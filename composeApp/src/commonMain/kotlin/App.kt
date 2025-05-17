@@ -1,35 +1,34 @@
 @file:Suppress("FunctionName")
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.navigation.compose.rememberNavController
+import components.MainViewModel
+import components.injection.mainModule
+import org.koin.compose.KoinApplication
+import org.koin.compose.getKoin
+import screens.navigation.DrawerNav
+import screens.navigation.NavigationHost
 
 @Composable
 fun App() {
     val platform = getPlatform()
 
-    Column(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        Text(
-            text = platform.name,
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            fontSize = 24.sp
-        )
+    KoinApplication(application = { modules(mainModule) }) {
+        val viewModel = getKoin().get<MainViewModel>()
+        val navigator = rememberNavController()
 
-        Spacer(modifier = Modifier.height(10.dp))
-
-        Text(
-            text = "Hello World!",
-            modifier = Modifier.align(Alignment.CenterHorizontally),
-            fontSize = 24.sp
-        )
+        DrawerNav(
+            navHostController = navigator,
+            viewModel = viewModel,
+            content = { paddingValues ->
+                NavigationHost(
+                    modifier = Modifier.padding(paddingValues),
+                    navHostController = navigator,
+                    viewModel = viewModel
+                )
+                      },
+            )
     }
 }
