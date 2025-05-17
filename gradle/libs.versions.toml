@@ -19,8 +19,8 @@ viewModel = "2.8.0"
 compose-navigation = "2.7.0-alpha07"
 jna = "5.14.0"
 
-koinCompose = "1.1.0"
-koinCore = "3.5.0"
+koinCompose = "4.0.4"
+koinCore = "4.0.4"
 
 [libraries]
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
