@@ -58,6 +58,9 @@ kotlin {
             // For Koin Implementation
             implementation(libs.koin.core)
             implementation(libs.koin.compose)
+
+            // Window Size class
+            implementation(libs.window.size.multiplatform)
         }
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
