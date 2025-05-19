@@ -28,8 +28,7 @@ compose-navigation = "2.7.0-alpha07"
 #5.14.0
 jna = "5.17.0"
 
-koinCompose = "4.0.4"
-koinCore = "4.0.4"
+koin = "4.0.4"
 
 material3WindowSizeClassMultiplatform = "0.5.0"
 uiAndroid = "1.8.1"
@@ -57,9 +56,12 @@ compose-navigation = { group = "compose", module = "org.jetbrains.androidx.navig
 
 jna = { group = "java", module = "net.java.dev.jna:jna-platform", version.ref = "jna" }
 
-koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koinCompose" }
-koin-core = { module = "io.insert-koin:koin-core", version.ref = "koinCore" }
-koin-android = { module = "io.insert-koin:koin-android", version.ref = "koinCore" }
+# Koin dependencies
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-composeVM = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
 
 window-size-multiplatform = { module = "dev.chrisbanes.material3:material3-window-size-class-multiplatform", version.ref = "material3WindowSizeClassMultiplatform" }
 androidx-ui-android = { group = "androidx.compose.ui", name = "ui-android", version.ref = "uiAndroid" }

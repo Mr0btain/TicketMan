@@ -1,18 +1,18 @@
 @file:Suppress("FunctionName")
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import components.MainViewModel
-import components.injection.mainModule
+import components.injection.viewModelModule
 import org.koin.compose.KoinApplication
+import org.koin.compose.KoinContext
 import org.koin.compose.getKoin
+import org.koin.compose.viewmodel.koinViewModel
 import screens.navigation.DrawerNav
 import screens.navigation.NavigationHost
 import ui.theme.AppTheme
@@ -20,12 +20,14 @@ import ui.theme.AppTheme
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun App() {
-    AppTheme {
-        KoinApplication(application = { modules(mainModule) }) {
-            val viewModel = getKoin().get<MainViewModel>()
-            val navigator = rememberNavController()
-            val windowSizeClass = calculateWindowSizeClass()
+    KoinContext {
+        val viewModel = koinViewModel<MainViewModel>()
+        val navigator = rememberNavController()
+        val windowSizeClass = calculateWindowSizeClass()
 
+        AppTheme(
+            darkTheme = viewModel.darkMode.value
+        ) {
             if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
                 DrawerNav(
                     navHostController = navigator,

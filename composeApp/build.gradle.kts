@@ -39,7 +39,10 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+
+            // Koin support for Android
             implementation(libs.koin.android)
+            implementation(libs.koin.androidx.compose)
         }
 
         commonMain.dependencies {
@@ -56,8 +59,9 @@ kotlin {
             implementation(libs.kotlinx.coroutines.core)
 
             // For Koin Implementation
-            implementation(libs.koin.core)
+            api(libs.koin.core)
             implementation(libs.koin.compose)
+            implementation(libs.koin.composeVM)
 
             // Window Size class
             implementation(libs.window.size.multiplatform)
