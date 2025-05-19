@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,6 +18,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import components.MainViewModel
+import org.jetbrains.compose.resources.stringResource
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.login_button_text
+import ticketman.composeapp.generated.resources.login_text
+import ui.theme.AppTheme
 
 /**
  * Login screen composable
@@ -26,7 +33,8 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun LoginScreen(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: MainViewModel
 ) {
     val userName = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
@@ -35,9 +43,10 @@ fun LoginScreen(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize()
     ) {
         Surface(
+            color = if (viewModel.darkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
             shape = RoundedCornerShape(10.dp),
             shadowElevation = 10.dp
         ) {
@@ -47,7 +56,7 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Login",
+                    text = stringResource(Res.string.login_text),
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -69,7 +78,7 @@ fun LoginScreen(
                     onClick = {}
                 ) {
                     Text(
-                        text = "Confirm",
+                        text = stringResource(Res.string.login_button_text),
                         fontSize = 18.sp
                     )
                 }

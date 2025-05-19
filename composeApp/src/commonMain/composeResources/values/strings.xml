@@ -5,4 +5,7 @@
     <string name="warning_password_level">Password strength</string>
     <string name="warning_password_level_strong">Strong</string>
     <string name="warning_password_level_weak">Weak</string>
+    <string name="login_text">Login</string>
+    <string name="login_button_text">Confirm</string>
+    <string name="settings_text">Settings</string>
 </resources>
