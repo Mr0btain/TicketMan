@@ -1,5 +1,6 @@
 package components
 
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 
 /**
@@ -8,4 +9,6 @@ import androidx.lifecycle.ViewModel
  */
 
 class MainViewModel(): ViewModel() {
+    // Settings Values
+    val darkMode = mutableStateOf(false)
 }
