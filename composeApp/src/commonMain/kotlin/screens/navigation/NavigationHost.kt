@@ -6,6 +6,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import screens.login.LoginScreen
 
 @Composable
 fun NavigationHost(
@@ -28,7 +29,7 @@ fun NavigationHost(
         }
 
         composable(NavigationItem.Login.route) {
-            //Login(viewModel = viewModel)
+            LoginScreen()
         }
     }
 }

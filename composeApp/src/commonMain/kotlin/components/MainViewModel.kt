@@ -1,7 +1,5 @@
 package components
 
-import Platform
-import androidx.compose.material3.windowsizeclass.WindowSizeClass
 import androidx.lifecycle.ViewModel
 
 /**

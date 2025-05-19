@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Ticket Manager</string>
+    <string name="username_string">Username</string>
+    <string name="password_string">Password</string>
+    <string name="warning_password_level">Password strength</string>
+    <string name="warning_password_level_strong">Strong</string>
+    <string name="warning_password_level_weak">Weak</string>
+</resources>

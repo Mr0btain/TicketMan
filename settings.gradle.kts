@@ -1,4 +1,4 @@
-rootProject.name = "MultiplatformTemplate"
+rootProject.name = "TicketMan"
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 pluginManagement {

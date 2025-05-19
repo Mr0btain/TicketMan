@@ -69,7 +69,7 @@ kotlin {
 }
 
 android {
-    namespace = "org.compose.template"
+    namespace = "org.mr0btain.ticketman"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     sourceSets["main"].manifest.srcFile("src/androidMain/AndroidManifest.xml")
@@ -77,7 +77,7 @@ android {
     sourceSets["main"].resources.srcDirs("src/commonMain/resources")
 
     defaultConfig {
-        applicationId = "org.compose.template"
+        applicationId = "org.mr0btain.ticketman"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
@@ -104,6 +104,9 @@ android {
         debugImplementation(compose.uiTooling)
     }
 }
+dependencies {
+    implementation(libs.androidx.ui.android)
+}
 
 compose.desktop {
     application {
@@ -111,7 +114,7 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.compose.template"
+            packageName = "org.m0btain.ticketman"
             packageVersion = "1.0.0"
         }
     }
