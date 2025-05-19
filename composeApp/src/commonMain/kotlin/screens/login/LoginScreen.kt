@@ -1,34 +1,22 @@
 package screens.login
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import ticketman.composeapp.generated.resources.Res
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
-import ticketman.composeapp.generated.resources.eye
-import ticketman.composeapp.generated.resources.eye_off
-import ticketman.composeapp.generated.resources.lock
-import ticketman.composeapp.generated.resources.password_string
-import ticketman.composeapp.generated.resources.user
-import ticketman.composeapp.generated.resources.username_string
+import androidx.compose.ui.unit.sp
 
 /**
  * Login screen composable
@@ -40,7 +28,58 @@ import ticketman.composeapp.generated.resources.username_string
 fun LoginScreen(
     modifier: Modifier = Modifier
 ) {
+    val userName = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
+    val showPassword = remember { mutableStateOf(false) }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier.fillMaxSize()
+    ) {
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            shadowElevation = 10.dp
+        ) {
+            Column(
+                modifier = Modifier.padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = "Login",
+                    fontSize = 36.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                Spacer(Modifier.padding(12.dp))
+
+                LoginTextField(
+                    username = userName.value,
+                    onUsernameChange = { userName.value = it },
+                    password = password.value,
+                    onPasswordChange = { password.value = it },
+                    showPassword = showPassword.value,
+                    showPasswordOnClick = { showPassword.value = !showPassword.value }
+                )
+
+                Spacer(Modifier.padding(12.dp))
+
+                Button(
+                    onClick = {}
+                ) {
+                    Text(
+                        text = "Confirm",
+                        fontSize = 18.sp
+                    )
+                }
+            }
+        }
+    }
+}
+
+/*
+val password = remember { mutableStateOf("") }
     val strongPass = remember { mutableStateOf(false) }
 
     Surface(
@@ -55,4 +94,4 @@ fun LoginScreen(
             onHasStrongPassword = { strongPass.value = it }
         )
     }
-}
+ */
