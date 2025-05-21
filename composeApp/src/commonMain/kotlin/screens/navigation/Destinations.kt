@@ -6,6 +6,6 @@ package screens.navigation
 
 enum class Destinations {
     LOGIN,
-    HOME,
+    MAIN,
     SETTINGS
 }

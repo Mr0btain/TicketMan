@@ -37,8 +37,7 @@ fun DrawerNav(
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
     scope: CoroutineScope = rememberCoroutineScope(),
-    navHostController: NavHostController,
-    viewModel: MainViewModel
+    navHostController: NavHostController
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
@@ -60,7 +59,7 @@ fun DrawerNav(
                         selected = false,
                         onClick = {
                             scope.launch {
-                                navHostController.navigate(NavigationItem.Home.route)
+                                navHostController.navigate(NavigationItem.Main.route)
                                 //viewModel.topAppText.value = "Home"
                                 drawerState.close()
                             }

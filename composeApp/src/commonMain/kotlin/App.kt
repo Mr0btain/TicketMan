@@ -36,7 +36,6 @@ fun App() {
             if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
                 DrawerNav(
                     navHostController = navigator,
-                    viewModel = mainViewModel,
                     content = { paddingValues ->
                         NavigationHost(
                             modifier = Modifier.padding(paddingValues),
@@ -49,7 +48,6 @@ fun App() {
             } else {
                 DrawerNav(
                     navHostController = navigator,
-                    viewModel = mainViewModel,
                     content = { paddingValues ->
                         NavigationHost(
                             modifier = Modifier.padding(paddingValues),
