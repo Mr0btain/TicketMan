@@ -7,15 +7,16 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import screens.login.LoginScreen
-import screens.settings.SettingsData
 import screens.settings.SettingsScreen
+import screens.settings.components.SettingsViewModel
 
 @Composable
 fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
     startDestination: String = NavigationItem.Home.route,
-    viewModel: MainViewModel
+    mainViewModel: MainViewModel,
+    settingsViewModel: SettingsViewModel
 ) {
     NavHost(
         modifier = modifier,
@@ -27,11 +28,11 @@ fun NavigationHost(
         }
 
         composable(NavigationItem.Settings.route) {
-            SettingsScreen(viewModel = viewModel)
+            SettingsScreen(viewModel = settingsViewModel)
         }
 
         composable(NavigationItem.Login.route) {
-            LoginScreen(viewModel = viewModel)
+            LoginScreen(viewModel = mainViewModel)
         }
     }
 }

@@ -1,5 +1,6 @@
 <resources>
     <string name="app_name">Ticket Manager</string>
+
     <string name="username_string">Username</string>
     <string name="password_string">Password</string>
     <string name="warning_password_level">Password strength</string>
@@ -7,5 +8,8 @@
     <string name="warning_password_level_weak">Weak</string>
     <string name="login_text">Login</string>
     <string name="login_button_text">Confirm</string>
+
     <string name="settings_text">Settings</string>
+    <string name="settings_first_group">First Group</string>
+    <string name="settings_second_group">Second Group</string>
 </resources>
