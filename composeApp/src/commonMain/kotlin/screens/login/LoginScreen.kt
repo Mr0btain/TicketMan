@@ -20,13 +20,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import components.MainViewModel
 import org.jetbrains.compose.resources.stringResource
+import screens.settings.components.SettingsViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.login_button_text
 import ticketman.composeapp.generated.resources.login_text
 import ui.theme.AppTheme
 
 /**
- * Login screen composable
+ * Login screen composable made for dialog but can be used either way
  */
 
 // TODO: Implement logic for login
@@ -34,73 +35,57 @@ import ui.theme.AppTheme
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel
+    onConfirm: (user:String, pass: String) -> Boolean,
+    onDismiss: () -> Unit,
+    isDarkMode: Boolean
 ) {
     val userName = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val showPassword = remember { mutableStateOf(false) }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = modifier.fillMaxSize()
+    Surface(
+        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(10.dp),
+        shadowElevation = 10.dp
     ) {
-        Surface(
-            color = if (viewModel.darkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 10.dp
+        Column(
+            modifier = Modifier.padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                modifier = Modifier.padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
+            Text(
+                text = stringResource(Res.string.login_text),
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.padding(12.dp))
+
+            LoginTextField(
+                username = userName.value,
+                onUsernameChange = { userName.value = it },
+                password = password.value,
+                onPasswordChange = { password.value = it },
+                showPassword = showPassword.value,
+                showPasswordOnClick = { showPassword.value = !showPassword.value }
+            )
+
+            Spacer(Modifier.padding(12.dp))
+
+            Button(
+                onClick = {
+                    // Check if its valid
+                    onConfirm(userName.value, password.value)
+
+                    // Dismiss
+                    onDismiss()
+                }
             ) {
                 Text(
-                    text = stringResource(Res.string.login_text),
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold
+                    text = stringResource(Res.string.login_button_text),
+                    fontSize = 18.sp
                 )
-
-                Spacer(Modifier.padding(12.dp))
-
-                LoginTextField(
-                    username = userName.value,
-                    onUsernameChange = { userName.value = it },
-                    password = password.value,
-                    onPasswordChange = { password.value = it },
-                    showPassword = showPassword.value,
-                    showPasswordOnClick = { showPassword.value = !showPassword.value }
-                )
-
-                Spacer(Modifier.padding(12.dp))
-
-                Button(
-                    onClick = {}
-                ) {
-                    Text(
-                        text = stringResource(Res.string.login_button_text),
-                        fontSize = 18.sp
-                    )
-                }
             }
         }
     }
 }
-
-/*
-val password = remember { mutableStateOf("") }
-    val strongPass = remember { mutableStateOf(false) }
-
-    Surface(
-        modifier = Modifier.fillMaxSize()
-    ) {
-        PasswordTextField(
-            text = password.value,
-            labelText = "Password",
-            validateStrengthPassword = true,
-            onTextChanged = { password.value = it },
-            hasError = if (password.value.isNotBlank()) !strongPass.value else false,
-            onHasStrongPassword = { strongPass.value = it }
-        )
-    }
- */
