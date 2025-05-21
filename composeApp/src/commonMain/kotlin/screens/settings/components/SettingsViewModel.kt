@@ -12,8 +12,8 @@ class SettingsViewModel: ViewModel() {
     private val _isSwitchOn: MutableStateFlow<Boolean> = MutableStateFlow(false)
     var isSwitchOn = _isSwitchOn.asStateFlow()
 
-    private val _textPreference: MutableStateFlow<String> = MutableStateFlow("")
-    var textPreference = _textPreference.asStateFlow()
+    private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("")
+    var serverAddress = _serverAddress.asStateFlow()
 
     private val _numberPreference: MutableStateFlow<String> = MutableStateFlow("0")
     var numberPreference = _numberPreference.asStateFlow()
@@ -32,23 +32,35 @@ class SettingsViewModel: ViewModel() {
     }
 
     fun saveText(finalText: String) {
-        _textPreference.value = finalText
+        _serverAddress.value = finalText
         // place to store text
     }
 
     // just checking, if it is not empty - but you can check anything
     fun checkTextInput(text: String) = text.isNotEmpty()
 
-    // to get separator for the locale
-    private val separatorChar = DecimalFormatSymbols.getInstance().decimalSeparator
+    /**
+     * Check to see if an address is valid. Will have to setup a ping or something to actually check. for now just check text
+     */
+    fun checkWebAddress(text: String): Boolean {
+        var isValid = false
 
-    // filtering only numbers and decimal separator
+        // basic placeholder check
+        if (text.startsWith("http://") || text.startsWith("https://") && text.endsWith(".com")) isValid = true
+
+        // Basic ip check to see if there is enough digits
+        val ipcheck = text.filter { it.isDigit() }
+        if (ipcheck.length >= 6) isValid = true
+
+        return isValid
+    }
+
+    // filtering only number
     fun filterNumbers(text: String): String = text.filter {
         it.isDigit()
     }
 
-    // someone can still put more decimal points into the textfield
-    // we should always try to convert text to number
+    // Check if text is a number
     fun checkNumber(text: String): Boolean {
         val value = text.toDoubleOrNull() ?: return false
         return value >= 0

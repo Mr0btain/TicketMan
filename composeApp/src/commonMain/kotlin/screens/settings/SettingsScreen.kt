@@ -25,6 +25,7 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.book
 import ticketman.composeapp.generated.resources.hash
 import ticketman.composeapp.generated.resources.moon
+import ticketman.composeapp.generated.resources.server
 import ticketman.composeapp.generated.resources.settings_first_group
 import ticketman.composeapp.generated.resources.settings_second_group
 import ticketman.composeapp.generated.resources.sun
@@ -52,6 +53,7 @@ fun SettingsScreen(
                     .padding(16.dp)
             ) {
                 SettingsGroup(stringResource(Res.string.settings_first_group)) {
+                    // Dark mode switch
                     SettingsSwitchItem(
                         name = "Dark Mode",
                         icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
@@ -69,20 +71,21 @@ fun SettingsScreen(
                     ) {
                         viewModel.toggleSwitch()
                     }
-
-                    SettingsTextItem(
-                        name = "Text Item",
-                        icon = painterResource(Res.drawable.book),
-                        iconDesc = "Description",
-                        state = viewModel.textPreference.collectAsState(),
-                        onSave = { finalText -> viewModel.saveText(finalText) },
-                        inputFilter = { text -> text },
-                        onCheck = { text -> viewModel.checkTextInput(text) },
-                        keyboardType = KeyboardType.Text
-                    )
                 }
 
                 SettingsGroup(name = stringResource(Res.string.settings_second_group)) {
+                    // Server address item
+                    SettingsTextItem(
+                        name = "Server Address:",
+                        icon = painterResource(Res.drawable.server),
+                        iconDesc = "Description",
+                        state = viewModel.serverAddress.collectAsState(),
+                        onSave = { finalText -> viewModel.saveText(finalText) },
+                        inputFilter = { text -> text },
+                        onCheck = { text -> viewModel.checkWebAddress(text) },
+                        keyboardType = KeyboardType.Text
+                    )
+
                     SettingsTextItem(
                         name = "Number Item",
                         icon = painterResource(Res.drawable.hash),
@@ -98,43 +101,3 @@ fun SettingsScreen(
         }
     }
 }
-
-
-/*
-Column(
-                modifier = Modifier
-                    .verticalScroll(rememberScrollState())
-                    .padding(28.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = stringResource(Res.string.settings_text),
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold
-                )
-
-                Spacer(Modifier.padding(12.dp))
-
-                // Use dark mode option
-                Row(
-                    modifier = Modifier.padding(start = 12.dp, end = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        modifier = Modifier.semantics { contentDescription = "If enabled will use dark mode all the time" },
-                        text = "Dark Mode",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Spacer(Modifier.padding(16.dp))
-
-                    Switch(
-                        checked = ,
-                        onCheckedChange = {
-                            viewModel.darkMode.value = !viewModel.darkMode.value
-                        }
-                    )
-                }
- */
