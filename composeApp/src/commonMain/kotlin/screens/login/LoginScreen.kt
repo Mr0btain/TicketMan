@@ -11,6 +11,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -37,14 +38,14 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
     onConfirm: (user:String, pass: String) -> Boolean,
     onDismiss: () -> Unit,
-    isDarkMode: Boolean
+    isDarkMode: State<Boolean>
 ) {
     val userName = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val showPassword = remember { mutableStateOf(false) }
 
     Surface(
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        color = if (isDarkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer,
         shape = RoundedCornerShape(10.dp),
         shadowElevation = 10.dp
     ) {

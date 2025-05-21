@@ -23,6 +23,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.State
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -36,8 +38,9 @@ import kotlinx.coroutines.launch
 fun DrawerNav(
     modifier: Modifier = Modifier,
     content: @Composable (PaddingValues) -> Unit,
-    scope: CoroutineScope = rememberCoroutineScope(),
-    navHostController: NavHostController
+    scope: CoroutineScope,
+    navHostController: NavHostController,
+    topAppTextState: MutableState<String>
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
@@ -55,12 +58,17 @@ fun DrawerNav(
 
                     Text("Section 1", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
                     NavigationDrawerItem(
-                        label = { Text("Home") },
+                        label = { Text("Main") },
                         selected = false,
                         onClick = {
                             scope.launch {
+                                // Navigate to screen
                                 navHostController.navigate(NavigationItem.Main.route)
-                                //viewModel.topAppText.value = "Home"
+
+                                // Set top app bar text
+                                topAppTextState.value = "Main"
+
+                                // Close drawer
                                 drawerState.close()
                             }
                         }
@@ -70,8 +78,13 @@ fun DrawerNav(
                         selected = false,
                         onClick = {
                             scope.launch {
+                                // Navigate to screen
                                 navHostController.navigate(NavigationItem.Settings.route)
-                                //viewModel.topAppText.value = "Customer Info"
+
+                                // Set top app bar text
+                                topAppTextState.value = "Settings"
+
+                                // Close drawer
                                 drawerState.close()
                             }
                         }
@@ -83,7 +96,11 @@ fun DrawerNav(
                         onClick = {
                             scope.launch {
                                 navHostController.navigate(NavigationItem.Login.route)
-                                //viewModel.topAppText.value = "Inventory"
+
+                                // Set top app bar text
+                                topAppTextState.value = "Login"
+
+                                // Close drawer
                                 drawerState.close()
                             }
                         }
@@ -96,7 +113,7 @@ fun DrawerNav(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("Top App Text") },
+                    title = { Text(topAppTextState.value) },
                     navigationIcon = {
                         IconButton(onClick = {
                             scope.launch {

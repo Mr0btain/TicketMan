@@ -30,7 +30,10 @@ fun NavigationHost(
         startDestination = startDestination
     ) {
         composable(NavigationItem.Main.route) {
-            MainScreen(viewModel = mainViewModel)
+            MainScreen(
+                viewModel = mainViewModel,
+                isDarkMode = settingsViewModel.isDarkMode.collectAsState()
+            )
         }
 
         composable(NavigationItem.Settings.route) {
@@ -46,7 +49,7 @@ fun NavigationHost(
                 LoginScreen(
                     onConfirm = { user, pass -> true },
                     onDismiss = {},
-                    isDarkMode = settingsViewModel.isDarkMode.collectAsState().value
+                    isDarkMode = settingsViewModel.isDarkMode.collectAsState()
                 )
             }
         }

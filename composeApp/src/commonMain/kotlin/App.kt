@@ -6,6 +6,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import components.MainViewModel
@@ -30,6 +31,11 @@ fun App() {
         // Calculating screen size stuff
         val windowSizeClass = calculateWindowSizeClass()
 
+        // Main scope to use with coroutines
+        val mainScope = rememberCoroutineScope()
+
+        //
+
         AppTheme(
             darkTheme = settingsViewModel.isDarkMode.collectAsState().value
         ) {
@@ -44,6 +50,8 @@ fun App() {
                             settingsViewModel = settingsViewModel
                         )
                     },
+                    scope = mainScope,
+                    topAppTextState = mainViewModel.topAppBarText
                 )
             } else {
                 DrawerNav(
@@ -56,6 +64,8 @@ fun App() {
                             settingsViewModel = settingsViewModel
                         )
                     },
+                    scope = mainScope,
+                    topAppTextState = mainViewModel.topAppBarText
                 )
             }
         }
