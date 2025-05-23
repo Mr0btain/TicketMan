@@ -18,7 +18,6 @@ import ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
-@Preview
 fun App() {
     KoinContext {
         // View Models
