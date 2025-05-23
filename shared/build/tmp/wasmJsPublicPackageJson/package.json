@@ -1,0 +1,11 @@
+{
+  "name": "KotlinProject-shared-wasm-js",
+  "version": "0.0.0-unspecified",
+  "main": "KotlinProject-shared-wasm-js.mjs",
+  "types": "KotlinProject-shared-wasm-js.d.ts",
+  "devDependencies": {},
+  "dependencies": {},
+  "peerDependencies": {},
+  "optionalDependencies": {},
+  "bundledDependencies": []
+}
