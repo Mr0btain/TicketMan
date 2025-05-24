@@ -106,7 +106,8 @@ fun DrawerNav(
                 }
             }
         },
-        drawerState = drawerState
+        drawerState = drawerState,
+        gesturesEnabled = false
     ) {
         Scaffold(
             topBar = {
