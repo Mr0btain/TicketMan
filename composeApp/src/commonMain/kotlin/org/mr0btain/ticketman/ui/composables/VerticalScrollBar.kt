@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 /**
  * Adds a vertical scroll bar to scrollable content providing its own scroll state to manage scroll
@@ -115,17 +116,20 @@ private fun VerticalScrollBarItem(
     scope: CoroutineScope
 ) {
     // Total content height / max scrollable value
-    val totalContentHeight = scrollState.maxValue.toFloat()
+    val totalContentHeight = max(scrollState.maxValue.toFloat(), 1f)
+
+    // Using this avoids a divide by zero exception
+    val viewport = max(scrollState.viewportSize.toFloat(), 1f)
 
     // Compute scrollbar height and position
-    val scrollBarHeight = (scrollState.viewportSize / totalContentHeight) * scrollState.viewportSize * 2
+    val scrollBarHeight = (viewport / totalContentHeight) * viewport * 2
 
     // Actual location of the scroll bar
-    offsetState.value = (scrollState.value.toFloat() / totalContentHeight) * scrollState.viewportSize - (scrollBarHeight / 2)
+    offsetState.value = (max(scrollState.value.toFloat(), 1f) / totalContentHeight) * viewport -(scrollBarHeight / 2)
 
 
     // The adjustment amount from the height of the scrolling material to the height of our bars travel area
-    val adjust = scrollState.maxValue / scrollState.viewportSize + scrollBarHeight
+    val adjust = totalContentHeight / viewport + scrollBarHeight
 
     Column(
         modifier
@@ -162,6 +166,6 @@ fun Modifier.getHeight(
     return drawWithContent {
         drawContent()
 
-        height.value = this.size.height
+        height.value = max(this.size.height, 1f)
     }
 }

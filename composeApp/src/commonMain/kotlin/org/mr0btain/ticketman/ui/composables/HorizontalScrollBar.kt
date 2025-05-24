@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlin.math.max
 
 /**
  * Adds a horizontal scroll bar to scrollable content providing its own scroll state to manage scroll
@@ -48,8 +49,8 @@ fun HorizontalScrollBar(
     scrollState: ScrollState = rememberScrollState(),
     content: @Composable (RowScope.(scrollState: ScrollState) -> Unit)
 ) {
-    val offsetState = remember { mutableStateOf(0f) }
-    val totalWidth = remember { mutableStateOf(0f) }
+    val offsetState = remember { mutableStateOf(1f) }
+    val totalWidth = remember { mutableStateOf(1f) }
     val viewportHeight = remember { mutableStateOf(1200f) }
 
     Surface(
@@ -69,7 +70,7 @@ fun HorizontalScrollBar(
 
                 // The content
                 Box(
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportHeight.value.dp - size)
+                    modifier = if (clipToContent) Modifier else Modifier.height(viewportHeight.value.dp - size)
                 ) {
                     Row(
                         modifier = Modifier
@@ -84,7 +85,7 @@ fun HorizontalScrollBar(
             } else {
                 // The content
                 Box(
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportHeight.value.dp - size)
+                    modifier = if (clipToContent) Modifier else Modifier.height(viewportHeight.value.dp - size)
                 ) {
                     Row(
                         modifier = Modifier
@@ -129,13 +130,13 @@ private fun HorizontalScrollBarItem(
     scope: CoroutineScope
 ) {
     // Viewport Width
-    val viewportWidth = remember { mutableStateOf(0f) }
+    val viewportWidth = remember { mutableStateOf(1f) }
 
     // Scrollbar width and position
     val scrollBarWidth = (viewportWidth.value / totalContentWidth) * viewportWidth.value
 
     // Set offset for the scroll bar
-    offsetState.value = (scrollState.value.toFloat() / totalContentWidth) * viewportWidth.value
+    offsetState.value = (max(scrollState.value.toFloat(), 1f) / totalContentWidth) * viewportWidth.value
 
     // The adjustment amount from the width of the scrolling material to the length of our bars travel area
     val adjust = totalContentWidth / (viewportWidth.value - scrollBarWidth)
@@ -179,6 +180,6 @@ fun Modifier.getWidth(
 ): Modifier {
     return drawWithContent {
         drawContent()
-        width.value = this.size.width
+        width.value = max(this.size.width, 1f)
     }
 }

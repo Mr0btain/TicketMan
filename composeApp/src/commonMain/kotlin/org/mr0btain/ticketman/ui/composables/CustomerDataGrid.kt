@@ -1,21 +1,29 @@
 package org.mr0btain.ticketman.ui.composables
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.CustomerInfo
+import kotlin.math.abs
+import kotlin.math.absoluteValue
 
 @Composable
 fun HeaderBox(
@@ -31,55 +39,142 @@ fun HeaderBox(
         horizontalArrangement = Arrangement.Center
     ) {
         Text(
-            modifier = Modifier.padding(8.dp),
+            modifier = Modifier,
             text = label,
             fontWeight = FontWeight.SemiBold,
             fontSize = 20.sp
         )
     }
 
-    VerticalDivider(
-        Modifier.draggable(
-            orientation = Orientation.Horizontal,
-            state =
-                rememberDraggableState { delta ->
-                    width.value += delta
-                }
-        ),
-        thickness = 4.dp,
-        color = MaterialTheme.colorScheme.primary
-    )
+    Row(
+        Modifier
+            .width(22.dp)
+            .draggable(
+                orientation = Orientation.Horizontal,
+                state =
+                    rememberDraggableState { delta ->
+                        width.value += delta
+                    }
+            ),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        VerticalDivider(
+            thickness = 4.dp,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
 }
+
+// TODO: Make onclick go to customer details screen when its done. or a popup?
 
 @Composable
 fun TableItem(
+    modifier: Modifier = Modifier,
+    color: Color = MaterialTheme.colorScheme.surface,
     customerInfo: CustomerInfo,
     nameWidth: Float,
     addressWidth: Float,
     contactWidth: Float,
     ticketWidth: Float
 ) {
-    Row {
-        Text(
-            text = customerInfo.name,
-            modifier = Modifier.width(nameWidth.dp)
-        )
+    Surface(
+        modifier = modifier
+            .padding(2.dp)
+            .clickable(
+                onClick = {
+                    // Do something
+                }
+            ),
+        shape = RoundedCornerShape(8.dp),
+        shadowElevation = 4.dp,
+        color = color
+    ) {
+        val sizeAdjust = -8
 
-        Text(
-            text = customerInfo.address,
-            modifier = Modifier.width(addressWidth.dp)
-        )
+        Row(
+            modifier = Modifier.padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .width(nameWidth.dp + sizeAdjust.dp)
+            ) {
+                TableCardTextItem(customerInfo.name)
+            }
 
-        Text(
-            text = customerInfo.contactInfo.email,
-            modifier = Modifier.width(contactWidth.dp)
-        )
+            Row(
+                modifier = Modifier.width(22.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    thickness = 2.dp
+                )
+            }
 
-        Text(
-            text = customerInfo.mostRecentTicket,
-            modifier = Modifier.width(ticketWidth.dp)
-        )
+            Box(
+                modifier = Modifier
+                    .padding(start = 5.dp)
+                    .width(addressWidth.dp + sizeAdjust.dp)
+            ) {
+                TableCardTextItem(customerInfo.address)
+            }
+
+            Row(
+                modifier = Modifier.width(22.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    thickness = 2.dp
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .width(contactWidth.dp + sizeAdjust.dp)
+            ) {
+                TableCardTextItem(customerInfo.contactInfo.email)
+            }
+
+            Row(
+                modifier = Modifier.width(22.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    thickness = 2.dp
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .width(ticketWidth.dp + sizeAdjust.dp)
+            ) {
+                TableCardTextItem(customerInfo.mostRecentTicket)
+            }
+        }
     }
+}
+
+@Composable
+private fun TableCardTextItem(
+    text: String
+) {
+    Text(
+        text = text,
+        modifier = Modifier.padding(start = 4.dp),
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        overflow = TextOverflow.Ellipsis,
+        maxLines = 1
+    )
 }
 
 @Composable
@@ -140,15 +235,22 @@ fun CustomerDataGrid(
             Column(
                 modifier = Modifier.horizontalScroll(horizontalScrollState)
             ) {
+                // Almost have to use manual indexing to alternate item colors. If you use forEachIndexed or something of the like
+                // it ends up producing wrong values for some reason
+                val indexed = remember { mutableIntStateOf(0) }
+
                 repeat(20) {
-                    customerInfo.forEach { info ->
+                    customerInfo.forEach{ info ->
                         TableItem(
                             customerInfo = info,
+                            color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
                             nameWidth = nameColumnWidth.value,
                             addressWidth = addressColumnWidth.value,
                             contactWidth = contactColumnWidth.value,
                             ticketWidth = ticketColumnWidth.value
                         )
+
+                        indexed.value++
                     }
                 }
             }
