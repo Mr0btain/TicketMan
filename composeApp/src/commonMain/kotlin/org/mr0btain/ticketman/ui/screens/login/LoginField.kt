@@ -19,8 +19,7 @@ import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun LoginField(
-    isDarkMode: Boolean,
-    onConfirm: (username: String, pass: String) -> Unit,
+    onConfirm: () -> Unit,
     onDismiss: () -> Unit
 ) {
     val userName = remember { mutableStateOf("") }
@@ -28,7 +27,7 @@ fun LoginField(
     val showPassword = remember { mutableStateOf(false) }
 
     Surface(
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        color = MaterialTheme.colorScheme.secondaryContainer,
         shape = RoundedCornerShape(10.dp),
         shadowElevation = 10.dp
     ) {
@@ -59,7 +58,7 @@ fun LoginField(
             Button(
                 onClick = {
                     // Check if its valid
-                    onConfirm(userName.value, password.value)
+                    onConfirm()
 
                     // Dismiss
                     onDismiss()
