@@ -1,20 +1,81 @@
 package org.mr0btain.ticketman.ui.screens.login
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import ticketman.composeapp.generated.resources.*
 
+@Composable
+fun LoginField(
+    isDarkMode: Boolean,
+    onConfirm: (username: String, pass: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val userName = remember { mutableStateOf("") }
+    val password = remember { mutableStateOf("") }
+    val showPassword = remember { mutableStateOf(false) }
+
+    Surface(
+        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.secondaryContainer,
+        shape = RoundedCornerShape(10.dp),
+        shadowElevation = 10.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = stringResource(Res.string.login_text),
+                fontSize = 36.sp,
+                fontWeight = FontWeight.Bold
+            )
+
+            Spacer(Modifier.padding(12.dp))
+
+            LoginTextField(
+                username = userName.value,
+                onUsernameChange = { userName.value = it },
+                password = password.value,
+                onPasswordChange = { password.value = it },
+                showPassword = showPassword.value,
+                showPasswordOnClick = { showPassword.value = !showPassword.value }
+            )
+
+            Spacer(Modifier.padding(12.dp))
+
+            Button(
+                onClick = {
+                    // Check if its valid
+                    onConfirm(userName.value, password.value)
+
+                    // Dismiss
+                    onDismiss()
+                }
+            ) {
+                Text(
+                    text = stringResource(Res.string.login_button_text),
+                    fontSize = 18.sp
+                )
+            }
+        }
+    }
+}
 
 @Composable
-fun LoginTextField(
+private fun LoginTextField(
     modifier: Modifier = Modifier,
     username: String,
     onUsernameChange: (text: String) -> Unit = {},
