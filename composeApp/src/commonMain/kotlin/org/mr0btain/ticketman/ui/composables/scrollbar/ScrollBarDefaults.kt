@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.composables
+package org.mr0btain.ticketman.ui.composables.scrollbar
 
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.MaterialTheme
