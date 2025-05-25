@@ -1,4 +1,4 @@
-package ui.theme
+package org.mr0btain.ticketman.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

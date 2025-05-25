@@ -113,6 +113,8 @@ fun CustomerDataGrid(
                             ticketWidth = ticketColumnWidth.value
                         )
 
+                        Spacer(Modifier.padding(2.dp))
+
                         indexed.value++
                     }
                 }
@@ -129,7 +131,7 @@ private fun HeaderBox(
 ) {
     Row(
         modifier = modifier
-            .height(42.dp)
+            .height(34.dp)
             .width(width.value.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center
@@ -138,7 +140,7 @@ private fun HeaderBox(
             modifier = Modifier,
             text = label,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp
+            fontSize = 14.sp
         )
     }
 
@@ -244,7 +246,7 @@ private fun TableItemEntry(
         modifier = modifier,
         leadingIcon = {
             Icon(
-                modifier = Modifier.size(20.dp),
+                modifier = Modifier.size(16.dp),
                 painter = painterResource(resource),
                 contentDescription = ""
             )
@@ -252,7 +254,7 @@ private fun TableItemEntry(
         label = label,
         textStyle = TextStyle.Default.copy(
             fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp
+            fontSize = 12.sp
         )
     )
 }

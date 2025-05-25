@@ -13,9 +13,10 @@ import org.mr0btain.ticketman.components.MainViewModel
 import org.mr0btain.ticketman.ui.composables.SearchTextField
 import org.mr0btain.ticketman.ui.composables.TicketDataGrid
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDatabaseList
+import org.mr0btain.ticketman.ui.screens.main.components.TicketDatabaseList
 
 /**
- * Main Screen containing all the customer/ticket data and such
+ * The main landing screen after logon
  */
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -26,8 +27,7 @@ fun MainScreen(
     scrollBarRight: Boolean,
     isDarkMode: Boolean
 ) {
-    // State for tab selection
-    var selectedTabIndex by remember { mutableIntStateOf(0) }
+    val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -43,26 +43,14 @@ fun MainScreen(
             ) {
                 Row(
                     modifier = Modifier.padding(4.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Start
                 ) {
-                    Spacer(Modifier.padding(8.dp))
-
-                    SearchTextField(
-                        modifier = Modifier.padding(bottom = 4.dp),
-                        label = "Search",
-                        placeholder = "",
-                        onValueChange = {}
-                    )
-
-                    // TODO: Maybe add when you hot enter it adds a pin for that item then you can add more pins to narrow searches? like filters
-
-                    Spacer(Modifier.padding(12.dp))
-
                     Box(
                         modifier = Modifier.width(260.dp)
                     ) {
                         SecondaryTabRow(
-                            selectedTabIndex = selectedTabIndex,
+                            selectedTabIndex = tabIndex.value.toInt(),
                             modifier = Modifier
                                 .padding(top = 4.dp)
                                 .wrapContentWidth(),
@@ -70,8 +58,8 @@ fun MainScreen(
                         ) {
                             // Customer Tab
                             Tab(
-                                selected = selectedTabIndex == 0,
-                                onClick = { selectedTabIndex = 0 },
+                                selected = tabIndex.value == "0",
+                                onClick = { viewModel.changeMainTabIndex("0") },
                                 modifier = Modifier.wrapContentWidth(),
                                 text = {
                                     Text(
@@ -85,8 +73,8 @@ fun MainScreen(
 
                             // Ticket Tab
                             Tab(
-                                selected = selectedTabIndex == 1,
-                                onClick = { selectedTabIndex = 1 },
+                                selected = tabIndex.value == "1",
+                                onClick = { viewModel.changeMainTabIndex("1") },
                                 modifier = Modifier.wrapContentWidth(),
                                 text = {
                                     Text(
@@ -100,30 +88,6 @@ fun MainScreen(
                         }
                     }
 
-                    Spacer(Modifier.weight(1f))
-
-                    Button(
-                        onClick = {
-
-                        },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        /*
-                        Icon(
-                            modifier = Modifier
-                                .size(22.dp),
-                            painter = painterResource(Res.drawable.plus),
-                            contentDescription = ""
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-                         */
-
-                        Text(
-                            text = "Add " + if (selectedTabIndex == 0) "Customer" else "Ticket"
-                        )
-                    }
-
                     Spacer(Modifier.padding(8.dp))
                 }
 
@@ -133,7 +97,7 @@ fun MainScreen(
                     color = if (isDarkMode) MaterialTheme.colorScheme.surface else DividerDefaults.color
                 )
 
-                if (selectedTabIndex == 0) {
+                if (tabIndex.value == "0") {
                     CustomerDatabaseList(
                         customerInfoList = viewModel.mockCustomerInfoList,
                         scrollBarTop = scrollBarTop,
@@ -141,7 +105,7 @@ fun MainScreen(
                         isDarkMode = isDarkMode
                     )
                 } else {
-                    TicketDataGrid()
+                    TicketDatabaseList(viewModel)
                 }
             }
         }

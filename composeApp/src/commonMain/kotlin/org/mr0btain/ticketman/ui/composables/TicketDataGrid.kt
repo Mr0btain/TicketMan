@@ -1,50 +1,45 @@
 package org.mr0btain.ticketman.ui.composables
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.components.data.CustomerInfo
-import org.mr0btain.ticketman.ui.composables.scrollbar.HorizontalScrollBar
+import org.mr0btain.ticketman.components.data.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.VerticalScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
+import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 
 @Composable
 fun TicketDataGrid(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    ticketInfo: List<TicketInfo> = listOf()
 ) {
+
+// Ticket #  |  Priority  |   Last Note   |   Status
+
     // Column widths
-    val nameColumnWidth = remember { mutableStateOf(300f) }
-    val addressColumnWidth = remember { mutableStateOf(240f) }
-    val contactColumnWidth = remember { mutableStateOf(200f) }
-    val ticketColumnWidth = remember { mutableStateOf(180f) }
+    val numberColumnWidth = 100.dp
+    val priorityColumnWidth = 140.dp
+    val noteColumnWidth = 360.dp
+    val statusColumnWidth = 180.dp
 
     // Scroll stuff
     val horizontalScrollState = rememberScrollState()
@@ -53,36 +48,42 @@ fun TicketDataGrid(
     Column(
         modifier = modifier
     ) {
-        HorizontalScrollBar(
-            scope = scope,
-            scrollState = horizontalScrollState
+        Row(
+            modifier = Modifier
+                .height(46.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier
-                    .height(46.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HeaderBox(
-                    label = "Name",
-                    width = nameColumnWidth
-                )
+            Spacer(Modifier.padding(10.dp))
 
-                HeaderBox(
-                    label = "Address",
-                    width = addressColumnWidth
-                )
+            HeaderBox(
+                label = "Ticket #",
+                width = numberColumnWidth
+            )
 
-                HeaderBox(
-                    label = "Contact",
-                    width = contactColumnWidth
-                )
+            Spacer(Modifier.padding(9.dp))
 
-                HeaderBox(
-                    label = "Last Ticket",
-                    width = ticketColumnWidth
-                )
-            }
+            HeaderBox(
+                label = "Priority",
+                width = priorityColumnWidth
+            )
+
+            Spacer(Modifier.padding(9.dp))
+
+            HeaderBox(
+                label = "Latest Note",
+                width = noteColumnWidth
+            )
+
+            Spacer(Modifier.padding(10.dp))
+
+            HeaderBox(
+                label = "Status",
+                width = statusColumnWidth,
+                dividerEnable = false
+            )
         }
+
+        HorizontalDivider()
 
         VerticalScrollBar(
             modifier = Modifier
@@ -98,20 +99,28 @@ fun TicketDataGrid(
                 val indexed = remember { mutableIntStateOf(0) }
 
                 repeat(20) {
-                    /*
-                    customerInfo.forEach{ info ->
-                        TableItem(
-                            customerInfo = info,
-                            color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                            nameWidth = nameColumnWidth.value,
-                            addressWidth = addressColumnWidth.value,
-                            contactWidth = contactColumnWidth.value,
-                            ticketWidth = ticketColumnWidth.value
-                        )
+                    TableItem(
+                        color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                        ticketInfo = TicketInfo(
+                            "1234",
+                            Device("Apple", "IPhone16"),
+                            randomTicketStatus(),
+                            randomTicketPriority(),
+                            notes = listOf(
+                                Note(
+                                    "Mr. Author",
+                                    "Still working on the device"
+                                )
+                            )),
+                        numberWidth = numberColumnWidth,
+                        priorityWidth = priorityColumnWidth,
+                        noteWidth = noteColumnWidth,
+                        statusWidth = statusColumnWidth
+                    )
 
-                        indexed.value++
-                    }
-                     */
+                    Spacer(Modifier.padding(2.dp))
+
+                    indexed.value++
                 }
             }
         }
@@ -122,39 +131,23 @@ fun TicketDataGrid(
 private fun HeaderBox(
     modifier: Modifier = Modifier,
     label: String,
-    width: MutableState<Float>
+    width: Dp,
+    dividerEnable: Boolean = true
 ) {
     Row(
-        modifier = modifier
-            .height(56.dp)
-            .width(width.value.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        modifier.width(width),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            modifier = Modifier,
             text = label,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 20.sp
+            fontSize = 14.sp
         )
-    }
 
-    Row(
-        Modifier
-            .width(22.dp)
-            .draggable(
-                orientation = Orientation.Horizontal,
-                state =
-                    rememberDraggableState { delta ->
-                        width.value += delta
-                    }
-            ),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        VerticalDivider(
-            thickness = 4.dp,
-            color = MaterialTheme.colorScheme.primary
-        )
+        if (dividerEnable) {
+            VerticalDivider(Modifier.height(42.dp), thickness = 3.dp, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 
@@ -164,12 +157,15 @@ private fun HeaderBox(
 private fun TableItem(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surface,
-    customerInfo: CustomerInfo,
-    nameWidth: Float,
-    addressWidth: Float,
-    contactWidth: Float,
-    ticketWidth: Float
+    ticketInfo: TicketInfo,
+    numberWidth: Dp,
+    priorityWidth: Dp,
+    noteWidth: Dp,
+    statusWidth: Dp
 ) {
+    val yellowColor = Color(red = 230, green = 218, blue = 2)
+    val greenColor = Color(red = 6, green = 138, blue = 52)
+
     Surface(
         modifier = modifier
             .padding(2.dp)
@@ -188,12 +184,19 @@ private fun TableItem(
             modifier = Modifier.padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // TODO: Setup an actual composable for this
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
-                    .width(nameWidth.dp + sizeAdjust.dp)
+                    .width(numberWidth + sizeAdjust.dp),
+                contentAlignment = Alignment.Center
             ) {
-                TableCardTextItem(customerInfo.name)
+                TableStatusItem(
+                    label = ticketInfo.id,
+                    textStyle = TextStyle.Default.copy(fontSize = 12.sp),
+                    backgroundColor = MaterialTheme.colorScheme.primary
+                )
+                //TableCardTextItem(ticketInfo.id)
             }
 
             Row(
@@ -210,9 +213,42 @@ private fun TableItem(
             Box(
                 modifier = Modifier
                     .padding(start = 5.dp)
-                    .width(addressWidth.dp + sizeAdjust.dp)
+                    .width(priorityWidth + sizeAdjust.dp),
+                contentAlignment = Alignment.Center
             ) {
-                TableCardTextItem(customerInfo.address)
+                TableStatusItem(
+                    label = ticketInfo.priority.name,
+                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary),
+                    backgroundColor = when (ticketInfo.priority) {
+                        TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
+                        TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
+                        TicketPriority.HIGH -> yellowColor
+                        TicketPriority.URGENT -> MaterialTheme.colorScheme.error
+                    }
+                )
+            }
+
+            Row(
+                modifier = Modifier.width(22.dp),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                VerticalDivider(
+                    modifier = Modifier.height(40.dp),
+                    color = MaterialTheme.colorScheme.primary,
+                    thickness = 2.dp
+                )
+            }
+
+            // TODO: Setup an actual composable for this
+
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .width(noteWidth + sizeAdjust.dp)
+            ) {
+                TableCardTextItem(
+                    ticketInfo.notes.last().author + " : " + ticketInfo.notes.last().text
+                )
             }
 
             Row(
@@ -229,28 +265,22 @@ private fun TableItem(
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
-                    .width(contactWidth.dp + sizeAdjust.dp)
+                    .width(statusWidth + sizeAdjust.dp),
+                contentAlignment = Alignment.Center
             ) {
-                TableCardTextItem(customerInfo.contactInfo.email)
-            }
-
-            Row(
-                modifier = Modifier.width(22.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = 2.dp
+                TableStatusItem(
+                    label = ticketInfo.status.name,
+                    textStyle = if (ticketInfo.status.name == "ON_HOLD") {
+                        TextStyle.Default.copy(fontSize = 12.sp)
+                    } else TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary),
+                    backgroundColor = when (ticketInfo.status) {
+                        TicketStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary
+                        TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
+                        TicketStatus.DONE -> greenColor
+                    }
                 )
-            }
 
-            Box(
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .width(ticketWidth.dp + sizeAdjust.dp)
-            ) {
-                TableCardTextItem(customerInfo.mostRecentTicket)
+                // Yellow Color(0xF5E911)
             }
         }
     }
