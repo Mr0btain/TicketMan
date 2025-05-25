@@ -32,7 +32,9 @@ fun NavigationHost(
         composable(NavigationItem.Main.route) {
             MainScreen(
                 viewModel = mainViewModel,
-                isDarkMode = settingsViewModel.isDarkMode.collectAsState()
+                isDarkMode = settingsViewModel.isDarkMode.value,
+                scrollBarTop = settingsViewModel.scrollBarOnTop.value,
+                scrollBarRight = settingsViewModel.scrollBarOnRight.value
             )
         }
 

@@ -22,11 +22,16 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsSwitchItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsTextItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.arrow_down
+import ticketman.composeapp.generated.resources.arrow_left
+import ticketman.composeapp.generated.resources.arrow_right
+import ticketman.composeapp.generated.resources.arrow_up
 import ticketman.composeapp.generated.resources.hash
 import ticketman.composeapp.generated.resources.moon
 import ticketman.composeapp.generated.resources.server
 import ticketman.composeapp.generated.resources.settings_first_group
 import ticketman.composeapp.generated.resources.settings_second_group
+import ticketman.composeapp.generated.resources.settings_third_group
 import ticketman.composeapp.generated.resources.sun
 
 @Composable
@@ -35,6 +40,8 @@ fun SettingsScreen(
     viewModel: SettingsViewModel
 ) {
     val darkMode = viewModel.isDarkMode.collectAsState()
+    val scrollBarOnRight = viewModel.scrollBarOnRight.collectAsState()
+    val scrollBarOnTop = viewModel.scrollBarOnTop.collectAsState()
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -52,24 +59,7 @@ fun SettingsScreen(
                     .padding(16.dp)
             ) {
                 SettingsGroup(stringResource(Res.string.settings_first_group)) {
-                    // Dark mode switch
-                    SettingsSwitchItem(
-                        name = "Dark Mode",
-                        icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
-                        iconDesc = "Example Description",
-                        state = darkMode
-                    ) {
-                        viewModel.toggleDarkMode()
-                    }
 
-                    SettingsSwitchItem(
-                        name = "Switch Item",
-                        icon = painterResource(Res.drawable.sun),
-                        iconDesc = "Example Description",
-                        state = viewModel.isSwitchOn.collectAsState()
-                    ) {
-                        viewModel.toggleSwitch()
-                    }
                 }
 
                 SettingsGroup(name = stringResource(Res.string.settings_second_group)) {
@@ -95,6 +85,38 @@ fun SettingsScreen(
                         onCheck = { text -> viewModel.checkNumber(text) },
                         keyboardType = KeyboardType.Number
                     )
+                }
+
+                SettingsGroup(stringResource(Res.string.settings_third_group)) {
+                    // Dark mode switch
+                    SettingsSwitchItem(
+                        name = "Dark Mode",
+                        icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
+                        iconDesc = "Should the ui stay in dark mode",
+                        state = darkMode
+                    ) {
+                        viewModel.toggleDarkMode()
+                    }
+
+                    // Vertical Scroll Bar position switch
+                    SettingsSwitchItem(
+                        name = "Vertical ScrollBars on the right",
+                        icon = if (scrollBarOnRight.value) painterResource(Res.drawable.arrow_right) else painterResource(Res.drawable.arrow_left),
+                        iconDesc = "Should scroll bars be on the right? if not they will be on the left",
+                        state = scrollBarOnRight
+                    ) {
+                        viewModel.toggleScrollBarOnRight()
+                    }
+
+                    // Horizontal Scroll Bar position switch
+                    SettingsSwitchItem(
+                        name = "Horizontal ScrollBars on top",
+                        icon = if (scrollBarOnTop.value) painterResource(Res.drawable.arrow_up) else painterResource(Res.drawable.arrow_down),
+                        iconDesc = "Should scroll bars be on the top? if not they will be on the bottom",
+                        state = scrollBarOnTop
+                    ) {
+                        viewModel.toggleScrollBarOnTop()
+                    }
                 }
             }
         }

@@ -5,22 +5,53 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 class SettingsViewModel: ViewModel() {
-    private val _isDarkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    var isDarkMode = _isDarkMode.asStateFlow()
 
-    private val _isSwitchOn: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    var isSwitchOn = _isSwitchOn.asStateFlow()
+    // First basic group
 
+    // Second data group
+    // Server address
     private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("")
     var serverAddress = _serverAddress.asStateFlow()
 
+    // Nothing
     private val _numberPreference: MutableStateFlow<String> = MutableStateFlow("0")
     var numberPreference = _numberPreference.asStateFlow()
+
+
+    // Third UI group
+
+    // Dark mode
+
+    private val _isDarkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    var isDarkMode = _isDarkMode.asStateFlow()
+
+    // Should we have scroll bars on the right or left
+    private val _scrollBarOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    var scrollBarOnRight = _scrollBarOnRight.asStateFlow()
+
+    // Should we have scroll bars on the Top or Bottom
+    private val _scrollBarOnTop: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    var scrollBarOnTop = _scrollBarOnTop.asStateFlow()
+
+
+
+    private val _isSwitchOn: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    var isSwitchOn = _isSwitchOn.asStateFlow()
 
     // Functions to change settings
 
     fun toggleDarkMode(){
         _isDarkMode.value = !_isDarkMode.value
+        // here is place for permanent storage handling
+    }
+
+    fun toggleScrollBarOnRight(){
+        _scrollBarOnRight.value = !_scrollBarOnRight.value
+        // here is place for permanent storage handling
+    }
+
+    fun toggleScrollBarOnTop(){
+        _scrollBarOnTop.value = !_scrollBarOnTop.value
         // here is place for permanent storage handling
     }
 

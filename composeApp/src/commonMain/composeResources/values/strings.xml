@@ -12,4 +12,5 @@
     <string name="settings_text">Settings</string>
     <string name="settings_first_group">Basic</string>
     <string name="settings_second_group">Data</string>
+    <string name="settings_third_group">UI</string>
 </resources>

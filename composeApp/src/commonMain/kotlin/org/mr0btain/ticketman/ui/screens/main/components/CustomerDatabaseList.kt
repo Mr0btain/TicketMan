@@ -9,14 +9,20 @@ import org.mr0btain.ticketman.ui.composables.CustomerDataGrid
 @Composable
 fun CustomerDatabaseList(
     modifier: Modifier = Modifier,
-    customerInfoList: List<CustomerInfo>
+    customerInfoList: List<CustomerInfo>,
+    scrollBarTop: Boolean,
+    scrollBarRight: Boolean,
+    isDarkMode: Boolean
 ) {
     Surface(
         modifier = modifier
     ) {
         CustomerDataGrid(
             modifier = Modifier,
-            customerInfo = customerInfoList
+            customerInfo = customerInfoList,
+            scrollBarTop = scrollBarTop,
+            scrollBarRight = scrollBarRight,
+            isDarkMode = isDarkMode
         )
     }
 }

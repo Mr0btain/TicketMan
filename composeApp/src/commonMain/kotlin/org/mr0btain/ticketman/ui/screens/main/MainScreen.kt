@@ -11,8 +11,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.MainViewModel
 import org.mr0btain.ticketman.ui.composables.SearchTextField
+import org.mr0btain.ticketman.ui.composables.TicketDataGrid
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDatabaseList
-import org.mr0btain.ticketman.ui.screens.main.components.TicketDatabaseList
 
 /**
  * Main Screen containing all the customer/ticket data and such
@@ -22,7 +22,9 @@ import org.mr0btain.ticketman.ui.screens.main.components.TicketDatabaseList
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    isDarkMode: State<Boolean>
+    scrollBarTop: Boolean,
+    scrollBarRight: Boolean,
+    isDarkMode: Boolean
 ) {
     // State for tab selection
     var selectedTabIndex by remember { mutableIntStateOf(0) }
@@ -32,7 +34,7 @@ fun MainScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         Surface(
-            color = if (isDarkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
+            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
             shape = RoundedCornerShape(10.dp),
             shadowElevation = 10.dp
         ) {
@@ -128,15 +130,18 @@ fun MainScreen(
                 HorizontalDivider(
                     modifier = Modifier,
                     thickness = DividerDefaults.Thickness,
-                    color = if (isDarkMode.value) MaterialTheme.colorScheme.surface else DividerDefaults.color
+                    color = if (isDarkMode) MaterialTheme.colorScheme.surface else DividerDefaults.color
                 )
 
                 if (selectedTabIndex == 0) {
                     CustomerDatabaseList(
-                        customerInfoList = viewModel.mockCustomerInfoList
+                        customerInfoList = viewModel.mockCustomerInfoList,
+                        scrollBarTop = scrollBarTop,
+                        scrollBarRight = scrollBarRight,
+                        isDarkMode = isDarkMode
                     )
                 } else {
-                    TicketDatabaseList()
+                    TicketDataGrid()
                 }
             }
         }
