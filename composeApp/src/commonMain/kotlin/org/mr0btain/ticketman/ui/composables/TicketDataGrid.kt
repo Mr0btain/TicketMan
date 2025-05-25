@@ -29,6 +29,7 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 
 @Composable
 fun TicketDataGrid(
+    isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf()
 ) {
@@ -45,82 +46,92 @@ fun TicketDataGrid(
     val horizontalScrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
-    Column(
+    Surface(
         modifier = modifier
+            .wrapContentSize()
+            .padding(8.dp),
+        shape = RoundedCornerShape(10.dp),
+        shadowElevation = 10.dp,
+        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
     ) {
-        Row(
+        Column(
             modifier = Modifier
-                .height(46.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .wrapContentSize()
+                .padding(start = 16.dp, end = 16.dp)
         ) {
-            Spacer(Modifier.padding(10.dp))
-
-            HeaderBox(
-                label = "Ticket #",
-                width = numberColumnWidth
-            )
-
-            Spacer(Modifier.padding(9.dp))
-
-            HeaderBox(
-                label = "Priority",
-                width = priorityColumnWidth
-            )
-
-            Spacer(Modifier.padding(9.dp))
-
-            HeaderBox(
-                label = "Latest Note",
-                width = noteColumnWidth
-            )
-
-            Spacer(Modifier.padding(10.dp))
-
-            HeaderBox(
-                label = "Status",
-                width = statusColumnWidth,
-                dividerEnable = false
-            )
-        }
-
-        HorizontalDivider()
-
-        VerticalScrollBar(
-            modifier = Modifier
-                .fillMaxWidth(),
-            scope = scope,
-            clipToContent = false
-        ) {
-            Column(
-                modifier = Modifier.horizontalScroll(horizontalScrollState)
+            Row(
+                modifier = Modifier
+                    .height(46.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Almost have to use manual indexing to alternate item colors. If you use forEachIndexed or something of the like
-                // it ends up producing wrong values for some reason
-                val indexed = remember { mutableIntStateOf(0) }
+                Spacer(Modifier.padding(10.dp))
 
-                repeat(20) {
-                    TableItem(
-                        color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                        ticketInfo = TicketInfo(
-                            "1234",
-                            Device("Apple", "IPhone16"),
-                            randomTicketStatus(),
-                            randomTicketPriority(),
-                            notes = listOf(
-                                Note(
-                                    "Mr. Author",
-                                    "Still working on the device"
-                                )
-                            )),
-                        numberWidth = numberColumnWidth,
-                        priorityWidth = priorityColumnWidth,
-                        noteWidth = noteColumnWidth,
-                        statusWidth = statusColumnWidth
-                    )
+                HeaderBox(
+                    label = "Ticket #",
+                    width = numberColumnWidth
+                )
 
-                    Spacer(Modifier.padding(2.dp))
+                Spacer(Modifier.padding(9.dp))
 
-                    indexed.value++
+                HeaderBox(
+                    label = "Priority",
+                    width = priorityColumnWidth
+                )
+
+                Spacer(Modifier.padding(9.dp))
+
+                HeaderBox(
+                    label = "Latest Note",
+                    width = noteColumnWidth
+                )
+
+                Spacer(Modifier.padding(10.dp))
+
+                HeaderBox(
+                    label = "Status",
+                    width = statusColumnWidth,
+                    dividerEnable = false
+                )
+            }
+
+            HorizontalDivider(modifier = Modifier.width(850.dp))
+
+            VerticalScrollBar(
+                modifier = Modifier.wrapContentSize(),
+                scope = scope,
+                clipToContent = true
+            ) {
+                Column(
+                    modifier = Modifier.horizontalScroll(horizontalScrollState)
+                ) {
+                    // Almost have to use manual indexing to alternate item colors. If you use forEachIndexed or something of the like
+                    // it ends up producing wrong values for some reason
+                    val indexed = remember { mutableIntStateOf(0) }
+
+                    repeat(20) {
+                        TableItem(
+                            color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                            ticketInfo = TicketInfo(
+                                "1234",
+                                Device("Apple", "IPhone16"),
+                                randomTicketStatus(),
+                                randomTicketPriority(),
+                                notes = listOf(
+                                    Note(
+                                        "Mr. Author",
+                                        "Still working on the device"
+                                    )
+                                )),
+                            numberWidth = numberColumnWidth,
+                            priorityWidth = priorityColumnWidth,
+                            noteWidth = noteColumnWidth,
+                            statusWidth = statusColumnWidth
+                        )
+
+                        Spacer(Modifier.padding(2.dp))
+
+                        indexed.value++
+                    }
                 }
             }
         }

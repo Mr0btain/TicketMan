@@ -55,7 +55,7 @@ fun NavigationHost(
                 LoginScreen(
                     onConfirm = { user, pass -> true },
                     onDismiss = {},
-                    isDarkMode = settingsViewModel.isDarkMode.collectAsState()
+                    isDarkMode = settingsViewModel.isDarkMode.value
                 )
             }
         }

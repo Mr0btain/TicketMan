@@ -8,6 +8,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.DrawableResource
@@ -44,78 +46,93 @@ fun CustomerDataGrid(
     isDarkMode: Boolean
 ) {
     // Column widths
-    val nameColumnWidth = remember { mutableStateOf(270f) }
-    val addressColumnWidth = remember { mutableStateOf(280f) }
-    val contactColumnWidth = remember { mutableStateOf(200f) }
-    val ticketColumnWidth = remember { mutableStateOf(120f) }
+    val nameColumnWidth = 200.dp
+    val addressColumnWidth = 200.dp
+    val contactColumnWidth = 200.dp
+    val ticketColumnWidth = 120.dp
 
     // Scroll stuff
     val horizontalScrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
-    Column(
+    Surface(
         modifier = modifier
+            .wrapContentSize()
+            .padding(8.dp),
+        shape = RoundedCornerShape(10.dp),
+        shadowElevation = 10.dp,
+        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
     ) {
-        HorizontalScrollBar(
-            scope = scope,
-            scrollState = horizontalScrollState,
-            scrollBarOnTop = scrollBarTop
+        Column(
+            modifier = Modifier
+                .wrapContentSize()
+                .padding(start = 16.dp, end = 16.dp)
         ) {
             Row(
                 modifier = Modifier
                     .height(46.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Spacer(Modifier.padding(10.dp))
+
                 HeaderBox(
                     label = "Name",
                     width = nameColumnWidth
                 )
+
+                Spacer(Modifier.padding(9.dp))
 
                 HeaderBox(
                     label = "Address",
                     width = addressColumnWidth
                 )
 
+                Spacer(Modifier.padding(9.dp))
+
                 HeaderBox(
                     label = "Contact",
                     width = contactColumnWidth
                 )
 
+                Spacer(Modifier.padding(10.dp))
+
                 HeaderBox(
                     label = "Last Ticket",
-                    width = ticketColumnWidth
+                    width = ticketColumnWidth,
+                    dividerEnable = false
                 )
             }
-        }
 
-        VerticalScrollBar(
-            modifier = Modifier
-                .fillMaxWidth(),
-            scope = scope,
-            clipToContent = false,
-            scrollBarOnRight = scrollBarRight
-        ) {
-            Column(
-                modifier = Modifier.horizontalScroll(horizontalScrollState)
+            HorizontalDivider(modifier = Modifier.width(746.dp))
+
+            VerticalScrollBar(
+                modifier = Modifier.wrapContentSize(),
+                scope = scope,
+                clipToContent = true,
+                scrollBarOnRight = scrollBarRight
             ) {
-                // Almost have to use manual indexing to alternate item colors. If you use forEachIndexed or something of the like
-                // it ends up producing wrong values for some reason
-                val indexed = remember { mutableIntStateOf(0) }
+                Column(
+                    modifier = Modifier.horizontalScroll(horizontalScrollState)
+                ) {
+                    // Almost have to use manual indexing to alternate item colors. If you use forEachIndexed or something of the like
+                    // it ends up producing wrong values for some reason
+                    val indexed = remember { mutableIntStateOf(0) }
 
-                repeat(20) {
-                    customerInfo.forEach { info ->
-                        TableItem(
-                            customerInfo = info,
-                            color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                            nameWidth = nameColumnWidth.value,
-                            addressWidth = addressColumnWidth.value,
-                            contactWidth = contactColumnWidth.value,
-                            ticketWidth = ticketColumnWidth.value
-                        )
+                    repeat(20) {
+                        customerInfo.forEach { info ->
+                            TableItem(
+                                customerInfo = info,
+                                color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                                nameWidth = nameColumnWidth,
+                                addressWidth = addressColumnWidth,
+                                contactWidth = contactColumnWidth,
+                                ticketWidth = ticketColumnWidth
+                            )
 
-                        Spacer(Modifier.padding(2.dp))
+                            Spacer(Modifier.padding(2.dp))
 
-                        indexed.value++
+                            indexed.value++
+                        }
                     }
                 }
             }
@@ -127,39 +144,23 @@ fun CustomerDataGrid(
 private fun HeaderBox(
     modifier: Modifier = Modifier,
     label: String,
-    width: MutableState<Float>
+    width: Dp,
+    dividerEnable: Boolean = true
 ) {
     Row(
-        modifier = modifier
-            .height(34.dp)
-            .width(width.value.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
+        modifier.width(width),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            modifier = Modifier,
             text = label,
             fontWeight = FontWeight.SemiBold,
             fontSize = 14.sp
         )
-    }
 
-    Row(
-        Modifier
-            .width(22.dp)
-            .draggable(
-                orientation = Orientation.Horizontal,
-                state =
-                    rememberDraggableState { delta ->
-                        width.value += delta
-                    }
-            ),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        VerticalDivider(
-            thickness = 4.dp,
-            color = MaterialTheme.colorScheme.primary
-        )
+        if (dividerEnable) {
+            VerticalDivider(Modifier.height(42.dp), thickness = 3.dp, color = MaterialTheme.colorScheme.primary)
+        }
     }
 }
 
@@ -171,10 +172,10 @@ private fun TableItem(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surface,
     customerInfo: CustomerInfo,
-    nameWidth: Float,
-    addressWidth: Float,
-    contactWidth: Float,
-    ticketWidth: Float,
+    nameWidth: Dp,
+    addressWidth: Dp,
+    contactWidth: Dp,
+    ticketWidth: Dp,
     showEmail: Boolean = true
 ) {
     Surface(
@@ -196,7 +197,7 @@ private fun TableItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             TableItemEntry(
-                modifier = Modifier.width(nameWidth.dp + sizeAdjust.dp),
+                modifier = Modifier.width(nameWidth + sizeAdjust.dp),
                 label = customerInfo.name,
                 resource = Res.drawable.users
             )
@@ -204,7 +205,7 @@ private fun TableItem(
             TableDivider()
 
             TableItemEntry(
-                modifier = Modifier.width(addressWidth.dp + sizeAdjust.dp),
+                modifier = Modifier.width(addressWidth + sizeAdjust.dp),
                 label = customerInfo.address,
                 resource = Res.drawable.navigation
             )
@@ -213,13 +214,13 @@ private fun TableItem(
 
             if (showEmail) {
                 TableItemEntry(
-                    modifier = Modifier.width(contactWidth.dp + sizeAdjust.dp),
+                    modifier = Modifier.width(contactWidth + sizeAdjust.dp),
                     label = customerInfo.contactInfo.email,
                     resource = Res.drawable.mail
                 )
             } else {
                 TableItemEntry(
-                    modifier = Modifier.width(contactWidth.dp + sizeAdjust.dp),
+                    modifier = Modifier.width(contactWidth + sizeAdjust.dp),
                     label = customerInfo.contactInfo.phone.first(),
                     resource = Res.drawable.phone
                 )
@@ -228,7 +229,7 @@ private fun TableItem(
             TableDivider()
 
             TableItemEntry(
-                modifier = Modifier.width(ticketWidth.dp + sizeAdjust.dp),
+                modifier = Modifier.width(ticketWidth + sizeAdjust.dp),
                 label = customerInfo.mostRecentTicket,
                 resource = Res.drawable.tag
             )
@@ -257,6 +258,31 @@ private fun TableItemEntry(
             fontSize = 12.sp
         )
     )
+}
+
+@Composable
+private fun SimpleTableItemEntry(
+    label: String,
+    width: Dp
+) {
+    Box(
+        modifier = Modifier
+            .padding(start = 4.dp)
+            .width(width)
+    ) {
+        TableCardTextItem(label)
+    }
+
+    Row(
+        modifier = Modifier.width(22.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        VerticalDivider(
+            modifier = Modifier.height(40.dp),
+            color = MaterialTheme.colorScheme.primary,
+            thickness = 2.dp
+        )
+    }
 }
 
 @Composable

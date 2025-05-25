@@ -47,6 +47,7 @@ import ticketman.composeapp.generated.resources.chevron_up
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketDatabaseList(
+    isDarkMode: Boolean,
     viewModel: MainViewModel
 ) {
     // State for tab selection
@@ -75,7 +76,7 @@ fun TicketDatabaseList(
                         .wrapContentWidth(),
                     containerColor = Color.Transparent
                 ) {
-                    // Customer Tab
+                    // My Tickets
                     Tab(
                         selected = selectedTab.value == "0",
                         onClick = { viewModel.changeTicketTabIndex("0") },
@@ -90,7 +91,7 @@ fun TicketDatabaseList(
                         }
                     )
 
-                    // Ticket Tab
+                    // All Tickets
                     Tab(
                         selected = selectedTab.value == "1",
                         onClick = { viewModel.changeTicketTabIndex("1") },
@@ -165,9 +166,7 @@ fun TicketDatabaseList(
         Spacer(Modifier.padding(4.dp))
 
         TicketDataGrid(
-            modifier = Modifier
-                .padding(start = 16.dp)
-                .fillMaxWidth()
+            isDarkMode = isDarkMode
         )
     }
 }

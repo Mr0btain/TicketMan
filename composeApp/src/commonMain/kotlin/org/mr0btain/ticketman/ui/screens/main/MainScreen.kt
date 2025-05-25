@@ -105,7 +105,9 @@ fun MainScreen(
                         isDarkMode = isDarkMode
                     )
                 } else {
-                    TicketDatabaseList(viewModel)
+                    TicketDatabaseList(
+                        isDarkMode = isDarkMode,
+                        viewModel = viewModel)
                 }
             }
         }
