@@ -140,7 +140,10 @@ fun CustomerDatabaseList(
                         .weight(0.47f)
                         .height(500.dp),
                     isDarkMode = isDarkMode,
-                    selectedCustomerData = selectedCustomerData.value
+                    selectedCustomerData = selectedCustomerData.value,
+                    onEditClick = {
+                        // TODO: Add logic for this
+                    }
                 )
             }
         }
