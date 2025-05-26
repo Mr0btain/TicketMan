@@ -180,49 +180,59 @@ private fun CustomerTableItem(
         shadowElevation = 4.dp,
         color = color
     ) {
-        val sizeAdjust = -4
-
         Row(
             modifier = Modifier.padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            TableItemEntry(
-                modifier = Modifier.width(nameWidth + sizeAdjust.dp),
-                label = customerInfo.name.firstName + " " + customerInfo.name.lastName,
-                resource = Res.drawable.users
-            )
-
-            TableDivider()
-
-            TableItemEntry(
-                modifier = Modifier.width(addressWidth + sizeAdjust.dp),
-                label = customerInfo.address.street,
-                resource = Res.drawable.navigation
-            )
-
-            TableDivider()
-
-            if (showEmail) {
-                TableItemEntry(
-                    modifier = Modifier.width(contactWidth + sizeAdjust.dp),
-                    label = customerInfo.contactInfo.email,
-                    resource = Res.drawable.mail
-                )
-            } else {
-                TableItemEntry(
-                    modifier = Modifier.width(contactWidth + sizeAdjust.dp),
-                    label = customerInfo.contactInfo.phone.first(),
-                    resource = Res.drawable.phone
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .width(nameWidth - 4.dp)
+            ) {
+                TableCardTextItem(
+                    customerInfo.name.firstName + " " + customerInfo.name.lastName
                 )
             }
 
             TableDivider()
 
-            TableItemEntry(
-                modifier = Modifier.width(ticketWidth + sizeAdjust.dp),
-                label = customerInfo.mostRecentTicket,
-                resource = Res.drawable.tag
-            )
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .width(addressWidth - 6.dp)
+            ) {
+                TableCardTextItem(customerInfo.address.street)
+            }
+
+            TableDivider()
+
+            if (showEmail) {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .width(contactWidth - 8.dp)
+                ) {
+                    TableCardTextItem(customerInfo.contactInfo.email)
+                }
+            } else {
+                Box(
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .width(contactWidth - 6.dp)
+                ) {
+                    TableCardTextItem(customerInfo.contactInfo.phone.first())
+                }
+            }
+
+            TableDivider()
+
+            Box(
+                modifier = Modifier
+                    .padding(start = 4.dp)
+                    .width(ticketWidth - 8.dp)
+            ) {
+                TableCardTextItem(customerInfo.mostRecentTicket)
+            }
         }
     }
 }

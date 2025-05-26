@@ -26,7 +26,6 @@ import org.mr0btain.ticketman.components.data.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.VerticalScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
-import org.mr0btain.ticketman.ui.theme.ExtendedColorScheme
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 
@@ -114,7 +113,7 @@ fun TicketDataGrid(
                     val indexed = remember { mutableIntStateOf(0) }
 
                     repeat(20) {
-                        TableItem(
+                        TicketTableItem(
                             color = if (!isDarkMode) {
                                 if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                             } else {
@@ -165,7 +164,7 @@ private fun HeaderBox(
 // TODO: Make onclick go to customer details screen when its done. or a popup?
 
 @Composable
-private fun TableItem(
+private fun TicketTableItem(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surface,
     ticketInfo: TicketInfo,
@@ -175,8 +174,6 @@ private fun TableItem(
     statusWidth: Dp,
     isDarkMode: Boolean
 ) {
-    val yellowColor = Color(red = 230, green = 218, blue = 2)
-    val greenColor = Color(red = 6, green = 138, blue = 52)
 
     Surface(
         modifier = modifier
