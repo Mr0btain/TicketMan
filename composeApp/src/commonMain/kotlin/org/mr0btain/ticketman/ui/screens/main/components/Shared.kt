@@ -1,16 +1,10 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,7 +37,9 @@ fun TableStatusItem(
            fontSize = textStyle.fontSize,
            fontFamily = textStyle.fontFamily,
            textAlign = textStyle.textAlign,
-           color = textStyle.color
+           color = textStyle.color,
+           maxLines = 3,
+           overflow = TextOverflow.Ellipsis
        )
    }
 }
@@ -58,7 +54,7 @@ fun TableCardTextItem(
         fontWeight = FontWeight.SemiBold,
         fontSize = 12.sp,
         overflow = TextOverflow.Ellipsis,
-        maxLines = 1
+        maxLines = 3
     )
 }
 
@@ -93,7 +89,7 @@ fun IconText(
                 color = textStyle.color,
                 textAlign = textStyle.textAlign,
                 fontFamily = textStyle.fontFamily,
-                maxLines = 1,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis
             )
         }

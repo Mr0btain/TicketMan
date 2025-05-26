@@ -1,11 +1,13 @@
-package org.mr0btain.ticketman.components
+package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.mr0btain.ticketman.components.data.ContactInfo
+import org.mr0btain.ticketman.components.data.CustomerData
 import org.mr0btain.ticketman.components.data.CustomerInfo
+import org.mr0btain.ticketman.components.data.generateMockCustomerData
 import org.mr0btain.ticketman.getPlatform
 
 /**
@@ -27,33 +29,34 @@ class MainViewModel(): ViewModel() {
     private val _selectedTicketTabIndex: MutableStateFlow<String> = MutableStateFlow("0")
     var selectedTicketTabIndex = _selectedTicketTabIndex.asStateFlow()
 
+    // Selected Customer data
+    private val _customerDataList: MutableStateFlow<List<CustomerData>> = MutableStateFlow(generateMockCustomerData(40))
+    var customerDataList = _customerDataList.asStateFlow()
+
+
+    // Selected Customer data
+    private val _selectedCustomerData: MutableStateFlow<CustomerData> = MutableStateFlow(CustomerData())
+    var selectedCustomerData = _selectedCustomerData.asStateFlow()
 
 
 
-
-
-
+    // Call to change customer data
+    fun changeSelectedCustomerData(customerData: CustomerData) {
+        _selectedCustomerData.value = customerData
+    }
 
     // To update the main tab index
     fun changeMainTabIndex(update: String) {
         _selectedMainTabIndex.value = update
     }
 
+    // To update customer data list
+    fun changeCustomerDataList(list: List<CustomerData>) {
+        _customerDataList.value = list
+    }
+
     // To update the ticket tab index
     fun changeTicketTabIndex(update: String) {
         _selectedTicketTabIndex.value = update
     }
-
-    // For testing
-    val mockCustomerInfoList = listOf(
-        CustomerInfo("Jane Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("Jack Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("Nathan Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("James Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("George Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("Jane Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("Jane Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("Jane Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-        CustomerInfo("Jane Doe", "123 Wallaby way", ContactInfo("janedoe@gmail.com", listOf("8145678765")), "123"),
-    )
 }

@@ -3,15 +3,15 @@ package org.mr0btain.ticketman.ui.screens.main
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.mr0btain.ticketman.components.MainViewModel
-import org.mr0btain.ticketman.ui.composables.SearchTextField
-import org.mr0btain.ticketman.ui.composables.TicketDataGrid
+import org.mr0btain.ticketman.components.data.generateMockCustomerData
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDatabaseList
 import org.mr0btain.ticketman.ui.screens.main.components.TicketDatabaseList
 
@@ -99,15 +99,15 @@ fun MainScreen(
 
                 if (tabIndex.value == "0") {
                     CustomerDatabaseList(
-                        customerInfoList = viewModel.mockCustomerInfoList,
-                        scrollBarTop = scrollBarTop,
-                        scrollBarRight = scrollBarRight,
+                        viewModel = viewModel,
                         isDarkMode = isDarkMode
                     )
                 } else {
                     TicketDatabaseList(
                         isDarkMode = isDarkMode,
-                        viewModel = viewModel)
+                        viewModel = viewModel,
+                        scrollOnRight = scrollBarRight
+                    )
                 }
             }
         }

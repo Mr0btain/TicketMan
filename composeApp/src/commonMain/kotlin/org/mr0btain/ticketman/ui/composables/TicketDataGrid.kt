@@ -26,12 +26,16 @@ import org.mr0btain.ticketman.components.data.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.VerticalScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
+import org.mr0btain.ticketman.ui.theme.ExtendedColorScheme
+import org.mr0btain.ticketman.ui.theme.extendedDark
+import org.mr0btain.ticketman.ui.theme.extendedLight
 
 @Composable
 fun TicketDataGrid(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    ticketInfo: List<TicketInfo> = listOf()
+    ticketInfo: List<TicketInfo> = listOf(),
+    scrollOnRight: Boolean
 ) {
 
 // Ticket #  |  Priority  |   Last Note   |   Status
@@ -52,7 +56,7 @@ fun TicketDataGrid(
             .padding(8.dp),
         shape = RoundedCornerShape(10.dp),
         shadowElevation = 10.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -99,7 +103,8 @@ fun TicketDataGrid(
             VerticalScrollBar(
                 modifier = Modifier.wrapContentSize(),
                 scope = scope,
-                clipToContent = true
+                clipToContent = true,
+                scrollBarOnRight = scrollOnRight
             ) {
                 Column(
                     modifier = Modifier.horizontalScroll(horizontalScrollState)
@@ -110,22 +115,17 @@ fun TicketDataGrid(
 
                     repeat(20) {
                         TableItem(
-                            color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                            ticketInfo = TicketInfo(
-                                "1234",
-                                Device("Apple", "IPhone16"),
-                                randomTicketStatus(),
-                                randomTicketPriority(),
-                                notes = listOf(
-                                    Note(
-                                        "Mr. Author",
-                                        "Still working on the device"
-                                    )
-                                )),
+                            color = if (!isDarkMode) {
+                                if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (indexed.value % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            ticketInfo = generateRandomTicket("123"),
                             numberWidth = numberColumnWidth,
                             priorityWidth = priorityColumnWidth,
                             noteWidth = noteColumnWidth,
-                            statusWidth = statusColumnWidth
+                            statusWidth = statusColumnWidth,
+                            isDarkMode = isDarkMode
                         )
 
                         Spacer(Modifier.padding(2.dp))
@@ -172,7 +172,8 @@ private fun TableItem(
     numberWidth: Dp,
     priorityWidth: Dp,
     noteWidth: Dp,
-    statusWidth: Dp
+    statusWidth: Dp,
+    isDarkMode: Boolean
 ) {
     val yellowColor = Color(red = 230, green = 218, blue = 2)
     val greenColor = Color(red = 6, green = 138, blue = 52)
@@ -233,7 +234,7 @@ private fun TableItem(
                     backgroundColor = when (ticketInfo.priority) {
                         TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
                         TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
-                        TicketPriority.HIGH -> yellowColor
+                        TicketPriority.HIGH -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
                         TicketPriority.URGENT -> MaterialTheme.colorScheme.error
                     }
                 )
@@ -285,9 +286,9 @@ private fun TableItem(
                         TextStyle.Default.copy(fontSize = 12.sp)
                     } else TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary),
                     backgroundColor = when (ticketInfo.status) {
-                        TicketStatus.IN_PROGRESS -> MaterialTheme.colorScheme.secondary
+                        TicketStatus.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
                         TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
-                        TicketStatus.DONE -> greenColor
+                        TicketStatus.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
                     }
                 )
 

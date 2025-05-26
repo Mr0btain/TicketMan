@@ -7,8 +7,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ElevatedButton
@@ -16,6 +18,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,7 +27,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.CustomerInfo
 import org.mr0btain.ticketman.ui.composables.CustomerDataGrid
 import org.mr0btain.ticketman.ui.composables.SearchTextField
 import ticketman.composeapp.generated.resources.Res
@@ -34,17 +36,20 @@ import ticketman.composeapp.generated.resources.chevron_up
 @Composable
 fun CustomerDatabaseList(
     modifier: Modifier = Modifier,
-    customerInfoList: List<CustomerInfo>,
-    scrollBarTop: Boolean,
-    scrollBarRight: Boolean,
+    viewModel: MainViewModel,
+    scrollBarTop: Boolean = false,
+    scrollBarRight: Boolean = true,
     isDarkMode: Boolean
 ) {
     // Search bar state
     var showSearchBar by remember { mutableStateOf(false) }
 
+    // Customer data
+    val selectedCustomerData = viewModel.selectedCustomerData.collectAsState()
+    val customerInfoList = viewModel.customerDataList.collectAsState()
+
     Surface(
         modifier = modifier
-
     ) {
         Column(
             horizontalAlignment = Alignment.Start,
@@ -113,14 +118,31 @@ fun CustomerDatabaseList(
                 }
             }
 
+            Row(
+                modifier = Modifier
+                    .wrapContentHeight()
+                    .fillMaxWidth()
+            ) {
+                CustomerDataGrid(
+                    modifier = Modifier
+                        .weight(0.53f)
+                        .height(500.dp),
+                    customerInfo = customerInfoList.value.map { it.info },
+                    scrollBarRight = scrollBarRight,
+                    isDarkMode = isDarkMode,
+                    onClick = { id ->
+                        viewModel.changeSelectedCustomerData(viewModel.customerDataList.value.filter { it.info.id == id }.first())
+                    }
+                )
 
-            CustomerDataGrid(
-                modifier = Modifier,
-                customerInfo = customerInfoList,
-                scrollBarTop = scrollBarTop,
-                scrollBarRight = scrollBarRight,
-                isDarkMode = isDarkMode
-            )
+                CustomerInfoItem(
+                    modifier = modifier
+                        .weight(0.47f)
+                        .height(500.dp),
+                    isDarkMode = isDarkMode,
+                    selectedCustomerData = selectedCustomerData.value
+                )
+            }
         }
     }
 }

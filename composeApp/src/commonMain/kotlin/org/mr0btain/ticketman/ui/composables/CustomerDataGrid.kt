@@ -1,20 +1,18 @@
 package org.mr0btain.ticketman.ui.composables
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
-import androidx.compose.runtime.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,22 +24,16 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.CustomerInfo
-import org.mr0btain.ticketman.ui.composables.scrollbar.HorizontalScrollBar
 import org.mr0btain.ticketman.ui.composables.scrollbar.VerticalScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.IconText
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.mail
-import ticketman.composeapp.generated.resources.navigation
-import ticketman.composeapp.generated.resources.phone
-import ticketman.composeapp.generated.resources.tag
-import ticketman.composeapp.generated.resources.users
+import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun CustomerDataGrid(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
-    scrollBarTop: Boolean,
+    onClick: (id: String) -> Unit,
     scrollBarRight: Boolean,
     isDarkMode: Boolean
 ) {
@@ -59,9 +51,9 @@ fun CustomerDataGrid(
         modifier = modifier
             .wrapContentSize()
             .padding(8.dp),
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = 10.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 4.dp,
+        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -105,37 +97,36 @@ fun CustomerDataGrid(
 
             HorizontalDivider(modifier = Modifier.width(746.dp))
 
+            LazyColumn {
+                itemsIndexed(customerInfo) { index, info ->
+                    CustomerTableItem(
+                        customerInfo = info,
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        nameWidth = nameColumnWidth,
+                        addressWidth = addressColumnWidth,
+                        contactWidth = contactColumnWidth,
+                        ticketWidth = ticketColumnWidth,
+                        onClick = onClick
+                    )
+
+                    Spacer(Modifier.padding(2.dp))
+                }
+            }
+
+            /*
             VerticalScrollBar(
                 modifier = Modifier.wrapContentSize(),
                 scope = scope,
                 clipToContent = true,
                 scrollBarOnRight = scrollBarRight
             ) {
-                Column(
-                    modifier = Modifier.horizontalScroll(horizontalScrollState)
-                ) {
-                    // Almost have to use manual indexing to alternate item colors. If you use forEachIndexed or something of the like
-                    // it ends up producing wrong values for some reason
-                    val indexed = remember { mutableIntStateOf(0) }
 
-                    repeat(20) {
-                        customerInfo.forEach { info ->
-                            TableItem(
-                                customerInfo = info,
-                                color = if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                                nameWidth = nameColumnWidth,
-                                addressWidth = addressColumnWidth,
-                                contactWidth = contactColumnWidth,
-                                ticketWidth = ticketColumnWidth
-                            )
-
-                            Spacer(Modifier.padding(2.dp))
-
-                            indexed.value++
-                        }
-                    }
-                }
             }
+             */
         }
     }
 }
@@ -159,7 +150,7 @@ private fun HeaderBox(
         )
 
         if (dividerEnable) {
-            VerticalDivider(Modifier.height(42.dp), thickness = 3.dp, color = MaterialTheme.colorScheme.primary)
+            VerticalDivider(Modifier.height(42.dp), thickness = 3.dp, color = MaterialTheme.colorScheme.secondary)
         }
     }
 }
@@ -168,8 +159,9 @@ private fun HeaderBox(
 // TODO: Make icon reflect if there is a ticket not completed?
 
 @Composable
-private fun TableItem(
+private fun CustomerTableItem(
     modifier: Modifier = Modifier,
+    onClick: (id: String) -> Unit,
     color: Color = MaterialTheme.colorScheme.surface,
     customerInfo: CustomerInfo,
     nameWidth: Dp,
@@ -182,9 +174,7 @@ private fun TableItem(
         modifier = modifier
             .padding(2.dp)
             .clickable(
-                onClick = {
-                    // Do something
-                }
+                onClick = { onClick(customerInfo.id) }
             ),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp,
@@ -198,7 +188,7 @@ private fun TableItem(
         ) {
             TableItemEntry(
                 modifier = Modifier.width(nameWidth + sizeAdjust.dp),
-                label = customerInfo.name,
+                label = customerInfo.name.firstName + " " + customerInfo.name.lastName,
                 resource = Res.drawable.users
             )
 
@@ -206,7 +196,7 @@ private fun TableItem(
 
             TableItemEntry(
                 modifier = Modifier.width(addressWidth + sizeAdjust.dp),
-                label = customerInfo.address,
+                label = customerInfo.address.street,
                 resource = Res.drawable.navigation
             )
 
@@ -279,7 +269,7 @@ private fun SimpleTableItemEntry(
     ) {
         VerticalDivider(
             modifier = Modifier.height(40.dp),
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.secondary,
             thickness = 2.dp
         )
     }
@@ -293,7 +283,7 @@ private fun TableDivider() {
     ) {
         VerticalDivider(
             modifier = Modifier.height(40.dp),
-            color = MaterialTheme.colorScheme.primary,
+            color = MaterialTheme.colorScheme.secondary,
             thickness = 2.dp
         )
     }

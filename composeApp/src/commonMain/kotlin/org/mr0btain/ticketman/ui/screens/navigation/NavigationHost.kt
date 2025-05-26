@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import org.mr0btain.ticketman.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen

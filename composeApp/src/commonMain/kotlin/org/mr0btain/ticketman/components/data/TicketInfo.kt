@@ -3,11 +3,12 @@ package org.mr0btain.ticketman.components.data
 import kotlin.random.Random
 
 data class TicketInfo(
-    val id: String,
-    val device: Device,
-    val status: TicketStatus,
-    val priority: TicketPriority,
-    val notes: List<Note>
+    val id: String = "",
+    val customerId: String = "",
+    val device: Device = Device("", ""),
+    val status: TicketStatus = TicketStatus.DONE,
+    val priority: TicketPriority = TicketPriority.NORMAL,
+    val notes: List<Note> = listOf()
 )
 
 enum class TicketStatus {

@@ -7,14 +7,13 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
-import org.jetbrains.compose.ui.tooling.preview.Preview
+import org.mr0btain.ticketman.ui.theme.AppTheme
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
-import org.mr0btain.ticketman.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.DrawerNav
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
-import ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
