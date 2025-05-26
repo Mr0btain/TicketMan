@@ -6,10 +6,9 @@ import kotlin.uuid.Uuid
 
 fun generateMockCustomerData(num: Int): List<CustomerData> {
     val data = mutableListOf<CustomerData>()
-
     val ids = mutableListOf<Int>()
 
-    for (i in 0..num) {
+    (0..num).forEach { i ->
         var id = Random.nextInt(100, 99999)
 
         while (ids.contains(id)) {
@@ -20,7 +19,14 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
 
         val name = generateRandomName()
         val tickets = mutableListOf<TicketInfo>()
+        val notes = mutableListOf<Note>()
 
+        // Generate notes
+        (0..Random.nextInt(0, 4)).forEach { _ ->
+            notes.add(generateCustomerNote())
+        }
+
+        // Generate tickets
         (0 .. Random.nextInt(1, 10)).forEach { i ->
             tickets.add(generateRandomTicket(id.toString()))
         }
@@ -35,7 +41,7 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
                     mostRecentTicket = tickets.last().id
                 ),
                 tickets = tickets,
-                notes = if (id % 3 == 0) listOf(generateCustomerNote()) else listOf()
+                notes = notes
             )
         )
     }
@@ -187,14 +193,20 @@ private fun generateRandomContactInfo(firstName: String? = null, lastName: Strin
     val numberPart = Random.nextInt(10, 99)
     val email = "$fName.$lName$numberPart@${domains.random()}".lowercase()
 
+    val phone = mutableListOf<String>()
+
     // Random US-style phone number (XXX-XXX-XXXX)
-    val phone = buildString {
-        append(Random.nextInt(200, 999))  // Area code
-        append("-")
-        append(Random.nextInt(100, 999))  // Prefix
-        append("-")
-        append(Random.nextInt(1000, 9999)) // Line number
+    (0..Random.nextInt(0, 4)).forEach { _ ->
+        phone.add(
+            buildString {
+                append(Random.nextInt(200, 999))  // Area code
+                append("-")
+                append(Random.nextInt(100, 999))  // Prefix
+                append("-")
+                append(Random.nextInt(1000, 9999)) // Line number
+            }
+        )
     }
 
-    return ContactInfo(email, listOf(phone))
+    return ContactInfo(email, phone)
 }
