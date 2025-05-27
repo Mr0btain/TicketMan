@@ -11,12 +11,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.mr0btain.ticketman.components.data.UserSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsSwitchItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsTextItem
@@ -69,7 +72,7 @@ fun SettingsScreen(
                         icon = painterResource(Res.drawable.server),
                         iconDesc = "Description",
                         state = viewModel.serverAddress.collectAsState(),
-                        onSave = { finalText -> viewModel.saveText(finalText) },
+                        onSave = { finalText -> viewModel.saveServerAddress(finalText) },
                         inputFilter = { text -> text },
                         onCheck = { text -> viewModel.checkWebAddress(text) },
                         keyboardType = KeyboardType.Text

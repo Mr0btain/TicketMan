@@ -1,10 +1,58 @@
 package org.mr0btain.ticketman.ui.screens.settings.components
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.data.PreferenceStore
+import org.mr0btain.ticketman.components.data.UserSettings
+import org.mr0btain.ticketman.components.data.UserSettingsDataStatus
 
-class SettingsViewModel: ViewModel() {
+class SettingsViewModel(
+    private val preferenceStore: PreferenceStore,
+    private val dispatcher : CoroutineDispatcher
+): ViewModel() {
+
+    // For updating and getting settings
+    private val _userSettingsDataState : MutableStateFlow<UserSettingsDataStatus> = MutableStateFlow(UserSettingsDataStatus.LOADING)
+    val userSettingsState = _userSettingsDataState.asStateFlow()
+
+    // TODO: Setup error saving and such
+    fun getUserSettings() {
+        viewModelScope.launch(dispatcher) {
+            _userSettingsDataState.value = UserSettingsDataStatus.LOADING
+
+            try {
+                preferenceStore.getSettings().collect{
+                    _userSettingsDataState.value = UserSettingsDataStatus.SUCCESS
+
+                    _isDarkMode.value = it.darkMode
+                    _serverAddress.value = it.serverAddress
+                    _scrollBarOnRight.value = it.verticalScrollRight
+                    _scrollBarOnTop.value = it.horizontalScrollTop
+                }
+            } catch (e: Exception){
+                _userSettingsDataState.value = UserSettingsDataStatus.ERROR
+            }
+        }
+    }
+
+    fun updateUserSettings(){
+        viewModelScope.launch(dispatcher) {
+            preferenceStore.saveSettings(
+                UserSettings(
+                    darkMode = _isDarkMode.value,
+                    serverAddress = _serverAddress.value,
+                    verticalScrollRight = _scrollBarOnRight.value,
+                    horizontalScrollTop = _scrollBarOnTop.value
+                )
+            )
+
+            //_userState.value = PreferenceDataState.SUCCESS(settings)
+        }
+    }
 
     // First basic group
 
@@ -41,29 +89,44 @@ class SettingsViewModel: ViewModel() {
     // Functions to change settings
 
     fun toggleDarkMode(){
+        // Update the value
         _isDarkMode.value = !_isDarkMode.value
-        // here is place for permanent storage handling
+
+        // Save it
+        updateUserSettings()
     }
 
     fun toggleScrollBarOnRight(){
+        // Update value
         _scrollBarOnRight.value = !_scrollBarOnRight.value
-        // here is place for permanent storage handling
+
+        // Save it
+        updateUserSettings()
     }
 
     fun toggleScrollBarOnTop(){
+        // Update value
         _scrollBarOnTop.value = !_scrollBarOnTop.value
-        // here is place for permanent storage handling
+
+        // Save it
+        updateUserSettings()
     }
 
 
     fun toggleSwitch(){
+        // Update value
         _isSwitchOn.value = !_isSwitchOn.value
-        // here is place for permanent storage handling - switch
+
+        // Save it
+        updateUserSettings()
     }
 
-    fun saveText(finalText: String) {
+    fun saveServerAddress(finalText: String) {
+        // update value
         _serverAddress.value = finalText
-        // place to store text
+
+        // Save it
+        updateUserSettings()
     }
 
     // just checking, if it is not empty - but you can check anything
@@ -98,8 +161,11 @@ class SettingsViewModel: ViewModel() {
 
     // saving the number / show error if something goes wrong
     fun saveNumber(text: String) {
+        // Update value
         _numberPreference.value = text
-        //val value = text.toDoubleOrNull() ?: 0 // default value / handle the error in some way - show toast or something
+
+        // Save it
+        updateUserSettings()
     }
 
     companion object {

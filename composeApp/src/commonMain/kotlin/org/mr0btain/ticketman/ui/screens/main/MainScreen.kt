@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.generateMockCustomerData
+import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDatabaseList
 import org.mr0btain.ticketman.ui.screens.main.components.TicketDatabaseList

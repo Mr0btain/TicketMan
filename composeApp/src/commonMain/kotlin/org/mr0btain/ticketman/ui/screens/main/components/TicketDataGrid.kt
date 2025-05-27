@@ -1,8 +1,11 @@
-package org.mr0btain.ticketman.ui.composables
+package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -24,8 +27,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.VerticalScrollBar
-import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
-import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 
@@ -99,40 +100,36 @@ fun TicketDataGrid(
 
             HorizontalDivider(modifier = Modifier.width(850.dp))
 
+            LazyColumn {
+                itemsIndexed(ticketInfo) { index, item ->
+                    TicketTableItem(
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        ticketInfo = item,
+                        numberWidth = numberColumnWidth,
+                        priorityWidth = priorityColumnWidth,
+                        noteWidth = noteColumnWidth,
+                        statusWidth = statusColumnWidth,
+                        isDarkMode = isDarkMode
+                    )
+
+                    Spacer(Modifier.padding(2.dp))
+                }
+            }
+
+            /*
             VerticalScrollBar(
                 modifier = Modifier.wrapContentSize(),
                 scope = scope,
                 clipToContent = true,
                 scrollBarOnRight = scrollOnRight
             ) {
-                Column(
-                    modifier = Modifier.horizontalScroll(horizontalScrollState)
-                ) {
-                    // Almost have to use manual indexing to alternate item colors. If you use forEachIndexed or something of the like
-                    // it ends up producing wrong values for some reason
-                    val indexed = remember { mutableIntStateOf(0) }
 
-                    repeat(20) {
-                        TicketTableItem(
-                            color = if (!isDarkMode) {
-                                if (indexed.value % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (indexed.value % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            ticketInfo = generateRandomTicket("123"),
-                            numberWidth = numberColumnWidth,
-                            priorityWidth = priorityColumnWidth,
-                            noteWidth = noteColumnWidth,
-                            statusWidth = statusColumnWidth,
-                            isDarkMode = isDarkMode
-                        )
-
-                        Spacer(Modifier.padding(2.dp))
-
-                        indexed.value++
-                    }
-                }
             }
+             */
         }
     }
 }

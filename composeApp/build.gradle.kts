@@ -35,6 +35,7 @@ kotlin {
     
     jvm("desktop")
     
+    /*
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         moduleName = "composeApp"
@@ -54,6 +55,7 @@ kotlin {
         }
         binaries.executable()
     }
+     */
     
     sourceSets {
         val desktopMain by getting
@@ -62,6 +64,7 @@ kotlin {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
         }
+
         commonMain.dependencies {
             implementation(compose.runtime)
             implementation(compose.foundation)
@@ -83,10 +86,16 @@ kotlin {
 
             // Window Size class
             implementation(libs.window.size.multiplatform)
+
+            // Datastore
+            implementation(libs.datastore.preferences)
+            implementation(libs.datastore)
         }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
+
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)

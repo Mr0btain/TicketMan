@@ -18,17 +18,11 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
         ids.add(id)
 
         val name = generateRandomName()
-        val tickets = mutableListOf<TicketInfo>()
         val notes = mutableListOf<Note>()
 
         // Generate notes
         (0..Random.nextInt(0, 4)).forEach { _ ->
             notes.add(generateCustomerNote())
-        }
-
-        // Generate tickets
-        (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(id.toString()))
         }
 
         data.add(
@@ -38,15 +32,46 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
                     name = name,
                     address = generateRandomAddress(),
                     contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
-                    mostRecentTicket = tickets.last().id
+                    mostRecentTicket = ""
                 ),
-                tickets = tickets,
                 notes = notes
             )
         )
     }
 
     return data
+}
+
+fun generateMockData(num: Int): Pair<List<CustomerData>, List<TicketInfo>> {
+    // Generate some mock customer data
+    val customerData = generateMockCustomerData(num)
+
+    // Hold the new data
+    val newCustomerData = mutableListOf<CustomerData>()
+    val result = mutableListOf<TicketInfo>()
+
+    customerData.forEach { item ->
+        val tickets = mutableListOf<TicketInfo>()
+        val ticketIds = mutableListOf<String>()
+
+        // Generate tickets
+        (0 .. Random.nextInt(1, 10)).forEach { i ->
+            tickets.add(generateRandomTicket(item.info.id))
+        }
+
+        // Make a list of ticket ids
+        tickets.forEach { tick ->
+            ticketIds.add(tick.id)
+        }
+
+        // Update the customer data
+        newCustomerData.add(item.copy(tickets = ticketIds, info = item.info.copy(mostRecentTicket = tickets.last().id)))
+
+        // Add the tickets to the result
+        result.addAll(tickets)
+    }
+
+    return Pair(newCustomerData, result)
 }
 
 private fun generateRandomAddress(): Address {

@@ -164,7 +164,7 @@ fun SmallTicketList(
                 modifier = Modifier
                     .padding(4.dp)
             ) {
-                items(tickets) { ticket ->
+                items(tickets.reversed()) { ticket ->
                     Surface(
                         modifier = Modifier
                             .padding(8.dp)

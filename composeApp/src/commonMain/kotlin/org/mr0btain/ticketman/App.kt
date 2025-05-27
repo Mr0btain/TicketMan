@@ -9,7 +9,9 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
 import org.mr0btain.ticketman.ui.theme.AppTheme
 import org.koin.compose.KoinContext
+import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
+import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.DrawerNav
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
@@ -32,7 +34,15 @@ fun App() {
         // Main scope to use with coroutines
         val mainScope = rememberCoroutineScope()
 
-        //
+        // Make some mock data
+        val (mockCustomers, mockTickets) = generateMockData(40)
+
+        // Update it in view model
+        mainViewModel.changeCustomerDataList(mockCustomers)
+        mainViewModel.changeTicketDataList(mockTickets)
+
+        // Get our stored settings
+        settingsViewModel.getUserSettings()
 
         AppTheme(
             darkTheme = settingsViewModel.isDarkMode.collectAsState().value

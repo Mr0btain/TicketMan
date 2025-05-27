@@ -98,7 +98,7 @@ fun CustomerDataGrid(
             HorizontalDivider(modifier = Modifier.width(746.dp))
 
             LazyColumn {
-                itemsIndexed(customerInfo) { index, info ->
+                itemsIndexed(customerInfo.sortedBy { it.name.firstName + it.name.lastName }) { index, info ->
                     CustomerTableItem(
                         customerInfo = info,
                         color = if (!isDarkMode) {

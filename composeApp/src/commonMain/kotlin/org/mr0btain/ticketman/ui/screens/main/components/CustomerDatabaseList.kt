@@ -131,7 +131,7 @@ fun CustomerDatabaseList(
                     scrollBarRight = scrollBarRight,
                     isDarkMode = isDarkMode,
                     onClick = { id ->
-                        viewModel.changeSelectedCustomerData(viewModel.customerDataList.value.filter { it.info.id == id }.first())
+                        viewModel.changeSelectedCustomerData(viewModel.getCustomerData(id))
                     }
                 )
 
@@ -143,7 +143,8 @@ fun CustomerDatabaseList(
                     selectedCustomerData = selectedCustomerData.value,
                     onEditClick = {
                         // TODO: Add logic for this
-                    }
+                    },
+                    tickets = viewModel.getTicketsForCustomer(selectedCustomerData.value.info.id)
                 )
             }
         }

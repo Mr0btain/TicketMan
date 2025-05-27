@@ -11,9 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.composables.SearchTextField
-import org.mr0btain.ticketman.ui.composables.TicketDataGrid
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
@@ -146,7 +144,8 @@ fun TicketDatabaseList(
 
             TicketDataGrid(
                 isDarkMode = isDarkMode,
-                scrollOnRight = scrollOnRight
+                scrollOnRight = scrollOnRight,
+                ticketInfo = viewModel.ticketDataList.value
             )
         }
     }
