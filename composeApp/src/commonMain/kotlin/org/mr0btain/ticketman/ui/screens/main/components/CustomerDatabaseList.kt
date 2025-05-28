@@ -125,7 +125,6 @@ fun CustomerDatabaseList(
             ) {
                 CustomerDataGrid(
                     modifier = Modifier
-                        .weight(0.53f)
                         .height(500.dp),
                     customerInfo = customerInfoList.value.map { it.info },
                     scrollBarRight = scrollBarRight,
@@ -137,7 +136,6 @@ fun CustomerDatabaseList(
 
                 CustomerInfoItem(
                     modifier = modifier
-                        .weight(0.47f)
                         .height(500.dp),
                     isDarkMode = isDarkMode,
                     selectedCustomerData = selectedCustomerData.value,

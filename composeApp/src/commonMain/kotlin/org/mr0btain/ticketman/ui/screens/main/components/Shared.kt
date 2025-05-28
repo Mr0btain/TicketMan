@@ -214,6 +214,8 @@ fun SmallTicketList(
                                     fontSize = 14.sp
                                 )
 
+                                Spacer(Modifier.padding(2.dp))
+
                                 Text(
                                     text = ticket.device.model,
                                     fontSize = 14.sp

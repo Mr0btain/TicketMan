@@ -1,33 +1,21 @@
 package org.mr0btain.ticketman.ui.composables
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.DrawableResource
-import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.CustomerInfo
-import org.mr0btain.ticketman.ui.composables.scrollbar.VerticalScrollBar
-import org.mr0btain.ticketman.ui.screens.main.components.IconText
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
-import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun CustomerDataGrid(
@@ -41,11 +29,7 @@ fun CustomerDataGrid(
     val nameColumnWidth = 200.dp
     val addressColumnWidth = 200.dp
     val contactColumnWidth = 200.dp
-    val ticketColumnWidth = 120.dp
-
-    // Scroll stuff
-    val horizontalScrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
+    val ticketColumnWidth = 60.dp
 
     Surface(
         modifier = modifier
@@ -58,7 +42,7 @@ fun CustomerDataGrid(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 16.dp, end = 16.dp)
+                .padding(start = 16.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -67,28 +51,28 @@ fun CustomerDataGrid(
             ) {
                 Spacer(Modifier.padding(10.dp))
 
-                HeaderBox(
+                CustomerHeaderBox(
                     label = "Name",
                     width = nameColumnWidth
                 )
 
                 Spacer(Modifier.padding(9.dp))
 
-                HeaderBox(
+                CustomerHeaderBox(
                     label = "Address",
                     width = addressColumnWidth
                 )
 
                 Spacer(Modifier.padding(9.dp))
 
-                HeaderBox(
+                CustomerHeaderBox(
                     label = "Contact",
                     width = contactColumnWidth
                 )
 
                 Spacer(Modifier.padding(10.dp))
 
-                HeaderBox(
+                CustomerHeaderBox(
                     label = "Last Ticket",
                     width = ticketColumnWidth,
                     dividerEnable = false
@@ -132,7 +116,7 @@ fun CustomerDataGrid(
 }
 
 @Composable
-private fun HeaderBox(
+private fun CustomerHeaderBox(
     modifier: Modifier = Modifier,
     label: String,
     width: Dp,
@@ -234,54 +218,6 @@ private fun CustomerTableItem(
                 TableCardTextItem(customerInfo.mostRecentTicket)
             }
         }
-    }
-}
-
-@Composable
-private fun TableItemEntry(
-    modifier: Modifier = Modifier,
-    label: String,
-    resource: DrawableResource
-) {
-    IconText(
-        modifier = modifier,
-        leadingIcon = {
-            Icon(
-                modifier = Modifier.size(16.dp),
-                painter = painterResource(resource),
-                contentDescription = ""
-            )
-        },
-        label = label,
-        textStyle = TextStyle.Default.copy(
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp
-        )
-    )
-}
-
-@Composable
-private fun SimpleTableItemEntry(
-    label: String,
-    width: Dp
-) {
-    Box(
-        modifier = Modifier
-            .padding(start = 4.dp)
-            .width(width)
-    ) {
-        TableCardTextItem(label)
-    }
-
-    Row(
-        modifier = Modifier.width(22.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        VerticalDivider(
-            modifier = Modifier.height(40.dp),
-            color = MaterialTheme.colorScheme.secondary,
-            thickness = 2.dp
-        )
     }
 }
 
