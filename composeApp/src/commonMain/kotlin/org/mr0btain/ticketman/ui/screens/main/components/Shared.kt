@@ -2,19 +2,16 @@ package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +26,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.fastReduce
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.TicketInfo
 import org.mr0btain.ticketman.components.data.TicketStatus
@@ -168,7 +164,7 @@ fun SmallTicketList(
                         modifier = Modifier
                             .padding(8.dp)
                             .clickable(
-                                onClick = { onClick(ticket.id) }
+                                onClick = { onClick(ticket.idNum) }
                             ),
                         shape = RoundedCornerShape(10.dp),
                         shadowElevation = 4.dp,
@@ -183,7 +179,7 @@ fun SmallTicketList(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Text(
-                                    text = ticket.id,
+                                    text = ticket.idNum,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )

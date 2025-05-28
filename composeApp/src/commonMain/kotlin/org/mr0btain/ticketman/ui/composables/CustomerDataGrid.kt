@@ -196,7 +196,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 8.dp)
                 ) {
-                    TableCardTextItem(customerInfo.contactInfo.email)
+                    TableCardTextItem(customerInfo.contactInfo.email.first())
                 }
             } else {
                 Box(

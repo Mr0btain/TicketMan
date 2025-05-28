@@ -11,7 +11,8 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.TicketInfo
-import org.mr0btain.ticketman.components.data.components.UserSettings
+import org.mr0btain.ticketman.components.data.database.SqliteDb
+import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.getPlatform
 
 /**
@@ -20,7 +21,8 @@ Used to store data that needs to persist for the lifetime of the app and be used
  */
 
 class MainViewModel(
-    private val fileManager: FileManager
+    private val fileManager: FileManager,
+    private val database: SqliteDb
 ): ViewModel() {
     val topAppBarText = mutableStateOf("Main")
     val platform = getPlatform().name
@@ -85,7 +87,7 @@ class MainViewModel(
         val result = mutableListOf<TicketInfo>()
 
         _ticketDataList.value.forEach {
-            if (tickets.contains(it.id)) {
+            if (tickets.contains(it.idNum)) {
                 result.add(it)
             }
         }
@@ -126,5 +128,30 @@ class MainViewModel(
         viewModelScope.launch {
             FileKit.openFilePicker()
         }
+    }
+
+    // TODO: Need to really flesh this out better
+    fun updateDataFromDb() {
+        // Read data from mock db and update it in view model
+        changeCustomerDataList(database.getAllCustomerData())
+        changeTicketDataList(database.getAllTicketData())
+    }
+
+    fun checkIfTablesExist(): Boolean {
+        return database.listTables().containsAll(listOf("customer", "tickets"))
+    }
+
+    fun generateMockDbData() {
+        val (customerdata, ticketData) = generateMockData(20)
+
+        database.addAllTicketData(ticketData)
+
+        // Add the generated values to the database
+        database.addAllCustomerData(customerdata)
+    }
+
+    fun getMockDataFromDb() {
+        // Now lets read and set values in the viewmodel
+        changeCustomerDataList(database.getAllCustomerData())
     }
 }

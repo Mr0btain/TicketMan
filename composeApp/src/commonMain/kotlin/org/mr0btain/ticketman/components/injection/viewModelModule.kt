@@ -18,7 +18,8 @@ val viewModelModule = module {
     }
 
     viewModel { MainViewModel(
-        fileManager = get()
+        fileManager = get(),
+        database = get()
     ) }
 }
 

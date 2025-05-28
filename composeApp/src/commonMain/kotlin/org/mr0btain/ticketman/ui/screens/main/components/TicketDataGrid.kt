@@ -194,7 +194,7 @@ private fun TicketTableItem(
                 contentAlignment = Alignment.Center
             ) {
                 TableStatusItem(
-                    label = ticketInfo.id,
+                    label = ticketInfo.idNum,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp),
                     backgroundColor = MaterialTheme.colorScheme.primary
                 )

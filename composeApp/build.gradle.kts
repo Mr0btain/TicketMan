@@ -36,6 +36,8 @@ kotlin {
     
     jvm("desktop")
 
+    // Exposed does not support wasmjs
+    /*
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         moduleName = "composeApp"
@@ -55,6 +57,7 @@ kotlin {
         }
         binaries.executable()
     }
+     */
     
     sourceSets {
         val desktopMain by getting
@@ -62,6 +65,7 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+            //implementation (libs.android.sqldelight.driver)
         }
 
         commonMain.dependencies {
@@ -94,9 +98,16 @@ kotlin {
             // Serialization
             implementation(libs.kotlinx.serialization.json)
 
-            // Datastore
-            //implementation(libs.datastore.preferences)
-            //implementation(libs.datastore)
+            // Exposed
+            implementation(libs.exposed.core)
+            implementation(libs.exposed.jdbc)
+            implementation(libs.exposed.dao)
+            implementation(libs.exposed.json)
+
+            // Exposed dbs
+            implementation(libs.sqlite.jdbc)
+            implementation(libs.h2)
+
         }
 
         commonTest.dependencies {

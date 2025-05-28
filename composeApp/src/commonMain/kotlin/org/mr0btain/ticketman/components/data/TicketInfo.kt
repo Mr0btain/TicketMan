@@ -1,11 +1,12 @@
 package org.mr0btain.ticketman.components.data
 
+import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.components.data.components.Device
 import org.mr0btain.ticketman.components.data.components.Note
 import kotlin.random.Random
 
 data class TicketInfo(
-    val id: String = "",
+    val idNum: String = "",
     val customerId: String = "",
     val assignedEmployee: String = "",
     val device: Device = Device("", ""),
@@ -14,6 +15,7 @@ data class TicketInfo(
     val notes: List<Note> = listOf()
 )
 
+@Serializable
 enum class TicketStatus {
     IN_PROGRESS,
     ON_HOLD,
@@ -25,6 +27,7 @@ fun randomTicketStatus(): TicketStatus {
     return values[Random.nextInt(values.size)]
 }
 
+@Serializable
 enum class TicketPriority {
     LOW,
     NORMAL,

@@ -204,25 +204,26 @@ private fun ContactBlock(data: CustomerInfo) {
             horizontalAlignment = Alignment.Start
         ) {
             // Email section
-            if (data.contactInfo.email
-                .isNotBlank()) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        modifier = Modifier.size(iconSize),
-                        painter = painterResource(Res.drawable.mail),
-                        contentDescription = "Email"
-                    )
+            if (data.contactInfo.email.isNotEmpty()) {
+                data.contactInfo.email.forEach { mail ->
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(iconSize),
+                            painter = painterResource(Res.drawable.mail),
+                            contentDescription = "Email"
+                        )
 
-                    Spacer(Modifier.padding(4.dp))
+                        Spacer(Modifier.padding(4.dp))
 
-                    Text(
-                        modifier = Modifier,
-                        text = data.contactInfo.email,
-                        fontSize = textFont
-                    )
+                        Text(
+                            modifier = Modifier,
+                            text = mail,
+                            fontSize = textFont
+                        )
+                    }
                 }
             }
 

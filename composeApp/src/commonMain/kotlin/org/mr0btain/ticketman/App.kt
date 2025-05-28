@@ -4,19 +4,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
-import io.github.vinceglb.filekit.FileKit
-import org.mr0btain.ticketman.ui.theme.AppTheme
 import org.koin.compose.KoinContext
-import org.koin.compose.koinInject
 import org.koin.compose.viewmodel.koinViewModel
-import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.DrawerNav
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
+import org.mr0btain.ticketman.ui.theme.AppTheme
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -35,15 +34,16 @@ fun App() {
         // Main scope to use with coroutines
         val mainScope = rememberCoroutineScope()
 
-        // Make some mock data
-        val (mockCustomers, mockTickets) = generateMockData(40)
+        // Generate some mock data and add it to the database in memory
+        //mainViewModel.generateMockDbData()
 
-        // Update it in view model
-        mainViewModel.changeCustomerDataList(mockCustomers)
-        mainViewModel.changeTicketDataList(mockTickets)
+        mainViewModel.updateDataFromDb()
 
         // Get our stored settings
         settingsViewModel.getUserSettings()
+
+        // Testing a db
+        //testSqliteDatabase()
 
         AppTheme(
             darkTheme = settingsViewModel.isDarkMode.collectAsState().value

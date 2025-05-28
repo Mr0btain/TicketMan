@@ -68,11 +68,11 @@ fun generateMockData(num: Int): Pair<List<CustomerData>, List<TicketInfo>> {
 
         // Make a list of ticket ids
         tickets.forEach { tick ->
-            ticketIds.add(tick.id)
+            ticketIds.add(tick.idNum)
         }
 
         // Update the customer data
-        newCustomerData.add(item.copy(tickets = ticketIds, info = item.info.copy(mostRecentTicket = tickets.last().id)))
+        newCustomerData.add(item.copy(tickets = ticketIds, info = item.info.copy(mostRecentTicket = tickets.last().idNum)))
 
         // Add the tickets to the result
         result.addAll(tickets)
@@ -180,7 +180,7 @@ fun generateRandomTicket(customerId: String): TicketInfo {
     val uuid = Uuid.random().toString()
 
     return TicketInfo(
-        id = Random.nextInt(0, 9999).toString(),
+        idNum = Random.nextInt(0, 9999).toString(),
         customerId = customerId,
         assignedEmployee = if (customerId.toInt() % 12 == 0) "201" else "",
         device = Device(manufacturer, model),
@@ -241,5 +241,5 @@ private fun generateRandomContactInfo(firstName: String? = null, lastName: Strin
         )
     }
 
-    return ContactInfo(email, phone)
+    return ContactInfo(listOf(email), phone)
 }

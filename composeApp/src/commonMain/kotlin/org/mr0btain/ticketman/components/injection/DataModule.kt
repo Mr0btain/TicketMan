@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.injection
 
 import org.koin.dsl.module
 import org.mr0btain.ticketman.components.data.FileManager
+import org.mr0btain.ticketman.components.data.database.SqliteDb
 
 val dataModule = module {
     //example
@@ -12,5 +13,9 @@ val dataModule = module {
      */
     single<FileManager> {
         FileManager()
+    }
+
+    single<SqliteDb> {
+        SqliteDb()
     }
 }

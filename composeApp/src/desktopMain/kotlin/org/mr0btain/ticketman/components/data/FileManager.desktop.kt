@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.data.components.UserSettings
 
+@Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 actual class FileManager actual constructor() {
     private val projectDir = FileKit.filesDir
 

@@ -164,7 +164,7 @@ fun TicketDatabaseList(
                     TicketDataGrid(
                         isDarkMode = isDarkMode,
                         scrollOnRight = scrollOnRight,
-                        ticketInfo = tickets.value.sortedBy { it.id.toInt() }.reversed(),
+                        ticketInfo = tickets.value.sortedBy { it.idNum.toInt() }.reversed(),
                         onClick = { ticket ->
                             viewModel.changeSelectedTicketInfo(ticket)
                         }

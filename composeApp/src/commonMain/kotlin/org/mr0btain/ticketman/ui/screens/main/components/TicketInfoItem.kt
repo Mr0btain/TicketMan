@@ -33,7 +33,6 @@ import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.mail
 import ticketman.composeapp.generated.resources.phone
 import ticketman.composeapp.generated.resources.tag
-import ticketman.composeapp.generated.resources.user
 
 @Composable
 fun TicketInfoItem(
@@ -76,7 +75,7 @@ fun TicketInfoItem(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = selectedTicketInfo.id,
+                        text = selectedTicketInfo.idNum,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -215,25 +214,26 @@ private fun ContactBlock(data: CustomerInfo) {
             horizontalAlignment = Alignment.Start
         ) {
             // Email section
-            if (data.contactInfo.email
-                    .isNotBlank()) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        modifier = Modifier.size(iconSize),
-                        painter = painterResource(Res.drawable.mail),
-                        contentDescription = "Email"
-                    )
+            if (data.contactInfo.email.isNotEmpty()) {
+                data.contactInfo.email.forEach { mail ->
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(iconSize),
+                            painter = painterResource(Res.drawable.mail),
+                            contentDescription = "Email"
+                        )
 
-                    Spacer(Modifier.padding(4.dp))
+                        Spacer(Modifier.padding(4.dp))
 
-                    Text(
-                        modifier = Modifier,
-                        text = data.contactInfo.email,
-                        fontSize = textFont
-                    )
+                        Text(
+                            modifier = Modifier,
+                            text = mail,
+                            fontSize = textFont
+                        )
+                    }
                 }
             }
 
