@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.data
+package org.mr0btain.ticketman.components.data.components
 
 /**
  * Data class for holding data about a specific device type

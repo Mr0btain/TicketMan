@@ -1,5 +1,12 @@
 package org.mr0btain.ticketman.components.data
 
+import org.mr0btain.ticketman.components.data.components.Address
+import org.mr0btain.ticketman.components.data.components.ContactInfo
+import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.Device
+import org.mr0btain.ticketman.components.data.components.Note
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

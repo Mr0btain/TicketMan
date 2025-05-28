@@ -2,10 +2,16 @@ package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.dialogs.openFilePicker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.mr0btain.ticketman.components.data.CustomerData
+import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.data.FileManager
+import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.TicketInfo
+import org.mr0btain.ticketman.components.data.components.UserSettings
 import org.mr0btain.ticketman.getPlatform
 
 /**
@@ -13,7 +19,9 @@ Main View model for the project.
 Used to store data that needs to persist for the lifetime of the app and be used anywhere
  */
 
-class MainViewModel(): ViewModel() {
+class MainViewModel(
+    private val fileManager: FileManager
+): ViewModel() {
     val topAppBarText = mutableStateOf("Main")
     val platform = getPlatform().name
 
@@ -112,4 +120,11 @@ class MainViewModel(): ViewModel() {
     }
 
     // ----------------------------------------------------------------------------------------------------------------------------
+    // TESTING
+
+    fun openTestFilePicker() {
+        viewModelScope.launch {
+            FileKit.openFilePicker()
+        }
+    }
 }

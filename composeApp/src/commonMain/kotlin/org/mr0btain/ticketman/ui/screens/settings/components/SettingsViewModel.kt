@@ -2,17 +2,14 @@ package org.mr0btain.ticketman.ui.screens.settings.components
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.PreferenceStore
-import org.mr0btain.ticketman.components.data.UserSettings
-import org.mr0btain.ticketman.components.data.UserSettingsDataStatus
+import org.mr0btain.ticketman.components.data.FileManager
+import org.mr0btain.ticketman.components.data.components.UserSettings
+import org.mr0btain.ticketman.components.data.components.UserSettingsDataStatus
 
 class SettingsViewModel(
-    private val preferenceStore: PreferenceStore,
-    private val dispatcher : CoroutineDispatcher
+    private val fileManager: FileManager
 ): ViewModel() {
 
     // For updating and getting settings
@@ -21,37 +18,24 @@ class SettingsViewModel(
 
     // TODO: Setup error saving and such
     fun getUserSettings() {
-        viewModelScope.launch(dispatcher) {
-            _userSettingsDataState.value = UserSettingsDataStatus.LOADING
+        val settings = fileManager.getSettings(viewModelScope)
 
-            try {
-                preferenceStore.getSettings().collect{
-                    _userSettingsDataState.value = UserSettingsDataStatus.SUCCESS
-
-                    _isDarkMode.value = it.darkMode
-                    _serverAddress.value = it.serverAddress
-                    _scrollBarOnRight.value = it.verticalScrollRight
-                    _scrollBarOnTop.value = it.horizontalScrollTop
-                }
-            } catch (e: Exception){
-                _userSettingsDataState.value = UserSettingsDataStatus.ERROR
-            }
-        }
+        _isDarkMode.value = settings.darkMode
+        _serverAddress.value = settings.serverAddress
+        _scrollBarOnTop.value = settings.horizontalScrollTop
+        _scrollBarOnRight.value = settings.verticalScrollRight
     }
 
-    fun updateUserSettings(){
-        viewModelScope.launch(dispatcher) {
-            preferenceStore.saveSettings(
-                UserSettings(
-                    darkMode = _isDarkMode.value,
-                    serverAddress = _serverAddress.value,
-                    verticalScrollRight = _scrollBarOnRight.value,
-                    horizontalScrollTop = _scrollBarOnTop.value
-                )
-            )
-
-            //_userState.value = PreferenceDataState.SUCCESS(settings)
-        }
+    fun updateUserSettings() {
+        fileManager.saveSettings(
+            UserSettings(
+                darkMode = _isDarkMode.value,
+                serverAddress = _serverAddress.value,
+                verticalScrollRight = _scrollBarOnRight.value,
+                horizontalScrollTop = _scrollBarOnTop.value
+            ),
+            viewModelScope
+        )
     }
 
     // First basic group

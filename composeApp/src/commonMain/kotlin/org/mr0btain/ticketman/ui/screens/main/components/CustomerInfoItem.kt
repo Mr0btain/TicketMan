@@ -12,8 +12,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.CustomerData
-import org.mr0btain.ticketman.components.data.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.TicketInfo
 import ticketman.composeapp.generated.resources.*
 

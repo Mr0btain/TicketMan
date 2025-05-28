@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.data
 
+import org.mr0btain.ticketman.components.data.components.Device
+import org.mr0btain.ticketman.components.data.components.Note
 import kotlin.random.Random
 
 data class TicketInfo(

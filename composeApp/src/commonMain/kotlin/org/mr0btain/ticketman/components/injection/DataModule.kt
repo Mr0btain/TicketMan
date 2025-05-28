@@ -1,13 +1,16 @@
 package org.mr0btain.ticketman.components.injection
 
 import org.koin.dsl.module
-import org.mr0btain.ticketman.components.data.PreferenceStore
-import org.mr0btain.ticketman.components.data.PreferenceStoreImpl
-import org.mr0btain.ticketman.components.data.createDataStore
+import org.mr0btain.ticketman.components.data.FileManager
 
 val dataModule = module {
-    //data store
+    //example
+    /*
     single<PreferenceStore> {
         PreferenceStoreImpl(createDataStore())
+    }
+     */
+    single<FileManager> {
+        FileManager()
     }
 }

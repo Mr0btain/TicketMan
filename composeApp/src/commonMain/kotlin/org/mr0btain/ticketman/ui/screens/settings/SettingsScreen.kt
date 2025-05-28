@@ -19,7 +19,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.mr0btain.ticketman.components.data.UserSettings
+import org.mr0btain.ticketman.components.data.components.UserSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsSwitchItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsTextItem

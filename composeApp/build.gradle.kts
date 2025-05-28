@@ -10,6 +10,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.composeHotReload)
+    alias(libs.plugins.serialize)
 }
 
 kotlin {
@@ -89,6 +90,9 @@ kotlin {
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs)
             implementation(libs.filekit.coil)
+
+            // Serialization
+            implementation(libs.kotlinx.serialization.json)
 
             // Datastore
             //implementation(libs.datastore.preferences)

@@ -1,4 +1,6 @@
-package org.mr0btain.ticketman.components.data
+package org.mr0btain.ticketman.components.data.components
+
+import org.mr0btain.ticketman.components.data.components.CustomerName
 
 data class CustomerInfo(
     val id: String = "",

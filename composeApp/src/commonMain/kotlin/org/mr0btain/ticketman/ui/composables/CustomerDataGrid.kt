@@ -14,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.components.data.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 
 @Composable

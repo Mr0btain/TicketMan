@@ -45,7 +45,6 @@ fun TableStatusItem(
     label: String,
     textStyle: TextStyle
 ) {
-    // .border(1.5.dp, Color.Gray, RoundedCornerShape(10.dp))
    Surface(
        modifier = modifier,
        shape = RoundedCornerShape(4.dp),
