@@ -34,8 +34,7 @@ kotlin {
      */
     
     jvm("desktop")
-    
-    /*
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         moduleName = "composeApp"
@@ -55,7 +54,6 @@ kotlin {
         }
         binaries.executable()
     }
-     */
     
     sourceSets {
         val desktopMain by getting
@@ -87,9 +85,14 @@ kotlin {
             // Window Size class
             implementation(libs.window.size.multiplatform)
 
+            // FileKit
+            implementation(libs.filekit.core)
+            implementation(libs.filekit.dialogs)
+            implementation(libs.filekit.coil)
+
             // Datastore
-            implementation(libs.datastore.preferences)
-            implementation(libs.datastore)
+            //implementation(libs.datastore.preferences)
+            //implementation(libs.datastore)
         }
 
         commonTest.dependencies {
