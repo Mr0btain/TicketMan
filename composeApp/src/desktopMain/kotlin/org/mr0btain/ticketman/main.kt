@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.components.injection.initKoin
 
 fun main() = application {
     Window(
-        state = rememberWindowState(size = DpSize(1600.dp, 800.dp)),
+        state = rememberWindowState(size = DpSize(1460.dp, 800.dp)),
         onCloseRequest = ::exitApplication,
         title = "TicketMan",
     ) {
