@@ -175,6 +175,7 @@ fun generateRandomTicket(customerId: String): TicketInfo {
     return TicketInfo(
         id = Random.nextInt(0, 9999).toString(),
         customerId = customerId,
+        assignedEmployee = if (customerId.toInt() % 12 == 0) "201" else "",
         device = Device(manufacturer, model),
         status = randomTicketStatus(),
         priority = randomTicketPriority(),

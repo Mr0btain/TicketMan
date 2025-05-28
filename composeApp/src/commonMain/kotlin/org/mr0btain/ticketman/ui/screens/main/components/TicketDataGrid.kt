@@ -1,10 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -14,8 +12,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -26,7 +22,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.*
-import org.mr0btain.ticketman.ui.composables.scrollbar.VerticalScrollBar
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 
@@ -35,16 +30,17 @@ fun TicketDataGrid(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf(),
-    scrollOnRight: Boolean
+    scrollOnRight: Boolean,
+    onClick: (TicketInfo) -> Unit
 ) {
 
 // Ticket #  |  Priority  |   Last Note   |   Status
 
     // Column widths
     val numberColumnWidth = 100.dp
-    val priorityColumnWidth = 140.dp
+    val priorityColumnWidth = 100.dp
     val noteColumnWidth = 360.dp
-    val statusColumnWidth = 180.dp
+    val statusColumnWidth = 120.dp
 
     // Scroll stuff
     val horizontalScrollState = rememberScrollState()
@@ -70,35 +66,35 @@ fun TicketDataGrid(
             ) {
                 Spacer(Modifier.padding(10.dp))
 
-                HeaderBox(
+                TicketHeaderBox(
                     label = "Ticket #",
                     width = numberColumnWidth
                 )
 
                 Spacer(Modifier.padding(9.dp))
 
-                HeaderBox(
+                TicketHeaderBox(
                     label = "Priority",
                     width = priorityColumnWidth
                 )
 
                 Spacer(Modifier.padding(9.dp))
 
-                HeaderBox(
+                TicketHeaderBox(
                     label = "Latest Note",
                     width = noteColumnWidth
                 )
 
                 Spacer(Modifier.padding(10.dp))
 
-                HeaderBox(
+                TicketHeaderBox(
                     label = "Status",
                     width = statusColumnWidth,
                     dividerEnable = false
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(850.dp))
+            HorizontalDivider(modifier = Modifier.width(750.dp))
 
             LazyColumn {
                 itemsIndexed(ticketInfo) { index, item ->
@@ -113,7 +109,8 @@ fun TicketDataGrid(
                         priorityWidth = priorityColumnWidth,
                         noteWidth = noteColumnWidth,
                         statusWidth = statusColumnWidth,
-                        isDarkMode = isDarkMode
+                        isDarkMode = isDarkMode,
+                        onClick = { onClick(item) }
                     )
 
                     Spacer(Modifier.padding(2.dp))
@@ -135,7 +132,7 @@ fun TicketDataGrid(
 }
 
 @Composable
-private fun HeaderBox(
+private fun TicketHeaderBox(
     modifier: Modifier = Modifier,
     label: String,
     width: Dp,
@@ -169,16 +166,15 @@ private fun TicketTableItem(
     priorityWidth: Dp,
     noteWidth: Dp,
     statusWidth: Dp,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    onClick: () -> Unit
 ) {
 
     Surface(
         modifier = modifier
             .padding(2.dp)
             .clickable(
-                onClick = {
-                    // Do something
-                }
+                onClick = { onClick() }
             ),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp,

@@ -4,12 +4,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.mr0btain.ticketman.components.data.ContactInfo
 import org.mr0btain.ticketman.components.data.CustomerData
-import org.mr0btain.ticketman.components.data.CustomerInfo
 import org.mr0btain.ticketman.components.data.TicketInfo
-import org.mr0btain.ticketman.components.data.generateMockCustomerData
-import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.getPlatform
 
 /**
@@ -21,6 +17,10 @@ class MainViewModel(): ViewModel() {
     val topAppBarText = mutableStateOf("Main")
     val platform = getPlatform().name
 
+    // User ID
+    private val _employeeId: MutableStateFlow<String> = MutableStateFlow("201")
+    var employeeId = _employeeId.asStateFlow()
+
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<String> = MutableStateFlow("0")
     var selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
@@ -30,6 +30,11 @@ class MainViewModel(): ViewModel() {
         _selectedMainTabIndex.value = update
     }
 
+    // To update the user id
+    fun changeUserId(update: String) {
+        _employeeId.value = update
+    }
+
     /** Ticket Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
 
@@ -37,9 +42,22 @@ class MainViewModel(): ViewModel() {
     private val _ticketDataList: MutableStateFlow<List<TicketInfo>> = MutableStateFlow(listOf())
     var ticketDataList = _ticketDataList.asStateFlow()
 
+    // User specific ticket data list
+    private val _myTicketDataList: MutableStateFlow<List<String>> = MutableStateFlow(listOf())
+    var myTicketDataList = _myTicketDataList.asStateFlow()
+
     // Selected ticket tab index
     private val _selectedTicketTabIndex: MutableStateFlow<String> = MutableStateFlow("0")
     var selectedTicketTabIndex = _selectedTicketTabIndex.asStateFlow()
+
+    // Selected ticket tab index
+    private val _selectedTicketInfo: MutableStateFlow<TicketInfo> = MutableStateFlow(TicketInfo())
+    var selectedTicketInfo = _selectedTicketInfo.asStateFlow()
+
+    // To update selected ticket
+    fun changeSelectedTicketInfo(ticket: TicketInfo) {
+        _selectedTicketInfo.value = ticket
+    }
 
     // To update ticket data list
     fun changeTicketDataList(list: List<TicketInfo>) {

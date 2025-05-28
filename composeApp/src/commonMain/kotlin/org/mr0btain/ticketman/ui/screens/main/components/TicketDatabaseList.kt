@@ -26,6 +26,10 @@ fun TicketDatabaseList(
 ) {
     // State for tab selection
     val selectedTab = viewModel.selectedTicketTabIndex.collectAsState()
+    val selectedTicket = viewModel.selectedTicketInfo.collectAsState()
+    val employeeId = viewModel.employeeId.collectAsState()
+    val tickets = viewModel.ticketDataList.collectAsState()
+
     var showSearchBar by remember { mutableStateOf(false) }
 
     Surface(
@@ -142,11 +146,38 @@ fun TicketDatabaseList(
 
             Spacer(Modifier.padding(4.dp))
 
-            TicketDataGrid(
-                isDarkMode = isDarkMode,
-                scrollOnRight = scrollOnRight,
-                ticketInfo = viewModel.ticketDataList.value
-            )
+            Row {
+                // Check if were on my tickets which is 0 or all tickets
+                if (selectedTab.value == "0") {
+                    // My Tickets tab. Filter tickets
+                    TicketDataGrid(
+                        isDarkMode = isDarkMode,
+                        scrollOnRight = scrollOnRight,
+                        ticketInfo = tickets.value.filter { it.assignedEmployee == employeeId.value }.reversed(),
+                        onClick = { ticket ->
+                            viewModel.changeSelectedTicketInfo(ticket)
+                        }
+                    )
+                } else {
+                    // All tickets tab.
+                    // TODO: Sorting is just for testing will probably keep reversed in there
+                    TicketDataGrid(
+                        isDarkMode = isDarkMode,
+                        scrollOnRight = scrollOnRight,
+                        ticketInfo = tickets.value.sortedBy { it.id.toInt() }.reversed(),
+                        onClick = { ticket ->
+                            viewModel.changeSelectedTicketInfo(ticket)
+                        }
+                    )
+                }
+
+                TicketInfoItem(
+                    modifier = Modifier,
+                    isDarkMode = isDarkMode,
+                    selectedTicketInfo = selectedTicket.value,
+                    onEditClick = {}
+                )
+            }
         }
     }
 }

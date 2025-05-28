@@ -5,6 +5,7 @@ import kotlin.random.Random
 data class TicketInfo(
     val id: String = "",
     val customerId: String = "",
+    val assignedEmployee: String = "",
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus.DONE,
     val priority: TicketPriority = TicketPriority.NORMAL,
