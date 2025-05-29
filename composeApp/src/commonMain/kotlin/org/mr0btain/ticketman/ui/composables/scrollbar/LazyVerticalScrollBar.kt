@@ -117,7 +117,7 @@ private fun LazyVerticalScrollBarItem(
     // Calculations. Some of this seems really wild but its not hard once you get your head around what were actually doing.
     // Basically just getting the total size of our items by multiplying the count of items by the height and space between them
     // Then we get our scroll value from just taking our first visible item and calculating its length from the start. We then have
-    // where we are and how far we can go. The res is pretty basic.
+    // where we are and how far we can go. The rest is pretty basic.
 
     // Total item count.
     val totalItems = lazyListState.layoutInfo.totalItemsCount
@@ -135,7 +135,7 @@ private fun LazyVerticalScrollBarItem(
     // The viewport or visible section on screen.
     val viewport = max(lazyListState.layoutInfo.viewportSize.height.toFloat(), 1f)
 
-    // Compute scrollbar height and position
+    // Compute scrollbar height and position.
     val scrollBarHeight = (viewport / totalContentHeight) * viewport * 2
 
     // Actual location of the scroll bar on its track.
@@ -162,7 +162,7 @@ private fun LazyVerticalScrollBarItem(
                     state = rememberDraggableState { delta ->
                         if (enabled) {
                             scope.launch {
-                                // Scroll the content by the delta multiplied by the adjustment
+                                // Scroll the content by the delta multiplied by the adjustment.
                                 lazyListState.scrollBy(adjust * delta)
                             }
                         }

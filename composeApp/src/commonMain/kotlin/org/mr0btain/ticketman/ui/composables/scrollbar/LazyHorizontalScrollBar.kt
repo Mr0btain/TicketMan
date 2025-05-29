@@ -57,7 +57,7 @@ fun LazyHorizontalScrollBar(
     Surface(
         modifier = modifier
             .drawWithContent {
-                // this is how we get the viewport height
+                // this is how we get the viewport height.
                 drawContent()
                 viewportHeight.floatValue = max(this.size.height, 1f)
             }
@@ -110,8 +110,8 @@ fun LazyHorizontalScrollBar(
  * The actual scroll bar itself.
  */
 
-// Here we have to do some things different from vertical. Like we cant trust ScrollState to give us maxvalue or viewport size.
-// Something is off with it and I couldn't get consistent results. So we have to get those values ourselves and then do the math.
+// Here we have to do some things different from vertical.
+// Something is off with it and I couldn't get consistent results.
 @Composable
 private fun LazyHorizontalScrollBarItem(
     modifier: Modifier = Modifier,
