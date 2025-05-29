@@ -18,14 +18,53 @@ class SqliteDb() {
     // TODO: Flesh these out better to support copying synching and such between dbs
     // TODO: Add encryption
     // TODO: Add removal functions
-    // TODO: Add update functions
     private val appDir = FileKit.filesDir.path
     private val db = Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
         //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
 
-    fun createDatabases() {
+    fun updateCustomer(data: CustomerData) {
         transaction {
-            SchemaUtils.create(TicketDataTable, CustomerDataTable)
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // check if tables exist if not make them
+            checkAndCreateTables()
+
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq data.info.id }) { item ->
+                item[idNumber] = data.info.id
+                item[firstName] = data.info.name.firstName
+                item[lastName] = data.info.name.lastName
+                item[street] = data.info.address.street
+                item[city] = data.info.address.city
+                item[state] = data.info.address.state
+                item[zip] = data.info.address.zip
+                item[tickets] = TicketList(data.tickets)
+                item[notes] = Notes(data.notes)
+                item[contactInfo] = contactInfo
+            }
+        }
+    }
+
+    fun addCustomer(data: CustomerData) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // check if tables exist if not make them
+            checkAndCreateTables()
+
+            CustomerDataTable.insert { item ->
+                item[idNumber] = data.info.id
+                item[firstName] = data.info.name.firstName
+                item[lastName] = data.info.name.lastName
+                item[street] = data.info.address.street
+                item[city] = data.info.address.city
+                item[state] = data.info.address.state
+                item[zip] = data.info.address.zip
+                item[tickets] = TicketList(data.tickets)
+                item[notes] = Notes(data.notes)
+                item[contactInfo] = contactInfo
+            }
         }
     }
 
@@ -69,29 +108,6 @@ class SqliteDb() {
         return result
     }
 
-    fun addToCustomerData(data: CustomerData) {
-        transaction {
-            // Setup logger
-            addLogger(StdOutSqlLogger)
-
-            // check if tables exist if not make them
-            checkAndCreateTables()
-
-            CustomerDataTable.insert { item ->
-                item[idNumber] = data.info.id
-                item[firstName] = data.info.name.firstName
-                item[lastName] = data.info.name.lastName
-                item[street] = data.info.address.street
-                item[city] = data.info.address.city
-                item[state] = data.info.address.state
-                item[zip] = data.info.address.zip
-                item[tickets] = TicketList(data.tickets)
-                item[notes] = Notes(data.notes)
-                item[contactInfo] = contactInfo
-            }
-        }
-    }
-
     fun addAllCustomerData(data: List<CustomerData>) {
         transaction {
             // Setup logger
@@ -117,7 +133,27 @@ class SqliteDb() {
         }
     }
 
-    fun addToTicketData(data: TicketInfo) {
+    fun updateTicket(data: TicketInfo) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // Check if tables exist if not make them
+            checkAndCreateTables()
+
+            TicketDataTable.update({ TicketDataTable.idNumber eq data.idNum }) { item ->
+                item[TicketDataTable.idNumber] = data.idNum
+                item[TicketDataTable.customerId] = data.customerId
+                item[TicketDataTable.device] = data.device
+                item[TicketDataTable.assignedEmp] = data.assignedEmployee
+                item[TicketDataTable.priority] = data.priority
+                item[TicketDataTable.status] = data.status
+                item[TicketDataTable.notes] = Notes(data.notes)
+            }
+        }
+    }
+
+    fun addTicket(data: TicketInfo) {
         transaction {
             // Setup logger
             addLogger(StdOutSqlLogger)
