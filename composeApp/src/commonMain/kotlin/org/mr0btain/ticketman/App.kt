@@ -39,9 +39,6 @@ fun App() {
         // Get our stored settings
         settingsViewModel.getUserSettings()
 
-        // Testing a db
-        //testSqliteDatabase()
-
         // TODO: I don't think using window size class is the best way to go for differentiating between desktop and mobile as it
         // causes us to end up hitting the database everytime screen size class changes in desktop. We should move the window size
         // class state down the tree to avoid it recomposing the entire app when we resize the screen on desktop
@@ -106,35 +103,3 @@ fun App() {
         }
     }
 }
-
-/*
-val screenSize = remember { mutableStateOf(Pair(-1, -1)) }
-    Layout(
-        content = {
-            Box(modifier = Modifier.fillMaxSize()) {
-                Text("Screen size: ${screenSize.value.first}x${screenSize.value.second}px", modifier = Modifier.align(Alignment.Center))
-            }
-        },
-        measurePolicy = { measurables, constraints ->
-            // Use the max width and height from the constraints
-            val width = constraints.maxWidth
-            val height = constraints.maxHeight
-
-            screenSize.value = Pair(width, height)
-            println("Width: $width, height: $height")
-
-            // Measure and place children composables
-            val placeables = measurables.map { measurable ->
-                measurable.measure(constraints)
-            }
-
-            layout(width, height) {
-                var yPosition = 0
-                placeables.forEach { placeable ->
-                    placeable.placeRelative(x = 0, y = yPosition)
-                    yPosition += placeable.height
-                }
-            }
-        }
-    )
- */
