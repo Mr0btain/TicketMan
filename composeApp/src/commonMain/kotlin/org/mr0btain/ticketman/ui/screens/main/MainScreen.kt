@@ -5,6 +5,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -12,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.generateMockCustomerData
 import org.mr0btain.ticketman.components.data.generateMockData
+import org.mr0btain.ticketman.ui.dialog.CustomerDataDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDatabaseList
 import org.mr0btain.ticketman.ui.screens.main.components.TicketDatabaseList

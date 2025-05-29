@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.ui.composables.CustomerDataGrid
 import org.mr0btain.ticketman.ui.composables.SearchTextField
+import org.mr0btain.ticketman.ui.dialog.CustomerDataDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
@@ -43,10 +44,21 @@ fun CustomerDatabaseList(
 ) {
     // Search bar state
     var showSearchBar by remember { mutableStateOf(false) }
+    var showCustomerDialog by remember { mutableStateOf(false) }
 
     // Customer data
     val selectedCustomerData = viewModel.selectedCustomerData.collectAsState()
     val customerInfoList = viewModel.customerDataList.collectAsState()
+
+    if (showCustomerDialog) {
+        CustomerDataDialog(
+            modifier = Modifier,
+            customerData = selectedCustomerData.value,
+            onClick = {},
+            onDismiss = { showCustomerDialog = false },
+            isDarkMode = isDarkMode
+        )
+    }
 
     Surface(
         modifier = modifier
@@ -140,7 +152,7 @@ fun CustomerDatabaseList(
                     isDarkMode = isDarkMode,
                     selectedCustomerData = selectedCustomerData.value,
                     onEditClick = {
-                        // TODO: Add logic for this
+                        showCustomerDialog = true
                     },
                     tickets = viewModel.getTicketsForCustomer(selectedCustomerData.value.info.id)
                 )
