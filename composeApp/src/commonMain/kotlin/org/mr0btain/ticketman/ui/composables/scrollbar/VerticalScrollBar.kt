@@ -49,8 +49,8 @@ fun VerticalScrollBar(
     scope: CoroutineScope = rememberCoroutineScope(),
     content: @Composable (ColumnScope.(scrollState: ScrollState) -> Unit)
 ) {
-    val offsetState = remember { mutableStateOf(20f) }
-    val viewportWidth = remember { mutableStateOf(1200f) }
+    val offsetState = remember { mutableFloatStateOf(20f) }
+    val viewportWidth = remember { mutableFloatStateOf(1200f) }
 
     Surface(
         modifier = modifier.getWidth(viewportWidth)
@@ -59,7 +59,7 @@ fun VerticalScrollBar(
             if (scrollBarOnRight) {
                 // The content
                 Box(
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportWidth.value.dp - size)
+                    modifier = if (clipToContent) Modifier else Modifier.width(viewportWidth.floatValue.dp - size)
                 ) {
                     Column(
                         modifier = Modifier
@@ -70,7 +70,7 @@ fun VerticalScrollBar(
                     }
                 }
 
-                VerticalScrollBarItem(
+                LazyVerticalScrollBarItem(
                     size = size,
                     colors = colors,
                     enabled = enabled,
@@ -79,7 +79,7 @@ fun VerticalScrollBar(
                     scope = scope
                 )
             } else {
-                VerticalScrollBarItem(
+                LazyVerticalScrollBarItem(
                     size = size,
                     colors = colors,
                     enabled = enabled,
@@ -89,7 +89,7 @@ fun VerticalScrollBar(
                 )
 
                 Box (
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportWidth.value.dp - size)
+                    modifier = if (clipToContent) Modifier else Modifier.width(viewportWidth.floatValue.dp - size)
                 ) {
                     // The content
                     Column(
@@ -106,7 +106,7 @@ fun VerticalScrollBar(
 }
 
 @Composable
-private fun VerticalScrollBarItem(
+private fun LazyVerticalScrollBarItem(
     modifier: Modifier = Modifier,
     size: Dp,
     enabled: Boolean,

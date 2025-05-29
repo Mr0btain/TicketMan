@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 
 @Composable
@@ -75,35 +76,26 @@ fun CustomerDataGrid(
 
             HorizontalDivider(modifier = Modifier.width(700.dp))
 
-            LazyColumn {
-                itemsIndexed(customerInfo.sortedBy { it.name.firstName + it.name.lastName }) { index, info ->
-                    CustomerTableItem(
-                        customerInfo = info,
-                        color = if (!isDarkMode) {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                        } else {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                        },
-                        nameWidth = nameColumnWidth,
-                        addressWidth = addressColumnWidth,
-                        contactWidth = contactColumnWidth,
-                        onClick = onClick
-                    )
+            if (customerInfo.isNotEmpty()) {
+                LazyVerticalScrollBar {
+                    itemsIndexed(customerInfo.sortedBy { it.name.firstName + it.name.lastName }) { index, info ->
+                        CustomerTableItem(
+                            customerInfo = info,
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            nameWidth = nameColumnWidth,
+                            addressWidth = addressColumnWidth,
+                            contactWidth = contactColumnWidth,
+                            onClick = onClick
+                        )
 
-                    Spacer(Modifier.padding(2.dp))
+                        Spacer(Modifier.padding(2.dp))
+                    }
                 }
             }
-
-            /*
-            VerticalScrollBar(
-                modifier = Modifier.wrapContentSize(),
-                scope = scope,
-                clipToContent = true,
-                scrollBarOnRight = scrollBarRight
-            ) {
-
-            }
-             */
         }
     }
 }

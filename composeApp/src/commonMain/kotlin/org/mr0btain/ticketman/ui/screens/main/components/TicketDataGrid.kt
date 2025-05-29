@@ -22,6 +22,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.*
+import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 
@@ -96,7 +97,7 @@ fun TicketDataGrid(
 
             HorizontalDivider(modifier = Modifier.width(750.dp))
 
-            LazyColumn {
+            LazyVerticalScrollBar {
                 itemsIndexed(ticketInfo) { index, item ->
                     TicketTableItem(
                         color = if (!isDarkMode) {
@@ -116,17 +117,6 @@ fun TicketDataGrid(
                     Spacer(Modifier.padding(2.dp))
                 }
             }
-
-            /*
-            VerticalScrollBar(
-                modifier = Modifier.wrapContentSize(),
-                scope = scope,
-                clipToContent = true,
-                scrollBarOnRight = scrollOnRight
-            ) {
-
-            }
-             */
         }
     }
 }
