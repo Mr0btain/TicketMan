@@ -27,6 +27,26 @@ object ScrollBarDefaults {
         )
 
     /**
+     * Which side the scroll bar should be on. True means right for Vertical scroll bars
+     * Defaults to right
+     */
+
+    val scrollBarOnRight = true
+
+    /**
+     * Which side the scroll bar should be on. True means Top for Horizontal scroll bars
+     * Defaults to bottom
+     */
+
+    val scrollBarOnTop = false
+
+    /**
+     * Whether we should clip the scroll bar to the content or the edge of the parent
+     */
+
+    val clipToContent = true
+
+    /**
      * The default size of the scroll bar be it width or height depending on whether its vertical or horizonal
      */
     val size = 8.dp
@@ -78,23 +98,6 @@ interface ScrollBarColors {
      */
     @Composable fun barColor(enabled: Boolean): State<Color>
 }
-
-@Composable
-fun scrollBarColors(
-    trackColor: Color = MaterialTheme.colorScheme.surface,
-    barColor: Color = MaterialTheme.colorScheme.onSurface,
-    disabledTrackColor: Color =
-        MaterialTheme.colorScheme.onSurface
-            .copy(alpha = 0.12f)
-            .compositeOver(MaterialTheme.colorScheme.surface),
-    disabledBarColor: Color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-): ScrollBarColors =
-    DefaultScrollBarColors(
-        trackColor = trackColor,
-        barColor = barColor,
-        disabledTrackColor = disabledTrackColor,
-        disabledBarColor = disabledBarColor
-    )
 
 /** Default [ScrollBarColors] implementation. */
 @Immutable

@@ -49,16 +49,21 @@ fun HorizontalScrollBar(
     scrollState: ScrollState = rememberScrollState(),
     content: @Composable (RowScope.(scrollState: ScrollState) -> Unit)
 ) {
-    val offsetState = remember { mutableStateOf(1f) }
-    val totalWidth = remember { mutableStateOf(1f) }
-    val viewportHeight = remember { mutableStateOf(1200f) }
+    val offsetState = remember { mutableFloatStateOf(1f) }
+    val totalWidth = remember { mutableFloatStateOf(1f) }
+    val viewportHeight = remember { mutableFloatStateOf(1200f) }
 
     Surface(
-        modifier = modifier.getHeight(viewportHeight)
+        modifier = modifier
+            .drawWithContent {
+                // this is how we get the viewport height
+                drawContent()
+                viewportHeight.floatValue = max(this.size.height, 1f)
+            }
     ) {
         Column {
             if (scrollBarOnTop) {
-                HorizontalScrollBarItem(
+                LazyHorizontalScrollBarItem(
                     scrollState = scrollState,
                     offsetState = offsetState,
                     height = size,
@@ -70,7 +75,7 @@ fun HorizontalScrollBar(
 
                 // The content
                 Box(
-                    modifier = if (clipToContent) Modifier else Modifier.height(viewportHeight.value.dp - size)
+                    modifier = if (clipToContent) Modifier else Modifier.height(viewportHeight.floatValue.dp - size)
                 ) {
                     Row(
                         modifier = Modifier
@@ -85,7 +90,7 @@ fun HorizontalScrollBar(
             } else {
                 // The content
                 Box(
-                    modifier = if (clipToContent) Modifier else Modifier.height(viewportHeight.value.dp - size)
+                    modifier = if (clipToContent) Modifier else Modifier.height(viewportHeight.floatValue.dp - size)
                 ) {
                     Row(
                         modifier = Modifier
@@ -98,11 +103,11 @@ fun HorizontalScrollBar(
                     }
                 }
 
-                HorizontalScrollBarItem(
+                LazyHorizontalScrollBarItem(
                     scrollState = scrollState,
                     offsetState = offsetState,
                     height = size,
-                    totalContentWidth = totalWidth.value,
+                    totalContentWidth = totalWidth.floatValue,
                     colors = colors,
                     enabled = enabled,
                     scope = scope
@@ -119,7 +124,7 @@ fun HorizontalScrollBar(
 // Here we have to do some things different from vertical. Like we cant trust ScrollState to give us maxvalue or viewport size.
 // Something is off with it and I couldn't get consistent results. So we have to get those values ourselves and then do the math.
 @Composable
-private fun HorizontalScrollBarItem(
+private fun LazyHorizontalScrollBarItem(
     modifier: Modifier = Modifier,
     scrollState: ScrollState,
     offsetState: MutableState<Float>,
@@ -130,16 +135,16 @@ private fun HorizontalScrollBarItem(
     scope: CoroutineScope
 ) {
     // Viewport Width
-    val viewportWidth = remember { mutableStateOf(1f) }
+    val viewportWidth = remember { mutableFloatStateOf(1f) }
 
     // Scrollbar width and position
-    val scrollBarWidth = (viewportWidth.value / totalContentWidth) * viewportWidth.value
+    val scrollBarWidth = (viewportWidth.floatValue / totalContentWidth) * viewportWidth.floatValue
 
     // Set offset for the scroll bar
-    offsetState.value = (max(scrollState.value.toFloat(), 1f) / totalContentWidth) * viewportWidth.value
+    offsetState.value = (max(scrollState.value.toFloat(), 1f) / totalContentWidth) * viewportWidth.floatValue
 
     // The adjustment amount from the width of the scrolling material to the length of our bars travel area
-    val adjust = totalContentWidth / (viewportWidth.value - scrollBarWidth)
+    val adjust = totalContentWidth / (viewportWidth.floatValue - scrollBarWidth)
 
     Row(
         modifier
@@ -175,7 +180,7 @@ private fun HorizontalScrollBarItem(
  * Updates a mutable state with the current width of a composable
  */
 @Composable
-fun Modifier.getWidth(
+private fun Modifier.getWidth(
     width: MutableState<Float>
 ): Modifier {
     return drawWithContent {

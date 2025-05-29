@@ -76,24 +76,22 @@ fun CustomerDataGrid(
 
             HorizontalDivider(modifier = Modifier.width(700.dp))
 
-            if (customerInfo.isNotEmpty()) {
-                LazyVerticalScrollBar {
-                    itemsIndexed(customerInfo.sortedBy { it.name.firstName + it.name.lastName }) { index, info ->
-                        CustomerTableItem(
-                            customerInfo = info,
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            nameWidth = nameColumnWidth,
-                            addressWidth = addressColumnWidth,
-                            contactWidth = contactColumnWidth,
-                            onClick = onClick
-                        )
+            LazyVerticalScrollBar {
+                itemsIndexed(customerInfo.sortedBy { it.name.firstName + it.name.lastName }) { index, info ->
+                    CustomerTableItem(
+                        customerInfo = info,
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        nameWidth = nameColumnWidth,
+                        addressWidth = addressColumnWidth,
+                        contactWidth = contactColumnWidth,
+                        onClick = onClick
+                    )
 
-                        Spacer(Modifier.padding(2.dp))
-                    }
+                    Spacer(Modifier.padding(2.dp))
                 }
             }
         }

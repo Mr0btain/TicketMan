@@ -53,7 +53,11 @@ fun VerticalScrollBar(
     val viewportWidth = remember { mutableFloatStateOf(1200f) }
 
     Surface(
-        modifier = modifier.getWidth(viewportWidth)
+        modifier = modifier
+            .drawWithContent {
+                drawContent()
+                viewportWidth.floatValue = max(this.size.width, 1f)
+            }
     ) {
         Row {
             if (scrollBarOnRight) {
@@ -156,16 +160,5 @@ private fun LazyVerticalScrollBarItem(
             thickness = size,
             color = colors.barColor(enabled).value
         )
-    }
-}
-
-@Composable
-fun Modifier.getHeight(
-    height: MutableState<Float>
-): Modifier {
-    return drawWithContent {
-        drawContent()
-
-        height.value = max(this.size.height, 1f)
     }
 }

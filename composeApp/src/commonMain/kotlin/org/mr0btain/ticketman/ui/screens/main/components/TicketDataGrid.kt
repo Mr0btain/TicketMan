@@ -4,6 +4,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
@@ -43,9 +44,8 @@ fun TicketDataGrid(
     val noteColumnWidth = 360.dp
     val statusColumnWidth = 120.dp
 
-    // Scroll stuff
-    val horizontalScrollState = rememberScrollState()
-    val scope = rememberCoroutineScope()
+    // LazyListState
+    val verticalLazyScrollbarState = rememberLazyListState()
 
     Surface(
         modifier = modifier
@@ -97,7 +97,9 @@ fun TicketDataGrid(
 
             HorizontalDivider(modifier = Modifier.width(750.dp))
 
-            LazyVerticalScrollBar {
+            LazyVerticalScrollBar(
+                state = verticalLazyScrollbarState
+            ) {
                 itemsIndexed(ticketInfo) { index, item ->
                     TicketTableItem(
                         color = if (!isDarkMode) {
