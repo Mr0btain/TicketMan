@@ -28,8 +28,7 @@ fun CustomerDataGrid(
     // Column widths
     val nameColumnWidth = 200.dp
     val addressColumnWidth = 200.dp
-    val contactColumnWidth = 200.dp
-    val ticketColumnWidth = 60.dp
+    val contactColumnWidth = 240.dp
 
     Surface(
         modifier = modifier
@@ -67,19 +66,14 @@ fun CustomerDataGrid(
 
                 CustomerHeaderBox(
                     label = "Contact",
-                    width = contactColumnWidth
-                )
-
-                Spacer(Modifier.padding(10.dp))
-
-                CustomerHeaderBox(
-                    label = "Last Ticket",
-                    width = ticketColumnWidth,
+                    width = contactColumnWidth,
                     dividerEnable = false
                 )
+
+                Spacer(Modifier.padding(4.dp))
             }
 
-            HorizontalDivider(modifier = Modifier.width(746.dp))
+            HorizontalDivider(modifier = Modifier.width(700.dp))
 
             LazyColumn {
                 itemsIndexed(customerInfo.sortedBy { it.name.firstName + it.name.lastName }) { index, info ->
@@ -93,7 +87,6 @@ fun CustomerDataGrid(
                         nameWidth = nameColumnWidth,
                         addressWidth = addressColumnWidth,
                         contactWidth = contactColumnWidth,
-                        ticketWidth = ticketColumnWidth,
                         onClick = onClick
                     )
 
@@ -151,7 +144,6 @@ private fun CustomerTableItem(
     nameWidth: Dp,
     addressWidth: Dp,
     contactWidth: Dp,
-    ticketWidth: Dp,
     showEmail: Boolean = true
 ) {
     Surface(
@@ -206,16 +198,6 @@ private fun CustomerTableItem(
                 ) {
                     TableCardTextItem(customerInfo.contactInfo.phone.first())
                 }
-            }
-
-            TableDivider()
-
-            Box(
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .width(ticketWidth - 8.dp)
-            ) {
-                TableCardTextItem(customerInfo.mostRecentTicket)
             }
         }
     }

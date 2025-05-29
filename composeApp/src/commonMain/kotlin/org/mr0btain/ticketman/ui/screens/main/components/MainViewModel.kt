@@ -121,13 +121,20 @@ class MainViewModel(
         return _customerDataList.value.first { it.info.id == id }
     }
 
-    // ----------------------------------------------------------------------------------------------------------------------------
-    // TESTING
+    // Database
+    // --------------------------------------------------------------------------------------------------------------------------
 
-    fun openTestFilePicker() {
-        viewModelScope.launch {
-            FileKit.openFilePicker()
-        }
+    fun updateCustomer(data: CustomerData) {
+        // Add to database
+        database.updateCustomer(data)
+
+        // Refresh customer data
+        updateDataFromDb()
+    }
+
+    fun addCustomer(data: CustomerData) {
+        _customerDataList.value = _customerDataList.value + data
+        database.addCustomer(data)
     }
 
     // TODO: Need to really flesh this out better
@@ -135,6 +142,15 @@ class MainViewModel(
         // Read data from mock db and update it in view model
         changeCustomerDataList(database.getAllCustomerData())
         changeTicketDataList(database.getAllTicketData())
+    }
+
+    // ----------------------------------------------------------------------------------------------------------------------------
+    // TESTING
+
+    fun openTestFilePicker() {
+        viewModelScope.launch {
+            FileKit.openFilePicker()
+        }
     }
 
     fun checkIfTablesExist(): Boolean {

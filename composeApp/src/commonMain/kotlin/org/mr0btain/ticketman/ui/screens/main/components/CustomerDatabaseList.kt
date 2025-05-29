@@ -27,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.helpers.check
 import org.mr0btain.ticketman.ui.composables.CustomerDataGrid
 import org.mr0btain.ticketman.ui.composables.SearchTextField
 import org.mr0btain.ticketman.ui.dialog.CustomerDataDialog
@@ -54,8 +55,19 @@ fun CustomerDatabaseList(
         CustomerDataDialog(
             modifier = Modifier,
             customerData = selectedCustomerData.value,
-            onClick = {},
-            onDismiss = { showCustomerDialog = false },
+            onDismiss = { newCustomerData ->
+                // Check if we need to update the data
+                if (selectedCustomerData.value != newCustomerData) {
+                    // Update database and list
+                    viewModel.updateCustomer(newCustomerData)
+
+                    // Update selected customer data
+                    viewModel.changeSelectedCustomerData(newCustomerData)
+                }
+
+                // Close dialog
+                showCustomerDialog = false
+                        },
             isDarkMode = isDarkMode
         )
     }

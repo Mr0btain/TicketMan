@@ -38,8 +38,7 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
                     id = id.toString(),
                     name = name,
                     address = generateRandomAddress(),
-                    contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
-                    mostRecentTicket = ""
+                    contactInfo = generateRandomContactInfo(name.firstName, name.lastName)
                 ),
                 notes = notes
             )
@@ -72,7 +71,7 @@ fun generateMockData(num: Int): Pair<List<CustomerData>, List<TicketInfo>> {
         }
 
         // Update the customer data
-        newCustomerData.add(item.copy(tickets = ticketIds, info = item.info.copy(mostRecentTicket = tickets.last().idNum)))
+        newCustomerData.add(item.copy(tickets = ticketIds))
 
         // Add the tickets to the result
         result.addAll(tickets)
