@@ -39,6 +39,7 @@ import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.SubItemType
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
 import ticketman.composeapp.generated.resources.plus
@@ -58,10 +59,44 @@ fun CustomerDataDialog(
     val city = remember { mutableStateOf(customerData.info.address.city) }
     val state = remember { mutableStateOf(customerData.info.address.state) }
     val zip = remember { mutableStateOf(customerData.info.address.zip) }
-    val email = remember { customerData.info.contactInfo.email.toMutableList() }
-    val phone = remember { customerData.info.contactInfo.phone.toMutableList() }
-    val tickets = remember { customerData.tickets.toMutableList() }
-    val notes = remember { customerData.notes.toMutableList() }
+    val email = remember { mutableStateOf(customerData.info.contactInfo.email) }
+    val phone = remember { mutableStateOf(customerData.info.contactInfo.phone) }
+    val tickets = remember { mutableStateOf(customerData.tickets) }
+    val notes = remember { mutableStateOf(customerData.notes) }
+
+    val showConfirmDeleteScreen = remember { mutableStateOf(false) }
+    val itemNameUpForDelete = remember { mutableStateOf("") }
+    val itemForDelete = remember { mutableStateOf(SubItemType.NONE) }
+
+    if (showConfirmDeleteScreen.value) {
+        ConfirmDeleteDialog(
+            itemName = itemNameUpForDelete.value,
+            isDarkMode = isDarkMode,
+            itemType = itemForDelete.value,
+            onDismissRequest = { confirm ->
+                showConfirmDeleteScreen.value = false
+
+                if (confirm) {
+                    when (itemForDelete.value) {
+                        // Do Nothing for ID
+                        SubItemType.ID -> {}
+                        SubItemType.TICKET -> { tickets.value = tickets.value.filter { it != itemNameUpForDelete.value} }
+                        SubItemType.EMAIL -> { email.value = email.value.filter { it != itemNameUpForDelete.value} }
+                        SubItemType.PHONE -> { phone.value = phone.value.filter { it != itemNameUpForDelete.value} }
+                        SubItemType.NOTE -> {  }
+                        // Do Nothing for update, there is none on this screen
+                        SubItemType.UPDATE -> {}
+                        // Do Nothing for none
+                        SubItemType.NONE -> {}
+                    }
+                }
+
+                // Reset items for delete
+                itemNameUpForDelete.value = ""
+                itemForDelete.value = SubItemType.NONE
+            },
+        )
+    }
 
     // TODO: Flesh out a better way of updating most recent ticket
     Dialog(
@@ -72,10 +107,10 @@ fun CustomerDataDialog(
                         id =identifier,
                         name = CustomerName(firstName.value, lastName.value),
                         address = Address(street.value, city.value, state.value, zip.value),
-                        contactInfo = ContactInfo(email, phone)
+                        contactInfo = ContactInfo(email.value, phone.value)
                     ),
-                    tickets = tickets,
-                    notes = notes
+                    tickets = tickets.value,
+                    notes = notes.value
                 )
             )
         }
@@ -201,7 +236,13 @@ fun CustomerDataDialog(
                         // Email list
                         CustomerEmailListRow(
                             modifier = Modifier,
-                            items = email
+                            items = email.value,
+                            onEditClick = {},
+                            onDeleteClick = { item ->
+                                itemForDelete.value = SubItemType.EMAIL
+                                itemNameUpForDelete.value = item
+                                showConfirmDeleteScreen.value = true
+                            }
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -219,7 +260,9 @@ fun CustomerDataDialog(
 
                             IconButton(
                                 modifier = Modifier.size(26.dp),
-                                onClick = {}
+                                onClick = {
+                                    // TODO
+                                }
                             ) {
                                 Icon(
                                     modifier = Modifier
@@ -231,10 +274,17 @@ fun CustomerDataDialog(
                             }
                         }
 
+                        // TODO: Logic for delete/ confirm screen dialog
                         // Phone List
                         CustomerPhoneListRow(
                             modifier = Modifier,
-                            items = phone
+                            items = phone.value,
+                            onEditClick = {},
+                            onDeleteClick = { item ->
+                                itemForDelete.value = SubItemType.PHONE
+                                itemNameUpForDelete.value = item
+                                showConfirmDeleteScreen.value = true
+                            }
                         )
 
                         Text(
@@ -245,9 +295,16 @@ fun CustomerDataDialog(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        Row {
-
-                        }
+                        // Ticket list
+                        CustomerTicketListRow(
+                            items = tickets.value,
+                            onDeleteClick = { item ->
+                                itemForDelete.value = SubItemType.TICKET
+                                itemNameUpForDelete.value = item
+                                showConfirmDeleteScreen.value = true
+                            },
+                            onTicketClick = {}
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
@@ -281,10 +338,10 @@ fun CustomerDataDialog(
                                         id =identifier,
                                         name = CustomerName(firstName.value, lastName.value),
                                         address = Address(street.value, city.value, state.value, zip.value),
-                                        contactInfo = ContactInfo(email, phone)
+                                        contactInfo = ContactInfo(email.value, phone.value)
                                     ),
-                                    tickets = tickets,
-                                    notes = notes
+                                    tickets = tickets.value,
+                                    notes = notes.value
                                 )
                             )
                         }
@@ -334,10 +391,13 @@ private fun CustomerDialogTextRow(
     }
 }
 
+// TODO: Fix issue with step removing rows if they don't contain that amount of items to step to
 @Composable
 private fun CustomerEmailListRow(
     modifier: Modifier = Modifier,
-    items: MutableList<String>
+    items: List<String>,
+    onEditClick: (String) -> Unit,
+    onDeleteClick: (String) -> Unit
 ) {
     items.indices.step(2).forEachIndexed { index, value ->
         Row(
@@ -349,15 +409,15 @@ private fun CustomerEmailListRow(
         ) {
             CustomChip(
                 label = items.getOrElse(index, { "" }),
-                editOnClick =  {},
-                removeOnClick =  {}
+                onEditClick =  { onEditClick(items[index]) },
+                onDeleteClick =  { onDeleteClick(items[index]) }
             )
 
             if (items.getOrElse(index + 1, { "" }).isNotEmpty()) {
                 CustomChip(
                     label = items.getOrElse(index + 1, { "" }),
-                    editOnClick = {},
-                    removeOnClick = {}
+                    onEditClick = { onEditClick(items[index + 1]) },
+                    onDeleteClick = { onDeleteClick(items[index + 1]) }
                 )
             }
         }
@@ -367,7 +427,9 @@ private fun CustomerEmailListRow(
 @Composable
 private fun CustomerPhoneListRow(
     modifier: Modifier = Modifier,
-    items: MutableList<String>
+    items: List<String>,
+    onEditClick: (String) -> Unit,
+    onDeleteClick: (String) -> Unit
 ) {
     items.indices.step(3).forEachIndexed { index, value ->
         Row(
@@ -379,23 +441,164 @@ private fun CustomerPhoneListRow(
         ) {
             CustomChip(
                 label = items.getOrElse(index, { "" }),
-                editOnClick =  {},
-                removeOnClick =  {}
+                onEditClick = { onEditClick(items[index]) },
+                onDeleteClick = { onDeleteClick(items[index]) }
             )
 
             if (items.getOrElse(index + 1, { "" }).isNotEmpty()) {
                 CustomChip(
                     label = items.getOrElse(index + 1, { "" }),
-                    editOnClick = {},
-                    removeOnClick = {}
+                    onEditClick = { onEditClick(items[index + 1]) },
+                    onDeleteClick = { onDeleteClick(items[index + 1]) }
                 )
             }
 
             if (items.getOrElse(index + 2, { "" }).isNotEmpty()) {
                 CustomChip(
                     label = items.getOrElse(index + 2, { "" }),
-                    editOnClick =  {},
-                    removeOnClick =  {}
+                    onEditClick = { onEditClick(items[index]) },
+                    onDeleteClick = { onDeleteClick(items[index]) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CustomerTicketListRow(
+    modifier: Modifier = Modifier,
+    items: List<String>,
+    onTicketClick: (ticketId: String) -> Unit,
+    onDeleteClick: (ticketId: String) -> Unit
+) {
+    items.indices.step(5).forEachIndexed { index, value ->
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            InputChip(
+                label = { Text(items.getOrElse(index, { "" })) },
+                onClick = { onTicketClick(items[index]) },
+                selected = false,
+                trailingIcon = {
+                    Box(
+                        modifier = Modifier
+                            .size(InputChipDefaults.AvatarSize + 2.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .clickable(
+                                onClick = { onDeleteClick(items[index]) }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(InputChipDefaults.AvatarSize),
+                            painter = painterResource(Res.drawable.x),
+                            contentDescription = "Remove Ticket",
+                        )
+                    }
+                }
+            )
+
+            if (items.getOrElse(index + 1, { "" }).isNotEmpty()) {
+                InputChip(
+                    label = { Text(items.getOrElse(index + 1, { "" })) },
+                    onClick = { onTicketClick(items[index + 1]) },
+                    selected = false,
+                    trailingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(InputChipDefaults.AvatarSize + 2.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .clickable(
+                                    onClick = { onDeleteClick(items[index + 1]) }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(InputChipDefaults.AvatarSize),
+                                painter = painterResource(Res.drawable.x),
+                                contentDescription = "Remove Ticket",
+                            )
+                        }
+                    }
+                )
+            }
+
+            if (items.getOrElse(index + 2, { "" }).isNotEmpty()) {
+                InputChip(
+                    label = { Text(items.getOrElse(index + 2, { "" })) },
+                    onClick = { onTicketClick(items[index + 2]) },
+                    selected = false,
+                    trailingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(InputChipDefaults.AvatarSize + 2.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .clickable(
+                                    onClick = { onDeleteClick(items[index + 2]) }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(InputChipDefaults.AvatarSize),
+                                painter = painterResource(Res.drawable.x),
+                                contentDescription = "Remove Ticket",
+                            )
+                        }
+                    }
+                )
+            }
+
+            if (items.getOrElse(index + 3, { "" }).isNotEmpty()) {
+                InputChip(
+                    label = { Text(items.getOrElse(index + 3, { "" })) },
+                    onClick = { onTicketClick(items[index + 3]) },
+                    selected = false,
+                    trailingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(InputChipDefaults.AvatarSize + 2.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .clickable(
+                                    onClick = { onDeleteClick(items[index + 3]) }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(InputChipDefaults.AvatarSize),
+                                painter = painterResource(Res.drawable.x),
+                                contentDescription = "Remove Ticket",
+                            )
+                        }
+                    }
+                )
+            }
+
+            if (items.getOrElse(index + 4, { "" }).isNotEmpty()) {
+                InputChip(
+                    label = { Text(items.getOrElse(index + 4, { "" })) },
+                    onClick = { onTicketClick(items[index + 4]) },
+                    selected = false,
+                    trailingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(InputChipDefaults.AvatarSize + 2.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .clickable(
+                                    onClick = { onDeleteClick(items[index + 4]) }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(InputChipDefaults.AvatarSize),
+                                painter = painterResource(Res.drawable.x),
+                                contentDescription = "Remove Ticket",
+                            )
+                        }
+                    }
                 )
             }
         }
@@ -406,8 +609,8 @@ private fun CustomerPhoneListRow(
 private fun CustomChip(
     modifier: Modifier = Modifier,
     label: String,
-    editOnClick: () -> Unit,
-    removeOnClick: () -> Unit
+    onEditClick: () -> Unit,
+    onDeleteClick: () -> Unit
 ) {
     Box(
         modifier = modifier
@@ -427,7 +630,7 @@ private fun CustomChip(
                     .size(InputChipDefaults.AvatarSize)
                     .clip(RoundedCornerShape(2.dp))
                     .clickable(
-                        onClick = { editOnClick() }
+                        onClick = { onEditClick() }
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -452,7 +655,7 @@ private fun CustomChip(
                     .size(InputChipDefaults.AvatarSize + 2.dp)
                     .clip(RoundedCornerShape(2.dp))
                     .clickable(
-                        onClick = { removeOnClick() }
+                        onClick = { onDeleteClick() }
                     ),
                 contentAlignment = Alignment.Center
             ) {
