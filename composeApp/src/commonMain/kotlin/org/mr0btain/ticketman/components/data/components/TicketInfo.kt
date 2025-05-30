@@ -1,10 +1,9 @@
-package org.mr0btain.ticketman.components.data
+package org.mr0btain.ticketman.components.data.components
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.components.data.components.Device
-import org.mr0btain.ticketman.components.data.components.Note
 import kotlin.random.Random
 
+@Serializable
 data class TicketInfo(
     val idNum: String = "",
     val customerId: String = "",

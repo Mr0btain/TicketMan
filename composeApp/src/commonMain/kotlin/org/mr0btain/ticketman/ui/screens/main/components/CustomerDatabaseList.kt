@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.ui.composables.CustomerDataGrid
 import org.mr0btain.ticketman.ui.composables.SearchTextField
-import org.mr0btain.ticketman.ui.dialog.CustomerDataDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
@@ -32,23 +31,14 @@ fun CustomerDatabaseList(
     val selectedCustomerData = viewModel.selectedCustomerData.collectAsState()
     val customerInfoList = viewModel.customerDataList.collectAsState()
 
+    // For some reason were ending up with snapshot states for our lists. This causes them to not match even though they are the same data wise
+
     if (showCustomerDialog) {
         CustomerDataDialog(
             modifier = Modifier,
             customerData = selectedCustomerData.value,
-            onDismiss = { newCustomerData ->
-                // Check if we need to update the data
-                if (selectedCustomerData.value != newCustomerData) {
-                    // Update database and list
-                    viewModel.updateCustomer(newCustomerData)
-
-                    // Update selected customer data
-                    viewModel.changeSelectedCustomerData(newCustomerData)
-                }
-
-                // Close dialog
-                showCustomerDialog = false
-                        },
+            viewModel = viewModel,
+            onDismiss = { showCustomerDialog = false },
             isDarkMode = isDarkMode
         )
     }

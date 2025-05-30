@@ -27,8 +27,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.TicketInfo
-import org.mr0btain.ticketman.components.data.TicketStatus
+import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.data.components.TicketStatus
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res

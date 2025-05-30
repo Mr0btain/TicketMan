@@ -7,6 +7,9 @@ import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.CustomerName
 import org.mr0btain.ticketman.components.data.components.Device
 import org.mr0btain.ticketman.components.data.components.Note
+import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.data.components.randomTicketPriority
+import org.mr0btain.ticketman.components.data.components.randomTicketStatus
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

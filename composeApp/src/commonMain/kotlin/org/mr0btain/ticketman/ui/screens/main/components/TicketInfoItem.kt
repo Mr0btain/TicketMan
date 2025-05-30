@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.TicketInfo
+import org.mr0btain.ticketman.components.data.components.TicketInfo
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.mail
