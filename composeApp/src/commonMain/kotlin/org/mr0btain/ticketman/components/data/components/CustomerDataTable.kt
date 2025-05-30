@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.json.json
 
 object CustomerDataTable : IntIdTable("customer") {
-    val idNumber = text("number")
+    val idNumber = integer("number")
     val firstName = text("firstname")
     val lastName = text("lastname")
     val street = text("street")

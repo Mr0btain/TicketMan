@@ -1,12 +1,15 @@
-package org.mr0btain.ticketman.ui.composables
+package org.mr0btain.ticketman.ui.screens.main.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -14,15 +17,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
-import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 
+// TODO: Setup selected highlight of item
 @Composable
 fun CustomerDataGrid(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
     onClick: (id: String) -> Unit,
+    selectedId: String,
+    lazyListState: LazyListState = rememberLazyListState(),
+    scope: CoroutineScope = rememberCoroutineScope(),
     scrollBarRight: Boolean,
     isDarkMode: Boolean
 ) {
@@ -76,10 +83,14 @@ fun CustomerDataGrid(
 
             HorizontalDivider(modifier = Modifier.width(700.dp))
 
-            LazyVerticalScrollBar {
-                itemsIndexed(customerInfo.sortedBy { it.name.firstName + it.name.lastName }) { index, info ->
+            LazyVerticalScrollBar(
+                state = lazyListState,
+                scope = scope
+            ) {
+                itemsIndexed(customerInfo) { index, info ->
                     CustomerTableItem(
                         customerInfo = info,
+                        selected = info.id == selectedId,
                         color = if (!isDarkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {
@@ -129,6 +140,7 @@ private fun CustomerHeaderBox(
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
     onClick: (id: String) -> Unit,
+    selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customerInfo: CustomerInfo,
     nameWidth: Dp,
@@ -144,7 +156,8 @@ private fun CustomerTableItem(
             ),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp,
-        color = color
+        color = color,
+        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(0.dp, Color.Transparent)
     ) {
         Row(
             modifier = Modifier.padding(4.dp),
@@ -178,7 +191,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 8.dp)
                 ) {
-                    TableCardTextItem(customerInfo.contactInfo.email.first())
+                    TableCardTextItem(customerInfo.contactInfo.email.getOrElse(0) { "" })
                 }
             } else {
                 Box(
@@ -186,7 +199,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 6.dp)
                 ) {
-                    TableCardTextItem(customerInfo.contactInfo.phone.first())
+                    TableCardTextItem(customerInfo.contactInfo.phone.getOrElse(0) { "" })
                 }
             }
         }

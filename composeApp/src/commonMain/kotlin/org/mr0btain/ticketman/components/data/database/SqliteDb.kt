@@ -32,8 +32,8 @@ class SqliteDb() {
             // check if tables exists, if not make them
             checkAndCreateTables()
 
-            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq data.info.id }) { item ->
-                item[idNumber] = data.info.id
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq data.info.id.toInt() }) { item ->
+                item[idNumber] = data.info.id.toInt()
                 item[firstName] = data.info.name.firstName
                 item[lastName] = data.info.name.lastName
                 item[street] = data.info.address.street
@@ -47,6 +47,21 @@ class SqliteDb() {
         }
     }
 
+    fun getNextCustomerId(): String {
+        var result = 0
+
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            CustomerDataTable.select(CustomerDataTable.idNumber).forEach { item ->
+                if (item[CustomerDataTable.idNumber] > result) result = item[CustomerDataTable.idNumber]
+            }
+        }
+
+        return (result + 1).toString()
+    }
+
     fun updateCustomerName(id: String, data: CustomerName) {
         transaction {
             // Setup logger
@@ -55,7 +70,7 @@ class SqliteDb() {
             // check if tables exists, if not make them
             checkAndCreateTables()
 
-            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id.toInt() }) { item ->
                 item[firstName] = data.firstName
                 item[lastName] = data.lastName
             }
@@ -70,7 +85,7 @@ class SqliteDb() {
             // check if tables exists, if not make them
             checkAndCreateTables()
 
-            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id.toInt() }) { item ->
                 item[street] = data.street
                 item[city] = data.city
                 item[state] = data.state
@@ -87,7 +102,7 @@ class SqliteDb() {
             // check if tables exists, if not make them
             checkAndCreateTables()
 
-            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id.toInt() }) { item ->
                 item[contactInfo] = data
             }
         }
@@ -101,7 +116,7 @@ class SqliteDb() {
             // check if tables exists, if not make them
             checkAndCreateTables()
 
-            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id.toInt() }) { item ->
                 item[tickets] = TicketList(data)
             }
         }
@@ -115,13 +130,13 @@ class SqliteDb() {
             // check if tables exists, if not make them
             checkAndCreateTables()
 
-            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id.toInt() }) { item ->
                 item[notes] = Notes(data)
             }
         }
     }
 
-    fun addCustomer(data: CustomerData) {
+    fun addCustomer(customer: CustomerData) {
         transaction {
             // Setup logger
             addLogger(StdOutSqlLogger)
@@ -130,16 +145,16 @@ class SqliteDb() {
             checkAndCreateTables()
 
             CustomerDataTable.insert { item ->
-                item[idNumber] = data.info.id
-                item[firstName] = data.info.name.firstName
-                item[lastName] = data.info.name.lastName
-                item[street] = data.info.address.street
-                item[city] = data.info.address.city
-                item[state] = data.info.address.state
-                item[zip] = data.info.address.zip
-                item[tickets] = TicketList(data.tickets)
-                item[notes] = Notes(data.notes)
-                item[contactInfo] = contactInfo
+                item[idNumber] = customer.info.id.toInt()
+                item[firstName] = customer.info.name.firstName
+                item[lastName] = customer.info.name.lastName
+                item[street] = customer.info.address.street
+                item[city] = customer.info.address.city
+                item[state] = customer.info.address.state
+                item[zip] = customer.info.address.zip
+                item[tickets] = TicketList(customer.tickets)
+                item[notes] = Notes(customer.notes)
+                item[contactInfo] = customer.info.contactInfo
             }
         }
     }
@@ -161,7 +176,7 @@ class SqliteDb() {
                 result.add(
                     CustomerData(
                         info = CustomerInfo(
-                            id = item[CustomerDataTable.idNumber],
+                            id = item[CustomerDataTable.idNumber].toString(),
                             name = CustomerName(
                                 firstName = item[CustomerDataTable.firstName],
                                 lastName = item[CustomerDataTable.lastName]
@@ -194,7 +209,7 @@ class SqliteDb() {
 
             data.forEach { customer ->
                 CustomerDataTable.insert { item ->
-                    item[idNumber] = customer.info.id
+                    item[idNumber] = customer.info.id.toInt()
                     item[firstName] = customer.info.name.firstName
                     item[lastName] = customer.info.name.lastName
                     item[street] = customer.info.address.street

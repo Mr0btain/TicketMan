@@ -112,6 +112,14 @@ class MainViewModel(
     private val _selectedCustomerData: MutableStateFlow<CustomerData> = MutableStateFlow(CustomerData())
     var selectedCustomerData = _selectedCustomerData.asStateFlow()
 
+    // Selected Customer data index default to absurd number
+    private val _selectedCustomerDataIndex: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
+    var selectedCustomerDataIndex = _selectedCustomerDataIndex.asStateFlow()
+
+    fun changeSelectedCustomerIndex(index: Int) {
+        _selectedCustomerDataIndex.value = index
+    }
+
     // Call to change customer data
     fun changeSelectedCustomerData(customerData: CustomerData) {
         _selectedCustomerData.value = customerData
@@ -126,8 +134,13 @@ class MainViewModel(
         return _customerDataList.value.first { it.info.id == id }
     }
 
+    // To get the index of an item
+    fun getCustomerIndex(data: CustomerData): Int { return _customerDataList.value.indexOf(data) }
+
     // Database
     // --------------------------------------------------------------------------------------------------------------------------
+
+    fun getNextCustomerId(): String { return database.getNextCustomerId() }
 
     fun updateCustomerName(id: String, data: CustomerName) {
         database.updateCustomerName(id, data)
@@ -190,7 +203,16 @@ class MainViewModel(
     }
 
     fun addCustomer(data: CustomerData) {
+        // Add to list
         _customerDataList.value = _customerDataList.value + data
+
+        // Set selected
+        _selectedCustomerData.value = data
+
+        // Set index
+        _selectedCustomerDataIndex.value = getCustomerIndex(data)
+
+        // Push to database
         database.addCustomer(data)
     }
 
@@ -214,7 +236,7 @@ class MainViewModel(
     }
 
     fun generateMockDbData() {
-        val (customerdata, ticketData) = generateMockData(60)
+        val (customerdata, ticketData) = generateMockData(600)
 
         database.addAllTicketData(ticketData)
 

@@ -16,6 +16,11 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
 
+// TODO: Sort the lists and remember the values to save on performance
+// TODO: Add ability to click column and sort by that value
+// TODO: Add scroll to item when make new ticket
+// TODO: Add highlight to item when selected
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketDatabaseList(
