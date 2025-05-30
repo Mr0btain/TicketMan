@@ -10,14 +10,16 @@ import org.jetbrains.exposed.v1.core.locate
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.Tasks
-import org.mr0btain.ticketman.components.data.TicketInfo
+import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.*
 
 class SqliteDb() {
     // TODO: Setup error handling
-    // TODO: Flesh these out better to support copying synching and such between dbs
+    // TODO: Flesh these out better to support copying syncing and such between dbs
     // TODO: Add encryption
     // TODO: Add removal functions
+    // TODO: Make more functions for indexing and searching the db for things
+    // TODO: Make functions to update specific items for each thing using id
     private val appDir = FileKit.filesDir.path
     private val db = Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
         //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
@@ -27,7 +29,7 @@ class SqliteDb() {
             // Setup logger
             addLogger(StdOutSqlLogger)
 
-            // check if tables exist if not make them
+            // check if tables exists, if not make them
             checkAndCreateTables()
 
             CustomerDataTable.update(where = { CustomerDataTable.idNumber eq data.info.id }) { item ->
@@ -41,6 +43,80 @@ class SqliteDb() {
                 item[tickets] = TicketList(data.tickets)
                 item[notes] = Notes(data.notes)
                 item[contactInfo] = contactInfo
+            }
+        }
+    }
+
+    fun updateCustomerName(id: String, data: CustomerName) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // check if tables exists, if not make them
+            checkAndCreateTables()
+
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+                item[firstName] = data.firstName
+                item[lastName] = data.lastName
+            }
+        }
+    }
+
+    fun updateCustomerAddress(id: String, data: Address) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // check if tables exists, if not make them
+            checkAndCreateTables()
+
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+                item[street] = data.street
+                item[city] = data.city
+                item[state] = data.state
+                item[zip] = data.zip
+            }
+        }
+    }
+
+    fun updateCustomerContact(id: String, data: ContactInfo) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // check if tables exists, if not make them
+            checkAndCreateTables()
+
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+                item[contactInfo] = data
+            }
+        }
+    }
+
+    fun updateCustomerTickets(id: String, data: List<String>) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // check if tables exists, if not make them
+            checkAndCreateTables()
+
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+                item[tickets] = TicketList(data)
+            }
+        }
+    }
+
+    fun updateCustomerNotes(id: String, data: List<Note>) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // check if tables exists, if not make them
+            checkAndCreateTables()
+
+            CustomerDataTable.update(where = { CustomerDataTable.idNumber eq id }) { item ->
+                item[notes] = Notes(data)
             }
         }
     }

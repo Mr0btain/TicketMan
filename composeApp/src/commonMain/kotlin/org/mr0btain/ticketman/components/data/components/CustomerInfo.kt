@@ -1,7 +1,8 @@
 package org.mr0btain.ticketman.components.data.components
 
-import org.mr0btain.ticketman.components.data.components.CustomerName
+import kotlinx.serialization.Serializable
 
+@Serializable
 data class CustomerInfo(
     val id: String = "",
     val name: CustomerName = CustomerName(),

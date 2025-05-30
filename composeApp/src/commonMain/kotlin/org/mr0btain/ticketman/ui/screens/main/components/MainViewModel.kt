@@ -9,8 +9,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
+import org.mr0btain.ticketman.components.data.components.Address
+import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.TicketInfo
+import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.Note
+import org.mr0btain.ticketman.components.data.components.Notes
+import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.getPlatform
@@ -124,12 +129,64 @@ class MainViewModel(
     // Database
     // --------------------------------------------------------------------------------------------------------------------------
 
-    fun updateCustomer(data: CustomerData) {
-        // Add to database
-        database.updateCustomer(data)
+    fun updateCustomerName(id: String, data: CustomerName) {
+        database.updateCustomerName(id, data)
 
-        // Refresh customer data
-        updateDataFromDb()
+        // Fix List in viewmodel
+        _customerDataList.value = _customerDataList.value.map { it ->
+            if (it.info.id == id) it.copy(info = it.info.copy(name = data)) else it
+        }
+
+        // update selected data as well
+        _selectedCustomerData.value = _selectedCustomerData.value.copy(info = _selectedCustomerData.value.info.copy(name = data))
+    }
+
+    fun updateCustomerAddress(id: String, data: Address) {
+        database.updateCustomerAddress(id, data)
+
+        // Fix List in viewmodel
+        _customerDataList.value = _customerDataList.value.map { it ->
+            if (it.info.id == id) it.copy(info = it.info.copy(address = data)) else it
+        }
+
+        // update selected data as well
+        _selectedCustomerData.value = _selectedCustomerData.value.copy(info = _selectedCustomerData.value.info.copy(address = data))
+    }
+
+    fun updateCustomerContact(id: String, data: ContactInfo) {
+        database.updateCustomerContact(id, data)
+
+        // Fix List in viewmodel
+        _customerDataList.value = _customerDataList.value.map { it ->
+            if (it.info.id == id) it.copy(info = it.info.copy(contactInfo = data)) else it
+        }
+
+        // update selected data as well
+        _selectedCustomerData.value = _selectedCustomerData.value.copy(info = _selectedCustomerData.value.info.copy(contactInfo = data))
+    }
+
+    fun updateCustomerTickets(id: String, data: List<String>) {
+        database.updateCustomerTickets(id, data)
+
+        // Fix List in viewmodel
+        _customerDataList.value = _customerDataList.value.map { it ->
+            if (it.info.id == id) it.copy(tickets = data) else it
+        }
+
+        // update selected data as well
+        _selectedCustomerData.value = _selectedCustomerData.value.copy(tickets = data)
+    }
+
+    fun updateCustomerNotes(id: String, data: List<Note>) {
+        database.updateCustomerNotes(id, data)
+
+        // Fix List in viewmodel
+        _customerDataList.value = _customerDataList.value.map { it ->
+            if (it.info.id == id) it.copy(notes = data) else it
+        }
+
+        // update selected data as well
+        _selectedCustomerData.value = _selectedCustomerData.value.copy(notes = data)
     }
 
     fun addCustomer(data: CustomerData) {
@@ -137,7 +194,6 @@ class MainViewModel(
         database.addCustomer(data)
     }
 
-    // TODO: Need to really flesh this out better
     fun updateDataFromDb() {
         // Read data from mock db and update it in view model
         changeCustomerDataList(database.getAllCustomerData())
@@ -158,7 +214,7 @@ class MainViewModel(
     }
 
     fun generateMockDbData() {
-        val (customerdata, ticketData) = generateMockData(20)
+        val (customerdata, ticketData) = generateMockData(60)
 
         database.addAllTicketData(ticketData)
 

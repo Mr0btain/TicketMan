@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.components.data.components
 
+import kotlinx.serialization.Serializable
+
+@Serializable
 data class Address(
     val street: String = "",
     val city: String = "",
