@@ -33,7 +33,7 @@ import org.mr0btain.ticketman.components.data.components.getLabelTextForType
  */
 
 @Composable
-fun AddSubItemDialog(
+fun AddBasicSubItemDialog(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     subItemType: SubItemType,
