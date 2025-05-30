@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -40,6 +41,7 @@ import org.mr0btain.ticketman.components.data.components.CustomerName
 import org.mr0btain.ticketman.components.data.components.MainItemType
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.SubItemType
+import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.AddNoteDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import ticketman.composeapp.generated.resources.Res
@@ -60,7 +62,7 @@ fun CustomerDataDialog(
 ) {
     val identifier = customerData.info.id
     // Use mutable state here to make sure the updates are reflected properly with state change as updating view model sometimes
-    // doesn't trigger change to dialog
+    // doesn't trigger change to dialog but for some reason this works
     var data by remember { mutableStateOf(customerData) }
 
     // Name
@@ -87,6 +89,10 @@ fun CustomerDataDialog(
     // For adding note dialog
     var showAddNoteDialog by remember { mutableStateOf(false) }
 
+    // For adding a basic sub item
+    var itemToAdd by remember { mutableStateOf(SubItemType.NONE) }
+    var showAddBasicSubItemDialog by remember { mutableStateOf(false) }
+
     // Add Note dialog
     if (showAddNoteDialog) {
         AddNoteDialog(
@@ -101,6 +107,40 @@ fun CustomerDataDialog(
             onDismissRequest = { showAddNoteDialog = false }
         )
     }
+
+    // Add basic item dialog
+    if (showAddBasicSubItemDialog) {
+        AddBasicSubItemDialog(
+            isDarkMode = isDarkMode,
+            subItemType = itemToAdd,
+            onConfirm = { item ->
+                if (item.isNotBlank()) {
+                    when (itemToAdd) {
+                        SubItemType.EMAIL -> {
+                            // Add item to list
+                            email.add(item)
+
+                            // Update database
+                            viewModel.updateCustomerContact(identifier, data.info.contactInfo.copy(email = email))
+                        }
+                        SubItemType.PHONE -> {
+                            // Add item to list
+                            phone.add(item)
+
+                            // Update database
+                            viewModel.updateCustomerContact(identifier, data.info.contactInfo.copy(phone = phone))
+                        }
+                        else -> {}
+                    }
+                }
+            },
+            onDismissRequest = {
+                showAddBasicSubItemDialog = false
+                itemToAdd = SubItemType.NONE
+            }
+        )
+    }
+
 
     // Delete item dialog
     if (showConfirmDeleteScreen) {
@@ -275,7 +315,10 @@ fun CustomerDataDialog(
 
                             IconButton(
                                 modifier = Modifier.size(26.dp),
-                                onClick = {}
+                                onClick = {
+                                    itemToAdd = SubItemType.EMAIL
+                                    showAddBasicSubItemDialog = true
+                                }
                             ) {
                                 Icon(
                                     modifier = Modifier
@@ -315,7 +358,8 @@ fun CustomerDataDialog(
                             IconButton(
                                 modifier = Modifier.size(26.dp),
                                 onClick = {
-                                    // TODO
+                                    itemToAdd = SubItemType.PHONE
+                                    showAddBasicSubItemDialog = true
                                 }
                             ) {
                                 Icon(
@@ -427,8 +471,22 @@ fun CustomerDataDialog(
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Button(
+                        onClick = { onDismiss() },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        )
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Spacer(Modifier.padding(8.dp))
+
                     Button(
                         onClick = {
                             // Check remaining data
@@ -441,7 +499,8 @@ fun CustomerDataDialog(
 
                             // Call dismiss
                             onDismiss()
-                        }
+                        },
+                        shape = RoundedCornerShape(8.dp),
                     ) {
                         Text("Confirm")
                     }
@@ -488,6 +547,10 @@ private fun CustomerDialogTextRow(
     }
 }
 
+/**
+ * For displaying emails on dialog. Only one per line as emails that get very long will not be displayed for whatever reason
+ */
+
 @Composable
 private fun CustomerDialogEmailList(
     modifier: Modifier = Modifier,
@@ -495,38 +558,17 @@ private fun CustomerDialogEmailList(
     onEditClick: (Int) -> Unit,
     onDeleteClick: (Int) -> Unit
 ) {
-    var row = 1
+    Column(
+        modifier = modifier
+    ) {
+        items.forEachIndexed { index, email ->
+            CustomChip(
+                label = items[index],
+                onEditClick =  { onEditClick(index) },
+                onDeleteClick =  { onDeleteClick(index) }
+            )
 
-    Column {
-        for (i in 1..ceil(items.size.toFloat() / 2f).toInt()) {
-            val index = i * row
-
-            // CHeck if there is even items in this row
-            if (items.getOrElse(index - 1) { "" }.isNotEmpty()) {
-                Row(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CustomChip(
-                        label = items[index - 1],
-                        onEditClick =  { onEditClick(index - 1) },
-                        onDeleteClick =  { onDeleteClick(index - 1) }
-                    )
-
-                    if (items.getOrElse(index) { "" }.isNotEmpty()) {
-                        CustomChip(
-                            label = items[index],
-                            onEditClick = { onEditClick(index) },
-                            onDeleteClick = { onDeleteClick(index) }
-                        )
-                    }
-                }
-            }
-
-            row++
+            Spacer(Modifier.padding(2.dp))
         }
     }
 }

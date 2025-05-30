@@ -2,12 +2,14 @@ package org.mr0btain.ticketman.ui.dialog
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -84,14 +86,33 @@ fun AddNoteDialog(
 
                 Spacer(Modifier.padding(4.dp))
 
-                Button(
-                    onClick = {
-                        onConfirm(Note(author, text))
-                        onDismissRequest()
-                              },
-                    shape = RoundedCornerShape(8.dp)
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Add")
+                    Button(
+                        onClick = { onDismissRequest() },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.error,
+                            contentColor = MaterialTheme.colorScheme.onError
+                        )
+                    ) {
+                        Text("Cancel")
+                    }
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    Button(
+                        onClick = {
+                            onConfirm(Note(author, text))
+                            onDismissRequest()
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = author.isNotBlank() && text.isNotBlank()
+                    ) {
+                        Text("Add")
+                    }
                 }
             }
         }
