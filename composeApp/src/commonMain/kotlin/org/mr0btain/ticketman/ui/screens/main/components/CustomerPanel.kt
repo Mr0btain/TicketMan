@@ -8,19 +8,19 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.ui.composables.SearchTextField
+import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.ui.composables.CustomerSearchBox
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
 
-// TODO: Add ability to click on column and have it sorted by that value
-// TODO: Finish search bar implementation
-
 @Composable
-fun CustomerDatabaseList(
+fun CustomerPanel(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
     scrollBarTop: Boolean = false,
@@ -30,7 +30,10 @@ fun CustomerDatabaseList(
     // Customer data
     val selectedCustomerData = viewModel.selectedCustomerData.collectAsState()
     val customerDataList = viewModel.customerDataList.collectAsState()
-    val selectedCustomerIndex = viewModel.selectedCustomerDataIndex.collectAsState()
+    //val selectedCustomerIndex = viewModel.selectedCustomerDataIndex.collectAsState()
+
+    // Starter data to seed new customer if needed
+    val starterData = remember { mutableStateOf(CustomerData()) }
 
     // Hopefully this saves on calculations and updates properly
     val sortedCustomerInfo = remember(customerDataList.value) { customerDataList.value.map { it.info }.sortedBy { it.name.firstName + it.name.lastName } }
@@ -47,18 +50,20 @@ fun CustomerDatabaseList(
     val customerDataListState = rememberLazyListState()
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
-    var isIndexUpdateFromClick by remember { mutableStateOf(false) }
+    var isSelectUpdateFromClick by remember { mutableStateOf(false) }
 
-    // On list update scroll to selected item
-    // This will only really happen if we add a new customer
-    LaunchedEffect(selectedCustomerIndex.value) {
-        if (!isIndexUpdateFromClick) {
+    val focusManager = LocalFocusManager.current
+
+    // On list update or search scroll to selected item
+    LaunchedEffect(selectedCustomerData.value) {
+        if (!isSelectUpdateFromClick) {
             val index = sortedCustomerInfo.indexOf(selectedCustomerData.value.info)
+
             // Sanity check
-            if (selectedCustomerIndex.value >= 0 && selectedCustomerIndex.value != Int.MAX_VALUE && index >= 0) {
+            if (index >= 0 && index <= customerDataList.value.size) {
                 customerDataListState.scrollToItem(index)
             }
-        } else isIndexUpdateFromClick = false
+        } else isSelectUpdateFromClick = false
     }
 
     // For editing customer data
@@ -75,8 +80,15 @@ fun CustomerDatabaseList(
     if (showAddCustomerDialog) {
         AddCustomerDataDialog(
             viewModel = viewModel,
-            onDismiss = { showAddCustomerDialog = false },
-            isDarkMode = isDarkMode
+            onDismiss = {
+                // Reset starter data
+                starterData.value = CustomerData()
+
+                // Hide dialog
+                showAddCustomerDialog = false
+                        },
+            isDarkMode = isDarkMode,
+            starterData = starterData.value
         )
     }
 
@@ -122,7 +134,11 @@ fun CustomerDatabaseList(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { showAddCustomerDialog = true },
+                        onClick = {
+                            focusManager.clearFocus()
+
+                            showAddCustomerDialog = true
+                                  },
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(text = "Add Customer")
@@ -134,18 +150,36 @@ fun CustomerDatabaseList(
 
             // Search bar
             AnimatedVisibility(visible = showSearchBar) {
-                Row(
-                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    SearchTextField(
-                        modifier = Modifier.padding(bottom = 4.dp),
-                        label = "Search",
-                        placeholder = "",
-                        onValueChange = {}
-                    )
-                }
+                CustomerSearchBox(
+                    modifier = Modifier.sizeIn(
+                        maxWidth = 500.dp
+                    ),
+                    items = viewModel.getAllCustomerInfo(),
+                    onResult = { item, isNew ->
+                        if (isNew) {
+                            val newName = item.split(" ")
+
+                            starterData.value = CustomerData(
+                                info = CustomerInfo(
+                                    name = CustomerName(
+                                        firstName = newName.getOrElse(0) { "" },
+                                        lastName = newName.getOrElse(1) { "" }
+                                    )
+                                )
+                            )
+
+                            // Popup new customer dialog
+                            showAddCustomerDialog = true
+                        } else {
+                            // Update selected customer
+                            viewModel.changeSelectedCustomerData(
+                                customerDataList.value.firstOrNull { it.info.id == item } ?: CustomerData()
+                            )
+                        }
+
+                        focusManager.clearFocus()
+                    }
+                )
             }
 
             Row(
@@ -153,7 +187,7 @@ fun CustomerDatabaseList(
                     .wrapContentHeight()
                     .fillMaxWidth()
             ) {
-                CustomerDataGrid(
+                CustomerListPane(
                     modifier = Modifier
                         .height(500.dp),
                     customerInfo = sortedCustomerInfo,
@@ -164,24 +198,23 @@ fun CustomerDatabaseList(
                     isDarkMode = isDarkMode,
                     onClick = { id ->
                         // Set the isupdatefromclick so we don't jar the scroll in the launched effect
-                        isIndexUpdateFromClick = true
+                        isSelectUpdateFromClick = true
 
                         // Update selected customer
                         viewModel.changeSelectedCustomerData(viewModel.getCustomerData(id))
 
-                        // Update selected index
-                        viewModel.changeSelectedCustomerIndex(
-                            sortedCustomerInfo.indexOf(selectedCustomerData.value.info)
-                        )
+                        // Clear request focus to clear search bar if its open
+                        focusManager.clearFocus()
                     }
                 )
 
-                CustomerInfoItem(
+                CustomerInfoPane(
                     modifier = modifier
                         .height(500.dp),
                     isDarkMode = isDarkMode,
                     selectedCustomerData = selectedCustomerData.value,
                     onEditClick = {
+                        focusManager.clearFocus()
                         showEditCustomerDialog = true
                     },
                     tickets = viewModel.getTicketsForCustomer(selectedCustomerData.value.info.id)

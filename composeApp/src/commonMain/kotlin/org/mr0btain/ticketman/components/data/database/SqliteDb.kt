@@ -21,10 +21,10 @@ class SqliteDb() {
     // TODO: Make more functions for indexing and searching the db for things
     // TODO: When we add error handling remove need to make database every transaction.
 
-    // Get out app directory depending on platform
+    // Get the app directory depending on platform
     private val appDir = FileKit.filesDir.path
 
-    // Connect to our database
+    // Connect to the local database
     private val db = Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
         //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
 
@@ -60,6 +60,21 @@ class SqliteDb() {
 
             CustomerDataTable.select(CustomerDataTable.idNumber).forEach { item ->
                 if (item[CustomerDataTable.idNumber] > result) result = item[CustomerDataTable.idNumber]
+            }
+        }
+
+        return (result + 1).toString()
+    }
+
+    fun getNextTicketId(): String {
+        var result = 0
+
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            TicketDataTable.select(TicketDataTable.idNumber).forEach { item ->
+                if (item[TicketDataTable.idNumber] > result) result = item[TicketDataTable.idNumber]
             }
         }
 
@@ -236,7 +251,7 @@ class SqliteDb() {
             // Check if tables exist, if not make them
             checkAndCreateTables()
 
-            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+            TicketDataTable.update({ TicketDataTable.idNumber eq id.toInt() }) { item ->
                 item[TicketDataTable.updates] = updates
             }
         }
@@ -250,7 +265,7 @@ class SqliteDb() {
             // Check if tables exist, if not make them
             checkAndCreateTables()
 
-            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+            TicketDataTable.update({ TicketDataTable.idNumber eq id.toInt() }) { item ->
                 item[TicketDataTable.status] = status
             }
         }
@@ -264,7 +279,7 @@ class SqliteDb() {
             // Check if tables exist, if not make them
             checkAndCreateTables()
 
-            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+            TicketDataTable.update({ TicketDataTable.idNumber eq id.toInt() }) { item ->
                 item[TicketDataTable.priority] = priority
             }
         }
@@ -278,7 +293,7 @@ class SqliteDb() {
             // Check if tables exist, if not make them
             checkAndCreateTables()
 
-            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+            TicketDataTable.update({ TicketDataTable.idNumber eq id.toInt() }) { item ->
                 item[TicketDataTable.assignedEmp] = employeeNum
             }
         }
@@ -292,7 +307,7 @@ class SqliteDb() {
             // Check if tables exist, if not make them
             checkAndCreateTables()
 
-            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+            TicketDataTable.update({ TicketDataTable.idNumber eq id.toInt() }) { item ->
                 item[TicketDataTable.device] = device
             }
         }
@@ -306,7 +321,7 @@ class SqliteDb() {
             // Check if tables exist, if not make them
             checkAndCreateTables()
 
-            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+            TicketDataTable.update({ TicketDataTable.idNumber eq id.toInt() }) { item ->
                 item[TicketDataTable.customerId] = custId
             }
         }
@@ -320,8 +335,8 @@ class SqliteDb() {
             // Check if tables exist, if not make them
             checkAndCreateTables()
 
-            TicketDataTable.update({ TicketDataTable.idNumber eq data.idNum }) { item ->
-                item[TicketDataTable.idNumber] = data.idNum
+            TicketDataTable.update({ TicketDataTable.idNumber eq data.idNum.toInt() }) { item ->
+                item[TicketDataTable.idNumber] = data.idNum.toInt()
                 item[TicketDataTable.customerId] = data.customerId
                 item[TicketDataTable.device] = data.device
                 item[TicketDataTable.assignedEmp] = data.assignedEmployee
@@ -341,7 +356,7 @@ class SqliteDb() {
             checkAndCreateTables()
 
             TicketDataTable.insert { item ->
-                item[TicketDataTable.idNumber] = data.idNum
+                item[TicketDataTable.idNumber] = data.idNum.toInt()
                 item[TicketDataTable.customerId] = data.customerId
                 item[TicketDataTable.device] = data.device
                 item[TicketDataTable.assignedEmp] = data.assignedEmployee
@@ -362,7 +377,7 @@ class SqliteDb() {
 
             // Batch insert
             TicketDataTable.batchInsert(data) { item ->
-                this[TicketDataTable.idNumber] = item.idNum
+                this[TicketDataTable.idNumber] = item.idNum.toInt()
                 this[TicketDataTable.customerId] = item.customerId
                 this[TicketDataTable.device] = item.device
                 this[TicketDataTable.assignedEmp] = item.assignedEmployee
@@ -382,7 +397,7 @@ class SqliteDb() {
             TicketDataTable.selectAll().forEach { item ->
                 result.add(
                     TicketInfo(
-                        idNum = item[TicketDataTable.idNumber],
+                        idNum = item[TicketDataTable.idNumber].toString(),
                         customerId = item[TicketDataTable.customerId],
                         device = item[TicketDataTable.device],
                         assignedEmployee = item[TicketDataTable.assignedEmp],

@@ -7,6 +7,9 @@ enum class SubItemType {
     PHONE,
     NOTE,
     UPDATE,
+    CUSTOMER_ID,
+    ASSIGNED_EMPLOYEE,
+    DEVICE,
     NONE
 }
 
@@ -18,6 +21,9 @@ fun getLabelTextForType(subItemType: SubItemType): String {
         SubItemType.PHONE -> "Phone"
         SubItemType.NOTE -> "Note"
         SubItemType.UPDATE -> "Update"
+        SubItemType.CUSTOMER_ID -> "Customer Id"
+        SubItemType.ASSIGNED_EMPLOYEE -> "Assigned Employee"
+        SubItemType.DEVICE -> "Device"
         SubItemType.NONE -> "ERROR"
     }
 }

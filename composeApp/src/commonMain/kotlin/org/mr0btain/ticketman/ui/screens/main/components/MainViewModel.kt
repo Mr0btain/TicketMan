@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.components.data.FileManager
 import org.mr0btain.ticketman.components.data.components.Address
 import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.CustomerName
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.Notes
@@ -145,10 +146,23 @@ class MainViewModel(
     // To get the index of an item
     fun getCustomerIndex(data: CustomerData): Int { return _customerDataList.value.indexOf(data) }
 
+    // Get a list of all customer names
+    fun getAllCustomerInfo(): List<CustomerInfo> {
+        val result = mutableListOf<CustomerInfo>()
+
+        _customerDataList.value.forEach { customerData ->
+            result.add(customerData.info)
+        }
+
+        return result
+    }
+
     // Database
     // --------------------------------------------------------------------------------------------------------------------------
 
     fun getNextCustomerId(): String { return database.getNextCustomerId() }
+
+    fun getNextTicketId(): String { return database.getNextTicketId() }
 
     fun updateCustomerName(id: String, data: CustomerName) {
         database.updateCustomerName(id, data)
@@ -222,6 +236,20 @@ class MainViewModel(
 
         // Push to database
         database.addCustomer(data)
+    }
+
+    fun addTicket(data: TicketInfo) {
+        // Add to list
+        _ticketDataList.value = _ticketDataList.value + data
+
+        // Set selected ticket
+        _selectedTicketInfo.value = data
+
+        // Set index
+        // TODO
+
+        // Push to database
+        database.addTicket(data)
     }
 
     fun updateDataFromDb() {

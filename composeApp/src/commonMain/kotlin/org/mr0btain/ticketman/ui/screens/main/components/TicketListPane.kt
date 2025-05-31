@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui.screens.main.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -28,13 +29,14 @@ import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 
 @Composable
-fun TicketDataGrid(
+fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf(),
     selectedId: String,
     scrollOnRight: Boolean,
-    onClick: (TicketInfo) -> Unit
+    onClick: (TicketInfo) -> Unit,
+    state: LazyListState = rememberLazyListState()
 ) {
 
 // Ticket #  |  Priority  |   Last Note   |   Status
@@ -44,9 +46,6 @@ fun TicketDataGrid(
     val priorityColumnWidth = 100.dp
     val noteColumnWidth = 360.dp
     val statusColumnWidth = 120.dp
-
-    // LazyListState
-    val verticalLazyScrollbarState = rememberLazyListState()
 
     Surface(
         modifier = modifier
@@ -99,7 +98,7 @@ fun TicketDataGrid(
             HorizontalDivider(modifier = Modifier.width(750.dp))
 
             LazyVerticalScrollBar(
-                state = verticalLazyScrollbarState
+                state = state
             ) {
                 itemsIndexed(ticketInfo) { index, item ->
                     TicketTableItem(

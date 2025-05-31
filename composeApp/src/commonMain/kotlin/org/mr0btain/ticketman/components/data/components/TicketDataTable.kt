@@ -5,7 +5,7 @@ import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.json.json
 
 object TicketDataTable: IntIdTable("tickets") {
-    val idNumber = text("number")
+    val idNumber = integer("number")
     val customerId = text("customerid")
     val assignedEmp = text("assignedemp")
     val device = json<Device>("device", Json)

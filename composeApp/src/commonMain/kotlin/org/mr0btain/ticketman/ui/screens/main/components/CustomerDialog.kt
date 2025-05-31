@@ -52,7 +52,7 @@ import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
 import kotlin.math.ceil
 
-// TODO: Maybe make specific functions for updating database stuff so we don't have to pass the entire item only id and change
+// TODO: We can prossibly combine these two dialogs into one
 
 @Composable
 fun EditCustomerDataDialog(
@@ -254,7 +254,7 @@ fun EditCustomerDataDialog(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        CustomerDialogTextRow(
+                        DialogTextRow(
                             modifier = Modifier,
                             firstLabel = "First",
                             firstValue = firstName,
@@ -277,7 +277,7 @@ fun EditCustomerDataDialog(
                             verticalArrangement = Arrangement.SpaceBetween,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            CustomerDialogTextRow(
+                            DialogTextRow(
                                 modifier = Modifier,
                                 firstLabel = "Street",
                                 firstValue = street,
@@ -285,7 +285,7 @@ fun EditCustomerDataDialog(
                                 secondValue = city
                             )
 
-                            CustomerDialogTextRow(
+                            DialogTextRow(
                                 modifier = Modifier,
                                 firstLabel = "State",
                                 firstValue = state,
@@ -512,10 +512,12 @@ fun EditCustomerDataDialog(
     }
 }
 
+// TODO: Add checks to make sure its not blank
 @Composable
 fun AddCustomerDataDialog(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
+    starterData: CustomerData = CustomerData(),
     onDismiss: () -> Unit,
     isDarkMode: Boolean
 ) {
@@ -523,20 +525,20 @@ fun AddCustomerDataDialog(
     val identifier = remember { viewModel.getNextCustomerId() }
 
     // Name
-    val firstName = remember { mutableStateOf("") }
-    val lastName = remember { mutableStateOf("") }
+    val firstName = remember { mutableStateOf(starterData.info.name.firstName) }
+    val lastName = remember { mutableStateOf(starterData.info.name.lastName) }
 
     // Address
-    val street = remember { mutableStateOf("") }
-    val city = remember { mutableStateOf("") }
-    val state = remember { mutableStateOf("") }
-    val zip = remember { mutableStateOf("") }
+    val street = remember { mutableStateOf(starterData.info.address.street) }
+    val city = remember { mutableStateOf(starterData.info.address.city) }
+    val state = remember { mutableStateOf(starterData.info.address.state) }
+    val zip = remember { mutableStateOf(starterData.info.address.zip) }
 
     // Mutable lists
-    val email = remember { mutableStateListOf<String>() }
-    val phone = remember { mutableStateListOf<String>() }
-    val tickets = remember { mutableStateListOf<String>() }
-    val notes = remember { mutableStateListOf<Note>() }
+    val email = remember { starterData.info.contactInfo.email.toMutableStateList() }
+    val phone = remember { starterData.info.contactInfo.phone.toMutableStateList() }
+    val tickets = remember { starterData.tickets.toMutableStateList() }
+    val notes = remember { starterData.notes.toMutableStateList() }
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
@@ -688,7 +690,7 @@ fun AddCustomerDataDialog(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        CustomerDialogTextRow(
+                        DialogTextRow(
                             modifier = Modifier,
                             firstLabel = "First",
                             firstValue = firstName,
@@ -711,7 +713,7 @@ fun AddCustomerDataDialog(
                             verticalArrangement = Arrangement.SpaceBetween,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            CustomerDialogTextRow(
+                            DialogTextRow(
                                 modifier = Modifier,
                                 firstLabel = "Street",
                                 firstValue = street,
@@ -719,7 +721,7 @@ fun AddCustomerDataDialog(
                                 secondValue = city
                             )
 
-                            CustomerDialogTextRow(
+                            DialogTextRow(
                                 modifier = Modifier,
                                 firstLabel = "State",
                                 firstValue = state,
@@ -930,8 +932,16 @@ fun AddCustomerDataDialog(
                                 CustomerData(
                                     info = CustomerInfo(
                                         id = identifier,
-                                        name = CustomerName(firstName.value, lastName.value),
-                                        address = Address(street.value, city.value, state.value, zip.value),
+                                        name = CustomerName(
+                                            firstName.value.lowercase().replaceFirstChar { it.uppercase() },
+                                            lastName.value.lowercase().replaceFirstChar { it.uppercase() }
+                                        ),
+                                        address = Address(
+                                            street.value.lowercase().replaceFirstChar { it.uppercase() },
+                                            city.value.lowercase().replaceFirstChar { it.uppercase() },
+                                            state.value.lowercase().replaceFirstChar { it.uppercase() },
+                                            zip.value
+                                        ),
                                         contactInfo = ContactInfo(email, phone)
                                     ),
                                     tickets = tickets,
@@ -949,43 +959,6 @@ fun AddCustomerDataDialog(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun CustomerDialogTextRow(
-    modifier: Modifier = Modifier,
-    firstLabel: String,
-    firstValue: MutableState<String>,
-    secondLabel: String,
-    secondValue: MutableState<String>
-) {
-    Row(
-        modifier = modifier.padding(8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        OutlinedTextField(
-            modifier = Modifier.weight(0.5f),
-            label = {
-                Text(firstLabel)
-            },
-            value = firstValue.value,
-            onValueChange = { firstValue.value = it },
-            singleLine = true
-        )
-
-        Spacer(Modifier.padding(8.dp))
-
-        OutlinedTextField(
-            modifier = Modifier.weight(0.5f),
-            label = {
-                Text(secondLabel)
-            },
-            value = secondValue.value,
-            onValueChange = { secondValue.value = it },
-            singleLine = true
-        )
     }
 }
 

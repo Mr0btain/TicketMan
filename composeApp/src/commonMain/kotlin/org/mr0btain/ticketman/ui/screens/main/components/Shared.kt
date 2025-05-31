@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -14,12 +15,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -27,12 +32,105 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.TicketStatus
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.tag
+import ticketman.composeapp.generated.resources.x
+
+// This holds things used between both panes
+
+@Composable
+fun DialogNoteList(
+    modifier: Modifier = Modifier,
+    notes: List<Note>,
+    onDeleteClick: (Int) -> Unit
+) {
+    Column {
+        notes.forEachIndexed { index, item ->
+            Row(
+                modifier = modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        text = "${item.author}:",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Spacer(Modifier.padding(2.dp))
+
+                    Text(
+                        text = item.text,
+                        fontSize = 12.sp
+                    )
+                }
+
+                Spacer(Modifier.padding(2.dp))
+
+                Box(
+                    modifier = Modifier
+                        .size(InputChipDefaults.AvatarSize + 2.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .clickable(
+                            onClick = { onDeleteClick(index) }
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        modifier = Modifier.size(InputChipDefaults.AvatarSize),
+                        painter = painterResource(Res.drawable.x),
+                        contentDescription = "Remove Item",
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun DialogTextRow(
+    modifier: Modifier = Modifier,
+    firstLabel: String,
+    firstValue: MutableState<String>,
+    secondLabel: String,
+    secondValue: MutableState<String>
+) {
+    Row(
+        modifier = modifier.padding(8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        OutlinedTextField(
+            modifier = Modifier.weight(0.5f),
+            label = {
+                Text(firstLabel)
+            },
+            value = firstValue.value,
+            onValueChange = { firstValue.value = it },
+            singleLine = true
+        )
+
+        Spacer(Modifier.padding(8.dp))
+
+        OutlinedTextField(
+            modifier = Modifier.weight(0.5f),
+            label = {
+                Text(secondLabel)
+            },
+            value = secondValue.value,
+            onValueChange = { secondValue.value = it },
+            singleLine = true
+        )
+    }
+}
 
 @Composable
 fun TableStatusItem(

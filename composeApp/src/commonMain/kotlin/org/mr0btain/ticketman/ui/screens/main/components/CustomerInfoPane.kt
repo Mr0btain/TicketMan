@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.components.data.components.TicketInfo
 import ticketman.composeapp.generated.resources.*
 
 @Composable
-fun CustomerInfoItem(
+fun CustomerInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     selectedCustomerData: CustomerData,

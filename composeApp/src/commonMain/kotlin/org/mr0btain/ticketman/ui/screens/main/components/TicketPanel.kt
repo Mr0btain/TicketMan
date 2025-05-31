@@ -9,11 +9,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.ui.composables.SearchTextField
+import org.mr0btain.ticketman.ui.composables.TicketSearchBox
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
@@ -24,7 +29,7 @@ import ticketman.composeapp.generated.resources.chevron_up
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TicketDatabaseList(
+fun TicketPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     viewModel: MainViewModel,
@@ -34,7 +39,6 @@ fun TicketDatabaseList(
     val selectedTab = viewModel.selectedTicketTabIndex.collectAsState()
 
     val selectedTicket = viewModel.selectedTicketInfo.collectAsState()
-    val selectedTicketIndex = viewModel.selectedTicketIndex.collectAsState()
 
     var customerData by remember(selectedTicket.value) { mutableStateOf(viewModel.getCustomerData(selectedTicket.value.customerId)) }
 
@@ -43,23 +47,28 @@ fun TicketDatabaseList(
     val tickets = viewModel.ticketDataList.collectAsState()
     val sortedTickets = remember(tickets.value) { mutableStateOf(tickets.value) }
 
+    // State for showing things
     var showSearchBar by remember { mutableStateOf(false) }
+    var showEditTicketDialog by remember { mutableStateOf(false) }
+    var showAddTicketDialog by remember { mutableStateOf(false) }
 
     val ticketLazyListState = rememberLazyListState()
 
+    val focusManager = LocalFocusManager.current
+
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
-    var isIndexUpdateFromClick by remember { mutableStateOf(false) }
+    var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
 
     // On list update scroll to selected item
     // This will only really happen if we add a new customer
-    LaunchedEffect(selectedTicketIndex.value) {
-        if (!isIndexUpdateFromClick) {
+    LaunchedEffect(selectedTicket.value) {
+        if (!isSelectedUpdateFromClick) {
             val index = sortedTickets.value.indexOf(selectedTicket.value)
             // Sanity check
-            if (selectedTicketIndex.value >= 0 && selectedTicketIndex.value != Int.MAX_VALUE && index >= 0) {
+            if (index >= 0 && index <= sortedTickets.value.size) {
                 ticketLazyListState.scrollToItem(index)
             }
-        } else isIndexUpdateFromClick = false
+        } else isSelectedUpdateFromClick = false
     }
 
     // When we change values we should also update the data this way
@@ -69,6 +78,20 @@ fun TicketDatabaseList(
         } else {
             sortedTickets.value = tickets.value.sortedBy { it.idNum }.reversed()
         }
+    }
+
+    // For editing customer data
+    if (showEditTicketDialog) {
+        // TODO
+    }
+
+    // For adding new customer
+    if (showAddTicketDialog) {
+        AddTicketDialog(
+            viewModel = viewModel,
+            onDismiss = { showAddTicketDialog = false },
+            isDarkMode = isDarkMode
+        )
     }
 
     Surface(
@@ -99,7 +122,11 @@ fun TicketDatabaseList(
                         // My Tickets
                         Tab(
                             selected = selectedTab.value == "0",
-                            onClick = { viewModel.changeTicketTabIndex("0") },
+                            onClick = {
+                                focusManager.clearFocus()
+
+                                viewModel.changeTicketTabIndex("0")
+                                      },
                             modifier = Modifier.wrapContentWidth(),
                             text = {
                                 Text(
@@ -114,7 +141,11 @@ fun TicketDatabaseList(
                         // All Tickets
                         Tab(
                             selected = selectedTab.value == "1",
-                            onClick = { viewModel.changeTicketTabIndex("1") },
+                            onClick = {
+                                focusManager.clearFocus()
+
+                                viewModel.changeTicketTabIndex("1")
+                                      },
                             modifier = Modifier.wrapContentWidth(),
                             text = {
                                 Text(
@@ -157,7 +188,9 @@ fun TicketDatabaseList(
                 ) {
                     Button(
                         onClick = {
-                            // TODO
+                            focusManager.clearFocus()
+
+                            showAddTicketDialog = true
                         },
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -174,11 +207,20 @@ fun TicketDatabaseList(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SearchTextField(
-                        modifier = Modifier.padding(bottom = 4.dp),
-                        label = "Search",
-                        placeholder = "",
-                        onValueChange = {}
+                    TicketSearchBox(
+                        items = sortedTickets.value,
+                        onResult = { item, isNew ->
+                            if (isNew) {
+
+                                // Popup new customer dialog
+                                //showAddCustomerDialog = true
+                            } else {
+                                // Update selected customer
+                                viewModel.changeSelectedTicketInfo(
+                                    tickets.value.firstOrNull { it.idNum == item } ?: TicketInfo()
+                                )
+                            }
+                        }
                     )
                 }
             }
@@ -188,50 +230,53 @@ fun TicketDatabaseList(
             Row {
                 // Check if were on my tickets which is 0 or all tickets
                 if (selectedTab.value == "0") {
-                    // My Tickets tab. Filter tickets
-                    TicketDataGrid(
+                    // My Tickets tab
+                    TicketListPane(
                         isDarkMode = isDarkMode,
                         scrollOnRight = scrollOnRight,
                         ticketInfo = sortedTickets.value,
                         onClick = { ticket ->
+                            focusManager.clearFocus()
+
                             // Set is update from click
-                            isIndexUpdateFromClick = true
+                            isSelectedUpdateFromClick = true
 
                             // Change selected ticket
                             viewModel.changeSelectedTicketInfo(ticket)
-
-                            // Update selected index
-                            viewModel.changeSelectedTicketIndex(sortedTickets.value.indexOf(selectedTicket.value))
                         },
-                        selectedId = selectedTicket.value.idNum
+                        selectedId = selectedTicket.value.idNum,
+                        state = ticketLazyListState
                     )
                 } else {
                     // All tickets tab.
-                    // TODO: Sorting is just for testing will probably keep reversed in there
-                    TicketDataGrid(
+                    TicketListPane(
                         isDarkMode = isDarkMode,
                         scrollOnRight = scrollOnRight,
-                        ticketInfo = tickets.value.sortedBy { it.idNum.toInt() }.reversed(),
+                        ticketInfo = sortedTickets.value,
                         onClick = { ticket ->
+                            focusManager.clearFocus()
+
                             // Update from click
-                            isIndexUpdateFromClick = true
+                            isSelectedUpdateFromClick = true
 
                             // Update selected ticket
                             viewModel.changeSelectedTicketInfo(ticket)
-
-                            // Update selected index
-                            viewModel.changeSelectedTicketIndex(sortedTickets.value.indexOf(selectedTicket.value))
                         },
-                        selectedId = selectedTicket.value.idNum
+                        selectedId = selectedTicket.value.idNum,
+                        state = ticketLazyListState
                     )
                 }
 
-                TicketInfoItem(
+                // This pane shows the info for selected ticket
+                TicketInfoPane(
                     modifier = Modifier,
                     customerData = customerData,
                     isDarkMode = isDarkMode,
                     ticketInfo = selectedTicket.value,
-                    onEditClick = {}
+                    onEditClick = {
+                        focusManager.clearFocus()
+                        // TODO
+                    }
                 )
             }
         }

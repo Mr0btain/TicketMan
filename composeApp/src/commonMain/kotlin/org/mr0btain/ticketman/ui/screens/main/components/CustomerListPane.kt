@@ -12,7 +12,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -22,7 +24,7 @@ import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 
 @Composable
-fun CustomerDataGrid(
+fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
     onClick: (id: String) -> Unit,

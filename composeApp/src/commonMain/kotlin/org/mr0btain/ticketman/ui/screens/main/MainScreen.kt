@@ -11,8 +11,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.main.components.CustomerDatabaseList
-import org.mr0btain.ticketman.ui.screens.main.components.TicketDatabaseList
+import org.mr0btain.ticketman.ui.screens.main.components.CustomerPanel
+import org.mr0btain.ticketman.ui.screens.main.components.TicketPanel
 
 /**
  * The main landing screen after logon
@@ -97,12 +97,12 @@ fun MainScreen(
                 )
 
                 if (tabIndex.value == "0") {
-                    CustomerDatabaseList(
+                    CustomerPanel(
                         viewModel = viewModel,
                         isDarkMode = isDarkMode
                     )
                 } else {
-                    TicketDatabaseList(
+                    TicketPanel(
                         isDarkMode = isDarkMode,
                         viewModel = viewModel,
                         scrollOnRight = scrollBarRight

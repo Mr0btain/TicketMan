@@ -34,6 +34,7 @@ import org.mr0btain.ticketman.components.data.components.getLabelTextForType
 fun AddNoteDialog(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
+    label: String = "Add New Note",
     onConfirm: (Note) -> Unit,
     onDismissRequest: () -> Unit
 ) {
@@ -55,7 +56,7 @@ fun AddNoteDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Add New Note",
+                    text = label,
                     fontSize = 20.sp
                 )
 
@@ -86,6 +87,7 @@ fun AddNoteDialog(
 
                 Spacer(Modifier.padding(4.dp))
 
+                // Cancel and Confirm buton row
                 Row(
                     horizontalArrangement = Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically
@@ -105,7 +107,14 @@ fun AddNoteDialog(
 
                     Button(
                         onClick = {
-                            onConfirm(Note(author, text))
+                            // Prettify author name
+                            val authorName = author.split(" ")
+                                .joinToString(" ") { name -> name.lowercase().replaceFirstChar { it.uppercase() } }
+
+                            // Call onConfirm
+                            onConfirm(Note(authorName, text.replaceFirstChar { it.uppercase() }))
+
+                            // Dismiss
                             onDismissRequest()
                         },
                         shape = RoundedCornerShape(8.dp),

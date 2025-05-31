@@ -20,10 +20,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
@@ -32,7 +28,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerName
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.TicketPriority
@@ -44,21 +39,13 @@ import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.tag
 
 @Composable
-fun TicketInfoItem(
+fun TicketInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     customerData: CustomerData,
     ticketInfo: TicketInfo,
     onEditClick: () -> Unit
 ) {
-    // Data
-    var customerId by remember(ticketInfo) { mutableStateOf(ticketInfo.customerId) }
-    var assignedEmpl by remember(ticketInfo) { mutableStateOf(ticketInfo.assignedEmployee) }
-    var device by remember(ticketInfo) { mutableStateOf(ticketInfo.device) }
-    var status by remember(ticketInfo) { mutableStateOf(ticketInfo.status) }
-    var priority by remember(ticketInfo) { mutableStateOf(ticketInfo.priority) }
-    var updates by remember(ticketInfo) { mutableStateOf(ticketInfo.updates) }
-
     // Main Body
     Surface(
         modifier = modifier
@@ -177,7 +164,7 @@ fun TicketInfoItem(
                             Spacer(Modifier.padding(4.dp))
 
                             Text(
-                                text = device.manufacturer,
+                                text = ticketInfo.device.manufacturer,
                                 fontSize = 16.sp
                             )
                         }
@@ -198,7 +185,7 @@ fun TicketInfoItem(
                             Spacer(Modifier.padding(4.dp))
 
                             Text(
-                                text = device.model,
+                                text = ticketInfo.device.model,
                                 fontSize = 16.sp
                             )
                         }
@@ -221,7 +208,7 @@ fun TicketInfoItem(
                                 Spacer(Modifier.padding(4.dp))
 
                                 Text(
-                                    text = assignedEmpl,
+                                    text = ticketInfo.assignedEmployee,
                                     fontSize = 18.sp
                                 )
                             }
@@ -277,9 +264,9 @@ fun TicketInfoItem(
                             if (ticketInfo.idNum.isNotBlank()) {
                                 TableStatusItem(
                                     textModifier = Modifier.padding(4.dp),
-                                    label = status.name,
+                                    label = ticketInfo.status.name,
                                     textStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
-                                    backgroundColor = when (status) {
+                                    backgroundColor = when (ticketInfo.status) {
                                         TicketStatus.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
                                         TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
                                         TicketStatus.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
@@ -307,9 +294,9 @@ fun TicketInfoItem(
                             if (ticketInfo.idNum.isNotBlank()) {
                                 TableStatusItem(
                                     textModifier = Modifier.padding(4.dp),
-                                    label = priority.name,
+                                    label = ticketInfo.priority.name,
                                     textStyle = TextStyle.Default.copy(fontSize =16.sp, color = MaterialTheme.colorScheme.onPrimary),
-                                    backgroundColor = when (priority) {
+                                    backgroundColor = when (ticketInfo.priority) {
                                         TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
                                         TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
                                         TicketPriority.HIGH -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
@@ -321,7 +308,7 @@ fun TicketInfoItem(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        UpdatesBlock(data = updates)
+                        UpdatesBlock(data = ticketInfo.updates)
                     }
                 }
             }
