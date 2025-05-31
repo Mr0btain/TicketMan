@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -31,6 +32,7 @@ fun TicketDataGrid(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf(),
+    selectedId: String,
     scrollOnRight: Boolean,
     onClick: (TicketInfo) -> Unit
 ) {
@@ -106,6 +108,7 @@ fun TicketDataGrid(
                         } else {
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                         },
+                        selected = selectedId == item.idNum,
                         ticketInfo = item,
                         numberWidth = numberColumnWidth,
                         priorityWidth = priorityColumnWidth,
@@ -152,6 +155,7 @@ private fun TicketHeaderBox(
 private fun TicketTableItem(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surface,
+    selected: Boolean,
     ticketInfo: TicketInfo,
     numberWidth: Dp,
     priorityWidth: Dp,
@@ -160,7 +164,6 @@ private fun TicketTableItem(
     isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
-
     Surface(
         modifier = modifier
             .padding(2.dp)
@@ -169,7 +172,8 @@ private fun TicketTableItem(
             ),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp,
-        color = color
+        color = color,
+        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(0.dp, Color.Transparent)
     ) {
         val sizeAdjust = -8
 
@@ -240,7 +244,7 @@ private fun TicketTableItem(
                     .width(noteWidth + sizeAdjust.dp)
             ) {
                 TableCardTextItem(
-                    ticketInfo.notes.last().author + " : " + ticketInfo.notes.last().text
+                    ticketInfo.updates.last().author + " : " + ticketInfo.updates.last().text
                 )
             }
 
@@ -272,8 +276,6 @@ private fun TicketTableItem(
                         TicketStatus.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
                     }
                 )
-
-                // Yellow Color(0xF5E911)
             }
         }
     }

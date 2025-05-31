@@ -11,5 +11,5 @@ object TicketDataTable: IntIdTable("tickets") {
     val device = json<Device>("device", Json)
     val status = json<TicketStatus>("status", Json)
     val priority = json<TicketPriority>("priority", Json)
-    val notes = json<Notes>("notes", Json)
+    val updates = json<Notes>("updates", Json)
 }

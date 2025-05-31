@@ -9,6 +9,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
@@ -181,11 +183,12 @@ private fun AddressBlock(data: CustomerInfo) {
 
 // Contact intimation block
 @Composable
-private fun ContactBlock(data: CustomerInfo) {
-    val labelFont = 12.sp
-    val textFont = 16.sp
-    val iconSize = 18.dp
-
+fun ContactBlock(
+    data: CustomerInfo,
+    labelFont: TextUnit = 12.sp,
+    textFont: TextUnit = 16.sp,
+    iconSize: Dp = 18.dp,
+) {
     Column(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.SpaceBetween

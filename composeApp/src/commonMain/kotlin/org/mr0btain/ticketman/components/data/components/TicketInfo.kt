@@ -11,7 +11,7 @@ data class TicketInfo(
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus.DONE,
     val priority: TicketPriority = TicketPriority.NORMAL,
-    val notes: List<Note> = listOf()
+    val updates: List<Note> = listOf()
 )
 
 @Serializable

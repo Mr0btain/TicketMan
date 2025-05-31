@@ -17,6 +17,7 @@ import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
 
 // TODO: Add ability to click on column and have it sorted by that value
+// TODO: Finish search bar implementation
 
 @Composable
 fun CustomerDatabaseList(

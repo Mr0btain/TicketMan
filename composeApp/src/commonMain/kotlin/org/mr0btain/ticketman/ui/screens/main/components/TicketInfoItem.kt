@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -19,30 +20,44 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.data.components.TicketPriority
+import org.mr0btain.ticketman.components.data.components.TicketStatus
+import org.mr0btain.ticketman.ui.theme.extendedDark
+import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
-import ticketman.composeapp.generated.resources.mail
-import ticketman.composeapp.generated.resources.phone
 import ticketman.composeapp.generated.resources.tag
 
 @Composable
 fun TicketInfoItem(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    selectedTicketInfo: TicketInfo,
+    customerData: CustomerData,
+    ticketInfo: TicketInfo,
     onEditClick: () -> Unit
 ) {
-    // Scroll state for basic ifo pane if needed
-    val scrollState = rememberScrollState()
+    // Data
+    var customerId by remember(ticketInfo) { mutableStateOf(ticketInfo.customerId) }
+    var assignedEmpl by remember(ticketInfo) { mutableStateOf(ticketInfo.assignedEmployee) }
+    var device by remember(ticketInfo) { mutableStateOf(ticketInfo.device) }
+    var status by remember(ticketInfo) { mutableStateOf(ticketInfo.status) }
+    var priority by remember(ticketInfo) { mutableStateOf(ticketInfo.priority) }
+    var updates by remember(ticketInfo) { mutableStateOf(ticketInfo.updates) }
 
     // Main Body
     Surface(
@@ -75,7 +90,7 @@ fun TicketInfoItem(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = selectedTicketInfo.idNum,
+                        text = "Details for: ${ticketInfo.idNum}",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -101,7 +116,7 @@ fun TicketInfoItem(
             HorizontalDivider()
 
             Row {
-                // Basic customer details pane
+                // First Pane
                 Surface(
                     modifier = Modifier
                         .padding(8.dp)
@@ -114,9 +129,7 @@ fun TicketInfoItem(
                         modifier = Modifier
                             .width(300.dp)
                             .padding(20.dp)
-                            .verticalScroll(scrollState),
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.Top
+                            .verticalScroll(rememberScrollState())
                     ) {
                         Text(
                             text = "Info",
@@ -126,139 +139,190 @@ fun TicketInfoItem(
 
                         HorizontalDivider()
 
-                        /*
-                        val id: String = "",
-                        val customerId: String = "",
-                        val assignedEmployee: String = "",
-                        val device: Device = Device("", ""),
-                        val status: TicketStatus = TicketStatus.DONE,
-                        val priority: TicketPriority = TicketPriority.NORMAL,
-                        val notes: List<Note> = listOf()
-                         */
-                    }
-                }
-            }
-        }
-    }
-}
+                        Spacer(Modifier.padding(4.dp))
 
-// Address information block
-@Composable
-private fun AddressBlock(data: CustomerInfo) {
-    val labelFont = 12.sp
-    val textFont = 16.sp
+                        // Customer name
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Customer:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
 
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Label
-        Text(
-            modifier = Modifier
-                .padding(2.dp),
-            text = "Address",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = labelFont
-        )
+                            Spacer(Modifier.padding(4.dp))
 
-        Column(
-            verticalArrangement = Arrangement.SpaceAround,
-            horizontalAlignment = Alignment.Start
-        ) {
-            // Street
-            Text(
-                modifier = Modifier,
-                text = data.address.street,
-                fontSize = textFont
-            )
-
-            // City and state
-            Text(
-                modifier = Modifier,
-                text = data.address.city + " " + data.address.state,
-                fontSize = textFont
-            )
-
-            // Zip
-            Text(
-                modifier = Modifier,
-                text = data.address.zip,
-                fontSize = textFont
-            )
-        }
-    }
-}
-
-// Contact intimation block
-@Composable
-private fun ContactBlock(data: CustomerInfo) {
-    val labelFont = 12.sp
-    val textFont = 16.sp
-    val iconSize = 18.dp
-
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Label
-        Text(
-            modifier = Modifier
-                .padding(2.dp),
-            text = "Contact",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = labelFont
-        )
-
-        Column(
-            verticalArrangement = Arrangement.SpaceAround,
-            horizontalAlignment = Alignment.Start
-        ) {
-            // Email section
-            if (data.contactInfo.email.isNotEmpty()) {
-                data.contactInfo.email.forEach { mail ->
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(iconSize),
-                            painter = painterResource(Res.drawable.mail),
-                            contentDescription = "Email"
-                        )
+                            Text(
+                                text = customerData.info.name.firstName + " " + customerData.info.name.lastName,
+                                fontSize = 16.sp
+                            )
+                        }
 
                         Spacer(Modifier.padding(4.dp))
 
-                        Text(
-                            modifier = Modifier,
-                            text = mail,
-                            fontSize = textFont
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Manufacturer:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            Text(
+                                text = device.manufacturer,
+                                fontSize = 16.sp
+                            )
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Model:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            Text(
+                                text = device.model,
+                                fontSize = 16.sp
+                            )
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Assigned employee
+                        Column {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Assigned Employee:",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Spacer(Modifier.padding(4.dp))
+
+                                Text(
+                                    text = assignedEmpl,
+                                    fontSize = 18.sp
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Contacts for customer block
+                        ContactBlock(
+                            data = customerData.info,
+                            labelFont = 16.sp
                         )
                     }
                 }
-            }
 
-            Spacer(Modifier.padding(2.dp))
-
-            // Phone number section
-            data.contactInfo.phone.forEach { item ->
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                // Second Pane
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    shadowElevation = 4.dp,
+                    color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    Icon(
+                    Column(
                         modifier = Modifier
-                            .size(iconSize),
-                        painter = painterResource(Res.drawable.phone),
-                        contentDescription = "Phone Number"
-                    )
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            text = "Updates",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
 
-                    Spacer(Modifier.padding(4.dp))
+                        HorizontalDivider()
 
-                    Text(
-                        modifier = Modifier,
-                        text = item,
-                        fontSize = textFont
-                    )
+                        Spacer(Modifier.padding(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Status:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            if (ticketInfo.idNum.isNotBlank()) {
+                                TableStatusItem(
+                                    textModifier = Modifier.padding(4.dp),
+                                    label = status.name,
+                                    textStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
+                                    backgroundColor = when (status) {
+                                        TicketStatus.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+                                        TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
+                                        TicketStatus.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Priority
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Priority:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            if (ticketInfo.idNum.isNotBlank()) {
+                                TableStatusItem(
+                                    textModifier = Modifier.padding(4.dp),
+                                    label = priority.name,
+                                    textStyle = TextStyle.Default.copy(fontSize =16.sp, color = MaterialTheme.colorScheme.onPrimary),
+                                    backgroundColor = when (priority) {
+                                        TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
+                                        TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
+                                        TicketPriority.HIGH -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+                                        TicketPriority.URGENT -> MaterialTheme.colorScheme.error
+                                    }
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        UpdatesBlock(data = updates)
+                    }
                 }
             }
         }
@@ -267,26 +331,14 @@ private fun ContactBlock(data: CustomerInfo) {
 
 // Notes list
 @Composable
-private fun NotesBlock(data: CustomerData) {
-    val labelFont = 12.sp
+private fun UpdatesBlock(data: List<Note>) {
     val textFont = 16.sp
 
     Column(
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
-        // Label
-        Text(
-            modifier = Modifier
-                .padding(2.dp),
-            text = "Notes",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = labelFont
-        )
-
-        Spacer(Modifier.padding(2.dp))
-
-        data.notes.forEach { note ->
+        data.forEach { note ->
             Column {
                 // Author
                 Text(

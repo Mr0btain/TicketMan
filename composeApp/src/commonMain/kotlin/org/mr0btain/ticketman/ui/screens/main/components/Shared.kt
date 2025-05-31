@@ -37,6 +37,7 @@ import ticketman.composeapp.generated.resources.tag
 @Composable
 fun TableStatusItem(
     modifier: Modifier = Modifier,
+    textModifier: Modifier = Modifier,
     backgroundColor: Color,
     label: String,
     textStyle: TextStyle
@@ -47,7 +48,7 @@ fun TableStatusItem(
        color = backgroundColor
    ) {
        Text(
-           modifier = Modifier.padding(start = 6.dp, end = 6.dp),
+           modifier = textModifier.padding(start = 6.dp, end = 6.dp),
            text = label,
            fontWeight = textStyle.fontWeight,
            fontSize = textStyle.fontSize,
@@ -223,7 +224,7 @@ fun SmallTicketList(
                             Column(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                ticket.notes.take(3).forEach { note ->
+                                ticket.updates.take(3).forEach { note ->
                                     Row(
                                         modifier = Modifier.padding(4.dp),
                                         verticalAlignment = Alignment.CenterVertically

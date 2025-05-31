@@ -239,7 +239,7 @@ class SqliteDb() {
                 item[TicketDataTable.assignedEmp] = data.assignedEmployee
                 item[TicketDataTable.priority] = data.priority
                 item[TicketDataTable.status] = data.status
-                item[TicketDataTable.notes] = Notes(data.notes)
+                item[TicketDataTable.updates] = Notes(data.updates)
             }
         }
     }
@@ -249,7 +249,7 @@ class SqliteDb() {
             // Setup logger
             addLogger(StdOutSqlLogger)
 
-            // Check if tables exist if not make them
+            // Check if tables exist, if not make them
             checkAndCreateTables()
 
             TicketDataTable.insert { item ->
@@ -259,7 +259,7 @@ class SqliteDb() {
                 item[TicketDataTable.assignedEmp] = data.assignedEmployee
                 item[TicketDataTable.priority] = data.priority
                 item[TicketDataTable.status] = data.status
-                item[TicketDataTable.notes] = Notes(data.notes)
+                item[TicketDataTable.updates] = Notes(data.updates)
             }
         }
     }
@@ -280,7 +280,7 @@ class SqliteDb() {
                 this[TicketDataTable.assignedEmp] = item.assignedEmployee
                 this[TicketDataTable.priority] = item.priority
                 this[TicketDataTable.status] = item.status
-                this[TicketDataTable.notes] = Notes(item.notes)
+                this[TicketDataTable.updates] = Notes(item.updates)
             }
         }
     }
@@ -300,7 +300,7 @@ class SqliteDb() {
                         assignedEmployee = item[TicketDataTable.assignedEmp],
                         priority = item[TicketDataTable.priority],
                         status = item[TicketDataTable.status],
-                        notes = item[TicketDataTable.notes].notes
+                        updates = item[TicketDataTable.updates].notes
                     )
                 )
             }

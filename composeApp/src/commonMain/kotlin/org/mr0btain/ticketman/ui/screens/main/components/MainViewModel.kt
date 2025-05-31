@@ -69,6 +69,14 @@ class MainViewModel(
     private val _selectedTicketInfo: MutableStateFlow<TicketInfo> = MutableStateFlow(TicketInfo())
     var selectedTicketInfo = _selectedTicketInfo.asStateFlow()
 
+    // Selected Customer data index default to absurd number
+    private val _selectedTicketIndex: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
+    var selectedTicketIndex = _selectedTicketIndex.asStateFlow()
+
+    fun changeSelectedTicketIndex(index: Int) {
+        _selectedTicketIndex.value = index
+    }
+
     // To update selected ticket
     fun changeSelectedTicketInfo(ticket: TicketInfo) {
         _selectedTicketInfo.value = ticket
@@ -131,7 +139,7 @@ class MainViewModel(
     }
 
     fun getCustomerData(id: String): CustomerData {
-        return _customerDataList.value.first { it.info.id == id }
+        return _customerDataList.value.firstOrNull() { it.info.id == id } ?: CustomerData()
     }
 
     // To get the index of an item

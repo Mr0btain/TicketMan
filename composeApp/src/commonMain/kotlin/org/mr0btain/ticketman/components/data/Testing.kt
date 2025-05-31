@@ -188,7 +188,7 @@ fun generateRandomTicket(customerId: String): TicketInfo {
         device = Device(manufacturer, model),
         status = randomTicketStatus(),
         priority = randomTicketPriority(),
-        notes = notes
+        updates = notes
     )
 }
 

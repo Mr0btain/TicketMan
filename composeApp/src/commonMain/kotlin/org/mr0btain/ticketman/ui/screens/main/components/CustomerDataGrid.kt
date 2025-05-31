@@ -21,7 +21,6 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 
-// TODO: Setup selected highlight of item
 @Composable
 fun CustomerDataGrid(
     modifier: Modifier = Modifier,
