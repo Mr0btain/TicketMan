@@ -103,6 +103,7 @@ kotlin {
             implementation(libs.exposed.jdbc)
             implementation(libs.exposed.dao)
             implementation(libs.exposed.json)
+            implementation(libs.exposed.crypt)
 
             // Exposed dbs
             implementation(libs.sqlite.jdbc)
