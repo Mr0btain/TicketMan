@@ -19,8 +19,12 @@ class SqliteDb() {
     // TODO: Add encryption
     // TODO: Add removal functions
     // TODO: Make more functions for indexing and searching the db for things
-    // TODO: Make functions to update specific items for each thing using id
+    // TODO: When we add error handling remove need to make database every transaction.
+
+    // Get out app directory depending on platform
     private val appDir = FileKit.filesDir.path
+
+    // Connect to our database
     private val db = Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
         //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
 
@@ -224,12 +228,96 @@ class SqliteDb() {
         }
     }
 
+    fun updateTicketUpdates(id: String, updates: Notes) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // Check if tables exist, if not make them
+            checkAndCreateTables()
+
+            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+                item[TicketDataTable.updates] = updates
+            }
+        }
+    }
+
+    fun updateTicketStatus(id: String, status: TicketStatus) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // Check if tables exist, if not make them
+            checkAndCreateTables()
+
+            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+                item[TicketDataTable.status] = status
+            }
+        }
+    }
+
+    fun updateTicketPriority(id: String, priority: TicketPriority) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // Check if tables exist, if not make them
+            checkAndCreateTables()
+
+            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+                item[TicketDataTable.priority] = priority
+            }
+        }
+    }
+
+    fun updateTicketEmply(id: String, employeeNum: String) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // Check if tables exist, if not make them
+            checkAndCreateTables()
+
+            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+                item[TicketDataTable.assignedEmp] = employeeNum
+            }
+        }
+    }
+
+    fun updateTicketDevice(id: String, device: Device) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // Check if tables exist, if not make them
+            checkAndCreateTables()
+
+            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+                item[TicketDataTable.device] = device
+            }
+        }
+    }
+
+    fun updateTicketCustId(id: String, custId: String) {
+        transaction {
+            // Setup logger
+            addLogger(StdOutSqlLogger)
+
+            // Check if tables exist, if not make them
+            checkAndCreateTables()
+
+            TicketDataTable.update({ TicketDataTable.idNumber eq id }) { item ->
+                item[TicketDataTable.customerId] = custId
+            }
+        }
+    }
+
     fun updateTicket(data: TicketInfo) {
         transaction {
             // Setup logger
             addLogger(StdOutSqlLogger)
 
-            // Check if tables exist if not make them
+            // Check if tables exist, if not make them
             checkAndCreateTables()
 
             TicketDataTable.update({ TicketDataTable.idNumber eq data.idNum }) { item ->
