@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.ui.composables.TicketSearchBox
 import ticketman.composeapp.generated.resources.Res
@@ -29,6 +30,7 @@ fun TicketPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     viewModel: MainViewModel,
+    onAddCustomer: (PersonName) -> Unit,
     scrollOnRight: Boolean
 ) {
     // State for tab selection
@@ -38,7 +40,7 @@ fun TicketPanel(
 
     var customerData by remember(selectedTicket.value) { mutableStateOf(viewModel.getCustomerData(selectedTicket.value.customerId)) }
 
-    val employeeId = viewModel.employeeId.collectAsState()
+    val employee = viewModel.employee.collectAsState()
 
     val tickets = viewModel.ticketDataList.collectAsState()
     val sortedTickets = remember(tickets.value) { mutableStateOf(tickets.value) }
@@ -55,14 +57,26 @@ fun TicketPanel(
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
 
+    // TODO: Maybe make this also switch to the right tab as well
     // On list update scroll to selected item
-    // This will only really happen if we add a new customer
+    // This will only really happen if we add a new ticket
+    // Not sure if we need this as we sort tickets by newest first.
     LaunchedEffect(selectedTicket.value) {
         if (!isSelectedUpdateFromClick) {
-            val index = sortedTickets.value.indexOf(selectedTicket.value)
-            // Sanity check
-            if (index >= 0 && index <= sortedTickets.value.size) {
-                ticketLazyListState.scrollToItem(index)
+            // Check to see if were even on the list were selecting the ticket for, this comes up if
+            // were on mytickets tab, and we add a new ticket that isnt assigned to our employee
+            // then there's no reason to scroll to it as were not even on that list
+            if (
+                selectedTab.value == "0" &&
+                selectedTicket.value.assignedEmployee == employee.value.identifier ||
+                selectedTab.value == "1" &&
+                selectedTicket.value.assignedEmployee != employee.value.identifier
+            ) {
+                val index = sortedTickets.value.indexOf(selectedTicket.value)
+                // Sanity check
+                if (index >= 0 && index <= sortedTickets.value.size) {
+                    ticketLazyListState.scrollToItem(index)
+                }
             }
         } else isSelectedUpdateFromClick = false
     }
@@ -70,7 +84,7 @@ fun TicketPanel(
     // When we change values we should also update the data this way
     LaunchedEffect(selectedTab.value, tickets.value) {
         if (selectedTab.value == "0") {
-            sortedTickets.value = tickets.value.sortedBy { it.identifier }.filter { it.assignedEmployee == employeeId.value }.reversed()
+            sortedTickets.value = tickets.value.sortedBy { it.identifier }.filter { it.assignedEmployee == employee.value.identifier }.reversed()
         } else {
             sortedTickets.value = tickets.value.sortedBy { it.identifier }.reversed()
         }
@@ -86,7 +100,8 @@ fun TicketPanel(
         AddTicketDialog(
             viewModel = viewModel,
             onDismiss = { showAddTicketDialog = false },
-            isDarkMode = isDarkMode
+            isDarkMode = isDarkMode,
+            onAddNewCustomer = { name -> onAddCustomer(name) }
         )
     }
 
@@ -263,10 +278,13 @@ fun TicketPanel(
                     )
                 }
 
+                // TODO: Might be a better way to get the name for the employee
+
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
                     customerData = customerData,
+                    employeeName = viewModel.getEmployee(selectedTicket.value.assignedEmployee).name,
                     isDarkMode = isDarkMode,
                     ticketInfo = selectedTicket.value,
                     onEditClick = {

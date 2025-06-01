@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
@@ -28,6 +29,10 @@ fun NavigationHost(
     mainViewModel: MainViewModel,
     settingsViewModel: SettingsViewModel
 ) {
+    val darkMode = settingsViewModel.isDarkMode.collectAsState()
+    val scrollBarOnTop = settingsViewModel.scrollBarOnTop.collectAsState()
+    val scrollBarOnRight = settingsViewModel.scrollBarOnRight.collectAsState()
+
     NavHost(
         modifier = modifier,
         navController = navHostController,
@@ -36,9 +41,9 @@ fun NavigationHost(
         composable(NavigationItem.Main.route) {
             MainScreen(
                 viewModel = mainViewModel,
-                isDarkMode = settingsViewModel.isDarkMode.value,
-                scrollBarTop = settingsViewModel.scrollBarOnTop.value,
-                scrollBarRight = settingsViewModel.scrollBarOnRight.value
+                isDarkMode = darkMode.value,
+                scrollBarTop = scrollBarOnTop.value,
+                scrollBarRight = scrollBarOnRight.value
             )
         }
 
@@ -55,9 +60,16 @@ fun NavigationHost(
                 LoginScreen(
                     onConfirm = { user, pass -> true },
                     onDismiss = {},
-                    isDarkMode = settingsViewModel.isDarkMode.value
+                    isDarkMode = darkMode.value
                 )
             }
+        }
+
+        composable(NavigationItem.Admin.route) {
+            AdminScreen(
+                viewModel = mainViewModel,
+                isDarkMode = darkMode.value
+            )
         }
     }
 }

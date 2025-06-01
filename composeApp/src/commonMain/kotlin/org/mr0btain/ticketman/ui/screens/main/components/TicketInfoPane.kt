@@ -28,7 +28,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.Note
+import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.TicketPriority
 import org.mr0btain.ticketman.components.data.components.TicketStatus
@@ -43,6 +45,7 @@ fun TicketInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     customerData: CustomerData,
+    employeeName: PersonName,
     ticketInfo: TicketInfo,
     onEditClick: () -> Unit
 ) {
@@ -194,21 +197,21 @@ fun TicketInfoPane(
 
                         // Assigned employee
                         Column {
+                            Text(
+                                text = "Assigned Employee:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
+                                horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Assigned Employee:",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                Spacer(Modifier.padding(4.dp))
-
-                                Text(
-                                    text = ticketInfo.assignedEmployee,
+                                    text = ticketInfo.assignedEmployee + ": " + employeeName.firstName + " " + employeeName.lastName,
                                     fontSize = 18.sp
                                 )
                             }
@@ -263,14 +266,8 @@ fun TicketInfoPane(
 
                             if (ticketInfo.identifier.isNotBlank()) {
                                 TableStatusItem(
-                                    textModifier = Modifier.padding(4.dp),
-                                    label = ticketInfo.status.name,
-                                    textStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
-                                    backgroundColor = when (ticketInfo.status) {
-                                        TicketStatus.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-                                        TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
-                                        TicketStatus.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
-                                    }
+                                    status = ticketInfo.status,
+                                    darkMode = isDarkMode
                                 )
                             }
                         }
@@ -292,16 +289,9 @@ fun TicketInfoPane(
                             Spacer(Modifier.padding(4.dp))
 
                             if (ticketInfo.identifier.isNotBlank()) {
-                                TableStatusItem(
-                                    textModifier = Modifier.padding(4.dp),
-                                    label = ticketInfo.priority.name,
-                                    textStyle = TextStyle.Default.copy(fontSize =16.sp, color = MaterialTheme.colorScheme.onPrimary),
-                                    backgroundColor = when (ticketInfo.priority) {
-                                        TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
-                                        TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
-                                        TicketPriority.HIGH -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-                                        TicketPriority.URGENT -> MaterialTheme.colorScheme.error
-                                    }
+                                TablePriorityItem(
+                                    priority = ticketInfo.priority,
+                                    darkMode = isDarkMode
                                 )
                             }
                         }

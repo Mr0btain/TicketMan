@@ -25,15 +25,12 @@ fun CustomerPanel(
     viewModel: MainViewModel,
     scrollBarTop: Boolean = false,
     scrollBarRight: Boolean = true,
+    onAddCustomer: (PersonName) -> Unit,
     isDarkMode: Boolean
 ) {
     // Customer data
     val selectedCustomerData = viewModel.selectedCustomerData.collectAsState()
     val customerDataList = viewModel.customerDataList.collectAsState()
-    //val selectedCustomerIndex = viewModel.selectedCustomerDataIndex.collectAsState()
-
-    // Starter data to seed new customer if needed
-    val starterData = remember { mutableStateOf(CustomerData()) }
 
     // Hopefully this saves on calculations and updates properly
     val sortedCustomerInfo = remember(customerDataList.value) { customerDataList.value.map { it.info }.sortedBy { it.name.firstName + it.name.lastName } }
@@ -44,7 +41,6 @@ fun CustomerPanel(
     // States for showing things
     var showSearchBar by remember { mutableStateOf(false) }
     var showEditCustomerDialog by remember { mutableStateOf(false) }
-    var showAddCustomerDialog by remember { mutableStateOf(false) }
 
     // Lazy list state for scrolling to item when we add new customer
     val customerDataListState = rememberLazyListState()
@@ -73,22 +69,6 @@ fun CustomerPanel(
             viewModel = viewModel,
             onDismiss = { showEditCustomerDialog = false },
             isDarkMode = isDarkMode
-        )
-    }
-
-    // For adding new customer
-    if (showAddCustomerDialog) {
-        AddCustomerDataDialog(
-            viewModel = viewModel,
-            onDismiss = {
-                // Reset starter data
-                starterData.value = CustomerData()
-
-                // Hide dialog
-                showAddCustomerDialog = false
-                        },
-            isDarkMode = isDarkMode,
-            starterData = starterData.value
         )
     }
 
@@ -137,7 +117,7 @@ fun CustomerPanel(
                         onClick = {
                             focusManager.clearFocus()
 
-                            showAddCustomerDialog = true
+                            onAddCustomer(PersonName())
                                   },
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -159,17 +139,13 @@ fun CustomerPanel(
                         if (isNew) {
                             val newName = item.split(" ")
 
-                            starterData.value = CustomerData(
-                                info = CustomerInfo(
-                                    name = PersonName(
-                                        firstName = newName.getOrElse(0) { "" },
-                                        lastName = newName.getOrElse(1) { "" }
-                                    )
+                            // Call new customer dialog
+                            onAddCustomer(
+                                PersonName(
+                                    firstName = newName.getOrElse(0) { "" },
+                                    lastName = newName.getOrElse(1) { "" }
                                 )
                             )
-
-                            // Popup new customer dialog
-                            showAddCustomerDialog = true
                         } else {
                             // Update selected customer
                             viewModel.changeSelectedCustomerData(

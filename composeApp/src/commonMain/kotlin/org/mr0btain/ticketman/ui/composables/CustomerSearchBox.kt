@@ -102,7 +102,7 @@ fun CustomerSearchBox(
                         )
                     },
                     trailingIcon = {
-                        // Clear value button only show if there is text
+                        // For adding new
                         if (query.isNotEmpty() && shouldShowPlus) {
                             IconButton(
                                 modifier = Modifier.size(26.dp),

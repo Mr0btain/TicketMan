@@ -28,12 +28,17 @@ fun App() {
         // Navigation
         val navigator = rememberNavController()
 
+        // TODO: Pass and use this throughout app
         // Main scope to use with coroutines
         val mainScope = rememberCoroutineScope()
+
+        // Check and setup databases if they don't exist
+        mainViewModel.setupDatabase()
 
         // Generate some mock data and add it to the database in memory
         //mainViewModel.generateMockDbData()
 
+        // Pull data from local database
         mainViewModel.updateDataFromDb()
 
         // Get our stored settings

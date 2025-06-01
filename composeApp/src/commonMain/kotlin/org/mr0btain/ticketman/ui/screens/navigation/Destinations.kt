@@ -7,5 +7,6 @@ package org.mr0btain.ticketman.ui.screens.navigation
 enum class Destinations {
     LOGIN,
     MAIN,
-    SETTINGS
+    SETTINGS,
+    ADMIN
 }

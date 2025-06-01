@@ -25,7 +25,6 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -34,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.data.components.TicketPriority
 import org.mr0btain.ticketman.components.data.components.TicketStatus
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
@@ -135,19 +135,23 @@ fun DialogTextRow(
 @Composable
 fun TableStatusItem(
     modifier: Modifier = Modifier,
+    status: TicketStatus,
     textModifier: Modifier = Modifier,
-    backgroundColor: Color,
-    label: String,
-    textStyle: TextStyle
+    textStyle: TextStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
+    darkMode: Boolean
 ) {
    Surface(
-       modifier = modifier,
+       modifier = modifier.padding(4.dp),
        shape = RoundedCornerShape(4.dp),
-       color = backgroundColor
+       color = when (status) {
+           TicketStatus.IN_PROGRESS -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+           TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
+           TicketStatus.DONE -> if (darkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
+       }
    ) {
        Text(
            modifier = textModifier.padding(start = 6.dp, end = 6.dp),
-           text = label,
+           text = status.name,
            fontWeight = textStyle.fontWeight,
            fontSize = textStyle.fontSize,
            fontFamily = textStyle.fontFamily,
@@ -157,6 +161,63 @@ fun TableStatusItem(
            overflow = TextOverflow.Ellipsis
        )
    }
+}
+
+@Composable
+fun TablePriorityItem(
+    modifier: Modifier = Modifier,
+    priority: TicketPriority,
+    textModifier: Modifier = Modifier,
+    textStyle: TextStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
+    darkMode: Boolean
+) {
+    Surface(
+        modifier = modifier.padding(4.dp),
+        shape = RoundedCornerShape(4.dp),
+        color = when (priority) {
+            TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
+            TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
+            TicketPriority.HIGH -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+            TicketPriority.URGENT -> MaterialTheme.colorScheme.error
+        }
+    ) {
+        Text(
+            modifier = textModifier.padding(start = 6.dp, end = 6.dp),
+            text = priority.name,
+            fontWeight = textStyle.fontWeight,
+            fontSize = textStyle.fontSize,
+            fontFamily = textStyle.fontFamily,
+            textAlign = textStyle.textAlign,
+            color = textStyle.color,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+fun TableTicketIdItem(
+    modifier: Modifier = Modifier,
+    label: String,
+    textStyle: TextStyle = TextStyle.Default
+) {
+    Surface(
+        modifier = modifier.padding(4.dp),
+        shape = RoundedCornerShape(4.dp),
+        color = MaterialTheme.colorScheme.primary
+    ) {
+        Text(
+            modifier = Modifier.padding(start = 6.dp, end = 6.dp),
+            text = label,
+            fontWeight = textStyle.fontWeight,
+            fontSize = textStyle.fontSize,
+            fontFamily = textStyle.fontFamily,
+            textAlign = textStyle.textAlign,
+            color = textStyle.color,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
 
 @Composable
@@ -284,15 +345,8 @@ fun SmallTicketList(
                                 )
 
                                 TableStatusItem(
-                                    label = ticket.status.name,
-                                    textStyle = if (ticket.status.name == "ON_HOLD") {
-                                        TextStyle.Default.copy(fontSize = 12.sp)
-                                    } else TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary),
-                                    backgroundColor = when (ticket.status) {
-                                        TicketStatus.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-                                        TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
-                                        TicketStatus.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
-                                    }
+                                    status = ticket.status,
+                                    darkMode = isDarkMode
                                 )
                             }
 

@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.json.json
 import org.mr0btain.ticketman.components.data.components.Device
 import org.mr0btain.ticketman.components.data.components.Notes
+import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.TicketPriority
 import org.mr0btain.ticketman.components.data.components.TicketStatus
 

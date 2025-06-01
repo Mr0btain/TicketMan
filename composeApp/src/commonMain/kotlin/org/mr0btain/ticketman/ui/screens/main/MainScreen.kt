@@ -5,11 +5,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.ui.screens.main.components.AddCustomerDataDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerPanel
 import org.mr0btain.ticketman.ui.screens.main.components.TicketPanel
@@ -27,6 +34,26 @@ fun MainScreen(
     isDarkMode: Boolean
 ) {
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
+
+    // For add new customer dialog
+    val starterData = remember { mutableStateOf(CustomerData()) }
+    var showAddCustomerDialog by remember { mutableStateOf(false) }
+
+    // For adding new customer
+    if (showAddCustomerDialog) {
+        AddCustomerDataDialog(
+            viewModel = viewModel,
+            onDismiss = {
+                // Reset starter data
+                starterData.value = CustomerData()
+
+                // Hide dialog
+                showAddCustomerDialog = false
+            },
+            isDarkMode = isDarkMode,
+            starterData = starterData.value
+        )
+    }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -99,13 +126,27 @@ fun MainScreen(
                 if (tabIndex.value == "0") {
                     CustomerPanel(
                         viewModel = viewModel,
-                        isDarkMode = isDarkMode
+                        isDarkMode = isDarkMode,
+                        onAddCustomer = { name ->
+                            // Add starter data
+                            starterData.value = CustomerData(info = CustomerInfo(name = name))
+
+                            // Trigger dialog
+                            showAddCustomerDialog = true
+                        }
                     )
                 } else {
                     TicketPanel(
                         isDarkMode = isDarkMode,
                         viewModel = viewModel,
-                        scrollOnRight = scrollBarRight
+                        scrollOnRight = scrollBarRight,
+                        onAddCustomer =  { name ->
+                            // Add starter data
+                            starterData.value = CustomerData(info = CustomerInfo(name = name))
+
+                            // Trigger dialog
+                            showAddCustomerDialog = true
+                        }
                     )
                 }
             }

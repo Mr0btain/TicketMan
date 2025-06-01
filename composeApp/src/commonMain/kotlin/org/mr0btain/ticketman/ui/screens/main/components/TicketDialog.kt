@@ -14,6 +14,9 @@ import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.*
 import org.mr0btain.ticketman.ui.composables.CustomerSearchBox
+import org.mr0btain.ticketman.ui.composables.EmployeeSearchBox
+import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
+import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.dialog.AddNoteDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import ticketman.composeapp.generated.resources.Res
@@ -24,9 +27,13 @@ import ticketman.composeapp.generated.resources.plus
 fun AddTicketDialog(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
+    onAddNewCustomer: (PersonName) -> Unit,
     onDismiss: () -> Unit,
     isDarkMode: Boolean
 ) {
+    // Current Employee
+    val currentEmp = viewModel.employee.collectAsState().value
+
     // Get next id
     val identifier = remember { viewModel.getNextTicketId() }
 
@@ -74,7 +81,7 @@ fun AddTicketDialog(
 
     // Add basic item dialog
     if (showAddBasicSubItemDialog) {
-        // TODO Gonna have to make some custom logic for this
+        // TODO Gonna have to make some custom logic for this if its even needed
     }
 
 
@@ -145,14 +152,12 @@ fun AddTicketDialog(
 
                 Spacer(Modifier.padding(8.dp))
 
-                // TODO: Make this regular ScrollBarColumn for desktop
+                // TODO: Make this regular ScrollBarColumn for desktops wintout scroll wheel
                 LazyColumn(
                     modifier = Modifier.height(400.dp)
                 ) {
                     item {
                         // Add to Customer Section
-                        // TODO: Setup drop down or search for current customer
-                        // TODO: Also add way to add new customer
                         Text(
                             text = "Customer",
                             fontWeight = FontWeight.SemiBold,
@@ -163,10 +168,23 @@ fun AddTicketDialog(
 
                         CustomerSearchBox(
                             items = viewModel.getAllCustomerInfo(),
-                            onResult = { item, isAdd ->  }
-                        )
+                            onResult = { item, isNew ->
+                                // Check if were adding a new customer or not
+                                if (isNew) {
+                                    val newName = item.split(" ")
 
-                        // TODO Customer
+                                    onAddNewCustomer(
+                                        PersonName(
+                                            firstName = newName.getOrElse(0) { "" },
+                                            lastName = newName.getOrElse(1) { "" }
+                                        )
+                                    )
+                                } else {
+                                    // Else set customer id
+                                    customerId.value = item
+                                }
+                            }
+                        )
 
                         Spacer(Modifier.padding(8.dp))
 
@@ -180,7 +198,15 @@ fun AddTicketDialog(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        // TODO Employee
+                        EmployeeSearchBox(
+                            items = viewModel.getAllEmployees(),
+                            onResult = { emp, isNew ->
+                                // TODO: don't know if were going to allow new employee creation here or not. Maybe if admin?
+                                // Add assigned employee.
+                                assignedEmployee.value = emp
+                            },
+                            currentEmployee = currentEmp
+                        )
 
                         Spacer(Modifier.padding(8.dp))
 
@@ -192,7 +218,7 @@ fun AddTicketDialog(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        // make this a drop down??
+                        // TODO: Maybe make this drop down with list of things?
                         DialogTextRow(
                             modifier = Modifier,
                             firstLabel = "Manufacturer",
@@ -200,6 +226,34 @@ fun AddTicketDialog(
                             secondLabel = "Model",
                             secondValue = deviceModel
                         )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        Text(
+                            text = "Status",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
+                        )
+
+                        TicketStatusDropDown(
+                            modifier = Modifier.width(350.dp),
+                        ) {
+                            status.value = it
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        Text(
+                            text = "Priority",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
+                        )
+
+                        TicketPriorityDropDown(
+                            modifier = Modifier.width(350.dp)
+                        ) {
+                            priority.value = it
+                        }
 
                         Spacer(Modifier.padding(4.dp))
 

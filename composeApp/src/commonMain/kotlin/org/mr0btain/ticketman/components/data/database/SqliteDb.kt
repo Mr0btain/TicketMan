@@ -189,35 +189,31 @@ class SqliteDb() {
     }
 
     fun getAllCustomerData(): List<CustomerData> {
-        val result = mutableListOf<CustomerData>()
+        var result = listOf<CustomerData>()
 
         // Go into database and convert data to customer data item
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            println("Customer data size: ${CustomerDataTable.selectAll().count()}")
-
-            CustomerDataTable.selectAll().forEach { item ->
-                result.add(
-                    CustomerData(
-                        info = CustomerInfo(
-                            identifier = item[CustomerDataTable.identifier].toString(),
-                            name = PersonName(
-                                firstName = item[CustomerDataTable.firstName],
-                                lastName = item[CustomerDataTable.lastName]
-                            ),
-                            address = Address(
-                                street = item[CustomerDataTable.street],
-                                city = item[CustomerDataTable.city],
-                                state = item[CustomerDataTable.state],
-                                zip = item[CustomerDataTable.zip]
-                            ),
-                            contactInfo = item[CustomerDataTable.contactInfo],
+            result = CustomerDataTable.selectAll().map { item ->
+                CustomerData(
+                    info = CustomerInfo(
+                        identifier = item[CustomerDataTable.identifier].toString(),
+                        name = PersonName(
+                            firstName = item[CustomerDataTable.firstName],
+                            lastName = item[CustomerDataTable.lastName]
                         ),
-                        tickets = item[CustomerDataTable.tickets].list,
-                        notes = item[CustomerDataTable.notes].notes
-                    )
+                        address = Address(
+                            street = item[CustomerDataTable.street],
+                            city = item[CustomerDataTable.city],
+                            state = item[CustomerDataTable.state],
+                            zip = item[CustomerDataTable.zip]
+                        ),
+                        contactInfo = item[CustomerDataTable.contactInfo],
+                    ),
+                    tickets = item[CustomerDataTable.tickets].list,
+                    notes = item[CustomerDataTable.notes].notes
                 )
             }
         }
@@ -280,7 +276,7 @@ class SqliteDb() {
         }
     }
 
-    fun updateTicketEmply(id: String, employeeNum: String) {
+    fun updateTicketEmply(id: String, employeeNum: String, employeeName: PersonName) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
@@ -376,23 +372,21 @@ class SqliteDb() {
     }
 
     fun getAllTicketData(): List<TicketInfo> {
-        val result = mutableListOf<TicketInfo>()
+        var result = listOf<TicketInfo>()
 
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.selectAll().forEach { item ->
-                result.add(
-                    TicketInfo(
-                        identifier = item[TicketDataTable.identifier].toString(),
-                        customerId = item[TicketDataTable.customerId],
-                        device = item[TicketDataTable.device],
-                        assignedEmployee = item[TicketDataTable.assignedEmp],
-                        priority = item[TicketDataTable.priority],
-                        status = item[TicketDataTable.status],
-                        updates = item[TicketDataTable.updates].notes
-                    )
+            result = TicketDataTable.selectAll().map { item ->
+                TicketInfo(
+                    identifier = item[TicketDataTable.identifier].toString(),
+                    customerId = item[TicketDataTable.customerId],
+                    device = item[TicketDataTable.device],
+                    assignedEmployee = item[TicketDataTable.assignedEmp],
+                    priority = item[TicketDataTable.priority],
+                    status = item[TicketDataTable.status],
+                    updates = item[TicketDataTable.updates].notes
                 )
             }
         }
@@ -417,6 +411,28 @@ class SqliteDb() {
         }
     }
 
+    fun getEmployee(id: String): Employee {
+        var result = Employee()
+
+        transaction {
+            // If we should log, setup logger
+            if (shouldLog) addLogger(StdOutSqlLogger)
+
+            result = EmployeeTable.selectAll().where { EmployeeTable.identifier eq id.toInt() }.map { value ->
+                Employee(
+                    identifier = value[EmployeeTable.identifier].toString(),
+                    name = PersonName(value[EmployeeTable.firstName], value[EmployeeTable.lastName]),
+                    notes = value[EmployeeTable.notes].notes,
+                    contactInfo = value[EmployeeTable.contactInfo],
+                    tickets = value[EmployeeTable.tickets].list,
+                    accessLevel = value[EmployeeTable.access]
+                )
+            }.singleOrNull() ?: Employee()
+        }
+
+        return result
+    }
+
     fun removeEmployee(id: String) {
         transaction {
             // If we should log, setup logger
@@ -425,6 +441,48 @@ class SqliteDb() {
             // Delete employee
             EmployeeTable.deleteWhere { identifier eq id.toInt() }
         }
+    }
+
+    fun addAllEmployees(employees: List<Employee>) {
+        transaction {
+            // If we should log, setup logger
+            if (shouldLog) addLogger(StdOutSqlLogger)
+
+            // Batch insert
+            EmployeeTable.batchInsert(employees) { item ->
+                this[EmployeeTable.identifier] = item.identifier.toInt()
+                this[EmployeeTable.firstName] = item.name.firstName
+                this[EmployeeTable.lastName] = item.name.lastName
+                this[EmployeeTable.contactInfo] = item.contactInfo
+                this[EmployeeTable.notes] = Notes(item.notes)
+                this[EmployeeTable.tickets] = TicketList(item.tickets)
+                this[EmployeeTable.access] = item.accessLevel
+            }
+        }
+    }
+
+    fun getAllEmployees(): List<Employee> {
+        val result = mutableListOf<Employee>()
+
+        transaction {
+            // If we should log, setup logger
+            if (shouldLog) addLogger(StdOutSqlLogger)
+
+            EmployeeTable.selectAll().forEach { item ->
+                result.add(
+                    Employee(
+                        identifier = item[EmployeeTable.identifier].toString(),
+                        name = PersonName(item[EmployeeTable.firstName], item[EmployeeTable.lastName]),
+                        notes = item[EmployeeTable.notes].notes,
+                        contactInfo = item[EmployeeTable.contactInfo],
+                        tickets = item[EmployeeTable.tickets].list,
+                        accessLevel = item[EmployeeTable.access]
+                    )
+                )
+            }
+        }
+
+        return result
     }
 
     fun updateEmployeeName(id: String, name: PersonName) {

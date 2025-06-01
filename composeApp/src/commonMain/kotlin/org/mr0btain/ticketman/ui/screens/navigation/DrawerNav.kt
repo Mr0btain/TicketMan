@@ -52,10 +52,9 @@ fun DrawerNav(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Spacer(Modifier.height(12.dp))
-                    Text("Welcome", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
-                    HorizontalDivider()
+                    Text("Main", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
 
-                    Text("Section 1", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+                    // Main Screen
                     NavigationDrawerItem(
                         label = { Text("Main") },
                         selected = false,
@@ -72,6 +71,29 @@ fun DrawerNav(
                             }
                         }
                     )
+
+                    // Admin Screen
+                    NavigationDrawerItem(
+                        label = { Text("Admin") },
+                        selected = false,
+                        onClick = {
+                            scope.launch {
+                                navHostController.navigate(NavigationItem.Admin.route)
+
+                                // Set top app bar text
+                                topAppTextState.value = "Admin"
+
+                                // Close drawer
+                                drawerState.close()
+                            }
+                        }
+                    )
+
+                    HorizontalDivider()
+
+                    Text("Options", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+
+                    // Settings screen
                     NavigationDrawerItem(
                         label = { Text("Settings") },
                         selected = false,
@@ -89,6 +111,12 @@ fun DrawerNav(
                         }
                     )
 
+                    HorizontalDivider()
+
+                    Text("Testing", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleMedium)
+
+                    // TODO: THis is a temp build of it
+                    // Login Screen
                     NavigationDrawerItem(
                         label = { Text("Login") },
                         selected = false,

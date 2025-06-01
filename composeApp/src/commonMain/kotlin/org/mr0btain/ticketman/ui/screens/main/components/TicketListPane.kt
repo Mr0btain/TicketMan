@@ -187,12 +187,10 @@ private fun TicketTableItem(
                     .width(numberWidth + sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableStatusItem(
+                TableTicketIdItem(
                     label = ticketInfo.identifier,
-                    textStyle = TextStyle.Default.copy(fontSize = 12.sp),
-                    backgroundColor = MaterialTheme.colorScheme.primary
+                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
-                //TableCardTextItem(ticketInfo.id)
             }
 
             Row(
@@ -212,15 +210,11 @@ private fun TicketTableItem(
                     .width(priorityWidth + sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableStatusItem(
-                    label = ticketInfo.priority.name,
-                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary),
-                    backgroundColor = when (ticketInfo.priority) {
-                        TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
-                        TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
-                        TicketPriority.HIGH -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-                        TicketPriority.URGENT -> MaterialTheme.colorScheme.error
-                    }
+
+                TablePriorityItem(
+                    priority = ticketInfo.priority,
+                    darkMode = isDarkMode,
+                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }
 
@@ -265,15 +259,9 @@ private fun TicketTableItem(
                 contentAlignment = Alignment.Center
             ) {
                 TableStatusItem(
-                    label = ticketInfo.status.name,
-                    textStyle = if (ticketInfo.status.name == "ON_HOLD") {
-                        TextStyle.Default.copy(fontSize = 12.sp)
-                    } else TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary),
-                    backgroundColor = when (ticketInfo.status) {
-                        TicketStatus.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-                        TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
-                        TicketStatus.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
-                    }
+                    status = ticketInfo.status,
+                    darkMode = isDarkMode,
+                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }
         }

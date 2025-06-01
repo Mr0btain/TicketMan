@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
+import org.mr0btain.ticketman.components.data.components.AccessLevel
 import org.mr0btain.ticketman.components.data.components.Address
 import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
@@ -30,7 +31,7 @@ class MainViewModel(
     private val fileManager: FileManager,
     private val database: SqliteDb
 ): ViewModel() {
-    val topAppBarText = mutableStateOf("Main")
+    val topAppBarText = mutableStateOf("Welcome")
     val platform = getPlatform().name
 
 
@@ -49,21 +50,22 @@ class MainViewModel(
     /** Employee Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
 
-    // User ID
-    private val _employeeId: MutableStateFlow<String> = MutableStateFlow("201")
-    var employeeId = _employeeId.asStateFlow()
+    // TODO: Setup access level stuff
+    // Employee stuff
+    private val _employee: MutableStateFlow<Employee> = MutableStateFlow(Employee(identifier = "201"))
+    var employee = _employee.asStateFlow()
+
+    // Employee list
+    private val _employeeList: MutableStateFlow<List<Employee>> = MutableStateFlow(listOf())
+    var employeeList = _employeeList.asStateFlow()
 
     // To update the user id
-    fun changeUserId(update: String) {
-        _employeeId.value = update
+    fun changeEmployee(employee: Employee) {
+        _employee.value = employee
     }
 
-    fun addEmployee(employee: Employee) {
-        database.addEmployee(employee)
-    }
-
-    fun removeEmployee(employee: Employee) {
-        database.removeEmployee(employee.identifier)
+    fun changeEmployeeList(list: List<Employee>) {
+        _employeeList.value = list
     }
 
     /** Ticket Related Things */
@@ -175,6 +177,9 @@ class MainViewModel(
     // Database
     // --------------------------------------------------------------------------------------------------------------------------
 
+    // To check and setup initial database if it doesnt exist
+    fun setupDatabase() { database.checkAndCreateTables() }
+
     fun getNextCustomerId(): String { return database.getNextCustomerId() }
 
     fun getNextTicketId(): String { return database.getNextTicketId() }
@@ -267,10 +272,29 @@ class MainViewModel(
         database.addTicket(data)
     }
 
+    fun getAllEmployees(): List<Employee> {
+        return database.getAllEmployees()
+    }
+
+    fun addEmployee(employee: Employee) {
+        database.addEmployee(employee)
+    }
+
+    fun removeEmployee(employee: Employee) {
+        database.removeEmployee(employee.identifier)
+    }
+
+    fun getEmployee(id: String): Employee {
+        return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee()
+    }
+
+    // TODO: Employee needs fleshed out
     fun updateDataFromDb() {
         // Read data from mock db and update it in view model
         changeCustomerDataList(database.getAllCustomerData())
         changeTicketDataList(database.getAllTicketData())
+        changeEmployeeList(database.getAllEmployees())
+        changeEmployee(employeeList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: Employee())
     }
 
     // ----------------------------------------------------------------------------------------------------------------------------
@@ -287,12 +311,15 @@ class MainViewModel(
     }
 
     fun generateMockDbData() {
-        val (customerdata, ticketData) = generateMockData(600)
+        val (customerdata, ticketData, employeeData) = generateMockData(600)
 
         database.addAllTicketData(ticketData)
 
         // Add the generated values to the database
         database.addAllCustomerData(customerdata)
+
+        // Add all employees
+        database.addAllEmployees(employeeData)
     }
 
     fun getMockDataFromDb() {

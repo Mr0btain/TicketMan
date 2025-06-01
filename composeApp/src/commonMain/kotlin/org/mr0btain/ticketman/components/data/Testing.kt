@@ -1,11 +1,13 @@
 package org.mr0btain.ticketman.components.data
 
+import org.mr0btain.ticketman.components.data.components.AccessLevel
 import org.mr0btain.ticketman.components.data.components.Address
 import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.Device
+import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.randomTicketPriority
@@ -51,13 +53,14 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
     return data
 }
 
-fun generateMockData(num: Int): Pair<List<CustomerData>, List<TicketInfo>> {
+fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<Employee>> {
     // Generate some mock customer data
     val customerData = generateMockCustomerData(num)
+    val employeeData = generateMockEmployeeData(6).toMutableList()
 
     // Hold the new data
     val newCustomerData = mutableListOf<CustomerData>()
-    val result = mutableListOf<TicketInfo>()
+    val newTicketData = mutableListOf<TicketInfo>()
 
     customerData.forEach { item ->
         val tickets = mutableListOf<TicketInfo>()
@@ -77,10 +80,65 @@ fun generateMockData(num: Int): Pair<List<CustomerData>, List<TicketInfo>> {
         newCustomerData.add(item.copy(tickets = ticketIds))
 
         // Add the tickets to the result
-        result.addAll(tickets)
+        newTicketData.addAll(tickets)
     }
 
-    return Pair(newCustomerData, result)
+    newTicketData.forEachIndexed { index, ticket ->
+        // Get random employee
+        val empNum = Random.nextInt(0, 6)
+        val emp = employeeData[empNum]
+
+        // Set ticket data assigned employee
+        newTicketData[index] = ticket.copy(
+            assignedEmployee = emp.identifier
+        )
+
+        // add ticket to employee
+        employeeData[empNum] = emp.copy(tickets = emp.tickets + ticket.identifier)
+    }
+
+
+    return Triple(newCustomerData, newTicketData, employeeData)
+}
+
+// Function to generate random employee data
+fun generateMockEmployeeData(num: Int): List<Employee> {
+    val employees = mutableListOf<Employee>()
+
+    for (i in 0..num) {
+        // Random AccessLevel
+        val accessLevel = AccessLevel.entries.random()
+
+        // Random identifier (UUID style)
+        val identifier = "${Random.nextInt(1000, 9999)}"
+
+        // Random PersonName (first name and last name)
+        val firstName = listOf("John", "Jane", "Alex", "Chris", "Pat").random()
+        val lastName = listOf("Smith", "Johnson", "Williams", "Brown", "Jones").random()
+        val name = PersonName(firstName, lastName)
+
+        // Random Notes
+        val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
+
+        // Random ContactInfo (emails and phone numbers)
+        val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
+        val phone = (1..Random.nextInt(1, 2)).map { "+1${Random.nextInt(100000000, 999999999)}" }
+        val contactInfo = ContactInfo(email, phone)
+
+        // Create and return Employee object
+        employees.add(
+            Employee(
+                identifier = identifier,
+                name = name,
+                notes = notes,
+                contactInfo = contactInfo,
+                tickets = listOf(),
+                accessLevel = accessLevel
+            )
+        )
+    }
+
+    return employees
 }
 
 private fun generateRandomAddress(): Address {
@@ -184,7 +242,7 @@ fun generateRandomTicket(customerId: String): TicketInfo {
     return TicketInfo(
         identifier = Random.nextInt(0, 9999).toString(),
         customerId = customerId,
-        assignedEmployee = if (customerId.toInt() % 12 == 0) "201" else "",
+        assignedEmployee = "",
         device = Device(manufacturer, model),
         status = randomTicketStatus(),
         priority = randomTicketPriority(),
@@ -216,6 +274,30 @@ private fun generateCustomerNote(): Note {
     val message = customerNotes.random()
 
     return Note(author, message)
+}
+
+// Function to generate a random employee note
+fun generateEmployeeNote(): Note {
+    // List of potential authors for the note
+    val authors = listOf("Manager", "HR", "Supervisor", "Team Lead", "Peer", "Self")
+
+// List of potential note topics related to performance, behavior, etc.
+    val noteTopics = listOf(
+        "has shown excellent performance on recent projects.",
+        "needs to improve communication with team members.",
+        "has demonstrated great leadership qualities during the last quarter.",
+        "is consistently meeting expectations.",
+        "requires additional training on the new software tools.",
+        "has been taking initiative in meetings and brainstorming sessions.",
+        "needs to be more proactive with deadlines.",
+        "shows great teamwork skills and collaborates effectively.",
+        "has exceeded sales targets this month.",
+        "has been a key contributor to the success of the latest project.",
+        "could benefit from more time management training.",
+        "has a positive attitude and motivates others in the workplace."
+    )
+
+    return Note(authors.random(), noteTopics.random())
 }
 
 private fun generateRandomContactInfo(firstName: String? = null, lastName: String? = null): ContactInfo {

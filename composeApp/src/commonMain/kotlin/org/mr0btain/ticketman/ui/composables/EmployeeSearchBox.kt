@@ -28,6 +28,8 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.components.AccessLevel
+import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
@@ -35,9 +37,10 @@ import ticketman.composeapp.generated.resources.search
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun TicketSearchBox(
+fun EmployeeSearchBox(
     modifier: Modifier = Modifier,
-    items: List<TicketInfo>,
+    currentEmployee: Employee,
+    items: List<Employee>,
     onResult: (String, Boolean) -> Unit
 ) {
     var isExpanded by rememberSaveable { mutableStateOf(false) }
@@ -57,15 +60,15 @@ fun TicketSearchBox(
             // Filter items and add it to filtered
             filtered.addAll(
                 items.filter {
-                    (it.identifier + it.customerId).contains(query)
-                }.sortedBy { it.identifier + it.customerId }
+                    (it.identifier + it.name.firstName + it.name.lastName + it.identifier).contains(query)
+                }.sortedBy { it.identifier + it.name.firstName + it.name.lastName }
             )
         } else {
             // Clear list
             filtered.clear()
 
             // Add all sorted
-            filtered.addAll(items.sortedBy { it.identifier + it.customerId })
+            filtered.addAll(items.sortedBy { it.identifier + it.name.firstName + it.name.lastName })
         }
     }
 
@@ -83,12 +86,12 @@ fun TicketSearchBox(
                         if (!shouldShowPlus) shouldShowPlus = true
                     },
                     onSearch = { item ->
-                        onResult(item, true)
+                        ///onResult(item, true)
                         isExpanded = false
                     },
                     expanded = isExpanded,
                     onExpandedChange = { isExpanded = it },
-                    label = "Search Tickets",
+                    label = "Search Employees",
                     leadingIcon = {
                         Icon(
                             modifier = Modifier.size(24.dp),
@@ -97,13 +100,14 @@ fun TicketSearchBox(
                         )
                     },
                     trailingIcon = {
-                        // Clear value button only show if there is text
-                        if (query.isNotEmpty() && shouldShowPlus) {
+                        // For adding new
+                        if (currentEmployee.accessLevel == AccessLevel.ADMIN && query.isNotEmpty() && shouldShowPlus) {
                             IconButton(
                                 modifier = Modifier.size(26.dp),
                                 onClick = {
                                     focusManager.clearFocus()
-                                    onResult(query, true)
+                                    // TODO
+                                    //onResult(query, true)
                                 }
                             ) {
                                 Icon(
@@ -132,7 +136,7 @@ fun TicketSearchBox(
                         ListItem(
                             modifier = Modifier.clickable(
                                 onClick = {
-                                    query = item.identifier + " : " + item.customerId
+                                    query =  item.name.firstName + " " + item.name.firstName + ": " + item.identifier
                                     shouldShowPlus = false
                                     isExpanded = false
                                     focusManager.clearFocus()
@@ -141,7 +145,7 @@ fun TicketSearchBox(
                             ),
                             headlineContent = {
                                 Text(
-                                    text = item.identifier+ " : " + item.customerId,
+                                    text = item.name.firstName + " " + item.name.firstName + ": " + item.identifier,
                                     fontSize = 16.sp
                                 )
                             }

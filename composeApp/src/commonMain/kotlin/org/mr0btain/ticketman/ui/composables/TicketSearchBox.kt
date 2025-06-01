@@ -97,7 +97,7 @@ fun TicketSearchBox(
                         )
                     },
                     trailingIcon = {
-                        // Clear value button only show if there is text
+                        // For adding new
                         if (query.isNotEmpty() && shouldShowPlus) {
                             IconButton(
                                 modifier = Modifier.size(26.dp),
@@ -132,7 +132,7 @@ fun TicketSearchBox(
                         ListItem(
                             modifier = Modifier.clickable(
                                 onClick = {
-                                    query = item.identifier + " : " + item.customerId
+                                    query = item.identifier + ": "  + item.customerId
                                     shouldShowPlus = false
                                     isExpanded = false
                                     focusManager.clearFocus()
@@ -141,7 +141,7 @@ fun TicketSearchBox(
                             ),
                             headlineContent = {
                                 Text(
-                                    text = item.identifier+ " : " + item.customerId,
+                                    text = "Ticket: " + item.identifier+ " Customer: " + item.customerId,
                                     fontSize = 16.sp
                                 )
                             }
