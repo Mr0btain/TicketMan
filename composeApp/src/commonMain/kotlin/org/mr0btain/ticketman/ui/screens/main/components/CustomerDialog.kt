@@ -23,7 +23,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.InputChip
 import androidx.compose.material3.InputChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -39,7 +38,7 @@ import org.mr0btain.ticketman.components.data.components.Address
 import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.MainItemType
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.SubItemType
@@ -62,7 +61,7 @@ fun EditCustomerDataDialog(
     onDismiss: () -> Unit,
     isDarkMode: Boolean
 ) {
-    val identifier = customerData.info.id
+    val identifier = customerData.info.identifier
     // Use mutable state here to make sure the updates are reflected properly with state change as updating view model sometimes
     // doesn't trigger change to dialog but for some reason this works
     var data by remember { mutableStateOf(customerData) }
@@ -228,7 +227,7 @@ fun EditCustomerDataDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = "Edit Customer: ${data.info.id}",
+                        text = "Edit Customer: ${data.info.identifier}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp
                     )
@@ -494,7 +493,7 @@ fun EditCustomerDataDialog(
                             // Check remaining data
                             checkDataOnClose(
                                 oldData = data,
-                                newName = CustomerName(firstName.value, lastName.value),
+                                newName = PersonName(firstName.value, lastName.value),
                                 newAddress = Address(street.value, city.value, state.value, zip.value),
                                 viewModel = viewModel
                             )
@@ -931,8 +930,8 @@ fun AddCustomerDataDialog(
                             viewModel.addCustomer(
                                 CustomerData(
                                     info = CustomerInfo(
-                                        id = identifier,
-                                        name = CustomerName(
+                                        identifier = identifier,
+                                        name = PersonName(
                                             firstName.value.lowercase().replaceFirstChar { it.uppercase() },
                                             lastName.value.lowercase().replaceFirstChar { it.uppercase() }
                                         ),
@@ -1258,21 +1257,21 @@ private fun CustomChip(
 
 private fun checkDataOnClose(
     oldData: CustomerData,
-    newName: CustomerName,
+    newName: PersonName,
     newAddress: Address,
     viewModel: MainViewModel
 ) {
     // Check name
     when {
-        oldData.info.name.firstName != newName.firstName -> viewModel.updateCustomerName(oldData.info.id, newName)
-        oldData.info.name.lastName != newName.lastName -> viewModel.updateCustomerName(oldData.info.id, newName)
+        oldData.info.name.firstName != newName.firstName -> viewModel.updateCustomerName(oldData.info.identifier, newName)
+        oldData.info.name.lastName != newName.lastName -> viewModel.updateCustomerName(oldData.info.identifier, newName)
     }
 
     // Check address
     when {
-        oldData.info.address.state != newAddress.state -> viewModel.updateCustomerAddress(oldData.info.id, newAddress)
-        oldData.info.address.street != newAddress.street -> viewModel.updateCustomerAddress(oldData.info.id, newAddress)
-        oldData.info.address.city != newAddress.city -> viewModel.updateCustomerAddress(oldData.info.id, newAddress)
-        oldData.info.address.zip != newAddress.zip -> viewModel.updateCustomerAddress(oldData.info.id, newAddress)
+        oldData.info.address.state != newAddress.state -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
+        oldData.info.address.street != newAddress.street -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
+        oldData.info.address.city != newAddress.city -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
+        oldData.info.address.zip != newAddress.zip -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
     }
 }

@@ -263,7 +263,7 @@ fun SmallTicketList(
                         modifier = Modifier
                             .padding(8.dp)
                             .clickable(
-                                onClick = { onClick(ticket.idNum) }
+                                onClick = { onClick(ticket.identifier) }
                             ),
                         shape = RoundedCornerShape(10.dp),
                         shadowElevation = 4.dp,
@@ -278,7 +278,7 @@ fun SmallTicketList(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Text(
-                                    text = ticket.idNum,
+                                    text = ticket.identifier,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )

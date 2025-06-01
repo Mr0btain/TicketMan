@@ -4,8 +4,8 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CustomerInfo(
-    val id: String = "",
-    val name: CustomerName = CustomerName(),
+    val identifier: String = "",
+    val name: PersonName = PersonName(),
     val address: Address = Address(),
     val contactInfo: ContactInfo = ContactInfo()
 )

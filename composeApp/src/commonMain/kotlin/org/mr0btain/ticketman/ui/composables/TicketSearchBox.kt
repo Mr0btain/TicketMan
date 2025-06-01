@@ -28,7 +28,6 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
@@ -58,15 +57,15 @@ fun TicketSearchBox(
             // Filter items and add it to filtered
             filtered.addAll(
                 items.filter {
-                    (it.idNum + it.customerId).contains(query)
-                }.sortedBy { it.idNum + it.customerId }
+                    (it.identifier + it.customerId).contains(query)
+                }.sortedBy { it.identifier + it.customerId }
             )
         } else {
             // Clear list
             filtered.clear()
 
             // Add all sorted
-            filtered.addAll(items.sortedBy { it.idNum + it.customerId })
+            filtered.addAll(items.sortedBy { it.identifier + it.customerId })
         }
     }
 
@@ -133,16 +132,16 @@ fun TicketSearchBox(
                         ListItem(
                             modifier = Modifier.clickable(
                                 onClick = {
-                                    query = item.idNum + " : " + item.customerId
+                                    query = item.identifier + " : " + item.customerId
                                     shouldShowPlus = false
                                     isExpanded = false
                                     focusManager.clearFocus()
-                                    onResult(item.idNum, false)
+                                    onResult(item.identifier, false)
                                 }
                             ),
                             headlineContent = {
                                 Text(
-                                    text = item.idNum+ " : " + item.customerId,
+                                    text = item.identifier+ " : " + item.customerId,
                                     fontSize = 16.sp
                                 )
                             }

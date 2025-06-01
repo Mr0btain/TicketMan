@@ -14,7 +14,6 @@ import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.*
 import org.mr0btain.ticketman.ui.composables.CustomerSearchBox
-import org.mr0btain.ticketman.ui.composables.SearchBox
 import org.mr0btain.ticketman.ui.dialog.AddNoteDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import ticketman.composeapp.generated.resources.Res
@@ -267,7 +266,7 @@ fun AddTicketDialog(
                             // Add the customer to the database
                             viewModel.addTicket(
                                 TicketInfo(
-                                    idNum = identifier,
+                                    identifier = identifier,
                                     customerId = customerId.value,
                                     assignedEmployee = assignedEmployee.value,
                                     device = Device(deviceManufacturer.value, deviceModel.value),

@@ -13,9 +13,9 @@ import org.mr0btain.ticketman.components.data.components.Address
 import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.Employee
+import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.Note
-import org.mr0btain.ticketman.components.data.components.Notes
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
@@ -33,9 +33,7 @@ class MainViewModel(
     val topAppBarText = mutableStateOf("Main")
     val platform = getPlatform().name
 
-    // User ID
-    private val _employeeId: MutableStateFlow<String> = MutableStateFlow("201")
-    var employeeId = _employeeId.asStateFlow()
+
 
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<String> = MutableStateFlow("0")
@@ -46,9 +44,26 @@ class MainViewModel(
         _selectedMainTabIndex.value = update
     }
 
+
+
+    /** Employee Related Things */
+    // -----------------------------------------------------------------------------------------------------------------------
+
+    // User ID
+    private val _employeeId: MutableStateFlow<String> = MutableStateFlow("201")
+    var employeeId = _employeeId.asStateFlow()
+
     // To update the user id
     fun changeUserId(update: String) {
         _employeeId.value = update
+    }
+
+    fun addEmployee(employee: Employee) {
+        database.addEmployee(employee)
+    }
+
+    fun removeEmployee(employee: Employee) {
+        database.removeEmployee(employee.identifier)
     }
 
     /** Ticket Related Things */
@@ -101,7 +116,7 @@ class MainViewModel(
         val result = mutableListOf<TicketInfo>()
 
         _ticketDataList.value.forEach {
-            if (tickets.contains(it.idNum)) {
+            if (tickets.contains(it.identifier)) {
                 result.add(it)
             }
         }
@@ -140,7 +155,7 @@ class MainViewModel(
     }
 
     fun getCustomerData(id: String): CustomerData {
-        return _customerDataList.value.firstOrNull() { it.info.id == id } ?: CustomerData()
+        return _customerDataList.value.firstOrNull() { it.info.identifier == id } ?: CustomerData()
     }
 
     // To get the index of an item
@@ -164,12 +179,12 @@ class MainViewModel(
 
     fun getNextTicketId(): String { return database.getNextTicketId() }
 
-    fun updateCustomerName(id: String, data: CustomerName) {
+    fun updateCustomerName(id: String, data: PersonName) {
         database.updateCustomerName(id, data)
 
         // Fix List in viewmodel
         _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.id == id) it.copy(info = it.info.copy(name = data)) else it
+            if (it.info.identifier == id) it.copy(info = it.info.copy(name = data)) else it
         }
 
         // update selected data as well
@@ -181,7 +196,7 @@ class MainViewModel(
 
         // Fix List in viewmodel
         _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.id == id) it.copy(info = it.info.copy(address = data)) else it
+            if (it.info.identifier == id) it.copy(info = it.info.copy(address = data)) else it
         }
 
         // update selected data as well
@@ -193,7 +208,7 @@ class MainViewModel(
 
         // Fix List in viewmodel
         _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.id == id) it.copy(info = it.info.copy(contactInfo = data)) else it
+            if (it.info.identifier == id) it.copy(info = it.info.copy(contactInfo = data)) else it
         }
 
         // update selected data as well
@@ -205,7 +220,7 @@ class MainViewModel(
 
         // Fix List in viewmodel
         _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.id == id) it.copy(tickets = data) else it
+            if (it.info.identifier == id) it.copy(tickets = data) else it
         }
 
         // update selected data as well
@@ -217,7 +232,7 @@ class MainViewModel(
 
         // Fix List in viewmodel
         _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.id == id) it.copy(notes = data) else it
+            if (it.info.identifier == id) it.copy(notes = data) else it
         }
 
         // update selected data as well

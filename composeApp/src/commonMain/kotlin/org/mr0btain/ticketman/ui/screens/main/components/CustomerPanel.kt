@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.ui.composables.CustomerSearchBox
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
@@ -161,7 +161,7 @@ fun CustomerPanel(
 
                             starterData.value = CustomerData(
                                 info = CustomerInfo(
-                                    name = CustomerName(
+                                    name = PersonName(
                                         firstName = newName.getOrElse(0) { "" },
                                         lastName = newName.getOrElse(1) { "" }
                                     )
@@ -173,7 +173,7 @@ fun CustomerPanel(
                         } else {
                             // Update selected customer
                             viewModel.changeSelectedCustomerData(
-                                customerDataList.value.firstOrNull { it.info.id == item } ?: CustomerData()
+                                customerDataList.value.firstOrNull { it.info.identifier == item } ?: CustomerData()
                             )
                         }
 
@@ -192,7 +192,7 @@ fun CustomerPanel(
                         .height(500.dp),
                     customerInfo = sortedCustomerInfo,
                     lazyListState = customerDataListState,
-                    selectedId = selectedCustomerData.value.info.id,
+                    selectedId = selectedCustomerData.value.info.identifier,
                     scope = coroutineScope,
                     scrollBarRight = scrollBarRight,
                     isDarkMode = isDarkMode,
@@ -217,7 +217,7 @@ fun CustomerPanel(
                         focusManager.clearFocus()
                         showEditCustomerDialog = true
                     },
-                    tickets = viewModel.getTicketsForCustomer(selectedCustomerData.value.info.id)
+                    tickets = viewModel.getTicketsForCustomer(selectedCustomerData.value.info.identifier)
                 )
             }
         }

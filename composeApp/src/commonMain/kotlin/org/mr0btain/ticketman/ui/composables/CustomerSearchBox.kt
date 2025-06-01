@@ -32,7 +32,6 @@ import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.search
-import ticketman.composeapp.generated.resources.x
 
 /**
  * SearchBox for searching customers. Will return an id or a name and a true if they want to add new if it doesn't exist
@@ -63,15 +62,15 @@ fun CustomerSearchBox(
                 items.filter {
                     (it.name.firstName + it.name.lastName).lowercase()
                         .contains(query.lowercase().replace(" ", ""))
-                    || it.id.contains(query)
-                }.sortedBy { it.name.firstName + it.name.lastName + it.id }
+                    || it.identifier.contains(query)
+                }.sortedBy { it.name.firstName + it.name.lastName + it.identifier }
             )
         } else {
             // Clear list
             filtered.clear()
 
             // Add all sorted
-            filtered.addAll(items.sortedBy { it.name.firstName + it.name.lastName + it.id })
+            filtered.addAll(items.sortedBy { it.name.firstName + it.name.lastName + it.identifier })
         }
     }
 
@@ -140,15 +139,15 @@ fun CustomerSearchBox(
                         ListItem(
                             modifier = Modifier.clickable(
                                 onClick = {
-                                    query = item.name.firstName + " " + item.name.lastName + ": " + item.id
+                                    query = item.name.firstName + " " + item.name.lastName + ": " + item.identifier
                                     shouldShowPlus = false
                                     isExpanded = false
-                                    onResult(item.id, false)
+                                    onResult(item.identifier, false)
                                 }
                             ),
                             headlineContent = {
                                 Text(
-                                    text = item.name.firstName + " " + item.name.lastName + ": " + item.id,
+                                    text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier,
                                     fontSize = 16.sp
                                 )
                             }

@@ -13,11 +13,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.CustomerName
 import org.mr0btain.ticketman.components.data.components.TicketInfo
-import org.mr0btain.ticketman.ui.composables.SearchTextField
 import org.mr0btain.ticketman.ui.composables.TicketSearchBox
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
@@ -74,9 +70,9 @@ fun TicketPanel(
     // When we change values we should also update the data this way
     LaunchedEffect(selectedTab.value, tickets.value) {
         if (selectedTab.value == "0") {
-            sortedTickets.value = tickets.value.sortedBy { it.idNum }.filter { it.assignedEmployee == employeeId.value }.reversed()
+            sortedTickets.value = tickets.value.sortedBy { it.identifier }.filter { it.assignedEmployee == employeeId.value }.reversed()
         } else {
-            sortedTickets.value = tickets.value.sortedBy { it.idNum }.reversed()
+            sortedTickets.value = tickets.value.sortedBy { it.identifier }.reversed()
         }
     }
 
@@ -217,7 +213,7 @@ fun TicketPanel(
                             } else {
                                 // Update selected customer
                                 viewModel.changeSelectedTicketInfo(
-                                    tickets.value.firstOrNull { it.idNum == item } ?: TicketInfo()
+                                    tickets.value.firstOrNull { it.identifier == item } ?: TicketInfo()
                                 )
                             }
                         }
@@ -244,7 +240,7 @@ fun TicketPanel(
                             // Change selected ticket
                             viewModel.changeSelectedTicketInfo(ticket)
                         },
-                        selectedId = selectedTicket.value.idNum,
+                        selectedId = selectedTicket.value.identifier,
                         state = ticketLazyListState
                     )
                 } else {
@@ -262,7 +258,7 @@ fun TicketPanel(
                             // Update selected ticket
                             viewModel.changeSelectedTicketInfo(ticket)
                         },
-                        selectedId = selectedTicket.value.idNum,
+                        selectedId = selectedTicket.value.identifier,
                         state = ticketLazyListState
                     )
                 }

@@ -107,7 +107,7 @@ fun TicketListPane(
                         } else {
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                         },
-                        selected = selectedId == item.idNum,
+                        selected = selectedId == item.identifier,
                         ticketInfo = item,
                         numberWidth = numberColumnWidth,
                         priorityWidth = priorityColumnWidth,
@@ -188,7 +188,7 @@ private fun TicketTableItem(
                 contentAlignment = Alignment.Center
             ) {
                 TableStatusItem(
-                    label = ticketInfo.idNum,
+                    label = ticketInfo.identifier,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp),
                     backgroundColor = MaterialTheme.colorScheme.primary
                 )

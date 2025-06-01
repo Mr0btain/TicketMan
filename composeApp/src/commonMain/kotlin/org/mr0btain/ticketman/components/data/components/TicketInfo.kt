@@ -5,7 +5,7 @@ import kotlin.random.Random
 
 @Serializable
 data class TicketInfo(
-    val idNum: String = "",
+    val identifier: String = "",
     val customerId: String = "",
     val assignedEmployee: String = "",
     val device: Device = Device("", ""),

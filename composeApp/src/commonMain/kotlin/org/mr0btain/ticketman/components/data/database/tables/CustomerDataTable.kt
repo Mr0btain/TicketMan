@@ -1,15 +1,16 @@
-package org.mr0btain.ticketman.components.data.components
+package org.mr0btain.ticketman.components.data.database.tables
 
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
-import org.jetbrains.exposed.v1.crypt.Algorithms
-import org.jetbrains.exposed.v1.crypt.encryptedVarchar
 import org.jetbrains.exposed.v1.json.json
+import org.mr0btain.ticketman.components.data.components.ContactInfo
+import org.mr0btain.ticketman.components.data.components.Notes
+import org.mr0btain.ticketman.components.data.components.TicketList
 
-// TODO: Find way to encrypt sensitive data. maybe convert data class to json string then store as varchar encrypted and decode to class manually
+// TODO: Maybe encrypt whole data and just leave first last and identifier unencrypted
 
 object CustomerDataTable : IntIdTable("customer") {
-    val idNumber = integer("number")
+    val identifier = integer("number")
 
     val firstName = text("firstname")
     val lastName = text("lastname")
@@ -17,12 +18,10 @@ object CustomerDataTable : IntIdTable("customer") {
     val city = text("city")
     val state = text("state")
     val zip = text("zip")
-    val tickets = json<TicketList>("tickets", Json)
-    val notes = json<Notes>("notes", Json)
-    val contactInfo = json<ContactInfo>("contact", Json)
+    val tickets = json<TicketList>("tickets", Json.Default)
+    val notes = json<Notes>("notes", Json.Default)
+    val contactInfo = json<ContactInfo>("contact", Json.Default)
 }
-
-
 
 /*
 val columEncrypted = encryptedVarchar(

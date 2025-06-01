@@ -77,7 +77,7 @@ fun TicketInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = "Details for: ${ticketInfo.idNum}",
+                        text = "Details for: ${ticketInfo.identifier}",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -261,7 +261,7 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.idNum.isNotBlank()) {
+                            if (ticketInfo.identifier.isNotBlank()) {
                                 TableStatusItem(
                                     textModifier = Modifier.padding(4.dp),
                                     label = ticketInfo.status.name,
@@ -291,7 +291,7 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.idNum.isNotBlank()) {
+                            if (ticketInfo.identifier.isNotBlank()) {
                                 TableStatusItem(
                                     textModifier = Modifier.padding(4.dp),
                                     label = ticketInfo.priority.name,

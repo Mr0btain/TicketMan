@@ -4,7 +4,7 @@ import org.mr0btain.ticketman.components.data.components.Address
 import org.mr0btain.ticketman.components.data.components.ContactInfo
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.CustomerName
+import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.Device
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.TicketInfo
@@ -38,7 +38,7 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
         data.add(
             CustomerData(
                 info = CustomerInfo(
-                    id = id.toString(),
+                    identifier = id.toString(),
                     name = name,
                     address = generateRandomAddress(),
                     contactInfo = generateRandomContactInfo(name.firstName, name.lastName)
@@ -65,12 +65,12 @@ fun generateMockData(num: Int): Pair<List<CustomerData>, List<TicketInfo>> {
 
         // Generate tickets
         (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(item.info.id))
+            tickets.add(generateRandomTicket(item.info.identifier))
         }
 
         // Make a list of ticket ids
         tickets.forEach { tick ->
-            ticketIds.add(tick.idNum)
+            ticketIds.add(tick.identifier)
         }
 
         // Update the customer data
@@ -112,7 +112,7 @@ private fun generateRandomAddress(): Address {
     )
 }
 
-private fun generateRandomName(): CustomerName {
+private fun generateRandomName(): PersonName {
     val firstNames = listOf(
         "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
         "William", "Elizabeth", "David", "Barbara", "Richard", "Susan", "Joseph", "Jessica",
@@ -133,7 +133,7 @@ private fun generateRandomName(): CustomerName {
         "Carter", "Roberts"
     )
 
-    return CustomerName(firstNames.random(), lastNames.random())
+    return PersonName(firstNames.random(), lastNames.random())
 }
 
 @OptIn(ExperimentalUuidApi::class)
@@ -182,7 +182,7 @@ fun generateRandomTicket(customerId: String): TicketInfo {
     val uuid = Uuid.random().toString()
 
     return TicketInfo(
-        idNum = Random.nextInt(0, 9999).toString(),
+        identifier = Random.nextInt(0, 9999).toString(),
         customerId = customerId,
         assignedEmployee = if (customerId.toInt() % 12 == 0) "201" else "",
         device = Device(manufacturer, model),

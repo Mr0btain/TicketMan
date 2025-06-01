@@ -12,9 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -91,7 +89,7 @@ fun CustomerListPane(
                 itemsIndexed(customerInfo) { index, info ->
                     CustomerTableItem(
                         customerInfo = info,
-                        selected = info.id == selectedId,
+                        selected = info.identifier == selectedId,
                         color = if (!isDarkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {
@@ -153,7 +151,7 @@ private fun CustomerTableItem(
         modifier = modifier
             .padding(2.dp)
             .clickable(
-                onClick = { onClick(customerInfo.id) }
+                onClick = { onClick(customerInfo.identifier) }
             ),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp,

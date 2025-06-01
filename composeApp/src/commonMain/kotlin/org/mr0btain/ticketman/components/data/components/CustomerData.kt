@@ -33,7 +33,7 @@ fun CustomerData.compare(data: CustomerData): Boolean {
         this.info.contactInfo.email.toList() != data.info.contactInfo.email.toList() -> false
         this.info.contactInfo.phone.toList() != data.info.contactInfo.phone.toList() -> false
 
-        this.info.id != data.info.id -> false
+        this.info.identifier != data.info.identifier -> false
 
         else -> true
     }
