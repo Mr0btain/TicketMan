@@ -1,17 +1,6 @@
 package org.mr0btain.ticketman.components.data
 
-import org.mr0btain.ticketman.components.data.components.AccessLevel
-import org.mr0btain.ticketman.components.data.components.Address
-import org.mr0btain.ticketman.components.data.components.ContactInfo
-import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.PersonName
-import org.mr0btain.ticketman.components.data.components.Device
-import org.mr0btain.ticketman.components.data.components.Employee
-import org.mr0btain.ticketman.components.data.components.Note
-import org.mr0btain.ticketman.components.data.components.TicketInfo
-import org.mr0btain.ticketman.components.data.components.randomTicketPriority
-import org.mr0btain.ticketman.components.data.components.randomTicketStatus
+import org.mr0btain.ticketman.components.data.components.*
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -238,7 +227,7 @@ fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
     val notes = List(Random.nextInt(1, 4)) {
         val author = "${firstNames.random()} ${lastNames.random()}"
         val message = noteMessages.random()
-        Note(author, message)
+        Note(author, message, getTime())
     }
 
     val uuid = Uuid.random().toString()
@@ -277,7 +266,7 @@ private fun generateCustomerNote(): Note {
     val author = "${firstNames.random()} ${lastNames.random()}"
     val message = customerNotes.random()
 
-    return Note(author, message)
+    return Note(author, message, getTime())
 }
 
 // Function to generate a random employee note
@@ -301,7 +290,7 @@ fun generateEmployeeNote(): Note {
         "has a positive attitude and motivates others in the workplace."
     )
 
-    return Note(authors.random(), noteTopics.random())
+    return Note(authors.random(), noteTopics.random(), getTime())
 }
 
 private fun generateRandomContactInfo(firstName: String? = null, lastName: String? = null): ContactInfo {

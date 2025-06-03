@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -27,19 +26,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.components.data.components.Note
-import org.mr0btain.ticketman.components.data.components.SubItemType
-import org.mr0btain.ticketman.components.data.components.getLabelTextForType
+import org.mr0btain.ticketman.components.data.components.getTime
 
 @Composable
-fun AddNoteDialog(
+fun NoteDialog(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    label: String = "Add New Note",
+    seedData: Note = Note(),
+    label: String = "Add",
     onConfirm: (Note) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var author by remember { mutableStateOf("") }
-    var text by remember { mutableStateOf("") }
+    var author by remember { mutableStateOf(seedData.author) }
+    var text by remember { mutableStateOf(seedData.text) }
+    val time = remember { if (seedData.time != Long.MAX_VALUE) seedData.time else getTime() }
 
     Dialog(
         onDismissRequest = { onDismissRequest() },
@@ -56,7 +56,7 @@ fun AddNoteDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = label,
+                    text = if (seedData.time != Long.MAX_VALUE) "Edit $label" else "Add $label",
                     fontSize = 20.sp
                 )
 
@@ -112,7 +112,7 @@ fun AddNoteDialog(
                                 .joinToString(" ") { name -> name.lowercase().replaceFirstChar { it.uppercase() } }
 
                             // Call onConfirm
-                            onConfirm(Note(authorName, text.replaceFirstChar { it.uppercase() }))
+                            onConfirm(Note(authorName, text.replaceFirstChar { it.uppercase() }, time))
 
                             // Dismiss
                             onDismissRequest()
@@ -120,7 +120,7 @@ fun AddNoteDialog(
                         shape = RoundedCornerShape(8.dp),
                         enabled = author.isNotBlank() && text.isNotBlank()
                     ) {
-                        Text("Add")
+                        Text(if (seedData.time != Long.MAX_VALUE) "Confirm" else "Add")
                     }
                 }
             }

@@ -4,21 +4,12 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Note(
-    val author: String,
-    val text: String
+    val author: String = "",
+    val text: String = "",
+    val time: Long = Long.MAX_VALUE
 )
 
 @Serializable
 data class Notes(
     val notes: List<Note> = listOf()
 )
-
-fun Note.toSingleString(): String {
-    return this.author + ":" + this.text
-}
-
-fun convertStringBackToNote(input: String): Note {
-    val result = input.split(":")
-
-    return Note(result.first(), result.subList(1, result.size).toString())
-}

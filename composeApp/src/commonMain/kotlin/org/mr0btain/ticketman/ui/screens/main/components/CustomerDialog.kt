@@ -2,29 +2,10 @@ package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.InputChip
-import androidx.compose.material3.InputChipDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -34,16 +15,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.Address
-import org.mr0btain.ticketman.components.data.components.ContactInfo
-import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.PersonName
-import org.mr0btain.ticketman.components.data.components.MainItemType
-import org.mr0btain.ticketman.components.data.components.Note
-import org.mr0btain.ticketman.components.data.components.SubItemType
+import org.mr0btain.ticketman.components.data.components.*
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
-import org.mr0btain.ticketman.ui.dialog.AddNoteDialog
+import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
@@ -53,11 +27,13 @@ import kotlin.math.ceil
 
 // TODO: Add checks to make sure its not blank
 // TODO: Add ability to assign already existing tickets to customer.
+// TODO: Add ability to edit note
+// TODO: Add error handling and snack bar notifications
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
     seedData: CustomerData = CustomerData(),
-    onDismiss: (CustomerData?, Boolean) -> Unit,
+    onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
     onAddNewTicket: (String) -> Unit,
     isDarkMode: Boolean
 ) {
@@ -84,6 +60,7 @@ fun CustomerDialog(
 
     // For adding note dialog
     var showAddNoteDialog by remember { mutableStateOf(false) }
+    var noteSeedData by remember { mutableStateOf(Note()) }
 
     // For adding a basic sub item
     var itemToAdd by remember { mutableStateOf(SubItemType.NONE) }
@@ -91,13 +68,21 @@ fun CustomerDialog(
 
     // Add Note dialog
     if (showAddNoteDialog) {
-        AddNoteDialog(
+        NoteDialog(
             isDarkMode = isDarkMode,
+            seedData = noteSeedData,
+            label = "Note",
             onConfirm = { item ->
                 // Add to out list
                 notes.add(item)
             },
-            onDismissRequest = { showAddNoteDialog = false }
+            onDismissRequest = {
+                // Reset seed data
+                noteSeedData = Note()
+
+                // Close dialog
+                showAddNoteDialog = false
+            }
         )
     }
 
@@ -181,7 +166,7 @@ fun CustomerDialog(
     Dialog(
         onDismissRequest = {
             // Call dismiss as we haven't confirmed anything
-            onDismiss(null, false)
+            onDismiss(null, DialogDismissReason.CANCEL)
         }
     ) {
         Surface(
@@ -453,7 +438,7 @@ fun CustomerDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { onDismiss(null, false) },
+                        onClick = { onDismiss(null, DialogDismissReason.CANCEL) },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -467,7 +452,7 @@ fun CustomerDialog(
 
                     Button(
                         onClick = {
-                            // Call dismiss
+                            // Call dismiss with continue
                             onDismiss(
                                 CustomerData(
                                     info = CustomerInfo(
@@ -487,7 +472,7 @@ fun CustomerDialog(
                                     tickets = tickets,
                                     notes = notes
                                 ),
-                                true
+                                DialogDismissReason.CONTINUE
                             )
                         },
                         shape = RoundedCornerShape(8.dp),

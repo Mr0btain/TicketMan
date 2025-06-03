@@ -19,19 +19,20 @@ import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.EmployeeSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
-import org.mr0btain.ticketman.ui.dialog.AddNoteDialog
+import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 
 // TODO: Add checks to make sure its not blank
+// TODO: Add ability to edit update?
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
     employees: List<Employee>,
     onAddNewCustomer: (PersonName) -> Unit,
-    onDismiss: (TicketInfo?, Boolean) -> Unit,
+    onDismiss: (TicketInfo?, DialogDismissReason) -> Unit,
     seedData: TicketInfo,
     focusManager: FocusManager = LocalFocusManager.current,
     isDarkMode: Boolean
@@ -69,9 +70,9 @@ fun TicketDialog(
 
     // Add Note dialog
     if (showAddNoteDialog) {
-        AddNoteDialog(
+        NoteDialog(
             isDarkMode = isDarkMode,
-            label = "Add Update",
+            label = "Update",
             onConfirm = { item ->
                 // Add to out list
                 updates.add(item)
@@ -114,7 +115,7 @@ fun TicketDialog(
     Dialog(
         onDismissRequest = {
             // Call dismiss as we haven't confirmed anything
-            onDismiss(null, false)
+            onDismiss(null, DialogDismissReason.CANCEL)
         }
     ) {
         Surface(
@@ -178,7 +179,6 @@ fun TicketDialog(
                         Spacer(Modifier.padding(8.dp))
 
                         // Assigned employee section
-                        // TODO: Add drop down list for current employees
                         Text(
                             text = "Assigned Employee",
                             fontWeight = FontWeight.SemiBold,
@@ -298,7 +298,7 @@ fun TicketDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { onDismiss(null, false) },
+                        onClick = { onDismiss(null, DialogDismissReason.CANCEL) },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -323,7 +323,7 @@ fun TicketDialog(
                                     priority = priority,
                                     updates = updates
                                 ),
-                                true
+                                DialogDismissReason.CONTINUE
                             )
                         },
                         shape = RoundedCornerShape(8.dp),

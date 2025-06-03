@@ -11,27 +11,13 @@ data class TicketInfo(
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus.DONE,
     val priority: TicketPriority = TicketPriority.NORMAL,
-    val updates: List<Note> = listOf()
+    val updates: List<Note> = listOf(),
+    val time: Long
 )
-
-@Serializable
-enum class TicketStatus {
-    IN_PROGRESS,
-    ON_HOLD,
-    DONE
-}
 
 fun randomTicketStatus(): TicketStatus {
     val values = TicketStatus.entries.toTypedArray()
     return values[Random.nextInt(values.size)]
-}
-
-@Serializable
-enum class TicketPriority {
-    LOW,
-    NORMAL,
-    HIGH,
-    URGENT
 }
 
 fun randomTicketPriority(): TicketPriority {

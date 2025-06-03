@@ -236,46 +236,6 @@ fun TableCardTextItem(
 }
 
 @Composable
-fun IconText(
-    modifier: Modifier = Modifier,
-    label: String,
-    textStyle: TextStyle = TextStyle.Default,
-    leadingIcon: @Composable (RowScope.() -> Unit) = {},
-    trailingIcon: @Composable (RowScope.() -> Unit) = {}
-) {
-    Row(
-        modifier = modifier.padding(start = 12.dp, end = 12.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // Our leading icon if any
-        leadingIcon()
-
-        Row(
-            modifier = Modifier
-                .padding(start = 16.dp, end = 16.dp)
-                .weight(1f),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Text(
-                text = label,
-                fontWeight = textStyle.fontWeight,
-                fontSize = textStyle.fontSize,
-                fontStyle = textStyle.fontStyle,
-                color = textStyle.color,
-                textAlign = textStyle.textAlign,
-                fontFamily = textStyle.fontFamily,
-                maxLines = 3,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        trailingIcon()
-    }
-}
-
-@Composable
 fun SmallTicketList(
     modifier: Modifier = Modifier,
     tickets: List<TicketInfo>,

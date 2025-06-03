@@ -31,7 +31,7 @@ import ticketman.composeapp.generated.resources.search
  * @param onClick Event called when clicking, string passed is identifier for ticket
  */
 
-// TODO: Possibly add come extra into prefix like customer name?
+// TODO: Possibly add some extra details into prefix like customer name?
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

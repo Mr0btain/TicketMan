@@ -7,5 +7,6 @@ data class CustomerInfo(
     val identifier: String = "",
     val name: PersonName = PersonName(),
     val address: Address = Address(),
-    val contactInfo: ContactInfo = ContactInfo()
+    val contactInfo: ContactInfo = ContactInfo(),
+    val time: Long
 )

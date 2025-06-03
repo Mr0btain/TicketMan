@@ -28,6 +28,8 @@ import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 
+// TODO: Add time or date to these
+
 @Composable
 fun TicketListPane(
     isDarkMode: Boolean,
@@ -145,8 +147,6 @@ private fun TicketHeaderBox(
     }
 }
 
-// TODO: Make onclick go to customer details screen when its done. or a popup?
-
 @Composable
 private fun TicketTableItem(
     modifier: Modifier = Modifier,
@@ -177,7 +177,6 @@ private fun TicketTableItem(
             modifier = Modifier.padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // TODO: Setup an actual composable for this
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
@@ -225,8 +224,6 @@ private fun TicketTableItem(
                     thickness = 2.dp
                 )
             }
-
-            // TODO: Setup an actual composable for this
 
             Box(
                 modifier = Modifier

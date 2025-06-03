@@ -9,6 +9,8 @@ import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.TicketPriority
 import org.mr0btain.ticketman.components.data.components.TicketStatus
 
+// TODO: Setup time stamps for notes or updates, times for when tickets added and such
+
 object TicketDataTable: IntIdTable("tickets") {
     val identifier = integer("number")
     val customerId = text("customerid")

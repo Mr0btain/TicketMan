@@ -9,7 +9,8 @@ data class Employee(
     val notes: List<Note> = listOf(),
     val contactInfo: ContactInfo = ContactInfo(),
     val tickets: List<String> = listOf(),
-    val accessLevel: AccessLevel = AccessLevel.RESTRICTED
+    val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
+    val time: Long
 )
 
 

@@ -40,6 +40,8 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.tag
 
+// TODO: Add date
+
 @Composable
 fun TicketInfoPane(
     modifier: Modifier = Modifier,

@@ -264,9 +264,6 @@ class MainViewModel(
         // Set selected ticket
         _selectedTicketId.value = data.identifier
 
-        // Set index
-        // TODO
-
         // Push to database
         database.addTicket(data)
     }

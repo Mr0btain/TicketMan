@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.components.TicketDialog
@@ -35,6 +36,7 @@ import org.mr0btain.ticketman.ui.screens.main.components.TicketPanel
  */
 
 // TODO: Need to add error handling
+// TODO: Add snack bar notifications on errors or cancels
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,6 +62,7 @@ fun MainScreen(
     // For customer dialog
     var customerSeedData by rememberSaveable { mutableStateOf(CustomerData()) }
     var showCustomerDialog by rememberSaveable { mutableStateOf(false) }
+    var isNewCustomer by remember { mutableStateOf(false) }
 
     // For ticket dialog
     var showTicketDialog by rememberSaveable { mutableStateOf(false) }
@@ -76,9 +79,17 @@ fun MainScreen(
     // For customer adding or editing
     if (showCustomerDialog) {
         CustomerDialog(
-            onDismiss = { data, isNewOrUpdate ->
+            onDismiss = { data, reason ->
                 // Check if we should update or add
-                if (isNewOrUpdate) { viewModel.updateOrAddCustomer(data!!) }
+                when (reason) {
+                    DialogDismissReason.CONTINUE -> {
+                        viewModel.updateOrAddCustomer(data!!)
+                    }
+
+                    DialogDismissReason.CANCEL -> {
+                        // Do Nothing
+                    }
+                }
 
                 // Reset starter data
                 customerSeedData = CustomerData()
@@ -103,9 +114,17 @@ fun MainScreen(
     // TODO: Need to make it so when adding new customer and we add a ticket we update customers tickets after ticket creation
     if (showTicketDialog) {
         TicketDialog(
-            onDismiss = { data, isNewOrUpdate ->
+            onDismiss = { data, reason ->
                 // Check if it's an actual add else data will be null
-                if (isNewOrUpdate) { viewModel.updateOrAddTicket(data!!) }
+                when (reason) {
+                    DialogDismissReason.CONTINUE -> {
+                        viewModel.updateOrAddTicket(data!!)
+                    }
+
+                    DialogDismissReason.CANCEL -> {
+                        // Do nothing
+                    }
+                }
 
                 // Reset seed data
                 ticketSeedData = TicketInfo()

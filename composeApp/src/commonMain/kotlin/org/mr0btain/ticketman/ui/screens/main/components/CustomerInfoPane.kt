@@ -280,6 +280,7 @@ private fun NotesBlock(data: CustomerData) {
         Spacer(Modifier.padding(2.dp))
 
         data.notes.forEach { note ->
+            // TODO: Add date and time to this
             Column {
                 // Author
                 Text(

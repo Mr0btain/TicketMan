@@ -22,7 +22,6 @@ class SqliteDb() {
     // TODO: Add encryption
     // TODO: Add removal functions
     // TODO: Make more functions for indexing and searching the db for things
-    // TODO: When we add error handling remove need to make database every transaction.
 
     // Get the app directory depending on platform
     private val appDir = FileKit.filesDir.path
