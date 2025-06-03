@@ -12,7 +12,7 @@ import androidx.navigation.compose.rememberNavController
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.navigation.DrawerNav
+import org.mr0btain.ticketman.ui.screens.navigation.DrawerNavigator
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import org.mr0btain.ticketman.ui.theme.AppTheme
@@ -28,7 +28,6 @@ fun App() {
         // Navigation
         val navigator = rememberNavController()
 
-        // TODO: Pass and use this throughout app
         // Main scope to use with coroutines
         val mainScope = rememberCoroutineScope()
 
@@ -44,6 +43,9 @@ fun App() {
         // Get our stored settings
         settingsViewModel.getUserSettings()
 
+        // Current employee info
+        val currentEmployee = mainViewModel.employee.collectAsState()
+
         // TODO: I don't think using window size class is the best way to go for differentiating between desktop and mobile as it
         // causes us to end up hitting the database everytime screen size class changes in desktop. We should move the window size
         // class state down the tree to avoid it recomposing the entire app when we resize the screen on desktop
@@ -52,21 +54,23 @@ fun App() {
             darkTheme = settingsViewModel.isDarkMode.collectAsState().value
         ) {
             println("Platform: ${mainViewModel.platform}")
+
             // Check if were on desktop
             if (mainViewModel.platform.contains("Java")) {
                 // TODO: Change desktop nav to a side bar
-                DrawerNav(
+                DrawerNavigator(
                     navHostController = navigator,
                     content = { paddingValues ->
                         NavigationHost(
                             modifier = Modifier.padding(paddingValues),
                             navHostController = navigator,
+                            coroutineScope = mainScope,
                             mainViewModel = mainViewModel,
                             settingsViewModel = settingsViewModel
                         )
                     },
-                    scope = mainScope,
-                    topAppTextState = mainViewModel.topAppBarText
+                    coroutineScope = mainScope,
+                    topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}"
                 )
             } else {
                 // Calculating screen size stuff
@@ -75,33 +79,35 @@ fun App() {
                 // Change our view dependent on screen size. Mostly to differentiate from tablet or phone screen
                 if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
                     // Tablet screen
-                    DrawerNav(
+                    DrawerNavigator(
                         navHostController = navigator,
                         content = { paddingValues ->
                             NavigationHost(
                                 modifier = Modifier.padding(paddingValues),
+                                coroutineScope = mainScope,
                                 navHostController = navigator,
                                 mainViewModel = mainViewModel,
                                 settingsViewModel = settingsViewModel
                             )
                         },
-                        scope = mainScope,
-                        topAppTextState = mainViewModel.topAppBarText
+                        coroutineScope = mainScope,
+                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}"
                     )
                 } else {
                     // Phone screen
-                    DrawerNav(
+                    DrawerNavigator(
                         navHostController = navigator,
                         content = { paddingValues ->
                             NavigationHost(
                                 modifier = Modifier.padding(paddingValues),
+                                coroutineScope = mainScope,
                                 navHostController = navigator,
                                 mainViewModel = mainViewModel,
                                 settingsViewModel = settingsViewModel
                             )
                         },
-                        scope = mainScope,
-                        topAppTextState = mainViewModel.topAppBarText
+                        coroutineScope = mainScope,
+                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}"
                     )
                 }
             }

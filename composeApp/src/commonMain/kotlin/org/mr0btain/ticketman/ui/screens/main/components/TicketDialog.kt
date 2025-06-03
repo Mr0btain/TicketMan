@@ -7,14 +7,16 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.*
-import org.mr0btain.ticketman.ui.composables.CustomerSearchBox
-import org.mr0btain.ticketman.ui.composables.EmployeeSearchBox
+import org.mr0btain.ticketman.ui.composables.CustomerSearch
+import org.mr0btain.ticketman.ui.composables.EmployeeSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.dialog.AddNoteDialog
@@ -24,35 +26,32 @@ import ticketman.composeapp.generated.resources.plus
 
 // TODO: Add checks to make sure its not blank
 @Composable
-fun AddTicketDialog(
+fun TicketDialog(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel,
+    customerInfo: List<CustomerInfo>,
+    employees: List<Employee>,
     onAddNewCustomer: (PersonName) -> Unit,
-    onDismiss: () -> Unit,
+    onDismiss: (TicketInfo?, Boolean) -> Unit,
+    seedData: TicketInfo,
+    focusManager: FocusManager = LocalFocusManager.current,
     isDarkMode: Boolean
 ) {
-    // Current Employee
-    val currentEmp = viewModel.employee.collectAsState().value
-
-    // Get next id
-    val identifier = remember { viewModel.getNextTicketId() }
-
-    // Name
-    val customerId = remember { mutableStateOf("") }
+    // seed data
+    var customerId by remember(seedData) { mutableStateOf(seedData.customerId) }
 
     // Assigned employee
-    val assignedEmployee = remember { mutableStateOf("") }
+    var assignedEmployee by remember(seedData) { mutableStateOf(seedData.assignedEmployee) }
 
     // Device
-    val deviceManufacturer = remember { mutableStateOf("") }
-    val deviceModel = remember { mutableStateOf("") }
+    var deviceManufacturer by remember(seedData) { mutableStateOf(seedData.device.manufacturer) }
+    var deviceModel by remember(seedData) { mutableStateOf(seedData.device.model) }
 
     // Status and priority
-    val status = remember { mutableStateOf(TicketStatus.IN_PROGRESS) }
-    val priority = remember { mutableStateOf(TicketPriority.LOW) }
+    var status by remember(seedData) { mutableStateOf(seedData.status) }
+    var priority by remember(seedData) { mutableStateOf(seedData.priority) }
 
     // Mutable lists
-    val updates = remember { mutableStateListOf<Note>() }
+    val updates = remember(seedData) { seedData.updates.toMutableStateList() }
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
@@ -62,15 +61,17 @@ fun AddTicketDialog(
     // For adding note dialog
     var showAddNoteDialog by remember { mutableStateOf(false) }
 
-    // For adding a basic sub item
-    var itemToAdd by remember { mutableStateOf(SubItemType.NONE) }
-    var showAddBasicSubItemDialog by remember { mutableStateOf(false) }
+    // For customer search bar
+    var customerSearchBarInput by remember { mutableStateOf(seedData.customerId) }
+
+    // For employee search bar
+    var employeeSearchBarInput by remember { mutableStateOf(seedData.assignedEmployee) }
 
     // Add Note dialog
     if (showAddNoteDialog) {
         AddNoteDialog(
             isDarkMode = isDarkMode,
-            label = "Add New Update",
+            label = "Add Update",
             onConfirm = { item ->
                 // Add to out list
                 updates.add(item)
@@ -78,12 +79,6 @@ fun AddTicketDialog(
             onDismissRequest = { showAddNoteDialog = false }
         )
     }
-
-    // Add basic item dialog
-    if (showAddBasicSubItemDialog) {
-        // TODO Gonna have to make some custom logic for this if its even needed
-    }
-
 
     // Delete item dialog
     if (showConfirmDeleteScreen) {
@@ -119,7 +114,7 @@ fun AddTicketDialog(
     Dialog(
         onDismissRequest = {
             // Call dismiss as we haven't confirmed anything
-            onDismiss()
+            onDismiss(null, false)
         }
     ) {
         Surface(
@@ -139,7 +134,7 @@ fun AddTicketDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = "Add New Ticket: $identifier",
+                        text = "Add New Ticket: ${seedData.identifier}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp
                     )
@@ -166,24 +161,18 @@ fun AddTicketDialog(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        CustomerSearchBox(
-                            items = viewModel.getAllCustomerInfo(),
-                            onResult = { item, isNew ->
-                                // Check if were adding a new customer or not
-                                if (isNew) {
-                                    val newName = item.split(" ")
+                        CustomerSearch(
+                            items = customerInfo,
+                            input = customerSearchBarInput,
+                            onInputChange = { customerSearchBarInput = it },
+                            onClick = { item ->
+                                // Set search bar text
+                                customerSearchBarInput = item
 
-                                    onAddNewCustomer(
-                                        PersonName(
-                                            firstName = newName.getOrElse(0) { "" },
-                                            lastName = newName.getOrElse(1) { "" }
-                                        )
-                                    )
-                                } else {
-                                    // Else set customer id
-                                    customerId.value = item
-                                }
-                            }
+                                // Set customer id
+                                customerId = item
+                                      },
+                            focusManager = focusManager
                         )
 
                         Spacer(Modifier.padding(8.dp))
@@ -198,14 +187,18 @@ fun AddTicketDialog(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        EmployeeSearchBox(
-                            items = viewModel.getAllEmployees(),
-                            onResult = { emp, isNew ->
-                                // TODO: don't know if were going to allow new employee creation here or not. Maybe if admin?
-                                // Add assigned employee.
-                                assignedEmployee.value = emp
-                            },
-                            currentEmployee = currentEmp
+                        EmployeeSearch(
+                            items = employees,
+                            focusManager = focusManager,
+                            input = employeeSearchBarInput,
+                            onInputChange = { employeeSearchBarInput = it },
+                            onClick = { item ->
+                                // Set search bar text
+                                employeeSearchBarInput = item
+
+                                // Set employee id
+                                assignedEmployee = item
+                            }
                         )
 
                         Spacer(Modifier.padding(8.dp))
@@ -223,8 +216,10 @@ fun AddTicketDialog(
                             modifier = Modifier,
                             firstLabel = "Manufacturer",
                             firstValue = deviceManufacturer,
+                            onFirstValueChange = { deviceManufacturer = it },
                             secondLabel = "Model",
-                            secondValue = deviceModel
+                            secondValue = deviceModel,
+                            onSecondValueChange = { deviceModel = it }
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -237,9 +232,9 @@ fun AddTicketDialog(
 
                         TicketStatusDropDown(
                             modifier = Modifier.width(350.dp),
-                        ) {
-                            status.value = it
-                        }
+                            status = status,
+                            onClick = { status = it }
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
@@ -250,10 +245,10 @@ fun AddTicketDialog(
                         )
 
                         TicketPriorityDropDown(
-                            modifier = Modifier.width(350.dp)
-                        ) {
-                            priority.value = it
-                        }
+                            modifier = Modifier.width(350.dp),
+                            priority = priority,
+                            onClick = { priority = it }
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
@@ -303,7 +298,7 @@ fun AddTicketDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { onDismiss() },
+                        onClick = { onDismiss(null, false) },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -317,21 +312,19 @@ fun AddTicketDialog(
 
                     Button(
                         onClick = {
-                            // Add the customer to the database
-                            viewModel.addTicket(
+                            // Call dismiss with data
+                            onDismiss(
                                 TicketInfo(
-                                    identifier = identifier,
-                                    customerId = customerId.value,
-                                    assignedEmployee = assignedEmployee.value,
-                                    device = Device(deviceManufacturer.value, deviceModel.value),
-                                    status = status.value,
-                                    priority = priority.value,
+                                    identifier = seedData.identifier,
+                                    customerId = customerId,
+                                    assignedEmployee = assignedEmployee,
+                                    device = Device(deviceManufacturer, deviceModel),
+                                    status = status,
+                                    priority = priority,
                                     updates = updates
-                                )
+                                ),
+                                true
                             )
-
-                            // Call dismiss
-                            onDismiss()
                         },
                         shape = RoundedCornerShape(8.dp),
                     ) {

@@ -35,12 +35,9 @@ fun TicketListPane(
     ticketInfo: List<TicketInfo> = listOf(),
     selectedId: String,
     scrollOnRight: Boolean,
-    onClick: (TicketInfo) -> Unit,
+    onClick: (String) -> Unit,
     state: LazyListState = rememberLazyListState()
 ) {
-
-// Ticket #  |  Priority  |   Last Note   |   Status
-
     // Column widths
     val numberColumnWidth = 100.dp
     val priorityColumnWidth = 100.dp
@@ -82,7 +79,7 @@ fun TicketListPane(
                 Spacer(Modifier.padding(9.dp))
 
                 TicketHeaderBox(
-                    label = "Latest Note",
+                    label = "Latest Update",
                     width = noteColumnWidth
                 )
 
@@ -114,7 +111,7 @@ fun TicketListPane(
                         noteWidth = noteColumnWidth,
                         statusWidth = statusColumnWidth,
                         isDarkMode = isDarkMode,
-                        onClick = { onClick(item) }
+                        onClick = { onClick(item.identifier) }
                     )
 
                     Spacer(Modifier.padding(2.dp))

@@ -2,108 +2,70 @@ package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.PersonName
+import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.TicketInfo
-import org.mr0btain.ticketman.ui.composables.TicketSearchBox
+import org.mr0btain.ticketman.ui.composables.TicketSearch
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
 
 // TODO: Add ability to click column and sort by that value
-// TODO: Add scroll to item when make new ticket
-// TODO: Implement search function
+// TODO: Should really offload some of the calculations on the lists to before we call this screen?
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    viewModel: MainViewModel,
-    onAddCustomer: (PersonName) -> Unit,
-    scrollOnRight: Boolean
+    selectedPanel: Int,
+    onSelectedPanelChange: (Int) -> Unit,
+    selectedTicketId: String,
+    ticketList: List<TicketInfo>,
+    customerList: List<CustomerData>,
+    currentEmployee: Employee,
+    employeeList: List<Employee>,
+    onAddNewTicket: () -> Unit,
+    onEditTicket: () -> Unit,
+    onSelectedTicketChange: (String) -> Unit,
+    scrollOnRight: Boolean,
+    focusManager: FocusManager = LocalFocusManager.current,
+    ticketListState: LazyListState = rememberLazyListState()
 ) {
-    // State for tab selection
-    val selectedTab = viewModel.selectedTicketTabIndex.collectAsState()
-
-    val selectedTicket = viewModel.selectedTicketInfo.collectAsState()
-
-    var customerData by remember(selectedTicket.value) { mutableStateOf(viewModel.getCustomerData(selectedTicket.value.customerId)) }
-
-    val employee = viewModel.employee.collectAsState()
-
-    val tickets = viewModel.ticketDataList.collectAsState()
-    val sortedTickets = remember(tickets.value) { mutableStateOf(tickets.value) }
-
-    // State for showing things
-    var showSearchBar by remember { mutableStateOf(false) }
-    var showEditTicketDialog by remember { mutableStateOf(false) }
-    var showAddTicketDialog by remember { mutableStateOf(false) }
-
-    val ticketLazyListState = rememberLazyListState()
-
-    val focusManager = LocalFocusManager.current
-
-    // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
-    var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
-
-    // TODO: Maybe make this also switch to the right tab as well
-    // On list update scroll to selected item
-    // This will only really happen if we add a new ticket
-    // Not sure if we need this as we sort tickets by newest first.
-    LaunchedEffect(selectedTicket.value) {
-        if (!isSelectedUpdateFromClick) {
-            // Check to see if were even on the list were selecting the ticket for, this comes up if
-            // were on mytickets tab, and we add a new ticket that isnt assigned to our employee
-            // then there's no reason to scroll to it as were not even on that list
-            if (
-                selectedTab.value == "0" &&
-                selectedTicket.value.assignedEmployee == employee.value.identifier ||
-                selectedTab.value == "1" &&
-                selectedTicket.value.assignedEmployee != employee.value.identifier
-            ) {
-                val index = sortedTickets.value.indexOf(selectedTicket.value)
-                // Sanity check
-                if (index >= 0 && index <= sortedTickets.value.size) {
-                    ticketLazyListState.scrollToItem(index)
-                }
-            }
-        } else isSelectedUpdateFromClick = false
-    }
-
-    // When we change values we should also update the data this way
-    LaunchedEffect(selectedTab.value, tickets.value) {
-        if (selectedTab.value == "0") {
-            sortedTickets.value = tickets.value.sortedBy { it.identifier }.filter { it.assignedEmployee == employee.value.identifier }.reversed()
+    // Sorted tickets dependant upon which tab were on
+    val sortedTickets = remember(selectedPanel, ticketList, currentEmployee) {
+        if (selectedPanel == 0) {
+            ticketList.sortedBy { it.identifier }.filter { it.assignedEmployee == currentEmployee.identifier }.reversed()
         } else {
-            sortedTickets.value = tickets.value.sortedBy { it.identifier }.reversed()
+            ticketList.sortedBy { it.identifier }.reversed()
         }
     }
 
-    // For editing customer data
-    if (showEditTicketDialog) {
-        // TODO
-    }
+    // Selected ticket info
+    val selectedTicket = ticketList.firstOrNull() { it.identifier == selectedTicketId } ?: TicketInfo()
 
-    // For adding new customer
-    if (showAddTicketDialog) {
-        AddTicketDialog(
-            viewModel = viewModel,
-            onDismiss = { showAddTicketDialog = false },
-            isDarkMode = isDarkMode,
-            onAddNewCustomer = { name -> onAddCustomer(name) }
-        )
-    }
+    // For search input
+    var searchInput by remember { mutableStateOf("") }
+
+    // Search items
+    val searchItems = remember(selectedPanel) { sortedTickets.map { it.identifier } }
+
+    // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
+    var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier
@@ -117,14 +79,31 @@ fun TicketPanel(
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(Modifier.width(135.dp))
+                //Spacer(Modifier.width(135.dp))
+
+                // Search box
+                TicketSearch(
+                    modifier = Modifier.padding(start = 8.dp),
+                    items = searchItems,
+                    input = searchInput,
+                    onInputChange = { searchInput = it },
+                    onClick = {
+                        // Set search input in out text box
+                        searchInput = it
+
+                        // Call selected ticket change
+                        onSelectedTicketChange(it)
+                    }
+                )
+
+                Spacer(Modifier.padding(8.dp))
 
                 // Tab row for switching tables
                 Box(
                     modifier = Modifier.width(260.dp)
                 ) {
                     SecondaryTabRow(
-                        selectedTabIndex = selectedTab.value.toInt(),
+                        selectedTabIndex = selectedPanel.toInt(),
                         modifier = Modifier
                             .padding(top = 4.dp)
                             .wrapContentWidth(),
@@ -132,11 +111,13 @@ fun TicketPanel(
                     ) {
                         // My Tickets
                         Tab(
-                            selected = selectedTab.value == "0",
+                            selected = selectedPanel == 0,
                             onClick = {
+                                // CLear focus if search bar has it
                                 focusManager.clearFocus()
 
-                                viewModel.changeTicketTabIndex("0")
+                                // Call update panel
+                                onSelectedPanelChange(0)
                                       },
                             modifier = Modifier.wrapContentWidth(),
                             text = {
@@ -151,11 +132,12 @@ fun TicketPanel(
 
                         // All Tickets
                         Tab(
-                            selected = selectedTab.value == "1",
+                            selected = selectedPanel == 1,
                             onClick = {
+                                // Clear focus if search bar has it
                                 focusManager.clearFocus()
 
-                                viewModel.changeTicketTabIndex("1")
+                                onSelectedPanelChange(1)
                                       },
                             modifier = Modifier.wrapContentWidth(),
                             text = {
@@ -172,24 +154,7 @@ fun TicketPanel(
 
                 Spacer(Modifier.padding(8.dp))
 
-                // Button to drop down Search bar
-                ElevatedButton(
-                    onClick = { showSearchBar = !showSearchBar },
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "Search Bar",
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
 
-                    Icon(
-                        modifier = Modifier.size(22.dp),
-                        painter = painterResource(
-                            if (showSearchBar) Res.drawable.chevron_up else Res.drawable.chevron_down
-                        ),
-                        contentDescription = "Show search bar"
-                    )
-                }
 
                 // Button for adding ticket
                 Row(
@@ -199,9 +164,11 @@ fun TicketPanel(
                 ) {
                     Button(
                         onClick = {
+                            // Clear focus in case search bar isnt closed
                             focusManager.clearFocus()
 
-                            showAddTicketDialog = true
+                            // Trigger new ticket dialog
+                            onAddNewTicket()
                         },
                         shape = RoundedCornerShape(8.dp)
                     ) {
@@ -212,40 +179,16 @@ fun TicketPanel(
                 }
             }
 
-            AnimatedVisibility(visible = showSearchBar) {
-                Row(
-                    modifier = Modifier.padding(4.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TicketSearchBox(
-                        items = sortedTickets.value,
-                        onResult = { item, isNew ->
-                            if (isNew) {
-
-                                // Popup new customer dialog
-                                //showAddCustomerDialog = true
-                            } else {
-                                // Update selected customer
-                                viewModel.changeSelectedTicketInfo(
-                                    tickets.value.firstOrNull { it.identifier == item } ?: TicketInfo()
-                                )
-                            }
-                        }
-                    )
-                }
-            }
-
             Spacer(Modifier.padding(4.dp))
 
             Row {
                 // Check if were on my tickets which is 0 or all tickets
-                if (selectedTab.value == "0") {
+                if (selectedPanel == 0) {
                     // My Tickets tab
                     TicketListPane(
                         isDarkMode = isDarkMode,
                         scrollOnRight = scrollOnRight,
-                        ticketInfo = sortedTickets.value,
+                        ticketInfo = sortedTickets,
                         onClick = { ticket ->
                             focusManager.clearFocus()
 
@@ -253,17 +196,17 @@ fun TicketPanel(
                             isSelectedUpdateFromClick = true
 
                             // Change selected ticket
-                            viewModel.changeSelectedTicketInfo(ticket)
+                            onSelectedTicketChange(ticket)
                         },
-                        selectedId = selectedTicket.value.identifier,
-                        state = ticketLazyListState
+                        selectedId = selectedTicket.identifier,
+                        state = ticketListState
                     )
                 } else {
                     // All tickets tab.
                     TicketListPane(
                         isDarkMode = isDarkMode,
                         scrollOnRight = scrollOnRight,
-                        ticketInfo = sortedTickets.value,
+                        ticketInfo = sortedTickets,
                         onClick = { ticket ->
                             focusManager.clearFocus()
 
@@ -271,28 +214,57 @@ fun TicketPanel(
                             isSelectedUpdateFromClick = true
 
                             // Update selected ticket
-                            viewModel.changeSelectedTicketInfo(ticket)
+                            onSelectedTicketChange(ticket)
                         },
-                        selectedId = selectedTicket.value.identifier,
-                        state = ticketLazyListState
+                        selectedId = selectedTicket.identifier,
+                        state = ticketListState
                     )
                 }
-
-                // TODO: Might be a better way to get the name for the employee
 
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customerData = customerData,
-                    employeeName = viewModel.getEmployee(selectedTicket.value.assignedEmployee).name,
+                    customerData = customerList.firstOrNull { it.tickets.contains(selectedTicketId) } ?: CustomerData(),
+                    employeeName = (employeeList.firstOrNull() { it.identifier == selectedTicket.assignedEmployee } ?: Employee()).name,
                     isDarkMode = isDarkMode,
-                    ticketInfo = selectedTicket.value,
+                    ticketInfo = selectedTicket,
                     onEditClick = {
+                        // Clear focus if search bar has it
                         focusManager.clearFocus()
-                        // TODO
+
+                        // Call edit ticket
+                        onEditTicket()
                     }
                 )
             }
         }
+    }
+
+    // TODO: Maybe make this also switch to the right tab as well
+    // On certain list update scroll to selected item
+    // This will only really happen if we add a new ticket
+    LaunchedEffect(selectedTicketId, selectedPanel) {
+        if (!isSelectedUpdateFromClick) {
+            // Check to see if were even on the list were selecting the ticket for, this comes up if
+            // were on mytickets tab, and we add a new ticket that isn't assigned to our employee
+            // then there's no reason to scroll to it as were not even on that list
+            if (sortedTickets.map { it.identifier }.contains(selectedTicketId)) {
+                // Get index of our item
+                val index = sortedTickets.indexOf(selectedTicket)
+
+                // Get index of visible items
+                val visibleItemIndex = ticketListState.layoutInfo.visibleItemsInfo.map { it.index }
+
+                // Check if item is in viewport, else scroll to it
+                if (visibleItemIndex.isNotEmpty() && index >= 0) {
+                    if (index < visibleItemIndex.first() || index > visibleItemIndex.last()) {
+                        ticketListState.animateScrollToItem(
+                            index = index,
+                            scrollOffset = -(ticketListState.layoutInfo.viewportSize.height / 2) + 30
+                            )
+                    }
+                }
+            }
+        } else isSelectedUpdateFromClick = false
     }
 }

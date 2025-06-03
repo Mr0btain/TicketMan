@@ -26,7 +26,7 @@ fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
     onClick: (id: String) -> Unit,
-    selectedId: String,
+    selectedCustomerId: String,
     lazyListState: LazyListState = rememberLazyListState(),
     scope: CoroutineScope = rememberCoroutineScope(),
     scrollBarRight: Boolean,
@@ -41,7 +41,7 @@ fun CustomerListPane(
         modifier = modifier
             .wrapContentSize()
             .padding(8.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(10.dp),
         shadowElevation = 4.dp,
         color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
     ) {
@@ -89,7 +89,7 @@ fun CustomerListPane(
                 itemsIndexed(customerInfo) { index, info ->
                     CustomerTableItem(
                         customerInfo = info,
-                        selected = info.identifier == selectedId,
+                        selected = info.identifier == selectedCustomerId,
                         color = if (!isDarkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {

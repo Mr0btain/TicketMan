@@ -51,493 +51,31 @@ import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
 import kotlin.math.ceil
 
-// TODO: We can prossibly combine these two dialogs into one
-
-@Composable
-fun EditCustomerDataDialog(
-    modifier: Modifier = Modifier,
-    customerData: CustomerData,
-    viewModel: MainViewModel,
-    onDismiss: () -> Unit,
-    isDarkMode: Boolean
-) {
-    val identifier = customerData.info.identifier
-    // Use mutable state here to make sure the updates are reflected properly with state change as updating view model sometimes
-    // doesn't trigger change to dialog but for some reason this works
-    var data by remember { mutableStateOf(customerData) }
-
-    // Name
-    val firstName = remember { mutableStateOf(data.info.name.firstName) }
-    val lastName = remember { mutableStateOf(data.info.name.lastName) }
-
-    // Address
-    val street = remember { mutableStateOf(data.info.address.street) }
-    val city = remember { mutableStateOf(data.info.address.city) }
-    val state = remember { mutableStateOf(data.info.address.state) }
-    val zip = remember { mutableStateOf(data.info.address.zip) }
-
-    // Mutable lists
-    val email = remember { data.info.contactInfo.email.toMutableStateList() }
-    val phone = remember { data.info.contactInfo.phone.toMutableStateList() }
-    val tickets = remember { data.tickets.toMutableStateList() }
-    val notes = remember { data.notes.toMutableStateList() }
-
-    // For deleting item dialog
-    var showConfirmDeleteScreen by remember { mutableStateOf(false) }
-    var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
-    var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
-
-    // For adding note dialog
-    var showAddNoteDialog by remember { mutableStateOf(false) }
-
-    // For adding a basic sub item
-    var itemToAdd by remember { mutableStateOf(SubItemType.NONE) }
-    var showAddBasicSubItemDialog by remember { mutableStateOf(false) }
-
-    // Add Note dialog
-    if (showAddNoteDialog) {
-        AddNoteDialog(
-            isDarkMode = isDarkMode,
-            onConfirm = { item ->
-                // Add to out list
-                notes.add(item)
-
-                // Add to database
-                viewModel.updateCustomerNotes(identifier, notes)
-                        },
-            onDismissRequest = { showAddNoteDialog = false }
-        )
-    }
-
-    // Add basic item dialog
-    if (showAddBasicSubItemDialog) {
-        AddBasicSubItemDialog(
-            isDarkMode = isDarkMode,
-            subItemType = itemToAdd,
-            onConfirm = { item ->
-                if (item.isNotBlank()) {
-                    when (itemToAdd) {
-                        SubItemType.EMAIL -> {
-                            // Add item to list
-                            email.add(item)
-
-                            // Update database
-                            viewModel.updateCustomerContact(identifier, data.info.contactInfo.copy(email = email))
-                        }
-                        SubItemType.PHONE -> {
-                            // Add item to list
-                            phone.add(item)
-
-                            // Update database
-                            viewModel.updateCustomerContact(identifier, data.info.contactInfo.copy(phone = phone))
-                        }
-                        else -> {}
-                    }
-                }
-            },
-            onDismissRequest = {
-                showAddBasicSubItemDialog = false
-                itemToAdd = SubItemType.NONE
-            }
-        )
-    }
-
-
-    // Delete item dialog
-    if (showConfirmDeleteScreen) {
-        ConfirmDeleteDialog(
-            itemName = when (itemForDelete) {
-                SubItemType.TICKET -> tickets[itemUpForDeleteIndex]
-                SubItemType.EMAIL -> email[itemUpForDeleteIndex]
-                SubItemType.PHONE -> phone[itemUpForDeleteIndex]
-                SubItemType.NOTE -> notes[itemUpForDeleteIndex].author + "'s Note"
-                else -> ""
-            },
-            isDarkMode = isDarkMode,
-            mainItemType = MainItemType.CUSTOMER,
-            onDismissRequest = { confirm ->
-                if (confirm && itemForDelete != SubItemType.NONE) {
-                    when (itemForDelete) {
-                        SubItemType.TICKET -> {
-                            // Remove item from list
-                            tickets.removeAt(itemUpForDeleteIndex)
-
-                            // Update database
-                            viewModel.updateCustomerTickets(identifier, tickets)
-                        }
-
-                        SubItemType.EMAIL -> {
-                            // Remove item from list
-                            email.removeAt(itemUpForDeleteIndex)
-
-                            // Update database
-                            viewModel.updateCustomerContact(identifier, data.info.contactInfo.copy(email = email))
-                        }
-
-                        SubItemType.PHONE -> {
-                            // Remove item from list
-                            phone.removeAt(itemUpForDeleteIndex)
-
-                            // Update database
-                            viewModel.updateCustomerContact(identifier, data.info.contactInfo.copy(phone = phone))
-                        }
-
-                        SubItemType.NOTE -> {
-                            // Remove item from list
-                            notes.removeAt(itemUpForDeleteIndex)
-
-                            // Update database
-                            viewModel.updateCustomerNotes(identifier, notes)
-                        }
-
-                        // For everything else do nothing
-                        else -> {}
-                    }
-                }
-
-                // Reset items for delete and set index to insane value
-                itemUpForDeleteIndex = 10000
-                itemForDelete = SubItemType.NONE
-
-                showConfirmDeleteScreen = false
-            },
-        )
-    }
-
-    Dialog(
-        onDismissRequest = {
-            // Call dismiss as we haven't confirmed anything
-            onDismiss()
-        }
-    ) {
-        Surface(
-            modifier = modifier
-                .height(600.dp)
-                .width(600.dp),
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp,
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-        ) {
-            Column(
-                modifier = Modifier.padding(32.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        modifier = Modifier.padding(4.dp),
-                        text = "Edit Customer: ${data.info.identifier}",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 26.sp
-                    )
-                }
-
-                HorizontalDivider(
-                    modifier = Modifier.padding(4.dp),
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else DividerDefaults.color
-                )
-
-                Spacer(Modifier.padding(8.dp))
-
-                LazyColumn(
-                    modifier = Modifier.height(400.dp)
-                ) {
-                    item {
-                        // Name section
-                        Text(
-                            text = "Name",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        DialogTextRow(
-                            modifier = Modifier,
-                            firstLabel = "First",
-                            firstValue = firstName,
-                            secondLabel = "Last",
-                            secondValue = lastName
-                        )
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        // Address section
-                        Text(
-                            text = "Address",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Column(
-                            verticalArrangement = Arrangement.SpaceBetween,
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            DialogTextRow(
-                                modifier = Modifier,
-                                firstLabel = "Street",
-                                firstValue = street,
-                                secondLabel = "City",
-                                secondValue = city
-                            )
-
-                            DialogTextRow(
-                                modifier = Modifier,
-                                firstLabel = "State",
-                                firstValue = state,
-                                secondLabel = "Zip",
-                                secondValue = zip,
-                            )
-                        }
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        Text(
-                            text = "Contact Info",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Email",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            IconButton(
-                                modifier = Modifier.size(26.dp),
-                                onClick = {
-                                    itemToAdd = SubItemType.EMAIL
-                                    showAddBasicSubItemDialog = true
-                                }
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(20.dp),
-                                    painter = painterResource(Res.drawable.plus),
-                                    contentDescription = "Add Email Address"
-                                )
-                            }
-                        }
-
-                        // Email list
-                        CustomerDialogEmailList(
-                            modifier = Modifier,
-                            items = email,
-                            onEditClick = {},
-                            onDeleteClick = { item ->
-                                itemForDelete = SubItemType.EMAIL
-                                itemUpForDeleteIndex = item
-                                showConfirmDeleteScreen = true
-                            }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Phone",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            IconButton(
-                                modifier = Modifier.size(26.dp),
-                                onClick = {
-                                    itemToAdd = SubItemType.PHONE
-                                    showAddBasicSubItemDialog = true
-                                }
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(20.dp),
-                                    painter = painterResource(Res.drawable.plus),
-                                    contentDescription = "Add Phone Number"
-                                )
-                            }
-                        }
-
-                        // TODO: Logic for delete/ confirm screen dialog
-                        // Phone List
-                        CustomerDialogPhoneList(
-                            modifier = Modifier,
-                            items = phone,
-                            onEditClick = {},
-                            onDeleteClick = { item ->
-                                itemForDelete = SubItemType.PHONE
-                                itemUpForDeleteIndex = item
-                                showConfirmDeleteScreen = true
-                            }
-                        )
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Tickets",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            IconButton(
-                                modifier = Modifier.size(26.dp),
-                                onClick = {
-                                    // TODO
-                                }
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(20.dp),
-                                    painter = painterResource(Res.drawable.plus),
-                                    contentDescription = "Add Ticket"
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Ticket list
-                        CustomerDialogTicketList(
-                            items = tickets,
-                            onDeleteClick = { item ->
-                                itemForDelete = SubItemType.TICKET
-                                itemUpForDeleteIndex = item
-                                showConfirmDeleteScreen = true
-                            },
-                            onTicketClick = {}
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Notes",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            IconButton(
-                                modifier = Modifier.size(26.dp),
-                                onClick = { showAddNoteDialog = true }
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(20.dp),
-                                    painter = painterResource(Res.drawable.plus),
-                                    contentDescription = "Add new Note"
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        CustomerDialogNoteList(
-                            notes = notes,
-                            onDeleteClick = { item ->
-                                itemForDelete = SubItemType.NOTE
-                                itemUpForDeleteIndex = item
-                                showConfirmDeleteScreen = true
-                            }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-                    }
-                }
-
-                Spacer(Modifier.padding(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { onDismiss() },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text("Cancel")
-                    }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    Button(
-                        onClick = {
-                            // Check remaining data
-                            checkDataOnClose(
-                                oldData = data,
-                                newName = PersonName(firstName.value, lastName.value),
-                                newAddress = Address(street.value, city.value, state.value, zip.value),
-                                viewModel = viewModel
-                            )
-
-                            // Call dismiss
-                            onDismiss()
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text("Confirm")
-                    }
-                }
-            }
-        }
-    }
-}
-
 // TODO: Add checks to make sure its not blank
+// TODO: Add ability to assign already existing tickets to customer.
 @Composable
-fun AddCustomerDataDialog(
+fun CustomerDialog(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel,
-    starterData: CustomerData = CustomerData(),
-    onDismiss: () -> Unit,
+    seedData: CustomerData = CustomerData(),
+    onDismiss: (CustomerData?, Boolean) -> Unit,
+    onAddNewTicket: (String) -> Unit,
     isDarkMode: Boolean
 ) {
-    // Get next id
-    val identifier = remember { viewModel.getNextCustomerId() }
-
     // Name
-    val firstName = remember { mutableStateOf(starterData.info.name.firstName) }
-    val lastName = remember { mutableStateOf(starterData.info.name.lastName) }
+    var firstName by remember(seedData) { mutableStateOf(seedData.info.name.firstName) }
+    var lastName by remember(seedData) { mutableStateOf(seedData.info.name.lastName) }
 
     // Address
-    val street = remember { mutableStateOf(starterData.info.address.street) }
-    val city = remember { mutableStateOf(starterData.info.address.city) }
-    val state = remember { mutableStateOf(starterData.info.address.state) }
-    val zip = remember { mutableStateOf(starterData.info.address.zip) }
+    var street by remember(seedData) { mutableStateOf(seedData.info.address.street) }
+    var city by remember(seedData) { mutableStateOf(seedData.info.address.city) }
+    var state by remember(seedData) { mutableStateOf(seedData.info.address.state) }
+    var zip by remember(seedData) { mutableStateOf(seedData.info.address.zip) }
 
     // Mutable lists
-    val email = remember { starterData.info.contactInfo.email.toMutableStateList() }
-    val phone = remember { starterData.info.contactInfo.phone.toMutableStateList() }
-    val tickets = remember { starterData.tickets.toMutableStateList() }
-    val notes = remember { starterData.notes.toMutableStateList() }
+    val email = remember(seedData) { seedData.info.contactInfo.email.toMutableStateList() }
+    val phone = remember(seedData) { seedData.info.contactInfo.phone.toMutableStateList() }
+    val tickets = remember(seedData) { seedData.tickets.toMutableStateList() }
+    val notes = remember(seedData) { seedData.notes.toMutableStateList() }
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
@@ -643,7 +181,7 @@ fun AddCustomerDataDialog(
     Dialog(
         onDismissRequest = {
             // Call dismiss as we haven't confirmed anything
-            onDismiss()
+            onDismiss(null, false)
         }
     ) {
         Surface(
@@ -663,7 +201,7 @@ fun AddCustomerDataDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = "Add New Customer: $identifier",
+                        text = "Add New Customer: ${seedData.info.identifier}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp
                     )
@@ -693,8 +231,10 @@ fun AddCustomerDataDialog(
                             modifier = Modifier,
                             firstLabel = "First",
                             firstValue = firstName,
+                            onFirstValueChange = { firstName = it },
                             secondLabel = "Last",
-                            secondValue = lastName
+                            secondValue = lastName,
+                            onSecondValueChange = { lastName = it }
                         )
 
                         Spacer(Modifier.padding(8.dp))
@@ -716,16 +256,20 @@ fun AddCustomerDataDialog(
                                 modifier = Modifier,
                                 firstLabel = "Street",
                                 firstValue = street,
+                                onFirstValueChange = { street = it },
                                 secondLabel = "City",
-                                secondValue = city
+                                secondValue = city,
+                                onSecondValueChange = { city = it }
                             )
 
                             DialogTextRow(
                                 modifier = Modifier,
                                 firstLabel = "State",
                                 firstValue = state,
+                                onFirstValueChange = { state = it },
                                 secondLabel = "Zip",
                                 secondValue = zip,
+                                onSecondValueChange = { zip = it }
                             )
                         }
 
@@ -809,7 +353,6 @@ fun AddCustomerDataDialog(
                             }
                         }
 
-                        // TODO: Logic for delete/ confirm screen dialog
                         // Phone List
                         CustomerDialogPhoneList(
                             modifier = Modifier,
@@ -835,9 +378,7 @@ fun AddCustomerDataDialog(
 
                             IconButton(
                                 modifier = Modifier.size(26.dp),
-                                onClick = {
-                                    // TODO
-                                }
+                                onClick = { onAddNewTicket(seedData.info.identifier) }
                             ) {
                                 Icon(
                                     modifier = Modifier
@@ -912,7 +453,7 @@ fun AddCustomerDataDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Button(
-                        onClick = { onDismiss() },
+                        onClick = { onDismiss(null, false) },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MaterialTheme.colorScheme.error,
@@ -926,30 +467,28 @@ fun AddCustomerDataDialog(
 
                     Button(
                         onClick = {
-                            // Add the customer to the database
-                            viewModel.addCustomer(
+                            // Call dismiss
+                            onDismiss(
                                 CustomerData(
                                     info = CustomerInfo(
-                                        identifier = identifier,
+                                        identifier = seedData.info.identifier,
                                         name = PersonName(
-                                            firstName.value.lowercase().replaceFirstChar { it.uppercase() },
-                                            lastName.value.lowercase().replaceFirstChar { it.uppercase() }
+                                            firstName.lowercase().replaceFirstChar { it.uppercase() },
+                                            lastName.lowercase().replaceFirstChar { it.uppercase() }
                                         ),
                                         address = Address(
-                                            street.value.lowercase().replaceFirstChar { it.uppercase() },
-                                            city.value.lowercase().replaceFirstChar { it.uppercase() },
-                                            state.value.lowercase().replaceFirstChar { it.uppercase() },
-                                            zip.value
+                                            street.lowercase().replaceFirstChar { it.uppercase() },
+                                            city.lowercase().replaceFirstChar { it.uppercase() },
+                                            state.lowercase().replaceFirstChar { it.uppercase() },
+                                            zip
                                         ),
                                         contactInfo = ContactInfo(email, phone)
                                     ),
                                     tickets = tickets,
                                     notes = notes
-                                )
+                                ),
+                                true
                             )
-
-                            // Call dismiss
-                            onDismiss()
                         },
                         shape = RoundedCornerShape(8.dp),
                     ) {
@@ -994,6 +533,7 @@ private fun CustomerDialogPhoneList(
     onEditClick: (Int) -> Unit,
     onDeleteClick: (Int) -> Unit
 ) {
+    val padding = 4.dp
     var row = 1
 
     Column {
@@ -1005,8 +545,8 @@ private fun CustomerDialogPhoneList(
                 Row(
                     modifier = modifier
                         .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CustomChip(
@@ -1015,6 +555,8 @@ private fun CustomerDialogPhoneList(
                         onDeleteClick = { onDeleteClick(index - 1) }
                     )
 
+                    Spacer(Modifier.padding(padding))
+
                     if (items.getOrElse(index) { "" }.isNotEmpty()) {
                         CustomChip(
                             label = items[index],
@@ -1022,6 +564,8 @@ private fun CustomerDialogPhoneList(
                             onDeleteClick = { onDeleteClick(index) }
                         )
                     }
+
+                    Spacer(Modifier.padding(padding))
 
                     if (items.getOrElse(index + 1) { "" }.isNotEmpty()) {
                         CustomChip(
@@ -1045,6 +589,7 @@ private fun CustomerDialogTicketList(
     onTicketClick: (Int) -> Unit,
     onDeleteClick: (Int) -> Unit
 ) {
+    val padding = 4.dp
     var row = 1
 
     Column {
@@ -1056,8 +601,8 @@ private fun CustomerDialogTicketList(
                 Row(
                     modifier = modifier
                         .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                        .padding(4.dp),
+                    horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CustomInputChip(
@@ -1065,6 +610,8 @@ private fun CustomerDialogTicketList(
                         onClick = { onTicketClick(index - 1) },
                         onDeleteClick = { onDeleteClick(index - 1) }
                     )
+
+                    Spacer(Modifier.padding(padding))
 
                     if (items.getOrElse(index) { "" }.isNotEmpty()) {
                         CustomInputChip(
@@ -1074,6 +621,8 @@ private fun CustomerDialogTicketList(
                         )
                     }
 
+                    Spacer(Modifier.padding(padding))
+
                     if (items.getOrElse(index + 1) { "" }.isNotEmpty()) {
                         CustomInputChip(
                             label = items[index + 1],
@@ -1082,6 +631,8 @@ private fun CustomerDialogTicketList(
                         )
                     }
 
+                    Spacer(Modifier.padding(padding))
+
                     if (items.getOrElse(index + 2) { "" }.isNotEmpty()) {
                         CustomInputChip(
                             label = items[index + 2],
@@ -1089,6 +640,8 @@ private fun CustomerDialogTicketList(
                             onDeleteClick = { onDeleteClick(index + 2) }
                         )
                     }
+
+                    Spacer(Modifier.padding(padding))
 
                     if (items.getOrElse(index + 3, { "" }).isNotEmpty()) {
                         CustomInputChip(
@@ -1116,7 +669,7 @@ private fun CustomerDialogNoteList(
             Row(
                 modifier = modifier
                     .fillMaxWidth()
-                    .padding(8.dp),
+                    .padding(4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -1248,30 +801,5 @@ private fun CustomChip(
                 )
             }
         }
-    }
-}
-
-/**
- * Compares values in data and updates as needed some things are drawn out because of issue with comparing snapshot state
- */
-
-private fun checkDataOnClose(
-    oldData: CustomerData,
-    newName: PersonName,
-    newAddress: Address,
-    viewModel: MainViewModel
-) {
-    // Check name
-    when {
-        oldData.info.name.firstName != newName.firstName -> viewModel.updateCustomerName(oldData.info.identifier, newName)
-        oldData.info.name.lastName != newName.lastName -> viewModel.updateCustomerName(oldData.info.identifier, newName)
-    }
-
-    // Check address
-    when {
-        oldData.info.address.state != newAddress.state -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
-        oldData.info.address.street != newAddress.street -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
-        oldData.info.address.city != newAddress.city -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
-        oldData.info.address.zip != newAddress.zip -> viewModel.updateCustomerAddress(oldData.info.identifier, newAddress)
     }
 }

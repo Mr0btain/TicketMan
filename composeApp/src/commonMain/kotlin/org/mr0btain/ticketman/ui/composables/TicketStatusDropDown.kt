@@ -1,18 +1,21 @@
 package org.mr0btain.ticketman.ui.composables
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.components.TicketStatus
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketStatusDropDown(
     modifier: Modifier = Modifier,
+    status: TicketStatus,
     onClick: (TicketStatus) -> Unit
 ) {
-    var status by remember { mutableStateOf(TicketStatus.IN_PROGRESS) }
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
@@ -28,18 +31,29 @@ fun TicketStatusDropDown(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
             modifier = Modifier
-                .menuAnchor()
+                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                 .fillMaxWidth()
         )
 
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(8.dp),
+            shadowElevation = 4.dp,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
             TicketStatus.entries.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(text = option.name) },
+                    text = { Text(
+                        text = option.name,
+                        fontSize = 16.sp
+                    ) },
                     onClick = {
-                        expanded = false
-                        status = option
+                        // Call onClick
                         onClick(option)
+
+                        // Close dialog
+                        expanded = false
                     }
                 )
             }

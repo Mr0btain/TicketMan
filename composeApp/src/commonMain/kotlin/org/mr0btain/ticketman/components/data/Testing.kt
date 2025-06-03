@@ -16,6 +16,58 @@ import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<Employee>> {
+    // Generate some mock customer data
+    val customerData = generateMockCustomerData(num)
+    val employeeData = generateMockEmployeeData(6).toMutableList()
+
+    var currentTicketId = Random.nextInt(0, 9999)
+
+    // Hold the new data
+    val newCustomerData = mutableListOf<CustomerData>()
+    val newTicketData = mutableListOf<TicketInfo>()
+
+    customerData.forEach { item ->
+        val tickets = mutableListOf<TicketInfo>()
+        val ticketIds = mutableListOf<String>()
+
+        // Generate tickets
+        (0 .. Random.nextInt(1, 10)).forEach { i ->
+            tickets.add(generateRandomTicket(item.info.identifier, currentTicketId.toString()))
+
+            currentTicketId++
+        }
+
+        // Make a list of ticket ids
+        tickets.forEach { tick ->
+            ticketIds.add(tick.identifier)
+        }
+
+        // Update the customer data
+        newCustomerData.add(item.copy(tickets = ticketIds))
+
+        // Add the tickets to the result
+        newTicketData.addAll(tickets)
+    }
+
+    newTicketData.forEachIndexed { index, ticket ->
+        // Get random employee
+        val empNum = Random.nextInt(0, 6)
+        val emp = employeeData[empNum]
+
+        // Set ticket data assigned employee
+        newTicketData[index] = ticket.copy(
+            assignedEmployee = emp.identifier
+        )
+
+        // add ticket to employee
+        employeeData[empNum] = emp.copy(tickets = emp.tickets + ticket.identifier)
+    }
+
+
+    return Triple(newCustomerData, newTicketData, employeeData)
+}
+
 fun generateMockCustomerData(num: Int): List<CustomerData> {
     val data = mutableListOf<CustomerData>()
     val ids = mutableListOf<Int>()
@@ -51,54 +103,6 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
     }
 
     return data
-}
-
-fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<Employee>> {
-    // Generate some mock customer data
-    val customerData = generateMockCustomerData(num)
-    val employeeData = generateMockEmployeeData(6).toMutableList()
-
-    // Hold the new data
-    val newCustomerData = mutableListOf<CustomerData>()
-    val newTicketData = mutableListOf<TicketInfo>()
-
-    customerData.forEach { item ->
-        val tickets = mutableListOf<TicketInfo>()
-        val ticketIds = mutableListOf<String>()
-
-        // Generate tickets
-        (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(item.info.identifier))
-        }
-
-        // Make a list of ticket ids
-        tickets.forEach { tick ->
-            ticketIds.add(tick.identifier)
-        }
-
-        // Update the customer data
-        newCustomerData.add(item.copy(tickets = ticketIds))
-
-        // Add the tickets to the result
-        newTicketData.addAll(tickets)
-    }
-
-    newTicketData.forEachIndexed { index, ticket ->
-        // Get random employee
-        val empNum = Random.nextInt(0, 6)
-        val emp = employeeData[empNum]
-
-        // Set ticket data assigned employee
-        newTicketData[index] = ticket.copy(
-            assignedEmployee = emp.identifier
-        )
-
-        // add ticket to employee
-        employeeData[empNum] = emp.copy(tickets = emp.tickets + ticket.identifier)
-    }
-
-
-    return Triple(newCustomerData, newTicketData, employeeData)
 }
 
 // Function to generate random employee data
@@ -195,7 +199,7 @@ private fun generateRandomName(): PersonName {
 }
 
 @OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(customerId: String): TicketInfo {
+fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),
@@ -240,7 +244,7 @@ fun generateRandomTicket(customerId: String): TicketInfo {
     val uuid = Uuid.random().toString()
 
     return TicketInfo(
-        identifier = Random.nextInt(0, 9999).toString(),
+        identifier = ticketId,
         customerId = customerId,
         assignedEmployee = "",
         device = Device(manufacturer, model),

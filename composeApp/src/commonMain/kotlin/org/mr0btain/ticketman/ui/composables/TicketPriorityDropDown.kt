@@ -1,18 +1,21 @@
 package org.mr0btain.ticketman.ui.composables
 
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.components.TicketPriority
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketPriorityDropDown(
     modifier: Modifier = Modifier,
+    priority: TicketPriority,
     onClick: (TicketPriority) -> Unit
 ) {
-    var status by remember { mutableStateOf(TicketPriority.LOW) }
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(
@@ -22,24 +25,35 @@ fun TicketPriorityDropDown(
     ) {
         OutlinedTextField(
             readOnly = true,
-            value = status.name,
+            value = priority.name,
             onValueChange = {},
             label = { Text("Status") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
             modifier = Modifier
-                .menuAnchor()
+                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                 .fillMaxWidth()
         )
 
-        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+            shape = RoundedCornerShape(8.dp),
+            shadowElevation = 4.dp,
+            containerColor = MaterialTheme.colorScheme.surface
+        ) {
             TicketPriority.entries.forEach { option ->
                 DropdownMenuItem(
-                    text = { Text(text = option.name) },
+                    text = { Text(
+                        text = option.name,
+                        fontSize = 16.sp
+                    ) },
                     onClick = {
-                        expanded = false
-                        status = option
+                        // Call onClick
                         onClick(option)
+
+                        // Close menu
+                        expanded = false
                     }
                 )
             }

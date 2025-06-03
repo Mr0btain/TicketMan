@@ -2,75 +2,56 @@ package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastFirst
+import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.PersonName
-import org.mr0btain.ticketman.ui.composables.CustomerSearchBox
+import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_down
 import ticketman.composeapp.generated.resources.chevron_up
 
+// TODO: Should really offload some of the calculations on the lists to before we call this screen
+
 @Composable
 fun CustomerPanel(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel,
     scrollBarTop: Boolean = false,
     scrollBarRight: Boolean = true,
+    selectedCustomerId: String,
+    customerDataList: List<CustomerData>,
+    ticketList: List<TicketInfo>,
     onAddCustomer: (PersonName) -> Unit,
+    onEditCustomer: () -> Unit,
+    onCustomerSelectionChange: (String) -> Unit,
+    customerLazyListState: LazyListState = rememberLazyListState(),
+    coroutineScope: CoroutineScope = rememberCoroutineScope(),
+    focusManager: FocusManager = LocalFocusManager.current,
     isDarkMode: Boolean
 ) {
-    // Customer data
-    val selectedCustomerData = viewModel.selectedCustomerData.collectAsState()
-    val customerDataList = viewModel.customerDataList.collectAsState()
-
     // Hopefully this saves on calculations and updates properly
-    val sortedCustomerInfo = remember(customerDataList.value) { customerDataList.value.map { it.info }.sortedBy { it.name.firstName + it.name.lastName } }
+    val sortedCustomerInfo = remember(customerDataList) { customerDataList.map { it.info }.sortedBy { it.name.firstName + it.name.lastName } }
 
-    // Coroutine scope
-    val coroutineScope = rememberCoroutineScope()
+    // For search input
+    var searchInput by remember { mutableStateOf("") }
 
-    // States for showing things
-    var showSearchBar by remember { mutableStateOf(false) }
-    var showEditCustomerDialog by remember { mutableStateOf(false) }
-
-    // Lazy list state for scrolling to item when we add new customer
-    val customerDataListState = rememberLazyListState()
+    // Search list
+    val searchItems = remember(customerDataList) { customerDataList.map { it.info } }
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectUpdateFromClick by remember { mutableStateOf(false) }
-
-    val focusManager = LocalFocusManager.current
-
-    // On list update or search scroll to selected item
-    LaunchedEffect(selectedCustomerData.value) {
-        if (!isSelectUpdateFromClick) {
-            val index = sortedCustomerInfo.indexOf(selectedCustomerData.value.info)
-
-            // Sanity check
-            if (index >= 0 && index <= customerDataList.value.size) {
-                customerDataListState.scrollToItem(index)
-            }
-        } else isSelectUpdateFromClick = false
-    }
-
-    // For editing customer data
-    if (showEditCustomerDialog) {
-        EditCustomerDataDialog(
-            customerData = selectedCustomerData.value,
-            viewModel = viewModel,
-            onDismiss = { showEditCustomerDialog = false },
-            isDarkMode = isDarkMode
-        )
-    }
 
     Surface(
         modifier = modifier
@@ -81,31 +62,25 @@ fun CustomerPanel(
         ) {
             Row(
                 modifier = Modifier
-                    .padding(4.dp)
                     .fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(Modifier.padding(8.dp))
+                // Search box
+                CustomerSearch(
+                    modifier = Modifier.padding(start = 8.dp),
+                    items = searchItems,
+                    input = searchInput,
+                    onClick = {
+                        // Set search input
+                        searchInput = it
 
-                // Button to drop down Search bar
-                ElevatedButton(
-                    onClick = { showSearchBar = !showSearchBar },
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = "Search Bar",
-                        modifier = Modifier.padding(end = 4.dp)
-                    )
-
-                    Icon(
-                        modifier = Modifier.size(22.dp),
-                        painter = painterResource(
-                            if (showSearchBar) Res.drawable.chevron_up else Res.drawable.chevron_down
-                        ),
-                        contentDescription = "Show search bar"
-                    )
-                }
+                        // Call selection change
+                        onCustomerSelectionChange(it)
+                              },
+                    onInputChange = { searchInput = it },
+                    focusManager = focusManager
+                )
 
                 // Button for adding a customer
                 Row(
@@ -128,35 +103,7 @@ fun CustomerPanel(
                 }
             }
 
-            // Search bar
-            AnimatedVisibility(visible = showSearchBar) {
-                CustomerSearchBox(
-                    modifier = Modifier.sizeIn(
-                        maxWidth = 500.dp
-                    ),
-                    items = viewModel.getAllCustomerInfo(),
-                    onResult = { item, isNew ->
-                        if (isNew) {
-                            val newName = item.split(" ")
-
-                            // Call new customer dialog
-                            onAddCustomer(
-                                PersonName(
-                                    firstName = newName.getOrElse(0) { "" },
-                                    lastName = newName.getOrElse(1) { "" }
-                                )
-                            )
-                        } else {
-                            // Update selected customer
-                            viewModel.changeSelectedCustomerData(
-                                customerDataList.value.firstOrNull { it.info.identifier == item } ?: CustomerData()
-                            )
-                        }
-
-                        focusManager.clearFocus()
-                    }
-                )
-            }
+            Spacer(Modifier.padding(4.dp))
 
             Row(
                 modifier = Modifier
@@ -167,8 +114,8 @@ fun CustomerPanel(
                     modifier = Modifier
                         .height(500.dp),
                     customerInfo = sortedCustomerInfo,
-                    lazyListState = customerDataListState,
-                    selectedId = selectedCustomerData.value.info.identifier,
+                    lazyListState = customerLazyListState,
+                    selectedCustomerId = selectedCustomerId,
                     scope = coroutineScope,
                     scrollBarRight = scrollBarRight,
                     isDarkMode = isDarkMode,
@@ -176,8 +123,8 @@ fun CustomerPanel(
                         // Set the isupdatefromclick so we don't jar the scroll in the launched effect
                         isSelectUpdateFromClick = true
 
-                        // Update selected customer
-                        viewModel.changeSelectedCustomerData(viewModel.getCustomerData(id))
+                        // Call selection change
+                        onCustomerSelectionChange(id)
 
                         // Clear request focus to clear search bar if its open
                         focusManager.clearFocus()
@@ -188,14 +135,35 @@ fun CustomerPanel(
                     modifier = modifier
                         .height(500.dp),
                     isDarkMode = isDarkMode,
-                    selectedCustomerData = selectedCustomerData.value,
+                    selectedCustomerData = customerDataList.singleOrNull() { it.info.identifier == selectedCustomerId } ?: CustomerData(),
                     onEditClick = {
                         focusManager.clearFocus()
-                        showEditCustomerDialog = true
+
+                        onEditCustomer()
                     },
-                    tickets = viewModel.getTicketsForCustomer(selectedCustomerData.value.info.identifier)
+                    tickets = ticketList.filter { it.customerId == selectedCustomerId }
                 )
             }
         }
+    }
+
+    // On list update or search scroll to selected item
+    LaunchedEffect(selectedCustomerId) {
+        if (!isSelectUpdateFromClick) {
+            // Get index of visible items
+            val visibleItemIndex = customerLazyListState.layoutInfo.visibleItemsInfo.map { it.index }
+
+            if (visibleItemIndex.isNotEmpty() && sortedCustomerInfo.map { it.identifier }.contains(selectedCustomerId)) {
+                val index = sortedCustomerInfo.indexOf(sortedCustomerInfo.fastFirst { it.identifier == selectedCustomerId })
+
+                if (index < visibleItemIndex.first() || index > visibleItemIndex.last() && index >= 0) {
+                    customerLazyListState.animateScrollToItem(
+                        index = index,
+                        scrollOffset = -(customerLazyListState.layoutInfo.viewportSize.height / 2) + 30
+                    )
+                }
+            }
+
+        } else isSelectUpdateFromClick = false
     }
 }

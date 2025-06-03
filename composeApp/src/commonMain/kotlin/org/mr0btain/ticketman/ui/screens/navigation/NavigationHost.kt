@@ -5,19 +5,17 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 
@@ -26,6 +24,7 @@ fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
     startDestination: String = NavigationItem.Main.route,
+    coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
     settingsViewModel: SettingsViewModel
 ) {
@@ -41,6 +40,7 @@ fun NavigationHost(
         composable(NavigationItem.Main.route) {
             MainScreen(
                 viewModel = mainViewModel,
+                coroutineScope = coroutineScope,
                 isDarkMode = darkMode.value,
                 scrollBarTop = scrollBarOnTop.value,
                 scrollBarRight = scrollBarOnRight.value

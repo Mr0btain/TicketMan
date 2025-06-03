@@ -21,7 +21,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -99,9 +98,11 @@ fun DialogNoteList(
 fun DialogTextRow(
     modifier: Modifier = Modifier,
     firstLabel: String,
-    firstValue: MutableState<String>,
+    firstValue: String,
+    onFirstValueChange: (String) -> Unit,
     secondLabel: String,
-    secondValue: MutableState<String>
+    secondValue: String,
+    onSecondValueChange: (String) -> Unit
 ) {
     Row(
         modifier = modifier.padding(8.dp),
@@ -113,8 +114,8 @@ fun DialogTextRow(
             label = {
                 Text(firstLabel)
             },
-            value = firstValue.value,
-            onValueChange = { firstValue.value = it },
+            value = firstValue,
+            onValueChange = onFirstValueChange,
             singleLine = true
         )
 
@@ -125,8 +126,8 @@ fun DialogTextRow(
             label = {
                 Text(secondLabel)
             },
-            value = secondValue.value,
-            onValueChange = { secondValue.value = it },
+            value = secondValue,
+            onValueChange = onSecondValueChange,
             singleLine = true
         )
     }

@@ -22,6 +22,8 @@ import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.getPlatform
 
+// TODO: Setup error handling in here
+
 /**
 Main View model for the project.
 Used to store data that needs to persist for the lifetime of the app and be used anywhere
@@ -51,6 +53,7 @@ class MainViewModel(
     // -----------------------------------------------------------------------------------------------------------------------
 
     // TODO: Setup access level stuff
+    // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
     // Employee stuff
     private val _employee: MutableStateFlow<Employee> = MutableStateFlow(Employee(identifier = "201"))
     var employee = _employee.asStateFlow()
@@ -75,29 +78,32 @@ class MainViewModel(
     private val _ticketDataList: MutableStateFlow<List<TicketInfo>> = MutableStateFlow(listOf())
     var ticketDataList = _ticketDataList.asStateFlow()
 
-    // User specific ticket data list
-    private val _myTicketDataList: MutableStateFlow<List<String>> = MutableStateFlow(listOf())
-    var myTicketDataList = _myTicketDataList.asStateFlow()
-
     // Selected ticket tab index
-    private val _selectedTicketTabIndex: MutableStateFlow<String> = MutableStateFlow("0")
-    var selectedTicketTabIndex = _selectedTicketTabIndex.asStateFlow()
+    private val _selectedTicketId: MutableStateFlow<String> = MutableStateFlow("")
+    var selectedTicketId = _selectedTicketId.asStateFlow()
 
-    // Selected ticket tab index
-    private val _selectedTicketInfo: MutableStateFlow<TicketInfo> = MutableStateFlow(TicketInfo())
-    var selectedTicketInfo = _selectedTicketInfo.asStateFlow()
+    // Add or update ticket info if it exists
+    fun updateOrAddTicket(data: TicketInfo) {
+        // Check if ticket exists or not, if not then add it
+        if (_ticketDataList.value.map { it.identifier }.contains(data.identifier)) {
+            // Update data in viewmodel
+            // Get index of the item
+            val index = _ticketDataList.value.indexOfFirst { it.identifier == data.identifier }
 
-    // Selected Customer data index default to absurd number
-    private val _selectedTicketIndex: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
-    var selectedTicketIndex = _selectedTicketIndex.asStateFlow()
+            // update list with new data
+            _ticketDataList.value = _ticketDataList.value.toMutableList().also { it[index] = data }
 
-    fun changeSelectedTicketIndex(index: Int) {
-        _selectedTicketIndex.value = index
+            // Update database
+            database.updateTicket(data)
+        } else {
+            // Else add new ticket
+            database.addTicket(data)
+        }
     }
 
     // To update selected ticket
-    fun changeSelectedTicketInfo(ticket: TicketInfo) {
-        _selectedTicketInfo.value = ticket
+    fun changeSelectedTicketId(id: String) {
+        _selectedTicketId.value = id
     }
 
     // To update ticket data list
@@ -105,9 +111,8 @@ class MainViewModel(
         _ticketDataList.value = list
     }
 
-    // To update the ticket tab index
-    fun changeTicketTabIndex(update: String) {
-        _selectedTicketTabIndex.value = update
+    fun getTicketForId(id: String): TicketInfo {
+        return _ticketDataList.value.firstOrNull { it.identifier == id } ?: TicketInfo()
     }
 
     fun getTicketsForCustomer(customerId: String): List<TicketInfo> {
@@ -134,21 +139,32 @@ class MainViewModel(
     var customerDataList = _customerDataList.asStateFlow()
 
 
-    // Selected Customer data
-    private val _selectedCustomerData: MutableStateFlow<CustomerData> = MutableStateFlow(CustomerData())
-    var selectedCustomerData = _selectedCustomerData.asStateFlow()
+    // Selected Customer
+    private val _selectedCustomerId: MutableStateFlow<String> = MutableStateFlow("")
+    var selectedCustomerId = _selectedCustomerId.asStateFlow()
 
-    // Selected Customer data index default to absurd number
-    private val _selectedCustomerDataIndex: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
-    var selectedCustomerDataIndex = _selectedCustomerDataIndex.asStateFlow()
+    // Add or update customer info if it exists
+    fun updateOrAddCustomer(data: CustomerData) {
+        // Check if customer exists or not, if not then add it
+        if (_customerDataList.value.map { it.info.identifier }.contains(data.info.identifier)) {
+            // Update data in viewmodel
+            // Get index of the item
+            val index = _customerDataList.value.indexOfFirst { it.info.identifier == data.info.identifier }
 
-    fun changeSelectedCustomerIndex(index: Int) {
-        _selectedCustomerDataIndex.value = index
+            // update list with new data
+            _customerDataList.value = _customerDataList.value.toMutableList().also { it[index] = data }
+
+            // Update database
+            database.updateCustomer(data)
+        } else {
+            // Else add new
+            database.addCustomer(data)
+        }
     }
 
     // Call to change customer data
-    fun changeSelectedCustomerData(customerData: CustomerData) {
-        _selectedCustomerData.value = customerData
+    fun changeSelectedCustomerId(id: String) {
+        _selectedCustomerId.value = id
     }
 
     // To update customer data list
@@ -160,24 +176,10 @@ class MainViewModel(
         return _customerDataList.value.firstOrNull() { it.info.identifier == id } ?: CustomerData()
     }
 
-    // To get the index of an item
-    fun getCustomerIndex(data: CustomerData): Int { return _customerDataList.value.indexOf(data) }
-
-    // Get a list of all customer names
-    fun getAllCustomerInfo(): List<CustomerInfo> {
-        val result = mutableListOf<CustomerInfo>()
-
-        _customerDataList.value.forEach { customerData ->
-            result.add(customerData.info)
-        }
-
-        return result
-    }
-
     // Database
     // --------------------------------------------------------------------------------------------------------------------------
 
-    // To check and setup initial database if it doesnt exist
+    // To check and setup initial database if it doesn't exist
     fun setupDatabase() { database.checkAndCreateTables() }
 
     fun getNextCustomerId(): String { return database.getNextCustomerId() }
@@ -193,7 +195,7 @@ class MainViewModel(
         }
 
         // update selected data as well
-        _selectedCustomerData.value = _selectedCustomerData.value.copy(info = _selectedCustomerData.value.info.copy(name = data))
+        _selectedCustomerId.value = id
     }
 
     fun updateCustomerAddress(id: String, data: Address) {
@@ -205,7 +207,7 @@ class MainViewModel(
         }
 
         // update selected data as well
-        _selectedCustomerData.value = _selectedCustomerData.value.copy(info = _selectedCustomerData.value.info.copy(address = data))
+        _selectedCustomerId.value = id
     }
 
     fun updateCustomerContact(id: String, data: ContactInfo) {
@@ -217,7 +219,7 @@ class MainViewModel(
         }
 
         // update selected data as well
-        _selectedCustomerData.value = _selectedCustomerData.value.copy(info = _selectedCustomerData.value.info.copy(contactInfo = data))
+        _selectedCustomerId.value = id
     }
 
     fun updateCustomerTickets(id: String, data: List<String>) {
@@ -229,7 +231,7 @@ class MainViewModel(
         }
 
         // update selected data as well
-        _selectedCustomerData.value = _selectedCustomerData.value.copy(tickets = data)
+        _selectedCustomerId.value = id
     }
 
     fun updateCustomerNotes(id: String, data: List<Note>) {
@@ -241,7 +243,7 @@ class MainViewModel(
         }
 
         // update selected data as well
-        _selectedCustomerData.value = _selectedCustomerData.value.copy(notes = data)
+        _selectedCustomerId.value = id
     }
 
     fun addCustomer(data: CustomerData) {
@@ -249,10 +251,7 @@ class MainViewModel(
         _customerDataList.value = _customerDataList.value + data
 
         // Set selected
-        _selectedCustomerData.value = data
-
-        // Set index
-        _selectedCustomerDataIndex.value = getCustomerIndex(data)
+        _selectedCustomerId.value = data.info.identifier
 
         // Push to database
         database.addCustomer(data)
@@ -263,7 +262,7 @@ class MainViewModel(
         _ticketDataList.value = _ticketDataList.value + data
 
         // Set selected ticket
-        _selectedTicketInfo.value = data
+        _selectedTicketId.value = data.identifier
 
         // Set index
         // TODO
@@ -307,7 +306,7 @@ class MainViewModel(
     }
 
     fun checkIfTablesExist(): Boolean {
-        return database.listTables().containsAll(listOf("customer", "tickets"))
+        return database.listTables().containsAll(listOf("customer", "tickets", "employee"))
     }
 
     fun generateMockDbData() {

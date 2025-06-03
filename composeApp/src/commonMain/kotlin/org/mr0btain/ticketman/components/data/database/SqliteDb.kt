@@ -188,6 +188,10 @@ class SqliteDb() {
         }
     }
 
+    fun checkIfCustomerExistsInDb(id: String): Boolean {
+        return CustomerDataTable.select(CustomerDataTable.identifier).where { CustomerDataTable.identifier eq id.toInt() }.count() > 0
+    }
+
     fun getAllCustomerData(): List<CustomerData> {
         var result = listOf<CustomerData>()
 
