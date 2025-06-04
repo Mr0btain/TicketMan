@@ -32,14 +32,14 @@ fun EmployeeSearch(
     focusManager: FocusManager = LocalFocusManager.current,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (String) -> Unit,
+    onClick: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val filteredList = remember(input) { items.filter {
         (it.name.firstName + it.name.lastName).lowercase()
             .contains(input.lowercase().replace(" ", ""))
-                || it.identifier.contains(input)
-    }.sortedBy { it.name.firstName + it.name.lastName + it.identifier } }
+                || it.identifier.toString().contains(input)
+    }.sortedBy { it.name.firstName + it.name.lastName + it.identifier.toString() } }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -57,11 +57,7 @@ fun EmployeeSearch(
             },
             prefix = {
                 // Get employee if we've matched with one
-                val employee = remember(input) { items.fastFirstOrNull { it.identifier == input } }
-
-                println("Employee: $employee")
-
-                println("employee list: $items")
+                val employee = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
 
                 // If a match then prefix the name
                 if (employee != null) { Text(text = employee.name.firstName + " " + employee.name.lastName + ": ") }
@@ -84,7 +80,7 @@ fun EmployeeSearch(
             filteredList.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(
-                        text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier,
+                        text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier.toString(),
                         fontSize = 16.sp
                     )
                     },

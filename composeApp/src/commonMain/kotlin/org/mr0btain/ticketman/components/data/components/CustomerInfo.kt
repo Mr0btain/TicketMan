@@ -4,9 +4,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class CustomerInfo(
-    val identifier: String = "",
+    val identifier: Int = Int.MAX_VALUE,
     val name: PersonName = PersonName(),
     val address: Address = Address(),
     val contactInfo: ContactInfo = ContactInfo(),
-    val time: Long
+    val time: Long = Long.MAX_VALUE
 )

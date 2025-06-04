@@ -38,10 +38,10 @@ fun TicketDialog(
     isDarkMode: Boolean
 ) {
     // seed data
-    var customerId by remember(seedData) { mutableStateOf(seedData.customerId) }
+    var customerId by remember(seedData) { mutableIntStateOf(seedData.customerId) }
 
     // Assigned employee
-    var assignedEmployee by remember(seedData) { mutableStateOf(seedData.assignedEmployee) }
+    var assignedEmployee by remember(seedData) { mutableIntStateOf(seedData.assignedEmployee) }
 
     // Device
     var deviceManufacturer by remember(seedData) { mutableStateOf(seedData.device.manufacturer) }
@@ -63,10 +63,10 @@ fun TicketDialog(
     var showAddNoteDialog by remember { mutableStateOf(false) }
 
     // For customer search bar
-    var customerSearchBarInput by remember { mutableStateOf(seedData.customerId) }
+    var customerSearchBarInput by remember { mutableStateOf(if (seedData.customerId != Int.MAX_VALUE) seedData.customerId.toString() else "") }
 
     // For employee search bar
-    var employeeSearchBarInput by remember { mutableStateOf(seedData.assignedEmployee) }
+    var employeeSearchBarInput by remember { mutableStateOf(if (seedData.assignedEmployee != Int.MAX_VALUE) seedData.assignedEmployee.toString()else "")  }
 
     // Add Note dialog
     if (showAddNoteDialog) {
@@ -168,7 +168,7 @@ fun TicketDialog(
                             onInputChange = { customerSearchBarInput = it },
                             onClick = { item ->
                                 // Set search bar text
-                                customerSearchBarInput = item
+                                customerSearchBarInput = item.toString()
 
                                 // Set customer id
                                 customerId = item
@@ -194,7 +194,7 @@ fun TicketDialog(
                             onInputChange = { employeeSearchBarInput = it },
                             onClick = { item ->
                                 // Set search bar text
-                                employeeSearchBarInput = item
+                                employeeSearchBarInput = item.toString()
 
                                 // Set employee id
                                 assignedEmployee = item

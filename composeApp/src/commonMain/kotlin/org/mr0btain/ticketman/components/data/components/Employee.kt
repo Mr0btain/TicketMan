@@ -4,13 +4,13 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Employee(
-    val identifier: String = "",
+    val identifier: Int = Int.MAX_VALUE,
     val name: PersonName = PersonName(),
     val notes: List<Note> = listOf(),
     val contactInfo: ContactInfo = ContactInfo(),
-    val tickets: List<String> = listOf(),
+    val tickets: List<Int> = listOf(),
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
-    val time: Long
+    val time: Long = Long.MAX_VALUE
 )
 
 

@@ -34,14 +34,14 @@ fun TicketPanel(
     isDarkMode: Boolean,
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
-    selectedTicketId: String,
+    selectedTicketId: Int,
     ticketList: List<TicketInfo>,
     customerList: List<CustomerData>,
     currentEmployee: Employee,
     employeeList: List<Employee>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
-    onSelectedTicketChange: (String) -> Unit,
+    onSelectedTicketChange: (Int) -> Unit,
     scrollOnRight: Boolean,
     focusManager: FocusManager = LocalFocusManager.current,
     ticketListState: LazyListState = rememberLazyListState()
@@ -84,12 +84,12 @@ fun TicketPanel(
                 // Search box
                 TicketSearch(
                     modifier = Modifier.padding(start = 8.dp),
-                    items = searchItems,
+                    items = searchItems.map { it.toString() },
                     input = searchInput,
                     onInputChange = { searchInput = it },
                     onClick = {
                         // Set search input in out text box
-                        searchInput = it
+                        searchInput = it.toString()
 
                         // Call selected ticket change
                         onSelectedTicketChange(it)
@@ -164,7 +164,7 @@ fun TicketPanel(
                 ) {
                     Button(
                         onClick = {
-                            // Clear focus in case search bar isnt closed
+                            // Clear focus in case search bar isn't closed
                             focusManager.clearFocus()
 
                             // Trigger new ticket dialog

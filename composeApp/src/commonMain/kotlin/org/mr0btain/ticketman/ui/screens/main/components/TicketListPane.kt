@@ -35,9 +35,9 @@ fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf(),
-    selectedId: String,
+    selectedId: Int,
     scrollOnRight: Boolean,
-    onClick: (String) -> Unit,
+    onClick: (Int) -> Unit,
     state: LazyListState = rememberLazyListState()
 ) {
     // Column widths
@@ -184,7 +184,7 @@ private fun TicketTableItem(
                 contentAlignment = Alignment.Center
             ) {
                 TableTicketIdItem(
-                    label = ticketInfo.identifier,
+                    label = ticketInfo.identifier.toString(),
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }

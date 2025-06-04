@@ -33,7 +33,9 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.TicketPriority
+import org.mr0btain.ticketman.components.data.components.TicketPriorityType
 import org.mr0btain.ticketman.components.data.components.TicketStatus
+import org.mr0btain.ticketman.components.data.components.TicketStatusType
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
@@ -144,15 +146,15 @@ fun TableStatusItem(
    Surface(
        modifier = modifier.padding(4.dp),
        shape = RoundedCornerShape(4.dp),
-       color = when (status) {
-           TicketStatus.IN_PROGRESS -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-           TicketStatus.ON_HOLD -> MaterialTheme.colorScheme.error
-           TicketStatus.DONE -> if (darkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
+       color = when (status.status) {
+           TicketStatusType.IN_PROGRESS -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+           TicketStatusType.ON_HOLD -> MaterialTheme.colorScheme.error
+           TicketStatusType.DONE -> if (darkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
        }
    ) {
        Text(
            modifier = textModifier.padding(start = 6.dp, end = 6.dp),
-           text = status.name,
+           text = status.status.name,
            fontWeight = textStyle.fontWeight,
            fontSize = textStyle.fontSize,
            fontFamily = textStyle.fontFamily,
@@ -175,16 +177,16 @@ fun TablePriorityItem(
     Surface(
         modifier = modifier.padding(4.dp),
         shape = RoundedCornerShape(4.dp),
-        color = when (priority) {
-            TicketPriority.LOW -> MaterialTheme.colorScheme.secondary
-            TicketPriority.NORMAL -> MaterialTheme.colorScheme.primary
-            TicketPriority.HIGH -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-            TicketPriority.URGENT -> MaterialTheme.colorScheme.error
+        color = when (priority.priority) {
+            TicketPriorityType.LOW -> MaterialTheme.colorScheme.secondary
+            TicketPriorityType.NORMAL -> MaterialTheme.colorScheme.primary
+            TicketPriorityType.HIGH -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+            TicketPriorityType.URGENT -> MaterialTheme.colorScheme.error
         }
     ) {
         Text(
             modifier = textModifier.padding(start = 6.dp, end = 6.dp),
-            text = priority.name,
+            text = priority.priority.name,
             fontWeight = textStyle.fontWeight,
             fontSize = textStyle.fontSize,
             fontFamily = textStyle.fontFamily,
@@ -240,7 +242,7 @@ fun SmallTicketList(
     modifier: Modifier = Modifier,
     tickets: List<TicketInfo>,
     isDarkMode: Boolean,
-    onClick: (String) -> Unit
+    onClick: (Int) -> Unit
 ) {
     Surface(
         modifier = modifier
@@ -300,7 +302,7 @@ fun SmallTicketList(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                             ) {
                                 Text(
-                                    text = ticket.identifier,
+                                    text = ticket.identifier.toString(),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )

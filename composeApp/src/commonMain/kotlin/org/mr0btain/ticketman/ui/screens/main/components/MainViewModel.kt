@@ -39,11 +39,11 @@ class MainViewModel(
 
 
     // Selected main tab index
-    private val _selectedMainTabIndex: MutableStateFlow<String> = MutableStateFlow("0")
+    private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
     var selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
 
     // To update the main tab index
-    fun changeMainTabIndex(update: String) {
+    fun changeMainTabIndex(update: Int) {
         _selectedMainTabIndex.value = update
     }
 
@@ -55,7 +55,7 @@ class MainViewModel(
     // TODO: Setup access level stuff
     // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
     // Employee stuff
-    private val _employee: MutableStateFlow<Employee> = MutableStateFlow(Employee(identifier = "201"))
+    private val _employee: MutableStateFlow<Employee> = MutableStateFlow(Employee())
     var employee = _employee.asStateFlow()
 
     // Employee list
@@ -79,7 +79,7 @@ class MainViewModel(
     var ticketDataList = _ticketDataList.asStateFlow()
 
     // Selected ticket tab index
-    private val _selectedTicketId: MutableStateFlow<String> = MutableStateFlow("")
+    private val _selectedTicketId: MutableStateFlow<Int> = MutableStateFlow(0)
     var selectedTicketId = _selectedTicketId.asStateFlow()
 
     // Add or update ticket info if it exists
@@ -102,7 +102,7 @@ class MainViewModel(
     }
 
     // To update selected ticket
-    fun changeSelectedTicketId(id: String) {
+    fun changeSelectedTicketId(id: Int) {
         _selectedTicketId.value = id
     }
 
@@ -111,15 +111,15 @@ class MainViewModel(
         _ticketDataList.value = list
     }
 
-    fun getTicketForId(id: String): TicketInfo {
+    fun getTicketForId(id: Int): TicketInfo {
         return _ticketDataList.value.firstOrNull { it.identifier == id } ?: TicketInfo()
     }
 
-    fun getTicketsForCustomer(customerId: String): List<TicketInfo> {
+    fun getTicketsForCustomer(customerId: Int): List<TicketInfo> {
         return _ticketDataList.value.filter { it.customerId == customerId }
     }
 
-    fun getTickets(tickets: List<String>): List<TicketInfo> {
+    fun getTickets(tickets: List<Int>): List<TicketInfo> {
         val result = mutableListOf<TicketInfo>()
 
         _ticketDataList.value.forEach {
@@ -140,7 +140,7 @@ class MainViewModel(
 
 
     // Selected Customer
-    private val _selectedCustomerId: MutableStateFlow<String> = MutableStateFlow("")
+    private val _selectedCustomerId: MutableStateFlow<Int> = MutableStateFlow(0)
     var selectedCustomerId = _selectedCustomerId.asStateFlow()
 
     // Add or update customer info if it exists
@@ -163,7 +163,7 @@ class MainViewModel(
     }
 
     // Call to change customer data
-    fun changeSelectedCustomerId(id: String) {
+    fun changeSelectedCustomerId(id: Int) {
         _selectedCustomerId.value = id
     }
 
@@ -172,7 +172,7 @@ class MainViewModel(
         _customerDataList.value = list
     }
 
-    fun getCustomerData(id: String): CustomerData {
+    fun getCustomerData(id: Int): CustomerData {
         return _customerDataList.value.firstOrNull() { it.info.identifier == id } ?: CustomerData()
     }
 
@@ -182,11 +182,11 @@ class MainViewModel(
     // To check and setup initial database if it doesn't exist
     fun setupDatabase() { database.checkAndCreateTables() }
 
-    fun getNextCustomerId(): String { return database.getNextCustomerId() }
+    fun getNextCustomerId(): Int { return database.getNextCustomerId() }
 
-    fun getNextTicketId(): String { return database.getNextTicketId() }
+    fun getNextTicketId(): Int { return database.getNextTicketId() }
 
-    fun updateCustomerName(id: String, data: PersonName) {
+    fun updateCustomerName(id: Int, data: PersonName) {
         database.updateCustomerName(id, data)
 
         // Fix List in viewmodel
@@ -198,7 +198,7 @@ class MainViewModel(
         _selectedCustomerId.value = id
     }
 
-    fun updateCustomerAddress(id: String, data: Address) {
+    fun updateCustomerAddress(id: Int, data: Address) {
         database.updateCustomerAddress(id, data)
 
         // Fix List in viewmodel
@@ -210,7 +210,7 @@ class MainViewModel(
         _selectedCustomerId.value = id
     }
 
-    fun updateCustomerContact(id: String, data: ContactInfo) {
+    fun updateCustomerContact(id: Int, data: ContactInfo) {
         database.updateCustomerContact(id, data)
 
         // Fix List in viewmodel
@@ -222,7 +222,7 @@ class MainViewModel(
         _selectedCustomerId.value = id
     }
 
-    fun updateCustomerTickets(id: String, data: List<String>) {
+    fun updateCustomerTickets(id: Int, data: List<Int>) {
         database.updateCustomerTickets(id, data)
 
         // Fix List in viewmodel
@@ -234,7 +234,7 @@ class MainViewModel(
         _selectedCustomerId.value = id
     }
 
-    fun updateCustomerNotes(id: String, data: List<Note>) {
+    fun updateCustomerNotes(id: Int, data: List<Note>) {
         database.updateCustomerNotes(id, data)
 
         // Fix List in viewmodel
@@ -280,7 +280,7 @@ class MainViewModel(
         database.removeEmployee(employee.identifier)
     }
 
-    fun getEmployee(id: String): Employee {
+    fun getEmployee(id: Int): Employee {
         return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee()
     }
 
@@ -316,10 +316,5 @@ class MainViewModel(
 
         // Add all employees
         database.addAllEmployees(employeeData)
-    }
-
-    fun getMockDataFromDb() {
-        // Now lets read and set values in the viewmodel
-        changeCustomerDataList(database.getAllCustomerData())
     }
 }

@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.components.TicketPriority
+import org.mr0btain.ticketman.components.data.components.TicketPriorityType
+import org.mr0btain.ticketman.components.data.components.getTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,7 +27,7 @@ fun TicketPriorityDropDown(
     ) {
         OutlinedTextField(
             readOnly = true,
-            value = priority.name,
+            value = priority.priority.name,
             onValueChange = {},
             label = { Text("Status") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -42,7 +44,7 @@ fun TicketPriorityDropDown(
             shadowElevation = 4.dp,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            TicketPriority.entries.forEach { option ->
+            TicketPriorityType.entries.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(
                         text = option.name,
@@ -50,7 +52,7 @@ fun TicketPriorityDropDown(
                     ) },
                     onClick = {
                         // Call onClick
-                        onClick(option)
+                        onClick(TicketPriority(option, getTime()))
 
                         // Close menu
                         expanded = false

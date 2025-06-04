@@ -8,6 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.components.TicketStatus
+import org.mr0btain.ticketman.components.data.components.TicketStatusType
+import org.mr0btain.ticketman.components.data.components.getTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -25,7 +27,7 @@ fun TicketStatusDropDown(
     ) {
         OutlinedTextField(
             readOnly = true,
-            value = status.name,
+            value = status.status.name,
             onValueChange = {},
             label = { Text("Status") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
@@ -42,7 +44,7 @@ fun TicketStatusDropDown(
             shadowElevation = 4.dp,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            TicketStatus.entries.forEach { option ->
+            TicketStatusType.entries.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(
                         text = option.name,
@@ -50,7 +52,7 @@ fun TicketStatusDropDown(
                     ) },
                     onClick = {
                         // Call onClick
-                        onClick(option)
+                        onClick(TicketStatus(option, getTime()))
 
                         // Close dialog
                         expanded = false

@@ -28,7 +28,7 @@ fun CustomerSearch(
     items: List<CustomerInfo>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (String) -> Unit,
+    onClick: (Int) -> Unit,
     focusManager: FocusManager
 ) {
     var expanded by remember { mutableStateOf(false) }
@@ -36,8 +36,8 @@ fun CustomerSearch(
     val filteredList = remember(input) { items.filter {
         (it.name.firstName + it.name.lastName).lowercase()
             .contains(input.lowercase().replace(" ", ""))
-                || it.identifier.contains(input)
-    }.sortedBy { it.name.firstName + it.name.lastName + it.identifier } }
+                || it.identifier.toString().contains(input)
+    }.sortedBy { it.name.firstName + it.name.lastName + it.identifier.toString() } }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -56,7 +56,7 @@ fun CustomerSearch(
             label = { Text("Search Customer") },
             prefix = {
                 // Get customer if we've matched with one
-                val customer = remember(input) { items.fastFirstOrNull { it.identifier == input } }
+                val customer = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
 
                 // If a match then prefix the name
                 if (customer != null) { Text(text = customer.name.firstName + " " + customer.name.lastName + ": ") }
@@ -78,7 +78,7 @@ fun CustomerSearch(
             filteredList.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(
-                        text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier,
+                        text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier.toString(),
                         fontSize = 16.sp
                     )
                            },

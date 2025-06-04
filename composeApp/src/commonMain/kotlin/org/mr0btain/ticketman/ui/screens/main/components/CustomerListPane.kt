@@ -25,8 +25,8 @@ import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
-    onClick: (id: String) -> Unit,
-    selectedCustomerId: String,
+    onClick: (Int) -> Unit,
+    selectedCustomerId: Int,
     lazyListState: LazyListState = rememberLazyListState(),
     scope: CoroutineScope = rememberCoroutineScope(),
     scrollBarRight: Boolean,
@@ -138,7 +138,7 @@ private fun CustomerHeaderBox(
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (id: String) -> Unit,
+    onClick: (Int) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customerInfo: CustomerInfo,

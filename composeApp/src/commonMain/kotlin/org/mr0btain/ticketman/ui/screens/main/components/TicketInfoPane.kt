@@ -82,7 +82,7 @@ fun TicketInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = "Details for: ${ticketInfo.identifier}",
+                        text = if (ticketInfo.identifier != Int.MAX_VALUE) "Details for: ${ticketInfo.identifier}" else "",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -213,7 +213,9 @@ fun TicketInfoPane(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = ticketInfo.assignedEmployee + ": " + employeeName.firstName + " " + employeeName.lastName,
+                                    text = if (ticketInfo.assignedEmployee != Int.MAX_VALUE) {
+                                        ticketInfo.assignedEmployee.toString() + ": " + employeeName.firstName + " " + employeeName.lastName
+                                    } else "",
                                     fontSize = 18.sp
                                 )
                             }
@@ -266,7 +268,7 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.identifier.isNotBlank()) {
+                            if (ticketInfo.identifier != Int.MAX_VALUE) {
                                 TableStatusItem(
                                     status = ticketInfo.status,
                                     darkMode = isDarkMode
@@ -290,7 +292,7 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.identifier.isNotBlank()) {
+                            if (ticketInfo.identifier != Int.MAX_VALUE) {
                                 TablePriorityItem(
                                     priority = ticketInfo.priority,
                                     darkMode = isDarkMode

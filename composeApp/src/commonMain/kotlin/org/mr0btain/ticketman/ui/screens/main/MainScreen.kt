@@ -25,6 +25,7 @@ import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.data.components.getTime
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.components.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -62,7 +63,6 @@ fun MainScreen(
     // For customer dialog
     var customerSeedData by rememberSaveable { mutableStateOf(CustomerData()) }
     var showCustomerDialog by rememberSaveable { mutableStateOf(false) }
-    var isNewCustomer by remember { mutableStateOf(false) }
 
     // For ticket dialog
     var showTicketDialog by rememberSaveable { mutableStateOf(false) }
@@ -99,7 +99,7 @@ fun MainScreen(
             },
             onAddNewTicket = { customerId ->
                 // Seed data with customer id
-                ticketSeedData = TicketInfo(customerId = customerId)
+                ticketSeedData = TicketInfo(customerId = customerId, time = getTime(), identifier = viewModel.getNextTicketId())
 
                 // Show dialog
                 showTicketDialog = true
@@ -138,7 +138,7 @@ fun MainScreen(
             employees = employeeList.value,
             onAddNewCustomer = { name ->
                 // Add seeded data if there is any
-                customerSeedData = CustomerData(info = CustomerInfo(name = name))
+                customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime()))
 
                 // Trigger dialog
                 showCustomerDialog = true
@@ -168,7 +168,7 @@ fun MainScreen(
                         modifier = Modifier.width(260.dp)
                     ) {
                         SecondaryTabRow(
-                            selectedTabIndex = tabIndex.value.toInt(),
+                            selectedTabIndex = tabIndex.value,
                             modifier = Modifier
                                 .padding(top = 4.dp)
                                 .wrapContentWidth(),
@@ -176,8 +176,8 @@ fun MainScreen(
                         ) {
                             // Customer Tab
                             Tab(
-                                selected = tabIndex.value == "0",
-                                onClick = { viewModel.changeMainTabIndex("0") },
+                                selected = tabIndex.value == 0,
+                                onClick = { viewModel.changeMainTabIndex(0) },
                                 modifier = Modifier.wrapContentWidth(),
                                 text = {
                                     Text(
@@ -191,8 +191,8 @@ fun MainScreen(
 
                             // Ticket Tab
                             Tab(
-                                selected = tabIndex.value == "1",
-                                onClick = { viewModel.changeMainTabIndex("1") },
+                                selected = tabIndex.value == 1,
+                                onClick = { viewModel.changeMainTabIndex(1) },
                                 modifier = Modifier.wrapContentWidth(),
                                 text = {
                                     Text(
@@ -215,12 +215,12 @@ fun MainScreen(
                     color = if (isDarkMode) MaterialTheme.colorScheme.surface else DividerDefaults.color
                 )
 
-                if (tabIndex.value == "0") {
+                if (tabIndex.value == 0) {
                     CustomerPanel(
                         isDarkMode = isDarkMode,
                         onAddCustomer = { name ->
                             // Add starter data
-                            customerSeedData = CustomerData(info = CustomerInfo(name = name))
+                            customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime()))
 
                             // Trigger dialog
                             showCustomerDialog = true
@@ -253,7 +253,8 @@ fun MainScreen(
                             // Set up seed data
                             ticketSeedData = TicketInfo(
                                 identifier = viewModel.getNextTicketId(),
-                                assignedEmployee = currentEmployee.value.identifier
+                                assignedEmployee = currentEmployee.value.identifier,
+                                time = getTime()
                             )
 
                             // Show the dialog

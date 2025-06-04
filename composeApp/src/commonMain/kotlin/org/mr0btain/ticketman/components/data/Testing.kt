@@ -18,11 +18,11 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
 
     customerData.forEach { item ->
         val tickets = mutableListOf<TicketInfo>()
-        val ticketIds = mutableListOf<String>()
+        val ticketIds = mutableListOf<Int>()
 
         // Generate tickets
         (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(item.info.identifier, currentTicketId.toString()))
+            tickets.add(generateRandomTicket(item.info.identifier, currentTicketId))
 
             currentTicketId++
         }
@@ -62,10 +62,10 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
     val ids = mutableListOf<Int>()
 
     (0..num).forEach { i ->
-        var id = Random.nextInt(100, 99999)
+        var id = Random.nextInt(0, 9999)
 
         while (ids.contains(id)) {
-            id = Random.nextInt(100, 99999)
+            id = Random.nextInt(0, 9999)
         }
 
         ids.add(id)
@@ -81,10 +81,11 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
         data.add(
             CustomerData(
                 info = CustomerInfo(
-                    identifier = id.toString(),
+                    identifier = id,
                     name = name,
                     address = generateRandomAddress(),
-                    contactInfo = generateRandomContactInfo(name.firstName, name.lastName)
+                    contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
+                    time = getTime()
                 ),
                 notes = notes
             )
@@ -102,20 +103,17 @@ fun generateMockEmployeeData(num: Int): List<Employee> {
         // Random AccessLevel
         val accessLevel = AccessLevel.entries.random()
 
-        // Random identifier (UUID style)
-        val identifier = "${Random.nextInt(1000, 9999)}"
+        // Random identifier
+        val identifier = Random.nextInt(0, 9999)
 
-        // Random PersonName (first name and last name)
-        val firstName = listOf("John", "Jane", "Alex", "Chris", "Pat").random()
-        val lastName = listOf("Smith", "Johnson", "Williams", "Brown", "Jones").random()
-        val name = PersonName(firstName, lastName)
+        val name = generateRandomName()
 
         // Random Notes
         val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
 
         // Random ContactInfo (emails and phone numbers)
         val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
-        val phone = (1..Random.nextInt(1, 2)).map { "+1${Random.nextInt(100000000, 999999999)}" }
+        val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
         val contactInfo = ContactInfo(email, phone)
 
         // Create and return Employee object
@@ -126,7 +124,38 @@ fun generateMockEmployeeData(num: Int): List<Employee> {
                 notes = notes,
                 contactInfo = contactInfo,
                 tickets = listOf(),
-                accessLevel = accessLevel
+                accessLevel = accessLevel,
+                time = getTime()
+            )
+        )
+    }
+
+    if (!employees.map { it.accessLevel }.contains(AccessLevel.ADMIN)) {
+        // Random AccessLevel
+        val accessLevel = AccessLevel.ADMIN
+
+        // Random identifier
+        val identifier = Random.nextInt(0, 9999)
+
+        val name = generateRandomName()
+
+        // Random Notes
+        val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
+
+        // Random ContactInfo (emails and phone numbers)
+        val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
+        val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
+        val contactInfo = ContactInfo(email, phone)
+
+        employees.add(
+            Employee(
+                identifier = identifier,
+                name = name,
+                notes = notes,
+                contactInfo = contactInfo,
+                tickets = listOf(),
+                accessLevel = accessLevel,
+                time = getTime()
             )
         )
     }
@@ -188,7 +217,7 @@ private fun generateRandomName(): PersonName {
 }
 
 @OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
+fun generateRandomTicket(customerId: Int, ticketId: Int): TicketInfo {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),
@@ -230,16 +259,15 @@ fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
         Note(author, message, getTime())
     }
 
-    val uuid = Uuid.random().toString()
-
     return TicketInfo(
         identifier = ticketId,
         customerId = customerId,
-        assignedEmployee = "",
+        assignedEmployee = 0,
         device = Device(manufacturer, model),
         status = randomTicketStatus(),
         priority = randomTicketPriority(),
-        updates = notes
+        updates = notes,
+        time = getTime()
     )
 }
 
@@ -307,16 +335,19 @@ private fun generateRandomContactInfo(firstName: String? = null, lastName: Strin
 
     // Random US-style phone number (XXX-XXX-XXXX)
     (0..Random.nextInt(0, 4)).forEach { _ ->
-        phone.add(
-            buildString {
-                append(Random.nextInt(200, 999))  // Area code
-                append("-")
-                append(Random.nextInt(100, 999))  // Prefix
-                append("-")
-                append(Random.nextInt(1000, 9999)) // Line number
-            }
-        )
+        phone.add(generateRandomPhoneNumber())
     }
 
     return ContactInfo(listOf(email), phone)
+}
+
+private fun generateRandomPhoneNumber(): String {
+    // Random US-style phone number (XXX-XXX-XXXX)
+    return buildString {
+        append(Random.nextInt(200, 999))  // Area code
+        append("-")
+        append(Random.nextInt(100, 999))  // Prefix
+        append("-")
+        append(Random.nextInt(1000, 9999)) // Line number
+    }
 }

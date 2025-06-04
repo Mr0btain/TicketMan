@@ -34,7 +34,7 @@ fun CustomerDialog(
     modifier: Modifier = Modifier,
     seedData: CustomerData = CustomerData(),
     onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
-    onAddNewTicket: (String) -> Unit,
+    onAddNewTicket: (Int) -> Unit,
     isDarkMode: Boolean
 ) {
     // Name
@@ -118,7 +118,7 @@ fun CustomerDialog(
     if (showConfirmDeleteScreen) {
         ConfirmDeleteDialog(
             itemName = when (itemForDelete) {
-                SubItemType.TICKET -> tickets[itemUpForDeleteIndex]
+                SubItemType.TICKET -> tickets[itemUpForDeleteIndex].toString()
                 SubItemType.EMAIL -> email[itemUpForDeleteIndex]
                 SubItemType.PHONE -> phone[itemUpForDeleteIndex]
                 SubItemType.NOTE -> notes[itemUpForDeleteIndex].author + "'s Note"
@@ -379,7 +379,7 @@ fun CustomerDialog(
 
                         // Ticket list
                         CustomerDialogTicketList(
-                            items = tickets,
+                            items = tickets.map { it.toString() },
                             onDeleteClick = { item ->
                                 itemForDelete = SubItemType.TICKET
                                 itemUpForDeleteIndex = item

@@ -38,8 +38,8 @@ class SqliteDb() {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            CustomerDataTable.update(where = { CustomerDataTable.identifier eq data.info.identifier.toInt() }) { item ->
-                item[identifier] = data.info.identifier.toInt()
+            CustomerDataTable.update(where = { CustomerDataTable.identifier eq data.info.identifier }) { item ->
+                item[identifier] = data.info.identifier
                 item[firstName] = data.info.name.firstName
                 item[lastName] = data.info.name.lastName
                 item[street] = data.info.address.street
@@ -49,11 +49,12 @@ class SqliteDb() {
                 item[tickets] = TicketList(data.tickets)
                 item[notes] = Notes(data.notes)
                 item[contactInfo] = contactInfo
+                item[time] = data.info.time
             }
         }
     }
 
-    fun getNextCustomerId(): String {
+    fun getNextCustomerId(): Int {
         var result = 0
 
         transaction {
@@ -65,10 +66,10 @@ class SqliteDb() {
             }
         }
 
-        return (result + 1).toString()
+        return (result + 1)
     }
 
-    fun getNextTicketId(): String {
+    fun getNextTicketId(): Int {
         var result = 0
 
         transaction {
@@ -80,10 +81,10 @@ class SqliteDb() {
             }
         }
 
-        return (result + 1).toString()
+        return (result + 1)
     }
 
-    fun getNextEmployeeId(): String {
+    fun getNextEmployeeId(): Int {
         var result = 0
 
         transaction {
@@ -95,27 +96,27 @@ class SqliteDb() {
             }
         }
 
-        return (result + 1).toString()
+        return (result + 1)
     }
 
-    fun updateCustomerName(id: String, data: PersonName) {
+    fun updateCustomerName(id: Int, data: PersonName) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id.toInt() }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id }) { item ->
                 item[firstName] = data.firstName
                 item[lastName] = data.lastName
             }
         }
     }
 
-    fun updateCustomerAddress(id: String, data: Address) {
+    fun updateCustomerAddress(id: Int, data: Address) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id.toInt() }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id }) { item ->
                 item[street] = data.street
                 item[city] = data.city
                 item[state] = data.state
@@ -124,71 +125,72 @@ class SqliteDb() {
         }
     }
 
-    fun updateCustomerContact(id: String, data: ContactInfo) {
+    fun updateCustomerContact(id: Int, data: ContactInfo) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id.toInt() }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id }) { item ->
                 item[contactInfo] = data
             }
         }
     }
 
-    fun updateCustomerTickets(id: String, data: List<String>) {
+    fun updateCustomerTickets(id: Int, data: List<Int>) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id.toInt() }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id }) { item ->
                 item[tickets] = TicketList(data)
             }
         }
     }
 
-    fun updateCustomerNotes(id: String, data: List<Note>) {
+    fun updateCustomerNotes(id: Int, data: List<Note>) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id.toInt() }) { item ->
+            CustomerDataTable.update(where = { CustomerDataTable.identifier eq id }) { item ->
                 item[notes] = Notes(data)
             }
         }
     }
 
-    fun addCustomer(customer: CustomerData) {
+    fun addCustomer(data: CustomerData) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
             CustomerDataTable.insert { item ->
-                item[identifier] = customer.info.identifier.toInt()
-                item[firstName] = customer.info.name.firstName
-                item[lastName] = customer.info.name.lastName
-                item[street] = customer.info.address.street
-                item[city] = customer.info.address.city
-                item[state] = customer.info.address.state
-                item[zip] = customer.info.address.zip
-                item[tickets] = TicketList(customer.tickets)
-                item[notes] = Notes(customer.notes)
-                item[contactInfo] = customer.info.contactInfo
+                item[identifier] = data.info.identifier
+                item[firstName] = data.info.name.firstName
+                item[lastName] = data.info.name.lastName
+                item[street] = data.info.address.street
+                item[city] = data.info.address.city
+                item[state] = data.info.address.state
+                item[zip] = data.info.address.zip
+                item[tickets] = TicketList(data.tickets)
+                item[notes] = Notes(data.notes)
+                item[contactInfo] = data.info.contactInfo
+                item[time] = data.info.time
             }
         }
     }
 
-    fun removeCustomer(id: String) {
+    fun removeCustomer(id: Int) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
             // Delete item
-            CustomerDataTable.deleteWhere { identifier eq id.toInt() }
+            CustomerDataTable.deleteWhere { identifier eq id }
         }
     }
 
-    fun checkIfCustomerExistsInDb(id: String): Boolean {
-        return CustomerDataTable.select(CustomerDataTable.identifier).where { CustomerDataTable.identifier eq id.toInt() }.count() > 0
+    fun checkIfCustomerExistsInDb(id: Int): Boolean {
+        return CustomerDataTable.select(CustomerDataTable.identifier).where { CustomerDataTable.identifier eq id }.count() > 0
     }
 
     fun getAllCustomerData(): List<CustomerData> {
@@ -202,7 +204,7 @@ class SqliteDb() {
             result = CustomerDataTable.selectAll().map { item ->
                 CustomerData(
                     info = CustomerInfo(
-                        identifier = item[CustomerDataTable.identifier].toString(),
+                        identifier = item[CustomerDataTable.identifier],
                         name = PersonName(
                             firstName = item[CustomerDataTable.firstName],
                             lastName = item[CustomerDataTable.lastName]
@@ -214,6 +216,7 @@ class SqliteDb() {
                             zip = item[CustomerDataTable.zip]
                         ),
                         contactInfo = item[CustomerDataTable.contactInfo],
+                        time = item[CustomerDataTable.time]
                     ),
                     tickets = item[CustomerDataTable.tickets].list,
                     notes = item[CustomerDataTable.notes].notes
@@ -231,7 +234,7 @@ class SqliteDb() {
 
             data.forEach { customer ->
                 CustomerDataTable.insert { item ->
-                    item[identifier] = customer.info.identifier.toInt()
+                    item[identifier] = customer.info.identifier
                     item[firstName] = customer.info.name.firstName
                     item[lastName] = customer.info.name.lastName
                     item[street] = customer.info.address.street
@@ -241,73 +244,74 @@ class SqliteDb() {
                     item[tickets] = TicketList(customer.tickets)
                     item[notes] = Notes(customer.notes)
                     item[contactInfo] = customer.info.contactInfo
+                    item[time] = customer.info.time
                 }
             }
         }
     }
 
-    fun updateTicketUpdates(id: String, updates: Notes) {
+    fun updateTicketUpdates(id: Int, updates: Notes) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.update({ TicketDataTable.identifier eq id.toInt() }) { item ->
+            TicketDataTable.update({ TicketDataTable.identifier eq id }) { item ->
                 item[TicketDataTable.updates] = updates
             }
         }
     }
 
-    fun updateTicketStatus(id: String, status: TicketStatus) {
+    fun updateTicketStatus(id: Int, status: TicketStatus) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.update({ TicketDataTable.identifier eq id.toInt() }) { item ->
+            TicketDataTable.update({ TicketDataTable.identifier eq id }) { item ->
                 item[TicketDataTable.status] = status
             }
         }
     }
 
-    fun updateTicketPriority(id: String, priority: TicketPriority) {
+    fun updateTicketPriority(id: Int, priority: TicketPriority) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.update({ TicketDataTable.identifier eq id.toInt() }) { item ->
+            TicketDataTable.update({ TicketDataTable.identifier eq id }) { item ->
                 item[TicketDataTable.priority] = priority
             }
         }
     }
 
-    fun updateTicketEmply(id: String, employeeNum: String, employeeName: PersonName) {
+    fun updateTicketEmply(id: Int, employeeNum: Int, employeeName: PersonName) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.update({ TicketDataTable.identifier eq id.toInt() }) { item ->
+            TicketDataTable.update({ TicketDataTable.identifier eq id }) { item ->
                 item[TicketDataTable.assignedEmp] = employeeNum
             }
         }
     }
 
-    fun updateTicketDevice(id: String, device: Device) {
+    fun updateTicketDevice(id: Int, device: Device) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.update({ TicketDataTable.identifier eq id.toInt() }) { item ->
+            TicketDataTable.update({ TicketDataTable.identifier eq id }) { item ->
                 item[TicketDataTable.device] = device
             }
         }
     }
 
-    fun updateTicketCustId(id: String, custId: String) {
+    fun updateTicketCustId(id: Int, customerId: Int) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.update({ TicketDataTable.identifier eq id.toInt() }) { item ->
-                item[TicketDataTable.customerId] = custId
+            TicketDataTable.update({ TicketDataTable.identifier eq id }) { item ->
+                item[TicketDataTable.customerId] = customerId
             }
         }
     }
@@ -317,14 +321,15 @@ class SqliteDb() {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            TicketDataTable.update({ TicketDataTable.identifier eq data.identifier.toInt() }) { item ->
-                item[TicketDataTable.identifier] = data.identifier.toInt()
+            TicketDataTable.update({ TicketDataTable.identifier eq data.identifier }) { item ->
+                item[TicketDataTable.identifier] = data.identifier
                 item[TicketDataTable.customerId] = data.customerId
                 item[TicketDataTable.device] = data.device
                 item[TicketDataTable.assignedEmp] = data.assignedEmployee
                 item[TicketDataTable.priority] = data.priority
                 item[TicketDataTable.status] = data.status
                 item[TicketDataTable.updates] = Notes(data.updates)
+                item[TicketDataTable.time] = data.time
             }
         }
     }
@@ -335,24 +340,25 @@ class SqliteDb() {
             if (shouldLog) addLogger(StdOutSqlLogger)
 
             TicketDataTable.insert { item ->
-                item[TicketDataTable.identifier] = data.identifier.toInt()
+                item[TicketDataTable.identifier] = data.identifier
                 item[TicketDataTable.customerId] = data.customerId
                 item[TicketDataTable.device] = data.device
                 item[TicketDataTable.assignedEmp] = data.assignedEmployee
                 item[TicketDataTable.priority] = data.priority
                 item[TicketDataTable.status] = data.status
                 item[TicketDataTable.updates] = Notes(data.updates)
+                item[TicketDataTable.time] = data.time
             }
         }
     }
 
-    fun removeTicket(id: String) {
+    fun removeTicket(id: Int) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
             // Delete item
-            TicketDataTable.deleteWhere { identifier eq id.toInt() }
+            TicketDataTable.deleteWhere { identifier eq id }
         }
     }
 
@@ -363,13 +369,14 @@ class SqliteDb() {
 
             // Batch insert
             TicketDataTable.batchInsert(data) { item ->
-                this[TicketDataTable.identifier] = item.identifier.toInt()
+                this[TicketDataTable.identifier] = item.identifier
                 this[TicketDataTable.customerId] = item.customerId
                 this[TicketDataTable.device] = item.device
                 this[TicketDataTable.assignedEmp] = item.assignedEmployee
                 this[TicketDataTable.priority] = item.priority
                 this[TicketDataTable.status] = item.status
                 this[TicketDataTable.updates] = Notes(item.updates)
+                this[TicketDataTable.time] = item.time
             }
         }
     }
@@ -383,13 +390,14 @@ class SqliteDb() {
 
             result = TicketDataTable.selectAll().map { item ->
                 TicketInfo(
-                    identifier = item[TicketDataTable.identifier].toString(),
+                    identifier = item[TicketDataTable.identifier],
                     customerId = item[TicketDataTable.customerId],
                     device = item[TicketDataTable.device],
                     assignedEmployee = item[TicketDataTable.assignedEmp],
                     priority = item[TicketDataTable.priority],
                     status = item[TicketDataTable.status],
-                    updates = item[TicketDataTable.updates].notes
+                    updates = item[TicketDataTable.updates].notes,
+                    time = item[TicketDataTable.time]
                 )
             }
         }
@@ -403,7 +411,7 @@ class SqliteDb() {
             if (shouldLog) addLogger(StdOutSqlLogger)
 
             EmployeeTable.insert { item ->
-                item[EmployeeTable.identifier] = emp.identifier.toInt()
+                item[EmployeeTable.identifier] = emp.identifier
                 item[EmployeeTable.firstName] = emp.name.firstName
                 item[EmployeeTable.lastName] = emp.name.lastName
                 item[EmployeeTable.contactInfo] = emp.contactInfo
@@ -414,21 +422,22 @@ class SqliteDb() {
         }
     }
 
-    fun getEmployee(id: String): Employee {
+    fun getEmployee(id: Int): Employee {
         var result = Employee()
 
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            result = EmployeeTable.selectAll().where { EmployeeTable.identifier eq id.toInt() }.map { value ->
+            result = EmployeeTable.selectAll().where { EmployeeTable.identifier eq id }.map { item ->
                 Employee(
-                    identifier = value[EmployeeTable.identifier].toString(),
-                    name = PersonName(value[EmployeeTable.firstName], value[EmployeeTable.lastName]),
-                    notes = value[EmployeeTable.notes].notes,
-                    contactInfo = value[EmployeeTable.contactInfo],
-                    tickets = value[EmployeeTable.tickets].list,
-                    accessLevel = value[EmployeeTable.access]
+                    identifier = item[EmployeeTable.identifier],
+                    name = PersonName(item[EmployeeTable.firstName], item[EmployeeTable.lastName]),
+                    notes = item[EmployeeTable.notes].notes,
+                    contactInfo = item[EmployeeTable.contactInfo],
+                    tickets = item[EmployeeTable.tickets].list,
+                    accessLevel = item[EmployeeTable.access],
+                    time = item[EmployeeTable.time]
                 )
             }.singleOrNull() ?: Employee()
         }
@@ -436,13 +445,13 @@ class SqliteDb() {
         return result
     }
 
-    fun removeEmployee(id: String) {
+    fun removeEmployee(id: Int) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
             // Delete employee
-            EmployeeTable.deleteWhere { identifier eq id.toInt() }
+            EmployeeTable.deleteWhere { identifier eq id }
         }
     }
 
@@ -453,13 +462,14 @@ class SqliteDb() {
 
             // Batch insert
             EmployeeTable.batchInsert(employees) { item ->
-                this[EmployeeTable.identifier] = item.identifier.toInt()
+                this[EmployeeTable.identifier] = item.identifier
                 this[EmployeeTable.firstName] = item.name.firstName
                 this[EmployeeTable.lastName] = item.name.lastName
                 this[EmployeeTable.contactInfo] = item.contactInfo
                 this[EmployeeTable.notes] = Notes(item.notes)
                 this[EmployeeTable.tickets] = TicketList(item.tickets)
                 this[EmployeeTable.access] = item.accessLevel
+                this[EmployeeTable.time] = item.time
             }
         }
     }
@@ -474,12 +484,13 @@ class SqliteDb() {
             EmployeeTable.selectAll().forEach { item ->
                 result.add(
                     Employee(
-                        identifier = item[EmployeeTable.identifier].toString(),
+                        identifier = item[EmployeeTable.identifier],
                         name = PersonName(item[EmployeeTable.firstName], item[EmployeeTable.lastName]),
                         notes = item[EmployeeTable.notes].notes,
                         contactInfo = item[EmployeeTable.contactInfo],
                         tickets = item[EmployeeTable.tickets].list,
-                        accessLevel = item[EmployeeTable.access]
+                        accessLevel = item[EmployeeTable.access],
+                        time = item[EmployeeTable.time]
                     )
                 )
             }
@@ -488,57 +499,57 @@ class SqliteDb() {
         return result
     }
 
-    fun updateEmployeeName(id: String, name: PersonName) {
+    fun updateEmployeeName(id: Int, name: PersonName) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            EmployeeTable.update({ EmployeeTable.identifier eq id.toInt() }) { item ->
+            EmployeeTable.update({ EmployeeTable.identifier eq id }) { item ->
                 item[EmployeeTable.firstName] = name.firstName
                 item[EmployeeTable.lastName] = name.lastName
             }
         }
     }
 
-    fun updateEmployeeTickets(id: String, tickets: List<String>) {
+    fun updateEmployeeTickets(id: Int, tickets: List<Int>) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            EmployeeTable.update({ EmployeeTable.identifier eq id.toInt() }) { item ->
+            EmployeeTable.update({ EmployeeTable.identifier eq id }) { item ->
                 item[EmployeeTable.tickets] = TicketList(tickets)
             }
         }
     }
 
-    fun updateEmployeeContactInfo(id: String, contact: ContactInfo) {
+    fun updateEmployeeContactInfo(id: Int, contact: ContactInfo) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            EmployeeTable.update({ EmployeeTable.identifier eq id.toInt() }) { item ->
+            EmployeeTable.update({ EmployeeTable.identifier eq id }) { item ->
                 item[contactInfo] = contact
             }
         }
     }
 
-    fun updateEmployeeNotes(id: String, note: List<Note>) {
+    fun updateEmployeeNotes(id: Int, note: List<Note>) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            EmployeeTable.update({ EmployeeTable.identifier eq id.toInt() }) { item ->
+            EmployeeTable.update({ EmployeeTable.identifier eq id }) { item ->
                 item[notes] = Notes(note)
             }
         }
     }
 
-    fun updateEmployeeAccess(id: String, accessLevel: AccessLevel) {
+    fun updateEmployeeAccess(id: Int, accessLevel: AccessLevel) {
         transaction {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            EmployeeTable.update({ EmployeeTable.identifier eq id.toInt() }) { item ->
+            EmployeeTable.update({ EmployeeTable.identifier eq id }) { item ->
                 item[access] = accessLevel
             }
         }

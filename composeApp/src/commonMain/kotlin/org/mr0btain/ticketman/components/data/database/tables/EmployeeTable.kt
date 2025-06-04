@@ -18,4 +18,5 @@ object EmployeeTable : IntIdTable("employee") {
     val contactInfo = json<ContactInfo>("contact", Json.Default)
     val notes = json<Notes>("notes", Json.Default)
     val access = json<AccessLevel>("access", Json.Default)
+    val time = long("time")
 }

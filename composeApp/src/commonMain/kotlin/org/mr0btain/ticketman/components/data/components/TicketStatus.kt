@@ -2,9 +2,10 @@ package org.mr0btain.ticketman.components.data.components
 
 import kotlinx.serialization.Serializable
 
+@Serializable
 data class TicketStatus(
     val status: TicketStatusType,
-    val time: Long
+    val time: Long = Long.MAX_VALUE
 )
 
 @Serializable

@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -14,14 +13,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirst
 import kotlinx.coroutines.CoroutineScope
-import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.chevron_down
-import ticketman.composeapp.generated.resources.chevron_up
 
 // TODO: Should really offload some of the calculations on the lists to before we call this screen
 
@@ -30,12 +25,12 @@ fun CustomerPanel(
     modifier: Modifier = Modifier,
     scrollBarTop: Boolean = false,
     scrollBarRight: Boolean = true,
-    selectedCustomerId: String,
+    selectedCustomerId: Int,
     customerDataList: List<CustomerData>,
     ticketList: List<TicketInfo>,
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
-    onCustomerSelectionChange: (String) -> Unit,
+    onCustomerSelectionChange: (Int) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     focusManager: FocusManager = LocalFocusManager.current,
@@ -73,7 +68,7 @@ fun CustomerPanel(
                     input = searchInput,
                     onClick = {
                         // Set search input
-                        searchInput = it
+                        searchInput = it.toString()
 
                         // Call selection change
                         onCustomerSelectionChange(it)

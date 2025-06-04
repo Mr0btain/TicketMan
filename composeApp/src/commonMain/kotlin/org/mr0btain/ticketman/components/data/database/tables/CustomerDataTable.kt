@@ -21,6 +21,7 @@ object CustomerDataTable : IntIdTable("customer") {
     val tickets = json<TicketList>("tickets", Json.Default)
     val notes = json<Notes>("notes", Json.Default)
     val contactInfo = json<ContactInfo>("contact", Json.Default)
+    val time = long("time")
 }
 
 /*
