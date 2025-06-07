@@ -7,6 +7,7 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
 import org.mr0btain.ticketman.components.data.components.*
@@ -62,6 +63,25 @@ class MainViewModel(
         _employeeList.value = list
     }
 
+    fun getAllEmployees(): List<Employee> { return database.getAllEmployees() }
+
+    fun addEmployee(employee: Employee) { database.addEmployee(employee) }
+
+    fun removeEmployee(id: Int) {
+        // Check if employee exists or not
+        if (_employeeList.value.firstOrNull { it.identifier == id } != null) {
+            // update list
+            _employeeList.value = _employeeList.value.filter { it.identifier != id }
+
+            // Update database
+            database.removeEmployee(id)
+        } else {
+            // TODO: We should trigger a warning or something
+        }
+    }
+
+    fun getEmployee(id: Int): Employee { return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee() }
+
     /** Ticket Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
 
@@ -104,6 +124,19 @@ class MainViewModel(
 
     fun getTicketForId(id: Int): TicketInfo {
         return _ticketDataList.value.firstOrNull { it.identifier == id } ?: TicketInfo()
+    }
+
+    fun removeTicket(id: Int) {
+        // Check if ticket exists or not
+        if (_ticketDataList.value.firstOrNull { it.identifier == id } != null) {
+            // update list
+            _ticketDataList.value = _ticketDataList.value.filter { it.identifier != id }
+
+            // Update database
+            database.removeTicket(id)
+        } else {
+            // TODO: We should trigger a warning or something
+        }
     }
 
     /** Customer related things */
@@ -162,6 +195,19 @@ class MainViewModel(
         return result ?: CustomerData()
     }
 
+    fun removeCustomer(id: Int) {
+        // Check if customer exists or not
+        if (_customerDataList.value.map { it.info.identifier }.contains(id)) {
+            // update list
+            _customerDataList.value = _customerDataList.value.filter { it.info.identifier != id }
+
+            // Update database
+            database.removeCustomer(id)
+        } else {
+            // TODO: We should trigger a warning or something
+        }
+    }
+
     // Database
     // --------------------------------------------------------------------------------------------------------------------------
 
@@ -171,14 +217,6 @@ class MainViewModel(
     fun getNextCustomerId(): Int { return database.getNextCustomerId() }
 
     fun getNextTicketId(): Int { return database.getNextTicketId() }
-
-    fun getAllEmployees(): List<Employee> { return database.getAllEmployees() }
-
-    fun addEmployee(employee: Employee) { database.addEmployee(employee) }
-
-    fun removeEmployee(employee: Employee) { database.removeEmployee(employee.identifier) }
-
-    fun getEmployee(id: Int): Employee { return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee() }
 
     // TODO: Employee needs fleshed out
     fun updateDataFromDb() {

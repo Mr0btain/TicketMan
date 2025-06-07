@@ -42,6 +42,7 @@ fun TicketPanel(
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (Int) -> Unit,
+    onDeleteTicket: (Int) -> Unit,
     scrollOnRight: Boolean,
     focusManager: FocusManager = LocalFocusManager.current,
     ticketListState: LazyListState = rememberLazyListState()
@@ -74,6 +75,7 @@ fun TicketPanel(
             horizontalAlignment = Alignment.Start,
             modifier = Modifier.fillMaxSize()
         ) {
+            // --------------------------------- Header ---------------------------------------------------
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.Start,
@@ -154,14 +156,30 @@ fun TicketPanel(
 
                 Spacer(Modifier.padding(8.dp))
 
-
-
-                // Button for adding ticket
+                // Buttons for adding a removing tickets
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Delete Ticket Button
+                    Button(
+                        onClick = {
+                            // Clear focus in case search bar isn't closed
+                            focusManager.clearFocus()
+
+                            // Trigger delete ticket dialog/ confirm
+                            onDeleteTicket(selectedTicketId)
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors().copy(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(text = "Delete Ticket")
+                    }
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    // Add Ticket Button
                     Button(
                         onClick = {
                             // Clear focus in case search bar isn't closed
@@ -181,6 +199,7 @@ fun TicketPanel(
 
             Spacer(Modifier.padding(4.dp))
 
+            // --------------------------------- List and Info Panes ---------------------------------------------------
             Row {
                 // Check if were on my tickets which is 0 or all tickets
                 if (selectedPanel == 0) {
@@ -224,7 +243,7 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customerData = customerList.firstOrNull { it.tickets.contains(selectedTicketId) } ?: CustomerData(),
+                    customerData = customerList.firstOrNull { it.info.identifier == selectedTicket.customerId } ?: CustomerData(),
                     employeeName = (employeeList.firstOrNull() { it.identifier == selectedTicket.assignedEmployee } ?: Employee()).name,
                     isDarkMode = isDarkMode,
                     ticketInfo = selectedTicket,
@@ -239,6 +258,8 @@ fun TicketPanel(
             }
         }
     }
+
+    // --------------------------------- Launched effect for selected ticket ---------------------------------------------------
 
     // TODO: Maybe make this also switch to the right tab as well
     // On certain list update scroll to selected item

@@ -230,9 +230,11 @@ private fun TicketTableItem(
                     .padding(start = 4.dp)
                     .width(noteWidth + sizeAdjust.dp)
             ) {
-                TableCardTextItem(
-                    ticketInfo.updates.last().author + " : " + ticketInfo.updates.last().text
-                )
+                if (ticketInfo.updates.isNotEmpty()) {
+                    TableCardTextItem(
+                        ticketInfo.updates.last().author + " : " + ticketInfo.updates.last().text
+                    )
+                }
             }
 
             Row(

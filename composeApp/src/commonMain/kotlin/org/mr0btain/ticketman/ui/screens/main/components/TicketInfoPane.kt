@@ -34,11 +34,13 @@ import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.TicketPriority
 import org.mr0btain.ticketman.components.data.components.TicketStatus
+import org.mr0btain.ticketman.components.helpers.formatTime
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.tag
+import java.util.Calendar
 
 // TODO: Add date
 
@@ -51,6 +53,8 @@ fun TicketInfoPane(
     ticketInfo: TicketInfo,
     onEditClick: () -> Unit
 ) {
+    val date = formatTime(ticketInfo.time)
+
     // Main Body
     Surface(
         modifier = modifier
@@ -108,7 +112,7 @@ fun TicketInfoPane(
             HorizontalDivider()
 
             Row {
-                // First Pane
+                // --------------------------------- First Pane -----------------------------------
                 Surface(
                     modifier = Modifier
                         .padding(8.dp)
@@ -117,12 +121,14 @@ fun TicketInfoPane(
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
+                    // Basic details
                     Column(
                         modifier = Modifier
                             .width(300.dp)
                             .padding(20.dp)
                             .verticalScroll(rememberScrollState())
                     ) {
+                        // Header
                         Text(
                             text = "Info",
                             fontSize = 18.sp,
@@ -134,66 +140,34 @@ fun TicketInfoPane(
                         Spacer(Modifier.padding(4.dp))
 
                         // Customer name
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Customer:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            Text(
-                                text = customerData.info.name.firstName + " " + customerData.info.name.lastName,
-                                fontSize = 16.sp
-                            )
-                        }
+                        SimpleTextItem(
+                            label = "Customer",
+                            text = customerData.info.name.firstName + " " + customerData.info.name.lastName
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Manufacturer:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            Text(
-                                text = ticketInfo.device.manufacturer,
-                                fontSize = 16.sp
-                            )
-                        }
+                        // Device manufacturer
+                        SimpleTextItem(
+                            label = "Manufacturer",
+                            text = ticketInfo.device.manufacturer
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Model:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        // Device model
+                        SimpleTextItem(
+                            label = "Model",
+                            text = ticketInfo.device.model
+                        )
 
-                            Spacer(Modifier.padding(4.dp))
+                        Spacer(Modifier.padding(4.dp))
 
-                            Text(
-                                text = ticketInfo.device.model,
-                                fontSize = 16.sp
-                            )
-                        }
+                        // Date created
+                        SimpleTextItem(
+                            label = "Created",
+                            text = if (ticketInfo.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
@@ -230,87 +204,113 @@ fun TicketInfoPane(
                         )
                     }
                 }
+            }
 
-                // Second Pane
-                Surface(
+            // --------------------------------- Second Pane -----------------------------------
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(8.dp),
+                shape = RoundedCornerShape(10.dp),
+                shadowElevation = 4.dp,
+                color = MaterialTheme.colorScheme.secondaryContainer
+            ) {
+                Column(
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(8.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    shadowElevation = 4.dp,
-                    color = MaterialTheme.colorScheme.secondaryContainer
+                        .padding(20.dp)
+                        .verticalScroll(rememberScrollState())
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .padding(20.dp)
-                            .verticalScroll(rememberScrollState())
+                    Text(
+                        text = "Updates",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+
+                    HorizontalDivider()
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Updates",
-                            fontSize = 18.sp,
+                            text = "Status:",
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.Bold
                         )
 
-                        HorizontalDivider()
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Status:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            if (ticketInfo.identifier != Int.MAX_VALUE) {
-                                TableStatusItem(
-                                    status = ticketInfo.status,
-                                    darkMode = isDarkMode
-                                )
-                            }
-                        }
-
                         Spacer(Modifier.padding(4.dp))
 
-                        // Priority
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Priority:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
+                        if (ticketInfo.identifier != Int.MAX_VALUE) {
+                            TableStatusItem(
+                                status = ticketInfo.status,
+                                darkMode = isDarkMode
                             )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            if (ticketInfo.identifier != Int.MAX_VALUE) {
-                                TablePriorityItem(
-                                    priority = ticketInfo.priority,
-                                    darkMode = isDarkMode
-                                )
-                            }
                         }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        UpdatesBlock(data = ticketInfo.updates)
                     }
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    // Priority
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Priority:",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        if (ticketInfo.identifier != Int.MAX_VALUE) {
+                            TablePriorityItem(
+                                priority = ticketInfo.priority,
+                                darkMode = isDarkMode
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    UpdatesBlock(data = ticketInfo.updates)
                 }
             }
         }
     }
 }
 
-// Notes list
+// Simple Text Item
+@Composable
+private fun SimpleTextItem(
+    label: String,
+    text: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$label:",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(Modifier.padding(4.dp))
+
+        Text(
+            text = text,
+            fontSize = 16.sp
+        )
+    }
+}
+
+// Updates
 @Composable
 private fun UpdatesBlock(data: List<Note>) {
     val textFont = 16.sp

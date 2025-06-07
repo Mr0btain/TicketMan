@@ -87,6 +87,8 @@ fun ConfirmDeleteDialog(
                                 fontSize = fontSize
                             )
                         }
+
+                        MainItemType.NONE -> {}
                     }
                 }
 

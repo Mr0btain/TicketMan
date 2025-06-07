@@ -2,14 +2,12 @@ package org.mr0btain.ticketman.ui.screens.main
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -21,12 +19,13 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.DialogDismissReason
+import org.mr0btain.ticketman.components.data.components.MainItemType
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.getTime
+import org.mr0btain.ticketman.ui.dialog.MainItemConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.components.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -71,6 +70,12 @@ fun MainScreen(
     // For ticket panel state
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by rememberSaveable { mutableIntStateOf(0) }
+
+    // For confirm delete dialog
+    var showConfirmDeleteDialog by rememberSaveable { mutableStateOf(false) }
+    var itemToDelete by rememberSaveable { mutableIntStateOf(Int.MAX_VALUE) }
+    var itemToDeleteType by rememberSaveable { mutableStateOf(MainItemType.NONE) }
+    var confirmDeleteDialogText by rememberSaveable { mutableStateOf("") }
 
     // For customer panel state
     val customerLazyListState = rememberLazyListState()
@@ -143,6 +148,33 @@ fun MainScreen(
                 showCustomerDialog = true
             },
             focusManager = focusManager
+        )
+    }
+
+    // For confirming deleting an item
+    if (showConfirmDeleteDialog) {
+        MainItemConfirmDeleteDialog(
+            itemName = confirmDeleteDialogText,
+            onDismissRequest = { confirmed ->
+                if (confirmed) {
+                    // Delete item
+                    when (itemToDeleteType) {
+                        MainItemType.CUSTOMER -> { viewModel.removeCustomer(itemToDelete) }
+                        MainItemType.TICKET -> { viewModel.removeTicket(itemToDelete) }
+                        MainItemType.USER -> { viewModel.removeEmployee(itemToDelete) }
+                        MainItemType.NONE -> {}
+                    }
+                }
+
+                // Reset values
+                itemToDelete = Int.MAX_VALUE
+                itemToDeleteType = MainItemType.NONE
+                confirmDeleteDialogText = ""
+
+                // Close the dialog
+                showConfirmDeleteDialog = false
+            },
+            isDarkMode = isDarkMode
         )
     }
 
@@ -230,6 +262,17 @@ fun MainScreen(
                             showCustomerDialog = true
                         },
                         onCustomerSelectionChange = { id ->  viewModel.changeSelectedCustomerId(id) },
+                        onDeleteCustomer = { id ->
+                            // TODO: Maybe add name of customer to this as well?
+                            // TODO: Add ability to delete tickets as well
+                            // Set values
+                            itemToDelete = id
+                            itemToDeleteType = MainItemType.CUSTOMER
+                            confirmDeleteDialogText = "Customer: $id"
+
+                            // Trigger the dialog
+                            showConfirmDeleteDialog = true
+                        },
                         selectedCustomerId = selectedCustomer.value,
                         customerDataList = customerData.value,
                         ticketList = ticketInfoList.value,
@@ -266,6 +309,15 @@ fun MainScreen(
                         },
                         onSelectedTicketChange = { id -> viewModel.changeSelectedTicketId(id) },
                         onSelectedPanelChange = { selectedTicketPanel = it },
+                        onDeleteTicket = { id ->
+                            // Set values
+                            itemToDelete = id
+                            itemToDeleteType = MainItemType.TICKET
+                            confirmDeleteDialogText = "Ticket: $id"
+
+                            // Trigger the dialog
+                            showConfirmDeleteDialog = true
+                        },
                         selectedPanel = selectedTicketPanel,
                         ticketListState = ticketLazyListState,
                         focusManager = focusManager

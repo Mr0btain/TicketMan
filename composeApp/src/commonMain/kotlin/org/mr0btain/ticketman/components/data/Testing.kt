@@ -1,6 +1,10 @@
 package org.mr0btain.ticketman.components.data
 
 import org.mr0btain.ticketman.components.data.components.*
+import org.mr0btain.ticketman.components.helpers.parseDateToLong
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -85,7 +89,7 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
                     name = name,
                     address = generateRandomAddress(),
                     contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
-                    time = getTime()
+                    time = getFakeTime()
                 ),
                 notes = notes
             )
@@ -125,7 +129,7 @@ fun generateMockEmployeeData(num: Int): List<Employee> {
                 contactInfo = contactInfo,
                 tickets = listOf(),
                 accessLevel = accessLevel,
-                time = getTime()
+                time = getFakeTime()
             )
         )
     }
@@ -155,12 +159,26 @@ fun generateMockEmployeeData(num: Int): List<Employee> {
                 contactInfo = contactInfo,
                 tickets = listOf(),
                 accessLevel = accessLevel,
-                time = getTime()
+                time = getFakeTime()
             )
         )
     }
 
     return employees
+}
+
+private fun getFakeTime(): Long {
+    return parseDateToLong(
+        Time(
+            year = Random.nextInt(2000, 2025),
+            month = Random.nextInt(1, 12),
+            day = Random.nextInt(1, 21),
+            hour = Random.nextInt(1,12),
+            minute = Random.nextInt(0, 59),
+            second = Random.nextInt(0, 59),
+            ampm = AMPM.entries.random()
+        )
+    )
 }
 
 private fun generateRandomAddress(): Address {
@@ -267,7 +285,7 @@ fun generateRandomTicket(customerId: Int, ticketId: Int): TicketInfo {
         status = randomTicketStatus(),
         priority = randomTicketPriority(),
         updates = notes,
-        time = getTime()
+        time = getFakeTime()
     )
 }
 

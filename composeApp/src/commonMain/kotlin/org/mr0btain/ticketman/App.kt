@@ -65,7 +65,6 @@ fun App() {
 
             // Check if were on desktop
             if (mainViewModel.platform.contains("Java")) {
-                // TODO: Change desktop nav to a side bar
                 SideAppNav(
                     navHostController = navigator,
                     content = { paddingValues ->
@@ -82,7 +81,8 @@ fun App() {
                     coroutineScope = mainScope
                 )
             } else {
-                // Calculating screen size stuff
+                // TODO: Test this
+                // Calculating screen size if were on mobile. This should only update when the screen is rotated.
                 val windowSizeClass = calculateWindowSizeClass()
 
                 // Change our view dependent on screen size. Mostly to differentiate from tablet or phone screen

@@ -31,6 +31,7 @@ fun CustomerPanel(
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (Int) -> Unit,
+    onDeleteCustomer: (Int) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     focusManager: FocusManager = LocalFocusManager.current,
@@ -77,12 +78,29 @@ fun CustomerPanel(
                     focusManager = focusManager
                 )
 
-                // Button for adding a customer
+                // Button for adding or deleting a customer
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    // Delete Customer button
+                    Button(
+                        onClick = {
+                            // Clear focus in case search bar isn't closed
+                            focusManager.clearFocus()
+
+                            // Trigger delete ticket dialog/ confirm
+                            onDeleteCustomer(selectedCustomerId)
+                        },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors().copy(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(text = "Delete Customer")
+                    }
+
+                    Spacer(Modifier.padding(8.dp))
+
                     Button(
                         onClick = {
                             focusManager.clearFocus()
