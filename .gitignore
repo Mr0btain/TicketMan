@@ -3,3 +3,5 @@
 /.kotlin/
 /composeApp/build/
 /server/build/
+gradle.properties
+local.properties
