@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,13 +17,12 @@ import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 @Composable
 fun AdminScreen(
     viewModel: MainViewModel,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    snackBarState: SnackbarHostState
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = 10.dp
+        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
     ) {
         Box(
             contentAlignment = Alignment.Center

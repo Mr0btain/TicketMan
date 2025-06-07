@@ -5,12 +5,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.snackbar.CustomSnackBar
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.menu
 
@@ -21,7 +24,8 @@ fun DrawerNavigator(
     content: @Composable (PaddingValues) -> Unit,
     coroutineScope: CoroutineScope,
     navHostController: NavHostController,
-    topAppText: String
+    topAppText: String,
+    snackBarHostState: SnackbarHostState
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
@@ -108,6 +112,9 @@ fun DrawerNavigator(
         drawerState = drawerState
     ) {
         Scaffold(
+            snackbarHost = {
+                CustomSnackBar(state = snackBarHostState)
+            },
             topBar = {
                 TopAppBar(
                     title = { Text(topAppText) },

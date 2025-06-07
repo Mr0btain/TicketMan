@@ -51,7 +51,7 @@ fun TicketListPane(
             .wrapContentSize()
             .padding(8.dp),
         shape = RoundedCornerShape(10.dp),
-        shadowElevation = 10.dp,
+        shadowElevation = 4.dp,
         color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
     ) {
         Column(

@@ -14,6 +14,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
@@ -47,7 +48,8 @@ fun LoginScreen(
     modifier: Modifier = Modifier,
     onConfirm: (user:String, pass: String) -> Boolean,
     onDismiss: () -> Unit,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    snackBarState: SnackbarHostState
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
 

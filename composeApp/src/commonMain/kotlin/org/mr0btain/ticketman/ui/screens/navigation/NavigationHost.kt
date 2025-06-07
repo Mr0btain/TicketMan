@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui.screens.navigation
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
@@ -13,6 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
+import org.mr0btain.ticketman.ui.screens.inventory.InventoryScreen
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -26,7 +28,8 @@ fun NavigationHost(
     startDestination: String = NavigationItem.Main.route,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
-    settingsViewModel: SettingsViewModel
+    settingsViewModel: SettingsViewModel,
+    snackBarState: SnackbarHostState
 ) {
     val darkMode = settingsViewModel.isDarkMode.collectAsState()
     val scrollBarOnTop = settingsViewModel.scrollBarOnTop.collectAsState()
@@ -43,7 +46,8 @@ fun NavigationHost(
                 coroutineScope = coroutineScope,
                 isDarkMode = darkMode.value,
                 scrollBarTop = scrollBarOnTop.value,
-                scrollBarRight = scrollBarOnRight.value
+                scrollBarRight = scrollBarOnRight.value,
+                snackBarState = snackBarState
             )
         }
 
@@ -60,7 +64,8 @@ fun NavigationHost(
                 LoginScreen(
                     onConfirm = { user, pass -> true },
                     onDismiss = {},
-                    isDarkMode = darkMode.value
+                    isDarkMode = darkMode.value,
+                    snackBarState = snackBarState
                 )
             }
         }
@@ -68,7 +73,16 @@ fun NavigationHost(
         composable(NavigationItem.Admin.route) {
             AdminScreen(
                 viewModel = mainViewModel,
-                isDarkMode = darkMode.value
+                isDarkMode = darkMode.value,
+                snackBarState = snackBarState
+            )
+        }
+
+        composable(NavigationItem.Inventory.route) {
+            InventoryScreen(
+                viewModel = mainViewModel,
+                isDarkMode = darkMode.value,
+                snackBarState = snackBarState
             )
         }
     }

@@ -5,4 +5,5 @@ sealed class NavigationItem(val route: String) {
     data object Settings: NavigationItem(Destinations.SETTINGS.name)
     data object Login: NavigationItem(Destinations.LOGIN.name)
     data object Admin: NavigationItem(Destinations.ADMIN.name)
+    data object Inventory: NavigationItem(Destinations.INVENTORY.name)
 }

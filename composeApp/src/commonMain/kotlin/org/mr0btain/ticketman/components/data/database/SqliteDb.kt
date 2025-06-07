@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.data.database
 
+import androidx.compose.material3.SnackbarHostState
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
@@ -17,7 +18,6 @@ import org.mr0btain.ticketman.components.data.database.tables.EmployeeTable
 import org.mr0btain.ticketman.components.data.database.tables.TicketDataTable
 
 class SqliteDb() {
-    // TODO: Setup error handling
     // TODO: Flesh these out better to support copying syncing and such between dbs
     // TODO: Add encryption
     // TODO: Add removal functions
@@ -580,67 +580,6 @@ class SqliteDb() {
     }
 }
 
-
-fun testSqliteDatabase() {
-    Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
-
-    transaction {
-        addLogger(StdOutSqlLogger)
-
-        SchemaUtils.create(Tasks)
-
-        val taskId = Tasks.insert {
-            it[title] = "Learn Exposed"
-            it[description] = "Go through the Get started with Exposed tutorial"
-        } get Tasks.id
-
-        val secondTaskId = Tasks.insert {
-            it[title] = "Read The Hobbit"
-            it[description] = "Read the first two chapters of The Hobbit"
-            it[isCompleted] = true
-        } get Tasks.id
-
-        println("Created new tasks with ids $taskId and $secondTaskId.")
-
-        val find = Tasks.select(Tasks.title.locate("Read")).count()
-
-        println("Searched and found: $find")
-
-        // How to find an entry and get all of its columns
-        val item = Tasks.selectAll().where { Tasks.title.eq("Read The Hobbit") }.first()
-
-        println("Id: ${item[Tasks.id]}")
-        println("Title: ${item[Tasks.title]}")
-        println("Description: ${item[Tasks.description]}")
-        println("IsComplete: ${item[Tasks.isCompleted]}")
-
-        // This is how you find an entry and only pull specific columns
-        Tasks.select(Tasks.id, Tasks.title, Tasks.description, Tasks.isCompleted).where { Tasks.title.eq("Read The Hobbit") }.forEach {
-            println("Id: ${it[Tasks.id]}")
-            println("Title: ${it[Tasks.title]}")
-            println("Description: ${it[Tasks.description]}")
-            println("IsComplete: ${it[Tasks.isCompleted]}")
-        }
-
-        Tasks.select(Tasks.id.count(), Tasks.isCompleted).groupBy(Tasks.isCompleted).forEach {
-            println("${it[Tasks.isCompleted]}: ${it[Tasks.id.count()]} ")
-        }
-
-        // Update a task
-        Tasks.update({ Tasks.id eq taskId }) {
-            it[isCompleted] = true
-        }
-
-        val updatedTask = Tasks.select(Tasks.isCompleted).where(Tasks.id eq taskId).single()
-
-        println("Updated task details: $updatedTask")
-
-        // Delete a task
-        Tasks.deleteWhere { id eq secondTaskId }
-
-        println("Remaining tasks: ${Tasks.selectAll().toList()}")
-    }
-}
 
 // Connect to a db
 // Database.connect("jdbc:sqlite:/data/data.db", "org.sqlite.JDBC")

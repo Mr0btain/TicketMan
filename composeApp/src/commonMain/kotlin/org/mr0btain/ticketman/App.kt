@@ -1,11 +1,13 @@
 package org.mr0btain.ticketman
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
@@ -14,8 +16,11 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.DrawerNavigator
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
+import org.mr0btain.ticketman.ui.screens.navigation.SideAppNav
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import org.mr0btain.ticketman.ui.theme.AppTheme
+
+// TODO: Work on UI for mobile size screens
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -30,6 +35,9 @@ fun App() {
 
         // Main scope to use with coroutines
         val mainScope = rememberCoroutineScope()
+
+        // For snack bar messages
+        val snackBarHostState = mainViewModel.snackBarHost
 
         // Check and setup databases if they don't exist
         mainViewModel.setupDatabase()
@@ -58,7 +66,7 @@ fun App() {
             // Check if were on desktop
             if (mainViewModel.platform.contains("Java")) {
                 // TODO: Change desktop nav to a side bar
-                DrawerNavigator(
+                SideAppNav(
                     navHostController = navigator,
                     content = { paddingValues ->
                         NavigationHost(
@@ -66,11 +74,12 @@ fun App() {
                             navHostController = navigator,
                             coroutineScope = mainScope,
                             mainViewModel = mainViewModel,
-                            settingsViewModel = settingsViewModel
+                            settingsViewModel = settingsViewModel,
+                            snackBarState = snackBarHostState
                         )
                     },
-                    coroutineScope = mainScope,
-                    topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}"
+                    topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
+                    coroutineScope = mainScope
                 )
             } else {
                 // Calculating screen size stuff
@@ -78,22 +87,25 @@ fun App() {
 
                 // Change our view dependent on screen size. Mostly to differentiate from tablet or phone screen
                 if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
-                    // Tablet screen
-                    DrawerNavigator(
+                    // TODO: Test and adjust or make custom ui for this
+                    // Tablet screen just use desktop sidebar
+                    SideAppNav(
                         navHostController = navigator,
                         content = { paddingValues ->
                             NavigationHost(
                                 modifier = Modifier.padding(paddingValues),
-                                coroutineScope = mainScope,
                                 navHostController = navigator,
+                                coroutineScope = mainScope,
                                 mainViewModel = mainViewModel,
-                                settingsViewModel = settingsViewModel
+                                settingsViewModel = settingsViewModel,
+                                snackBarState = snackBarHostState
                             )
                         },
-                        coroutineScope = mainScope,
-                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}"
+                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
+                        coroutineScope = mainScope
                     )
                 } else {
+                    // TODO: Make ui specifically for this
                     // Phone screen
                     DrawerNavigator(
                         navHostController = navigator,
@@ -103,11 +115,13 @@ fun App() {
                                 coroutineScope = mainScope,
                                 navHostController = navigator,
                                 mainViewModel = mainViewModel,
-                                settingsViewModel = settingsViewModel
+                                settingsViewModel = settingsViewModel,
+                                snackBarState = snackBarHostState
                             )
                         },
                         coroutineScope = mainScope,
-                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}"
+                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
+                        snackBarHostState = snackBarHostState
                     )
                 }
             }

@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.DialogDismissReason
@@ -36,9 +37,6 @@ import org.mr0btain.ticketman.ui.screens.main.components.TicketPanel
  * The main landing screen after logon maybe?
  */
 
-// TODO: Need to add error handling
-// TODO: Add snack bar notifications on errors or cancels
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -47,7 +45,8 @@ fun MainScreen(
     focusManager: FocusManager = LocalFocusManager.current,
     scrollBarTop: Boolean,
     scrollBarRight: Boolean,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    snackBarState: SnackbarHostState
 ) {
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
@@ -138,7 +137,7 @@ fun MainScreen(
             employees = employeeList.value,
             onAddNewCustomer = { name ->
                 // Add seeded data if there is any
-                customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime()))
+                customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = viewModel.getNextCustomerId()))
 
                 // Trigger dialog
                 showCustomerDialog = true
@@ -152,9 +151,7 @@ fun MainScreen(
         modifier = Modifier.fillMaxSize()
     ) {
         Surface(
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 10.dp
+            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth()
@@ -170,7 +167,7 @@ fun MainScreen(
                         SecondaryTabRow(
                             selectedTabIndex = tabIndex.value,
                             modifier = Modifier
-                                .padding(top = 4.dp)
+                                .padding(top = 4.dp, start = 4.dp)
                                 .wrapContentWidth(),
                             containerColor = Color.Transparent
                         ) {
@@ -220,7 +217,7 @@ fun MainScreen(
                         isDarkMode = isDarkMode,
                         onAddCustomer = { name ->
                             // Add starter data
-                            customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime()))
+                            customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = viewModel.getNextCustomerId()))
 
                             // Trigger dialog
                             showCustomerDialog = true

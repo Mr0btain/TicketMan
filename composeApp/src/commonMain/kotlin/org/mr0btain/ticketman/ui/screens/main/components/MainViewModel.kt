@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.FileKit
@@ -9,17 +9,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.components.data.components.AccessLevel
-import org.mr0btain.ticketman.components.data.components.Address
-import org.mr0btain.ticketman.components.data.components.ContactInfo
-import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.Employee
-import org.mr0btain.ticketman.components.data.components.PersonName
-import org.mr0btain.ticketman.components.data.components.Note
-import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.data.components.*
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
+import org.mr0btain.ticketman.components.error.safeCall
+import org.mr0btain.ticketman.components.logging.Logger
 import org.mr0btain.ticketman.getPlatform
 
 // TODO: Setup error handling in here
@@ -31,12 +25,11 @@ Used to store data that needs to persist for the lifetime of the app and be used
 
 class MainViewModel(
     private val fileManager: FileManager,
-    private val database: SqliteDb
+    private val database: SqliteDb,
+    val snackBarHost: SnackbarHostState
 ): ViewModel() {
-    val topAppBarText = mutableStateOf("Welcome")
+    private val mainTag = "MainViewModel"
     val platform = getPlatform().name
-
-
 
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
@@ -46,8 +39,6 @@ class MainViewModel(
     fun changeMainTabIndex(update: Int) {
         _selectedMainTabIndex.value = update
     }
-
-
 
     /** Employee Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
@@ -115,22 +106,6 @@ class MainViewModel(
         return _ticketDataList.value.firstOrNull { it.identifier == id } ?: TicketInfo()
     }
 
-    fun getTicketsForCustomer(customerId: Int): List<TicketInfo> {
-        return _ticketDataList.value.filter { it.customerId == customerId }
-    }
-
-    fun getTickets(tickets: List<Int>): List<TicketInfo> {
-        val result = mutableListOf<TicketInfo>()
-
-        _ticketDataList.value.forEach {
-            if (tickets.contains(it.identifier)) {
-                result.add(it)
-            }
-        }
-
-        return result
-    }
-
     /** Customer related things */
     // ----------------------------------------------------------------------------------------------------------------------------
 
@@ -173,7 +148,18 @@ class MainViewModel(
     }
 
     fun getCustomerData(id: Int): CustomerData {
-        return _customerDataList.value.firstOrNull() { it.info.identifier == id } ?: CustomerData()
+        val result = _customerDataList.value.firstOrNull() { it.info.identifier == id }
+
+        if (result == null) viewModelScope.launch {
+            snackBarHost.showSnackbar("Could not find Customer!", withDismissAction = true)
+
+            Logger.e(
+                message = "Could not find customer in view model list!",
+                caller = "MainViewModel:getCustomerData"
+            )
+        }
+
+        return result ?: CustomerData()
     }
 
     // Database
@@ -186,107 +172,17 @@ class MainViewModel(
 
     fun getNextTicketId(): Int { return database.getNextTicketId() }
 
-    fun updateCustomerName(id: Int, data: PersonName) {
-        database.updateCustomerName(id, data)
+    fun getAllEmployees(): List<Employee> { return database.getAllEmployees() }
 
-        // Fix List in viewmodel
-        _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.identifier == id) it.copy(info = it.info.copy(name = data)) else it
-        }
+    fun addEmployee(employee: Employee) { database.addEmployee(employee) }
 
-        // update selected data as well
-        _selectedCustomerId.value = id
-    }
+    fun removeEmployee(employee: Employee) { database.removeEmployee(employee.identifier) }
 
-    fun updateCustomerAddress(id: Int, data: Address) {
-        database.updateCustomerAddress(id, data)
-
-        // Fix List in viewmodel
-        _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.identifier == id) it.copy(info = it.info.copy(address = data)) else it
-        }
-
-        // update selected data as well
-        _selectedCustomerId.value = id
-    }
-
-    fun updateCustomerContact(id: Int, data: ContactInfo) {
-        database.updateCustomerContact(id, data)
-
-        // Fix List in viewmodel
-        _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.identifier == id) it.copy(info = it.info.copy(contactInfo = data)) else it
-        }
-
-        // update selected data as well
-        _selectedCustomerId.value = id
-    }
-
-    fun updateCustomerTickets(id: Int, data: List<Int>) {
-        database.updateCustomerTickets(id, data)
-
-        // Fix List in viewmodel
-        _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.identifier == id) it.copy(tickets = data) else it
-        }
-
-        // update selected data as well
-        _selectedCustomerId.value = id
-    }
-
-    fun updateCustomerNotes(id: Int, data: List<Note>) {
-        database.updateCustomerNotes(id, data)
-
-        // Fix List in viewmodel
-        _customerDataList.value = _customerDataList.value.map { it ->
-            if (it.info.identifier == id) it.copy(notes = data) else it
-        }
-
-        // update selected data as well
-        _selectedCustomerId.value = id
-    }
-
-    fun addCustomer(data: CustomerData) {
-        // Add to list
-        _customerDataList.value = _customerDataList.value + data
-
-        // Set selected
-        _selectedCustomerId.value = data.info.identifier
-
-        // Push to database
-        database.addCustomer(data)
-    }
-
-    fun addTicket(data: TicketInfo) {
-        // Add to list
-        _ticketDataList.value = _ticketDataList.value + data
-
-        // Set selected ticket
-        _selectedTicketId.value = data.identifier
-
-        // Push to database
-        database.addTicket(data)
-    }
-
-    fun getAllEmployees(): List<Employee> {
-        return database.getAllEmployees()
-    }
-
-    fun addEmployee(employee: Employee) {
-        database.addEmployee(employee)
-    }
-
-    fun removeEmployee(employee: Employee) {
-        database.removeEmployee(employee.identifier)
-    }
-
-    fun getEmployee(id: Int): Employee {
-        return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee()
-    }
+    fun getEmployee(id: Int): Employee { return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee() }
 
     // TODO: Employee needs fleshed out
     fun updateDataFromDb() {
-        // Read data from mock db and update it in view model
+        // Read data from db and update it in view model
         changeCustomerDataList(database.getAllCustomerData())
         changeTicketDataList(database.getAllTicketData())
         changeEmployeeList(database.getAllEmployees())
@@ -300,10 +196,6 @@ class MainViewModel(
         viewModelScope.launch {
             FileKit.openFilePicker()
         }
-    }
-
-    fun checkIfTablesExist(): Boolean {
-        return database.listTables().containsAll(listOf("customer", "tickets", "employee"))
     }
 
     fun generateMockDbData() {

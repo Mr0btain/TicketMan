@@ -1,0 +1,198 @@
+package org.mr0btain.ticketman.ui.screens.navigation
+
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import androidx.navigation.NavHostController
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.ui.composables.TabColumn
+import ticketman.composeapp.generated.resources.*
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("UnusedMaterial3ScaffoldPaddingParameter")
+@Composable
+fun SideAppNav(
+    modifier: Modifier = Modifier,
+    content: @Composable (PaddingValues) -> Unit,
+    coroutineScope: CoroutineScope,
+    navHostController: NavHostController,
+    topAppText: String,
+) {
+    val iconSize = 48.dp
+    val iconInnerPadding = 8.dp
+    val iconOuterPadding = 4.dp
+
+    // Selected tab/ screen
+    var selectedTab by remember { mutableIntStateOf(0) }
+
+    // Sidebar visibility
+    var isSideBarVisible by remember { mutableStateOf(true) }
+
+    // Duration for animations
+    val durationMillis = 400
+
+    // Animated value for padding
+    val sidePadding = animateIntAsState(
+        targetValue = if (isSideBarVisible) 58 else 0,
+        animationSpec = tween(durationMillis + 100)
+        )
+
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            Column {
+                TopAppBar(
+                    modifier = Modifier.padding(bottom = 4.dp),
+                    title = { Text(topAppText) },
+                    navigationIcon = {
+                        Box(
+                            modifier = Modifier
+                                .padding(iconOuterPadding)
+                                .clip(RoundedCornerShape(4.dp))
+                                .clickable(
+                                    onClick = {
+                                        isSideBarVisible = !isSideBarVisible
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .size(iconSize)
+                                    .padding(iconInnerPadding),
+                                painter = painterResource(Res.drawable.sidebar),
+                                contentDescription = "Show/Hide Sidebar"
+                            )
+                        }
+                    }
+                )
+
+                // Space between top menu icon and the nav icons
+                Spacer(Modifier.padding(top = 16.dp))
+
+                AnimatedVisibility(
+                    visible = true,
+                    enter = slideInHorizontally(animationSpec = tween(durationMillis)),
+                    exit = slideOutHorizontally(animationSpec = tween(durationMillis)),
+                    content = {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxHeight()
+                                .width(sidePadding.value.dp)
+                                .background(MaterialTheme.colorScheme.background),
+                        ) {
+                            Column(
+                                modifier = Modifier,
+                                verticalArrangement = Arrangement.Top,
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier.height(iconSize * 5)
+                                ) {
+                                    TabColumn(
+                                        modifier = Modifier.width(iconSize + 4.dp),
+                                        selectedTabIndex = selectedTab
+                                    ) {
+                                        // Main tab
+                                        Tab(
+                                            modifier = Modifier.wrapContentSize(),
+                                            selected = selectedTab == 0,
+                                            onClick = {
+                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Main.route) }
+                                                selectedTab = 0
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    modifier = Modifier
+                                                        .size(iconSize)
+                                                        .padding(iconInnerPadding),
+                                                    painter = painterResource(Res.drawable.home),
+                                                    contentDescription = "Home"
+                                                )
+                                            }
+                                        )
+
+                                        // Inventory tab
+                                        Tab(
+                                            selected = selectedTab == 1,
+                                            onClick = {
+                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Inventory.route) }
+                                                selectedTab = 1
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    modifier = Modifier
+                                                        .size(iconSize)
+                                                        .padding(iconInnerPadding),
+                                                    painter = painterResource(Res.drawable.clipboard),
+                                                    contentDescription = "Inventory"
+                                                )
+                                            }
+                                        )
+
+                                        // Settings tab
+                                        Tab(
+                                            selected = selectedTab == 2,
+                                            onClick = {
+                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Settings.route) }
+                                                selectedTab = 2
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    modifier = Modifier
+                                                        .size(iconSize)
+                                                        .padding(iconInnerPadding),
+                                                    painter = painterResource(Res.drawable.settings),
+                                                    contentDescription = "Settings"
+                                                )
+                                            }
+                                        )
+
+                                        // Login Tab
+                                        Tab(
+                                            selected = selectedTab == 3,
+                                            onClick = {
+                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Login.route) }
+                                                selectedTab = 3
+                                            },
+                                            icon = {
+                                                Icon(
+                                                    modifier = Modifier
+                                                        .size(iconSize)
+                                                        .padding(iconInnerPadding),
+                                                    painter = painterResource(Res.drawable.user),
+                                                    contentDescription = "Login"
+                                                )
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    ) { paddingValues ->
+        content(PaddingValues(start = sidePadding.value.dp, top = 58.dp))
+    }
+}

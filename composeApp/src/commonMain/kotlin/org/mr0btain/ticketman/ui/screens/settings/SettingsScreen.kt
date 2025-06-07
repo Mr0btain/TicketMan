@@ -48,10 +48,13 @@ fun SettingsScreen(
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = Arrangement.Top,
         modifier = modifier.fillMaxSize()
     ) {
         Surface(
+            modifier = Modifier
+                .padding(8.dp)
+                .fillMaxSize(),
             color = if (darkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background,
             shape = RoundedCornerShape(10.dp),
             shadowElevation = 10.dp
