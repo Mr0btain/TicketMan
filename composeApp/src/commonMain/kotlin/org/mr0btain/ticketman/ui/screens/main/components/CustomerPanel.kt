@@ -8,8 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirst
 import kotlinx.coroutines.CoroutineScope
@@ -32,9 +30,9 @@ fun CustomerPanel(
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (Int) -> Unit,
     onDeleteCustomer: (Int) -> Unit,
+    onTicketClick: (Int) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    focusManager: FocusManager = LocalFocusManager.current,
     isDarkMode: Boolean
 ) {
     // Hopefully this saves on calculations and updates properly
@@ -74,8 +72,7 @@ fun CustomerPanel(
                         // Call selection change
                         onCustomerSelectionChange(it)
                               },
-                    onInputChange = { searchInput = it },
-                    focusManager = focusManager
+                    onInputChange = { searchInput = it }
                 )
 
                 // Button for adding or deleting a customer
@@ -86,11 +83,7 @@ fun CustomerPanel(
                 ) {
                     // Delete Customer button
                     Button(
-                        onClick = {
-                            // Clear focus in case search bar isn't closed
-                            focusManager.clearFocus()
-
-                            // Trigger delete ticket dialog/ confirm
+                        onClick = {// Trigger delete ticket dialog/ confirm
                             onDeleteCustomer(selectedCustomerId)
                         },
                         shape = RoundedCornerShape(8.dp),
@@ -102,11 +95,7 @@ fun CustomerPanel(
                     Spacer(Modifier.padding(8.dp))
 
                     Button(
-                        onClick = {
-                            focusManager.clearFocus()
-
-                            onAddCustomer(PersonName())
-                                  },
+                        onClick = { onAddCustomer(PersonName()) },
                         shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(text = "Add Customer")
@@ -138,9 +127,6 @@ fun CustomerPanel(
 
                         // Call selection change
                         onCustomerSelectionChange(id)
-
-                        // Clear request focus to clear search bar if its open
-                        focusManager.clearFocus()
                     }
                 )
 
@@ -149,12 +135,9 @@ fun CustomerPanel(
                         .height(500.dp),
                     isDarkMode = isDarkMode,
                     selectedCustomerData = customerDataList.singleOrNull() { it.info.identifier == selectedCustomerId } ?: CustomerData(),
-                    onEditClick = {
-                        focusManager.clearFocus()
-
-                        onEditCustomer()
-                    },
-                    tickets = ticketList.filter { it.customerId == selectedCustomerId }
+                    onEditClick = { onEditCustomer() },
+                    tickets = ticketList.filter { it.customerId == selectedCustomerId },
+                    onTicketClick = onTicketClick
                 )
             }
         }

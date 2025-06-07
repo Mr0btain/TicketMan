@@ -11,31 +11,17 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.mr0btain.ticketman.components.data.components.UserSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsSwitchItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsTextItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.arrow_down
-import ticketman.composeapp.generated.resources.arrow_left
-import ticketman.composeapp.generated.resources.arrow_right
-import ticketman.composeapp.generated.resources.arrow_up
-import ticketman.composeapp.generated.resources.hash
-import ticketman.composeapp.generated.resources.moon
-import ticketman.composeapp.generated.resources.server
-import ticketman.composeapp.generated.resources.settings_first_group
-import ticketman.composeapp.generated.resources.settings_second_group
-import ticketman.composeapp.generated.resources.settings_third_group
-import ticketman.composeapp.generated.resources.sun
+import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun SettingsScreen(

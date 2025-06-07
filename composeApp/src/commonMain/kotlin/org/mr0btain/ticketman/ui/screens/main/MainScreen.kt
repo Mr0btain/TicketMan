@@ -25,7 +25,7 @@ import org.mr0btain.ticketman.components.data.components.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.MainItemType
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.getTime
-import org.mr0btain.ticketman.ui.dialog.MainItemConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.components.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -33,15 +33,14 @@ import org.mr0btain.ticketman.ui.screens.main.components.CustomerPanel
 import org.mr0btain.ticketman.ui.screens.main.components.TicketPanel
 
 /**
- * The main landing screen after logon maybe?
+ * The main landing screen
  */
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    focusManager: FocusManager = LocalFocusManager.current,
+    coroutineScope: CoroutineScope,
     scrollBarTop: Boolean,
     scrollBarRight: Boolean,
     isDarkMode: Boolean,
@@ -66,7 +65,7 @@ fun MainScreen(
     var showTicketDialog by rememberSaveable { mutableStateOf(false) }
     var ticketSeedData by rememberSaveable { mutableStateOf(TicketInfo()) }
 
-    // TODO: Maybe elevate these states to viewmodel so its saved between screen changes?
+    // TODO: Maybe elevate these states to viewmodel so its saved between screen changes? will have to see on mobile when screen rotates
     // For ticket panel state
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by rememberSaveable { mutableIntStateOf(0) }
@@ -146,14 +145,13 @@ fun MainScreen(
 
                 // Trigger dialog
                 showCustomerDialog = true
-            },
-            focusManager = focusManager
+            }
         )
     }
 
     // For confirming deleting an item
     if (showConfirmDeleteDialog) {
-        MainItemConfirmDeleteDialog(
+        SimpleConfirmDeleteDialog(
             itemName = confirmDeleteDialogText,
             onDismissRequest = { confirmed ->
                 if (confirmed) {
@@ -161,8 +159,8 @@ fun MainScreen(
                     when (itemToDeleteType) {
                         MainItemType.CUSTOMER -> { viewModel.removeCustomer(itemToDelete) }
                         MainItemType.TICKET -> { viewModel.removeTicket(itemToDelete) }
-                        MainItemType.USER -> { viewModel.removeEmployee(itemToDelete) }
-                        MainItemType.NONE -> {}
+                        MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
+                        MainItemType.NONE -> { /* Do nothing */ }
                     }
                 }
 
@@ -264,7 +262,7 @@ fun MainScreen(
                         onCustomerSelectionChange = { id ->  viewModel.changeSelectedCustomerId(id) },
                         onDeleteCustomer = { id ->
                             // TODO: Maybe add name of customer to this as well?
-                            // TODO: Add ability to delete tickets as well
+                            // TODO: Add ability to delete tickets for customer as well
                             // Set values
                             itemToDelete = id
                             itemToDeleteType = MainItemType.CUSTOMER
@@ -273,11 +271,20 @@ fun MainScreen(
                             // Trigger the dialog
                             showConfirmDeleteDialog = true
                         },
+                        onTicketClick = { id ->
+                            // Set selected ticket
+                            viewModel.changeSelectedTicketId(id)
+
+                            // Get seed data
+                            ticketSeedData = viewModel.getTicketForId(selectedTicket.value)
+
+                            // Pop up ticket dialog
+                            showTicketDialog = true
+                        },
                         selectedCustomerId = selectedCustomer.value,
                         customerDataList = customerData.value,
                         ticketList = ticketInfoList.value,
                         customerLazyListState = customerLazyListState,
-                        focusManager = focusManager,
                         coroutineScope = coroutineScope
                     )
                 } else {
@@ -319,8 +326,7 @@ fun MainScreen(
                             showConfirmDeleteDialog = true
                         },
                         selectedPanel = selectedTicketPanel,
-                        ticketListState = ticketLazyListState,
-                        focusManager = focusManager
+                        ticketListState = ticketLazyListState
                     )
                 }
             }

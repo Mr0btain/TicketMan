@@ -1,46 +1,25 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.Note
 import org.mr0btain.ticketman.components.data.components.PersonName
 import org.mr0btain.ticketman.components.data.components.TicketInfo
-import org.mr0btain.ticketman.components.data.components.TicketPriority
-import org.mr0btain.ticketman.components.data.components.TicketStatus
 import org.mr0btain.ticketman.components.helpers.formatTime
-import org.mr0btain.ticketman.ui.theme.extendedDark
-import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.tag
-import java.util.Calendar
 
 // TODO: Add date
 
@@ -67,7 +46,7 @@ fun TicketInfoPane(
             modifier = Modifier
                 .padding(2.dp)
         ) {
-            // Top bar
+            // --------------------------------- Header -----------------------------------
             Surface(
                 modifier = Modifier.padding(start = 4.dp, top = 8.dp, end = 4.dp, bottom = 8.dp)
             ) {
@@ -198,86 +177,86 @@ fun TicketInfoPane(
                         Spacer(Modifier.padding(4.dp))
 
                         // Contacts for customer block
-                        ContactBlock(
-                            data = customerData.info,
-                            labelFont = 16.sp
+                        ContactsBlock(
+                            customerInfo = customerData.info,
+                            labelSize = 16.sp
                         )
                     }
                 }
-            }
 
-            // --------------------------------- Second Pane -----------------------------------
-            Surface(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp),
-                shape = RoundedCornerShape(10.dp),
-                shadowElevation = 4.dp,
-                color = MaterialTheme.colorScheme.secondaryContainer
-            ) {
-                Column(
+                // --------------------------------- Second Pane -----------------------------------
+                Surface(
                     modifier = Modifier
-                        .padding(20.dp)
-                        .verticalScroll(rememberScrollState())
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    shadowElevation = 4.dp,
+                    color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    Text(
-                        text = "Updates",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    HorizontalDivider()
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState())
                     ) {
                         Text(
-                            text = "Status:",
-                            fontSize = 16.sp,
+                            text = "Updates",
+                            fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
 
+                        HorizontalDivider()
+
+                        Spacer(Modifier.padding(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Status:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            if (ticketInfo.identifier != Int.MAX_VALUE) {
+                                TableStatusItem(
+                                    status = ticketInfo.status,
+                                    darkMode = isDarkMode
+                                )
+                            }
+                        }
+
                         Spacer(Modifier.padding(4.dp))
 
-                        if (ticketInfo.identifier != Int.MAX_VALUE) {
-                            TableStatusItem(
-                                status = ticketInfo.status,
-                                darkMode = isDarkMode
+                        // Priority
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Priority:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            if (ticketInfo.identifier != Int.MAX_VALUE) {
+                                TablePriorityItem(
+                                    priority = ticketInfo.priority,
+                                    darkMode = isDarkMode
+                                )
+                            }
                         }
-                    }
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // Priority
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Priority:",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        if (ticketInfo.identifier != Int.MAX_VALUE) {
-                            TablePriorityItem(
-                                priority = ticketInfo.priority,
-                                darkMode = isDarkMode
-                            )
-                        }
+                        UpdatesBlock(data = ticketInfo.updates)
                     }
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    UpdatesBlock(data = ticketInfo.updates)
                 }
             }
         }

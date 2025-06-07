@@ -9,14 +9,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.helpers.formatTime
 import ticketman.composeapp.generated.resources.*
 
 @Composable
@@ -25,10 +23,19 @@ fun CustomerInfoPane(
     isDarkMode: Boolean,
     selectedCustomerData: CustomerData,
     tickets: List<TicketInfo>,
-    onEditClick: () -> Unit
+    onEditClick: () -> Unit,
+    onTicketClick: (Int) -> Unit
 ) {
     // Scroll state for basic ifo pane if needed
     val scrollState = rememberScrollState()
+
+    // Sizes for icons and text
+    val labelSize = 12.sp
+    val textSize = 16.sp
+    val iconSize = 18.dp
+
+    // Time formated
+    val time = formatTime(selectedCustomerData.info.time)
 
     // Main Body
     Surface(
@@ -42,7 +49,7 @@ fun CustomerInfoPane(
             modifier = Modifier
                 .padding(2.dp)
         ) {
-            // Top bar
+            // --------------------------------- Header -----------------------------------
             Surface(
                 modifier = Modifier.padding(start = 4.dp, top = 8.dp, end = 4.dp, bottom = 8.dp)
             ) {
@@ -87,7 +94,7 @@ fun CustomerInfoPane(
             HorizontalDivider()
 
             Row {
-                // Basic customer details pane
+                // --------------------------------- First Pane: Basic details -----------------------------------
                 Surface(
                     modifier = Modifier
                         .padding(8.dp)
@@ -112,189 +119,124 @@ fun CustomerInfoPane(
 
                         HorizontalDivider()
 
-                        AddressBlock(selectedCustomerData.info)
+                        // ----------- Date section ---------------
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            // Label
+                            Text(
+                                text = "Customer Since",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = labelSize
+                            )
 
-                        ContactBlock(selectedCustomerData.info)
+                            Spacer(Modifier.padding(4.dp))
 
-                        NotesBlock(selectedCustomerData)
+                            // Check if we have a sensible date to display, then show it
+                            if (selectedCustomerData.info.time != Long.MAX_VALUE) {
+                                Text(
+                                    modifier = Modifier,
+                                    text = "${time.month}/${time.day}/${time.year}",
+                                    fontSize = textSize
+                                )
+                            }
+                        }
+
+                        // ----------- Address ---------------
+                        Column(
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Label
+                            Text(
+                                modifier = Modifier
+                                    .padding(2.dp),
+                                text = "Address",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = labelSize
+                            )
+
+                            Column(
+                                verticalArrangement = Arrangement.SpaceAround,
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                // Street
+                                Text(
+                                    modifier = Modifier,
+                                    text = selectedCustomerData.info.address.street,
+                                    fontSize = textSize
+                                )
+
+                                // City and state
+                                Text(
+                                    modifier = Modifier,
+                                    text = selectedCustomerData.info.address.city + " " + selectedCustomerData.info.address.state,
+                                    fontSize = textSize
+                                )
+
+                                // Zip
+                                Text(
+                                    modifier = Modifier,
+                                    text = selectedCustomerData.info.address.zip,
+                                    fontSize = textSize
+                                )
+                            }
+                        }
+
+                        // ------------ Contacts section ---------------
+                        ContactsBlock(
+                            customerInfo = selectedCustomerData.info,
+                            labelSize = labelSize,
+                            textSize = textSize,
+                            iconSize = iconSize
+                        )
+
+                        // ------------ Notes section ---------------
+                        Column(
+                            horizontalAlignment = Alignment.Start,
+                            verticalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            // Label
+                            Text(
+                                modifier = Modifier
+                                    .padding(2.dp),
+                                text = "Notes",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = labelSize
+                            )
+
+                            Spacer(Modifier.padding(2.dp))
+
+                            selectedCustomerData.notes.forEach { note ->
+                                // TODO: Add date and time to this
+                                Column {
+                                    // Author
+                                    Text(
+                                        modifier = Modifier,
+                                        text = note.author + ": ",
+                                        fontSize = textSize,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+
+                                    // Text
+                                    Text(
+                                        modifier = Modifier,
+                                        text = note.text,
+                                        fontSize = textSize
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
 
-                // Ticket List
+                // --------------------------------- Second Pane: Ticket List -----------------------------------
                 SmallTicketList(
                     modifier = Modifier.fillMaxHeight(),
                     tickets = tickets,
                     isDarkMode = isDarkMode,
-                    onClick = { ticketId ->
-                        // TODO: Move to ticket details screen?
-                    }
-                )
-            }
-        }
-    }
-}
-
-// Address information block
-@Composable
-private fun AddressBlock(data: CustomerInfo) {
-    val labelFont = 12.sp
-    val textFont = 16.sp
-
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Label
-        Text(
-            modifier = Modifier
-                .padding(2.dp),
-            text = "Address",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = labelFont
-        )
-
-        Column(
-            verticalArrangement = Arrangement.SpaceAround,
-            horizontalAlignment = Alignment.Start
-        ) {
-            // Street
-            Text(
-                modifier = Modifier,
-                text = data.address.street,
-                fontSize = textFont
-            )
-
-            // City and state
-            Text(
-                modifier = Modifier,
-                text = data.address.city + " " + data.address.state,
-                fontSize = textFont
-            )
-
-            // Zip
-            Text(
-                modifier = Modifier,
-                text = data.address.zip,
-                fontSize = textFont
-            )
-        }
-    }
-}
-
-// Contact intimation block
-@Composable
-fun ContactBlock(
-    data: CustomerInfo,
-    labelFont: TextUnit = 12.sp,
-    textFont: TextUnit = 16.sp,
-    iconSize: Dp = 18.dp,
-) {
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Label
-        Text(
-            modifier = Modifier
-                .padding(2.dp),
-            text = "Contact",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = labelFont
-        )
-
-        Column(
-            verticalArrangement = Arrangement.SpaceAround,
-            horizontalAlignment = Alignment.Start
-        ) {
-            // Email section
-            if (data.contactInfo.email.isNotEmpty()) {
-                data.contactInfo.email.forEach { mail ->
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(iconSize),
-                            painter = painterResource(Res.drawable.mail),
-                            contentDescription = "Email"
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Text(
-                            modifier = Modifier,
-                            text = mail,
-                            fontSize = textFont
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.padding(2.dp))
-
-            // Phone number section
-            data.contactInfo.phone.forEach { item ->
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                         modifier = Modifier
-                             .size(iconSize),
-                        painter = painterResource(Res.drawable.phone),
-                        contentDescription = "Phone Number"
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    Text(
-                        modifier = Modifier,
-                        text = item,
-                        fontSize = textFont
-                    )
-                }
-            }
-        }
-    }
-}
-
-// Notes list
-@Composable
-private fun NotesBlock(data: CustomerData) {
-    val labelFont = 12.sp
-    val textFont = 16.sp
-
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Label
-        Text(
-            modifier = Modifier
-                .padding(2.dp),
-            text = "Notes",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = labelFont
-        )
-
-        Spacer(Modifier.padding(2.dp))
-
-        data.notes.forEach { note ->
-            // TODO: Add date and time to this
-            Column {
-                // Author
-                Text(
-                    modifier = Modifier,
-                    text = note.author + ": ",
-                    fontSize = textFont,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                // Text
-                Text(
-                    modifier = Modifier,
-                    text = note.text,
-                    fontSize = textFont
+                    onClick = { ticketId -> onTicketClick(ticketId) }
                 )
             }
         }

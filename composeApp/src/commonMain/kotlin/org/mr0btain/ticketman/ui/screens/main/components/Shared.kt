@@ -1,25 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.InputChipDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,20 +13,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.Note
-import org.mr0btain.ticketman.components.data.components.TicketInfo
-import org.mr0btain.ticketman.components.data.components.TicketPriority
-import org.mr0btain.ticketman.components.data.components.TicketPriorityType
-import org.mr0btain.ticketman.components.data.components.TicketStatus
-import org.mr0btain.ticketman.components.data.components.TicketStatusType
+import org.mr0btain.ticketman.components.data.components.*
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.tag
-import ticketman.composeapp.generated.resources.x
+import ticketman.composeapp.generated.resources.*
 
 // This holds things used between both panes
 
@@ -359,6 +340,84 @@ fun SmallTicketList(
                             }
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+// ----------------------------- Contacts for customer ----------------------------------
+@Composable
+fun ContactsBlock(
+    customerInfo: CustomerInfo,
+    labelSize: TextUnit = 12.sp,
+    textSize: TextUnit = 16.sp,
+    iconSize: Dp = 18.dp
+) {
+    // ----------- Contact info: Email/Phone ---------------
+    Column(
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Label
+        Text(
+            modifier = Modifier
+                .padding(2.dp),
+            text = "Contact",
+            fontWeight = FontWeight.SemiBold,
+            fontSize = labelSize
+        )
+
+        Column(
+            verticalArrangement = Arrangement.SpaceAround,
+            horizontalAlignment = Alignment.Start
+        ) {
+            // Email section
+            if (customerInfo.contactInfo.email.isNotEmpty()) {
+                customerInfo.contactInfo.email.forEach { mail ->
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            modifier = Modifier.size(iconSize),
+                            painter = painterResource(Res.drawable.mail),
+                            contentDescription = "Email"
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        Text(
+                            modifier = Modifier,
+                            text = mail,
+                            fontSize = textSize
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.padding(2.dp))
+
+            // Phone number section
+            customerInfo.contactInfo.phone.forEach { item ->
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        modifier = Modifier
+                            .size(iconSize),
+                        painter = painterResource(Res.drawable.phone),
+                        contentDescription = "Phone Number"
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    Text(
+                        modifier = Modifier,
+                        text = item,
+                        fontSize = textSize
+                    )
                 }
             }
         }

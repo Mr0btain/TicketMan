@@ -4,8 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.State
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -81,7 +79,7 @@ fun ConfirmDeleteDialog(
                             )
                         }
 
-                        MainItemType.USER -> {
+                        MainItemType.EMPLOYEE -> {
                             Text(
                                 text = "From this User?",
                                 fontSize = fontSize

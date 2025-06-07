@@ -21,6 +21,10 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import org.mr0btain.ticketman.ui.theme.AppTheme
 
 // TODO: Work on UI for mobile size screens
+// TODO: Make option to import database data from file?
+// TODO: Add remote database stuff
+// TODO: Administration screen
+// TODO: Inventory screen
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable

@@ -1,17 +1,12 @@
 package org.mr0btain.ticketman.components.data.database
 
-import androidx.compose.material3.SnackbarHostState
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.core.count
-import org.jetbrains.exposed.v1.core.locate
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.Tasks
-import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.components.*
 import org.mr0btain.ticketman.components.data.database.tables.CustomerDataTable
 import org.mr0btain.ticketman.components.data.database.tables.EmployeeTable

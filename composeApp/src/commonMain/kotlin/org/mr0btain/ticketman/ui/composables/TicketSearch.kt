@@ -1,26 +1,13 @@
 package org.mr0btain.ticketman.ui.composables
 
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.TicketInfo
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.plus
-import ticketman.composeapp.generated.resources.search
 
 /**
  * SearchBox for searching tickets. Will return an id or a name and a true if they want to add new if it doesn't exist
@@ -44,7 +31,6 @@ fun TicketSearch(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val filteredList = remember(input) { items.filter { it.contains(input) } }
-    val focusManager = LocalFocusManager.current
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -91,9 +77,6 @@ fun TicketSearch(
                     onClick = {
                         // minimize the drop-down
                         expanded = false
-
-                        // Clear focus
-                        focusManager.clearFocus()
 
                         // Call on click
                         onClick(option.toInt())

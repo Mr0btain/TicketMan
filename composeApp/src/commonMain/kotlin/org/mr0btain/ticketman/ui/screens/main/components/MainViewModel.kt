@@ -7,21 +7,22 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.openFilePicker
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.components.data.components.*
+import org.mr0btain.ticketman.components.data.components.AccessLevel
+import org.mr0btain.ticketman.components.data.components.CustomerData
+import org.mr0btain.ticketman.components.data.components.Employee
+import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
-import org.mr0btain.ticketman.components.error.safeCall
 import org.mr0btain.ticketman.components.logging.Logger
 import org.mr0btain.ticketman.getPlatform
 
 // TODO: Setup error handling in here
 
 /**
-Main View model for the project.
-Used to store data that needs to persist for the lifetime of the app and be used anywhere
+* Main View model for the project.
+* Used to store data that needs to persist for the lifetime of the app
  */
 
 class MainViewModel(

@@ -6,8 +6,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
@@ -29,7 +27,6 @@ import org.mr0btain.ticketman.components.data.components.Employee
 fun EmployeeSearch(
     modifier: Modifier = Modifier,
     items: List<Employee>,
-    focusManager: FocusManager = LocalFocusManager.current,
     input: String,
     onInputChange: (String) -> Unit,
     onClick: (Int) -> Unit,
@@ -87,9 +84,6 @@ fun EmployeeSearch(
                     onClick = {
                         // minimize the drop-down
                         expanded = false
-
-                        // Clear focus
-                        focusManager.clearFocus()
 
                         // Call on click
                         onClick(item.identifier)

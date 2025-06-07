@@ -6,7 +6,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
@@ -28,8 +27,7 @@ fun CustomerSearch(
     items: List<CustomerInfo>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Int) -> Unit,
-    focusManager: FocusManager
+    onClick: (Int) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -85,9 +83,6 @@ fun CustomerSearch(
                     onClick = {
                         // minimize the drop-down
                         expanded = false
-
-                        // Clear focus
-                        focusManager.clearFocus()
 
                         // Call on click
                         onClick(item.identifier)

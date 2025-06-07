@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -9,20 +8,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CoroutineScope
-import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.ui.composables.TicketSearch
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.chevron_down
-import ticketman.composeapp.generated.resources.chevron_up
 
 // TODO: Add ability to click column and sort by that value
 // TODO: Should really offload some of the calculations on the lists to before we call this screen?
@@ -44,7 +36,6 @@ fun TicketPanel(
     onSelectedTicketChange: (Int) -> Unit,
     onDeleteTicket: (Int) -> Unit,
     scrollOnRight: Boolean,
-    focusManager: FocusManager = LocalFocusManager.current,
     ticketListState: LazyListState = rememberLazyListState()
 ) {
     // Sorted tickets dependant upon which tab were on
@@ -114,13 +105,7 @@ fun TicketPanel(
                         // My Tickets
                         Tab(
                             selected = selectedPanel == 0,
-                            onClick = {
-                                // CLear focus if search bar has it
-                                focusManager.clearFocus()
-
-                                // Call update panel
-                                onSelectedPanelChange(0)
-                                      },
+                            onClick = { onSelectedPanelChange(0) },
                             modifier = Modifier.wrapContentWidth(),
                             text = {
                                 Text(
@@ -135,12 +120,7 @@ fun TicketPanel(
                         // All Tickets
                         Tab(
                             selected = selectedPanel == 1,
-                            onClick = {
-                                // Clear focus if search bar has it
-                                focusManager.clearFocus()
-
-                                onSelectedPanelChange(1)
-                                      },
+                            onClick = { onSelectedPanelChange(1) },
                             modifier = Modifier.wrapContentWidth(),
                             text = {
                                 Text(
@@ -165,9 +145,6 @@ fun TicketPanel(
                     // Delete Ticket Button
                     Button(
                         onClick = {
-                            // Clear focus in case search bar isn't closed
-                            focusManager.clearFocus()
-
                             // Trigger delete ticket dialog/ confirm
                             onDeleteTicket(selectedTicketId)
                         },
@@ -182,9 +159,6 @@ fun TicketPanel(
                     // Add Ticket Button
                     Button(
                         onClick = {
-                            // Clear focus in case search bar isn't closed
-                            focusManager.clearFocus()
-
                             // Trigger new ticket dialog
                             onAddNewTicket()
                         },
@@ -209,8 +183,6 @@ fun TicketPanel(
                         scrollOnRight = scrollOnRight,
                         ticketInfo = sortedTickets,
                         onClick = { ticket ->
-                            focusManager.clearFocus()
-
                             // Set is update from click
                             isSelectedUpdateFromClick = true
 
@@ -227,8 +199,6 @@ fun TicketPanel(
                         scrollOnRight = scrollOnRight,
                         ticketInfo = sortedTickets,
                         onClick = { ticket ->
-                            focusManager.clearFocus()
-
                             // Update from click
                             isSelectedUpdateFromClick = true
 
@@ -248,9 +218,6 @@ fun TicketPanel(
                     isDarkMode = isDarkMode,
                     ticketInfo = selectedTicket,
                     onEditClick = {
-                        // Clear focus if search bar has it
-                        focusManager.clearFocus()
-
                         // Call edit ticket
                         onEditTicket()
                     }

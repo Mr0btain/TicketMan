@@ -7,11 +7,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,11 +18,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.components.TicketInfo
-import org.mr0btain.ticketman.components.data.components.TicketPriority
-import org.mr0btain.ticketman.components.data.components.TicketStatus
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
-import org.mr0btain.ticketman.ui.theme.extendedDark
-import org.mr0btain.ticketman.ui.theme.extendedLight
 
 // TODO: Add time or date to these
 

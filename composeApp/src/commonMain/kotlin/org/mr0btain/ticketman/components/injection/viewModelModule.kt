@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.components.injection
 
 import org.koin.core.module.dsl.viewModel
-import org.koin.core.module.dsl.viewModelOf
 import org.koin.dsl.module
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel

@@ -7,8 +7,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusManager
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -19,8 +17,8 @@ import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.EmployeeSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
-import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 
@@ -34,7 +32,6 @@ fun TicketDialog(
     onAddNewCustomer: (PersonName) -> Unit,
     onDismiss: (TicketInfo?, DialogDismissReason) -> Unit,
     seedData: TicketInfo,
-    focusManager: FocusManager = LocalFocusManager.current,
     isDarkMode: Boolean
 ) {
     // seed data
@@ -172,8 +169,7 @@ fun TicketDialog(
 
                                 // Set customer id
                                 customerId = item
-                                      },
-                            focusManager = focusManager
+                                      }
                         )
 
                         Spacer(Modifier.padding(8.dp))
@@ -189,7 +185,6 @@ fun TicketDialog(
 
                         EmployeeSearch(
                             items = employees,
-                            focusManager = focusManager,
                             input = employeeSearchBarInput,
                             onInputChange = { employeeSearchBarInput = it },
                             onClick = { item ->
