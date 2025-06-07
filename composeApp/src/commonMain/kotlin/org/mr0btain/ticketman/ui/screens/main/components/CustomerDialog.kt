@@ -467,7 +467,8 @@ fun CustomerDialog(
                                             state.lowercase().replaceFirstChar { it.uppercase() },
                                             zip
                                         ),
-                                        contactInfo = ContactInfo(email, phone)
+                                        contactInfo = ContactInfo(email, phone),
+                                        time = seedData.info.time
                                     ),
                                     tickets = tickets,
                                     notes = notes

@@ -28,9 +28,9 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel
 ) {
-    val darkMode = viewModel.isDarkMode.collectAsState()
-    val scrollBarOnRight = viewModel.scrollBarOnRight.collectAsState()
-    val scrollBarOnTop = viewModel.scrollBarOnTop.collectAsState()
+    val darkMode = viewModel.darkMode.collectAsState(false)
+    val scrollBarOnRight = viewModel.scrollBarOnRight.collectAsState(true)
+    val scrollBarOnTop = viewModel.scrollBarOnTop.collectAsState(false)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -60,22 +60,11 @@ fun SettingsScreen(
                         name = "Server Address:",
                         icon = painterResource(Res.drawable.server),
                         iconDesc = "Description",
-                        state = viewModel.serverAddress.collectAsState(),
-                        onSave = { finalText -> viewModel.saveServerAddress(finalText) },
+                        state = viewModel.serverAddress.collectAsState(""),
+                        onSave = { address -> viewModel.saveServerAddress(address) },
                         inputFilter = { text -> text },
                         onCheck = { text -> viewModel.checkWebAddress(text) },
                         keyboardType = KeyboardType.Text
-                    )
-
-                    SettingsTextItem(
-                        name = "Number Item",
-                        icon = painterResource(Res.drawable.hash),
-                        iconDesc = "Description",
-                        state = viewModel.numberPreference.collectAsState(),
-                        onSave = { finalText -> viewModel.saveNumber(finalText) },
-                        inputFilter = { text -> viewModel.filterNumbers(text) },
-                        onCheck = { text -> viewModel.checkNumber(text) },
-                        keyboardType = KeyboardType.Number
                     )
                 }
 

@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui.screens.main.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -17,7 +18,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 
 // TODO: Add time or date to these
@@ -28,9 +31,9 @@ fun TicketListPane(
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf(),
     selectedId: Int,
-    scrollOnRight: Boolean,
     onClick: (Int) -> Unit,
-    state: LazyListState = rememberLazyListState()
+    state: LazyListState = rememberLazyListState(),
+    coroutineScope: CoroutineScope
 ) {
     // Column widths
     val numberColumnWidth = 100.dp
@@ -88,27 +91,54 @@ fun TicketListPane(
 
             HorizontalDivider(modifier = Modifier.width(750.dp))
 
-            LazyVerticalScrollBar(
-                state = state
-            ) {
-                itemsIndexed(ticketInfo) { index, item ->
-                    TicketTableItem(
-                        color = if (!isDarkMode) {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                        } else {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                        },
-                        selected = selectedId == item.identifier,
-                        ticketInfo = item,
-                        numberWidth = numberColumnWidth,
-                        priorityWidth = priorityColumnWidth,
-                        noteWidth = noteColumnWidth,
-                        statusWidth = statusColumnWidth,
-                        isDarkMode = isDarkMode,
-                        onClick = { onClick(item.identifier) }
-                    )
+            if (getPlatform().name.contains("Java")) {
+                LazyVerticalScrollBar(
+                    state = state,
+                    scope = coroutineScope
+                ) {
+                    itemsIndexed(ticketInfo) { index, item ->
+                        TicketTableItem(
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            selected = selectedId == item.identifier,
+                            ticketInfo = item,
+                            numberWidth = numberColumnWidth,
+                            priorityWidth = priorityColumnWidth,
+                            noteWidth = noteColumnWidth,
+                            statusWidth = statusColumnWidth,
+                            isDarkMode = isDarkMode,
+                            onClick = { onClick(item.identifier) }
+                        )
 
-                    Spacer(Modifier.padding(2.dp))
+                        Spacer(Modifier.padding(2.dp))
+                    }
+                }
+            } else {
+                LazyColumn(
+                    state = state
+                ) {
+                    itemsIndexed(ticketInfo) { index, item ->
+                        TicketTableItem(
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            selected = selectedId == item.identifier,
+                            ticketInfo = item,
+                            numberWidth = numberColumnWidth,
+                            priorityWidth = priorityColumnWidth,
+                            noteWidth = noteColumnWidth,
+                            statusWidth = statusColumnWidth,
+                            isDarkMode = isDarkMode,
+                            onClick = { onClick(item.identifier) }
+                        )
+
+                        Spacer(Modifier.padding(2.dp))
+                    }
                 }
             }
         }

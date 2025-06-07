@@ -22,6 +22,9 @@ actual class FileManager actual constructor() {
         val file = PlatformFile(projectDir, "settings.sts")
         var settingFile = UserSettings()
 
+        println("Getting settings")
+        println(file.androidFile.toString())
+
         // Check if the file exists then try and read it
         if (file.exists()) {
             scope.launch {
@@ -34,6 +37,9 @@ actual class FileManager actual constructor() {
 
     actual fun saveSettings(settings: UserSettings, scope: CoroutineScope) {
         val file = PlatformFile(projectDir, "settings.sts")
+
+        println("Saving settings")
+        println(file.androidFile.toString())
 
         scope.launch {
             if (projectDir.exists()) {

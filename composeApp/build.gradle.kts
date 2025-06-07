@@ -65,7 +65,6 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
-            //implementation (libs.android.sqldelight.driver)
         }
 
         commonMain.dependencies {
@@ -94,6 +93,10 @@ kotlin {
             implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs)
             implementation(libs.filekit.coil)
+
+            // Datastore for preferences
+            implementation(libs.datastore.preferences)
+            implementation(libs.datastore)
 
             // Serialization
             implementation(libs.kotlinx.serialization.json)
@@ -161,6 +164,8 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.mr0btain.ticketman"
             packageVersion = "1.0.0"
+            modules("jdk.unsupported")
+            modules("jdk.unsupported.desktop")
         }
     }
 }

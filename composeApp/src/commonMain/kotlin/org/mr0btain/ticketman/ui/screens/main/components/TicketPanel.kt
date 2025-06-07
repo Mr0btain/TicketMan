@@ -11,6 +11,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.CustomerData
 import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.TicketInfo
@@ -36,7 +37,8 @@ fun TicketPanel(
     onSelectedTicketChange: (Int) -> Unit,
     onDeleteTicket: (Int) -> Unit,
     scrollOnRight: Boolean,
-    ticketListState: LazyListState = rememberLazyListState()
+    coroutineScope: CoroutineScope,
+    ticketListState: LazyListState
 ) {
     // Sorted tickets dependant upon which tab were on
     val sortedTickets = remember(selectedPanel, ticketList, currentEmployee) {
@@ -175,40 +177,21 @@ fun TicketPanel(
 
             // --------------------------------- List and Info Panes ---------------------------------------------------
             Row {
-                // Check if were on my tickets which is 0 or all tickets
-                if (selectedPanel == 0) {
-                    // My Tickets tab
-                    TicketListPane(
-                        isDarkMode = isDarkMode,
-                        scrollOnRight = scrollOnRight,
-                        ticketInfo = sortedTickets,
-                        onClick = { ticket ->
-                            // Set is update from click
-                            isSelectedUpdateFromClick = true
+                // All tickets tab.
+                TicketListPane(
+                    isDarkMode = isDarkMode,
+                    ticketInfo = sortedTickets,
+                    onClick = { ticket ->
+                        // Update from click
+                        isSelectedUpdateFromClick = true
 
-                            // Change selected ticket
-                            onSelectedTicketChange(ticket)
-                        },
-                        selectedId = selectedTicket.identifier,
-                        state = ticketListState
-                    )
-                } else {
-                    // All tickets tab.
-                    TicketListPane(
-                        isDarkMode = isDarkMode,
-                        scrollOnRight = scrollOnRight,
-                        ticketInfo = sortedTickets,
-                        onClick = { ticket ->
-                            // Update from click
-                            isSelectedUpdateFromClick = true
-
-                            // Update selected ticket
-                            onSelectedTicketChange(ticket)
-                        },
-                        selectedId = selectedTicket.identifier,
-                        state = ticketListState
-                    )
-                }
+                        // Update selected ticket
+                        onSelectedTicketChange(ticket)
+                    },
+                    selectedId = selectedTicket.identifier,
+                    state = ticketListState,
+                    coroutineScope = coroutineScope
+                )
 
                 // This pane shows the info for selected ticket
                 TicketInfoPane(

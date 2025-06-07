@@ -316,7 +316,8 @@ fun TicketDialog(
                                     device = Device(deviceManufacturer, deviceModel),
                                     status = status,
                                     priority = priority,
-                                    updates = updates
+                                    updates = updates,
+                                    time = seedData.time
                                 ),
                                 DialogDismissReason.CONTINUE
                             )

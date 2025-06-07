@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui.screens.main.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -19,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.CustomerInfo
+import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 
 @Composable
@@ -27,8 +29,8 @@ fun CustomerListPane(
     customerInfo: List<CustomerInfo>,
     onClick: (Int) -> Unit,
     selectedCustomerId: Int,
-    lazyListState: LazyListState = rememberLazyListState(),
-    scope: CoroutineScope = rememberCoroutineScope(),
+    lazyListState: LazyListState,
+    scope: CoroutineScope,
     scrollBarRight: Boolean,
     isDarkMode: Boolean
 ) {
@@ -82,26 +84,50 @@ fun CustomerListPane(
 
             HorizontalDivider(modifier = Modifier.width(700.dp))
 
-            LazyVerticalScrollBar(
-                state = lazyListState,
-                scope = scope
-            ) {
-                itemsIndexed(customerInfo) { index, info ->
-                    CustomerTableItem(
-                        customerInfo = info,
-                        selected = info.identifier == selectedCustomerId,
-                        color = if (!isDarkMode) {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                        } else {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                        },
-                        nameWidth = nameColumnWidth,
-                        addressWidth = addressColumnWidth,
-                        contactWidth = contactColumnWidth,
-                        onClick = onClick
-                    )
+            if (getPlatform().name.contains("Java")) {
+                LazyVerticalScrollBar(
+                    state = lazyListState,
+                    scope = scope
+                ) {
+                    itemsIndexed(customerInfo) { index, info ->
+                        CustomerTableItem(
+                            customerInfo = info,
+                            selected = info.identifier == selectedCustomerId,
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            nameWidth = nameColumnWidth,
+                            addressWidth = addressColumnWidth,
+                            contactWidth = contactColumnWidth,
+                            onClick = onClick
+                        )
 
-                    Spacer(Modifier.padding(2.dp))
+                        Spacer(Modifier.padding(2.dp))
+                    }
+                }
+            } else {
+                LazyColumn(
+                    state = lazyListState
+                ) {
+                    itemsIndexed(customerInfo) { index, info ->
+                        CustomerTableItem(
+                            customerInfo = info,
+                            selected = info.identifier == selectedCustomerId,
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            nameWidth = nameColumnWidth,
+                            addressWidth = addressColumnWidth,
+                            contactWidth = contactColumnWidth,
+                            onClick = onClick
+                        )
+
+                        Spacer(Modifier.padding(2.dp))
+                    }
                 }
             }
         }

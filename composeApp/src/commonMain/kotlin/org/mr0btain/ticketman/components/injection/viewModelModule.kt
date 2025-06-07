@@ -12,7 +12,7 @@ val viewModelModule = module {
 
     viewModel {
         SettingsViewModel(
-            fileManager = get()
+            dataStore = get()
         )
     }
 

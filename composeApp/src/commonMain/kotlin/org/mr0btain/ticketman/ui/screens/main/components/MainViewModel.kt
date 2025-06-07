@@ -15,7 +15,6 @@ import org.mr0btain.ticketman.components.data.components.Employee
 import org.mr0btain.ticketman.components.data.components.TicketInfo
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
-import org.mr0btain.ticketman.components.logging.Logger
 import org.mr0btain.ticketman.getPlatform
 
 // TODO: Setup error handling in here
@@ -186,11 +185,6 @@ class MainViewModel(
 
         if (result == null) viewModelScope.launch {
             snackBarHost.showSnackbar("Could not find Customer!", withDismissAction = true)
-
-            Logger.e(
-                message = "Could not find customer in view model list!",
-                caller = "MainViewModel:getCustomerData"
-            )
         }
 
         return result ?: CustomerData()
@@ -238,7 +232,7 @@ class MainViewModel(
     }
 
     fun generateMockDbData() {
-        val (customerdata, ticketData, employeeData) = generateMockData(600)
+        val (customerdata, ticketData, employeeData) = generateMockData(20)
 
         database.addAllTicketData(ticketData)
 

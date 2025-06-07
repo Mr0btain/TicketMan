@@ -8,6 +8,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -58,23 +59,23 @@ fun MainScreen(
     val selectedTicket = viewModel.selectedTicketId.collectAsState()
 
     // For customer dialog
-    var customerSeedData by rememberSaveable { mutableStateOf(CustomerData()) }
-    var showCustomerDialog by rememberSaveable { mutableStateOf(false) }
+    var customerSeedData by remember { mutableStateOf(CustomerData()) }
+    var showCustomerDialog by remember { mutableStateOf(false) }
 
     // For ticket dialog
-    var showTicketDialog by rememberSaveable { mutableStateOf(false) }
-    var ticketSeedData by rememberSaveable { mutableStateOf(TicketInfo()) }
+    var showTicketDialog by remember { mutableStateOf(false) }
+    var ticketSeedData by remember { mutableStateOf(TicketInfo()) }
 
     // TODO: Maybe elevate these states to viewmodel so its saved between screen changes? will have to see on mobile when screen rotates
     // For ticket panel state
     val ticketLazyListState = rememberLazyListState()
-    var selectedTicketPanel by rememberSaveable { mutableIntStateOf(0) }
+    var selectedTicketPanel by remember { mutableIntStateOf(0) }
 
     // For confirm delete dialog
-    var showConfirmDeleteDialog by rememberSaveable { mutableStateOf(false) }
-    var itemToDelete by rememberSaveable { mutableIntStateOf(Int.MAX_VALUE) }
-    var itemToDeleteType by rememberSaveable { mutableStateOf(MainItemType.NONE) }
-    var confirmDeleteDialogText by rememberSaveable { mutableStateOf("") }
+    var showConfirmDeleteDialog by remember { mutableStateOf(false) }
+    var itemToDelete by remember { mutableIntStateOf(Int.MAX_VALUE) }
+    var itemToDeleteType by remember { mutableStateOf(MainItemType.NONE) }
+    var confirmDeleteDialogText by remember { mutableStateOf("") }
 
     // For customer panel state
     val customerLazyListState = rememberLazyListState()
@@ -326,7 +327,8 @@ fun MainScreen(
                             showConfirmDeleteDialog = true
                         },
                         selectedPanel = selectedTicketPanel,
-                        ticketListState = ticketLazyListState
+                        ticketListState = ticketLazyListState,
+                        coroutineScope = coroutineScope
                     )
                 }
             }

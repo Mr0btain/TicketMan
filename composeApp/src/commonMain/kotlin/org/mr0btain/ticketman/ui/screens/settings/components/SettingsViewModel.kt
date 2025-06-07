@@ -1,120 +1,99 @@
 package org.mr0btain.ticketman.ui.screens.settings.components
 
+import androidx.compose.runtime.collectAsState
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.components.data.components.UserSettings
-import org.mr0btain.ticketman.components.data.components.UserSettingsDataStatus
+import org.mr0btain.ticketman.components.data.components.CustomerData
 
 class SettingsViewModel(
-    private val fileManager: FileManager
+    private val dataStore: DataStore<Preferences>
 ): ViewModel() {
 
-    // For updating and getting settings
-    private val _userSettingsDataState : MutableStateFlow<UserSettingsDataStatus> = MutableStateFlow(UserSettingsDataStatus.LOADING)
-    val userSettingsState = _userSettingsDataState.asStateFlow()
+    private companion object {
+        const val TAG = "SettingsViewModel"
 
-    // TODO: Setup error saving and such
-    fun getUserSettings() {
-        val settings = fileManager.getSettings(viewModelScope)
-
-        _isDarkMode.value = settings.darkMode
-        _serverAddress.value = settings.serverAddress
-        _scrollBarOnTop.value = settings.horizontalScrollTop
-        _scrollBarOnRight.value = settings.verticalScrollRight
+        val DARK_MODE = booleanPreferencesKey("appInDarkMode")
+        val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
+        val SCROLL_BAR_ON_RIGHT = booleanPreferencesKey("scrollBarOnRight")
+        val SCROLL_BAR_ON_TOP = booleanPreferencesKey("scrollBarOnTop")
     }
 
-    fun updateUserSettings() {
-        fileManager.saveSettings(
-            UserSettings(
-                darkMode = _isDarkMode.value,
-                serverAddress = _serverAddress.value,
-                verticalScrollRight = _scrollBarOnRight.value,
-                horizontalScrollTop = _scrollBarOnTop.value
-            ),
-            viewModelScope
-        )
-    }
+    private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    var darkMode = _darkMode.asStateFlow()
 
-    // First basic group
-
-    // Second data group
-    // Server address
     private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("")
     var serverAddress = _serverAddress.asStateFlow()
 
-    // Nothing
-    private val _numberPreference: MutableStateFlow<String> = MutableStateFlow("0")
-    var numberPreference = _numberPreference.asStateFlow()
-
-
-    // Third UI group
-
-    // Dark mode
-
-    private val _isDarkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    var isDarkMode = _isDarkMode.asStateFlow()
-
-    // Should we have scroll bars on the right or left
-    private val _scrollBarOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    private val _scrollBarOnRight: MutableStateFlow<Boolean> = MutableStateFlow(false)
     var scrollBarOnRight = _scrollBarOnRight.asStateFlow()
 
-    // Should we have scroll bars on the Top or Bottom
     private val _scrollBarOnTop: MutableStateFlow<Boolean> = MutableStateFlow(false)
     var scrollBarOnTop = _scrollBarOnTop.asStateFlow()
 
-
-
-    private val _isSwitchOn: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    var isSwitchOn = _isSwitchOn.asStateFlow()
-
-    // Functions to change settings
+    // Pulling it all at once this way saves us from a real hard hitch in the ui when we change these
+    fun getSettingsFromPreferences() {
+        viewModelScope.launch {
+            _darkMode.value = dataStore.data.map { preferences -> preferences[DARK_MODE] ?: false }.first()
+            _serverAddress.value = dataStore.data.map { preferences -> preferences[SERVER_ADDRESS] ?: "" }.first()
+            _scrollBarOnRight.value = dataStore.data.map { preferences -> preferences[SCROLL_BAR_ON_RIGHT] ?: true }.first()
+            _scrollBarOnTop.value = dataStore.data.map { preferences -> preferences[SCROLL_BAR_ON_TOP] ?: false }.first()
+        }
+    }
 
     fun toggleDarkMode(){
         // Update the value
-        _isDarkMode.value = !_isDarkMode.value
+        val value = !_darkMode.value
 
-        // Save it
-        updateUserSettings()
+        _darkMode.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[DARK_MODE] = value }
+        }
     }
 
     fun toggleScrollBarOnRight(){
         // Update value
-        _scrollBarOnRight.value = !_scrollBarOnRight.value
+        val value = !_scrollBarOnRight.value
 
-        // Save it
-        updateUserSettings()
+        _scrollBarOnRight.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[SCROLL_BAR_ON_RIGHT] = value }
+        }
     }
 
     fun toggleScrollBarOnTop(){
         // Update value
-        _scrollBarOnTop.value = !_scrollBarOnTop.value
+        val value = !_scrollBarOnTop.value
 
-        // Save it
-        updateUserSettings()
+        _scrollBarOnTop.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[SCROLL_BAR_ON_TOP] = value }
+        }
     }
 
-
-    fun toggleSwitch(){
-        // Update value
-        _isSwitchOn.value = !_isSwitchOn.value
-
-        // Save it
-        updateUserSettings()
-    }
-
-    fun saveServerAddress(finalText: String) {
+    fun saveServerAddress(address: String) {
         // update value
-        _serverAddress.value = finalText
+        _serverAddress.value = address
 
-        // Save it
-        updateUserSettings()
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[SERVER_ADDRESS] = address }
+        }
     }
-
-    // just checking, if it is not empty - but you can check anything
-    fun checkTextInput(text: String) = text.isNotEmpty()
 
     /**
      * Check to see if an address is valid. Will have to setup a ping or something to actually check. for now just check text
@@ -142,18 +121,4 @@ class SettingsViewModel(
         val value = text.toDoubleOrNull() ?: return false
         return value >= 0
     }
-
-    // saving the number / show error if something goes wrong
-    fun saveNumber(text: String) {
-        // Update value
-        _numberPreference.value = text
-
-        // Save it
-        updateUserSettings()
-    }
-
-    companion object {
-        const val TAG = "SettingsViewModel"
-    }
-
 }

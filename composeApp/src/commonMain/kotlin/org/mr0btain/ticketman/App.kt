@@ -52,8 +52,8 @@ fun App() {
         // Pull data from local database
         mainViewModel.updateDataFromDb()
 
-        // Get our stored settings
-        settingsViewModel.getUserSettings()
+        // Pull settings from datastore
+        settingsViewModel.getSettingsFromPreferences()
 
         // Current employee info
         val currentEmployee = mainViewModel.employee.collectAsState()
@@ -63,7 +63,7 @@ fun App() {
         // class state down the tree to avoid it recomposing the entire app when we resize the screen on desktop
 
         AppTheme(
-            darkTheme = settingsViewModel.isDarkMode.collectAsState().value
+            darkTheme = settingsViewModel.darkMode.collectAsState(false).value
         ) {
             println("Platform: ${mainViewModel.platform}")
 
