@@ -26,8 +26,6 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
 
-// TODO: Add time or date to these
-
 @Composable
 fun InventoryListPane(
     isDarkMode: Boolean,
@@ -57,7 +55,7 @@ fun InventoryListPane(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 14.dp, end = 14.dp)
+                .padding(start = 14.dp, end = 12.dp)
         ) {
             Row(
                 modifier = Modifier

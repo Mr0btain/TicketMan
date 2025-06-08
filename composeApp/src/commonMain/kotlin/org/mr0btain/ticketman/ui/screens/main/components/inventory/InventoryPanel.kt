@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.ui.composables.InventorySearch
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,12 +40,12 @@ fun InventoryPanel(
     selectedInventoryItemId: Int,
     onSelectedInventoryItemChange: (Int) -> Unit,
     onAddInventoryItem: () -> Unit,
+    onEditInventoryItem: (Int) -> Unit,
     onDeleteInventoryItem: (Int) -> Unit,
-    scrollOnRight: Boolean,
     coroutineScope: CoroutineScope,
     inventoryListState: LazyListState
 ) {
-    // Selected ticket info
+    // Selected inventory item info
     val selectedInventoryItem = inventoryList.firstOrNull() { it.identifier == selectedInventoryItemId } ?: TicketInfo()
 
     // For search input
@@ -70,32 +71,32 @@ fun InventoryPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Search box
-                TicketSearch(
+                InventorySearch(
                     modifier = Modifier.padding(start = 8.dp),
-                    items = searchItems.map { it.toString() },
+                    items = inventoryList,
                     input = searchInput,
                     onInputChange = { searchInput = it },
                     onClick = {
                         // Set search input in out text box
-                        searchInput = it.toString()
+                        searchInput = "${it.name}: ${it.identifier}"
 
-                        // Call selected ticket change
-                        onSelectedInventoryItemChange(it)
+                        // Call selected item change
+                        onSelectedInventoryItemChange(it.identifier)
                     }
                 )
 
                 Spacer(Modifier.padding(8.dp))
 
-                // Buttons for adding a removing tickets
+                // Buttons for adding a removing items
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Delete Ticket Button
+                    // Delete Item Button
                     Button(
                         onClick = {
-                            // Trigger delete ticket dialog/ confirm
+                            // Trigger delete item dialog/ confirm
                             onDeleteInventoryItem(selectedInventoryItemId)
                         },
                         shape = RoundedCornerShape(8.dp),
@@ -106,15 +107,15 @@ fun InventoryPanel(
 
                     Spacer(Modifier.padding(8.dp))
 
-                    // Add Ticket Button
+                    // Add Item Button
                     Button(
                         onClick = {
-                            // Trigger new ticket dialog
+                            // Trigger new item dialog
                             onAddInventoryItem()
                         },
                         shape = RoundedCornerShape(8.dp)
                     ) {
-                        Text(text = "Add Ticket")
+                        Text(text = "Add Item")
                     }
 
                     Spacer(Modifier.padding(8.dp))
@@ -144,9 +145,7 @@ fun InventoryPanel(
                 InventoryInfoPane(
                     isDarkMode = isDarkMode,
                     inventoryItem = inventoryList.firstOrNull { it.identifier == selectedInventoryItemId } ?: InventoryItem(),
-                    onEditClick = {
-                        // TODO:
-                    }
+                    onEditClick = { onEditInventoryItem(selectedInventoryItemId) }
                 )
             }
         }

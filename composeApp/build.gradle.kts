@@ -112,6 +112,8 @@ kotlin {
             implementation(libs.sqlite.jdbc)
             implementation(libs.h2)
 
+            // compose WebView
+            //implementation(libs.compose.webview)
         }
 
         commonTest.dependencies {

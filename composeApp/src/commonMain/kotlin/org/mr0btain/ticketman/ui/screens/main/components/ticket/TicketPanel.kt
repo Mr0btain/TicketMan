@@ -17,6 +17,8 @@ import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 
 // TODO: Add ability to click column and sort by that value
+// TODO: Add hours worked/ inventory items to a list of expense and charges
+// TODO: Add invoice and ability to export
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,11 +36,10 @@ fun TicketPanel(
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (Int) -> Unit,
     onDeleteTicket: (Int) -> Unit,
-    scrollOnRight: Boolean,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
-    // Sorted tickets dependant upon which tab were on
+    // Sorted tickets by which tab were on
     val sortedTickets = remember(selectedPanel, ticketList, currentEmployee) {
         if (selectedPanel == 0) {
             ticketList.sortedBy { it.identifier }.filter { it.assignedEmployee == currentEmployee.identifier }.reversed()

@@ -86,7 +86,15 @@ fun ConfirmDeleteDialog(
                             )
                         }
 
+                        MainItemType.INVENTORY -> {
+                            Text(
+                                text = "From this Item?",
+                                fontSize = fontSize
+                            )
+                        }
+
                         MainItemType.NONE -> {}
+
                     }
                 }
 

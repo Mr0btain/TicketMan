@@ -4,5 +4,6 @@ enum class MainItemType {
     CUSTOMER,
     TICKET,
     EMPLOYEE,
+    INVENTORY,
     NONE
 }

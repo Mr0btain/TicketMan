@@ -4,7 +4,7 @@ android-compileSdk = "35"
 android-minSdk = "24"
 android-targetSdk = "35"
 androidx-activity = "1.10.1"
-androidx-appcompat = "1.7.0"
+androidx-appcompat = "1.7.1"
 androidx-constraintlayout = "2.2.1"
 androidx-core = "1.16.0"
 androidx-espresso = "3.6.1"
@@ -13,6 +13,7 @@ androidx-testExt = "1.2.1"
 composeHotReload = "1.0.0-alpha10"
 composeMultiplatform = "1.8.1"
 compose-navigation = "2.7.0-alpha07"
+compose-webview = "2.0.0"
 h2 = "2.2.224"
 junit = "4.13.2"
 kotlin = "2.1.21"
@@ -57,8 +58,6 @@ ktor-serverTestHost = { module = "io.ktor:ktor-server-test-host-jvm", version.re
 compose-navigation = { group = "compose", module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "compose-navigation" }
 
 # Koin dependencies
-koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
-koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-composeVM = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
@@ -100,7 +99,8 @@ exposed-mariadb = { module = "org.mariadb.jdbc:mariadb-java-client", version.ref
 exposed-pgjbnc = { module = "com.impossibl.pgjdbc-ng:pgjdbc-ng", version.ref = "exposedpgjbnc" }
 exposed-postgresql = { module = "org.postgresql:postgresql", version.ref = "exposedpostgresql" }
 
-
+# WebView for html and pdf
+compose-webview = { module = "io.github.kevinnzou:compose-webview-multiplatform", version.ref = "compose-webview" }
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
@@ -112,4 +112,3 @@ kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
 serialize = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

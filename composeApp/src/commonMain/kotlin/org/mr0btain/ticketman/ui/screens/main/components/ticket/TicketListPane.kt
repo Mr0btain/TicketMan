@@ -55,7 +55,7 @@ fun TicketListPane(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 14.dp, end = 14.dp)
+                .padding(start = 14.dp, end = 12.dp)
         ) {
             Row(
                 modifier = Modifier

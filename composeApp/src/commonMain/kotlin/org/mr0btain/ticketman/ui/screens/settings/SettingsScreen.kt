@@ -78,26 +78,6 @@ fun SettingsScreen(
                     ) {
                         viewModel.toggleDarkMode()
                     }
-
-                    // Vertical Scroll Bar position switch
-                    SettingsSwitchItem(
-                        name = "Vertical ScrollBars on the right",
-                        icon = if (scrollBarOnRight.value) painterResource(Res.drawable.arrow_right) else painterResource(Res.drawable.arrow_left),
-                        iconDesc = "Should scroll bars be on the right? if not they will be on the left",
-                        state = scrollBarOnRight
-                    ) {
-                        viewModel.toggleScrollBarOnRight()
-                    }
-
-                    // Horizontal Scroll Bar position switch
-                    SettingsSwitchItem(
-                        name = "Horizontal ScrollBars on top",
-                        icon = if (scrollBarOnTop.value) painterResource(Res.drawable.arrow_up) else painterResource(Res.drawable.arrow_down),
-                        iconDesc = "Should scroll bars be on the top? if not they will be on the bottom",
-                        state = scrollBarOnTop
-                    ) {
-                        viewModel.toggleScrollBarOnTop()
-                    }
                 }
             }
         }

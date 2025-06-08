@@ -9,8 +9,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
+import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
 import org.mr0btain.ticketman.components.data.components.employee.Employee
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
@@ -31,7 +31,9 @@ class MainViewModel(
     private val database: SqliteDb,
     val snackBarHost: SnackbarHostState
 ): ViewModel() {
-    private val mainTag = "MainViewModel"
+    private companion object {
+        const val TAG = "MainViewModel"
+    }
     val platform = getPlatform().name
 
     // Selected main tab index
@@ -147,13 +149,13 @@ class MainViewModel(
     }
 
     fun removeInventoryItem(id: Int) {
-        // Check if ticket exists or not
-        if (_ticketDataList.value.firstOrNull { it.identifier == id } != null) {
+        // Check if item exists or not
+        if (_inventoryList.value.firstOrNull { it.identifier == id } != null) {
             // update list
-            _ticketDataList.value = _ticketDataList.value.filter { it.identifier != id }
+            _inventoryList.value = _inventoryList.value.filter { it.identifier != id }
 
             // Update database
-            database.removeTicket(id)
+            database.removeInventoryItem(id)
         } else {
             // TODO: We should trigger a warning or something
         }

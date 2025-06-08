@@ -22,8 +22,6 @@ class SettingsViewModel(
 
         val DARK_MODE = booleanPreferencesKey("appInDarkMode")
         val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
-        val SCROLL_BAR_ON_RIGHT = booleanPreferencesKey("scrollBarOnRight")
-        val SCROLL_BAR_ON_TOP = booleanPreferencesKey("scrollBarOnTop")
     }
 
     private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -43,8 +41,6 @@ class SettingsViewModel(
         viewModelScope.launch {
             _darkMode.value = dataStore.data.map { preferences -> preferences[DARK_MODE] ?: false }.first()
             _serverAddress.value = dataStore.data.map { preferences -> preferences[SERVER_ADDRESS] ?: "" }.first()
-            _scrollBarOnRight.value = dataStore.data.map { preferences -> preferences[SCROLL_BAR_ON_RIGHT] ?: true }.first()
-            _scrollBarOnTop.value = dataStore.data.map { preferences -> preferences[SCROLL_BAR_ON_TOP] ?: false }.first()
         }
     }
 
@@ -56,28 +52,6 @@ class SettingsViewModel(
 
         viewModelScope.launch {
             dataStore.edit { preferences -> preferences[DARK_MODE] = value }
-        }
-    }
-
-    fun toggleScrollBarOnRight(){
-        // Update value
-        val value = !_scrollBarOnRight.value
-
-        _scrollBarOnRight.value = value
-
-        viewModelScope.launch {
-            dataStore.edit { preferences -> preferences[SCROLL_BAR_ON_RIGHT] = value }
-        }
-    }
-
-    fun toggleScrollBarOnTop(){
-        // Update value
-        val value = !_scrollBarOnTop.value
-
-        _scrollBarOnTop.value = value
-
-        viewModelScope.launch {
-            dataStore.edit { preferences -> preferences[SCROLL_BAR_ON_TOP] = value }
         }
     }
 

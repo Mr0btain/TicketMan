@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.shared.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.shared.MainItemType
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
@@ -34,53 +35,56 @@ import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketPanel
  * The main landing screen
  */
 
+// TODO: Inventory dialog
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
     coroutineScope: CoroutineScope,
-    scrollBarTop: Boolean,
-    scrollBarRight: Boolean,
     isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
+    // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
-    val customerData = viewModel.customerDataList.collectAsState()
-    val ticketInfoList = viewModel.ticketDataList.collectAsState()
-    val inventoryList = viewModel.inventoryList.collectAsState()
+    // Employee stuff
     val employeeList = viewModel.employeeList.collectAsState()
     val currentEmployee = viewModel.employee.collectAsState()
 
-    // This is needed for dialog
+    // For customer panel
+    val customerData = viewModel.customerDataList.collectAsState()
     val selectedCustomer = viewModel.selectedCustomerId.collectAsState()
-    val selectedTicket = viewModel.selectedTicketId.collectAsState()
+    val customerLazyListState = rememberLazyListState()
 
     // For customer dialog
     var customerSeedData by remember { mutableStateOf(CustomerData()) }
     var showCustomerDialog by remember { mutableStateOf(false) }
 
+    // For ticket panel
+    val ticketList = viewModel.ticketDataList.collectAsState()
+    val selectedTicket = viewModel.selectedTicketId.collectAsState()
+    val ticketLazyListState = rememberLazyListState()
+    var selectedTicketPanel by remember { mutableIntStateOf(0) }
+
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
     var ticketSeedData by remember { mutableStateOf(TicketInfo()) }
 
-    // TODO: Maybe elevate these states to viewmodel so its saved between screen changes? will have to see on mobile when screen rotates
-    // For ticket panel state
-    val ticketLazyListState = rememberLazyListState()
-    var selectedTicketPanel by remember { mutableIntStateOf(0) }
-
-    // For Inventory panel state
+    // For Inventory panel
+    val inventoryList = viewModel.inventoryList.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
     val selectedInventoryId = viewModel.selectedInventoryId.collectAsState()
+
+    // For inventory dialog
+    var showInventoryDialog by remember { mutableStateOf(false) }
+    var inventorySeedData by remember { mutableStateOf(InventoryItem()) }
 
     // For confirm delete dialog
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
     var itemToDelete by remember { mutableIntStateOf(Int.MAX_VALUE) }
     var itemToDeleteType by remember { mutableStateOf(MainItemType.NONE) }
     var confirmDeleteDialogText by remember { mutableStateOf("") }
-
-    // For customer panel state
-    val customerLazyListState = rememberLazyListState()
 
     // For customer adding or editing
     if (showCustomerDialog) {
@@ -163,6 +167,7 @@ fun MainScreen(
                         MainItemType.CUSTOMER -> { viewModel.removeCustomer(itemToDelete) }
                         MainItemType.TICKET -> { viewModel.removeTicket(itemToDelete) }
                         MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
+                        MainItemType.INVENTORY -> { viewModel.removeInventoryItem(itemToDelete) }
                         MainItemType.NONE -> { /* Do nothing */ }
                     }
                 }
@@ -302,7 +307,7 @@ fun MainScreen(
                             },
                             selectedCustomerId = selectedCustomer.value,
                             customerDataList = customerData.value,
-                            ticketList = ticketInfoList.value,
+                            ticketList = ticketList.value,
                             customerLazyListState = customerLazyListState,
                             coroutineScope = coroutineScope
                         )
@@ -313,11 +318,10 @@ fun MainScreen(
                         TicketPanel(
                             isDarkMode = isDarkMode,
                             selectedTicketId = selectedTicket.value,
-                            ticketList = ticketInfoList.value,
+                            ticketList = ticketList.value,
                             customerList = customerData.value,
                             currentEmployee = currentEmployee.value,
                             employeeList = employeeList.value,
-                            scrollOnRight = scrollBarRight,
                             onAddNewTicket = {
                                 // Set up seed data
                                 ticketSeedData = TicketInfo(
@@ -361,8 +365,18 @@ fun MainScreen(
                             selectedInventoryItemId = selectedInventoryId.value,
                             onSelectedInventoryItemChange = { viewModel.changeSelectedInventoryId(it) },
                             onAddInventoryItem = {  },
-                            onDeleteInventoryItem = {  },
-                            scrollOnRight = scrollBarRight,
+                            onEditInventoryItem = {  },
+                            onDeleteInventoryItem = { id ->
+                                // Get item so we can get the name
+                                val item = inventoryList.value.first { it.identifier == id }
+                                // Set values
+                                itemToDelete = id
+                                itemToDeleteType = MainItemType.INVENTORY
+                                confirmDeleteDialogText = "${item.name}: $id"
+
+                                // Trigger the dialog
+                                showConfirmDeleteDialog = true
+                            },
                             coroutineScope = coroutineScope,
                             inventoryListState = inventoryLazyListState
                         )
