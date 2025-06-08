@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.data
 
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.components.UserSettings
+import org.mr0btain.ticketman.components.data.components.settings.UserSettings
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
 expect class FileManager() {

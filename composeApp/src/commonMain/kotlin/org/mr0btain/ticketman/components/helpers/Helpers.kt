@@ -1,8 +1,8 @@
 package org.mr0btain.ticketman.components.helpers
 
-import org.mr0btain.ticketman.components.data.components.AMPM
-import org.mr0btain.ticketman.components.data.components.Time
-import org.mr0btain.ticketman.components.data.components.parseAmPm
+import org.mr0btain.ticketman.components.data.components.shared.AMPM
+import org.mr0btain.ticketman.components.data.components.shared.Time
+import org.mr0btain.ticketman.components.data.components.shared.parseAmPm
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

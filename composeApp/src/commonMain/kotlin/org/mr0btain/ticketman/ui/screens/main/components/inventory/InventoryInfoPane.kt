@@ -1,0 +1,228 @@
+package org.mr0btain.ticketman.ui.screens.main.components.inventory
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
+import org.mr0btain.ticketman.components.helpers.formatTime
+import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.archive
+import ticketman.composeapp.generated.resources.edit
+import ticketman.composeapp.generated.resources.package_icon
+import ticketman.composeapp.generated.resources.tag
+
+@Composable
+fun InventoryInfoPane(
+    modifier: Modifier = Modifier,
+    isDarkMode: Boolean,
+    inventoryItem: InventoryItem,
+    onEditClick: () -> Unit
+) {
+    val date = formatTime(inventoryItem.time)
+
+    // Main Body
+    Surface(
+        modifier = modifier
+            .padding(8.dp),
+        shape = RoundedCornerShape(16.dp),
+        shadowElevation = 4.dp,
+        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+    ) {
+        Column(
+            modifier = Modifier
+                .padding(2.dp)
+        ) {
+            // --------------------------------- Header -----------------------------------
+            Surface(
+                modifier = Modifier.padding(start = 4.dp, top = 8.dp, end = 4.dp, bottom = 8.dp)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        modifier = Modifier
+                            .size(30.dp),
+                        painter = painterResource(Res.drawable.package_icon),
+                        contentDescription = "Ticket ID"
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    Text(
+                        modifier = Modifier
+                            .padding(4.dp),
+                        text = inventoryItem.name,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onEditClick
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(24.dp),
+                                painter = painterResource(Res.drawable.edit),
+                                contentDescription = "Edit Ticket details"
+                            )
+                        }
+                    }
+                }
+            }
+
+            HorizontalDivider()
+
+            Row {
+                // --------------------------------- First Pane -----------------------------------
+                Surface(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxHeight(),
+                    shape = RoundedCornerShape(10.dp),
+                    shadowElevation = 4.dp,
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    // Basic details
+                    Column(
+                        modifier = Modifier
+                            .width(300.dp)
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        // Header
+                        Text(
+                            text = "Details",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        HorizontalDivider()
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Description
+                        SimpleTextItem(
+                            label = "Description",
+                            text = inventoryItem.description
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Cost
+                        SimpleTextItem(
+                            label = "Cost",
+                            text = inventoryItem.cost
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Price
+                        SimpleTextItem(
+                            label = "Price",
+                            text = inventoryItem.price
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Date created
+                        SimpleTextItem(
+                            label = "Created",
+                            text = if (inventoryItem.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                        )
+                    }
+                }
+
+                // --------------------------------- Second Pane -----------------------------------
+                /*
+                Surface(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    shadowElevation = 4.dp,
+                    color = MaterialTheme.colorScheme.secondaryContainer
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .padding(20.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        Text(
+                            text = "Updates",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        HorizontalDivider()
+
+                        Spacer(Modifier.padding(8.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Status:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            if (ticketInfo.identifier != Int.MAX_VALUE) {
+                                TableStatusItem(
+                                    status = ticketInfo.status,
+                                    darkMode = isDarkMode
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // Priority
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Priority:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            if (ticketInfo.identifier != Int.MAX_VALUE) {
+                                TablePriorityItem(
+                                    priority = ticketInfo.priority,
+                                    darkMode = isDarkMode
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        UpdatesBlock(data = ticketInfo.updates)
+                    }
+                }
+                 */
+            }
+        }
+    }
+}

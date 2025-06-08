@@ -3,10 +3,10 @@ package org.mr0btain.ticketman.components.data.database.tables
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.json.json
-import org.mr0btain.ticketman.components.data.components.AccessLevel
-import org.mr0btain.ticketman.components.data.components.ContactInfo
-import org.mr0btain.ticketman.components.data.components.Notes
-import org.mr0btain.ticketman.components.data.components.TicketList
+import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
+import org.mr0btain.ticketman.components.data.components.customer.ContactInfo
+import org.mr0btain.ticketman.components.data.components.shared.Notes
+import org.mr0btain.ticketman.components.data.components.customer.TicketList
 
 // TODO: Encrypt sensitive data
 

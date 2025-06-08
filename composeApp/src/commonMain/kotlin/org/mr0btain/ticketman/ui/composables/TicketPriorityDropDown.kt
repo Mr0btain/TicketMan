@@ -7,9 +7,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.components.data.components.TicketPriority
-import org.mr0btain.ticketman.components.data.components.TicketPriorityType
-import org.mr0btain.ticketman.components.data.components.getTime
+import org.mr0btain.ticketman.components.data.components.ticket.TicketPriority
+import org.mr0btain.ticketman.components.data.components.ticket.TicketPriorityType
+import org.mr0btain.ticketman.components.data.components.shared.getTime
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

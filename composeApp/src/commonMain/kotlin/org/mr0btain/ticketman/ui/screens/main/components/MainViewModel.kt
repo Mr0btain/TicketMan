@@ -9,10 +9,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.components.data.components.AccessLevel
-import org.mr0btain.ticketman.components.data.components.CustomerData
-import org.mr0btain.ticketman.components.data.components.Employee
-import org.mr0btain.ticketman.components.data.components.TicketInfo
+import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
+import org.mr0btain.ticketman.components.data.components.customer.CustomerData
+import org.mr0btain.ticketman.components.data.components.employee.Employee
+import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
+import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.getPlatform
@@ -55,17 +56,44 @@ class MainViewModel(
     var employeeList = _employeeList.asStateFlow()
 
     // To update the user id
-    fun changeEmployee(employee: Employee) {
-        _employee.value = employee
+    fun updateOrAddEmployee(employee: Employee) {
+        // Check if item exists or not, if not then add it
+        if (_employeeList.value.firstOrNull { it.identifier == employee.identifier } != null) {
+            // Update data in viewmodel
+            // Get index of the item
+            val index = _employeeList.value.indexOfFirst { it.identifier == employee.identifier }
+
+            // update list with new data
+            _employeeList.value = _employeeList.value.toMutableList().also { it[index] = employee }
+
+            // Update database
+            database.updateEmployee(employee)
+        } else {
+            // Else add new item
+            database.addEmployee(employee)
+        }
     }
 
-    fun changeEmployeeList(list: List<Employee>) {
-        _employeeList.value = list
+    fun getEmployees() { _employeeList.value = database.getAllEmployees() }
+
+    fun addEmployee(employee: Employee) {
+        // Check if item exists or not, if not then add it
+        if (_employeeList.value.firstOrNull { it.identifier == employee.identifier } != null) {
+            // Update data in viewmodel
+            // Get index of the item
+            val index = _employeeList.value.indexOfFirst { it.identifier == employee.identifier }
+
+            // update list with new data
+            _employeeList.value = _employeeList.value.toMutableList().also { it[index] = employee }
+
+            // Update database
+            database.updateEmployee(employee)
+        } else {
+            // Else add new item
+            database.addEmployee(employee)
+        }
+        database.addEmployee(employee)
     }
-
-    fun getAllEmployees(): List<Employee> { return database.getAllEmployees() }
-
-    fun addEmployee(employee: Employee) { database.addEmployee(employee) }
 
     fun removeEmployee(id: Int) {
         // Check if employee exists or not
@@ -80,7 +108,55 @@ class MainViewModel(
         }
     }
 
-    fun getEmployee(id: Int): Employee { return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee() }
+    fun getEmployeeForId(id: Int): Employee { return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee() }
+
+    /** Inventory Related Things */
+    // -----------------------------------------------------------------------------------------------------------------------
+
+    // Inventory list
+    private val _inventoryList: MutableStateFlow<List<InventoryItem>> = MutableStateFlow(listOf())
+    var inventoryList = _inventoryList.asStateFlow()
+
+    // Inventory selected item id
+    private val _selectedInventoryId: MutableStateFlow<Int> = MutableStateFlow(0)
+    var selectedInventoryId = _selectedInventoryId.asStateFlow()
+
+    fun changeSelectedInventoryId(id: Int) { _selectedInventoryId.value = id }
+
+    fun getNextInventoryId(): Int { return database.getNextInventoryId() }
+
+    fun getInventory() { _inventoryList.value =  database.getInventory() }
+
+    fun updateOrAddInventoryItem(inventoryItem: InventoryItem) {
+        // Check if item exists or not, if not then add it
+        if (_inventoryList.value.firstOrNull { it.identifier == inventoryItem.identifier } != null) {
+            // Update data in viewmodel
+            // Get index of the item
+            val index = _inventoryList.value.indexOfFirst { it.identifier == inventoryItem.identifier }
+
+            // update list with new data
+            _inventoryList.value = _inventoryList.value.toMutableList().also { it[index] = inventoryItem }
+
+            // Update database
+            database.updateInventoryItem(inventoryItem)
+        } else {
+            // Else add new item
+            database.addInventoryItem(inventoryItem)
+        }
+    }
+
+    fun removeInventoryItem(id: Int) {
+        // Check if ticket exists or not
+        if (_ticketDataList.value.firstOrNull { it.identifier == id } != null) {
+            // update list
+            _ticketDataList.value = _ticketDataList.value.filter { it.identifier != id }
+
+            // Update database
+            database.removeTicket(id)
+        } else {
+            // TODO: We should trigger a warning or something
+        }
+    }
 
     /** Ticket Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
@@ -92,6 +168,15 @@ class MainViewModel(
     // Selected ticket tab index
     private val _selectedTicketId: MutableStateFlow<Int> = MutableStateFlow(0)
     var selectedTicketId = _selectedTicketId.asStateFlow()
+
+    // To update selected ticket
+    fun changeSelectedTicketId(id: Int) {
+        _selectedTicketId.value = id
+    }
+
+    fun getNextTicketId(): Int { return database.getNextTicketId() }
+
+    fun getTickets() { _ticketDataList.value = database.getAllTickets() }
 
     // Add or update ticket info if it exists
     fun updateOrAddTicket(data: TicketInfo) {
@@ -112,20 +197,6 @@ class MainViewModel(
         }
     }
 
-    // To update selected ticket
-    fun changeSelectedTicketId(id: Int) {
-        _selectedTicketId.value = id
-    }
-
-    // To update ticket data list
-    fun changeTicketDataList(list: List<TicketInfo>) {
-        _ticketDataList.value = list
-    }
-
-    fun getTicketForId(id: Int): TicketInfo {
-        return _ticketDataList.value.firstOrNull { it.identifier == id } ?: TicketInfo()
-    }
-
     fun removeTicket(id: Int) {
         // Check if ticket exists or not
         if (_ticketDataList.value.firstOrNull { it.identifier == id } != null) {
@@ -137,6 +208,10 @@ class MainViewModel(
         } else {
             // TODO: We should trigger a warning or something
         }
+    }
+
+    fun getTicketForId(id: Int): TicketInfo {
+        return _ticketDataList.value.firstOrNull { it.identifier == id } ?: TicketInfo()
     }
 
     /** Customer related things */
@@ -151,10 +226,27 @@ class MainViewModel(
     private val _selectedCustomerId: MutableStateFlow<Int> = MutableStateFlow(0)
     var selectedCustomerId = _selectedCustomerId.asStateFlow()
 
+    // Call to change customer data
+    fun changeSelectedCustomerId(id: Int) {
+        _selectedCustomerId.value = id
+    }
+
+    fun getNextCustomerId(): Int { return database.getNextCustomerId() }
+
+    fun getCustomerForId(id: Int): CustomerData {
+        val result = _customerDataList.value.firstOrNull() { it.info.identifier == id }
+
+        if (result == null) viewModelScope.launch {
+            snackBarHost.showSnackbar("Could not find Customer!", withDismissAction = true)
+        }
+
+        return result ?: CustomerData()
+    }
+
     // Add or update customer info if it exists
     fun updateOrAddCustomer(data: CustomerData) {
         // Check if customer exists or not, if not then add it
-        if (_customerDataList.value.map { it.info.identifier }.contains(data.info.identifier)) {
+        if (_customerDataList.value.firstOrNull { it.info.identifier == data.info.identifier } != null) {
             // Update data in viewmodel
             // Get index of the item
             val index = _customerDataList.value.indexOfFirst { it.info.identifier == data.info.identifier }
@@ -170,25 +262,8 @@ class MainViewModel(
         }
     }
 
-    // Call to change customer data
-    fun changeSelectedCustomerId(id: Int) {
-        _selectedCustomerId.value = id
-    }
-
     // To update customer data list
-    fun changeCustomerDataList(list: List<CustomerData>) {
-        _customerDataList.value = list
-    }
-
-    fun getCustomerData(id: Int): CustomerData {
-        val result = _customerDataList.value.firstOrNull() { it.info.identifier == id }
-
-        if (result == null) viewModelScope.launch {
-            snackBarHost.showSnackbar("Could not find Customer!", withDismissAction = true)
-        }
-
-        return result ?: CustomerData()
-    }
+    fun getCustomers() { _customerDataList.value = database.getAllCustomers() }
 
     fun removeCustomer(id: Int) {
         // Check if customer exists or not
@@ -209,17 +284,14 @@ class MainViewModel(
     // To check and setup initial database if it doesn't exist
     fun setupDatabase() { database.checkAndCreateTables() }
 
-    fun getNextCustomerId(): Int { return database.getNextCustomerId() }
-
-    fun getNextTicketId(): Int { return database.getNextTicketId() }
-
     // TODO: Employee needs fleshed out
     fun updateDataFromDb() {
         // Read data from db and update it in view model
-        changeCustomerDataList(database.getAllCustomerData())
-        changeTicketDataList(database.getAllTicketData())
-        changeEmployeeList(database.getAllEmployees())
-        changeEmployee(employeeList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: Employee())
+        getCustomers()
+        getTickets()
+        getEmployees()
+        getInventory()
+        updateOrAddEmployee(employeeList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: Employee())
     }
 
     // ----------------------------------------------------------------------------------------------------------------------------
@@ -232,12 +304,12 @@ class MainViewModel(
     }
 
     fun generateMockDbData() {
-        val (customerdata, ticketData, employeeData) = generateMockData(20)
+        val (customerdata, ticketData, employeeData) = generateMockData(400)
 
-        database.addAllTicketData(ticketData)
+        database.addAllTickets(ticketData)
 
         // Add the generated values to the database
-        database.addAllCustomerData(customerdata)
+        database.addAllCustomers(customerdata)
 
         // Add all employees
         database.addAllEmployees(employeeData)

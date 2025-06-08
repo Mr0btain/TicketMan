@@ -3,10 +3,10 @@ package org.mr0btain.ticketman.components.data.database.tables
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.json.json
-import org.mr0btain.ticketman.components.data.components.Device
-import org.mr0btain.ticketman.components.data.components.Notes
-import org.mr0btain.ticketman.components.data.components.TicketPriority
-import org.mr0btain.ticketman.components.data.components.TicketStatus
+import org.mr0btain.ticketman.components.data.components.ticket.Device
+import org.mr0btain.ticketman.components.data.components.shared.Notes
+import org.mr0btain.ticketman.components.data.components.ticket.TicketPriority
+import org.mr0btain.ticketman.components.data.components.ticket.TicketStatus
 
 // TODO: Setup time stamps for notes or updates, times for when tickets added and such
 

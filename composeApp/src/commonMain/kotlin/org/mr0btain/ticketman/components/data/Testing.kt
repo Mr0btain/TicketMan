@@ -1,13 +1,23 @@
 package org.mr0btain.ticketman.components.data
 
-import org.mr0btain.ticketman.components.data.components.*
+import org.mr0btain.ticketman.components.data.components.customer.Address
+import org.mr0btain.ticketman.components.data.components.customer.ContactInfo
+import org.mr0btain.ticketman.components.data.components.customer.CustomerData
+import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
+import org.mr0btain.ticketman.components.data.components.employee.Employee
+import org.mr0btain.ticketman.components.data.components.shared.AMPM
+import org.mr0btain.ticketman.components.data.components.shared.Note
+import org.mr0btain.ticketman.components.data.components.shared.PersonName
+import org.mr0btain.ticketman.components.data.components.shared.Time
+import org.mr0btain.ticketman.components.data.components.shared.getTime
+import org.mr0btain.ticketman.components.data.components.ticket.Device
+import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.components.data.components.ticket.randomTicketPriority
+import org.mr0btain.ticketman.components.data.components.ticket.randomTicketStatus
 import org.mr0btain.ticketman.components.helpers.parseDateToLong
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Date
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<Employee>> {
     // Generate some mock customer data
@@ -173,7 +183,7 @@ private fun getFakeTime(): Long {
             year = Random.nextInt(2000, 2025),
             month = Random.nextInt(1, 12),
             day = Random.nextInt(1, 21),
-            hour = Random.nextInt(1,12),
+            hour = Random.nextInt(1, 12),
             minute = Random.nextInt(0, 59),
             second = Random.nextInt(0, 59),
             ampm = AMPM.entries.random()

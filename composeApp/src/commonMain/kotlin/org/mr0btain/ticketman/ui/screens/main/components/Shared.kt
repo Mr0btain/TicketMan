@@ -18,7 +18,13 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.*
+import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.shared.Note
+import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.components.data.components.ticket.TicketPriority
+import org.mr0btain.ticketman.components.data.components.ticket.TicketPriorityType
+import org.mr0btain.ticketman.components.data.components.ticket.TicketStatus
+import org.mr0btain.ticketman.components.data.components.ticket.TicketStatusType
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.*
@@ -421,5 +427,31 @@ fun ContactsBlock(
                 }
             }
         }
+    }
+}
+
+// Simple Text Item
+@Composable
+fun SimpleTextItem(
+    label: String,
+    text: String
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "$label:",
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+
+        Spacer(Modifier.padding(4.dp))
+
+        Text(
+            text = text,
+            fontSize = 16.sp
+        )
     }
 }

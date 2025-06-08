@@ -77,13 +77,5 @@ fun NavigationHost(
                 snackBarState = snackBarState
             )
         }
-
-        composable(NavigationItem.Inventory.route) {
-            InventoryScreen(
-                viewModel = mainViewModel,
-                isDarkMode = darkMode.value,
-                snackBarState = snackBarState
-            )
-        }
     }
 }

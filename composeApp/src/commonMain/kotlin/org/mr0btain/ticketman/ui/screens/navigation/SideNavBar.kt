@@ -106,7 +106,7 @@ fun SideAppNav(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(
-                                    modifier = Modifier.height(iconSize * 5)
+                                    modifier = Modifier.height(iconSize * 4)
                                 ) {
                                     TabColumn(
                                         modifier = Modifier.width(iconSize + 4.dp),
@@ -131,30 +131,12 @@ fun SideAppNav(
                                             }
                                         )
 
-                                        // Inventory tab
+                                        // Settings tab
                                         Tab(
                                             selected = selectedTab == 1,
                                             onClick = {
-                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Inventory.route) }
-                                                selectedTab = 1
-                                            },
-                                            icon = {
-                                                Icon(
-                                                    modifier = Modifier
-                                                        .size(iconSize)
-                                                        .padding(iconInnerPadding),
-                                                    painter = painterResource(Res.drawable.clipboard),
-                                                    contentDescription = "Inventory"
-                                                )
-                                            }
-                                        )
-
-                                        // Settings tab
-                                        Tab(
-                                            selected = selectedTab == 2,
-                                            onClick = {
                                                 coroutineScope.launch { navHostController.navigate(NavigationItem.Settings.route) }
-                                                selectedTab = 2
+                                                selectedTab = 1
                                             },
                                             icon = {
                                                 Icon(
@@ -169,10 +151,10 @@ fun SideAppNav(
 
                                         // Login Tab
                                         Tab(
-                                            selected = selectedTab == 3,
+                                            selected = selectedTab == 2,
                                             onClick = {
                                                 coroutineScope.launch { navHostController.navigate(NavigationItem.Login.route) }
-                                                selectedTab = 3
+                                                selectedTab = 2
                                             },
                                             icon = {
                                                 Icon(

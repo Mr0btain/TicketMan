@@ -10,7 +10,7 @@ import io.github.vinceglb.filekit.write
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.data.components.UserSettings
+import org.mr0btain.ticketman.components.data.components.settings.UserSettings
 import kotlin.io.readBytes
 
 actual class FileManager actual constructor() {

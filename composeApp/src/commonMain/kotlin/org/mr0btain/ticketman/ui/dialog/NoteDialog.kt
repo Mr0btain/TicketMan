@@ -25,8 +25,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.components.data.components.Note
-import org.mr0btain.ticketman.components.data.components.getTime
+import org.mr0btain.ticketman.components.data.components.shared.Note
+import org.mr0btain.ticketman.components.data.components.shared.getTime
 
 @Composable
 fun NoteDialog(
