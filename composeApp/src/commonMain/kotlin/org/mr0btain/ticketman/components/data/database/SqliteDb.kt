@@ -32,7 +32,7 @@ class SqliteDb() {
     private val appDir = FileKit.filesDir.path
 
     // Connect to the local database
-    private val db = Database.connect("jdbc:h2:$appDir/testData;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    private val db = Database.connect("jdbc:h2:$appDir/data/testData;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
 
     //Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")
@@ -397,6 +397,7 @@ class SqliteDb() {
                         stock = item[InventoryTable.stock],
                         cost = item[InventoryTable.cost],
                         price = item[InventoryTable.price],
+                        notes = item[InventoryTable.notes].notes,
                         time = item[InventoryTable.time]
                     )
                 )
@@ -419,6 +420,7 @@ class SqliteDb() {
                 this[InventoryTable.stock] = item.stock
                 this[InventoryTable.cost] = item.cost
                 this[InventoryTable.price] = item.price
+                this[InventoryTable.notes] = Notes(item.notes)
                 this[InventoryTable.time] = item.time
             }
         }
@@ -461,6 +463,7 @@ class SqliteDb() {
                 item[InventoryTable.stock] = inventoryItem.stock
                 item[InventoryTable.cost] = inventoryItem.cost
                 item[InventoryTable.price] = inventoryItem.price
+                item[InventoryTable.notes] = Notes(inventoryItem.notes)
                 item[InventoryTable.time] = inventoryItem.time
             }
         }
@@ -478,6 +481,7 @@ class SqliteDb() {
                 item[InventoryTable.stock] = inventoryItem.stock
                 item[InventoryTable.cost] = inventoryItem.cost
                 item[InventoryTable.price] = inventoryItem.price
+                item[InventoryTable.notes] = Notes(inventoryItem.notes)
                 item[InventoryTable.time] = inventoryItem.time
             }
         }

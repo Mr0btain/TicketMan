@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
+import org.mr0btain.ticketman.components.data.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
 
 // TODO: Setup error handling in here
@@ -288,10 +289,19 @@ class MainViewModel(
     fun updateDataFromDb() {
         // Read data from db and update it in view model
         getCustomers()
+        println("Customer list size: ${_customerDataList.value.size}")
+
         getTickets()
+        println("Ticket list size: ${_ticketDataList.value.size}")
+
         getEmployees()
+        println("Employee list size: ${_employeeList.value.size}")
+
         getInventory()
-        updateOrAddEmployee(employeeList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: Employee())
+        println("Inventory list size: ${_inventoryList.value.size}")
+
+        _employee.value = employeeList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: Employee()
+        println("Selected employee: ${_employee.value}")
     }
 
     // ----------------------------------------------------------------------------------------------------------------------------
@@ -313,5 +323,8 @@ class MainViewModel(
 
         // Add all employees
         database.addAllEmployees(employeeData)
+
+        // Generate and add inventory items
+        database.addAllInventory(generateRandomInventoryItems(60))
     }
 }

@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.helpers.formatTime
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
+import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SmallTicketList
 import ticketman.composeapp.generated.resources.*
 
@@ -195,41 +196,11 @@ fun CustomerInfoPane(
                         )
 
                         // ------------ Notes section ---------------
-                        Column(
-                            horizontalAlignment = Alignment.Start,
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            // Label
-                            Text(
-                                modifier = Modifier
-                                    .padding(2.dp),
-                                text = "Notes",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = labelSize
-                            )
-
-                            Spacer(Modifier.padding(2.dp))
-
-                            selectedCustomerData.notes.forEach { note ->
-                                // TODO: Add date and time to this
-                                Column {
-                                    // Author
-                                    Text(
-                                        modifier = Modifier,
-                                        text = note.author + ": ",
-                                        fontSize = textSize,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    // Text
-                                    Text(
-                                        modifier = Modifier,
-                                        text = note.text,
-                                        fontSize = textSize
-                                    )
-                                }
-                            }
-                        }
+                        NotesBlock(
+                            notes = selectedCustomerData.notes,
+                            labelSize = labelSize,
+                            textSize = textSize
+                        )
                     }
                 }
 

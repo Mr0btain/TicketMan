@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.shared.Note
+import org.mr0btain.ticketman.components.data.components.shared.Notes
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.data.components.ticket.TicketPriority
 import org.mr0btain.ticketman.components.data.components.ticket.TicketPriorityType
@@ -453,5 +454,63 @@ fun SimpleTextItem(
             text = text,
             fontSize = 16.sp
         )
+    }
+}
+
+@Composable
+fun TableDivider() {
+    Row(
+        modifier = Modifier.width(22.dp),
+        horizontalArrangement = Arrangement.Center
+    ) {
+        VerticalDivider(
+            modifier = Modifier.height(40.dp),
+            color = MaterialTheme.colorScheme.primary,
+            thickness = 2.dp
+        )
+    }
+}
+
+@Composable
+fun NotesBlock(
+    label: String = "Notes",
+    notes: List<Note>,
+    labelSize: TextUnit = 12.sp,
+    textSize: TextUnit = 16.sp
+) {
+    Column(
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Label
+        Text(
+            modifier = Modifier
+                .padding(2.dp),
+            text = "Notes",
+            fontWeight = FontWeight.SemiBold,
+            fontSize = labelSize
+        )
+
+        Spacer(Modifier.padding(2.dp))
+
+        notes.forEach { note ->
+            // TODO: Add date and time to this
+            Column {
+                // Author
+                Text(
+                    modifier = Modifier,
+                    text = note.author + ": ",
+                    fontSize = textSize,
+                    fontWeight = FontWeight.SemiBold
+                )
+
+                // Text
+                Text(
+                    modifier = Modifier,
+                    text = note.text,
+                    fontSize = textSize
+                )
+            }
+        }
     }
 }

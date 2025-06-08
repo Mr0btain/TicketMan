@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
+import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 
 @Composable
 fun CustomerListPane(
@@ -49,7 +50,7 @@ fun CustomerListPane(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 16.dp)
+                .padding(start = 14.dp, end = 14.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -227,19 +228,5 @@ private fun CustomerTableItem(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun TableDivider() {
-    Row(
-        modifier = Modifier.width(22.dp),
-        horizontalArrangement = Arrangement.Center
-    ) {
-        VerticalDivider(
-            modifier = Modifier.height(40.dp),
-            color = MaterialTheme.colorScheme.secondary,
-            thickness = 2.dp
-        )
     }
 }

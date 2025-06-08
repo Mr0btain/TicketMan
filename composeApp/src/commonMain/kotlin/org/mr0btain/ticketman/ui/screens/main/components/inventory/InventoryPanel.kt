@@ -129,6 +129,7 @@ fun InventoryPanel(
                 InventoryListPane(
                     isDarkMode = isDarkMode,
                     selectedId = selectedInventoryItemId,
+                    items = inventoryList,
                     onClick = {
                         // Set is update from click
                         isSelectedUpdateFromClick = true

@@ -23,6 +23,7 @@ import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
+import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
@@ -54,7 +55,7 @@ fun TicketListPane(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 16.dp, end = 16.dp)
+                .padding(start = 14.dp, end = 14.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -91,7 +92,7 @@ fun TicketListPane(
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(750.dp))
+            HorizontalDivider(modifier = Modifier.width(740.dp))
 
             if (getPlatform().name.contains("Java")) {
                 LazyVerticalScrollBar(
@@ -213,16 +214,7 @@ private fun TicketTableItem(
                 )
             }
 
-            Row(
-                modifier = Modifier.width(22.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = 2.dp
-                )
-            }
+            TableDivider()
 
             Box(
                 modifier = Modifier
@@ -238,16 +230,7 @@ private fun TicketTableItem(
                 )
             }
 
-            Row(
-                modifier = Modifier.width(22.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = 2.dp
-                )
-            }
+            TableDivider()
 
             Box(
                 modifier = Modifier
@@ -261,16 +244,7 @@ private fun TicketTableItem(
                 }
             }
 
-            Row(
-                modifier = Modifier.width(22.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = 2.dp
-                )
-            }
+            TableDivider()
 
             Box(
                 modifier = Modifier

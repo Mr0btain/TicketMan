@@ -1,6 +1,9 @@
 package org.mr0btain.ticketman.components.data.database.tables
 
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
+import org.jetbrains.exposed.v1.json.json
+import org.mr0btain.ticketman.components.data.components.shared.Notes
 
 object InventoryTable : IntIdTable("inventory") {
     val identifier = integer("number")
@@ -9,5 +12,6 @@ object InventoryTable : IntIdTable("inventory") {
     val stock = integer("stock")
     val cost = varchar("cost", 100)
     val price = varchar("price", 100)
+    val notes = json<Notes>("notes", Json.Default)
     val time = long("time")
 }

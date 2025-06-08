@@ -22,6 +22,8 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
+import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
+import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
 
 // TODO: Add time or date to these
@@ -30,18 +32,18 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
 fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    ticketInfo: List<InventoryItem> = listOf(),
+    items: List<InventoryItem>,
     selectedId: Int,
     onClick: (Int) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
     // Column widths
-    val nameColumnWidth = 100.dp
-    val stockColumnWidth = 80.dp
+    val nameColumnWidth = 160.dp
+    val stockColumnWidth = 60.dp
     val descriptionColumnWidth = 260.dp
-    val priceColumnWidth = 80.dp
-    val costColumnWidth = 80.dp
+    val priceColumnWidth = 60.dp
+    val costColumnWidth = 60.dp
 
     Surface(
         modifier = modifier
@@ -55,7 +57,7 @@ fun InventoryListPane(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 16.dp, end = 16.dp)
+                .padding(start = 14.dp, end = 14.dp)
         ) {
             Row(
                 modifier = Modifier
@@ -87,8 +89,7 @@ fun InventoryListPane(
 
                 InventoryHeaderBox(
                     label = "Price",
-                    width = priceColumnWidth,
-                    dividerEnable = false
+                    width = priceColumnWidth
                 )
 
                 Spacer(Modifier.padding(10.dp))
@@ -100,14 +101,14 @@ fun InventoryListPane(
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(750.dp))
+            HorizontalDivider(modifier = Modifier.width(690.dp))
 
             if (getPlatform().name.contains("Java")) {
                 LazyVerticalScrollBar(
                     state = state,
                     scope = coroutineScope
                 ) {
-                    itemsIndexed(ticketInfo) { index, item ->
+                    itemsIndexed(items) { index, item ->
                         InventoryTableItem(
                             color = if (!isDarkMode) {
                                 if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
@@ -132,7 +133,7 @@ fun InventoryListPane(
                 LazyColumn(
                     state = state
                 ) {
-                    itemsIndexed(ticketInfo) { index, item ->
+                    itemsIndexed(items) { index, item ->
                         InventoryTableItem(
                             color = if (!isDarkMode) {
                                 if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
@@ -213,96 +214,61 @@ private fun InventoryTableItem(
             modifier = Modifier.padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Name
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
                     .width(nameColumnWidth+ sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableTicketIdItem(
-                    label = inventoryItem.name,
-                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
-                )
+                TableCardTextItem(inventoryItem.name)
             }
 
-            Row(
-                modifier = Modifier.width(22.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = 2.dp
-                )
-            }
+            TableDivider()
 
+            // Stock
             Box(
                 modifier = Modifier
                     .padding(start = 5.dp)
                     .width(stockColumnWidth + sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableTicketIdItem(
-                    label = inventoryItem.stock.toString(),
-                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
-                )
+                TableCardTextItem(inventoryItem.stock.toString())
             }
 
-            Row(
-                modifier = Modifier.width(22.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = 2.dp
-                )
-            }
+            TableDivider()
 
+            // Description
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
                     .width(descriptionColumnWidth+ sizeAdjust.dp)
             ) {
-                TableTicketIdItem(
-                    label = inventoryItem.description,
-                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
-                )
+                TableCardTextItem(inventoryItem.description)
             }
 
-            Row(
-                modifier = Modifier.width(22.dp),
-                horizontalArrangement = Arrangement.Center
-            ) {
-                VerticalDivider(
-                    modifier = Modifier.height(40.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    thickness = 2.dp
-                )
-            }
+            TableDivider()
 
+            // Price
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
                     .width(priceColumnWidth + sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableTicketIdItem(
-                    label = inventoryItem.price,
-                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
-                )
+                TableCardTextItem(inventoryItem.price)
             }
 
+            TableDivider()
+
+            // Cost
             Box(
                 modifier = Modifier
                     .padding(start = 4.dp)
                     .width(costColumnWidth + sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableTicketIdItem(
-                    label = inventoryItem.cost,
-                    textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
-                )
+                TableCardTextItem(inventoryItem.cost)
             }
         }
     }

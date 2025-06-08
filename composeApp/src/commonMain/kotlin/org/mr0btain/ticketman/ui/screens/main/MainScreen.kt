@@ -359,7 +359,7 @@ fun MainScreen(
                             isDarkMode = isDarkMode,
                             inventoryList = inventoryList.value,
                             selectedInventoryItemId = selectedInventoryId.value,
-                            onSelectedInventoryItemChange = {  },
+                            onSelectedInventoryItemChange = { viewModel.changeSelectedInventoryId(it) },
                             onAddInventoryItem = {  },
                             onDeleteInventoryItem = {  },
                             scrollOnRight = scrollBarRight,

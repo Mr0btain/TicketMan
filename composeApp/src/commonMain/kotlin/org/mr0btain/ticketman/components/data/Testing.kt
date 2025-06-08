@@ -1,11 +1,13 @@
 package org.mr0btain.ticketman.components.data
 
+import org.jetbrains.exposed.v1.core.not
 import org.mr0btain.ticketman.components.data.components.customer.Address
 import org.mr0btain.ticketman.components.data.components.customer.ContactInfo
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
 import org.mr0btain.ticketman.components.data.components.employee.Employee
+import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.shared.AMPM
 import org.mr0btain.ticketman.components.data.components.shared.Note
 import org.mr0btain.ticketman.components.data.components.shared.PersonName
@@ -16,6 +18,7 @@ import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.data.components.ticket.randomTicketPriority
 import org.mr0btain.ticketman.components.data.components.ticket.randomTicketStatus
 import org.mr0btain.ticketman.components.helpers.parseDateToLong
+import java.text.DecimalFormat
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -67,8 +70,52 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
         employeeData[empNum] = emp.copy(tickets = emp.tickets + ticket.identifier)
     }
 
+    println("Generated Customer list: ${customerData.count()}")
+    println("Generated ticket list: ${newTicketData.count()}")
+    println("Generated employee list: ${employeeData.count()}")
+
 
     return Triple(newCustomerData, newTicketData, employeeData)
+}
+
+fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
+    val result = mutableListOf<InventoryItem>()
+    val itemNames = listOf(
+        "iPhone 11 Screen", "Galaxy S10 Screen", "Charging Port", "Battery Pack", "IC Chip A12",
+        "Logic Board Connector", "Touch Controller", "Screen Adhesive", "Camera Module", "Speaker Assembly",
+        "Microphone", "Flex Cable", "Display IC", "Backlight Filter", "USB-C Port", "Glass Lens",
+        "SIM Tray", "Housing Frame", "Home Button", "Power Button Flex", "Volume Button", "Thermal Paste"
+    )
+
+    val descriptions = listOf(
+        "High quality replacement part", "OEM standard component", "Compatible with multiple models",
+        "Includes adhesive backing", "Precision-engineered for easy installation",
+        "Durable and long-lasting", "Heat-resistant and flexible", "Comes with warranty"
+    )
+
+    val formatter = DecimalFormat("#.00")
+    val now = getFakeTime()
+
+    return List(count) {
+        val name = itemNames.random()
+        val description = descriptions.random()
+        val stock = Random.nextInt(1, 500)
+        val costVal = Random.nextDouble(0.5, 50.0)
+        val priceVal = costVal * Random.nextDouble(1.2, 2.5)
+        val identifier = Random.nextInt(100000, 999999)
+        val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
+
+        InventoryItem(
+            identifier = identifier,
+            name = name,
+            description = description,
+            stock = stock,
+            cost = "$${formatter.format(costVal)}",
+            price = "$${formatter.format(priceVal)}",
+            notes = generateRandomInventoryNotes(Random.nextInt(0, 4)),
+            time = now - timeOffset
+        )
+    }
 }
 
 fun generateMockCustomerData(num: Int): List<CustomerData> {
@@ -347,6 +394,24 @@ fun generateEmployeeNote(): Note {
     )
 
     return Note(authors.random(), noteTopics.random(), getTime())
+}
+
+fun generateRandomInventoryNotes(count: Int): List<Note> {
+    val authors = listOf("Alice", "Bob", "Charlie", "Dana", "Eli", "Frank")
+    val components = listOf("resistor", "capacitor", "transistor", "diode", "IC", "inductor")
+    val conditions = listOf("working", "damaged", "needs testing", "low stock", "new", "reordered")
+    val locations = listOf("Bin A1", "Shelf B2", "Cabinet C3", "Box D4", "Rack E5")
+
+    return List(count) {
+        val author = authors.random()
+        val component = components.random()
+        val condition = conditions.random()
+        val location = locations.random()
+        val quantity = Random.nextInt(1, 100)
+
+        val text = "Found $quantity $component(s) in $location - Status: $condition."
+        Note(author, text)
+    }
 }
 
 private fun generateRandomContactInfo(firstName: String? = null, lastName: String? = null): ContactInfo {

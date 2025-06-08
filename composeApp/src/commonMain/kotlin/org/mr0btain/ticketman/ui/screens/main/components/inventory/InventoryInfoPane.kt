@@ -11,9 +11,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import jdk.jfr.Description
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.helpers.formatTime
+import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
@@ -86,6 +88,7 @@ fun InventoryInfoPane(
 
             HorizontalDivider()
 
+            // TODO: Add photo options
             Row {
                 // --------------------------------- First Pane -----------------------------------
                 Surface(
@@ -115,10 +118,22 @@ fun InventoryInfoPane(
                         Spacer(Modifier.padding(4.dp))
 
                         // Description
-                        SimpleTextItem(
-                            label = "Description",
-                            text = inventoryItem.description
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Description:",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            Text(
+                                text = inventoryItem.description,
+                                fontSize = 16.sp
+                            )
+                        }
 
                         Spacer(Modifier.padding(4.dp))
 
@@ -147,7 +162,6 @@ fun InventoryInfoPane(
                 }
 
                 // --------------------------------- Second Pane -----------------------------------
-                /*
                 Surface(
                     modifier = Modifier
                         .fillMaxSize()
@@ -162,7 +176,7 @@ fun InventoryInfoPane(
                             .verticalScroll(rememberScrollState())
                     ) {
                         Text(
-                            text = "Updates",
+                            text = "Notes",
                             fontSize = 18.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -171,57 +185,11 @@ fun InventoryInfoPane(
 
                         Spacer(Modifier.padding(8.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Status:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            if (ticketInfo.identifier != Int.MAX_VALUE) {
-                                TableStatusItem(
-                                    status = ticketInfo.status,
-                                    darkMode = isDarkMode
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Priority
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Priority:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            if (ticketInfo.identifier != Int.MAX_VALUE) {
-                                TablePriorityItem(
-                                    priority = ticketInfo.priority,
-                                    darkMode = isDarkMode
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        UpdatesBlock(data = ticketInfo.updates)
+                        NotesBlock(
+                            notes = inventoryItem.notes
+                        )
                     }
                 }
-                 */
             }
         }
     }
