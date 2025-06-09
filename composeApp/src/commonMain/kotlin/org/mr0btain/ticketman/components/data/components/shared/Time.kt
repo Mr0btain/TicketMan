@@ -10,7 +10,11 @@ data class Time(
     val minute: Int,
     val second: Int,
     val ampm: AMPM
-)
+) {
+    override fun toString(): String {
+        return "${this.month}/${this.day}/${this.year} ${this.hour}:${this.minute}:${this.second} ${this.ampm.name}"
+    }
+}
 
 enum class AMPM {
     AM,

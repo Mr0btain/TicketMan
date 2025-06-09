@@ -189,13 +189,16 @@ fun CustomerDialog(
             Column(
                 modifier = Modifier.padding(32.dp)
             ) {
+                // TODO: Flesh out whether this is an add or edit
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = "Add New Customer: ${seedData.info.identifier}",
+                        text = if (seedData.info.name.firstName.isEmpty() && seedData.info.name.lastName.isEmpty()) {
+                            "Add Customer: ${seedData.info.identifier}"
+                        } else "Edit Customer: ${seedData.info.name.firstName} ${seedData.info.name.lastName}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp
                     )

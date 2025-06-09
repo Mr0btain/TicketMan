@@ -23,6 +23,7 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsTextItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import ticketman.composeapp.generated.resources.*
 
+// TODO: Add option for smooth scroll to item on selection or immediate
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,

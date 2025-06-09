@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.components.data.components.shared.PersonName
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.helpers.formatTime
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
+import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
@@ -169,7 +170,7 @@ fun TicketInfoPane(
                             ) {
                                 Text(
                                     text = if (ticketInfo.assignedEmployee != Int.MAX_VALUE) {
-                                        ticketInfo.assignedEmployee.toString() + ": " + employeeName.firstName + " " + employeeName.lastName
+                                        employeeName.firstName + " " + employeeName.lastName + ": " +  ticketInfo.assignedEmployee.toString()
                                     } else "",
                                     fontSize = 18.sp
                                 )
@@ -257,39 +258,13 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        UpdatesBlock(data = ticketInfo.updates)
+                        NotesBlock(
+                            label = "",
+                            notes = ticketInfo.updates,
+                            labelSize = 16.sp
+                        )
                     }
                 }
-            }
-        }
-    }
-}
-
-// Updates
-@Composable
-private fun UpdatesBlock(data: List<Note>) {
-    val textFont = 16.sp
-
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        data.forEach { note ->
-            Column {
-                // Author
-                Text(
-                    modifier = Modifier,
-                    text = note.author + ": ",
-                    fontSize = textFont,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                // Text
-                Text(
-                    modifier = Modifier,
-                    text = note.text,
-                    fontSize = textFont
-                )
             }
         }
     }

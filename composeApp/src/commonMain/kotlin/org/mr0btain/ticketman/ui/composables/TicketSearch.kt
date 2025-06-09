@@ -30,7 +30,7 @@ fun TicketSearch(
     onClick: (Int) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val filteredList = remember(input) { items.filter { it.contains(input) } }
+    val filteredList = remember(input) { items.filter { it.lowercase().contains(input.lowercase()) } }
 
     ExposedDropdownMenuBox(
         expanded = expanded,

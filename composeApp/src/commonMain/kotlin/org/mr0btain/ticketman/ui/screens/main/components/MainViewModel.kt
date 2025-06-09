@@ -121,7 +121,7 @@ class MainViewModel(
     var inventoryList = _inventoryList.asStateFlow()
 
     // Inventory selected item id
-    private val _selectedInventoryId: MutableStateFlow<Int> = MutableStateFlow(0)
+    private val _selectedInventoryId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
     var selectedInventoryId = _selectedInventoryId.asStateFlow()
 
     fun changeSelectedInventoryId(id: Int) { _selectedInventoryId.value = id }
@@ -173,7 +173,7 @@ class MainViewModel(
     var ticketDataList = _ticketDataList.asStateFlow()
 
     // Selected ticket tab index
-    private val _selectedTicketId: MutableStateFlow<Int> = MutableStateFlow(0)
+    private val _selectedTicketId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
     var selectedTicketId = _selectedTicketId.asStateFlow()
 
     // To update selected ticket
@@ -230,7 +230,7 @@ class MainViewModel(
 
 
     // Selected Customer
-    private val _selectedCustomerId: MutableStateFlow<Int> = MutableStateFlow(0)
+    private val _selectedCustomerId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
     var selectedCustomerId = _selectedCustomerId.asStateFlow()
 
     // Call to change customer data

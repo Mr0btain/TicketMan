@@ -30,6 +30,9 @@ import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.ui.composables.InventorySearch
 import org.mr0btain.ticketman.ui.composables.TicketSearch
+import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
+
+// TODO: Setup setting reorder on stock hitting a certain amount. Like a popup on login or when it happens?
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,9 +53,6 @@ fun InventoryPanel(
 
     // For search input
     var searchInput by remember { mutableStateOf("") }
-
-    // Search items
-    val searchItems = remember { inventoryList.map { it.identifier } }
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
@@ -93,30 +93,16 @@ fun InventoryPanel(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Delete Item Button
-                    Button(
-                        onClick = {
-                            // Trigger delete item dialog/ confirm
-                            onDeleteInventoryItem(selectedInventoryItemId)
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors().copy(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text(text = "Delete Item")
-                    }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    // Add Item Button
-                    Button(
-                        onClick = {
+                    AddOrDeleteButtonRow(
+                        onAddClick = {
                             // Trigger new item dialog
                             onAddInventoryItem()
                         },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(text = "Add Item")
-                    }
+                        onDeleteClick = {
+                            // Trigger delete item dialog/ confirm
+                            onDeleteInventoryItem(selectedInventoryItemId)
+                        }
+                    )
 
                     Spacer(Modifier.padding(8.dp))
                 }

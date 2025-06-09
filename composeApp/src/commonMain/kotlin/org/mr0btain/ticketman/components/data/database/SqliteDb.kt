@@ -443,8 +443,8 @@ class SqliteDb() {
             // If we should log, setup logger
             if (shouldLog) addLogger(StdOutSqlLogger)
 
-            InventoryTable.select(EmployeeTable.identifier).forEach { item ->
-                if (item[EmployeeTable.identifier] > result) result = item[EmployeeTable.identifier]
+            InventoryTable.select(InventoryTable.identifier).forEach { item ->
+                if (item[InventoryTable.identifier] > result) result = item[InventoryTable.identifier]
             }
         }
 

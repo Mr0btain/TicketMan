@@ -18,6 +18,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.employee.Employee
@@ -54,8 +56,9 @@ import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
+import kotlin.math.cos
 
-// TODO: Add ability to edit update?
+// TODO: Add ability to edit notes
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
@@ -126,6 +129,7 @@ fun InventoryDialog(
     }
 
     Dialog(
+        properties = DialogProperties(),
         onDismissRequest = {
             // Call dismiss as we haven't confirmed anything
             onDismiss(null, DialogDismissReason.CANCEL)
@@ -134,13 +138,14 @@ fun InventoryDialog(
         Surface(
             modifier = modifier
                 .height(600.dp)
-                .width(600.dp),
+                .width(400.dp),
             shape = RoundedCornerShape(10.dp),
             shadowElevation = 4.dp,
             color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
         ) {
             Column(
-                modifier = Modifier.padding(32.dp)
+                modifier = Modifier.padding(32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -148,7 +153,7 @@ fun InventoryDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = "Add New Ticket: ${seedData.identifier}",
+                        text = if (seedData.name.isEmpty()) "Add Item: ${seedData.identifier}" else "Edit Item: ${seedData.name}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp
                     )
@@ -161,63 +166,55 @@ fun InventoryDialog(
 
                 Spacer(Modifier.padding(8.dp))
 
-                // TODO: Make this regular ScrollBarColumn for desktops wintout scroll wheel
+                // TODO: Make this regular ScrollBarColumn for desktops without scroll wheel
                 LazyColumn(
                     modifier = Modifier.height(400.dp)
                 ) {
                     item {
-
-                        Text(
-                            text = "Name",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Name") }
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        // TODO
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Text(
-                            text = "Description",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Description") }
                         )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // TODO
 
                         Spacer(Modifier.padding(8.dp))
 
-                        Text(
-                            text = "Stock",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
+                        OutlinedTextField(
+                            value = stock.toString(),
+                            onValueChange = {
+                                // TODO: Make function to edit and format this
+                                            },
+                            label = { Text("Stock") }
                         )
-
-                        // TODO
 
                         Spacer(Modifier.padding(4.dp))
 
-                        Text(
-                            text = "Price",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
+                        OutlinedTextField(
+                            value = price,
+                            onValueChange = {
+                                // TODO
+                            },
+                            label = { Text("Price") }
                         )
-
-                        // TODO
 
                         Spacer(Modifier.padding(4.dp))
 
-                        Text(
-                            text = "Cost",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
+                        OutlinedTextField(
+                            value = cost,
+                            onValueChange = {
+                                // TODO
+                                cost = it
+                                            },
+                            label = { Text("Cost") }
                         )
-
-                        // TODO
 
                         Spacer(Modifier.padding(4.dp))
 

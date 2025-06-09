@@ -190,10 +190,29 @@ fun MainScreen(
                 if (confirmed) {
                     // Delete item
                     when (itemToDeleteType) {
-                        MainItemType.CUSTOMER -> { viewModel.removeCustomer(itemToDelete) }
-                        MainItemType.TICKET -> { viewModel.removeTicket(itemToDelete) }
+                        MainItemType.CUSTOMER -> {
+                            // Remove customer
+                            viewModel.removeCustomer(itemToDelete)
+
+                            // Reset selected
+                            viewModel.changeSelectedCustomerId(Int.MAX_VALUE)
+                        }
+
+                        MainItemType.TICKET -> {
+                            // Remove ticket
+                            viewModel.removeTicket(itemToDelete)
+
+                            // Reset selected
+                            viewModel.changeSelectedTicketId(Int.MAX_VALUE)
+                        }
                         MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
-                        MainItemType.INVENTORY -> { viewModel.removeInventoryItem(itemToDelete) }
+                        MainItemType.INVENTORY -> {
+                            // Remove item
+                            viewModel.removeInventoryItem(itemToDelete)
+
+                            // Reset selected
+                            viewModel.changeSelectedInventoryId(Int.MAX_VALUE)
+                        }
                         MainItemType.NONE -> { /* Do nothing */ }
                     }
                 }
@@ -296,8 +315,14 @@ fun MainScreen(
                         CustomerPanel(
                             isDarkMode = isDarkMode,
                             onAddCustomer = { name ->
-                                // Add starter data
-                                customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = viewModel.getNextCustomerId()))
+                                // Set seed data
+                                customerSeedData = CustomerData(
+                                    info = CustomerInfo(
+                                        name = name,
+                                        time = getTime(),
+                                        identifier = viewModel.getNextCustomerId()
+                                    )
+                                )
 
                                 // Trigger dialog
                                 showCustomerDialog = true
@@ -306,20 +331,23 @@ fun MainScreen(
                                 // Set seed data
                                 customerSeedData = viewModel.getCustomerForId(selectedCustomer.value)
 
-                                // Trigger dialog
-                                showCustomerDialog = true
+                                // Trigger dialog if we actually have an item selected
+                                if (customerSeedData != CustomerData()) { showCustomerDialog = true }
                             },
                             onCustomerSelectionChange = { id ->  viewModel.changeSelectedCustomerId(id) },
                             onDeleteCustomer = { id ->
                                 // TODO: Maybe add name of customer to this as well?
                                 // TODO: Add ability to delete tickets for customer as well
-                                // Set values
-                                itemToDelete = id
-                                itemToDeleteType = MainItemType.CUSTOMER
-                                confirmDeleteDialogText = "Customer: $id"
+                                // Check if item exists
+                                if (customerData.value.firstOrNull { it.info.identifier == id } != null) {
+                                    // Set values
+                                    itemToDelete = id
+                                    itemToDeleteType = MainItemType.CUSTOMER
+                                    confirmDeleteDialogText = "Customer: $id"
 
-                                // Trigger the dialog
-                                showConfirmDeleteDialog = true
+                                    // Trigger the dialog
+                                    showConfirmDeleteDialog = true
+                                }
                             },
                             onTicketClick = { id ->
                                 // Set selected ticket
@@ -363,19 +391,22 @@ fun MainScreen(
                                 // Get seed data
                                 ticketSeedData = viewModel.getTicketForId(selectedTicket.value)
 
-                                // Trigger dialog
-                                showTicketDialog = true
+                                // Trigger dialog if we have an actual item selected
+                                if (ticketSeedData != TicketInfo()) { showTicketDialog = true }
                             },
                             onSelectedTicketChange = { id -> viewModel.changeSelectedTicketId(id) },
                             onSelectedPanelChange = { selectedTicketPanel = it },
                             onDeleteTicket = { id ->
-                                // Set values
-                                itemToDelete = id
-                                itemToDeleteType = MainItemType.TICKET
-                                confirmDeleteDialogText = "Ticket: $id"
+                                // Make sure item exists
+                                if (ticketList.value.firstOrNull { it.identifier == id } != null) {
+                                    // Set values
+                                    itemToDelete = id
+                                    itemToDeleteType = MainItemType.TICKET
+                                    confirmDeleteDialogText = "Ticket: $id"
 
-                                // Trigger the dialog
-                                showConfirmDeleteDialog = true
+                                    // Trigger the dialog
+                                    showConfirmDeleteDialog = true
+                                }
                             },
                             selectedPanel = selectedTicketPanel,
                             ticketListState = ticketLazyListState,
@@ -404,19 +435,23 @@ fun MainScreen(
                                 // Set seed data
                                 inventorySeedData = viewModel.getInventoryItemForId(item)
 
-                                // Popup dialog
-                                showInventoryDialog = true
+                                // Popup dialog if we have an actual item selected
+                                if (inventorySeedData != InventoryItem()) { showInventoryDialog = true }
                             },
                             onDeleteInventoryItem = { id ->
                                 // Get item so we can get the name
-                                val item = inventoryList.value.first { it.identifier == id }
-                                // Set values
-                                itemToDelete = id
-                                itemToDeleteType = MainItemType.INVENTORY
-                                confirmDeleteDialogText = "${item.name}: $id"
+                                val item = inventoryList.value.firstOrNull { it.identifier == id }
 
-                                // Trigger the dialog
-                                showConfirmDeleteDialog = true
+                                // Check if its valid
+                                if (item != null) {
+                                    // Set values
+                                    itemToDelete = id
+                                    itemToDeleteType = MainItemType.INVENTORY
+                                    confirmDeleteDialogText = "${item.name}: $id"
+
+                                    // Trigger the dialog
+                                    showConfirmDeleteDialog = true
+                                }
                             },
                             coroutineScope = coroutineScope,
                             inventoryListState = inventoryLazyListState

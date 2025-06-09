@@ -41,7 +41,7 @@ fun InventorySearch(
     onClick: (InventoryItem) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val filteredList = remember(input) { items.filter { "${it.name}${it.identifier}".contains(input) } }
+    val filteredList = remember(input) { items.filter { "${it.name}${it.identifier}".lowercase().contains(input.lowercase()) } }
 
     ExposedDropdownMenuBox(
         expanded = expanded,

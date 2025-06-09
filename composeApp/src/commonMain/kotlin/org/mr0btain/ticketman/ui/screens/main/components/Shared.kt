@@ -26,11 +26,45 @@ import org.mr0btain.ticketman.components.data.components.ticket.TicketPriority
 import org.mr0btain.ticketman.components.data.components.ticket.TicketPriorityType
 import org.mr0btain.ticketman.components.data.components.ticket.TicketStatus
 import org.mr0btain.ticketman.components.data.components.ticket.TicketStatusType
+import org.mr0btain.ticketman.components.helpers.formatTime
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.*
 
-// This holds things used between both panes
+// This holds things used between all panes
+
+@Composable
+fun AddOrDeleteButtonRow(
+    modifier: Modifier = Modifier,
+    label: String = "Item",
+    onAddClick: () -> Unit,
+    onDeleteClick: () -> Unit
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Delete Item Button
+        Button(
+            onClick = onDeleteClick,
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors().copy(containerColor = MaterialTheme.colorScheme.error)
+        ) {
+            Text(text = "Delete $label")
+        }
+
+        Spacer(Modifier.padding(16.dp))
+
+        // Add Item Button
+        Button(
+            onClick = onAddClick,
+            shape = RoundedCornerShape(8.dp)
+        ) {
+            Text(text = "Add $label")
+        }
+    }
+}
 
 @Composable
 fun DialogNoteList(
@@ -483,26 +517,38 @@ fun NotesBlock(
         verticalArrangement = Arrangement.SpaceBetween
     ) {
         // Label
-        Text(
-            modifier = Modifier
-                .padding(2.dp),
-            text = "Notes",
-            fontWeight = FontWeight.SemiBold,
-            fontSize = labelSize
-        )
+        if (label.isNotBlank()) {
+            Text(
+                modifier = Modifier
+                    .padding(2.dp),
+                text = label,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = labelSize
+            )
 
-        Spacer(Modifier.padding(2.dp))
+            Spacer(Modifier.padding(2.dp))
+        }
 
         notes.forEach { note ->
-            // TODO: Add date and time to this
             Column {
-                // Author
-                Text(
-                    modifier = Modifier,
-                    text = note.author + ": ",
-                    fontSize = textSize,
-                    fontWeight = FontWeight.SemiBold
-                )
+                // Actual text of the note
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = note.author + ": ",
+                        fontSize = textSize,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    Text(
+                        text = formatTime(note.time).toString(),
+                        fontSize = (textSize.value - 4).sp,
+                        maxLines = 1
+                    )
+                }
+
 
                 // Text
                 Text(

@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.employee.Employee
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.ui.composables.TicketSearch
+import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
 // TODO: Add ability to click column and sort by that value
 // TODO: Add hours worked/ inventory items to a list of expense and charges
@@ -143,30 +144,17 @@ fun TicketPanel(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Delete Ticket Button
-                    Button(
-                        onClick = {
-                            // Trigger delete ticket dialog/ confirm
-                            onDeleteTicket(selectedTicketId)
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors().copy(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text(text = "Delete Ticket")
-                    }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    // Add Ticket Button
-                    Button(
-                        onClick = {
-                            // Trigger new ticket dialog
+                    AddOrDeleteButtonRow(
+                        label = "Ticket",
+                        onAddClick = {
+                            // Trigger new item dialog
                             onAddNewTicket()
                         },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(text = "Add Ticket")
-                    }
+                        onDeleteClick = {
+                            // Trigger delete ticket dialog/ confirm
+                            onDeleteTicket(selectedTicketId)
+                        }
+                    )
 
                     Spacer(Modifier.padding(8.dp))
                 }

@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.shared.PersonName
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
+import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
 // TODO: Should really offload some of the calculations on the lists to before we call this screen
 
@@ -81,25 +82,17 @@ fun CustomerPanel(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Delete Customer button
-                    Button(
-                        onClick = {// Trigger delete ticket dialog/ confirm
-                            onDeleteCustomer(selectedCustomerId)
+                    AddOrDeleteButtonRow(
+                        label = "Customer",
+                        onAddClick = {
+                            // Trigger new item dialog
+                            onAddCustomer(PersonName())
                         },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors().copy(containerColor = MaterialTheme.colorScheme.error)
-                    ) {
-                        Text(text = "Delete Customer")
-                    }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    Button(
-                        onClick = { onAddCustomer(PersonName()) },
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text(text = "Add Customer")
-                    }
+                        onDeleteClick = {
+                            // Trigger delete ticket dialog/ confirm
+                            onDeleteCustomer(selectedCustomerId)
+                        }
+                    )
 
                     Spacer(Modifier.padding(8.dp))
                 }
