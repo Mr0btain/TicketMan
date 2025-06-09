@@ -29,8 +29,6 @@ fun SettingsScreen(
     viewModel: SettingsViewModel
 ) {
     val darkMode = viewModel.darkMode.collectAsState(false)
-    val scrollBarOnRight = viewModel.scrollBarOnRight.collectAsState(true)
-    val scrollBarOnTop = viewModel.scrollBarOnTop.collectAsState(false)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

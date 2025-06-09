@@ -161,6 +161,10 @@ class MainViewModel(
         }
     }
 
+    fun getInventoryItemForId(id: Int): InventoryItem {
+        return _inventoryList.value.firstOrNull { it.identifier == id } ?: InventoryItem()
+    }
+
     /** Ticket Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
 

@@ -29,6 +29,7 @@ import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerPanel
+import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketPanel
 
 /**
@@ -119,7 +120,7 @@ fun MainScreen(
         )
     }
 
-    // For adding new ticket
+    // For ticket adding or editing
     // TODO: Need to handle the event if were making a new customer and they add a ticket then cancel adding customer?
     // TODO: Need to make it so when adding new customer and we add a ticket we update customers tickets after ticket creation
     if (showTicketDialog) {
@@ -153,6 +154,31 @@ fun MainScreen(
                 // Trigger dialog
                 showCustomerDialog = true
             }
+        )
+    }
+
+    // For inventory adding or editing
+    if (showInventoryDialog) {
+        InventoryDialog(
+            seedData = inventorySeedData,
+            onDismiss = { item, reason ->
+                when (reason) {
+                    DialogDismissReason.CONTINUE -> {
+                        viewModel.updateOrAddInventoryItem(item!!)
+                    }
+
+                    DialogDismissReason.CANCEL -> {
+                        // Do nothing
+                    }
+                }
+
+                // Reset seed data
+                inventorySeedData = InventoryItem()
+
+                // Close dialog
+                showInventoryDialog = false
+            },
+            isDarkMode = isDarkMode
         )
     }
 
@@ -364,8 +390,23 @@ fun MainScreen(
                             inventoryList = inventoryList.value,
                             selectedInventoryItemId = selectedInventoryId.value,
                             onSelectedInventoryItemChange = { viewModel.changeSelectedInventoryId(it) },
-                            onAddInventoryItem = {  },
-                            onEditInventoryItem = {  },
+                            onAddInventoryItem = {
+                                // Set seed data
+                                inventorySeedData = InventoryItem(
+                                    identifier = viewModel.getNextInventoryId(),
+                                    time = getTime()
+                                )
+
+                                // Popup dialog
+                                showInventoryDialog = true
+                            },
+                            onEditInventoryItem = { item ->
+                                // Set seed data
+                                inventorySeedData = viewModel.getInventoryItemForId(item)
+
+                                // Popup dialog
+                                showInventoryDialog = true
+                            },
                             onDeleteInventoryItem = { id ->
                                 // Get item so we can get the name
                                 val item = inventoryList.value.first { it.identifier == id }

@@ -30,12 +30,6 @@ class SettingsViewModel(
     private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("")
     var serverAddress = _serverAddress.asStateFlow()
 
-    private val _scrollBarOnRight: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    var scrollBarOnRight = _scrollBarOnRight.asStateFlow()
-
-    private val _scrollBarOnTop: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    var scrollBarOnTop = _scrollBarOnTop.asStateFlow()
-
     // Pulling it all at once this way saves us from a real hard hitch in the ui when we change these
     fun getSettingsFromPreferences() {
         viewModelScope.launch {
