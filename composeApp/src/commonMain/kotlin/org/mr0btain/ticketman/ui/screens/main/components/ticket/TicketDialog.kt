@@ -24,8 +24,10 @@ import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.EmployeeSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
+import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
+import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
@@ -135,6 +137,8 @@ fun TicketDialog(
             Column(
                 modifier = Modifier.padding(32.dp)
             ) {
+                // -------------------------------------------- Header ----------------------------------------------------
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
@@ -143,7 +147,8 @@ fun TicketDialog(
                         modifier = Modifier.padding(4.dp),
                         text = "Add New Ticket: ${seedData.identifier}",
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 26.sp
+                        fontSize = 26.sp,
+                        maxLines = 1
                     )
                 }
 
@@ -154,188 +159,172 @@ fun TicketDialog(
 
                 Spacer(Modifier.padding(8.dp))
 
-                // TODO: Make this regular ScrollBarColumn for desktops wintout scroll wheel
-                LazyColumn(
-                    modifier = Modifier.height(400.dp)
+                // -------------------------------------------- Content ----------------------------------------------------
+                ColumnScrollBar(
+                    modifier = Modifier.height(400.dp),
+                    columnModifier = Modifier.width(500.dp)
                 ) {
-                    item {
-                        // Add to Customer Section
-                        Text(
-                            text = "Customer",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
+                    // ------------------------- Customer -------------------------------
+                    Text(
+                        text = "Customer",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
 
-                        Spacer(Modifier.padding(4.dp))
+                    Spacer(Modifier.padding(4.dp))
 
-                        CustomerSearch(
-                            items = customerInfo,
-                            input = customerSearchBarInput,
-                            onInputChange = { customerSearchBarInput = it },
-                            onClick = { item ->
-                                // Set search bar text
-                                customerSearchBarInput = item.toString()
+                    CustomerSearch(
+                        items = customerInfo,
+                        input = customerSearchBarInput,
+                        onInputChange = { customerSearchBarInput = it },
+                        onClick = { item ->
+                            // Set search bar text
+                            customerSearchBarInput = item.toString()
 
-                                // Set customer id
-                                customerId = item
-                                      }
-                        )
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        // Assigned employee section
-                        Text(
-                            text = "Assigned Employee",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        EmployeeSearch(
-                            items = employees,
-                            input = employeeSearchBarInput,
-                            onInputChange = { employeeSearchBarInput = it },
-                            onClick = { item ->
-                                // Set search bar text
-                                employeeSearchBarInput = item.toString()
-
-                                // Set employee id
-                                assignedEmployee = item
-                            }
-                        )
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        Text(
-                            text = "Device",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // TODO: Maybe make this drop down with list of things?
-                        DialogTextRow(
-                            modifier = Modifier,
-                            firstLabel = "Manufacturer",
-                            firstValue = deviceManufacturer,
-                            onFirstValueChange = { deviceManufacturer = it },
-                            secondLabel = "Model",
-                            secondValue = deviceModel,
-                            onSecondValueChange = { deviceModel = it }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Text(
-                            text = "Status",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        TicketStatusDropDown(
-                            modifier = Modifier.width(350.dp),
-                            status = status,
-                            onClick = { status = it }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Text(
-                            text = "Priority",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        TicketPriorityDropDown(
-                            modifier = Modifier.width(350.dp),
-                            priority = priority,
-                            onClick = { priority = it }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Updates",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            IconButton(
-                                modifier = Modifier.size(26.dp),
-                                onClick = { showAddNoteDialog = true }
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(20.dp),
-                                    painter = painterResource(Res.drawable.plus),
-                                    contentDescription = "Add new Update"
-                                )
-                            }
+                            // Set customer id
+                            customerId = item
                         }
+                    )
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    // ------------------------- Assigned employee -------------------------------
+                    Text(
+                        text = "Assigned Employee",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    EmployeeSearch(
+                        items = employees,
+                        input = employeeSearchBarInput,
+                        onInputChange = { employeeSearchBarInput = it },
+                        onClick = { item ->
+                            // Set search bar text
+                            employeeSearchBarInput = item.toString()
+
+                            // Set employee id
+                            assignedEmployee = item
+                        }
+                    )
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    // ------------------------- Device -------------------------------
+                    Text(
+                        text = "Device",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    // TODO: Maybe make this drop down with list of things?
+                    DialogTextRow(
+                        modifier = Modifier,
+                        firstLabel = "Manufacturer",
+                        firstValue = deviceManufacturer,
+                        onFirstValueChange = { deviceManufacturer = it },
+                        secondLabel = "Model",
+                        secondValue = deviceModel,
+                        onSecondValueChange = { deviceModel = it }
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    // ------------------------- Status -------------------------------
+                    Text(
+                        text = "Status",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
+
+                    TicketStatusDropDown(
+                        modifier = Modifier.width(350.dp),
+                        status = status,
+                        onClick = { status = it }
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    // ------------------------- Priority -------------------------------
+                    Text(
+                        text = "Priority",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 18.sp
+                    )
+
+                    TicketPriorityDropDown(
+                        modifier = Modifier.width(350.dp),
+                        priority = priority,
+                        onClick = { priority = it }
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+                    // ------------------------- Updates -------------------------------
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Updates",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        DialogNoteList(
-                            notes = updates,
-                            onDeleteClick = { item ->
-                                itemForDelete = SubItemType.NOTE
-                                itemUpForDeleteIndex = item
-                                showConfirmDeleteScreen = true
-                            }
-                        )
+                        IconButton(
+                            modifier = Modifier.size(26.dp),
+                            onClick = { showAddNoteDialog = true }
+                        ) {
+                            Icon(
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .size(20.dp),
+                                painter = painterResource(Res.drawable.plus),
+                                contentDescription = "Add new Update"
+                            )
+                        }
                     }
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    DialogNoteList(
+                        notes = updates,
+                        onDeleteClick = { item ->
+                            itemForDelete = SubItemType.NOTE
+                            itemUpForDeleteIndex = item
+                            showConfirmDeleteScreen = true
+                        }
+                    )
                 }
 
                 Spacer(Modifier.padding(8.dp))
 
-                Row(
+                // -------------------------------------------- Confirm Cancel buttons ----------------------------------------------------
+                ConfirmOrCancelButtonRow(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { onDismiss(null, DialogDismissReason.CANCEL) },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
+                    onCancelClick = { onDismiss(null, DialogDismissReason.CANCEL) },
+                    onConfirmClick = {
+                        // Call dismiss with data
+                        onDismiss(
+                            TicketInfo(
+                                identifier = seedData.identifier,
+                                customerId = customerId,
+                                assignedEmployee = assignedEmployee,
+                                device = Device(deviceManufacturer, deviceModel),
+                                status = status,
+                                priority = priority,
+                                updates = updates,
+                                time = seedData.time
+                            ),
+                            DialogDismissReason.CONTINUE
                         )
-                    ) {
-                        Text("Cancel")
                     }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    Button(
-                        onClick = {
-                            // Call dismiss with data
-                            onDismiss(
-                                TicketInfo(
-                                    identifier = seedData.identifier,
-                                    customerId = customerId,
-                                    assignedEmployee = assignedEmployee,
-                                    device = Device(deviceManufacturer, deviceModel),
-                                    status = status,
-                                    priority = priority,
-                                    updates = updates,
-                                    time = seedData.time
-                                ),
-                                DialogDismissReason.CONTINUE
-                            )
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                    ) {
-                        Text("Confirm")
-                    }
-                }
+                )
             }
         }
     }

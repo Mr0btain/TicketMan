@@ -56,14 +56,14 @@ object ScrollBarDefaults {
      * ScrollBar.
      *
      * @param trackColor the track color of this ScrollBar when enabled
-     * @param barColor the bar color of this ScrollBar when enabled
+     * @param thumbColor the bar color of this ScrollBar when enabled
      * @param disabledTrackColor the track color of this ScrollBar when not enabled
      * @param disabledBarColor the bar color of this ScrollBar when not enabled
      */
     @Composable
     fun scrollBarColors(
-        trackColor: Color = MaterialTheme.colorScheme.outline,
-        barColor: Color = contentColorFor(trackColor),
+        trackColor: Color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+        thumbColor: Color = contentColorFor(trackColor),
         disabledTrackColor: Color =
             MaterialTheme.colorScheme.outlineVariant
                 .copy(alpha = 0.12f)
@@ -73,7 +73,7 @@ object ScrollBarDefaults {
     ): ScrollBarColors =
         DefaultScrollBarColors(
             trackColor = trackColor,
-            barColor = barColor,
+            thumbColor = thumbColor,
             disabledTrackColor = disabledTrackColor,
             disabledBarColor = disabledBarColor
         )
@@ -96,14 +96,14 @@ interface ScrollBarColors {
      *
      * @param enabled whether the scroll bar is enabled
      */
-    @Composable fun barColor(enabled: Boolean): State<Color>
+    @Composable fun thumbColor(enabled: Boolean): State<Color>
 }
 
 /** Default [ScrollBarColors] implementation. */
 @Immutable
 private class DefaultScrollBarColors(
     private val trackColor: Color,
-    private val barColor: Color,
+    private val thumbColor: Color,
     private val disabledTrackColor: Color,
     private val disabledBarColor: Color,
 ) : ScrollBarColors {
@@ -113,8 +113,8 @@ private class DefaultScrollBarColors(
     }
 
     @Composable
-    override fun barColor(enabled: Boolean): State<Color> {
-        return rememberUpdatedState(if (enabled) barColor else disabledBarColor)
+    override fun thumbColor(enabled: Boolean): State<Color> {
+        return rememberUpdatedState(if (enabled) thumbColor else disabledBarColor)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -122,7 +122,7 @@ private class DefaultScrollBarColors(
         if (other == null || this::class != other::class) return false
         other as DefaultScrollBarColors
         if (trackColor != other.trackColor) return false
-        if (barColor != other.barColor) return false
+        if (thumbColor != other.thumbColor) return false
         if (disabledTrackColor != other.disabledTrackColor) return false
         if (disabledBarColor != other.disabledBarColor) return false
         return true
@@ -130,7 +130,7 @@ private class DefaultScrollBarColors(
 
     override fun hashCode(): Int {
         var result = trackColor.hashCode()
-        result = 31 * result + barColor.hashCode()
+        result = 31 * result + thumbColor.hashCode()
         result = 31 * result + disabledTrackColor.hashCode()
         result = 31 * result + disabledBarColor.hashCode()
         return result

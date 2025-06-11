@@ -19,7 +19,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.ui.composables.scrollbar.LazyVerticalScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 
@@ -85,7 +85,7 @@ fun CustomerListPane(
             HorizontalDivider(modifier = Modifier.width(700.dp))
 
             if (getPlatform().name.contains("Java")) {
-                LazyVerticalScrollBar(
+                LazyColumnScrollBar(
                     state = lazyListState,
                     scope = scope
                 ) {

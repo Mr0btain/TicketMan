@@ -24,6 +24,7 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import ticketman.composeapp.generated.resources.*
 
 // TODO: Add option for smooth scroll to item on selection or immediate
+// TODO: Readd scroll bar size options now that we've hashed out the scroll bars
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,

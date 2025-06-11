@@ -37,6 +37,8 @@ import kotlin.math.max
  * @param content The scrollable content
  */
 
+// TODO: Redo with real scroll bar
+
 @Composable
 fun LazyHorizontalScrollBar(
     modifier: Modifier = Modifier,
@@ -165,7 +167,7 @@ private fun LazyHorizontalScrollBarItem(
                     }
                 ),
             thickness = thickness,
-            color = colors.barColor(enabled).value
+            color = colors.thumbColor(enabled).value
         )
     }
 }

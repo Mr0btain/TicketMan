@@ -19,8 +19,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
+import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
+import org.mr0btain.ticketman.components.data.components.shared.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.shared.Note
 import org.mr0btain.ticketman.components.data.components.shared.Notes
+import org.mr0btain.ticketman.components.data.components.shared.getTime
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.data.components.ticket.TicketPriority
 import org.mr0btain.ticketman.components.data.components.ticket.TicketPriorityType
@@ -32,6 +35,39 @@ import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.*
 
 // This holds things used between all panes
+
+@Composable
+fun ConfirmOrCancelButtonRow(
+    modifier: Modifier = Modifier,
+    onCancelClick: () -> Unit,
+    onConfirmClick: () -> Unit
+) {
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Button(
+            onClick = onCancelClick,
+            shape = RoundedCornerShape(8.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.error,
+                contentColor = MaterialTheme.colorScheme.onError
+            )
+        ) {
+            Text("Cancel")
+        }
+
+        Spacer(Modifier.padding(8.dp))
+
+        Button(
+            onClick = onConfirmClick,
+            shape = RoundedCornerShape(8.dp),
+        ) {
+            Text("Confirm")
+        }
+    }
+}
 
 @Composable
 fun AddOrDeleteButtonRow(
