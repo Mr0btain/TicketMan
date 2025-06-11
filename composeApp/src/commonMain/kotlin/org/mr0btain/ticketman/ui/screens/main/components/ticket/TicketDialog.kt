@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components.ticket
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -20,6 +19,7 @@ import org.mr0btain.ticketman.components.data.components.shared.PersonName
 import org.mr0btain.ticketman.components.data.components.shared.SubItemType
 import org.mr0btain.ticketman.components.data.components.ticket.Device
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.components.helpers.isNewTicket
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.EmployeeSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
@@ -43,7 +43,8 @@ fun TicketDialog(
     onAddNewCustomer: (PersonName) -> Unit,
     onDismiss: (TicketInfo?, DialogDismissReason) -> Unit,
     seedData: TicketInfo,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    scrollBarsOnRight: Boolean
 ) {
     // seed data
     var customerId by remember(seedData) { mutableIntStateOf(seedData.customerId) }
@@ -145,7 +146,7 @@ fun TicketDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = "Add New Ticket: ${seedData.identifier}",
+                        text = if (seedData.isNewTicket()) "Add New Ticket: ${seedData.identifier}" else "Edit Ticket: ${seedData.identifier}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp,
                         maxLines = 1
@@ -162,7 +163,10 @@ fun TicketDialog(
                 // -------------------------------------------- Content ----------------------------------------------------
                 ColumnScrollBar(
                     modifier = Modifier.height(400.dp),
-                    columnModifier = Modifier.width(500.dp)
+                    columnModifier = Modifier.width(500.dp),
+                    scrollBarOnRight = scrollBarsOnRight,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    isVisible = true
                 ) {
                     // ------------------------- Customer -------------------------------
                     Text(

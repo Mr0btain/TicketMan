@@ -22,6 +22,8 @@ class SettingsViewModel(
 
         val DARK_MODE = booleanPreferencesKey("appInDarkMode")
         val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
+        val SCROLL_BARS_ON_BOTTOM = booleanPreferencesKey("scrollBarsOnBottom")
+        val SCROLL_BARS_ON_RIGHT = booleanPreferencesKey("scrollBarsOnRight")
     }
 
     private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -30,11 +32,19 @@ class SettingsViewModel(
     private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("")
     var serverAddress = _serverAddress.asStateFlow()
 
+    private val _scrollBarsOnBottom: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    var scrollBarsOnBottom = _scrollBarsOnBottom.asStateFlow()
+
+    private val _scrollBarsOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    var scrollBarsOnRight = _scrollBarsOnRight.asStateFlow()
+
     // Pulling it all at once this way saves us from a real hard hitch in the ui when we change these
     fun getSettingsFromPreferences() {
         viewModelScope.launch {
             _darkMode.value = dataStore.data.map { preferences -> preferences[DARK_MODE] ?: false }.first()
             _serverAddress.value = dataStore.data.map { preferences -> preferences[SERVER_ADDRESS] ?: "" }.first()
+            _scrollBarsOnBottom.value = dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] ?: true }.first()
+            _scrollBarsOnRight.value = dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_RIGHT] ?: true }.first()
         }
     }
 
@@ -55,6 +65,28 @@ class SettingsViewModel(
 
         viewModelScope.launch {
             dataStore.edit { preferences -> preferences[SERVER_ADDRESS] = address }
+        }
+    }
+
+    fun toggleScrollBarsOnBottom(){
+        // Update the value
+        val value = !_scrollBarsOnBottom.value
+
+        _scrollBarsOnBottom.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] = value }
+        }
+    }
+
+    fun toggleScrollBarsOnRight(){
+        // Update the value
+        val value = !_scrollBarsOnRight.value
+
+        _scrollBarsOnRight.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[SCROLL_BARS_ON_RIGHT] = value }
         }
     }
 

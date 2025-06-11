@@ -33,6 +33,7 @@ fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf(),
+    scrollBarsOnRight: Boolean,
     selectedId: Int,
     onClick: (Int) -> Unit,
     state: LazyListState = rememberLazyListState(),
@@ -41,7 +42,7 @@ fun TicketListPane(
     // Column widths
     val numberColumnWidth = 100.dp
     val priorityColumnWidth = 100.dp
-    val noteColumnWidth = 360.dp
+    val noteColumnWidth = 320.dp
     val statusColumnWidth = 120.dp
 
     Surface(
@@ -55,21 +56,22 @@ fun TicketListPane(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 14.dp, end = 12.dp)
+                .padding(start = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
                 modifier = Modifier
                     .height(46.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(Modifier.padding(10.dp))
+                Spacer(Modifier.padding(3.dp))
 
                 TicketHeaderBox(
                     label = "Ticket #",
                     width = numberColumnWidth
                 )
 
-                Spacer(Modifier.padding(9.dp))
+                Spacer(Modifier.padding(10.dp))
 
                 TicketHeaderBox(
                     label = "Priority",
@@ -92,56 +94,35 @@ fun TicketListPane(
                 )
             }
 
-            HorizontalDivider(modifier = Modifier.width(740.dp))
+            HorizontalDivider(modifier = Modifier.width(710.dp))
 
-            if (getPlatform().name.contains("Java")) {
-                LazyColumnScrollBar(
-                    state = state,
-                    scope = coroutineScope
-                ) {
-                    itemsIndexed(ticketInfo) { index, item ->
-                        TicketTableItem(
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            selected = selectedId == item.identifier,
-                            ticketInfo = item,
-                            numberWidth = numberColumnWidth,
-                            priorityWidth = priorityColumnWidth,
-                            noteWidth = noteColumnWidth,
-                            statusWidth = statusColumnWidth,
-                            isDarkMode = isDarkMode,
-                            onClick = { onClick(item.identifier) }
-                        )
+            LazyColumnScrollBar(
+                modifier = Modifier
+                    .width(740.dp)
+                    .padding(start = 4.dp),
+                state = state,
+                scope = coroutineScope,
+                scrollBarOnRight = scrollBarsOnRight,
+                isVisible = ticketInfo.isNotEmpty()
+            ) {
+                itemsIndexed(ticketInfo) { index, item ->
+                    TicketTableItem(
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        selected = selectedId == item.identifier,
+                        ticketInfo = item,
+                        numberWidth = numberColumnWidth,
+                        priorityWidth = priorityColumnWidth,
+                        noteWidth = noteColumnWidth,
+                        statusWidth = statusColumnWidth,
+                        isDarkMode = isDarkMode,
+                        onClick = { onClick(item.identifier) }
+                    )
 
-                        Spacer(Modifier.padding(2.dp))
-                    }
-                }
-            } else {
-                LazyColumn(
-                    state = state
-                ) {
-                    itemsIndexed(ticketInfo) { index, item ->
-                        TicketTableItem(
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            selected = selectedId == item.identifier,
-                            ticketInfo = item,
-                            numberWidth = numberColumnWidth,
-                            priorityWidth = priorityColumnWidth,
-                            noteWidth = noteColumnWidth,
-                            statusWidth = statusColumnWidth,
-                            isDarkMode = isDarkMode,
-                            onClick = { onClick(item.identifier) }
-                        )
-
-                        Spacer(Modifier.padding(2.dp))
-                    }
+                    Spacer(Modifier.padding(2.dp))
                 }
             }
         }

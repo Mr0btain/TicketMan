@@ -48,7 +48,9 @@ fun ColumnScrollBar(
     columnModifier: Modifier = Modifier,
     scrollBarOnRight: Boolean = true,
     barWidth: Dp = ScrollBarDefaults.size,
+    backgroundColor: Color,
     enabled: Boolean = true,
+    isVisible: Boolean,
     colors: ScrollBarColors = ScrollBarDefaults.scrollBarColors(),
     contentPadding: PaddingValues = ScrollBarDefaults.ContentPadding,
     clipToContent: Boolean = true,
@@ -65,65 +67,68 @@ fun ColumnScrollBar(
             modifier = Modifier.drawWithContent {
                 drawContent()
                 viewportSize.value = this.size
-            }
+            }.background(backgroundColor)
         ) {
             if (scrollBarOnRight) {
-                Box(
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportSize.value.width.dp - barWidth)
+                // The content
+                Column(
+                    modifier = columnModifier
+                        .background(backgroundColor)
+                        .padding(contentPadding)
+                        .verticalScroll(scrollState)
+                        .weight(0.95f)
                 ) {
-                    // The content
-                    Column(
-                        modifier = columnModifier
-                            .padding(contentPadding)
-                            .width(viewportSize.value.width.dp - barWidth)
-                            .verticalScroll(scrollState)
+                    content(scrollState)
+                }
+
+                if (isVisible) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .wrapContentWidth()
+                            .weight(0.05f)
+                            .background(colors.trackColor(enabled).value)
                     ) {
-                        content(scrollState)
+                        VerticalScrollbar(
+                            modifier = Modifier.fillMaxHeight(),
+                            style = LocalScrollbarStyle.current.copy(
+                                minimalHeight = 48.dp,
+                                thickness = barWidth,
+                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
+                                hoverColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            adapter = rememberScrollbarAdapter(scrollState)
+                        )
+                    }
+                }
+            } else {
+                if (isVisible) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .wrapContentWidth()
+                            .background(colors.trackColor(enabled).value)
+                    ) {
+                        VerticalScrollbar(
+                            modifier = Modifier.fillMaxHeight(),
+                            style = LocalScrollbarStyle.current.copy(
+                                minimalHeight = 48.dp,
+                                thickness = barWidth,
+                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
+                                hoverColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            adapter = rememberScrollbarAdapter(scrollState)
+                        )
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .wrapContentWidth()
-                        .background(colors.trackColor(enabled).value)
-                ) {
-                    VerticalScrollbar(
-                        modifier = Modifier.fillMaxHeight(),
-                        style = LocalScrollbarStyle.current.copy(
-                            minimalHeight = 48.dp,
-                            thickness = barWidth,
-                            unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                            hoverColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        adapter = rememberScrollbarAdapter(scrollState)
-                    )
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .wrapContentWidth()
-                        .background(colors.trackColor(enabled).value)
-                ) {
-                    VerticalScrollbar(
-                        modifier = Modifier.fillMaxHeight(),
-                        style = LocalScrollbarStyle.current.copy(
-                            minimalHeight = 48.dp,
-                            thickness = barWidth,
-                            unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                            hoverColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        adapter = rememberScrollbarAdapter(scrollState)
-                    )
-                }
-
                 Box (
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportSize.value.width.dp - barWidth)
+                    modifier = if (clipToContent) Modifier.background(backgroundColor) else Modifier.width(viewportSize.value.width.dp - barWidth).background(backgroundColor)
                 ) {
                     // The content
                     Column(
                         modifier = Modifier
+                            .background(backgroundColor)
                             .verticalScroll(scrollState)
                             .padding(contentPadding)
                     ) {

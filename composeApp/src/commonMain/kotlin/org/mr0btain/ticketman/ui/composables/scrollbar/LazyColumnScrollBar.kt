@@ -38,6 +38,7 @@ fun LazyColumnScrollBar(
     scrollBarOnRight: Boolean = ScrollBarDefaults.scrollBarOnRight,
     thickness: Dp = ScrollBarDefaults.size,
     enabled: Boolean = true,
+    isVisible: Boolean,
     colors: ScrollBarColors = ScrollBarDefaults.scrollBarColors(),
     contentPadding: PaddingValues = ScrollBarDefaults.ContentPadding,
     clipToContent: Boolean = ScrollBarDefaults.clipToContent,
@@ -53,53 +54,59 @@ fun LazyColumnScrollBar(
             if (scrollBarOnRight) {
                 // The content
                 Box(
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportWidth.dp - thickness)
+                    modifier = modifier.weight(0.95f)
                 ) {
                     LazyColumn(
                         state = state,
-                        content = content
+                        content = content,
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .wrapContentWidth()
-                        .background(colors.trackColor(enabled).value)
-                ) {
-                    VerticalScrollbar(
-                        modifier = Modifier.fillMaxHeight(),
-                        style = LocalScrollbarStyle.current.copy(
-                            minimalHeight = 48.dp,
-                            thickness = thickness,
-                            unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                            hoverColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        adapter = rememberScrollbarAdapter(state)
-                    )
+                if (isVisible) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .wrapContentWidth()
+                            .weight(0.05f)
+                            .background(colors.trackColor(enabled).value)
+                    ) {
+                        VerticalScrollbar(
+                            modifier = Modifier.fillMaxHeight(),
+                            style = LocalScrollbarStyle.current.copy(
+                                minimalHeight = 48.dp,
+                                thickness = thickness,
+                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
+                                hoverColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            adapter = rememberScrollbarAdapter(state)
+                        )
+                    }
                 }
             } else {
-                Box(
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .wrapContentWidth()
-                        .background(colors.trackColor(enabled).value)
-                ) {
-                    VerticalScrollbar(
-                        modifier = Modifier.fillMaxHeight(),
-                        style = LocalScrollbarStyle.current.copy(
-                            minimalHeight = 48.dp,
-                            thickness = thickness,
-                            unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                            hoverColor = MaterialTheme.colorScheme.onSurface
-                        ),
-                        adapter = rememberScrollbarAdapter(state)
-                    )
+                if (isVisible) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .wrapContentWidth()
+                            .weight(0.05f)
+                            .background(colors.trackColor(enabled).value)
+                    ) {
+                        VerticalScrollbar(
+                            modifier = Modifier.fillMaxHeight(),
+                            style = LocalScrollbarStyle.current.copy(
+                                minimalHeight = 48.dp,
+                                thickness = thickness,
+                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
+                                hoverColor = MaterialTheme.colorScheme.onSurface
+                            ),
+                            adapter = rememberScrollbarAdapter(state)
+                        )
+                    }
                 }
 
                 // The content
                 Box(
-                    modifier = if (clipToContent) Modifier else Modifier.width(viewportWidth.dp - thickness)
+                    modifier = Modifier.weight(0.95f)
                 ) {
                     LazyColumn(
                         state = state,

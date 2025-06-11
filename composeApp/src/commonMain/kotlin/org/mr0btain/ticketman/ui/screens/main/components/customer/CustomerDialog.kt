@@ -1,11 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.main.components.customer
 
-import androidx.compose.foundation.ScrollbarAdapter
-import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,15 +18,11 @@ import org.mr0btain.ticketman.components.data.components.customer.Address
 import org.mr0btain.ticketman.components.data.components.customer.ContactInfo
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.shared.DialogDismissReason
-import org.mr0btain.ticketman.components.data.components.shared.MainItemType
-import org.mr0btain.ticketman.components.data.components.shared.Note
-import org.mr0btain.ticketman.components.data.components.shared.PersonName
-import org.mr0btain.ticketman.components.data.components.shared.SubItemType
+import org.mr0btain.ticketman.components.data.components.shared.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
-import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
@@ -41,14 +34,14 @@ import kotlin.math.ceil
 // TODO: Add checks to make sure its not blank
 // TODO: Add ability to assign already existing tickets to customer.
 // TODO: Add ability to edit note
-// TODO: Add error handling and snack bar notifications
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
     seedData: CustomerData = CustomerData(),
     onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
     onAddNewTicket: (Int) -> Unit,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    scrollBarsOnRight: Boolean
 ) {
     // Name
     var firstName by remember(seedData) { mutableStateOf(seedData.info.name.firstName) }
@@ -219,7 +212,10 @@ fun CustomerDialog(
                 // -------------------------------------------- Content ----------------------------------------------------
                 ColumnScrollBar(
                     modifier = Modifier.height(400.dp),
-                    columnModifier = Modifier.width(500.dp)
+                    columnModifier = Modifier.width(500.dp),
+                    scrollBarOnRight = scrollBarsOnRight,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    isVisible = true
                 ) {
                     // ------------------------- Name -------------------------------
                     Text(

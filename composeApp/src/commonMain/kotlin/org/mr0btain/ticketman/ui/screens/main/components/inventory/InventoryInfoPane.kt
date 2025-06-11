@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components.inventory
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import jdk.jfr.Description
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.helpers.formatTime
+import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
 import ticketman.composeapp.generated.resources.Res
@@ -28,6 +30,7 @@ fun InventoryInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     inventoryItem: InventoryItem,
+    scrollBarsOnRight: Boolean,
     onEditClick: () -> Unit
 ) {
     val date = formatTime(inventoryItem.time)
@@ -170,10 +173,13 @@ fun InventoryInfoPane(
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    Column(
+                    ColumnScrollBar(
                         modifier = Modifier
-                            .padding(20.dp)
-                            .verticalScroll(rememberScrollState())
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(20.dp),
+                        scrollBarOnRight = scrollBarsOnRight,
+                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                        isVisible = inventoryItem.notes.isNotEmpty()
                     ) {
                         Text(
                             text = "Notes",

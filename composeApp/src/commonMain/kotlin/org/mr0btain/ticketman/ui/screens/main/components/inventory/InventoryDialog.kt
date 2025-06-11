@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components.inventory
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.*
@@ -28,18 +27,19 @@ import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 
-// TODO: Add ability to edit notes
+// TODO: Add ability to edit notes?
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
     onDismiss: (InventoryItem?, DialogDismissReason) -> Unit,
     seedData: InventoryItem,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    scrollBarsOnRight: Boolean
 ) {
     // seed data
     var name by remember(seedData) { mutableStateOf(seedData.name) }
     var description by remember(seedData) { mutableStateOf(seedData.description) }
-    var stock by remember(seedData) { mutableStateOf(seedData.stock) }
+    var stock by remember(seedData) { mutableStateOf(if (seedData.stock != Int.MAX_VALUE) seedData.stock else 0) }
     val price = rememberTextFieldState(seedData.price.filter { it.isDigit() })
     val cost = rememberTextFieldState(seedData.cost.filter { it.isDigit() })
 
@@ -50,8 +50,6 @@ fun InventoryDialog(
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
     var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
     var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
-
-    val scrollState = rememberScrollState()
 
     // For adding note dialog
     var showAddNoteDialog by remember { mutableStateOf(false) }
@@ -143,7 +141,10 @@ fun InventoryDialog(
                 // -------------------------------------------- Content ----------------------------------------------------
                 ColumnScrollBar(
                     modifier = Modifier.height(400.dp),
-                    columnModifier = Modifier.width(300.dp)
+                    columnModifier = Modifier.width(300.dp),
+                    scrollBarOnRight = scrollBarsOnRight,
+                    backgroundColor = MaterialTheme.colorScheme.surface,
+                    isVisible = notes.isNotEmpty()
                 ) {
                     // -------------------------- Name ------------------------
                     OutlinedTextField(

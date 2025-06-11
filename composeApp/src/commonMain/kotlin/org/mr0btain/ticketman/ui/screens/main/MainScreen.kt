@@ -3,46 +3,43 @@ package org.mr0btain.ticketman.ui.screens.main
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.shared.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.shared.MainItemType
-import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.data.components.shared.getTime
+import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryPanel
-import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerDialog
-import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerPanel
 import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryDialog
+import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryPanel
+import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketPanel
 
 /**
  * The main landing screen
  */
 
-// TODO: Inventory dialog
+// TODO: Seed data is not updated before popping up dialog. Need to make a way to check and wait for it to be updated
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
     coroutineScope: CoroutineScope,
+    scrollBarsOnBottom: Boolean,
+    scrollBarsOnRight: Boolean,
     isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
@@ -116,7 +113,8 @@ fun MainScreen(
                 showTicketDialog = true
             },
             isDarkMode = isDarkMode,
-            seedData = customerSeedData
+            seedData = customerSeedData,
+            scrollBarsOnRight = scrollBarsOnRight
         )
     }
 
@@ -147,6 +145,7 @@ fun MainScreen(
             seedData = ticketSeedData,
             customerInfo = customerData.value.map { it.info },
             employees = employeeList.value,
+            scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
                 // Add seeded data if there is any
                 customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = viewModel.getNextCustomerId()))
@@ -178,7 +177,8 @@ fun MainScreen(
                 // Close dialog
                 showInventoryDialog = false
             },
-            isDarkMode = isDarkMode
+            isDarkMode = isDarkMode,
+            scrollBarsOnRight = scrollBarsOnRight
         )
     }
 
@@ -350,20 +350,25 @@ fun MainScreen(
                                 }
                             },
                             onTicketClick = { id ->
-                                // Set selected ticket
-                                viewModel.changeSelectedTicketId(id)
+                                coroutineScope.launch {
+                                    // Set selected ticket
+                                    viewModel.changeSelectedTicketId(id)
 
-                                // Get seed data
-                                ticketSeedData = viewModel.getTicketForId(selectedTicket.value)
+                                    // Get seed data
+                                    ticketSeedData = viewModel.getTicketForId(id)
 
-                                // Pop up ticket dialog
-                                showTicketDialog = true
+                                    // TODO: Popup error?
+                                    // Trigger dialog if we have an actual item selected
+                                    if (ticketSeedData != TicketInfo()) { showTicketDialog = true }
+                                }
                             },
                             selectedCustomerId = selectedCustomer.value,
                             customerDataList = customerData.value,
                             ticketList = ticketList.value,
                             customerLazyListState = customerLazyListState,
-                            coroutineScope = coroutineScope
+                            coroutineScope = coroutineScope,
+                            scrollBarsOnRight = scrollBarsOnRight,
+                            scrollBarsOnBottom = scrollBarsOnBottom
                         )
                     }
 
@@ -376,6 +381,7 @@ fun MainScreen(
                             customerList = customerData.value,
                             currentEmployee = currentEmployee.value,
                             employeeList = employeeList.value,
+                            scrollBarsOnRight = scrollBarsOnRight,
                             onAddNewTicket = {
                                 // Set up seed data
                                 ticketSeedData = TicketInfo(
@@ -424,6 +430,8 @@ fun MainScreen(
                             onAddInventoryItem = {
                                 // Set seed data
                                 inventorySeedData = InventoryItem(
+                                    cost = "000",
+                                    price = "000",
                                     identifier = viewModel.getNextInventoryId(),
                                     time = getTime()
                                 )
@@ -454,7 +462,8 @@ fun MainScreen(
                                 }
                             },
                             coroutineScope = coroutineScope,
-                            inventoryListState = inventoryLazyListState
+                            inventoryListState = inventoryLazyListState,
+                            scrollBarsOnRight = scrollBarsOnRight
                         )
                     }
                 }

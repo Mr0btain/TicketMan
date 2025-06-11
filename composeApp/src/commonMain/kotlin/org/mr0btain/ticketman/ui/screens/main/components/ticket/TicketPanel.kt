@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.ui.screens.main.components.ticket
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,7 +16,6 @@ import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
-// TODO: Add ability to click column and sort by that value
 // TODO: Add hours worked/ inventory items to a list of expense and charges
 // TODO: Add invoice and ability to export
 
@@ -28,6 +26,7 @@ fun TicketPanel(
     isDarkMode: Boolean,
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
+    scrollBarsOnRight: Boolean,
     selectedTicketId: Int,
     ticketList: List<TicketInfo>,
     customerList: List<CustomerData>,
@@ -168,6 +167,7 @@ fun TicketPanel(
                 TicketListPane(
                     isDarkMode = isDarkMode,
                     ticketInfo = sortedTickets,
+                    scrollBarsOnRight = scrollBarsOnRight,
                     onClick = { ticket ->
                         // Update from click
                         isSelectedUpdateFromClick = true
@@ -189,6 +189,7 @@ fun TicketPanel(
                         ?: Employee()).name,
                     isDarkMode = isDarkMode,
                     ticketInfo = selectedTicket,
+                    scrollBarsOnRight = scrollBarsOnRight,
                     onEditClick = {
                         // Call edit ticket
                         onEditTicket()

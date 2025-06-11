@@ -25,12 +25,15 @@ import ticketman.composeapp.generated.resources.*
 
 // TODO: Add option for smooth scroll to item on selection or immediate
 // TODO: Readd scroll bar size options now that we've hashed out the scroll bars
+// TODO: Add option for scroll bar size enum
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel
 ) {
     val darkMode = viewModel.darkMode.collectAsState(false)
+    val scrollBarsOnBottom = viewModel.scrollBarsOnBottom.collectAsState()
+    val scrollBarsOnRight = viewModel.scrollBarsOnRight.collectAsState()
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -74,9 +77,29 @@ fun SettingsScreen(
                         name = "Dark Mode",
                         icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
                         iconDesc = "Should the ui stay in dark mode",
-                        state = darkMode
+                        state = darkMode.value
                     ) {
                         viewModel.toggleDarkMode()
+                    }
+
+                    // Scroll bars on bottom
+                    SettingsSwitchItem(
+                        name = "Horizontal ScrollBars on the Bottom",
+                        icon = if (scrollBarsOnBottom.value) painterResource(Res.drawable.arrow_down_circle) else painterResource(Res.drawable.arrow_up_circle),
+                        iconDesc = "Position of horizontal scroll bars",
+                        state = scrollBarsOnBottom.value
+                    ) {
+                        viewModel.toggleScrollBarsOnBottom()
+                    }
+
+                    // Scroll bars on right
+                    SettingsSwitchItem(
+                        name = "Vertical ScrollBars on the Right",
+                        icon = if (scrollBarsOnRight.value) painterResource(Res.drawable.arrow_right_circle) else painterResource(Res.drawable.arrow_left_circle),
+                        iconDesc = "Position of vertical scroll bars",
+                        state = scrollBarsOnRight.value
+                    ) {
+                        viewModel.toggleScrollBarsOnRight()
                     }
                 }
             }

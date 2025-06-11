@@ -10,6 +10,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.components.helpers.CustomOutlinedTextField
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -48,7 +49,7 @@ fun MoneyTextField(
         },
         outputTransformation = {
             // Insert our decimal for cents
-            insert(length - 2, ".")
+            insert(max(length - 2, 0), ".")
 
             // Thi is used to calculate where we have to put a ","
             var leftOver = length - 3

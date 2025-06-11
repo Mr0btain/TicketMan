@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.ui.screens.main.components.customer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,8 +21,8 @@ import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 @Composable
 fun CustomerPanel(
     modifier: Modifier = Modifier,
-    scrollBarTop: Boolean = false,
-    scrollBarRight: Boolean = true,
+    scrollBarsOnBottom: Boolean,
+    scrollBarsOnRight: Boolean,
     selectedCustomerId: Int,
     customerDataList: List<CustomerData>,
     ticketList: List<TicketInfo>,
@@ -112,7 +111,7 @@ fun CustomerPanel(
                     lazyListState = customerLazyListState,
                     selectedCustomerId = selectedCustomerId,
                     scope = coroutineScope,
-                    scrollBarRight = scrollBarRight,
+                    scrollBarsOnRight = scrollBarsOnRight,
                     isDarkMode = isDarkMode,
                     onClick = { id ->
                         // Set the isupdatefromclick so we don't jar the scroll in the launched effect
@@ -131,7 +130,8 @@ fun CustomerPanel(
                         ?: CustomerData(),
                     onEditClick = { onEditCustomer() },
                     tickets = ticketList.filter { it.customerId == selectedCustomerId },
-                    onTicketClick = onTicketClick
+                    onTicketClick = onTicketClick,
+                    scrollBarsOnRight = scrollBarsOnRight
                 )
             }
         }

@@ -29,6 +29,7 @@ fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     items: List<InventoryItem>,
+    scrollBarsOnRight: Boolean,
     selectedId: Int,
     onClick: (Int) -> Unit,
     state: LazyListState = rememberLazyListState(),
@@ -53,14 +54,15 @@ fun InventoryListPane(
         Column(
             modifier = Modifier
                 .wrapContentSize()
-                .padding(start = 14.dp, end = 12.dp)
+                .padding(start = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Row(
                 modifier = Modifier
                     .height(46.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Spacer(Modifier.padding(10.dp))
+                Spacer(Modifier.padding(4.dp))
 
                 InventoryHeaderBox(
                     label = "Name",
@@ -101,8 +103,13 @@ fun InventoryListPane(
 
             if (getPlatform().name.contains("Java")) {
                 LazyColumnScrollBar(
+                    modifier = Modifier
+                        .width(720.dp)
+                        .padding(start = 4.dp),
                     state = state,
-                    scope = coroutineScope
+                    scope = coroutineScope,
+                    scrollBarOnRight = scrollBarsOnRight,
+                    isVisible = items.isNotEmpty()
                 ) {
                     itemsIndexed(items) { index, item ->
                         InventoryTableItem(

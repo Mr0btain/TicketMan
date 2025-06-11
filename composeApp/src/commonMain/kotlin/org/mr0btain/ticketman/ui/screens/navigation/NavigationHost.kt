@@ -31,7 +31,9 @@ fun NavigationHost(
     settingsViewModel: SettingsViewModel,
     snackBarState: SnackbarHostState
 ) {
-    val darkMode = settingsViewModel.darkMode.collectAsState(false)
+    val darkMode = settingsViewModel.darkMode.collectAsState()
+    val scrollBarsOnRight = settingsViewModel.scrollBarsOnRight.collectAsState()
+    val scrollBarsOnBottom = settingsViewModel.scrollBarsOnBottom.collectAsState()
 
     NavHost(
         modifier = modifier,
@@ -43,7 +45,9 @@ fun NavigationHost(
                 viewModel = mainViewModel,
                 coroutineScope = coroutineScope,
                 isDarkMode = darkMode.value,
-                snackBarState = snackBarState
+                snackBarState = snackBarState,
+                scrollBarsOnRight = scrollBarsOnRight.value,
+                scrollBarsOnBottom = scrollBarsOnBottom.value
             )
         }
 

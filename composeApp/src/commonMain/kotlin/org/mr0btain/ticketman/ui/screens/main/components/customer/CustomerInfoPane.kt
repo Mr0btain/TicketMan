@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components.customer
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,6 +16,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.helpers.formatTime
+import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SmallTicketList
@@ -24,6 +26,7 @@ import ticketman.composeapp.generated.resources.*
 fun CustomerInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
+    scrollBarsOnRight: Boolean,
     selectedCustomerData: CustomerData,
     tickets: List<TicketInfo>,
     onEditClick: () -> Unit,
@@ -106,13 +109,14 @@ fun CustomerInfoPane(
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    Column(
+                    ColumnScrollBar(
                         modifier = Modifier
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
                             .width(300.dp)
-                            .padding(20.dp)
-                            .verticalScroll(scrollState),
-                        horizontalAlignment = Alignment.Start,
-                        verticalArrangement = Arrangement.Top
+                            .padding(20.dp),
+                        scrollBarOnRight = scrollBarsOnRight,
+                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                        isVisible = true
                     ) {
                         Text(
                             text = "Info",
@@ -209,7 +213,8 @@ fun CustomerInfoPane(
                     modifier = Modifier.fillMaxHeight(),
                     tickets = tickets,
                     isDarkMode = isDarkMode,
-                    onClick = { ticketId -> onTicketClick(ticketId) }
+                    onClick = { ticketId -> onTicketClick(ticketId) },
+                    scrollBarsOnRight = scrollBarsOnRight
                 )
             }
         }

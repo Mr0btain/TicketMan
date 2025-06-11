@@ -18,7 +18,7 @@ fun SettingsSwitchItem(
     icon: Painter,
     iconDesc: String,
     name: String,
-    state: State<Boolean>,
+    state: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
@@ -56,7 +56,7 @@ fun SettingsSwitchItem(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Switch(
-                    checked = state.value,
+                    checked = state,
                     onCheckedChange = { onClick() }
                 )
             }

@@ -3,6 +3,9 @@ package org.mr0btain.ticketman.components.helpers
 import org.mr0btain.ticketman.components.data.components.shared.AMPM
 import org.mr0btain.ticketman.components.data.components.shared.Time
 import org.mr0btain.ticketman.components.data.components.shared.parseAmPm
+import org.mr0btain.ticketman.components.data.components.ticket.Device
+import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.components.data.components.ticket.TicketStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,5 +42,15 @@ fun parseDateToLong(time: Time): Long {
     } catch (e: Exception) {
         e.printStackTrace()
         Long.MAX_VALUE
+    }
+}
+
+fun TicketInfo.isNewTicket(): Boolean {
+    return when {
+        customerId != Int.MAX_VALUE -> false
+        updates.isNotEmpty() -> false
+        device != Device("", "") -> false
+        assignedEmployee != Int.MAX_VALUE -> false
+        else -> true
     }
 }

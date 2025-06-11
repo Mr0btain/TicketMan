@@ -41,6 +41,7 @@ fun InventoryPanel(
     isDarkMode: Boolean,
     inventoryList: List<InventoryItem>,
     selectedInventoryItemId: Int,
+    scrollBarsOnRight: Boolean,
     onSelectedInventoryItemChange: (Int) -> Unit,
     onAddInventoryItem: () -> Unit,
     onEditInventoryItem: (Int) -> Unit,
@@ -117,6 +118,7 @@ fun InventoryPanel(
                     isDarkMode = isDarkMode,
                     selectedId = selectedInventoryItemId,
                     items = inventoryList,
+                    scrollBarsOnRight = scrollBarsOnRight,
                     onClick = {
                         // Set is update from click
                         isSelectedUpdateFromClick = true
@@ -130,6 +132,7 @@ fun InventoryPanel(
 
                 InventoryInfoPane(
                     isDarkMode = isDarkMode,
+                    scrollBarsOnRight = scrollBarsOnRight,
                     inventoryItem = inventoryList.firstOrNull { it.identifier == selectedInventoryItemId } ?: InventoryItem(),
                     onEditClick = { onEditInventoryItem(selectedInventoryItemId) }
                 )

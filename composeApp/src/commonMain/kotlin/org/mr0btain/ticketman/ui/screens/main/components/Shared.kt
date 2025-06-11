@@ -2,8 +2,6 @@ package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -19,17 +17,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
-import org.mr0btain.ticketman.components.data.components.shared.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.shared.Note
-import org.mr0btain.ticketman.components.data.components.shared.Notes
-import org.mr0btain.ticketman.components.data.components.shared.getTime
-import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
-import org.mr0btain.ticketman.components.data.components.ticket.TicketPriority
-import org.mr0btain.ticketman.components.data.components.ticket.TicketPriorityType
-import org.mr0btain.ticketman.components.data.components.ticket.TicketStatus
-import org.mr0btain.ticketman.components.data.components.ticket.TicketStatusType
+import org.mr0btain.ticketman.components.data.components.ticket.*
 import org.mr0btain.ticketman.components.helpers.formatTime
+import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.*
@@ -295,10 +286,12 @@ fun TableCardTextItem(
     )
 }
 
+// TODO: Add time to this
 @Composable
 fun SmallTicketList(
     modifier: Modifier = Modifier,
     tickets: List<TicketInfo>,
+    scrollBarsOnRight: Boolean,
     isDarkMode: Boolean,
     onClick: (Int) -> Unit
 ) {
@@ -336,11 +329,13 @@ fun SmallTicketList(
 
             HorizontalDivider()
 
-            LazyColumn(
-                modifier = Modifier
-                    .padding(4.dp)
+            ColumnScrollBar(
+                modifier = Modifier.padding(4.dp),
+                scrollBarOnRight = scrollBarsOnRight,
+                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                isVisible = tickets.isNotEmpty()
             ) {
-                items(tickets.reversed()) { ticket ->
+                tickets.reversed().forEach { ticket ->
                     Surface(
                         modifier = Modifier
                             .padding(8.dp)

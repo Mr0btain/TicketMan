@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components.ticket
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +18,7 @@ import org.mr0btain.ticketman.components.data.components.shared.Note
 import org.mr0btain.ticketman.components.data.components.shared.PersonName
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.helpers.formatTime
+import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
@@ -31,6 +33,7 @@ fun TicketInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     customerData: CustomerData,
+    scrollBarsOnRight: Boolean,
     employeeName: PersonName,
     ticketInfo: TicketInfo,
     onEditClick: () -> Unit
@@ -196,10 +199,13 @@ fun TicketInfoPane(
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    Column(
+                    ColumnScrollBar(
                         modifier = Modifier
-                            .padding(20.dp)
-                            .verticalScroll(rememberScrollState())
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(20.dp),
+                        scrollBarOnRight = scrollBarsOnRight,
+                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                        isVisible = ticketInfo.updates.isNotEmpty()
                     ) {
                         Text(
                             text = "Updates",
