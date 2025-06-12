@@ -45,12 +45,12 @@ fun parseDateToLong(time: Time): Long {
     }
 }
 
+// TODO: Need a better way to determine if its a new ticket or not
 fun TicketInfo.isNewTicket(): Boolean {
     return when {
         customerId != Int.MAX_VALUE -> false
         updates.isNotEmpty() -> false
         device != Device("", "") -> false
-        assignedEmployee != Int.MAX_VALUE -> false
         else -> true
     }
 }

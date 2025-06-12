@@ -14,6 +14,7 @@ data class TicketInfo(
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Long.MAX_VALUE),
     val priority: TicketPriority = TicketPriority(TicketPriorityType.LOW, Long.MAX_VALUE),
     val updates: List<Note> = listOf(),
+    val charges: TicketCharge = TicketCharge(),
     val time: Long = Long.MAX_VALUE
 )
 

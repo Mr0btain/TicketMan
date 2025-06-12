@@ -3,7 +3,13 @@ package org.mr0btain.ticketman.ui.screens.main
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -16,22 +22,25 @@ import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.shared.DialogDismissReason
 import org.mr0btain.ticketman.components.data.components.shared.MainItemType
-import org.mr0btain.ticketman.components.data.components.shared.getTime
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.components.data.components.shared.getTime
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryPanel
 import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerDialog
+import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketDialog
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerPanel
 import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryDialog
-import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryPanel
-import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketPanel
 
 /**
  * The main landing screen
  */
+// Probably don't need some of these actions in a coroutine.
+// But the less we have to do on the main thread the better
+// I guess.
 
-// TODO: Seed data is not updated before popping up dialog. Need to make a way to check and wait for it to be updated
+// TODO: Something with snackbar? maybe errors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,29 +97,33 @@ fun MainScreen(
     if (showCustomerDialog) {
         CustomerDialog(
             onDismiss = { data, reason ->
-                // Check if we should update or add
-                when (reason) {
-                    DialogDismissReason.CONTINUE -> {
-                        viewModel.updateOrAddCustomer(data!!)
+                coroutineScope.launch {
+                    // Check if we should update or add
+                    when (reason) {
+                        DialogDismissReason.CONTINUE -> {
+                            viewModel.updateOrAddCustomer(data!!)
+                        }
+
+                        DialogDismissReason.CANCEL -> {
+                            // Do Nothing
+                        }
                     }
 
-                    DialogDismissReason.CANCEL -> {
-                        // Do Nothing
-                    }
+                    // Reset starter data
+                    customerSeedData = CustomerData()
+
+                    // Hide dialog
+                    showCustomerDialog = false
                 }
-
-                // Reset starter data
-                customerSeedData = CustomerData()
-
-                // Hide dialog
-                showCustomerDialog = false
             },
             onAddNewTicket = { customerId ->
-                // Seed data with customer id
-                ticketSeedData = TicketInfo(customerId = customerId, time = getTime(), identifier = viewModel.getNextTicketId())
+                coroutineScope.launch {
+                    // Seed data with customer id
+                    ticketSeedData = TicketInfo(customerId = customerId, time = getTime(), identifier = viewModel.getNextTicketId())
 
-                // Show dialog
-                showTicketDialog = true
+                    // Show dialog
+                    showTicketDialog = true
+                }
             },
             isDarkMode = isDarkMode,
             seedData = customerSeedData,
@@ -124,22 +137,24 @@ fun MainScreen(
     if (showTicketDialog) {
         TicketDialog(
             onDismiss = { data, reason ->
-                // Check if it's an actual add else data will be null
-                when (reason) {
-                    DialogDismissReason.CONTINUE -> {
-                        viewModel.updateOrAddTicket(data!!)
+                coroutineScope.launch {
+                    // Check if it's an actual add else data will be null
+                    when (reason) {
+                        DialogDismissReason.CONTINUE -> {
+                            viewModel.updateOrAddTicket(data!!)
+                        }
+
+                        DialogDismissReason.CANCEL -> {
+                            // Do nothing
+                        }
                     }
 
-                    DialogDismissReason.CANCEL -> {
-                        // Do nothing
-                    }
+                    // Reset seed data
+                    ticketSeedData = TicketInfo()
+
+                    // Close dialog
+                    showTicketDialog = false
                 }
-
-                // Reset seed data
-                ticketSeedData = TicketInfo()
-
-                // Close dialog
-                showTicketDialog = false
                         },
             isDarkMode = isDarkMode,
             seedData = ticketSeedData,
@@ -147,11 +162,13 @@ fun MainScreen(
             employees = employeeList.value,
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
-                // Add seeded data if there is any
-                customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = viewModel.getNextCustomerId()))
+                coroutineScope.launch {
+                    // Add seeded data if there is any
+                    customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = viewModel.getNextCustomerId()))
 
-                // Trigger dialog
-                showCustomerDialog = true
+                    // Trigger dialog
+                    showCustomerDialog = true
+                }
             }
         )
     }
@@ -161,21 +178,23 @@ fun MainScreen(
         InventoryDialog(
             seedData = inventorySeedData,
             onDismiss = { item, reason ->
-                when (reason) {
-                    DialogDismissReason.CONTINUE -> {
-                        viewModel.updateOrAddInventoryItem(item!!)
+                coroutineScope.launch {
+                    when (reason) {
+                        DialogDismissReason.CONTINUE -> {
+                            viewModel.updateOrAddInventoryItem(item!!)
+                        }
+
+                        DialogDismissReason.CANCEL -> {
+                            // Do nothing
+                        }
                     }
 
-                    DialogDismissReason.CANCEL -> {
-                        // Do nothing
-                    }
+                    // Reset seed data
+                    inventorySeedData = InventoryItem()
+
+                    // Close dialog
+                    showInventoryDialog = false
                 }
-
-                // Reset seed data
-                inventorySeedData = InventoryItem()
-
-                // Close dialog
-                showInventoryDialog = false
             },
             isDarkMode = isDarkMode,
             scrollBarsOnRight = scrollBarsOnRight
@@ -187,43 +206,45 @@ fun MainScreen(
         SimpleConfirmDeleteDialog(
             itemName = confirmDeleteDialogText,
             onDismissRequest = { confirmed ->
-                if (confirmed) {
-                    // Delete item
-                    when (itemToDeleteType) {
-                        MainItemType.CUSTOMER -> {
-                            // Remove customer
-                            viewModel.removeCustomer(itemToDelete)
+                coroutineScope.launch {
+                    if (confirmed) {
+                        // Delete item
+                        when (itemToDeleteType) {
+                            MainItemType.CUSTOMER -> {
+                                // Remove customer
+                                viewModel.removeCustomer(itemToDelete)
 
-                            // Reset selected
-                            viewModel.changeSelectedCustomerId(Int.MAX_VALUE)
+                                // Reset selected
+                                viewModel.changeSelectedCustomerId(Int.MAX_VALUE)
+                            }
+
+                            MainItemType.TICKET -> {
+                                // Remove ticket
+                                viewModel.removeTicket(itemToDelete)
+
+                                // Reset selected
+                                viewModel.changeSelectedTicketId(Int.MAX_VALUE)
+                            }
+                            MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
+                            MainItemType.INVENTORY -> {
+                                // Remove item
+                                viewModel.removeInventoryItem(itemToDelete)
+
+                                // Reset selected
+                                viewModel.changeSelectedInventoryId(Int.MAX_VALUE)
+                            }
+                            MainItemType.NONE -> { /* Do nothing */ }
                         }
-
-                        MainItemType.TICKET -> {
-                            // Remove ticket
-                            viewModel.removeTicket(itemToDelete)
-
-                            // Reset selected
-                            viewModel.changeSelectedTicketId(Int.MAX_VALUE)
-                        }
-                        MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
-                        MainItemType.INVENTORY -> {
-                            // Remove item
-                            viewModel.removeInventoryItem(itemToDelete)
-
-                            // Reset selected
-                            viewModel.changeSelectedInventoryId(Int.MAX_VALUE)
-                        }
-                        MainItemType.NONE -> { /* Do nothing */ }
                     }
+
+                    // Reset values
+                    itemToDelete = Int.MAX_VALUE
+                    itemToDeleteType = MainItemType.NONE
+                    confirmDeleteDialogText = ""
+
+                    // Close the dialog
+                    showConfirmDeleteDialog = false
                 }
-
-                // Reset values
-                itemToDelete = Int.MAX_VALUE
-                itemToDeleteType = MainItemType.NONE
-                confirmDeleteDialogText = ""
-
-                // Close the dialog
-                showConfirmDeleteDialog = false
             },
             isDarkMode = isDarkMode
         )
@@ -315,38 +336,44 @@ fun MainScreen(
                         CustomerPanel(
                             isDarkMode = isDarkMode,
                             onAddCustomer = { name ->
-                                // Set seed data
-                                customerSeedData = CustomerData(
-                                    info = CustomerInfo(
-                                        name = name,
-                                        time = getTime(),
-                                        identifier = viewModel.getNextCustomerId()
+                                coroutineScope.launch {
+                                    // Set seed data
+                                    customerSeedData = CustomerData(
+                                        info = CustomerInfo(
+                                            name = name,
+                                            time = getTime(),
+                                            identifier = viewModel.getNextCustomerId()
+                                        )
                                     )
-                                )
 
-                                // Trigger dialog
-                                showCustomerDialog = true
+                                    // Trigger dialog
+                                    showCustomerDialog = true
+                                }
                             },
                             onEditCustomer = {
-                                // Set seed data
-                                customerSeedData = viewModel.getCustomerForId(selectedCustomer.value)
+                                coroutineScope.launch {
+                                    // Set seed data
+                                    customerSeedData = viewModel.getCustomerForId(selectedCustomer.value)
 
-                                // Trigger dialog if we actually have an item selected
-                                if (customerSeedData != CustomerData()) { showCustomerDialog = true }
+                                    // Trigger dialog if we actually have an item selected
+                                    if (customerSeedData != CustomerData()) { showCustomerDialog = true }
+                                }
                             },
-                            onCustomerSelectionChange = { id ->  viewModel.changeSelectedCustomerId(id) },
+                            onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomerId(id)},
                             onDeleteCustomer = { id ->
-                                // TODO: Maybe add name of customer to this as well?
-                                // TODO: Add ability to delete tickets for customer as well
-                                // Check if item exists
-                                if (customerData.value.firstOrNull { it.info.identifier == id } != null) {
-                                    // Set values
-                                    itemToDelete = id
-                                    itemToDeleteType = MainItemType.CUSTOMER
-                                    confirmDeleteDialogText = "Customer: $id"
+                                coroutineScope.launch {
+                                    // TODO: Maybe add name of customer to this as well?
+                                    // TODO: Add ability to delete tickets for customer as well
+                                    // Check if item exists
+                                    if (customerData.value.firstOrNull { it.info.identifier == id } != null) {
+                                        // Set values
+                                        itemToDelete = id
+                                        itemToDeleteType = MainItemType.CUSTOMER
+                                        confirmDeleteDialogText = "Customer: $id"
 
-                                    // Trigger the dialog
-                                    showConfirmDeleteDialog = true
+                                        // Trigger the dialog
+                                        showConfirmDeleteDialog = true
+                                    }
                                 }
                             },
                             onTicketClick = { id ->
@@ -357,9 +384,8 @@ fun MainScreen(
                                     // Get seed data
                                     ticketSeedData = viewModel.getTicketForId(id)
 
-                                    // TODO: Popup error?
-                                    // Trigger dialog if we have an actual item selected
-                                    if (ticketSeedData != TicketInfo()) { showTicketDialog = true }
+                                    // Pop up ticket dialog
+                                    showTicketDialog = true
                                 }
                             },
                             selectedCustomerId = selectedCustomer.value,
@@ -383,35 +409,41 @@ fun MainScreen(
                             employeeList = employeeList.value,
                             scrollBarsOnRight = scrollBarsOnRight,
                             onAddNewTicket = {
-                                // Set up seed data
-                                ticketSeedData = TicketInfo(
-                                    identifier = viewModel.getNextTicketId(),
-                                    assignedEmployee = currentEmployee.value.identifier,
-                                    time = getTime()
-                                )
+                                coroutineScope.launch {
+                                    // Set up seed data
+                                    ticketSeedData = TicketInfo(
+                                        identifier = viewModel.getNextTicketId(),
+                                        assignedEmployee = currentEmployee.value.identifier,
+                                        time = getTime()
+                                    )
 
-                                // Show the dialog
-                                showTicketDialog = true
+                                    // Show the dialog
+                                    showTicketDialog = true
+                                }
                             },
                             onEditTicket = {
-                                // Get seed data
-                                ticketSeedData = viewModel.getTicketForId(selectedTicket.value)
+                                coroutineScope.launch {
+                                    // Get seed data
+                                    ticketSeedData = viewModel.getTicketForId(selectedTicket.value)
 
-                                // Trigger dialog if we have an actual item selected
-                                if (ticketSeedData != TicketInfo()) { showTicketDialog = true }
+                                    // Trigger dialog if we have an actual item selected
+                                    if (ticketSeedData != TicketInfo()) { showTicketDialog = true }
+                                }
                             },
                             onSelectedTicketChange = { id -> viewModel.changeSelectedTicketId(id) },
                             onSelectedPanelChange = { selectedTicketPanel = it },
                             onDeleteTicket = { id ->
-                                // Make sure item exists
-                                if (ticketList.value.firstOrNull { it.identifier == id } != null) {
-                                    // Set values
-                                    itemToDelete = id
-                                    itemToDeleteType = MainItemType.TICKET
-                                    confirmDeleteDialogText = "Ticket: $id"
+                                coroutineScope.launch {
+                                    // Make sure item exists
+                                    if (ticketList.value.firstOrNull { it.identifier == id } != null) {
+                                        // Set values
+                                        itemToDelete = id
+                                        itemToDeleteType = MainItemType.TICKET
+                                        confirmDeleteDialogText = "Ticket: $id"
 
-                                    // Trigger the dialog
-                                    showConfirmDeleteDialog = true
+                                        // Trigger the dialog
+                                        showConfirmDeleteDialog = true
+                                    }
                                 }
                             },
                             selectedPanel = selectedTicketPanel,
@@ -428,37 +460,43 @@ fun MainScreen(
                             selectedInventoryItemId = selectedInventoryId.value,
                             onSelectedInventoryItemChange = { viewModel.changeSelectedInventoryId(it) },
                             onAddInventoryItem = {
-                                // Set seed data
-                                inventorySeedData = InventoryItem(
-                                    cost = "000",
-                                    price = "000",
-                                    identifier = viewModel.getNextInventoryId(),
-                                    time = getTime()
-                                )
+                                coroutineScope.launch {
+                                    // Set seed data
+                                    inventorySeedData = InventoryItem(
+                                        cost = "000",
+                                        price = "000",
+                                        identifier = viewModel.getNextInventoryId(),
+                                        time = getTime()
+                                    )
 
-                                // Popup dialog
-                                showInventoryDialog = true
+                                    // Popup dialog
+                                    showInventoryDialog = true
+                                }
                             },
                             onEditInventoryItem = { item ->
-                                // Set seed data
-                                inventorySeedData = viewModel.getInventoryItemForId(item)
+                                coroutineScope.launch {
+                                    // Set seed data
+                                    inventorySeedData = viewModel.getInventoryItemForId(item)
 
-                                // Popup dialog if we have an actual item selected
-                                if (inventorySeedData != InventoryItem()) { showInventoryDialog = true }
+                                    // Popup dialog if we have an actual item selected
+                                    if (inventorySeedData != InventoryItem()) { showInventoryDialog = true }
+                                }
                             },
                             onDeleteInventoryItem = { id ->
-                                // Get item so we can get the name
-                                val item = inventoryList.value.firstOrNull { it.identifier == id }
+                                coroutineScope.launch {
+                                    // Get item so we can get the name
+                                    val item = inventoryList.value.firstOrNull { it.identifier == id }
 
-                                // Check if its valid
-                                if (item != null) {
-                                    // Set values
-                                    itemToDelete = id
-                                    itemToDeleteType = MainItemType.INVENTORY
-                                    confirmDeleteDialogText = "${item.name}: $id"
+                                    // Check if its valid
+                                    if (item != null) {
+                                        // Set values
+                                        itemToDelete = id
+                                        itemToDeleteType = MainItemType.INVENTORY
+                                        confirmDeleteDialogText = "${item.name}: $id"
 
-                                    // Trigger the dialog
-                                    showConfirmDeleteDialog = true
+                                        // Trigger the dialog
+                                        showConfirmDeleteDialog = true
+                                    }
                                 }
                             },
                             coroutineScope = coroutineScope,
