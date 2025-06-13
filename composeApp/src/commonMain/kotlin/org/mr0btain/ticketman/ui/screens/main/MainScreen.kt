@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -67,6 +68,12 @@ fun MainScreen(
     // For customer dialog
     var customerSeedData by remember { mutableStateOf(CustomerData()) }
     var showCustomerDialog by remember { mutableStateOf(false) }
+    var isTicketForNewCustomer by remember { mutableStateOf(false) }
+
+    // We need this outside of the customer dialog so we can modify this from other dialogs
+    // and handle different scenarios
+    val tempTicketHolder = remember { mutableStateListOf<TicketInfo>() }
+    val customerTicketList = remember { mutableStateListOf<Int>() }
 
     // For ticket panel
     val ticketList = viewModel.ticketDataList.collectAsState()
@@ -101,16 +108,26 @@ fun MainScreen(
                     // Check if we should update or add
                     when (reason) {
                         DialogDismissReason.CONTINUE -> {
+                            // Add or update customer
                             viewModel.updateOrAddCustomer(data!!)
+
+                            // Check for new tickets and add
+                            tempTicketHolder.forEach { ticket ->
+                                if (data.tickets.contains(ticket.identifier)) viewModel.updateOrAddTicket(ticket)
+                            }
                         }
 
-                        DialogDismissReason.CANCEL -> {
-                            // Do Nothing
+                        else -> {
+                            // Do nothing
                         }
                     }
 
                     // Reset starter data
                     customerSeedData = CustomerData()
+
+                    // Reset customer ticket stuff
+                    tempTicketHolder.clear()
+                    customerTicketList.clear()
 
                     // Hide dialog
                     showCustomerDialog = false
@@ -118,8 +135,15 @@ fun MainScreen(
             },
             onAddNewTicket = { customerId ->
                 coroutineScope.launch {
+                    // Set is for new customer so ticket dialog knows wht to do with it
+                    isTicketForNewCustomer = true
+
                     // Seed data with customer id
-                    ticketSeedData = TicketInfo(customerId = customerId, time = getTime(), identifier = viewModel.getNextTicketId())
+                    ticketSeedData = TicketInfo(
+                        customerId = customerId,
+                        time = getTime(),
+                        identifier = viewModel.getNextTicketId()
+                    )
 
                     // Show dialog
                     showTicketDialog = true
@@ -127,13 +151,12 @@ fun MainScreen(
             },
             isDarkMode = isDarkMode,
             seedData = customerSeedData,
+            ticketList = customerTicketList,
             scrollBarsOnRight = scrollBarsOnRight
         )
     }
 
     // For ticket adding or editing
-    // TODO: Need to handle the event if were making a new customer and they add a ticket then cancel adding customer?
-    // TODO: Need to make it so when adding new customer and we add a ticket we update customers tickets after ticket creation
     if (showTicketDialog) {
         TicketDialog(
             onDismiss = { data, reason ->
@@ -141,7 +164,21 @@ fun MainScreen(
                     // Check if it's an actual add else data will be null
                     when (reason) {
                         DialogDismissReason.CONTINUE -> {
-                            viewModel.updateOrAddTicket(data!!)
+                            // Check if this is for a new customer as we don't need to add them unless we fully finish adding
+                            // customer itself
+                            if (isTicketForNewCustomer) {
+                                // Add to temp holder list before we finalize customer
+                                tempTicketHolder.add(data!!)
+
+                                // Add to customer ticket list
+                                customerTicketList.add(data.identifier)
+
+                                // Reset check
+                                isTicketForNewCustomer = false
+                            } else {
+                                // Else add it to the database
+                                viewModel.updateOrAddTicket(data!!)
+                            }
                         }
 
                         DialogDismissReason.CANCEL -> {
@@ -184,7 +221,7 @@ fun MainScreen(
                             viewModel.updateOrAddInventoryItem(item!!)
                         }
 
-                        DialogDismissReason.CANCEL -> {
+                        else -> {
                             // Do nothing
                         }
                     }

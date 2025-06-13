@@ -62,6 +62,7 @@ fun EmployeeSearch(
             label = { Text("Search Employees") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
+            singleLine = true,
             modifier = Modifier
                 .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                 .fillMaxWidth()

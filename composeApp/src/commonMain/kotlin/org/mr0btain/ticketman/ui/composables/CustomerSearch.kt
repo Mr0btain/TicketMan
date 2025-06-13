@@ -61,6 +61,7 @@ fun CustomerSearch(
             },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
+            singleLine = true,
             modifier = Modifier
                 .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                 .fillMaxWidth()

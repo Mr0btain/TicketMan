@@ -60,6 +60,7 @@ fun InventorySearch(
             label = { Text("Search Inventory") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
+            singleLine = true,
             modifier = Modifier
                 .menuAnchor(MenuAnchorType.PrimaryEditable, true)
                 .fillMaxWidth()

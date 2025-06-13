@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotMutableState
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,10 +36,12 @@ import kotlin.math.ceil
 // TODO: Add checks to make sure its not blank
 // TODO: Add ability to assign already existing tickets to customer.
 // TODO: Add ability to edit note
+// TODO: Find better way to remove items based off more than just an index?
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
     seedData: CustomerData = CustomerData(),
+    ticketList: SnapshotStateList<Int>,
     onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
     onAddNewTicket: (Int) -> Unit,
     isDarkMode: Boolean,
@@ -56,7 +60,6 @@ fun CustomerDialog(
     // Mutable lists
     val email = remember(seedData) { seedData.info.contactInfo.email.toMutableStateList() }
     val phone = remember(seedData) { seedData.info.contactInfo.phone.toMutableStateList() }
-    val tickets = remember(seedData) { seedData.tickets.toMutableStateList() }
     val notes = remember(seedData) { seedData.notes.toMutableStateList() }
 
     // For deleting item dialog
@@ -119,12 +122,11 @@ fun CustomerDialog(
         )
     }
 
-
     // Delete item dialog
     if (showConfirmDeleteScreen) {
         ConfirmDeleteDialog(
             itemName = when (itemForDelete) {
-                SubItemType.TICKET -> tickets[itemUpForDeleteIndex].toString()
+                SubItemType.TICKET -> itemForDelete.toString()
                 SubItemType.EMAIL -> email[itemUpForDeleteIndex]
                 SubItemType.PHONE -> phone[itemUpForDeleteIndex]
                 SubItemType.NOTE -> notes[itemUpForDeleteIndex].author + "'s Note"
@@ -137,7 +139,7 @@ fun CustomerDialog(
                     when (itemForDelete) {
                         SubItemType.TICKET -> {
                             // Remove item from list
-                            tickets.removeAt(itemUpForDeleteIndex)
+                            ticketList.removeAt(itemUpForDeleteIndex)
                         }
 
                         SubItemType.EMAIL -> {
@@ -394,7 +396,7 @@ fun CustomerDialog(
 
                     // ------------------------- Ticket list -------------------------------
                     CustomerDialogTicketList(
-                        items = tickets.map { it.toString() },
+                        items = ticketList.map { it.toString() },
                         onDeleteClick = { item ->
                             itemForDelete = SubItemType.TICKET
                             itemUpForDeleteIndex = item
@@ -470,7 +472,7 @@ fun CustomerDialog(
                                     contactInfo = ContactInfo(email, phone),
                                     time = seedData.info.time
                                 ),
-                                tickets = tickets,
+                                tickets = ticketList,
                                 notes = notes
                             ),
                             DialogDismissReason.CONTINUE
@@ -564,6 +566,7 @@ private fun CustomerDialogPhoneList(
     }
 }
 
+// TODO: Convert to lazy row
 @Composable
 private fun CustomerDialogTicketList(
     modifier: Modifier = Modifier,

@@ -34,6 +34,7 @@ class MainViewModel(
     private companion object {
         const val TAG = "MainViewModel"
     }
+    // Todo Check if we even need this
     val platform = getPlatform().name
 
     // Selected main tab index
@@ -72,31 +73,15 @@ class MainViewModel(
             // Update database
             database.updateEmployee(employee)
         } else {
-            // Else add new item
+            // Else add new item to view model
+            _employeeList.value = _employeeList.value + employee
+
+            // Add to database
             database.addEmployee(employee)
         }
     }
 
     fun getEmployees() { _employeeList.value = database.getAllEmployees() }
-
-    fun addEmployee(employee: Employee) {
-        // Check if item exists or not, if not then add it
-        if (_employeeList.value.firstOrNull { it.identifier == employee.identifier } != null) {
-            // Update data in viewmodel
-            // Get index of the item
-            val index = _employeeList.value.indexOfFirst { it.identifier == employee.identifier }
-
-            // update list with new data
-            _employeeList.value = _employeeList.value.toMutableList().also { it[index] = employee }
-
-            // Update database
-            database.updateEmployee(employee)
-        } else {
-            // Else add new item
-            database.addEmployee(employee)
-        }
-        database.addEmployee(employee)
-    }
 
     fun removeEmployee(id: Int) {
         // Check if employee exists or not
@@ -143,9 +128,14 @@ class MainViewModel(
             // Update database
             database.updateInventoryItem(inventoryItem)
         } else {
-            // Else add new item
+            // Else add new item to view model
+            _inventoryList.value = _inventoryList.value + inventoryItem
+
+            // Add to database
             database.addInventoryItem(inventoryItem)
         }
+
+        _selectedInventoryId.value = inventoryItem.identifier
     }
 
     fun removeInventoryItem(id: Int) {
@@ -199,9 +189,14 @@ class MainViewModel(
             // Update database
             database.updateTicket(data)
         } else {
-            // Else add new ticket
+            // Else add new ticket to view model
+            _ticketDataList.value = _ticketDataList.value + data
+
+            // Add to database
             database.addTicket(data)
         }
+
+        _selectedTicketId.value = data.identifier
     }
 
     fun removeTicket(id: Int) {
@@ -264,9 +259,15 @@ class MainViewModel(
             // Update database
             database.updateCustomer(data)
         } else {
-            // Else add new
+            // Else add to list in view model
+            _customerDataList.value = _customerDataList.value + data
+
+            // Add to database
             database.addCustomer(data)
         }
+
+        // Set selected customer
+        _selectedCustomerId.value = data.info.identifier
     }
 
     // To update customer data list
@@ -295,17 +296,9 @@ class MainViewModel(
     fun updateDataFromDb() {
         // Read data from db and update it in view model
         getCustomers()
-        println("Customer list size: ${_customerDataList.value.size}")
-
         getTickets()
-        println("Ticket list size: ${_ticketDataList.value.size}")
-
         getEmployees()
-        println("Employee list size: ${_employeeList.value.size}")
-
         getInventory()
-        println("Inventory list size: ${_inventoryList.value.size}")
-
         _employee.value = employeeList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: Employee()
         println("Selected employee: ${_employee.value}")
     }
