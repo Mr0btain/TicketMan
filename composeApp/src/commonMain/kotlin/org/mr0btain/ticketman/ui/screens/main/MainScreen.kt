@@ -42,7 +42,6 @@ import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketPanel
 // I guess.
 
 // TODO: Something with snackbar? maybe errors
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(

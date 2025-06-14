@@ -1,13 +1,12 @@
-package org.mr0btain.ticketman.components.data.components.ticket
+package org.mr0btain.ticketman.components.data.components.invoice
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.components.data.components.invoice.Charge
 import org.mr0btain.ticketman.components.data.components.shared.Note
 
 @Serializable
-data class TicketCharge(
+data class Invoice(
     val invoiceNumber: Int = 0,
-    val employeeId: Int = 0,
+    val ticketId: Int = 0,
     val note: List<Note> = listOf(),
     val charges: List<Charge> = listOf()
 )

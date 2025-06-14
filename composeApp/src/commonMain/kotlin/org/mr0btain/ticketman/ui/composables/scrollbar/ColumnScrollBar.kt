@@ -1,8 +1,6 @@
 package org.mr0btain.ticketman.ui.composables.scrollbar
 
-import androidx.compose.foundation.LocalScrollbarStyle
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -10,10 +8,8 @@ import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.*
@@ -27,6 +23,9 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.max
+
+// TODO: Make expect actual because scrollbars don't exist on android so
+//  we would need custom implementation if we even want it on mobile
 
 /**
  * Adds a vertical scroll bar to scrollable content providing its own scroll state to manage scroll
@@ -89,16 +88,8 @@ fun ColumnScrollBar(
                             .weight(0.05f)
                             .background(colors.trackColor(enabled).value)
                     ) {
-                        VerticalScrollbar(
-                            modifier = Modifier.fillMaxHeight(),
-                            style = LocalScrollbarStyle.current.copy(
-                                minimalHeight = 48.dp,
-                                thickness = barWidth,
-                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                                hoverColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            adapter = rememberScrollbarAdapter(scrollState)
-                        )
+
+                        VerticalScrollBar(scrollState)
                     }
                 }
             } else {
@@ -109,16 +100,7 @@ fun ColumnScrollBar(
                             .wrapContentWidth()
                             .background(colors.trackColor(enabled).value)
                     ) {
-                        VerticalScrollbar(
-                            modifier = Modifier.fillMaxHeight(),
-                            style = LocalScrollbarStyle.current.copy(
-                                minimalHeight = 48.dp,
-                                thickness = barWidth,
-                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                                hoverColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            adapter = rememberScrollbarAdapter(scrollState)
-                        )
+                        VerticalScrollBar(scrollState)
                     }
                 }
 

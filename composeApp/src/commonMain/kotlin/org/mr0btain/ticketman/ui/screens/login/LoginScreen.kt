@@ -32,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.stringResource
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.login_button_text
 import ticketman.composeapp.generated.resources.login_text
@@ -46,6 +47,7 @@ import ticketman.composeapp.generated.resources.login_text
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
+    viewModel: MainViewModel,
     onConfirm: (user:String, pass: String) -> Boolean,
     onDismiss: () -> Unit,
     isDarkMode: Boolean,
@@ -104,6 +106,14 @@ fun LoginScreen(
             }
 
             Spacer(Modifier.padding(12.dp))
+
+            Button(
+                onClick = {
+                    viewModel.testPdf()
+                }
+            ) {
+                Text("generate Fake Pdf")
+            }
 
             if (selectedTab == 0) {
                 LoginField(

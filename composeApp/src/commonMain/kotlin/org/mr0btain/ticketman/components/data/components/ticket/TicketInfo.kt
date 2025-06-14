@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.data.components.ticket
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.components.data.components.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.shared.Note
 import org.mr0btain.ticketman.components.data.components.shared.getTime
 import kotlin.random.Random
@@ -14,7 +15,7 @@ data class TicketInfo(
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Long.MAX_VALUE),
     val priority: TicketPriority = TicketPriority(TicketPriorityType.LOW, Long.MAX_VALUE),
     val updates: List<Note> = listOf(),
-    val charges: TicketCharge = TicketCharge(),
+    val invoice: Invoice = Invoice(),
     val time: Long = Long.MAX_VALUE
 )
 

@@ -65,7 +65,8 @@ fun NavigationHost(
                     onConfirm = { user, pass -> true },
                     onDismiss = {},
                     isDarkMode = darkMode.value,
-                    snackBarState = snackBarState
+                    snackBarState = snackBarState,
+                    viewModel = mainViewModel
                 )
             }
         }

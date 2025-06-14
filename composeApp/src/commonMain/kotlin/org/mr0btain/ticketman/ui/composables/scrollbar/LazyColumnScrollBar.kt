@@ -1,20 +1,16 @@
 package org.mr0btain.ticketman.ui.composables.scrollbar
 
-import androidx.compose.foundation.LocalScrollbarStyle
-import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollbarAdapter
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -45,8 +41,6 @@ fun LazyColumnScrollBar(
     scope: CoroutineScope = rememberCoroutineScope(),
     content: LazyListScope.() -> Unit
 ) {
-    val viewportWidth = state.layoutInfo.viewportSize.width
-
     Surface(
         modifier = modifier
     ) {
@@ -70,16 +64,7 @@ fun LazyColumnScrollBar(
                             .weight(0.05f)
                             .background(colors.trackColor(enabled).value)
                     ) {
-                        VerticalScrollbar(
-                            modifier = Modifier.fillMaxHeight(),
-                            style = LocalScrollbarStyle.current.copy(
-                                minimalHeight = 48.dp,
-                                thickness = thickness,
-                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                                hoverColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            adapter = rememberScrollbarAdapter(state)
-                        )
+                        VerticalScrollBar(state)
                     }
                 }
             } else {
@@ -91,16 +76,7 @@ fun LazyColumnScrollBar(
                             .weight(0.05f)
                             .background(colors.trackColor(enabled).value)
                     ) {
-                        VerticalScrollbar(
-                            modifier = Modifier.fillMaxHeight(),
-                            style = LocalScrollbarStyle.current.copy(
-                                minimalHeight = 48.dp,
-                                thickness = thickness,
-                                unhoverColor = colors.thumbColor(enabled).value.copy(alpha = 0.7f),
-                                hoverColor = MaterialTheme.colorScheme.onSurface
-                            ),
-                            adapter = rememberScrollbarAdapter(state)
-                        )
+                        VerticalScrollBar(state)
                     }
                 }
 

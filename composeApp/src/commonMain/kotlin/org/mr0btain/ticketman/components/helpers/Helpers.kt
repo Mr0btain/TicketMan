@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.helpers
 
+import androidx.compose.foundation.text.input.insert
 import org.mr0btain.ticketman.components.data.components.shared.AMPM
 import org.mr0btain.ticketman.components.data.components.shared.Time
 import org.mr0btain.ticketman.components.data.components.shared.parseAmPm
@@ -53,4 +54,22 @@ fun TicketInfo.isNewTicket(): Boolean {
         device != Device("", "") -> false
         else -> true
     }
+}
+
+fun formatIntToMoney(input: Int): String {
+    val builder = StringBuilder(input.toString())
+
+    builder.apply {
+        //val amountToDrop = builder.length - dropWhile { it == '0' }.length
+        //replace(0, amountToDrop, "")
+        when (length) {
+            0 -> append("000")
+            1 -> insert(0, "00")
+            2 -> insert(0, "0")
+        }
+
+        insert(length - 2, ".")
+    }
+
+    return builder.toString()
 }

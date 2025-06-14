@@ -5,14 +5,25 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.dialogs.openFilePicker
+import io.github.vinceglb.filekit.filesDir
+import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
+import org.mr0btain.ticketman.components.data.components.customer.Address
+import org.mr0btain.ticketman.components.data.components.customer.ContactInfo
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
+import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
 import org.mr0btain.ticketman.components.data.components.employee.Employee
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
+import org.mr0btain.ticketman.components.data.components.invoice.Charge
+import org.mr0btain.ticketman.components.data.components.invoice.ChargeType
+import org.mr0btain.ticketman.components.data.components.invoice.Invoice
+import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
+import org.mr0btain.ticketman.components.data.components.shared.PersonName
+import org.mr0btain.ticketman.components.data.components.ticket.Device
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
 import org.mr0btain.ticketman.components.data.database.SqliteDb
 import org.mr0btain.ticketman.components.data.generateMockData
@@ -325,5 +336,48 @@ class MainViewModel(
 
         // Generate and add inventory items
         database.addAllInventory(generateRandomInventoryItems(60))
+    }
+
+    fun testPdf() {
+        makeTicketInvoicePdf(
+            filePath = FileKit.filesDir.path,
+            fileName = "SampleTest.pdf",
+            customerInfo = CustomerInfo(
+                name = PersonName("Eric", "Garrison"),
+                address = Address("134 Maple Dr", "Six Mile Run", "PA", "16679"),
+                contactInfo = ContactInfo(listOf("Garrison@gmail.com"), listOf("8145367890"))
+            ),
+            ticketInfo = TicketInfo(
+                identifier = 7865875,
+                assignedEmployee = 356247,
+                device = Device("Samsung", "Galaxy S7"),
+                invoice = Invoice(
+                    invoiceNumber = 123435678,
+                    charges = listOf(
+                        Charge(
+                            type = ChargeType.HOURS,
+                            amount = 3,
+                            name = "Repair",
+                            cost = 4500,
+                            description = "Made repair done"
+                        ),
+                        Charge(
+                            type = ChargeType.INVENTORY,
+                            amount = 1,
+                            name = "Solder",
+                            cost = 1340,
+                            description = "For Soldering"
+                        ),
+                        Charge(
+                            type = ChargeType.INVENTORY,
+                            amount = 1,
+                            name = "Flux",
+                            cost = 225,
+                            description = "For Solder"
+                        )
+                    )
+                )
+            )
+        )
     }
 }
