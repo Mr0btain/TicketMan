@@ -22,7 +22,7 @@ import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.shared.Note
 import org.mr0btain.ticketman.components.data.components.ticket.*
 import org.mr0btain.ticketman.components.helpers.formatTime
-import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.*
@@ -333,7 +333,7 @@ fun SmallTicketList(
 
             HorizontalDivider()
 
-            ColumnScrollBar(
+            PlatformColumnScrollable(
                 modifier = Modifier.padding(4.dp),
                 scrollBarOnRight = scrollBarsOnRight,
                 backgroundColor = MaterialTheme.colorScheme.secondaryContainer,

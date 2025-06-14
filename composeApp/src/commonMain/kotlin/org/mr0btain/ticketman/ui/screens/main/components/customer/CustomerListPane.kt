@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
-import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 
@@ -81,7 +81,7 @@ fun CustomerListPane(
 
             HorizontalDivider(modifier = Modifier.width(680.dp))
 
-            LazyColumnScrollBar(
+            PlatformLazyColumnScrollable(
                 modifier = Modifier
                     .width(700.dp),
                 state = lazyListState,

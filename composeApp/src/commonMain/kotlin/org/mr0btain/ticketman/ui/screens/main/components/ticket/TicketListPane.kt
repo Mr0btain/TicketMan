@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.ui.screens.main.components.ticket
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,8 +19,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
-import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
@@ -96,7 +94,7 @@ fun TicketListPane(
 
             HorizontalDivider(modifier = Modifier.width(710.dp))
 
-            LazyColumnScrollBar(
+            PlatformLazyColumnScrollable(
                 modifier = Modifier
                     .width(740.dp)
                     .padding(start = 4.dp),

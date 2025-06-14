@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotMutableState
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -21,7 +20,7 @@ import org.mr0btain.ticketman.components.data.components.customer.ContactInfo
 import org.mr0btain.ticketman.components.data.components.customer.CustomerData
 import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
 import org.mr0btain.ticketman.components.data.components.shared.*
-import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
@@ -212,7 +211,7 @@ fun CustomerDialog(
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Content ----------------------------------------------------
-                ColumnScrollBar(
+                PlatformColumnScrollable(
                     modifier = Modifier.height(400.dp),
                     columnModifier = Modifier.width(500.dp),
                     scrollBarOnRight = scrollBarsOnRight,

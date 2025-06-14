@@ -12,18 +12,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import jdk.jfr.Description
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.components.helpers.formatTime
-import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
 import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.package_icon
-import ticketman.composeapp.generated.resources.tag
 
 @Composable
 fun InventoryInfoPane(
@@ -173,7 +170,7 @@ fun InventoryInfoPane(
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    ColumnScrollBar(
+                    PlatformColumnScrollable(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.secondaryContainer)
                             .padding(20.dp),

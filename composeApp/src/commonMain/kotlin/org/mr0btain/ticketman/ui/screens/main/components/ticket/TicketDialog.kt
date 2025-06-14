@@ -24,7 +24,7 @@ import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.EmployeeSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
-import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
@@ -161,7 +161,7 @@ fun TicketDialog(
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Content ----------------------------------------------------
-                ColumnScrollBar(
+                PlatformColumnScrollable(
                     modifier = Modifier.height(400.dp),
                     columnModifier = Modifier.width(500.dp),
                     scrollBarOnRight = scrollBarsOnRight,

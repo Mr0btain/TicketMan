@@ -19,7 +19,7 @@ import org.mr0btain.ticketman.components.data.components.shared.MainItemType
 import org.mr0btain.ticketman.components.data.components.shared.SubItemType
 import org.mr0btain.ticketman.components.data.components.shared.getTime
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
-import org.mr0btain.ticketman.ui.composables.scrollbar.ColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
@@ -139,7 +139,7 @@ fun InventoryDialog(
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Content ----------------------------------------------------
-                ColumnScrollBar(
+                PlatformColumnScrollable(
                     modifier = Modifier.height(400.dp),
                     columnModifier = Modifier.width(300.dp),
                     scrollBarOnRight = scrollBarsOnRight,

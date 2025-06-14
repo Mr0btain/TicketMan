@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
 import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnScrollBar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 
@@ -102,7 +102,7 @@ fun InventoryListPane(
             HorizontalDivider(modifier = Modifier.width(690.dp))
 
             if (getPlatform().name.contains("Java")) {
-                LazyColumnScrollBar(
+                PlatformLazyColumnScrollable(
                     modifier = Modifier
                         .width(720.dp)
                         .padding(start = 4.dp),

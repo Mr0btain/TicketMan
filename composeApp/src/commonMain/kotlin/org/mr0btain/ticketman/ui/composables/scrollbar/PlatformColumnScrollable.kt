@@ -24,11 +24,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.max
 
-// TODO: Make expect actual because scrollbars don't exist on android so
-//  we would need custom implementation if we even want it on mobile
-
 /**
- * Adds a vertical scroll bar to scrollable content providing its own scroll state to manage scroll
+ * A scrollable Column that depending on the platform will show a scrollbar or not
  * @param modifier Modifier
  * @param scrollBarOnRight Whether the scroll bar should be on the right or the left of the content. true means right
  * @param barWidth The width in DP of the scroll bar
@@ -42,7 +39,7 @@ import kotlin.math.max
  */
 
 @Composable
-fun ColumnScrollBar(
+fun PlatformColumnScrollable(
     modifier: Modifier = Modifier,
     columnModifier: Modifier = Modifier,
     scrollBarOnRight: Boolean = true,

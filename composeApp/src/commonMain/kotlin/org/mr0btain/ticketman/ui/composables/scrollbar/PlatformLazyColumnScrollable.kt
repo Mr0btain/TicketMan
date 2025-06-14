@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.Dp
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * Adds a vertical scroll bar to scrollable content providing its own scroll state to manage scroll
+ * A Lazy column that depending on platform will show a scrollbar or not
  * @param modifier Modifier
  * @param scrollBarOnRight Whether the scroll bar should be on the right or the left of the content. true means right
  * @param thickness The width in DP of the scroll bar
@@ -28,7 +28,7 @@ import kotlinx.coroutines.CoroutineScope
  */
 
 @Composable
-fun LazyColumnScrollBar(
+fun PlatformLazyColumnScrollable(
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
     scrollBarOnRight: Boolean = ScrollBarDefaults.scrollBarOnRight,
