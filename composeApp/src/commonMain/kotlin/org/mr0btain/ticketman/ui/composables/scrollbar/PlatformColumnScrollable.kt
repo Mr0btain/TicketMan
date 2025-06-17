@@ -85,7 +85,6 @@ fun PlatformColumnScrollable(
                             .weight(0.05f)
                             .background(colors.trackColor(enabled).value)
                     ) {
-
                         VerticalScrollBar(scrollState)
                     }
                 }
@@ -118,90 +117,3 @@ fun PlatformColumnScrollable(
         }
     }
 }
-
-@Composable
-private fun VerticalScrollBarItem(
-    modifier: Modifier = Modifier,
-    barWidth: Dp = ScrollBarDefaults.size,
-    size: Size,
-    enabled: Boolean = true,
-    colors: ScrollBarColors = ScrollBarDefaults.scrollBarColors(),
-    scrollState: ScrollState,
-    offsetState: MutableState<Float>,
-    scope: CoroutineScope = rememberCoroutineScope()
-) {
-    // Using this avoids a divide by zero exception
-    val viewport = max(size.height , 1f)
-
-    // Total content height / max scrollable value minus viewport as we only want to know about the items we cant see
-    val totalContentHeight = max(scrollState.maxValue.toFloat() - viewport, 1f)
-
-    // Compute scrollbar height and position
-    val scrollBarHeight = max(48f, (viewport / totalContentHeight) * viewport * 2)
-
-    val scrollBarToContentRatio = (viewport - scrollBarHeight * 3.2f) / totalContentHeight
-
-    offsetState.value = scrollBarToContentRatio * scrollState.value.toFloat()
-    // Actual location of the scroll bar
-    //offsetState.value = (max(scrollState.value.toFloat(), 0.0001f) / totalContentHeight) * viewport
-
-    // The adjustment amount from the height of the scrolling material to the height of our bars travel area
-    val adjust = totalContentHeight / (viewport - scrollBarHeight * 3.2f)
-
-    println("Viewport $viewport")
-    println("totalContentHeight: $totalContentHeight")
-    println("scrollBarheight: $scrollBarHeight")
-    println("scrollBarToCOntentRatio: $scrollBarToContentRatio")
-    println("Offset: ${offsetState.value}")
-    println("Adjust: $adjust")
-
-    Column(
-        modifier
-            .height(viewport.dp)
-            .background(colors.trackColor(enabled).value)
-            .width(barWidth)
-    ) {
-        // The actual bar
-        VerticalDivider(
-            modifier = Modifier
-                .height(scrollBarHeight.dp)
-                .offset(0.dp, offsetState.value.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .draggable(
-                    orientation = Orientation.Vertical,
-                    state = rememberDraggableState { delta ->
-                        if (enabled) {
-                            scope.launch {
-                                scrollState.scrollBy(adjust * delta)
-                            }
-                        }
-                    }
-                ),
-            thickness = barWidth,
-            color = colors.thumbColor(enabled).value
-        )
-    }
-}
-
-/*
-/* The items which are already shown on screen should not be taken
-for calculations because they are already on screen!
-You have to calculate the items remaining off screen as the 100%
-of the data and match this percentage with the distance travelled
-by the scrollbar.
-*/
-private fun calculateScrollbarOffsetY(
-    state: LazyListState, dataSize: Int,
-    height: MutableState<Float>,
-    thumbHeight: Float
-): Float {
-    val renderedItemsNumberPerScroll = state.layoutInfo.visibleItemsInfo.size - 2
-    val itemsToScroll = dataSize - renderedItemsNumberPerScroll
-    val index = state.layoutInfo.visibleItemsInfo.first().index
-    val indexPercentage = ((100 * index) / itemsToScroll)
-
-    val yMaxValue = height.value - height.value / thumbHeight
-
-    return ((yMaxValue * indexPercentage) / 100)
-}
- */

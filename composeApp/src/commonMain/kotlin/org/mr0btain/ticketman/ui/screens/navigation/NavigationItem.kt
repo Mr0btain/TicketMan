@@ -1,8 +1,10 @@
 package org.mr0btain.ticketman.ui.screens.navigation
 
-sealed class NavigationItem(val route: String) {
-    data object Main: NavigationItem(Destinations.MAIN.name)
-    data object Settings: NavigationItem(Destinations.SETTINGS.name)
-    data object Login: NavigationItem(Destinations.LOGIN.name)
-    data object Admin: NavigationItem(Destinations.ADMIN.name)
-}
+import androidx.compose.ui.graphics.painter.Painter
+
+
+data class NavigationItem(
+    val title: String,
+    val icon: Painter,
+    val route: String
+)

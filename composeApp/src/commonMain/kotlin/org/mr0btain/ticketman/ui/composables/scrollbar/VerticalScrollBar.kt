@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 expect fun VerticalScrollBar(
     scrollState: ScrollState,
     colors: ScrollBarColors = ScrollBarDefaults.scrollBarColors(),
-    thickness: Dp = 4.dp,
+    thickness: Dp = 6.dp,
     enabled: Boolean = true
 )
 
@@ -18,6 +18,6 @@ expect fun VerticalScrollBar(
 expect fun VerticalScrollBar(
     lazyListState: LazyListState,
     colors: ScrollBarColors = ScrollBarDefaults.scrollBarColors(),
-    thickness: Dp = 4.dp,
+    thickness: Dp = 6.dp,
     enabled: Boolean = true
 )

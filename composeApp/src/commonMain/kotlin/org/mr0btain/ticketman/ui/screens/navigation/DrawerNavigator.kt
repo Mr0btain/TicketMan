@@ -45,7 +45,7 @@ fun DrawerNavigator(
                         onClick = {
                             coroutineScope.launch {
                                 // Navigate to screen
-                                navHostController.navigate(NavigationItem.Main.route)
+                                navHostController.navigate(Screen.Main.route)
 
                                 // Close drawer
                                 drawerState.close()
@@ -59,7 +59,7 @@ fun DrawerNavigator(
                         selected = false,
                         onClick = {
                             coroutineScope.launch {
-                                navHostController.navigate(NavigationItem.Admin.route)
+                                navHostController.navigate(Screen.Admin.route)
 
                                 // Close drawer
                                 drawerState.close()
@@ -78,7 +78,7 @@ fun DrawerNavigator(
                         onClick = {
                             coroutineScope.launch {
                                 // Navigate to screen
-                                navHostController.navigate(NavigationItem.Settings.route)
+                                navHostController.navigate(Screen.Settings.route)
 
                                 // Close drawer
                                 drawerState.close()
@@ -97,7 +97,7 @@ fun DrawerNavigator(
                         selected = false,
                         onClick = {
                             coroutineScope.launch {
-                                navHostController.navigate(NavigationItem.Login.route)
+                                navHostController.navigate(Screen.Login.route)
 
                                 // Close drawer
                                 drawerState.close()

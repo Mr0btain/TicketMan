@@ -1,24 +1,32 @@
 package org.mr0btain.ticketman
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
 import org.mr0btain.ticketman.ui.screens.navigation.DrawerNavigator
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
+import org.mr0btain.ticketman.ui.screens.navigation.NavigationItem
+import org.mr0btain.ticketman.ui.screens.navigation.Screen
 import org.mr0btain.ticketman.ui.screens.navigation.SideAppNav
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import org.mr0btain.ticketman.ui.theme.AppTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.archive
+import ticketman.composeapp.generated.resources.home
+import ticketman.composeapp.generated.resources.settings
+import ticketman.composeapp.generated.resources.user
 
 // TODO: Work on UI for mobile size screens
 // TODO: Make option to import database data from file?
@@ -58,6 +66,29 @@ fun App() {
         // Current employee info
         val currentEmployee = mainViewModel.employee.collectAsState()
 
+        val navDestinations = listOf(
+            NavigationItem(
+                title = "Home",
+                icon = painterResource(Res.drawable.home),
+                route = Screen.Main.route
+            ),
+            NavigationItem(
+                title = "Settings",
+                icon = painterResource(Res.drawable.settings),
+                route = Screen.Settings.route
+            ),
+            NavigationItem(
+                title = "Admin",
+                icon = painterResource(Res.drawable.archive),
+                route = Screen.Admin.route
+            ),
+            NavigationItem(
+                title = "Login",
+                icon = painterResource(Res.drawable.user),
+                route = Screen.Login.route
+            )
+        )
+
         // TODO: I don't think using window size class is the best way to go for differentiating between desktop and mobile as it
         // causes us to end up hitting the database everytime screen size class changes in desktop. We should move the window size
         // class state down the tree to avoid it recomposing the entire app when we resize the screen on desktop
@@ -82,16 +113,16 @@ fun App() {
                         )
                     },
                     topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
-                    coroutineScope = mainScope
+                    coroutineScope = mainScope,
+                    destinations = navDestinations
                 )
             } else {
-                // TODO: Test this
                 // Calculating screen size if were on mobile. This should only update when the screen is rotated.
                 val windowSizeClass = calculateWindowSizeClass()
 
                 // Change our view dependent on screen size. Mostly to differentiate from tablet or phone screen
                 if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
-                    // TODO: Test and adjust or make custom ui for this
+                    // TODO: Test on actual tablet
                     // Tablet screen just use desktop sidebar
                     SideAppNav(
                         navHostController = navigator,
@@ -106,13 +137,16 @@ fun App() {
                             )
                         },
                         topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
-                        coroutineScope = mainScope
+                        coroutineScope = mainScope,
+                        destinations = navDestinations
                     )
                 } else {
-                    // TODO: Make ui specifically for this
                     // Phone screen
-                    DrawerNavigator(
-                        navHostController = navigator,
+                    // TODO: Test on actual phone screen
+                    BottomNavigationDrawer(
+                        navController = navigator,
+                        coroutineScope = mainScope,
+                        destinations = navDestinations,
                         content = { paddingValues ->
                             NavigationHost(
                                 modifier = Modifier.padding(paddingValues),
@@ -122,10 +156,7 @@ fun App() {
                                 settingsViewModel = settingsViewModel,
                                 snackBarState = snackBarHostState
                             )
-                        },
-                        coroutineScope = mainScope,
-                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
-                        snackBarHostState = snackBarHostState
+                        }
                     )
                 }
             }

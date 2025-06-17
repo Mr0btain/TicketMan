@@ -36,6 +36,7 @@ fun SideAppNav(
     coroutineScope: CoroutineScope,
     navHostController: NavHostController,
     topAppText: String,
+    destinations: List<NavigationItem>
 ) {
     val iconSize = 48.dp
     val iconInnerPadding = 8.dp
@@ -106,66 +107,33 @@ fun SideAppNav(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Box(
-                                    modifier = Modifier.height(iconSize * 4)
+                                    modifier = Modifier.height(iconSize * (destinations.size + 1))
                                 ) {
                                     TabColumn(
                                         modifier = Modifier.width(iconSize + 4.dp),
                                         selectedTabIndex = selectedTab
                                     ) {
-                                        // Main tab
-                                        Tab(
-                                            modifier = Modifier.wrapContentSize(),
-                                            selected = selectedTab == 0,
-                                            onClick = {
-                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Main.route) }
-                                                selectedTab = 0
-                                            },
-                                            icon = {
-                                                Icon(
-                                                    modifier = Modifier
-                                                        .size(iconSize)
-                                                        .padding(iconInnerPadding),
-                                                    painter = painterResource(Res.drawable.home),
-                                                    contentDescription = "Home"
-                                                )
-                                            }
-                                        )
-
-                                        // Settings tab
-                                        Tab(
-                                            selected = selectedTab == 1,
-                                            onClick = {
-                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Settings.route) }
-                                                selectedTab = 1
-                                            },
-                                            icon = {
-                                                Icon(
-                                                    modifier = Modifier
-                                                        .size(iconSize)
-                                                        .padding(iconInnerPadding),
-                                                    painter = painterResource(Res.drawable.settings),
-                                                    contentDescription = "Settings"
-                                                )
-                                            }
-                                        )
-
-                                        // Login Tab
-                                        Tab(
-                                            selected = selectedTab == 2,
-                                            onClick = {
-                                                coroutineScope.launch { navHostController.navigate(NavigationItem.Login.route) }
-                                                selectedTab = 2
-                                            },
-                                            icon = {
-                                                Icon(
-                                                    modifier = Modifier
-                                                        .size(iconSize)
-                                                        .padding(iconInnerPadding),
-                                                    painter = painterResource(Res.drawable.user),
-                                                    contentDescription = "Login"
-                                                )
-                                            }
-                                        )
+                                        destinations.forEachIndexed { index, item ->
+                                            Tab(
+                                                modifier = Modifier.wrapContentSize(),
+                                                selected = selectedTab == index,
+                                                onClick = {
+                                                    coroutineScope.launch {
+                                                        navHostController.navigate(item.route)
+                                                        selectedTab = index
+                                                    }
+                                                },
+                                                icon = {
+                                                    Icon(
+                                                        modifier = Modifier
+                                                            .size(iconSize)
+                                                            .padding(iconInnerPadding),
+                                                        painter = item.icon,
+                                                        contentDescription = item.title
+                                                    )
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }

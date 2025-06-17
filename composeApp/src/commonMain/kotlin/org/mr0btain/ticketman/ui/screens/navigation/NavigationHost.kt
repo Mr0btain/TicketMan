@@ -14,7 +14,6 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
-import org.mr0btain.ticketman.ui.screens.inventory.InventoryScreen
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -25,7 +24,7 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
-    startDestination: String = NavigationItem.Main.route,
+    startDestination: String = Screen.Main.route,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
     settingsViewModel: SettingsViewModel,
@@ -40,7 +39,7 @@ fun NavigationHost(
         navController = navHostController,
         startDestination = startDestination
     ) {
-        composable(NavigationItem.Main.route) {
+        composable(Screen.Main.route) {
             MainScreen(
                 viewModel = mainViewModel,
                 coroutineScope = coroutineScope,
@@ -51,11 +50,11 @@ fun NavigationHost(
             )
         }
 
-        composable(NavigationItem.Settings.route) {
+        composable(Screen.Settings.route) {
             SettingsScreen(viewModel = settingsViewModel)
         }
 
-        composable(NavigationItem.Login.route) {
+        composable(Screen.Login.route) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -71,7 +70,7 @@ fun NavigationHost(
             }
         }
 
-        composable(NavigationItem.Admin.route) {
+        composable(Screen.Admin.route) {
             AdminScreen(
                 viewModel = mainViewModel,
                 isDarkMode = darkMode.value,
