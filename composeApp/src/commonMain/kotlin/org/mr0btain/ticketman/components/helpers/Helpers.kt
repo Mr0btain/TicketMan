@@ -1,12 +1,10 @@
 package org.mr0btain.ticketman.components.helpers
 
-import androidx.compose.foundation.text.input.insert
-import org.mr0btain.ticketman.components.data.components.shared.AMPM
-import org.mr0btain.ticketman.components.data.components.shared.Time
-import org.mr0btain.ticketman.components.data.components.shared.parseAmPm
-import org.mr0btain.ticketman.components.data.components.ticket.Device
-import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
-import org.mr0btain.ticketman.components.data.components.ticket.TicketStatus
+import org.mr0btain.ticketman.data.shared.AMPM
+import org.mr0btain.ticketman.data.shared.Time
+import org.mr0btain.ticketman.data.shared.parseAmPm
+import org.mr0btain.ticketman.data.ticket.Device
+import org.mr0btain.ticketman.data.ticket.TicketInfo
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale

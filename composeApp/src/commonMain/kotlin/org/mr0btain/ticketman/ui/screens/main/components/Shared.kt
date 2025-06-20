@@ -18,10 +18,15 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.shared.Note
+import org.mr0btain.ticketman.data.customer.CustomerInfo
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.components.data.components.ticket.*
 import org.mr0btain.ticketman.components.helpers.formatTime
+import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.data.ticket.TicketPriority
+import org.mr0btain.ticketman.data.ticket.TicketPriorityType
+import org.mr0btain.ticketman.data.ticket.TicketStatus
+import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight

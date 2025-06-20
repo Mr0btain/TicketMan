@@ -21,7 +21,10 @@ kotlin {
     //iosSimulatorArm64()
     
     jvm()
-    
+
+    /*
+
+
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         browser {
@@ -38,10 +41,27 @@ kotlin {
             }
         }
     }
+     */
     
     sourceSets {
         commonMain.dependencies {
             // put your Multiplatform dependencies here
+
+            // Serialization
+            implementation(libs.kotlinx.serialization.json)
+
+            // Exposed
+            implementation(libs.exposed.core)
+            implementation(libs.exposed.jdbc)
+            implementation(libs.exposed.dao)
+            implementation(libs.exposed.json)
+
+            // Exposed dbs
+            implementation(libs.h2)
+            implementation(libs.postgresql)
+
+            // FileKit
+            implementation(libs.filekit.core)
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)

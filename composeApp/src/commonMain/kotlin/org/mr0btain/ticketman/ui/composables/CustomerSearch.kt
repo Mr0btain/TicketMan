@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
-import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
+import org.mr0btain.ticketman.data.customer.CustomerInfo
 
 /**
  * SearchBox for searching customers. Will return an id or a name and a true if they want to add new if it doesn't exist

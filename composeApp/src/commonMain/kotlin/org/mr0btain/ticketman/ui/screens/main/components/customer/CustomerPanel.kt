@@ -10,9 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirst
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.components.customer.CustomerData
-import org.mr0btain.ticketman.components.data.components.shared.PersonName
-import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 

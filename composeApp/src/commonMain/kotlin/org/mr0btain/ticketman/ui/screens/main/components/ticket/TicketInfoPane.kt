@@ -13,9 +13,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.customer.CustomerData
-import org.mr0btain.ticketman.components.data.components.shared.PersonName
-import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
+import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.components.helpers.formatTime
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock

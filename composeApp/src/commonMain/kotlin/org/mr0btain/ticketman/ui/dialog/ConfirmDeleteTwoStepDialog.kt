@@ -24,8 +24,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.components.data.components.shared.SubItemType
-import org.mr0btain.ticketman.components.data.components.shared.getLabelTextForType
+import org.mr0btain.ticketman.data.shared.SubItemType
+import org.mr0btain.ticketman.data.shared.getLabelTextForType
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 

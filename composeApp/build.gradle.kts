@@ -90,27 +90,12 @@ kotlin {
             implementation(libs.window.size.multiplatform)
 
             // FileKit
-            implementation(libs.filekit.core)
             implementation(libs.filekit.dialogs)
             implementation(libs.filekit.coil)
 
             // Datastore for preferences
             implementation(libs.datastore.preferences)
             implementation(libs.datastore)
-
-            // Serialization
-            implementation(libs.kotlinx.serialization.json)
-
-            // Exposed
-            implementation(libs.exposed.core)
-            implementation(libs.exposed.jdbc)
-            implementation(libs.exposed.dao)
-            implementation(libs.exposed.json)
-            implementation(libs.exposed.crypt)
-
-            // Exposed dbs
-            implementation(libs.sqlite.jdbc)
-            implementation(libs.h2)
         }
 
         commonTest.dependencies {

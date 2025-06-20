@@ -18,7 +18,7 @@ val viewModelModule = module {
 
     viewModel { MainViewModel(
         fileManager = get(),
-        database = get(),
+        localAppDatabase = get(),
         snackBarHost = get()
     ) }
 }

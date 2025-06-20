@@ -13,11 +13,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
-import org.mr0btain.ticketman.components.data.components.shared.DialogDismissReason
-import org.mr0btain.ticketman.components.data.components.shared.MainItemType
-import org.mr0btain.ticketman.components.data.components.shared.SubItemType
-import org.mr0btain.ticketman.components.data.components.shared.getTime
+import org.mr0btain.ticketman.data.inventory.InventoryItem
+import org.mr0btain.ticketman.data.shared.DialogDismissReason
+import org.mr0btain.ticketman.data.shared.MainItemType
+import org.mr0btain.ticketman.data.shared.SubItemType
+import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog

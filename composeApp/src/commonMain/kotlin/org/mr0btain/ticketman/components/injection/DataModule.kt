@@ -5,7 +5,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import org.koin.dsl.module
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.components.data.database.SqliteDb
+import org.mr0btain.ticketman.database.LocalAppDatabase
 import org.mr0btain.ticketman.components.data.datastore.createDataStore
 
 val dataModule = module {
@@ -20,8 +20,8 @@ val dataModule = module {
         FileManager()
     }
 
-    single<SqliteDb> {
-        SqliteDb()
+    single<LocalAppDatabase> {
+        LocalAppDatabase()
     }
 
     single<SnackbarHostState> {

@@ -11,21 +11,21 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.components.data.components.customer.Address
-import org.mr0btain.ticketman.components.data.components.customer.ContactInfo
-import org.mr0btain.ticketman.components.data.components.customer.CustomerData
-import org.mr0btain.ticketman.components.data.components.customer.CustomerInfo
-import org.mr0btain.ticketman.components.data.components.employee.AccessLevel
-import org.mr0btain.ticketman.components.data.components.employee.Employee
-import org.mr0btain.ticketman.components.data.components.inventory.InventoryItem
+import org.mr0btain.ticketman.data.customer.Address
+import org.mr0btain.ticketman.data.customer.ContactInfo
+import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.customer.CustomerInfo
+import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.data.employee.Employee
+import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.components.data.components.invoice.Charge
 import org.mr0btain.ticketman.components.data.components.invoice.ChargeType
 import org.mr0btain.ticketman.components.data.components.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
-import org.mr0btain.ticketman.components.data.components.shared.PersonName
-import org.mr0btain.ticketman.components.data.components.ticket.Device
-import org.mr0btain.ticketman.components.data.components.ticket.TicketInfo
-import org.mr0btain.ticketman.components.data.database.SqliteDb
+import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.ticket.Device
+import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.database.LocalAppDatabase
 import org.mr0btain.ticketman.components.data.generateMockData
 import org.mr0btain.ticketman.components.data.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
@@ -39,13 +39,14 @@ import org.mr0btain.ticketman.getPlatform
 
 class MainViewModel(
     private val fileManager: FileManager,
-    private val database: SqliteDb,
+    private val localAppDatabase: LocalAppDatabase,
     val snackBarHost: SnackbarHostState
 ): ViewModel() {
     private companion object {
         const val TAG = "MainViewModel"
     }
-    // Todo Check if we even need this
+
+    // Platform the app is running on
     val platform = getPlatform().name
 
     // Selected main tab index
@@ -82,17 +83,17 @@ class MainViewModel(
             _employeeList.value = _employeeList.value.toMutableList().also { it[index] = employee }
 
             // Update database
-            database.updateEmployee(employee)
+            localAppDatabase.updateEmployee(employee)
         } else {
             // Else add new item to view model
             _employeeList.value = _employeeList.value + employee
 
             // Add to database
-            database.addEmployee(employee)
+            localAppDatabase.addEmployee(employee)
         }
     }
 
-    fun getEmployees() { _employeeList.value = database.getAllEmployees() }
+    fun getEmployees() { _employeeList.value = localAppDatabase.getAllEmployees() }
 
     fun removeEmployee(id: Int) {
         // Check if employee exists or not
@@ -101,7 +102,7 @@ class MainViewModel(
             _employeeList.value = _employeeList.value.filter { it.identifier != id }
 
             // Update database
-            database.removeEmployee(id)
+            localAppDatabase.removeEmployee(id)
         } else {
             // TODO: We should trigger a warning or something
         }
@@ -122,9 +123,9 @@ class MainViewModel(
 
     fun changeSelectedInventoryId(id: Int) { _selectedInventoryId.value = id }
 
-    fun getNextInventoryId(): Int { return database.getNextInventoryId() }
+    fun getNextInventoryId(): Int { return localAppDatabase.getNextInventoryId() }
 
-    fun getInventory() { _inventoryList.value =  database.getInventory() }
+    fun getInventory() { _inventoryList.value =  localAppDatabase.getInventory() }
 
     fun updateOrAddInventoryItem(inventoryItem: InventoryItem) {
         // Check if item exists or not, if not then add it
@@ -137,13 +138,13 @@ class MainViewModel(
             _inventoryList.value = _inventoryList.value.toMutableList().also { it[index] = inventoryItem }
 
             // Update database
-            database.updateInventoryItem(inventoryItem)
+            localAppDatabase.updateInventoryItem(inventoryItem)
         } else {
             // Else add new item to view model
             _inventoryList.value = _inventoryList.value + inventoryItem
 
             // Add to database
-            database.addInventoryItem(inventoryItem)
+            localAppDatabase.addInventoryItem(inventoryItem)
         }
 
         _selectedInventoryId.value = inventoryItem.identifier
@@ -156,7 +157,7 @@ class MainViewModel(
             _inventoryList.value = _inventoryList.value.filter { it.identifier != id }
 
             // Update database
-            database.removeInventoryItem(id)
+            localAppDatabase.removeInventoryItem(id)
         } else {
             // TODO: We should trigger a warning or something
         }
@@ -182,9 +183,9 @@ class MainViewModel(
         _selectedTicketId.value = id
     }
 
-    fun getNextTicketId(): Int { return database.getNextTicketId() }
+    fun getNextTicketId(): Int { return localAppDatabase.getNextTicketId() }
 
-    fun getTickets() { _ticketDataList.value = database.getAllTickets() }
+    fun getTickets() { _ticketDataList.value = localAppDatabase.getAllTickets() }
 
     // Add or update ticket info if it exists
     fun updateOrAddTicket(data: TicketInfo) {
@@ -198,13 +199,13 @@ class MainViewModel(
             _ticketDataList.value = _ticketDataList.value.toMutableList().also { it[index] = data }
 
             // Update database
-            database.updateTicket(data)
+            localAppDatabase.updateTicket(data)
         } else {
             // Else add new ticket to view model
             _ticketDataList.value = _ticketDataList.value + data
 
             // Add to database
-            database.addTicket(data)
+            localAppDatabase.addTicket(data)
         }
 
         _selectedTicketId.value = data.identifier
@@ -217,7 +218,7 @@ class MainViewModel(
             _ticketDataList.value = _ticketDataList.value.filter { it.identifier != id }
 
             // Update database
-            database.removeTicket(id)
+            localAppDatabase.removeTicket(id)
         } else {
             // TODO: We should trigger a warning or something
         }
@@ -244,7 +245,7 @@ class MainViewModel(
         _selectedCustomerId.value = id
     }
 
-    fun getNextCustomerId(): Int { return database.getNextCustomerId() }
+    fun getNextCustomerId(): Int { return localAppDatabase.getNextCustomerId() }
 
     fun getCustomerForId(id: Int): CustomerData {
         val result = _customerDataList.value.firstOrNull() { it.info.identifier == id }
@@ -268,13 +269,13 @@ class MainViewModel(
             _customerDataList.value = _customerDataList.value.toMutableList().also { it[index] = data }
 
             // Update database
-            database.updateCustomer(data)
+            localAppDatabase.updateCustomer(data)
         } else {
             // Else add to list in view model
             _customerDataList.value = _customerDataList.value + data
 
             // Add to database
-            database.addCustomer(data)
+            localAppDatabase.addCustomer(data)
         }
 
         // Set selected customer
@@ -282,7 +283,7 @@ class MainViewModel(
     }
 
     // To update customer data list
-    fun getCustomers() { _customerDataList.value = database.getAllCustomers() }
+    fun getCustomers() { _customerDataList.value = localAppDatabase.getAllCustomers() }
 
     fun removeCustomer(id: Int) {
         // Check if customer exists or not
@@ -291,7 +292,7 @@ class MainViewModel(
             _customerDataList.value = _customerDataList.value.filter { it.info.identifier != id }
 
             // Update database
-            database.removeCustomer(id)
+            localAppDatabase.removeCustomer(id)
         } else {
             // TODO: We should trigger a warning or something
         }
@@ -301,7 +302,7 @@ class MainViewModel(
     // --------------------------------------------------------------------------------------------------------------------------
 
     // To check and setup initial database if it doesn't exist
-    fun setupDatabase() { database.checkAndCreateTables() }
+    fun setupDatabase() { localAppDatabase.checkAndCreateTables() }
 
     // TODO: Employee needs fleshed out
     fun updateDataFromDb() {
@@ -326,16 +327,16 @@ class MainViewModel(
     fun generateMockDbData() {
         val (customerdata, ticketData, employeeData) = generateMockData(400)
 
-        database.addAllTickets(ticketData)
+        localAppDatabase.addAllTickets(ticketData)
 
         // Add the generated values to the database
-        database.addAllCustomers(customerdata)
+        localAppDatabase.addAllCustomers(customerdata)
 
         // Add all employees
-        database.addAllEmployees(employeeData)
+        localAppDatabase.addAllEmployees(employeeData)
 
         // Generate and add inventory items
-        database.addAllInventory(generateRandomInventoryItems(60))
+        localAppDatabase.addAllInventory(generateRandomInventoryItems(60))
     }
 
     fun testPdf() {

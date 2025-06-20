@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.data.components.invoice
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.components.data.components.shared.Note
+import org.mr0btain.ticketman.data.shared.Note
 
 @Serializable
 data class Invoice(
