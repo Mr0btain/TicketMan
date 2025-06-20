@@ -27,7 +27,8 @@ class LocalAppDatabase(
     // TODO: Flesh these out better to support copying syncing and such between dbs
     // TODO: Add encryption
     // TODO: Make more functions for indexing and searching the db for things
-    // TODO: FInd better db for android. really would like to use SQLite. Maybe make expect actual
+    // TODO: Find better db for android. really would like to use SQLite. Maybe make expect actual
+    // TODO: Setup data encryption for sensitive info
 
     // Connect to the local database
     private val db = Database.connect("jdbc:h2:$appDir/data/testData;DB_CLOSE_DELAY=-1;", "org.h2.Driver")

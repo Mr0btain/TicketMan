@@ -26,6 +26,7 @@ fun Application.module() {
     local.addAllTickets(testData.second)
     local.addAllEmployees(testData.third)
      */
+    //local.addAllInventory(generateRandomInventoryItems(50))
 
     routing {
         get("/") {

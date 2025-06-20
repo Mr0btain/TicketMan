@@ -356,6 +356,12 @@ class MainViewModel(
                     _employeeList.value = data
                     success = true
                 }
+
+            client.getInventoryData()
+                .onSuccess { data ->
+                    _inventoryList.value = data
+                    success = true
+                }
         }
 
         return success

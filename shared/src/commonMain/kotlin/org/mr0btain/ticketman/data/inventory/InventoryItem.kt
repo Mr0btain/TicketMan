@@ -1,7 +1,9 @@
 package org.mr0btain.ticketman.data.inventory
 
+import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.shared.Note
 
+@Serializable
 data class InventoryItem(
     val identifier: Int = Int.MAX_VALUE,
     val name: String = "",
