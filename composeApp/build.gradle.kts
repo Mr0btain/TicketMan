@@ -65,6 +65,9 @@ kotlin {
         androidMain.dependencies {
             implementation(compose.preview)
             implementation(libs.androidx.activity.compose)
+
+            // ktor
+            implementation(libs.ktor.client.okhttp)
         }
 
         commonMain.dependencies {
@@ -82,9 +85,7 @@ kotlin {
             implementation(libs.compose.navigation)
 
             // For Koin Implementation
-            api(libs.koin.core)
-            implementation(libs.koin.compose)
-            implementation(libs.koin.composeVM)
+            api(libs.bundles.koin)
 
             // Window Size class
             implementation(libs.window.size.multiplatform)
@@ -96,15 +97,27 @@ kotlin {
             // Datastore for preferences
             implementation(libs.datastore.preferences)
             implementation(libs.datastore)
+
+            // ktor http stuff
+            implementation(libs.bundles.ktorClient)
+
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }
 
+        nativeMain.dependencies {
+            // ktor
+            implementation(libs.ktor.client.darwin)
+        }
+
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)
+
+            // ktor
+            implementation(libs.ktor.client.okhttp)
 
             // open pdf
             implementation(libs.openpdf)

@@ -7,12 +7,18 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
+import org.koin.compose.getKoin
 import org.koin.compose.viewmodel.koinViewModel
+import org.mr0btain.ticketman.components.network.DatabaseClient
+import org.mr0btain.ticketman.components.network.createHttpClient
+import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
 import org.mr0btain.ticketman.ui.screens.navigation.DrawerNavigator
@@ -22,11 +28,14 @@ import org.mr0btain.ticketman.ui.screens.navigation.Screen
 import org.mr0btain.ticketman.ui.screens.navigation.SideAppNav
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 import org.mr0btain.ticketman.ui.theme.AppTheme
+import org.mr0btain.ticketman.util.onError
+import org.mr0btain.ticketman.util.onSuccess
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.settings
 import ticketman.composeapp.generated.resources.user
+import java.net.http.HttpClient
 
 // TODO: Work on UI for mobile size screens
 // TODO: Make option to import database data from file?
@@ -58,10 +67,13 @@ fun App() {
         //mainViewModel.generateMockDbData()
 
         // Pull data from local database
-        mainViewModel.updateDataFromDb()
+        //mainViewModel.updateDataFromDb()
 
         // Pull settings from datastore
         settingsViewModel.getSettingsFromPreferences()
+
+        // TODO: Make this into something that can be used in production
+        //mainViewModel.changeServerAddress(settingsViewModel.serverAddress.value)
 
         // Current employee info
         val currentEmployee = mainViewModel.employee.collectAsState()

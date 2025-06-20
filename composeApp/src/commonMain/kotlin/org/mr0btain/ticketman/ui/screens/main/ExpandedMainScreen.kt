@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.Button
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -374,6 +375,12 @@ fun ExpandedMainScreen(
                     }
 
                     Spacer(Modifier.padding(8.dp))
+
+                    Button(
+                        onClick = { viewModel.getDataFromServer() }
+                    ) {
+                        Text("Get Server Data")
+                    }
                 }
 
                 HorizontalDivider(

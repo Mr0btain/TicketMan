@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman
 
 import io.ktor.http.*
-import io.ktor.http.cio.HttpMessage
 import io.ktor.serialization.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
@@ -13,9 +12,16 @@ import org.mr0btain.ticketman.components.Priority
 import org.mr0btain.ticketman.components.Task
 import org.mr0btain.ticketman.components.TaskRepository
 import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.employee.Employee
+import org.mr0btain.ticketman.data.inventory.InventoryItem
+import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.database.LocalAppDatabase
+import org.mr0btain.ticketman.server.ServerResponse
+import org.mr0btain.ticketman.server.ServerResult
 import java.sql.Connection
 import java.sql.DriverManager
+
+// TODO: Add sync functionality to sync local and remote databases
 
 fun Application.configureDatabases(
     repository: TaskRepository,
@@ -24,7 +30,7 @@ fun Application.configureDatabases(
     install(ContentNegotiation) { json() }
 
     routing {
-        route("/customer") {
+        route("/customers") {
             // Get all customers
             get("/all") { call.respond(localAppDatabase.getAllCustomers()) }
 
@@ -41,11 +47,12 @@ fun Application.configureDatabases(
                 }
             }
 
-            // Bulk add customers
-            post("/add/all") {
+            // Update Customer
+            post("/update") {
                 try {
-                    val customers = call.receive<List<CustomerData>>()
-                    if (localAppDatabase.addAllCustomers(customers)) {
+                    val customer = call.receive<CustomerData>()
+
+                    if (localAppDatabase.updateCustomer(customer)) {
                         call.respond(HttpStatusCode.Accepted)
                     } else call.respond(HttpStatusCode.BadRequest)
                 } catch (ex: Exception) {
@@ -54,19 +61,210 @@ fun Application.configureDatabases(
                 }
             }
 
+            // Bulk add customers
+            post("/add/all") {
+                try {
+                    val customers = call.receive<List<CustomerData>>()
+
+                    if (localAppDatabase.addAllCustomers(customers)) {
+                        call.respond(ServerResponse(ServerResult.SUCCESS))
+                    } else call.respond(ServerResponse(ServerResult.FAIL))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
             // Delete customer
             delete("/delete/{customerIdentifier}") {
                 val identifier = call.parameters["customerIdentifier"]?.toIntOrNull()
 
                 if (identifier == null) {
-                    call.respond(HttpStatusCode.BadRequest)
+                    call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
                     return@delete
                 }
 
                 if (localAppDatabase.removeCustomer(identifier)) {
-                    call.respond(HttpStatusCode.NoContent)
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
                 } else {
-                    call.respond(HttpStatusCode.NotFound)
+                    call.respond(ServerResponse(ServerResult.FAIL))
+                }
+            }
+        }
+
+        route("/tickets") {
+            // Get all tickets
+            get("/all") { call.respond(localAppDatabase.getAllTickets()) }
+
+            // Add New Ticket
+            post("/add") {
+                try {
+                    val ticket = call.receive<TicketInfo>()
+                    localAppDatabase.addTicket(ticket)
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Update ticket
+            post("/update") {
+                try {
+                    val ticket = call.receive<TicketInfo>()
+                    localAppDatabase.updateTicket(ticket)
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Bulk add tickets
+            post("/add/all") {
+                try {
+                    val tickets = call.receive<List<TicketInfo>>()
+
+                    if (localAppDatabase.addAllTickets(tickets)) {
+                        call.respond(ServerResponse(ServerResult.SUCCESS))
+                    } else call.respond(ServerResponse(ServerResult.FAIL))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Delete ticket
+            delete("/delete/{ticketIdentifier}") {
+                val identifier = call.parameters["ticketIdentifier"]?.toIntOrNull()
+
+                if (identifier == null) {
+                    call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
+                    return@delete
+                }
+
+                if (localAppDatabase.removeTicket(identifier)) {
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } else {
+                    call.respond(ServerResponse(ServerResult.FAIL))
+                }
+            }
+        }
+
+        route("/employees") {
+            // Get all employees
+            get("/all") { call.respond(localAppDatabase.getAllEmployees()) }
+
+            // Add New employee
+            post("/add") {
+                try {
+                    val employee = call.receive<Employee>()
+                    localAppDatabase.addEmployee(employee)
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Update employee
+            post("/update") {
+                try {
+                    val employee = call.receive<Employee>()
+                    localAppDatabase.updateEmployee(employee)
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Bulk add employees
+            post("/add/all") {
+                try {
+                    val employees = call.receive<List<Employee>>()
+
+                    if (localAppDatabase.addAllEmployees(employees)) {
+                        call.respond(ServerResponse(ServerResult.SUCCESS))
+                    } else call.respond(ServerResponse(ServerResult.FAIL))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Delete employee
+            delete("/delete/{employeeIdentifier}") {
+                val identifier = call.parameters["employeeIdentifier"]?.toIntOrNull()
+
+                if (identifier == null) {
+                    call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
+                    return@delete
+                }
+
+                if (localAppDatabase.removeTicket(identifier)) {
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } else {
+                    call.respond(ServerResponse(ServerResult.FAIL))
+                }
+            }
+        }
+
+        route("/inventory") {
+            // Get all inventory
+            get("/all") { call.respond(localAppDatabase.getInventory()) }
+
+            // Add New item
+            post("/add") {
+                try {
+                    val inventoryItem = call.receive<InventoryItem>()
+                    localAppDatabase.addInventoryItem(inventoryItem)
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Update item
+            post("/update") {
+                try {
+                    val inventoryItem = call.receive<InventoryItem>()
+                    localAppDatabase.updateInventoryItem(inventoryItem)
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Bulk add employees
+            post("/add/all") {
+                try {
+                    val inventoryItems = call.receive<List<InventoryItem>>()
+
+                    if (localAppDatabase.addAllInventory(inventoryItems)) {
+                        call.respond(ServerResponse(ServerResult.SUCCESS))
+                    } else call.respond(ServerResponse(ServerResult.FAIL))
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
+                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                }
+            }
+
+            // Delete item
+            delete("/delete/{inventoryIdentifier}") {
+                val identifier = call.parameters["inventoryIdentifier"]?.toIntOrNull()
+
+                if (identifier == null) {
+                    call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
+                    return@delete
+                }
+
+                if (localAppDatabase.removeInventoryItem(identifier)) {
+                    call.respond(ServerResponse(ServerResult.SUCCESS))
+                } else {
+                    call.respond(ServerResponse(ServerResult.FAIL))
                 }
             }
         }

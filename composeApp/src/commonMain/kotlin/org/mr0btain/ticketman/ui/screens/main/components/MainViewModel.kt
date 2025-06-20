@@ -18,17 +18,22 @@ import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.employee.AccessLevel
 import org.mr0btain.ticketman.data.employee.Employee
 import org.mr0btain.ticketman.data.inventory.InventoryItem
-import org.mr0btain.ticketman.components.data.components.invoice.Charge
-import org.mr0btain.ticketman.components.data.components.invoice.ChargeType
-import org.mr0btain.ticketman.components.data.components.invoice.Invoice
+import org.mr0btain.ticketman.data.invoice.Charge
+import org.mr0btain.ticketman.data.invoice.ChargeType
+import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
+import org.mr0btain.ticketman.components.injection.dataModule
+import org.mr0btain.ticketman.components.network.DatabaseClient
+import org.mr0btain.ticketman.components.network.createHttpClient
+import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.database.LocalAppDatabase
-import org.mr0btain.ticketman.components.data.generateMockData
-import org.mr0btain.ticketman.components.data.generateRandomInventoryItems
+import org.mr0btain.ticketman.generateMockData
+import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
+import org.mr0btain.ticketman.util.onSuccess
 
 // TODO: Setup error handling in here
 
@@ -56,6 +61,15 @@ class MainViewModel(
     // To update the main tab index
     fun changeMainTabIndex(update: Int) {
         _selectedMainTabIndex.value = update
+    }
+
+    // Selected main tab index
+    private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("http://localhost:8080")
+    var serverAddress = _serverAddress.asStateFlow()
+
+    // To update the main tab index
+    fun changeServerAddress(update: String) {
+        _serverAddress.value = update
     }
 
     /** Employee Related Things */
@@ -298,7 +312,7 @@ class MainViewModel(
         }
     }
 
-    // Database
+    // Local Database
     // --------------------------------------------------------------------------------------------------------------------------
 
     // To check and setup initial database if it doesn't exist
@@ -315,9 +329,40 @@ class MainViewModel(
         println("Selected employee: ${_employee.value}")
     }
 
+    // Server Database
     // ----------------------------------------------------------------------------------------------------------------------------
-    // TESTING
 
+    // Client database
+    val client = DatabaseClient(createHttpClient(getHttpEngine()), _serverAddress.value)
+
+    fun getDataFromServer(): Boolean {
+        var success = false
+
+        viewModelScope.launch {
+            client.getCustomerData()
+                .onSuccess { data ->
+                    _customerDataList.value = data
+                    success = true
+                }
+
+            client.getTicketData()
+                .onSuccess { data ->
+                    _ticketDataList.value = data
+                    success = true
+                }
+
+            client.getEmployeeData()
+                .onSuccess { data ->
+                    _employeeList.value = data
+                    success = true
+                }
+        }
+
+        return success
+    }
+
+    // TESTING
+    // ----------------------------------------------------------------------------------------------------------------------------
     fun openTestFilePicker() {
         viewModelScope.launch {
             FileKit.openFilePicker()

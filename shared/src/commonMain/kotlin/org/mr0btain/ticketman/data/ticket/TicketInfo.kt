@@ -1,9 +1,9 @@
 package org.mr0btain.ticketman.data.ticket
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.components.data.components.invoice.Invoice
-import org.mr0btain.ticketman.components.data.components.shared.Note
-import org.mr0btain.ticketman.components.data.components.shared.getTime
+import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.getTime
 import kotlin.random.Random
 
 @Serializable

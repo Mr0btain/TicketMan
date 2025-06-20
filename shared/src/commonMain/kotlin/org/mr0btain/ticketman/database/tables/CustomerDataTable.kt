@@ -18,7 +18,7 @@ object CustomerDataTable : IntIdTable("customer") {
     val city = text("city")
     val state = text("state")
     val zip = text("zip")
-    val tickets = json<TicketList>("tickets", Json.Default)
+    val tickets = json<TicketList>("tickets", Json { ignoreUnknownKeys = true })
     val notes = json<Notes>("notes", Json.Default)
     val contactInfo = json<ContactInfo>("contact", Json.Default)
     val time = long("time")

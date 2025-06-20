@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.data
+package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
@@ -12,11 +12,11 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.Time
 import org.mr0btain.ticketman.data.shared.getTime
+import org.mr0btain.ticketman.data.shared.parseDateToLong
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.data.ticket.randomTicketPriority
 import org.mr0btain.ticketman.data.ticket.randomTicketStatus
-import org.mr0btain.ticketman.components.helpers.parseDateToLong
 import java.text.DecimalFormat
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi

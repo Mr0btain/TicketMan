@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.data.components.invoice
+package org.mr0btain.ticketman.data.invoice
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.shared.Note
