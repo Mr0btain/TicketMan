@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.Authentication
 import io.ktor.server.http.content.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
@@ -26,12 +27,12 @@ fun Application.configureRouting(
         // Static plugin. Try to access `/static/index.html`
         staticResources("/static", "static")
 
-        route("/api/user") {
-            userRoute(userService)
-        }
-
         route("/api/auth") {
             authRoute(jwtService)
+        }
+
+        route("/api/user") {
+            userRoute(userService)
         }
     }
 }

@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
 import io.ktor.server.response.header
 import io.ktor.server.response.respond
@@ -14,7 +15,7 @@ import org.mr0btain.ticketman.server.response.UserResponse
 import java.util.UUID
 
 fun Route.userRoute(userService: UserService) {
-    post {
+    post("/register") {
         val userRequest = call.receive<UserRequest>()
 
         val createdUser = userService.save(
@@ -29,22 +30,26 @@ fun Route.userRoute(userService: UserService) {
         call.respond(HttpStatusCode.Created)
     }
 
-    get {
-        val users = userService.fundAll()
+    authenticate {
+        get {
+            val users = userService.fundAll()
 
-        call.respond(
-            message = users.map(User::toResponse)
-        )
+            call.respond(
+                message = users.map(User::toResponse)
+            )
+        }
     }
 
-    get("/{id}") {
-        val id: String = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
+    authenticate("another-auth") {
+        get("/{id}") {
+            val id: String = call.parameters["id"] ?: return@get call.respond(HttpStatusCode.BadRequest)
 
-        val foundUser = userService.findById(id) ?: return@get call.respond(HttpStatusCode.NotFound)
+            val foundUser = userService.findById(id) ?: return@get call.respond(HttpStatusCode.NotFound)
 
-        call.respond(
-            message = foundUser.toResponse()
-        )
+            call.respond(
+                message = foundUser.toResponse()
+            )
+        }
     }
 }
 

@@ -9,6 +9,11 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.engine.applicationEnvironment
 import org.mr0btain.ticketman.server.request.LoginRequest
 import java.util.Date
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
+import kotlin.time.toJavaInstant
 
 class JwtService(
     private val application: Application,
@@ -27,7 +32,11 @@ class JwtService(
             .withIssuer(issuer)
             .build()
 
-    fun createJwtToken(loginRequest: LoginRequest): String? {
+    @OptIn(ExperimentalTime::class)
+    fun createJwtToken(
+        loginRequest: LoginRequest,
+        expiresAt: Instant
+    ): String? {
         val foundUser = userService.findByUsername(loginRequest.username)
 
         return if (foundUser != null && foundUser.password == loginRequest.password) {
@@ -36,7 +45,7 @@ class JwtService(
                 .withAudience(audience)
                 .withIssuer(issuer)
                 .withClaim("username", foundUser.username)
-                .withExpiresAt(Date(System.currentTimeMillis() + 3_600_000))
+                .withExpiresAt(expiresAt.toJavaInstant())
                 .sign(Algorithm.HMAC256(secret))
         } else null
     }
@@ -55,12 +64,8 @@ class JwtService(
     private fun extractUsername(credential: JWTCredential): String? =
         credential.payload.getClaim("username").asString()
 
-    private fun getConfigProperty(path: String): String? {
-        println("Path: $path")
-        println("Prop: ${application.environment.config.propertyOrNull(path)?.getString() ?: "NOT_FOUND"}")
-        println("Prop2: ${applicationEnvironment().config.propertyOrNull(path)?.getString() ?: "NOT_FOUND"}")
-        return application.environment.config.propertyOrNull(path)?.getString()
-    }
+    private fun getConfigProperty(path: String): String =
+        application.environment.config.property(path).getString()
 
 
     private fun audienceMatches(credential: JWTCredential): Boolean =
