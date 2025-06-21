@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsSwitchItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsTextItem
@@ -26,7 +27,7 @@ import ticketman.composeapp.generated.resources.*
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    viewModel: SettingsViewModel
+    viewModel: MainViewModel
 ) {
     val darkMode = viewModel.darkMode.collectAsState(false)
     val scrollBarsOnBottom = viewModel.scrollBarsOnBottom.collectAsState()

@@ -3,7 +3,14 @@ ktor:
         modules:
             - com.example.ApplicationKt.module
     deployment:
-        port: 8080
+        port: "$PORT:8080"
+
+
+jwt:
+    audience: "my-audience"
+    issuer: "http://localhost"
+    realm: "my realm"
+    secret: $SECRET
 # postgres:
 #  url: "jdbc:postgresql://localhost/default"
 #  user: username

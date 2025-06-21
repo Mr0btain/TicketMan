@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.server
+package org.mr0btain.ticketman.server.response
 
 data class ServerResponse(
     val result: ServerResult,

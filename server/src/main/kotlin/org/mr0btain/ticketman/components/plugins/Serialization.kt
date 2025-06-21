@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman
+package org.mr0btain.ticketman.components.plugins
 
 import io.ktor.server.application.*
 import io.ktor.server.response.*

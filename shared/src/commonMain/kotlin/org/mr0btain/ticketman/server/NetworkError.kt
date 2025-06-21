@@ -1,4 +1,6 @@
-package org.mr0btain.ticketman.util
+package org.mr0btain.ticketman.server
+
+import org.mr0btain.ticketman.error.Error
 
 enum class NetworkError : Error {
     REQUEST_TIMEOUT,

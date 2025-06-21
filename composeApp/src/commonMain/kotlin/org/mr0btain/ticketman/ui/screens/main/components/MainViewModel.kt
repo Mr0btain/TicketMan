@@ -1,6 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.FileKit
@@ -9,6 +14,8 @@ import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.FileManager
 import org.mr0btain.ticketman.data.customer.Address
@@ -22,10 +29,8 @@ import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
-import org.mr0btain.ticketman.components.injection.dataModule
+import org.mr0btain.ticketman.components.logging.AppLogger
 import org.mr0btain.ticketman.components.network.DatabaseClient
-import org.mr0btain.ticketman.components.network.createHttpClient
-import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo
@@ -33,7 +38,9 @@ import org.mr0btain.ticketman.database.LocalAppDatabase
 import org.mr0btain.ticketman.generateMockData
 import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.util.onSuccess
+import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.error.onError
+import org.mr0btain.ticketman.error.onSuccess
 
 // TODO: Setup error handling in here
 
@@ -45,10 +52,17 @@ import org.mr0btain.ticketman.util.onSuccess
 class MainViewModel(
     private val fileManager: FileManager,
     private val localAppDatabase: LocalAppDatabase,
+    private val dataStore: DataStore<Preferences>,
+    private val databaseClient: DatabaseClient,
     val snackBarHost: SnackbarHostState
 ): ViewModel() {
     private companion object {
         const val TAG = "MainViewModel"
+
+        val DARK_MODE = booleanPreferencesKey("appInDarkMode")
+        val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
+        val SCROLL_BARS_ON_BOTTOM = booleanPreferencesKey("scrollBarsOnBottom")
+        val SCROLL_BARS_ON_RIGHT = booleanPreferencesKey("scrollBarsOnRight")
     }
 
     // Platform the app is running on
@@ -56,20 +70,110 @@ class MainViewModel(
 
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
-    var selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
+    val selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
 
     // To update the main tab index
     fun changeMainTabIndex(update: Int) {
         _selectedMainTabIndex.value = update
     }
 
-    // Selected main tab index
-    private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("http://localhost:8080")
-    var serverAddress = _serverAddress.asStateFlow()
+    /** Settings section */
+    // ----------------------------------------------------------------------------------------------------------------------
 
-    // To update the main tab index
-    fun changeServerAddress(update: String) {
-        _serverAddress.value = update
+    private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val darkMode = _darkMode.asStateFlow()
+
+    private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("")
+    val serverAddress = _serverAddress.asStateFlow()
+
+    private val _scrollBarsOnBottom: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    val scrollBarsOnBottom = _scrollBarsOnBottom.asStateFlow()
+
+    private val _scrollBarsOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    val scrollBarsOnRight = _scrollBarsOnRight.asStateFlow()
+
+    // Pulling it all at once this way saves us from a real hard hitch in the ui when we change these
+    fun getSettingsFromPreferences() {
+        viewModelScope.launch {
+            _darkMode.value = dataStore.data.map { preferences -> preferences[DARK_MODE] ?: false }.first()
+
+            val server = dataStore.data.map { preferences -> preferences[SERVER_ADDRESS] ?: "" }.first()
+            _serverAddress.value = server
+            databaseClient.changeServerUrl(server)
+
+            _scrollBarsOnBottom.value = dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] ?: true }.first()
+            _scrollBarsOnRight.value = dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_RIGHT] ?: true }.first()
+        }
+    }
+
+    fun toggleDarkMode(){
+        // Update the value
+        val value = !_darkMode.value
+
+        _darkMode.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[DARK_MODE] = value }
+        }
+    }
+
+    fun saveServerAddress(address: String) {
+        // update value
+        _serverAddress.value = address
+
+        viewModelScope.launch {
+            databaseClient.changeServerUrl(address)
+            dataStore.edit { preferences -> preferences[SERVER_ADDRESS] = address }
+        }
+    }
+
+    fun toggleScrollBarsOnBottom(){
+        // Update the value
+        val value = !_scrollBarsOnBottom.value
+
+        _scrollBarsOnBottom.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] = value }
+        }
+    }
+
+    fun toggleScrollBarsOnRight(){
+        // Update the value
+        val value = !_scrollBarsOnRight.value
+
+        _scrollBarsOnRight.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[SCROLL_BARS_ON_RIGHT] = value }
+        }
+    }
+
+    /**
+     * Check to see if an address is valid. Will have to setup a ping or something to actually check. for now just check text
+     */
+    fun checkWebAddress(text: String): Boolean {
+        var isValid = false
+
+        // basic placeholder check
+        if (text.startsWith("http://") || text.startsWith("https://") && text.endsWith(".com")) isValid = true
+
+        // Basic ip check to see if there is enough digits
+        val ipcheck = text.filter { it.isDigit() }
+        if (ipcheck.length >= 6) isValid = true
+
+        return isValid
+    }
+
+    // filtering only number
+    fun filterNumbers(text: String): String = text.filter {
+        it.isDigit()
+    }
+
+    // Check if text is a number
+    fun checkNumber(text: String): Boolean {
+        val value = text.toDoubleOrNull() ?: return false
+        return value >= 0
     }
 
     /** Employee Related Things */
@@ -79,11 +183,11 @@ class MainViewModel(
     // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
     // Employee stuff
     private val _employee: MutableStateFlow<Employee> = MutableStateFlow(Employee())
-    var employee = _employee.asStateFlow()
+    val employee = _employee.asStateFlow()
 
     // Employee list
     private val _employeeList: MutableStateFlow<List<Employee>> = MutableStateFlow(listOf())
-    var employeeList = _employeeList.asStateFlow()
+    val employeeList = _employeeList.asStateFlow()
 
     // To update the user id
     fun updateOrAddEmployee(employee: Employee) {
@@ -129,11 +233,11 @@ class MainViewModel(
 
     // Inventory list
     private val _inventoryList: MutableStateFlow<List<InventoryItem>> = MutableStateFlow(listOf())
-    var inventoryList = _inventoryList.asStateFlow()
+    val inventoryList = _inventoryList.asStateFlow()
 
     // Inventory selected item id
     private val _selectedInventoryId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
-    var selectedInventoryId = _selectedInventoryId.asStateFlow()
+    val selectedInventoryId = _selectedInventoryId.asStateFlow()
 
     fun changeSelectedInventoryId(id: Int) { _selectedInventoryId.value = id }
 
@@ -186,11 +290,11 @@ class MainViewModel(
 
     // Ticket data list
     private val _ticketDataList: MutableStateFlow<List<TicketInfo>> = MutableStateFlow(listOf())
-    var ticketDataList = _ticketDataList.asStateFlow()
+    val ticketDataList = _ticketDataList.asStateFlow()
 
     // Selected ticket tab index
     private val _selectedTicketId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
-    var selectedTicketId = _selectedTicketId.asStateFlow()
+    val selectedTicketId = _selectedTicketId.asStateFlow()
 
     // To update selected ticket
     fun changeSelectedTicketId(id: Int) {
@@ -247,12 +351,12 @@ class MainViewModel(
 
     // Customer data list
     private val _customerDataList: MutableStateFlow<List<CustomerData>> = MutableStateFlow(listOf())
-    var customerDataList = _customerDataList.asStateFlow()
+    val customerDataList = _customerDataList.asStateFlow()
 
 
     // Selected Customer
     private val _selectedCustomerId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
-    var selectedCustomerId = _selectedCustomerId.asStateFlow()
+    val selectedCustomerId = _selectedCustomerId.asStateFlow()
 
     // Call to change customer data
     fun changeSelectedCustomerId(id: Int) {
@@ -332,39 +436,55 @@ class MainViewModel(
     // Server Database
     // ----------------------------------------------------------------------------------------------------------------------------
 
-    // Client database
-    val client = DatabaseClient(createHttpClient(getHttpEngine()), _serverAddress.value)
-
     fun getDataFromServer(): Boolean {
         var success = false
 
         viewModelScope.launch {
-            client.getCustomerData()
+            databaseClient.getCustomerData()
                 .onSuccess { data ->
                     _customerDataList.value = data
                     success = true
-                }
+                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got customer data")
+                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
 
-            client.getTicketData()
+            databaseClient.getTicketData()
                 .onSuccess { data ->
                     _ticketDataList.value = data
                     success = true
-                }
+                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got ticket data")
+                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
 
-            client.getEmployeeData()
+            databaseClient.getEmployeeData()
                 .onSuccess { data ->
                     _employeeList.value = data
                     success = true
-                }
+                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got employee data")
+                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
 
-            client.getInventoryData()
+            databaseClient.getInventoryData()
                 .onSuccess { data ->
                     _inventoryList.value = data
                     success = true
-                }
+                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got inventory data")
+                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
         }
 
         return success
+    }
+
+    // TODO: It seems okhttp throws stuff into log before we actually reach this and it never makes it to the logs
+    private fun handleNetworkError(caller: String ,error: NetworkError) {
+        when (error) {
+            NetworkError.REQUEST_TIMEOUT -> { AppLogger.m("$TAG:$caller", error.name) }
+            NetworkError.UNAUTHORIZED -> { AppLogger.i("$TAG:$caller", error.name) }
+            NetworkError.CONFLICT -> { AppLogger.i("$TAG:$caller", error.name) }
+            NetworkError.TOO_MANY_REQUESTS -> { AppLogger.i("$TAG:$caller", error.name) }
+            NetworkError.NO_INTERNET -> { AppLogger.m("$TAG:$caller", error.name) }
+            NetworkError.PAYLOAD_TOO_LARGE -> { AppLogger.i("$TAG:$caller", error.name) }
+            NetworkError.SERVER_ERROR -> { AppLogger.i("$TAG:$caller", error.name) }
+            NetworkError.SERIALIZATION -> { AppLogger.i("$TAG:$caller", error.name) }
+            NetworkError.UNKNOWN -> { AppLogger.i("$TAG:$caller", error.name) }
+        }
     }
 
     // TESTING

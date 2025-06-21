@@ -11,6 +11,7 @@ import org.koin.dsl.module
 import org.mr0btain.ticketman.components.data.FileManager
 import org.mr0btain.ticketman.database.LocalAppDatabase
 import org.mr0btain.ticketman.components.data.datastore.createDataStore
+import org.mr0btain.ticketman.components.network.DatabaseClient
 import org.mr0btain.ticketman.components.network.createHttpClient
 import org.mr0btain.ticketman.components.network.getHttpEngine
 
@@ -38,7 +39,7 @@ val dataModule = module {
         createDataStore()
     }
 
-    single<HttpClient> {
-        createHttpClient(getHttpEngine())
+    single<DatabaseClient> {
+        DatabaseClient(createHttpClient(getHttpEngine()))
     }
 }

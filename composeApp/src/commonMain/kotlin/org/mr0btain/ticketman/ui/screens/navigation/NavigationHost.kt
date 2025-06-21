@@ -27,12 +27,11 @@ fun NavigationHost(
     startDestination: String = Screen.Main.route,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
-    settingsViewModel: SettingsViewModel,
     snackBarState: SnackbarHostState
 ) {
-    val darkMode = settingsViewModel.darkMode.collectAsState()
-    val scrollBarsOnRight = settingsViewModel.scrollBarsOnRight.collectAsState()
-    val scrollBarsOnBottom = settingsViewModel.scrollBarsOnBottom.collectAsState()
+    val darkMode = mainViewModel.darkMode.collectAsState()
+    val scrollBarsOnRight = mainViewModel.scrollBarsOnRight.collectAsState()
+    val scrollBarsOnBottom = mainViewModel.scrollBarsOnBottom.collectAsState()
 
     NavHost(
         modifier = modifier,
@@ -51,7 +50,7 @@ fun NavigationHost(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(viewModel = settingsViewModel)
+            SettingsScreen(viewModel = mainViewModel)
         }
 
         composable(Screen.Login.route) {

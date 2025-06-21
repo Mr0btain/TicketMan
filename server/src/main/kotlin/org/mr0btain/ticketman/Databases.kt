@@ -16,8 +16,8 @@ import org.mr0btain.ticketman.data.employee.Employee
 import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.database.LocalAppDatabase
-import org.mr0btain.ticketman.server.ServerResponse
-import org.mr0btain.ticketman.server.ServerResult
+import org.mr0btain.ticketman.server.response.ServerResponse
+import org.mr0btain.ticketman.server.response.ServerResult
 import java.sql.Connection
 import java.sql.DriverManager
 

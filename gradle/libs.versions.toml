@@ -64,6 +64,8 @@ ktor-server-content-negotiation = { module = "io.ktor:ktor-server-content-negoti
 ktor-server-host-common = { module = "io.ktor:ktor-server-host-common", version.ref = "ktor" }
 ktor-server-status-pages = { module = "io.ktor:ktor-server-status-pages", version.ref = "ktor" }
 ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.ref = "ktor" }
+ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
+ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
 
 # Navigation
 compose-navigation = { group = "compose", module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "compose-navigation" }
@@ -115,6 +117,22 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 serialize = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [bundles]
+ktorServer = [
+    "logback",
+    "ktor-serverCore",
+    "ktor-serverNetty",
+    "ktor-serialization-kotlinx-json",
+    "ktor-server-content-negotiation",
+    "ktor-server-host-common",
+    "ktor-server-status-pages",
+    "ktor-server-config-yaml",
+    "ktor-server-auth",
+    "ktor-server-auth-jwt"
+]
+ktorServerTesting = [
+    "ktor-serverTestHost",
+    "kotlin-testJunit"
+]
 ktorClient = [
     "ktor-client-core",
     "ktor-client-content-negotiation",
