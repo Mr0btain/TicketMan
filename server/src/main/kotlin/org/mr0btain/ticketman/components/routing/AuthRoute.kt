@@ -5,29 +5,34 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.post
-import org.mr0btain.ticketman.components.service.JwtService
+import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.mr0btain.ticketman.server.request.RefreshTokenRequest
+import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import org.mr0btain.ticketman.server.response.TokenResponse
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
-fun Route.authRoute(jwtService: JwtService) {
+fun Route.authRoute(userService: UserService) {
     post {
         val loginRequest = call.receive<LoginRequest>()
-        val expiresAt = Clock.System.now().plus(30.days)
+        val authResponse: AuthResponse? = userService.authenticate(loginRequest)
 
-        val token = jwtService.createJwtToken(loginRequest, expiresAt)
-
-        token?.let {
-            call.respond(
-                TokenResponse(
-                    username = loginRequest.username,
-                    token = token,
-                    expiresAt = expiresAt.toString()
-                )
-            )
+        authResponse?.let {
+            call.respond(authResponse)
         }  ?: call.respond(HttpStatusCode.Unauthorized)
+    }
+
+    post("/refresh") {
+        val request = call.receive<RefreshTokenRequest>()
+
+        val newAccessToken: String? = userService.refreshToken(request.token)
+
+        newAccessToken?.let {
+            call.respond(RefreshTokenResponse(newAccessToken))
+        } ?: call.respond(HttpStatusCode.Unauthorized)
     }
 }

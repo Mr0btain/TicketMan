@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.auth.Authentication
 import io.ktor.server.http.content.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
@@ -11,8 +10,7 @@ import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 
 fun Application.configureRouting(
-    userService: UserService,
-    jwtService: JwtService
+    userService: UserService
 ) {
     install(StatusPages) {
         exception<Throwable> { call, cause ->
@@ -28,7 +26,7 @@ fun Application.configureRouting(
         staticResources("/static", "static")
 
         route("/api/auth") {
-            authRoute(jwtService)
+            authRoute(userService)
         }
 
         route("/api/user") {

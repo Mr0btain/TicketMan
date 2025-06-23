@@ -9,6 +9,7 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.FakeTaskRepository
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
+import org.mr0btain.ticketman.components.repository.RefreshTokenRepository
 import org.mr0btain.ticketman.components.repository.UserRepository
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.JwtService
@@ -27,13 +28,15 @@ fun Application.module() {
     //val local = LocalAppDatabase("C:/Users/wnbar/Documents/ServerDatabase")
     val local = LocalAppDatabase("/home/nick/.local/share/TicketMan")
     val userRepository = UserRepository()
-    val userService = UserService(userRepository)
-    val jwtService = JwtService(this, userService)
+    val refreshTokenRepository = RefreshTokenRepository()
+
+    val jwtService = JwtService(this, userRepository)
+    val userService = UserService(userRepository, jwtService, refreshTokenRepository)
 
     configureSerialization()
     configureDatabases(repository, local)
     configureSecurity(jwtService)
-    configureRouting(userService, jwtService)
+    configureRouting(userService)
 
     // Initialize our database here for now
     local.checkAndCreateTables()
