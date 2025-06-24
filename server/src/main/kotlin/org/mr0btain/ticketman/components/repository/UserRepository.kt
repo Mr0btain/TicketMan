@@ -11,7 +11,7 @@ class UserRepository {
     fun findAll(): List<User> = users
 
     fun findById(id: UUID): User? =
-        users.firstOrNull { user -> user.id == id }
+        users.firstOrNull { user -> user.identifier == id }
 
     fun findByUsername(username: String): User? =
         users.firstOrNull { user -> user.username == username }

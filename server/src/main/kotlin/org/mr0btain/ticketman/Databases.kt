@@ -7,7 +7,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.data.employee.Employee
-import org.mr0btain.ticketman.database.LocalAppDatabase
+import org.mr0btain.ticketman.database.LocalDatabase
 import org.mr0btain.ticketman.server.response.ServerResponse
 import org.mr0btain.ticketman.server.response.ServerResult
 import java.sql.Connection
@@ -16,20 +16,20 @@ import java.sql.DriverManager
 // TODO: Add sync functionality to sync local and remote databases
 
 fun Application.configureDatabases(
-    localAppDatabase: LocalAppDatabase
+    localDatabase: LocalDatabase
 ) {
     install(ContentNegotiation) { json() }
 
     routing {
         route("/employees") {
             // Get all employees
-            get("/all") { call.respond(localAppDatabase.getAllEmployees()) }
+            get("/all") { call.respond(localDatabase.getAllEmployees()) }
 
             // Add New employee
             post("/add") {
                 try {
                     val employee = call.receive<Employee>()
-                    localAppDatabase.addEmployee(employee)
+                    localDatabase.addEmployee(employee)
                     call.respond(ServerResponse(ServerResult.SUCCESS))
                 } catch (ex: Exception) {
                     ex.printStackTrace()
@@ -41,7 +41,7 @@ fun Application.configureDatabases(
             post("/update") {
                 try {
                     val employee = call.receive<Employee>()
-                    localAppDatabase.updateEmployee(employee)
+                    localDatabase.updateEmployee(employee)
                     call.respond(ServerResponse(ServerResult.SUCCESS))
                 } catch (ex: Exception) {
                     ex.printStackTrace()
@@ -54,7 +54,7 @@ fun Application.configureDatabases(
                 try {
                     val employees = call.receive<List<Employee>>()
 
-                    if (localAppDatabase.addAllEmployees(employees)) {
+                    if (localDatabase.addAllEmployees(employees)) {
                         call.respond(ServerResponse(ServerResult.SUCCESS))
                     } else call.respond(ServerResponse(ServerResult.FAIL))
                 } catch (ex: Exception) {
@@ -72,7 +72,7 @@ fun Application.configureDatabases(
                     return@delete
                 }
 
-                if (localAppDatabase.removeTicket(identifier)) {
+                if (localDatabase.removeTicket(identifier)) {
                     call.respond(ServerResponse(ServerResult.SUCCESS))
                 } else {
                     call.respond(ServerResponse(ServerResult.FAIL))

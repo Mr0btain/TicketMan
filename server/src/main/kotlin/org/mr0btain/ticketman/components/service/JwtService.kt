@@ -7,6 +7,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
 import org.mr0btain.ticketman.components.repository.UserRepository
+import org.mr0btain.ticketman.data.employee.AccessLevel
 import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -25,6 +26,9 @@ class JwtService(
 
     val realm = getConfigProperty("jwt.realm")
 
+    /**
+     * Verifier for tokens
+     */
     val jwtVerifier: JWTVerifier =
         JWT
             .require(Algorithm.HMAC256(secret))
@@ -32,44 +36,69 @@ class JwtService(
             .withIssuer(issuer)
             .build()
 
+    /**
+     * Generates a token given a UUID and a duration
+     */
+
     @OptIn(ExperimentalTime::class)
-    fun createJwtToken(id: UUID, expiresIn: Duration): String =
+    fun createJwtToken(identifier: UUID, expiresIn: Duration): String =
         JWT
             .create()
             .withAudience(audience)
             .withIssuer(issuer)
-            .withClaim("identifier", id.toString())
+            .withClaim("identifier", identifier.toString())
             .withExpiresAt(Clock.System.now().plus(expiresIn).toJavaInstant())
             .sign(Algorithm.HMAC256(secret))
+
+    /**
+     * Generates an access token
+     */
 
     fun createAccessToken(id: UUID): String =
         createJwtToken(id, 1.hours)
 
+    /**
+     * Generates a refresh token
+     */
+
     fun createRefreshToken(id: UUID): String =
-        createJwtToken(id, 365.days)
+        createJwtToken(id,  365.days)
 
+    /**
+     * Verify credentials along with access level to verify if its legit and allowed
+     */
 
-    fun customValidator(credential: JWTCredential): JWTPrincipal? {
+    fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
         val id = UUID.fromString(extractId(credential))
         val foundUser = id?.let(userRepository::findById)
 
         return foundUser?.let {
-            if (audienceMatches(credential)) {
+            if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {
                 JWTPrincipal(credential.payload)
             } else null
         }
     }
 
+    // Confirms access level is high enough or not
+    private fun AccessLevel.confirmAccessLevel(minAccessLevel: AccessLevel): Boolean =
+        this.level >= minAccessLevel.level
+
+    /**
+     * Checks if audience matches
+     */
     fun audienceMatches(audience: String): Boolean =
         this.audience == audience
 
+    // Extracts id
     private fun extractId(credential: JWTCredential): String? =
         credential.payload.getClaim("identifier").asString()
 
+    // Gets a config property from environment variable
     private fun getConfigProperty(path: String): String =
         application.environment.config.property(path).getString()
 
 
+    // Checks if audience matches
     private fun audienceMatches(credential: JWTCredential): Boolean =
         credential.payload.audience.contains(audience)
 }

@@ -1,8 +1,5 @@
 package org.mr0btain.ticketman.database
 
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.filesDir
-import io.github.vinceglb.filekit.path
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.*
@@ -21,7 +18,7 @@ import org.mr0btain.ticketman.database.tables.EmployeeTable
 import org.mr0btain.ticketman.database.tables.InventoryTable
 import org.mr0btain.ticketman.database.tables.TicketDataTable
 
-class LocalAppDatabase(
+class LocalDatabase(
     appDir: String
 ) {
     // TODO: Flesh these out better to support copying syncing and such between dbs

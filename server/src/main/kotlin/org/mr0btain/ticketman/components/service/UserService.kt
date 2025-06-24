@@ -20,7 +20,7 @@ class UserService(
         userRepository.findById(UUID.fromString(id))
 
     fun save(user: User): User? {
-        val foundUser = userRepository.findById(user.id)
+        val foundUser = userRepository.findById(user.identifier)
 
         return if (foundUser == null) {
             userRepository.save(user)
@@ -28,7 +28,7 @@ class UserService(
         } else null
     }
     fun authenticate(loginRequest: LoginRequest): AuthResponse? {
-        val id = loginRequest.id
+        val id = loginRequest.identifier
         val foundUser = userRepository.findById(id)
 
         return if (foundUser != null && foundUser.password == loginRequest.password) {
@@ -38,7 +38,7 @@ class UserService(
             refreshTokenRepository.save(refreshToken, id)
 
             AuthResponse(
-                id = foundUser.id,
+                id = foundUser.identifier,
                 accessToken = accessToken,
                 refreshToken = refreshToken
             )
@@ -53,7 +53,7 @@ class UserService(
             val foundUser = userRepository.findById(persistedId)
             val idFromRefreshToken = UUID.fromString(decodedRefreshToken.getClaim("identifier").asString())
 
-            if (foundUser != null && idFromRefreshToken == foundUser.id) {
+            if (foundUser != null && idFromRefreshToken == foundUser.identifier) {
                 jwtService.createAccessToken(persistedId)
             } else null
         } else null

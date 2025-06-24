@@ -12,6 +12,10 @@ import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import kotlin.time.ExperimentalTime
 
+/**
+ * Authorization routes
+ */
+
 @OptIn(ExperimentalTime::class)
 fun Route.authRoute(userService: UserService) {
     post {
