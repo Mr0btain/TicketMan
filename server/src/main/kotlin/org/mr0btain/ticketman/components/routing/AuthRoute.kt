@@ -10,9 +10,6 @@ import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
-import org.mr0btain.ticketman.server.response.TokenResponse
-import kotlin.time.Clock
-import kotlin.time.Duration.Companion.days
 import kotlin.time.ExperimentalTime
 
 @OptIn(ExperimentalTime::class)
@@ -23,7 +20,7 @@ fun Route.authRoute(userService: UserService) {
 
         authResponse?.let {
             call.respond(authResponse)
-        }  ?: call.respond(HttpStatusCode.Unauthorized)
+        } ?: call.respond(HttpStatusCode.Unauthorized)
     }
 
     post("/refresh") {

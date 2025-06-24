@@ -9,14 +9,19 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import org.mr0btain.ticketman.components.service.UserService
+import org.mr0btain.ticketman.database.LocalAppDatabase
 import org.mr0btain.ticketman.server.User
 import org.mr0btain.ticketman.server.hashPassword
 import org.mr0btain.ticketman.server.request.UserRequest
+import org.mr0btain.ticketman.server.response.RegisterResponse
 import org.mr0btain.ticketman.server.response.UserResponse
 import java.util.UUID
 
-// TODO: Only allow admins to use this once the og admin has been added
-fun Route.userRoute(userService: UserService) {
+fun Route.userRoute(
+    userService: UserService,
+    localAppDatabase: LocalAppDatabase
+) {
+    // TODO: Only allow admins to use this once the og admin has been added
     post("/register") {
         val userRequest = call.receive<UserRequest>()
 
@@ -24,18 +29,13 @@ fun Route.userRoute(userService: UserService) {
             user = userRequest.toModel()
         ) ?: return@post call.respond(HttpStatusCode.BadRequest)
 
-        call.response.header(
-            name = "id",
-            value = createdUser.id.toString()
-        )
-
-        call.respond(HttpStatusCode.Created)
+        call.respond(RegisterResponse(createdUser.id))
     }
 
-    // TODO: Setup access level so only admins can get this data
+    // TODO: Setup access level so only admins can get certain data
     authenticate {
         get("/getAll") {
-            val users = userService.fundAll()
+            val users = userService.findAll()
 
             call.respond(
                 message = users.map(User::toResponse)

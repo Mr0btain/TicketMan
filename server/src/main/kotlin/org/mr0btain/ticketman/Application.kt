@@ -1,12 +1,10 @@
 package org.mr0btain.ticketman
 
+import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.*
-import io.ktor.server.auth.Authentication
-import io.ktor.server.engine.*
 import io.ktor.server.netty.*
-import io.ktor.server.response.*
-import io.ktor.server.routing.*
-import org.mr0btain.ticketman.components.FakeTaskRepository
+import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.repository.RefreshTokenRepository
@@ -24,9 +22,8 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    val repository = FakeTaskRepository()
     //val local = LocalAppDatabase("C:/Users/wnbar/Documents/ServerDatabase")
-    val local = LocalAppDatabase("/home/nick/.local/share/TicketMan")
+    val localAppDatabase = LocalAppDatabase("/home/nick/.local/share/TicketMan")
     val userRepository = UserRepository()
     val refreshTokenRepository = RefreshTokenRepository()
 
@@ -34,20 +31,21 @@ fun Application.module() {
     val userService = UserService(userRepository, jwtService, refreshTokenRepository)
 
     configureSerialization()
-    configureDatabases(repository, local)
+    configureContentNegotiation()
     configureSecurity(jwtService)
-    configureRouting(userService)
+    configureRouting(userService, localAppDatabase)
 
     // Initialize our database here for now
-    local.checkAndCreateTables()
+    localAppDatabase.checkAndCreateTables()
+
 
     /*
-    val testData = generateMockData(60)
+    val testData = generateMockData(10)
 
-    local.addAllCustomers(testData.first)
-    local.addAllTickets(testData.second)
-    local.addAllEmployees(testData.third)
+    localAppDatabase.addAllCustomers(testData.first)
+    localAppDatabase.addAllTickets(testData.second)
+    localAppDatabase.addAllEmployees(testData.third)
+    localAppDatabase.addAllInventory(generateRandomInventoryItems(10))
      */
-    //local.addAllInventory(generateRandomInventoryItems(50))
 
 }

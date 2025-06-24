@@ -6,14 +6,13 @@ import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.application.Application
 import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
-import io.ktor.server.engine.applicationEnvironment
 import org.mr0btain.ticketman.components.repository.UserRepository
-import org.mr0btain.ticketman.server.request.LoginRequest
-import java.util.Date
+import java.util.UUID
 import kotlin.time.Clock
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
-import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 
 class JwtService(
@@ -34,25 +33,25 @@ class JwtService(
             .build()
 
     @OptIn(ExperimentalTime::class)
-    fun createJwtToken(username: String, expiresIn: Int): String =
+    fun createJwtToken(id: UUID, expiresIn: Duration): String =
         JWT
             .create()
             .withAudience(audience)
             .withIssuer(issuer)
-            .withClaim("username", username)
-            .withExpiresAt(Clock.System.now().plus(expiresIn.days).toJavaInstant())
+            .withClaim("identifier", id.toString())
+            .withExpiresAt(Clock.System.now().plus(expiresIn).toJavaInstant())
             .sign(Algorithm.HMAC256(secret))
 
-    fun createAccessToken(username: String): String =
-        createJwtToken(username, 1)
+    fun createAccessToken(id: UUID): String =
+        createJwtToken(id, 1.hours)
 
-    fun createRefreshToken(username: String): String =
-        createJwtToken(username, 365)
+    fun createRefreshToken(id: UUID): String =
+        createJwtToken(id, 365.days)
 
 
     fun customValidator(credential: JWTCredential): JWTPrincipal? {
-        val username = extractUsername(credential)
-        val foundUser = username?.let(userRepository::findByUsername)
+        val id = UUID.fromString(extractId(credential))
+        val foundUser = id?.let(userRepository::findById)
 
         return foundUser?.let {
             if (audienceMatches(credential)) {
@@ -64,8 +63,8 @@ class JwtService(
     fun audienceMatches(audience: String): Boolean =
         this.audience == audience
 
-    private fun extractUsername(credential: JWTCredential): String? =
-        credential.payload.getClaim("username").asString()
+    private fun extractId(credential: JWTCredential): String? =
+        credential.payload.getClaim("identifier").asString()
 
     private fun getConfigProperty(path: String): String =
         application.environment.config.property(path).getString()

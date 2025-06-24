@@ -1,12 +1,14 @@
 package org.mr0btain.ticketman.components.repository
 
-class RefreshTokenRepository {
-    private val tokens = mutableMapOf<String, String>()
+import java.util.UUID
 
-    fun findUsernameByToken(token: String): String? =
+class RefreshTokenRepository {
+    private val tokens = mutableMapOf<String, UUID>()
+
+    fun findIdByToken(token: String): UUID? =
         tokens[token]
 
-    fun save(token: String, userName: String) {
-        tokens[token] = userName
+    fun save(token: String, id: UUID) {
+        tokens[token] = id
     }
 }

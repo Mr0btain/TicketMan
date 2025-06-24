@@ -8,5 +8,6 @@ import java.util.UUID
 data class DataRequest(
     @Serializable(with = UUIDSerializer::class)
     val userId: UUID,
+    val token: String,
     val dataRequested: DataRequestType
 )

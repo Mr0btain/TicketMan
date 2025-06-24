@@ -1,20 +1,12 @@
 package org.mr0btain.ticketman
 
-import io.ktor.http.*
-import io.ktor.serialization.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.mr0btain.ticketman.components.Priority
-import org.mr0btain.ticketman.components.Task
-import org.mr0btain.ticketman.components.TaskRepository
-import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.employee.Employee
-import org.mr0btain.ticketman.data.inventory.InventoryItem
-import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.database.LocalAppDatabase
 import org.mr0btain.ticketman.server.response.ServerResponse
 import org.mr0btain.ticketman.server.response.ServerResult
@@ -24,133 +16,11 @@ import java.sql.DriverManager
 // TODO: Add sync functionality to sync local and remote databases
 
 fun Application.configureDatabases(
-    repository: TaskRepository,
     localAppDatabase: LocalAppDatabase
 ) {
     install(ContentNegotiation) { json() }
 
     routing {
-        route("/customers") {
-            // Get all customers
-            get("/all") { call.respond(localAppDatabase.getAllCustomers()) }
-
-            // Adding new customer
-            post("/add") {
-                try {
-                    val customer = call.receive<CustomerData>()
-                    localAppDatabase.addCustomer(customer)
-                    call.respond(HttpStatusCode.NoContent)
-                } catch (ex: IllegalStateException) {
-                    call.respond(HttpStatusCode.BadRequest)
-                } catch (ex: JsonConvertException) {
-                    call.respond(HttpStatusCode.BadRequest)
-                }
-            }
-
-            // Update Customer
-            post("/update") {
-                try {
-                    val customer = call.receive<CustomerData>()
-
-                    if (localAppDatabase.updateCustomer(customer)) {
-                        call.respond(HttpStatusCode.Accepted)
-                    } else call.respond(HttpStatusCode.BadRequest)
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(HttpStatusCode.BadRequest)
-                }
-            }
-
-            // Bulk add customers
-            post("/add/all") {
-                try {
-                    val customers = call.receive<List<CustomerData>>()
-
-                    if (localAppDatabase.addAllCustomers(customers)) {
-                        call.respond(ServerResponse(ServerResult.SUCCESS))
-                    } else call.respond(ServerResponse(ServerResult.FAIL))
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
-                }
-            }
-
-            // Delete customer
-            delete("/delete/{customerIdentifier}") {
-                val identifier = call.parameters["customerIdentifier"]?.toIntOrNull()
-
-                if (identifier == null) {
-                    call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
-                    return@delete
-                }
-
-                if (localAppDatabase.removeCustomer(identifier)) {
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } else {
-                    call.respond(ServerResponse(ServerResult.FAIL))
-                }
-            }
-        }
-
-        route("/tickets") {
-            // Get all tickets
-            get("/all") { call.respond(localAppDatabase.getAllTickets()) }
-
-            // Add New Ticket
-            post("/add") {
-                try {
-                    val ticket = call.receive<TicketInfo>()
-                    localAppDatabase.addTicket(ticket)
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
-                }
-            }
-
-            // Update ticket
-            post("/update") {
-                try {
-                    val ticket = call.receive<TicketInfo>()
-                    localAppDatabase.updateTicket(ticket)
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
-                }
-            }
-
-            // Bulk add tickets
-            post("/add/all") {
-                try {
-                    val tickets = call.receive<List<TicketInfo>>()
-
-                    if (localAppDatabase.addAllTickets(tickets)) {
-                        call.respond(ServerResponse(ServerResult.SUCCESS))
-                    } else call.respond(ServerResponse(ServerResult.FAIL))
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
-                }
-            }
-
-            // Delete ticket
-            delete("/delete/{ticketIdentifier}") {
-                val identifier = call.parameters["ticketIdentifier"]?.toIntOrNull()
-
-                if (identifier == null) {
-                    call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
-                    return@delete
-                }
-
-                if (localAppDatabase.removeTicket(identifier)) {
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } else {
-                    call.respond(ServerResponse(ServerResult.FAIL))
-                }
-            }
-        }
-
         route("/employees") {
             // Get all employees
             get("/all") { call.respond(localAppDatabase.getAllEmployees()) }
@@ -206,132 +76,6 @@ fun Application.configureDatabases(
                     call.respond(ServerResponse(ServerResult.SUCCESS))
                 } else {
                     call.respond(ServerResponse(ServerResult.FAIL))
-                }
-            }
-        }
-
-        route("/inventory") {
-            // Get all inventory
-            get("/all") { call.respond(localAppDatabase.getInventory()) }
-
-            // Add New item
-            post("/add") {
-                try {
-                    val inventoryItem = call.receive<InventoryItem>()
-                    localAppDatabase.addInventoryItem(inventoryItem)
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
-                }
-            }
-
-            // Update item
-            post("/update") {
-                try {
-                    val inventoryItem = call.receive<InventoryItem>()
-                    localAppDatabase.updateInventoryItem(inventoryItem)
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
-                }
-            }
-
-            // Bulk add employees
-            post("/add/all") {
-                try {
-                    val inventoryItems = call.receive<List<InventoryItem>>()
-
-                    if (localAppDatabase.addAllInventory(inventoryItems)) {
-                        call.respond(ServerResponse(ServerResult.SUCCESS))
-                    } else call.respond(ServerResponse(ServerResult.FAIL))
-                } catch (ex: Exception) {
-                    ex.printStackTrace()
-                    call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
-                }
-            }
-
-            // Delete item
-            delete("/delete/{inventoryIdentifier}") {
-                val identifier = call.parameters["inventoryIdentifier"]?.toIntOrNull()
-
-                if (identifier == null) {
-                    call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
-                    return@delete
-                }
-
-                if (localAppDatabase.removeInventoryItem(identifier)) {
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } else {
-                    call.respond(ServerResponse(ServerResult.FAIL))
-                }
-            }
-        }
-
-        route("/tasks") {
-            get {
-                val tasks = repository.allTasks()
-                call.respond(tasks)
-            }
-
-            get("/byName/{taskName}") {
-                val name = call.parameters["taskName"]
-                if (name == null) {
-                    call.respond(HttpStatusCode.BadRequest)
-                    return@get
-                }
-                val task = repository.taskByName(name)
-                if (task == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@get
-                }
-                call.respond(task)
-            }
-
-            get("/byPriority/{priority}") {
-                val priorityAsText = call.parameters["priority"]
-                if (priorityAsText == null) {
-                    call.respond(HttpStatusCode.BadRequest)
-                    return@get
-                }
-                try {
-                    val priority = Priority.valueOf(priorityAsText)
-                    val tasks = repository.tasksByPriority(priority)
-
-
-                    if (tasks.isEmpty()) {
-                        call.respond(HttpStatusCode.NotFound)
-                        return@get
-                    }
-                    call.respond(tasks)
-                } catch (ex: IllegalArgumentException) {
-                    call.respond(HttpStatusCode.BadRequest)
-                }
-            }
-
-            post {
-                try {
-                    val task = call.receive<Task>()
-                    repository.addTask(task)
-                    call.respond(HttpStatusCode.NoContent)
-                } catch (ex: IllegalStateException) {
-                    call.respond(HttpStatusCode.BadRequest)
-                } catch (ex: JsonConvertException) {
-                    call.respond(HttpStatusCode.BadRequest)
-                }
-            }
-
-            delete("/{taskName}") {
-                val name = call.parameters["taskName"]
-                if (name == null) {
-                    call.respond(HttpStatusCode.BadRequest)
-                    return@delete
-                }
-                if (repository.removeTask(name)) {
-                    call.respond(HttpStatusCode.NoContent)
-                } else {
-                    call.respond(HttpStatusCode.NotFound)
                 }
             }
         }
