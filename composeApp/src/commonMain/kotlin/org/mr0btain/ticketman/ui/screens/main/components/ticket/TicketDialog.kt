@@ -12,16 +12,16 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.customer.CustomerInfo
-import org.mr0btain.ticketman.data.employee.Employee
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.components.helpers.isNewTicket
+import org.mr0btain.ticketman.components.utils.isNewTicket
+import org.mr0btain.ticketman.server.User
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
-import org.mr0btain.ticketman.ui.composables.EmployeeSearch
+import org.mr0btain.ticketman.ui.composables.UserSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
@@ -39,18 +39,20 @@ import ticketman.composeapp.generated.resources.plus
 fun TicketDialog(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
-    employees: List<Employee>,
+    users: List<User>,
     onAddNewCustomer: (PersonName) -> Unit,
     onDismiss: (TicketInfo?, DialogDismissReason) -> Unit,
     seedData: TicketInfo,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
+    val userIds = remember(users) { users.map { it.identifier.toString() } }
+
     // seed data
     var customerId by remember(seedData) { mutableIntStateOf(seedData.customerId) }
 
     // Assigned employee
-    var assignedEmployee by remember(seedData) { mutableIntStateOf(seedData.assignedEmployee) }
+    var assignedUser by remember(seedData) { mutableStateOf(seedData.assignedUser) }
 
     // Device
     var deviceManufacturer by remember(seedData) { mutableStateOf(seedData.device.manufacturer) }
@@ -75,7 +77,7 @@ fun TicketDialog(
     var customerSearchBarInput by remember { mutableStateOf(if (seedData.customerId != Int.MAX_VALUE) seedData.customerId.toString() else "") }
 
     // For employee search bar
-    var employeeSearchBarInput by remember { mutableStateOf(if (seedData.assignedEmployee != Int.MAX_VALUE) seedData.assignedEmployee.toString()else "")  }
+    var userSearchBarInput by remember { mutableStateOf(if (userIds.contains(seedData.assignedUser)) seedData.assignedUser.toString()else "")  }
 
     // Add Note dialog
     if (showAddNoteDialog) {
@@ -192,25 +194,25 @@ fun TicketDialog(
 
                     Spacer(Modifier.padding(8.dp))
 
-                    // ------------------------- Assigned employee -------------------------------
+                    // ------------------------- Assigned user -------------------------------
                     Text(
-                        text = "Assigned Employee",
+                        text = "Assigned User",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 18.sp
                     )
 
                     Spacer(Modifier.padding(4.dp))
 
-                    EmployeeSearch(
-                        items = employees,
-                        input = employeeSearchBarInput,
-                        onInputChange = { employeeSearchBarInput = it },
+                    UserSearch(
+                        items = users,
+                        input = userSearchBarInput,
+                        onInputChange = { userSearchBarInput = it },
                         onClick = { item ->
                             // Set search bar text
-                            employeeSearchBarInput = item.toString()
+                            userSearchBarInput = item.toString()
 
-                            // Set employee id
-                            assignedEmployee = item
+                            // Set user id
+                            assignedUser = item.toString()
                         }
                     )
 
@@ -318,7 +320,7 @@ fun TicketDialog(
                             TicketInfo(
                                 identifier = seedData.identifier,
                                 customerId = customerId,
-                                assignedEmployee = assignedEmployee,
+                                assignedUser = assignedUser,
                                 device = Device(deviceManufacturer, deviceModel),
                                 status = status,
                                 priority = priority,

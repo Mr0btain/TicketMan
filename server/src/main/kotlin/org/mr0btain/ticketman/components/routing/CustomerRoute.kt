@@ -10,7 +10,7 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import org.mr0btain.ticketman.data.customer.CustomerData
-import org.mr0btain.ticketman.database.LocalDatabase
+import org.mr0btain.ticketman.database.CustomerDatabase
 import org.mr0btain.ticketman.server.response.ServerResponse
 import org.mr0btain.ticketman.server.response.ServerResult
 import kotlin.text.toIntOrNull
@@ -18,18 +18,22 @@ import kotlin.text.toIntOrNull
 /**
  * Customer routes
  */
-fun Route.customerRoute(localDatabase: LocalDatabase) {
+fun Route.customerRoute(database: CustomerDatabase) {
     // Get all customers
     authenticate("restricted") {
-        get("/all") { call.respond(localDatabase.getAllCustomers()) }
+        get("/all") {
+            database.getAll()?.let { data ->
+                call.respond(data)
+            } ?: call.respond(HttpStatusCode.NotFound)
+        }
     }
 
     // Adding new customer
-    authenticate("normal") {
+    authenticate {
         post("/add") {
             try {
                 val customer = call.receive<CustomerData>()
-                localDatabase.addCustomer(customer)
+                database.add(customer)
                 call.respond(HttpStatusCode.NoContent)
             } catch (ex: IllegalStateException) {
                 call.respond(HttpStatusCode.BadRequest)
@@ -40,12 +44,12 @@ fun Route.customerRoute(localDatabase: LocalDatabase) {
     }
 
     // Update Customer
-    authenticate("normal") {
+    authenticate {
         post("/update") {
             try {
                 val customer = call.receive<CustomerData>()
 
-                if (localDatabase.updateCustomer(customer)) {
+                if (database.update(customer)) {
                     call.respond(HttpStatusCode.Accepted)
                 } else call.respond(HttpStatusCode.BadRequest)
             } catch (ex: Exception) {
@@ -56,12 +60,12 @@ fun Route.customerRoute(localDatabase: LocalDatabase) {
     }
 
     // Bulk add customers mostly for syncing
-    authenticate("normal") {
+    authenticate {
         post("/add/all") {
             try {
                 val customers = call.receive<List<CustomerData>>()
 
-                if (localDatabase.addAllCustomers(customers)) {
+                if (database.addAll(customers)) {
                     call.respond(ServerResponse(ServerResult.SUCCESS))
                 } else call.respond(ServerResponse(ServerResult.FAIL))
             } catch (ex: Exception) {
@@ -72,7 +76,7 @@ fun Route.customerRoute(localDatabase: LocalDatabase) {
     }
 
     // Delete customer
-    authenticate("normal") {
+    authenticate {
         delete("/delete/{customerIdentifier}") {
             val identifier = call.parameters["customerIdentifier"]?.toIntOrNull()
 
@@ -81,7 +85,7 @@ fun Route.customerRoute(localDatabase: LocalDatabase) {
                 return@delete
             }
 
-            if (localDatabase.removeCustomer(identifier)) {
+            if (database.remove(identifier)) {
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } else {
                 call.respond(ServerResponse(ServerResult.FAIL))

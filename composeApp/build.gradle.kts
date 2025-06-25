@@ -101,6 +101,8 @@ kotlin {
             // ktor http stuff
             implementation(libs.bundles.ktorClient)
 
+            implementation(libs.bundles.exposed)
+
         }
 
         commonTest.dependencies {

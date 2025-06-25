@@ -23,4 +23,6 @@ dependencies {
 
     // Testing bundle
     implementation(libs.bundles.ktorServerTesting)
+
+    implementation(libs.bundles.exposed)
 }

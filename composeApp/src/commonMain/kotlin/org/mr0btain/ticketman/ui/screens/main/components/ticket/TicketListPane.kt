@@ -26,6 +26,8 @@ import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
 
+// TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
+
 @Composable
 fun TicketListPane(
     isDarkMode: Boolean,

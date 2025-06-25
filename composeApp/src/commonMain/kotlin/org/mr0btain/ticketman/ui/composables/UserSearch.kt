@@ -9,10 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
-import org.mr0btain.ticketman.data.employee.Employee
+import org.mr0btain.ticketman.server.User
+import java.util.UUID
 
 /**
- * SearchBox for searching emplyees. Will return an id or a name and a true if they want to add new if it doesn't exist
+ * SearchBox for searching users. Will return an id or a name and a true if they want to add new if it doesn't exist
  * @param modifier Modifier applied to drop down
  * @param items List of all customer info
  * @param input The state of the text field
@@ -24,12 +25,12 @@ import org.mr0btain.ticketman.data.employee.Employee
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EmployeeSearch(
+fun UserSearch(
     modifier: Modifier = Modifier,
-    items: List<Employee>,
+    items: List<User>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Int) -> Unit,
+    onClick: (UUID) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val filteredList = remember(input) { items.filter {
@@ -54,12 +55,12 @@ fun EmployeeSearch(
             },
             prefix = {
                 // Get employee if we've matched with one
-                val employee = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
+                val user = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
 
                 // If a match then prefix the name
-                if (employee != null) { Text(text = employee.name.firstName + " " + employee.name.lastName + ": ") }
+                if (user != null) { Text(text = user.name.firstName + " " + user.name.lastName + ": ") }
             },
-            label = { Text("Search Employees") },
+            label = { Text("Search Users") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
             singleLine = true,

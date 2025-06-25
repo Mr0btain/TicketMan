@@ -43,9 +43,6 @@ fun App() {
         // Pull settings from datastore
         mainViewModel.getSettingsFromPreferences()
 
-        // Check and setup databases if they don't exist
-        mainViewModel.setupDatabase()
-
         // For snack bar messages
         val snackBarHostState = mainViewModel.snackBarHost
 
@@ -59,10 +56,10 @@ fun App() {
         //mainViewModel.generateMockDbData()
 
         // Pull data from local database
-        //mainViewModel.updateDataFromDb()
+        mainViewModel.updateDataFromDb()
 
         // Current employee info
-        val currentEmployee = mainViewModel.employee.collectAsState()
+        val currentEmployee = mainViewModel.user.collectAsState()
 
         val navDestinations = listOf(
             NavigationItem(

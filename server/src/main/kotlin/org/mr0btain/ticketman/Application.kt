@@ -2,6 +2,7 @@ package org.mr0btain.ticketman
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
@@ -21,8 +22,7 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    //val local = LocalAppDatabase("C:/Users/wnbar/Documents/ServerDatabase")
-    val localDatabase = LocalDatabase("/home/nick/.local/share/TicketMan")
+    val database = configureDatabase("/home/nick/.local/share/TicketMan", true)
     val userRepository = UserRepository()
     val refreshTokenRepository = RefreshTokenRepository()
 
@@ -32,10 +32,7 @@ fun Application.module() {
     configureSerialization()
     configureContentNegotiation()
     configureSecurity(jwtService)
-    configureRouting(userService, localDatabase)
-
-    // Initialize our database here for now
-    localDatabase.checkAndCreateTables()
+    configureRouting(userService, database)
 
 
     /*

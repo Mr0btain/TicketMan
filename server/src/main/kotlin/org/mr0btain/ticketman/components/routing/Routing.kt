@@ -6,12 +6,13 @@ import io.ktor.server.http.content.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.ServerDatabase
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.database.LocalDatabase
 
 fun Application.configureRouting(
     userService: UserService,
-    localDatabase: LocalDatabase
+    serverDatabase: ServerDatabase
 ) {
     install(StatusPages) {
         exception<Throwable> { call, cause ->
@@ -31,19 +32,20 @@ fun Application.configureRouting(
         }
 
         route("/api/user") {
-            userRoute(userService, localDatabase)
+            // TODO: Setup new database flag?
+            userRoute(userService, serverDatabase.userDatabase, false)
         }
 
         route("/api/data/customer") {
-            customerRoute(localDatabase)
+            customerRoute(serverDatabase.customerDatabase)
         }
 
         route("/api/data/ticket") {
-            ticketRoute(localDatabase)
+            ticketRoute(serverDatabase.ticketDatabase)
         }
 
         route("/api/data/inventory") {
-            inventoryRoute(localDatabase)
+            inventoryRoute(serverDatabase.inventoryDatabase)
         }
     }
 }

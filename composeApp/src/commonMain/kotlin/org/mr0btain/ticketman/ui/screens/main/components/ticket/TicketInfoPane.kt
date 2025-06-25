@@ -33,7 +33,7 @@ fun TicketInfoPane(
     isDarkMode: Boolean,
     customerData: CustomerData,
     scrollBarsOnRight: Boolean,
-    employeeName: PersonName,
+    assignedUserName: PersonName,
     ticketInfo: TicketInfo,
     onEditClick: () -> Unit
 ) {
@@ -155,10 +155,10 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        // Assigned employee
+                        // Assigned User
                         Column {
                             Text(
-                                text = "Assigned Employee:",
+                                text = "Assigned User:",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -171,8 +171,8 @@ fun TicketInfoPane(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (ticketInfo.assignedEmployee != Int.MAX_VALUE) {
-                                        employeeName.firstName + " " + employeeName.lastName + ": " +  ticketInfo.assignedEmployee.toString()
+                                    text = if (ticketInfo.assignedUser.isNotEmpty()) {
+                                        assignedUserName.firstName + " " + assignedUserName.lastName + ": " + ticketInfo.assignedUser
                                     } else "",
                                     fontSize = 18.sp
                                 )

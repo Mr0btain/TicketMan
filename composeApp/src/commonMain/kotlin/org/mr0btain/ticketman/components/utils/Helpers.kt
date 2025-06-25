@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.helpers
+package org.mr0btain.ticketman.components.utils
 
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo

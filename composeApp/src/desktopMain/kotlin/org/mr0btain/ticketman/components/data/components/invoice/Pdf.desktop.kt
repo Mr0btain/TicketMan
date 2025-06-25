@@ -11,12 +11,9 @@ import com.lowagie.text.pdf.BaseFont
 import com.lowagie.text.pdf.PdfWriter
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.components.helpers.formatIntToMoney
+import org.mr0btain.ticketman.components.utils.formatIntToMoney
 import java.awt.Color
 import java.io.FileOutputStream
-import kotlin.collections.plusAssign
-import kotlin.times
-import kotlin.toString
 
 actual fun makeTicketInvoicePdf(
     filePath: String,
@@ -50,7 +47,7 @@ actual fun makeTicketInvoicePdf(
     val invoiceParagraph = listOf(
         "Invoice #: ${ticketInfo.invoice.invoiceNumber}",
         "Ticket #: ${ticketInfo.identifier}",
-        "Employee #: ${ticketInfo.assignedEmployee}"
+        "Employee #: ${ticketInfo.assignedUser}"
     )
 
     // PDF stuff

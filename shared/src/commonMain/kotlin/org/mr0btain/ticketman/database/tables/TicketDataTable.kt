@@ -12,8 +12,8 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 
 object TicketDataTable: IntIdTable("tickets") {
     val identifier = integer("number")
-    val customerId = integer("customerid")
-    val assignedEmp = integer("assignedemp")
+    val customerId = integer("customerId")
+    val assignedUser = varchar("assignedUser", 36)
     val device = json<Device>("device", Json.Default)
     val status = json<TicketStatus>("status", Json.Default)
     val priority = json<TicketPriority>("priority", Json.Default)

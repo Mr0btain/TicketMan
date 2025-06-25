@@ -3,14 +3,12 @@ package org.mr0btain.ticketman.components.injection
 import androidx.compose.material3.SnackbarHostState
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.filesDir
-import io.github.vinceglb.filekit.path
 import org.koin.dsl.module
 import org.mr0btain.ticketman.components.data.FileManager
-import org.mr0btain.ticketman.database.LocalDatabase
 import org.mr0btain.ticketman.components.data.datastore.createDataStore
-import org.mr0btain.ticketman.components.network.DatabaseClient
+import org.mr0btain.ticketman.components.database.ClientDatabase
+import org.mr0btain.ticketman.components.database.configureDatabase
+import org.mr0btain.ticketman.components.network.ServerDatabaseClient
 import org.mr0btain.ticketman.components.network.createHttpClient
 import org.mr0btain.ticketman.components.network.getHttpEngine
 
@@ -26,8 +24,8 @@ val dataModule = module {
         FileManager()
     }
 
-    single<LocalDatabase> {
-        LocalDatabase(FileKit.filesDir.path)
+    single<ClientDatabase> {
+        configureDatabase()
     }
 
     single<SnackbarHostState> {
@@ -38,7 +36,7 @@ val dataModule = module {
         createDataStore()
     }
 
-    single<DatabaseClient> {
-        DatabaseClient(createHttpClient(getHttpEngine()))
+    single<ServerDatabaseClient> {
+        ServerDatabaseClient(createHttpClient(getHttpEngine()))
     }
 }

@@ -23,39 +23,41 @@ import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.employee.AccessLevel
-import org.mr0btain.ticketman.data.employee.Employee
 import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
+import org.mr0btain.ticketman.components.database.ClientDatabase
+import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.logging.AppLogger
-import org.mr0btain.ticketman.components.network.DatabaseClient
+import org.mr0btain.ticketman.components.network.ServerDatabaseClient
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.database.LocalDatabase
 import org.mr0btain.ticketman.generateMockData
 import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.error.onError
 import org.mr0btain.ticketman.error.onSuccess
+import org.mr0btain.ticketman.server.User
+import java.util.UUID
 
 // TODO: Setup error handling in here
 
 /**
-* Main View model for the project.
-* Used to store data that needs to persist for the lifetime of the app
+ * Main View model for the project.
+ * Used to store data that needs to persist for the lifetime of the app
  */
 
 class MainViewModel(
     private val fileManager: FileManager,
-    private val localDatabase: LocalDatabase,
     private val dataStore: DataStore<Preferences>,
-    private val databaseClient: DatabaseClient,
+    private val serverDatabaseClient: ServerDatabaseClient,
+    private val clientDatabase: ClientDatabase,
     val snackBarHost: SnackbarHostState
-): ViewModel() {
+) : ViewModel() {
     private companion object {
         const val TAG = "MainViewModel"
 
@@ -99,14 +101,16 @@ class MainViewModel(
 
             val server = dataStore.data.map { preferences -> preferences[SERVER_ADDRESS] ?: "" }.first()
             _serverAddress.value = server
-            databaseClient.changeServerUrl(server)
+            serverDatabaseClient.changeServerUrl(server)
 
-            _scrollBarsOnBottom.value = dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] ?: true }.first()
-            _scrollBarsOnRight.value = dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_RIGHT] ?: true }.first()
+            _scrollBarsOnBottom.value =
+                dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] ?: true }.first()
+            _scrollBarsOnRight.value =
+                dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_RIGHT] ?: true }.first()
         }
     }
 
-    fun toggleDarkMode(){
+    fun toggleDarkMode() {
         // Update the value
         val value = !_darkMode.value
 
@@ -122,12 +126,12 @@ class MainViewModel(
         _serverAddress.value = address
 
         viewModelScope.launch {
-            databaseClient.changeServerUrl(address)
+            serverDatabaseClient.changeServerUrl(address)
             dataStore.edit { preferences -> preferences[SERVER_ADDRESS] = address }
         }
     }
 
-    fun toggleScrollBarsOnBottom(){
+    fun toggleScrollBarsOnBottom() {
         // Update the value
         val value = !_scrollBarsOnBottom.value
 
@@ -138,7 +142,7 @@ class MainViewModel(
         }
     }
 
-    fun toggleScrollBarsOnRight(){
+    fun toggleScrollBarsOnRight() {
         // Update the value
         val value = !_scrollBarsOnRight.value
 
@@ -176,57 +180,83 @@ class MainViewModel(
         return value >= 0
     }
 
-    /** Employee Related Things */
+    /** User Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
 
     // TODO: Setup access level stuff
     // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
-    // Employee stuff
-    private val _employee: MutableStateFlow<Employee> = MutableStateFlow(Employee())
-    val employee = _employee.asStateFlow()
+    // User stuff
+    private val _user: MutableStateFlow<User> = MutableStateFlow(User())
+    val user = _user.asStateFlow()
 
     // Employee list
-    private val _employeeList: MutableStateFlow<List<Employee>> = MutableStateFlow(listOf())
-    val employeeList = _employeeList.asStateFlow()
+    private val _userList: MutableStateFlow<List<User>> = MutableStateFlow(listOf())
+    val userList = _userList.asStateFlow()
 
     // To update the user id
-    fun updateOrAddEmployee(employee: Employee) {
-        // Check if item exists or not, if not then add it
-        if (_employeeList.value.firstOrNull { it.identifier == employee.identifier } != null) {
-            // Update data in viewmodel
-            // Get index of the item
-            val index = _employeeList.value.indexOfFirst { it.identifier == employee.identifier }
+    fun updateOrAddUser(user: User) {
+        viewModelScope.launch {
+            // Check if item exists or not, if not then add it
+            if (_userList.value.firstOrNull { it.identifier == user.identifier } != null) {
+                // Update data in viewmodel
+                // Get index of the item
+                val index = _userList.value.indexOfFirst { it.identifier == user.identifier }
 
-            // update list with new data
-            _employeeList.value = _employeeList.value.toMutableList().also { it[index] = employee }
+                // update list with new data
+                _userList.value = _userList.value.toMutableList().also { it[index] = user }
 
-            // Update database
-            localDatabase.updateEmployee(employee)
-        } else {
-            // Else add new item to view model
-            _employeeList.value = _employeeList.value + employee
+                // Update database
+                if (!clientDatabase.userDatabase.update(user)) {
+                    AppLogger.m("$TAG:updateOrAddUser", "Error updating user in database")
+                    snackBarHost.showSnackbar("Error updating user!")
+                }
+            } else {
+                // Else add new item to view model
+                _userList.value = _userList.value + user
 
-            // Add to database
-            localDatabase.addEmployee(employee)
+                // Add to database
+                if (!clientDatabase.userDatabase.add(user)) {
+                    AppLogger.m("$TAG:updateOrAddUser", "Error adding user to database")
+                }
+            }
         }
     }
 
-    fun getEmployees() { _employeeList.value = localDatabase.getAllEmployees() }
+    fun getUsersFromDatabase() {
+        viewModelScope.launch {
+            val result = clientDatabase.userDatabase.getAll()
 
-    fun removeEmployee(id: Int) {
-        // Check if employee exists or not
-        if (_employeeList.value.firstOrNull { it.identifier == id } != null) {
-            // update list
-            _employeeList.value = _employeeList.value.filter { it.identifier != id }
-
-            // Update database
-            localDatabase.removeEmployee(id)
-        } else {
-            // TODO: We should trigger a warning or something
+            if (result != null) {
+                _userList.value = result
+            } else {
+                AppLogger.m("$TAG:getUsersFromDatabase", "Error getting users from database")
+                snackBarHost.showSnackbar("Error getting users!")
+            }
         }
     }
 
-    fun getEmployeeForId(id: Int): Employee { return employeeList.value.firstOrNull() { it.identifier == id } ?: Employee() }
+
+    fun removeUser(identifier: UUID) {
+        viewModelScope.launch {
+            if (_userList.value.firstOrNull { it.identifier == identifier } != null) {
+                // update list
+                _userList.value = _userList.value.filter { it.identifier != identifier }
+
+                // Update database
+                if (!clientDatabase.userDatabase.remove(identifier)) {
+                    AppLogger.m("$TAG:removeUser", "Error removing user from database")
+                    snackBarHost.showSnackbar("Error removing user!")
+                }
+            } else {
+                AppLogger.m("$TAG:removeUser", "Error removing user from database")
+                snackBarHost.showSnackbar("Error removing user!")
+            }
+        }
+    }
+
+    fun getUserForId(identifier: UUID): User? {
+        return userList.value.firstOrNull() { it.identifier == identifier }
+    }
 
     /** Inventory Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
@@ -239,50 +269,88 @@ class MainViewModel(
     private val _selectedInventoryId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
     val selectedInventoryId = _selectedInventoryId.asStateFlow()
 
-    fun changeSelectedInventoryId(id: Int) { _selectedInventoryId.value = id }
+    fun changeSelectedInventoryId(identifier: Int) {
+        _selectedInventoryId.value = identifier
+    }
 
-    fun getNextInventoryId(): Int { return localDatabase.getNextInventoryId() }
+    fun getNextInventoryId(): Int? {
+        return clientDatabase.inventoryDatabase.getNextId()
+    }
 
-    fun getInventory() { _inventoryList.value =  localDatabase.getInventory() }
+    fun getInventoryFromDatabase() {
+        viewModelScope.launch {
+            val result = clientDatabase.inventoryDatabase.getAll()
+
+            if (result != null) {
+                _inventoryList.value = result
+            } else {
+                AppLogger.m("$TAG:getInventoryFromDatabase", "Error getting items from database")
+                snackBarHost.showSnackbar("Error getting inventory!")
+            }
+        }
+    }
 
     fun updateOrAddInventoryItem(inventoryItem: InventoryItem) {
-        // Check if item exists or not, if not then add it
-        if (_inventoryList.value.firstOrNull { it.identifier == inventoryItem.identifier } != null) {
-            // Update data in viewmodel
-            // Get index of the item
-            val index = _inventoryList.value.indexOfFirst { it.identifier == inventoryItem.identifier }
+        viewModelScope.launch {
+            // Check if item exists or not, if not then add it
+            if (_inventoryList.value.firstOrNull { it.identifier == inventoryItem.identifier } != null) {
+                // Update data in viewmodel
+                // Get index of the item
+                val index = _inventoryList.value.indexOfFirst { it.identifier == inventoryItem.identifier }
 
-            // update list with new data
-            _inventoryList.value = _inventoryList.value.toMutableList().also { it[index] = inventoryItem }
+                // update list with new data
+                _inventoryList.value = _inventoryList.value.toMutableList().also { it[index] = inventoryItem }
 
-            // Update database
-            localDatabase.updateInventoryItem(inventoryItem)
-        } else {
-            // Else add new item to view model
-            _inventoryList.value = _inventoryList.value + inventoryItem
+                // Update database
+                if (!clientDatabase.inventoryDatabase.update(inventoryItem)) {
+                    AppLogger.m("$TAG:updateOrAddInventoryItem", "Error updating item in database")
+                    snackBarHost.showSnackbar("Error updating item!")
+                }
+            } else {
+                // Else add new item to view model
+                _inventoryList.value = _inventoryList.value + inventoryItem
 
-            // Add to database
-            localDatabase.addInventoryItem(inventoryItem)
-        }
+                // Add to database
+                if (!clientDatabase.inventoryDatabase.add(inventoryItem)) {
+                    AppLogger.m("$TAG:updateOrAddInventoryItem", "Error adding item to database")
+                    snackBarHost.showSnackbar("Error adding item!")
+                }
+            }
 
-        _selectedInventoryId.value = inventoryItem.identifier
-    }
-
-    fun removeInventoryItem(id: Int) {
-        // Check if item exists or not
-        if (_inventoryList.value.firstOrNull { it.identifier == id } != null) {
-            // update list
-            _inventoryList.value = _inventoryList.value.filter { it.identifier != id }
-
-            // Update database
-            localDatabase.removeInventoryItem(id)
-        } else {
-            // TODO: We should trigger a warning or something
+            _selectedInventoryId.value = inventoryItem.identifier
         }
     }
 
-    fun getInventoryItemForId(id: Int): InventoryItem {
-        return _inventoryList.value.firstOrNull { it.identifier == id } ?: InventoryItem()
+    fun removeInventoryItem(identifier: Int) {
+        viewModelScope.launch {
+            // Check if item exists or not
+            if (_inventoryList.value.firstOrNull { it.identifier == identifier } != null) {
+                // update list
+                _inventoryList.value = _inventoryList.value.filter { it.identifier != identifier }
+
+                // Update database
+                if (!clientDatabase.inventoryDatabase.remove(identifier)) {
+                    AppLogger.m("$TAG:removeInventoryItem", "Error removing item from database")
+                    snackBarHost.showSnackbar("Error removing item!")
+                }
+            } else {
+                AppLogger.m("$TAG:removeInventoryItem", "Error removing item from database")
+                snackBarHost.showSnackbar("Error removing item!")
+            }
+        }
+    }
+
+    fun getInventoryItemForId(identifier: Int): InventoryItem? {
+        val result = _inventoryList.value.firstOrNull { it.identifier == identifier }
+
+        viewModelScope.launch {
+            if (result == null) {
+                AppLogger.m("$TAG:getInventoryItemForId", "Error getting item from database")
+                snackBarHost.showSnackbar("Error getting item!")
+            }
+        }
+
+        return result
     }
 
     /** Ticket Related Things */
@@ -297,53 +365,86 @@ class MainViewModel(
     val selectedTicketId = _selectedTicketId.asStateFlow()
 
     // To update selected ticket
-    fun changeSelectedTicketId(id: Int) {
-        _selectedTicketId.value = id
+    fun changeSelectedTicketId(identifier: Int) {
+        _selectedTicketId.value = identifier
     }
 
-    fun getNextTicketId(): Int { return localDatabase.getNextTicketId() }
+    fun getNextTicketId(): Int? {
+        return clientDatabase.ticketDatabase.getNextId()
+    }
 
-    fun getTickets() { _ticketDataList.value = localDatabase.getAllTickets() }
+    fun getTicketsFromDatabase() {
+        viewModelScope.launch {
+            val result = clientDatabase.ticketDatabase.getAll()
+
+            if (result != null) {
+                _ticketDataList.value = result
+            } else {
+                AppLogger.m("$TAG:getTicketsFromDatabase", "Error getting tickets from database")
+                snackBarHost.showSnackbar("Error getting tickets!")
+            }
+        }
+    }
 
     // Add or update ticket info if it exists
     fun updateOrAddTicket(data: TicketInfo) {
-        // Check if ticket exists or not, if not then add it
-        if (_ticketDataList.value.map { it.identifier }.contains(data.identifier)) {
-            // Update data in viewmodel
-            // Get index of the item
-            val index = _ticketDataList.value.indexOfFirst { it.identifier == data.identifier }
+        viewModelScope.launch {
+            // Check if ticket exists or not, if not then add it
+            if (_ticketDataList.value.map { it.identifier }.contains(data.identifier)) {
+                // Update data in viewmodel
+                // Get index of the item
+                val index = _ticketDataList.value.indexOfFirst { it.identifier == data.identifier }
 
-            // update list with new data
-            _ticketDataList.value = _ticketDataList.value.toMutableList().also { it[index] = data }
+                // update list with new data
+                _ticketDataList.value = _ticketDataList.value.toMutableList().also { it[index] = data }
 
-            // Update database
-            localDatabase.updateTicket(data)
-        } else {
-            // Else add new ticket to view model
-            _ticketDataList.value = _ticketDataList.value + data
+                // Update database
+                if (!clientDatabase.ticketDatabase.update(data)) {
+                    AppLogger.m("$TAG:updateOrAddTicket", "Error updating ticket in database")
+                    snackBarHost.showSnackbar("Error updating ticket!")
+                }
+            } else {
+                // Else add new ticket to view model
+                _ticketDataList.value = _ticketDataList.value + data
 
-            // Add to database
-            localDatabase.addTicket(data)
-        }
+                // Add to database
+                if (!clientDatabase.ticketDatabase.add(data)) {
+                    AppLogger.m("$TAG:updateOrAddTicket", "Error adding ticket to database")
+                    snackBarHost.showSnackbar("Error adding ticket!")
+                }
+            }
 
-        _selectedTicketId.value = data.identifier
-    }
-
-    fun removeTicket(id: Int) {
-        // Check if ticket exists or not
-        if (_ticketDataList.value.firstOrNull { it.identifier == id } != null) {
-            // update list
-            _ticketDataList.value = _ticketDataList.value.filter { it.identifier != id }
-
-            // Update database
-            localDatabase.removeTicket(id)
-        } else {
-            // TODO: We should trigger a warning or something
+            _selectedTicketId.value = data.identifier
         }
     }
 
-    fun getTicketForId(id: Int): TicketInfo {
-        return _ticketDataList.value.firstOrNull { it.identifier == id } ?: TicketInfo()
+    fun removeTicket(identifier: Int) {
+        viewModelScope.launch {
+            // Check if ticket exists or not
+            if (_ticketDataList.value.firstOrNull { it.identifier == identifier } != null) {
+                // update list
+                _ticketDataList.value = _ticketDataList.value.filter { it.identifier != identifier }
+
+                // Update database
+                if (!clientDatabase.ticketDatabase.remove(identifier)) {
+                    AppLogger.m("$TAG:removeTicket", "Error removing Ticket from database")
+                    snackBarHost.showSnackbar("Error removing ticket!")
+                }
+            } else {
+                AppLogger.m("$TAG:removeTicket", "Error removing ticket from database")
+                snackBarHost.showSnackbar("Error removing ticket!")
+            }
+        }
+    }
+
+    fun getTicketForId(id: Int): TicketInfo? {
+        val result = _ticketDataList.value.firstOrNull { it.identifier == id }
+
+        viewModelScope.launch {
+            if (result == null) snackBarHost.showSnackbar("Error getting ticket!")
+        }
+
+        return result
     }
 
     /** Customer related things */
@@ -359,78 +460,103 @@ class MainViewModel(
     val selectedCustomerId = _selectedCustomerId.asStateFlow()
 
     // Call to change customer data
-    fun changeSelectedCustomerId(id: Int) {
-        _selectedCustomerId.value = id
+    fun changeSelectedCustomerId(identifier: Int) {
+        _selectedCustomerId.value = identifier
     }
 
-    fun getNextCustomerId(): Int { return localDatabase.getNextCustomerId() }
+    fun getNextCustomerId(): Int? {
+        return clientDatabase.customerDatabase.getNextId()
+    }
 
-    fun getCustomerForId(id: Int): CustomerData {
+    fun getCustomerForId(id: Int): CustomerData? {
         val result = _customerDataList.value.firstOrNull() { it.info.identifier == id }
 
         if (result == null) viewModelScope.launch {
-            snackBarHost.showSnackbar("Could not find Customer!", withDismissAction = true)
+            AppLogger.m("$TAG:getCustomerForId", "Error getting customer from database")
+            snackBarHost.showSnackbar("Could not find Customer!")
         }
 
-        return result ?: CustomerData()
+        return result
     }
 
     // Add or update customer info if it exists
     fun updateOrAddCustomer(data: CustomerData) {
-        // Check if customer exists or not, if not then add it
-        if (_customerDataList.value.firstOrNull { it.info.identifier == data.info.identifier } != null) {
-            // Update data in viewmodel
-            // Get index of the item
-            val index = _customerDataList.value.indexOfFirst { it.info.identifier == data.info.identifier }
+        viewModelScope.launch {
+            // Check if customer exists or not, if not then add it
+            if (_customerDataList.value.firstOrNull { it.info.identifier == data.info.identifier } != null) {
+                // Update data in viewmodel
+                // Get index of the item
+                val index = _customerDataList.value.indexOfFirst { it.info.identifier == data.info.identifier }
 
-            // update list with new data
-            _customerDataList.value = _customerDataList.value.toMutableList().also { it[index] = data }
+                // update list with new data
+                _customerDataList.value = _customerDataList.value.toMutableList().also { it[index] = data }
 
-            // Update database
-            localDatabase.updateCustomer(data)
-        } else {
-            // Else add to list in view model
-            _customerDataList.value = _customerDataList.value + data
+                // Update database
+                if (!clientDatabase.customerDatabase.update(data)) {
+                    AppLogger.m("$TAG:updateOrAddCustomer", "Error updating customer in database")
+                    snackBarHost.showSnackbar("Error updating customer!")
+                }
+            } else {
+                // Else add to list in view model
+                _customerDataList.value = _customerDataList.value + data
 
-            // Add to database
-            localDatabase.addCustomer(data)
+                // Add to database
+                if (!clientDatabase.customerDatabase.add(data)) {
+                    AppLogger.m("$TAG:updateOrAddCustomer", "Error adding customer to database")
+                    snackBarHost.showSnackbar("Error adding customer!")
+                }
+            }
+
+            // Set selected customer
+            _selectedCustomerId.value = data.info.identifier
         }
-
-        // Set selected customer
-        _selectedCustomerId.value = data.info.identifier
     }
 
     // To update customer data list
-    fun getCustomers() { _customerDataList.value = localDatabase.getAllCustomers() }
+    fun getCustomers() {
+        viewModelScope.launch {
+            val result = clientDatabase.customerDatabase.getAll()
 
-    fun removeCustomer(id: Int) {
-        // Check if customer exists or not
-        if (_customerDataList.value.map { it.info.identifier }.contains(id)) {
-            // update list
-            _customerDataList.value = _customerDataList.value.filter { it.info.identifier != id }
+            if (result != null) {
+                _customerDataList.value = result
+            } else {
+                AppLogger.m("$TAG:getCustomers", "Error getting customers from database")
+                snackBarHost.showSnackbar("Error getting customers!")
+            }
+        }
+    }
 
-            // Update database
-            localDatabase.removeCustomer(id)
-        } else {
-            // TODO: We should trigger a warning or something
+    fun removeCustomer(identifier: Int) {
+        viewModelScope.launch {
+            // Check if customer exists or not
+            if (_customerDataList.value.map { it.info.identifier }.contains(identifier)) {
+                // update list
+                _customerDataList.value = _customerDataList.value.filter { it.info.identifier != identifier }
+
+                // Update database
+                if (!clientDatabase.customerDatabase.remove(identifier)) {
+                    AppLogger.m("$TAG:removeCustomer", "Error removing customer from database")
+                    snackBarHost.showSnackbar("Error removing customer!")
+                }
+            } else {
+                AppLogger.m("$TAG:removeCustomer", "Error removing customer from database")
+                snackBarHost.showSnackbar("Error removing customer!")
+            }
         }
     }
 
     // Local Database
     // --------------------------------------------------------------------------------------------------------------------------
 
-    // To check and setup initial database if it doesn't exist
-    fun setupDatabase() { localDatabase.checkAndCreateTables() }
-
     // TODO: Employee needs fleshed out
     fun updateDataFromDb() {
         // Read data from db and update it in view model
         getCustomers()
-        getTickets()
-        getEmployees()
-        getInventory()
-        _employee.value = employeeList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: Employee()
-        println("Selected employee: ${_employee.value}")
+        getTicketsFromDatabase()
+        getUsersFromDatabase()
+        getInventoryFromDatabase()
+        _user.value = userList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: User()
+        println("Selected User: ${_user.value}")
     }
 
     // Server Database
@@ -440,28 +566,28 @@ class MainViewModel(
         var success = false
 
         viewModelScope.launch {
-            databaseClient.getCustomerData()
+            serverDatabaseClient.getCustomers()
                 .onSuccess { data ->
                     _customerDataList.value = data
                     success = true
                     AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got customer data")
                 }.onError { error -> handleNetworkError("GetDataFromServer", error) }
 
-            databaseClient.getTicketData()
+            serverDatabaseClient.getTickets()
                 .onSuccess { data ->
                     _ticketDataList.value = data
                     success = true
                     AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got ticket data")
                 }.onError { error -> handleNetworkError("GetDataFromServer", error) }
 
-            databaseClient.getEmployeeData()
+            serverDatabaseClient.getUsers()
                 .onSuccess { data ->
-                    _employeeList.value = data
+                    _userList.value = data
                     success = true
                     AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got employee data")
                 }.onError { error -> handleNetworkError("GetDataFromServer", error) }
 
-            databaseClient.getInventoryData()
+            serverDatabaseClient.getInventory()
                 .onSuccess { data ->
                     _inventoryList.value = data
                     success = true
@@ -473,17 +599,43 @@ class MainViewModel(
     }
 
     // TODO: It seems okhttp throws stuff into log before we actually reach this and it never makes it to the logs
-    private fun handleNetworkError(caller: String ,error: NetworkError) {
+    private fun handleNetworkError(caller: String, error: NetworkError) {
         when (error) {
-            NetworkError.REQUEST_TIMEOUT -> { AppLogger.m("$TAG:$caller", error.name) }
-            NetworkError.UNAUTHORIZED -> { AppLogger.i("$TAG:$caller", error.name) }
-            NetworkError.CONFLICT -> { AppLogger.i("$TAG:$caller", error.name) }
-            NetworkError.TOO_MANY_REQUESTS -> { AppLogger.i("$TAG:$caller", error.name) }
-            NetworkError.NO_INTERNET -> { AppLogger.m("$TAG:$caller", error.name) }
-            NetworkError.PAYLOAD_TOO_LARGE -> { AppLogger.i("$TAG:$caller", error.name) }
-            NetworkError.SERVER_ERROR -> { AppLogger.i("$TAG:$caller", error.name) }
-            NetworkError.SERIALIZATION -> { AppLogger.i("$TAG:$caller", error.name) }
-            NetworkError.UNKNOWN -> { AppLogger.i("$TAG:$caller", error.name) }
+            NetworkError.REQUEST_TIMEOUT -> {
+                AppLogger.m("$TAG:$caller", error.name)
+            }
+
+            NetworkError.UNAUTHORIZED -> {
+                AppLogger.i("$TAG:$caller", error.name)
+            }
+
+            NetworkError.CONFLICT -> {
+                AppLogger.i("$TAG:$caller", error.name)
+            }
+
+            NetworkError.TOO_MANY_REQUESTS -> {
+                AppLogger.i("$TAG:$caller", error.name)
+            }
+
+            NetworkError.NO_INTERNET -> {
+                AppLogger.m("$TAG:$caller", error.name)
+            }
+
+            NetworkError.PAYLOAD_TOO_LARGE -> {
+                AppLogger.i("$TAG:$caller", error.name)
+            }
+
+            NetworkError.SERVER_ERROR -> {
+                AppLogger.i("$TAG:$caller", error.name)
+            }
+
+            NetworkError.SERIALIZATION -> {
+                AppLogger.i("$TAG:$caller", error.name)
+            }
+
+            NetworkError.UNKNOWN -> {
+                AppLogger.i("$TAG:$caller", error.name)
+            }
         }
     }
 
@@ -496,18 +648,18 @@ class MainViewModel(
     }
 
     fun generateMockDbData() {
-        val (customerdata, ticketData, employeeData) = generateMockData(400)
+        val (customerdata, ticketData, userData) = generateMockData(400)
 
-        localDatabase.addAllTickets(ticketData)
+        clientDatabase.ticketDatabase.addAll(ticketData)
 
         // Add the generated values to the database
-        localDatabase.addAllCustomers(customerdata)
+        clientDatabase.customerDatabase.addAll(customerdata)
 
         // Add all employees
-        localDatabase.addAllEmployees(employeeData)
+        clientDatabase.userDatabase.addAll(userData)
 
         // Generate and add inventory items
-        localDatabase.addAllInventory(generateRandomInventoryItems(60))
+        clientDatabase.inventoryDatabase.addAll(generateRandomInventoryItems(60))
     }
 
     fun testPdf() {
@@ -521,7 +673,7 @@ class MainViewModel(
             ),
             ticketInfo = TicketInfo(
                 identifier = 7865875,
-                assignedEmployee = 356247,
+                assignedUser = UUID.randomUUID().toString(),
                 device = Device("Samsung", "Galaxy S7"),
                 invoice = Invoice(
                     invoiceNumber = 123435678,
