@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.logging.AppLogger
 import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.inventory.InventoryItem
@@ -56,8 +57,9 @@ import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketPanel
 // But the less we have to do on the main thread the better
 // I guess.
 
-// TODO: Something with snackbar? maybe errors
 // TODO: Maybe make this expect actual of some sort for different platforms or screen sizes
+// TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpandedMainScreen(
@@ -71,9 +73,9 @@ fun ExpandedMainScreen(
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
-    // Employee stuff
-    val employeeList = viewModel.employeeList.collectAsState()
-    val currentEmployee = viewModel.employee.collectAsState()
+    // User stuff
+    val userList = viewModel.userList.collectAsState()
+    val currentUser = viewModel.user.collectAsState()
 
     // For customer panel
     val customerData = viewModel.customerDataList.collectAsState()
@@ -154,14 +156,22 @@ fun ExpandedMainScreen(
                     isTicketForNewCustomer = true
 
                     // Seed data with customer id
-                    ticketSeedData = TicketInfo(
-                        customerId = customerId,
-                        time = getTime(),
-                        identifier = viewModel.getNextTicketId()
-                    )
+                    val newIdentifier = viewModel.getNextTicketId()
 
-                    // Show dialog
-                    showTicketDialog = true
+                    // Check if our identifier is not null
+                    if (newIdentifier != null) {
+                        ticketSeedData = TicketInfo(
+                            customerId = customerId,
+                            time = getTime(),
+                            identifier = newIdentifier
+                        )
+
+                        // Pop up the dialog
+                        showTicketDialog = true
+                    } else {
+                        AppLogger.m("ExpandedMainScreen:onAddNewTicket", "Error adding new ticket ID was null!")
+                        snackBarState.showSnackbar("Error getting new ticket id!")
+                    }
                 }
             },
             isDarkMode = isDarkMode,
@@ -211,15 +221,23 @@ fun ExpandedMainScreen(
             isDarkMode = isDarkMode,
             seedData = ticketSeedData,
             customerInfo = customerData.value.map { it.info },
-            employees = employeeList.value,
+            users = userList.value,
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
                 coroutineScope.launch {
-                    // Add seeded data if there is any
-                    customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = viewModel.getNextCustomerId()))
+                    val newIdentifier = viewModel.getNextCustomerId()
 
-                    // Trigger dialog
-                    showCustomerDialog = true
+                    // Check if we can get a new identifier
+                    if (newIdentifier != null) {
+                        // Add seeded data if there is any
+                        customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = newIdentifier))
+
+                        // Trigger dialog
+                        showCustomerDialog = true
+                    } else {
+                        AppLogger.m("ExpandedMainScreen:onAddNewCustomer", "Error adding new customer ID was null!")
+                        snackBarState.showSnackbar("Error getting new customer id!")
+                    }
                 }
             }
         )
@@ -395,26 +413,41 @@ fun ExpandedMainScreen(
                             isDarkMode = isDarkMode,
                             onAddCustomer = { name ->
                                 coroutineScope.launch {
-                                    // Set seed data
-                                    customerSeedData = CustomerData(
-                                        info = CustomerInfo(
-                                            name = name,
-                                            time = getTime(),
-                                            identifier = viewModel.getNextCustomerId()
-                                        )
-                                    )
+                                    val newIdentifier = viewModel.getNextCustomerId()
 
-                                    // Trigger dialog
-                                    showCustomerDialog = true
+                                    // Check if we can et a new identifier
+                                    if (newIdentifier != null) {
+                                        // Set seed data
+                                        customerSeedData = CustomerData(
+                                            info = CustomerInfo(
+                                                name = name,
+                                                time = getTime(),
+                                                identifier = newIdentifier
+                                            )
+                                        )
+
+                                        // Trigger dialog
+                                        showCustomerDialog = true
+                                    } else {
+                                        AppLogger.m("ExpandedMainScreen:onAddCustomer", "Error adding customer ID was null!")
+                                        snackBarState.showSnackbar("Error getting new customer id!")
+                                    }
                                 }
                             },
                             onEditCustomer = {
                                 coroutineScope.launch {
-                                    // Set seed data
-                                    customerSeedData = viewModel.getCustomerForId(selectedCustomer.value)
+                                    val customer = viewModel.getCustomerForId(selectedCustomer.value)
 
-                                    // Trigger dialog if we actually have an item selected
-                                    if (customerSeedData != CustomerData()) { showCustomerDialog = true }
+                                    if (customer != null) {
+                                        // Set seed data
+                                        customerSeedData = customer
+
+                                        // Trigger dialog
+                                        showCustomerDialog = true
+                                    } else {
+                                        AppLogger.m("ExpandedMainScreen:onEditCustomer", "Error getting customer data. value was null!")
+                                        snackBarState.showSnackbar("Error getting customer data!")
+                                    }
                                 }
                             },
                             onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomerId(id)},
@@ -434,16 +467,23 @@ fun ExpandedMainScreen(
                                     }
                                 }
                             },
-                            onTicketClick = { id ->
+                            onTicketClick = { identifier ->
                                 coroutineScope.launch {
-                                    // Set selected ticket
-                                    viewModel.changeSelectedTicketId(id)
+                                    val ticket = viewModel.getTicketForId(identifier)
 
-                                    // Get seed data
-                                    ticketSeedData = viewModel.getTicketForId(id)
+                                    if (ticket != null) {
+                                        // Set selected ticket
+                                        viewModel.changeSelectedTicketId(identifier)
 
-                                    // Pop up ticket dialog
-                                    showTicketDialog = true
+                                        // Get seed data
+                                        ticketSeedData = ticket
+
+                                        // Pop up ticket dialog
+                                        showTicketDialog = true
+                                    } else {
+                                        AppLogger.m("ExpandedMainScreen:onTicketClick", "Error getting ticket info, data was null!")
+                                        snackBarState.showSnackbar("Error getting ticket info!")
+                                    }
                                 }
                             },
                             selectedCustomerId = selectedCustomer.value,
@@ -463,29 +503,43 @@ fun ExpandedMainScreen(
                             selectedTicketId = selectedTicket.value,
                             ticketList = ticketList.value,
                             customerList = customerData.value,
-                            currentEmployee = currentEmployee.value,
-                            employeeList = employeeList.value,
+                            currentUser = currentUser.value,
+                            users = userList.value,
                             scrollBarsOnRight = scrollBarsOnRight,
                             onAddNewTicket = {
                                 coroutineScope.launch {
-                                    // Set up seed data
-                                    ticketSeedData = TicketInfo(
-                                        identifier = viewModel.getNextTicketId(),
-                                        assignedEmployee = currentEmployee.value.identifier,
-                                        time = getTime()
-                                    )
+                                    val newIdentifier = viewModel.getNextTicketId()
 
-                                    // Show the dialog
-                                    showTicketDialog = true
+                                    if (newIdentifier != null) {
+                                        // Set up seed data
+                                        ticketSeedData = TicketInfo(
+                                            identifier = newIdentifier,
+                                            assignedUser = currentUser.value.identifier.toString(),
+                                            time = getTime()
+                                        )
+
+                                        // Show the dialog
+                                        showTicketDialog = true
+                                    } else {
+                                        AppLogger.m("ExpandedMainScreen:onAddNewTicket", "Error getting new ticket id, id was null!")
+                                        snackBarState.showSnackbar("Error getting new ticket id!")
+                                    }
                                 }
                             },
                             onEditTicket = {
                                 coroutineScope.launch {
-                                    // Get seed data
-                                    ticketSeedData = viewModel.getTicketForId(selectedTicket.value)
+                                    val ticket = viewModel.getTicketForId(selectedTicket.value)
 
-                                    // Trigger dialog if we have an actual item selected
-                                    if (ticketSeedData != TicketInfo()) { showTicketDialog = true }
+                                    if (ticket != null) {
+                                        // Get seed data
+                                        ticketSeedData = ticket
+
+                                        // Trigger dialog if we have an actual item selected
+                                        showTicketDialog = true
+                                    } else {
+                                        AppLogger.m("ExpandedMainScreen:onEditTicket", "Error getting ticket info, data was null!")
+                                        snackBarState.showSnackbar("Error getting ticket info!")
+                                    }
                                 }
                             },
                             onSelectedTicketChange = { id -> viewModel.changeSelectedTicketId(id) },
@@ -519,25 +573,39 @@ fun ExpandedMainScreen(
                             onSelectedInventoryItemChange = { viewModel.changeSelectedInventoryId(it) },
                             onAddInventoryItem = {
                                 coroutineScope.launch {
-                                    // Set seed data
-                                    inventorySeedData = InventoryItem(
-                                        cost = "000",
-                                        price = "000",
-                                        identifier = viewModel.getNextInventoryId(),
-                                        time = getTime()
-                                    )
+                                    val newIdentifier = viewModel.getNextInventoryId()
 
-                                    // Popup dialog
-                                    showInventoryDialog = true
+                                    if (newIdentifier != null) {
+                                        // Set seed data
+                                        inventorySeedData = InventoryItem(
+                                            cost = "000",
+                                            price = "000",
+                                            identifier = newIdentifier,
+                                            time = getTime()
+                                        )
+
+                                        // Popup dialog
+                                        showInventoryDialog = true
+                                    } else {
+                                        AppLogger.m("ExpandedMainScreen:onAddInventoryItem", "Error getting new inventory ID, ID was null")
+                                        snackBarState.showSnackbar("Error getting new inventory id!")
+                                    }
                                 }
                             },
                             onEditInventoryItem = { item ->
                                 coroutineScope.launch {
-                                    // Set seed data
-                                    inventorySeedData = viewModel.getInventoryItemForId(item)
+                                    val inventoryItem = viewModel.getInventoryItemForId(item)
 
-                                    // Popup dialog if we have an actual item selected
-                                    if (inventorySeedData != InventoryItem()) { showInventoryDialog = true }
+                                    if (inventoryItem != null) {
+                                        // Set seed data
+                                        inventorySeedData = inventoryItem
+
+                                        // Popup dialog
+                                        showInventoryDialog = true
+                                    } else {
+                                        AppLogger.m("ExpandedMainScreen:onEditInventoryItem", "Error getting inventory item, data was null!")
+                                        snackBarState.showSnackbar("Error getting inventory item!")
+                                    }
                                 }
                             },
                             onDeleteInventoryItem = { id ->

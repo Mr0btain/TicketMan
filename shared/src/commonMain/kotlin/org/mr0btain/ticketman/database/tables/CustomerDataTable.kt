@@ -11,7 +11,6 @@ import org.mr0btain.ticketman.data.shared.Notes
 
 object CustomerDataTable : IntIdTable("customer") {
     val identifier = integer("number")
-
     val firstName = text("firstname")
     val lastName = text("lastname")
     val street = text("street")

@@ -8,10 +8,10 @@ import org.mr0btain.ticketman.data.customer.TicketList
 import org.mr0btain.ticketman.data.employee.AccessLevel
 import org.mr0btain.ticketman.data.shared.Notes
 
-// TODO: Encrypt sensitive data
-
-object EmployeeTable : IntIdTable("employee") {
-    val identifier = integer("number")
+object UserTable : IntIdTable("user") {
+    val identifier = varchar("identifier", 36)
+    val username = text("username")
+    val password = text("password")
     val firstName = text("firstname")
     val lastName = text("lastname")
     val tickets = json<TicketList>("tickets", Json.Default)

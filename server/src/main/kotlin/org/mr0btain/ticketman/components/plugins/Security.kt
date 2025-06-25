@@ -21,11 +21,11 @@ fun Application.configureSecurity(
             verifier(jwtService.jwtVerifier)
 
             validate { credential ->
-                jwtService.customValidator(credential)
+                jwtService.customValidator(credential, AccessLevel.NORMAL)
             }
 
             challenge { defaultScheme, realm ->
-                call.respond(HttpStatusCode.Unauthorized, "Bad Token")
+                call.respond(HttpStatusCode.Unauthorized, "Bad Token or Unauthorized")
             }
         }
 
@@ -38,20 +38,7 @@ fun Application.configureSecurity(
             }
 
             challenge { defaultScheme, realm ->
-                call.respond(HttpStatusCode.Unauthorized, "Bad Token")
-            }
-        }
-
-        jwt("normal") {
-            realm = jwtService.realm
-            verifier(jwtService.jwtVerifier)
-
-            validate { credential ->
-                jwtService.customValidator(credential, AccessLevel.NORMAL)
-            }
-
-            challenge { defaultScheme, realm ->
-                call.respond(HttpStatusCode.Unauthorized, "Bad Token")
+                call.respond(HttpStatusCode.Unauthorized, "Bad Token or Unauthorized")
             }
         }
 
@@ -64,7 +51,7 @@ fun Application.configureSecurity(
             }
 
             challenge { defaultScheme, realm ->
-                call.respond(HttpStatusCode.Unauthorized, "Bad Token")
+                call.respond(HttpStatusCode.Unauthorized, "Bad Token or Unauthorized")
             }
         }
     }

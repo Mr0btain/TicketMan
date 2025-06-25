@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.helpers
+package org.mr0btain.ticketman.components.utils
 
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.interaction.MutableInteractionSource

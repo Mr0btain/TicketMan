@@ -6,13 +6,13 @@ import io.ktor.client.request.*
 import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.data.customer.CustomerData
-import org.mr0btain.ticketman.data.employee.Employee
 import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.server.User
 
-class DatabaseClient (
+class ServerDatabaseClient (
     private val httpClient: HttpClient
 ) {
     private var serverUrl = ""
@@ -20,12 +20,14 @@ class DatabaseClient (
     // For updating the server url
     fun changeServerUrl(url: String) { serverUrl = url }
 
-    suspend fun getCustomerData(): Result<List<CustomerData>, NetworkError> {
+    suspend fun getCustomers(): Result<List<CustomerData>, NetworkError> {
         val response = try {
-            httpClient.get(urlString = "${serverUrl}/customers/all")
+            httpClient.get(urlString = "${serverUrl}/api/data/customers/all")
         } catch (ex: UnresolvedAddressException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.NO_INTERNET)
         } catch (ex: SerializationException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.SERIALIZATION)
         }
 
@@ -46,12 +48,14 @@ class DatabaseClient (
         }
     }
 
-    suspend fun getTicketData(): Result<List<TicketInfo>, NetworkError> {
+    suspend fun getTickets(): Result<List<TicketInfo>, NetworkError> {
         val response = try {
-            httpClient.get(urlString = "$serverUrl/tickets/all")
+            httpClient.get(urlString = "$serverUrl/api/data/tickets/all")
         } catch (ex: UnresolvedAddressException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.NO_INTERNET)
         } catch (ex: SerializationException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.SERIALIZATION)
         }
 
@@ -72,19 +76,21 @@ class DatabaseClient (
         }
     }
 
-    suspend fun getEmployeeData(): Result<List<Employee>, NetworkError> {
+    suspend fun getUsers(): Result<List<User>, NetworkError> {
         val response = try {
-            httpClient.get(urlString = "$serverUrl/employees/all")
+            httpClient.get(urlString = "$serverUrl/api/data/user/all")
         } catch (ex: UnresolvedAddressException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.NO_INTERNET)
         } catch (ex: SerializationException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.SERIALIZATION)
         }
 
         return when (response.status.value) {
             in 200..299 -> {
-                val employees = response.body<List<Employee>>()
-                Result.Success(employees)
+                val users = response.body<List<User>>()
+                Result.Success(users)
             }
 
             401 -> Result.Error(NetworkError.UNAUTHORIZED)
@@ -98,12 +104,14 @@ class DatabaseClient (
         }
     }
 
-    suspend fun getInventoryData(): Result<List<InventoryItem>, NetworkError> {
+    suspend fun getInventory(): Result<List<InventoryItem>, NetworkError> {
         val response = try {
-            httpClient.get(urlString = "$serverUrl/inventory/all")
+            httpClient.get(urlString = "$serverUrl/api/data/inventory/all")
         } catch (ex: UnresolvedAddressException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.NO_INTERNET)
         } catch (ex: SerializationException) {
+            ex.printStackTrace()
             return Result.Error(NetworkError.SERIALIZATION)
         }
 

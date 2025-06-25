@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -8,23 +9,27 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.database.LocalDatabase
+import org.mr0btain.ticketman.database.TicketDatabase
 import org.mr0btain.ticketman.server.response.ServerResponse
 import org.mr0btain.ticketman.server.response.ServerResult
 import kotlin.text.toIntOrNull
 
-fun Route.ticketRoute(localDatabase: LocalDatabase) {
+fun Route.ticketRoute(database: TicketDatabase) {
     // Get all tickets
     authenticate("restricted") {
-        get("/all") { call.respond(localDatabase.getAllTickets()) }
+        get("/all") {
+            database.getAll()?.let { data ->
+                call.respond(data)
+            } ?: call.respond(HttpStatusCode.NotFound)
+        }
     }
 
     // Add New Ticket
-    authenticate("normal") {
+    authenticate {
         post("/add") {
             try {
                 val ticket = call.receive<TicketInfo>()
-                localDatabase.addTicket(ticket)
+                database.add(ticket)
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -34,11 +39,11 @@ fun Route.ticketRoute(localDatabase: LocalDatabase) {
     }
 
     // Update ticket
-    authenticate("normal") {
+    authenticate {
         post("/update") {
             try {
                 val ticket = call.receive<TicketInfo>()
-                localDatabase.updateTicket(ticket)
+                database.update(ticket)
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -48,12 +53,12 @@ fun Route.ticketRoute(localDatabase: LocalDatabase) {
     }
 
     // Bulk add tickets
-    authenticate("normal") {
+    authenticate {
         post("/add/all") {
             try {
                 val tickets = call.receive<List<TicketInfo>>()
 
-                if (localDatabase.addAllTickets(tickets)) {
+                if (database.addAll(tickets)) {
                     call.respond(ServerResponse(ServerResult.SUCCESS))
                 } else call.respond(ServerResponse(ServerResult.FAIL))
             } catch (ex: Exception) {
@@ -64,7 +69,7 @@ fun Route.ticketRoute(localDatabase: LocalDatabase) {
     }
 
     // Delete ticket
-    authenticate("normal") {
+    authenticate {
         delete("/delete/{ticketIdentifier}") {
             val identifier = call.parameters["ticketIdentifier"]?.toIntOrNull()
 
@@ -73,7 +78,7 @@ fun Route.ticketRoute(localDatabase: LocalDatabase) {
                 return@delete
             }
 
-            if (localDatabase.removeTicket(identifier)) {
+            if (database.remove(identifier)) {
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } else {
                 call.respond(ServerResponse(ServerResult.FAIL))

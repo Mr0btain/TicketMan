@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
@@ -8,7 +9,7 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import org.mr0btain.ticketman.data.inventory.InventoryItem
-import org.mr0btain.ticketman.database.LocalDatabase
+import org.mr0btain.ticketman.database.InventoryDatabase
 import org.mr0btain.ticketman.server.response.ServerResponse
 import org.mr0btain.ticketman.server.response.ServerResult
 import kotlin.text.toIntOrNull
@@ -16,18 +17,22 @@ import kotlin.text.toIntOrNull
 /**
  * Inventory routes
  */
-fun Route.inventoryRoute(localDatabase: LocalDatabase) {
+fun Route.inventoryRoute(database: InventoryDatabase) {
     // Get all inventory
     authenticate("restricted") {
-        get("/all") { call.respond(localDatabase.getInventory()) }
+        get("/all") {
+            database.getAll()?.let { data ->
+                call.respond(data)
+            } ?: call.respond(HttpStatusCode.NotFound)
+        }
     }
 
     // Add New item
-    authenticate("normal") {
+    authenticate {
         post("/add") {
             try {
                 val inventoryItem = call.receive<InventoryItem>()
-                localDatabase.addInventoryItem(inventoryItem)
+                database.add(inventoryItem)
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -37,11 +42,11 @@ fun Route.inventoryRoute(localDatabase: LocalDatabase) {
     }
 
     // Update item
-    authenticate("normal") {
+    authenticate {
         post("/update") {
             try {
                 val inventoryItem = call.receive<InventoryItem>()
-                localDatabase.updateInventoryItem(inventoryItem)
+                database.update(inventoryItem)
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -51,12 +56,12 @@ fun Route.inventoryRoute(localDatabase: LocalDatabase) {
     }
 
     // Bulk add employees
-    authenticate("normal") {
+    authenticate {
         post("/add/all") {
             try {
                 val inventoryItems = call.receive<List<InventoryItem>>()
 
-                if (localDatabase.addAllInventory(inventoryItems)) {
+                if (database.addAll(inventoryItems)) {
                     call.respond(ServerResponse(ServerResult.SUCCESS))
                 } else call.respond(ServerResponse(ServerResult.FAIL))
             } catch (ex: Exception) {
@@ -67,7 +72,7 @@ fun Route.inventoryRoute(localDatabase: LocalDatabase) {
     }
 
     // Delete item
-    authenticate("normal") {
+    authenticate {
         delete("/delete/{inventoryIdentifier}") {
             val identifier = call.parameters["inventoryIdentifier"]?.toIntOrNull()
 
@@ -76,7 +81,7 @@ fun Route.inventoryRoute(localDatabase: LocalDatabase) {
                 return@delete
             }
 
-            if (localDatabase.removeInventoryItem(identifier)) {
+            if (database.remove(identifier)) {
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } else {
                 call.respond(ServerResponse(ServerResult.FAIL))

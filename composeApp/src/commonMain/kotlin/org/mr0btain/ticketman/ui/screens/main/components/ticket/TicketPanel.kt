@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.employee.Employee
 import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.server.User
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
@@ -30,8 +31,8 @@ fun TicketPanel(
     selectedTicketId: Int,
     ticketList: List<TicketInfo>,
     customerList: List<CustomerData>,
-    currentEmployee: Employee,
-    employeeList: List<Employee>,
+    currentUser: User,
+    users: List<User>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (Int) -> Unit,
@@ -39,17 +40,20 @@ fun TicketPanel(
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
+    val currentUserId = remember(currentUser) { currentUser.identifier.toString() }
+
     // Sorted tickets by which tab were on
-    val sortedTickets = remember(selectedPanel, ticketList, currentEmployee) {
+    val sortedTickets = remember(selectedPanel, ticketList, currentUser) {
         if (selectedPanel == 0) {
-            ticketList.sortedBy { it.identifier }.filter { it.assignedEmployee == currentEmployee.identifier }.reversed()
+            ticketList.sortedBy { it.identifier }.filter { it.assignedUser == currentUserId }.reversed()
         } else {
             ticketList.sortedBy { it.identifier }.reversed()
         }
     }
 
     // Selected ticket info
-    val selectedTicket = ticketList.firstOrNull() { it.identifier == selectedTicketId } ?: TicketInfo()
+    val selectedTicket =
+        remember(selectedTicketId) { ticketList.firstOrNull() { it.identifier == selectedTicketId } ?: TicketInfo() }
 
     // For search input
     var searchInput by remember { mutableStateOf("") }
@@ -185,8 +189,8 @@ fun TicketPanel(
                     modifier = Modifier,
                     customerData = customerList.firstOrNull { it.info.identifier == selectedTicket.customerId }
                         ?: CustomerData(),
-                    employeeName = (employeeList.firstOrNull() { it.identifier == selectedTicket.assignedEmployee }
-                        ?: Employee()).name,
+                    assignedUserName = (users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser }
+                        ?: User()).name,
                     isDarkMode = isDarkMode,
                     ticketInfo = selectedTicket,
                     scrollBarsOnRight = scrollBarsOnRight,
@@ -222,7 +226,7 @@ fun TicketPanel(
                         ticketListState.animateScrollToItem(
                             index = index,
                             scrollOffset = -(ticketListState.layoutInfo.viewportSize.height / 2) + 30
-                            )
+                        )
                     }
                 }
             }
