@@ -3,10 +3,12 @@ package org.mr0btain.ticketman.components.plugins
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.auth.authentication
+import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.response.respond
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.database.UserDatabase
 
 /**
  * Security configuration for authentication

@@ -12,7 +12,7 @@ class ClientDatabase(
     appDir: String,
     shouldLog: Boolean = true
 ) {
-    private val localDatabase = LocalDatabase(appDir, shouldLog)
+    private val localDatabase = LocalDatabase("$appDir/client", shouldLog)
     val customerDatabase = localDatabase.customerDatabase
     val ticketDatabase = localDatabase.ticketDatabase
     val inventoryDatabase = localDatabase.inventoryDatabase

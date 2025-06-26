@@ -44,6 +44,66 @@ class UserDatabase(
         return result
     }
 
+    fun getByUsername(username: String): User? {
+        var result: User? = null
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                result = UserTable.selectAll().where { UserTable.username eq username }.map { user ->
+                    User(
+                        identifier = UUID.fromString(user[UserTable.identifier]),
+                        username = user[UserTable.username],
+                        password = user[UserTable.password],
+                        name = PersonName(user[UserTable.firstName], user[UserTable.lastName]),
+                        notes = user[UserTable.notes].notes,
+                        contactInfo = user[UserTable.contactInfo],
+                        tickets = user[UserTable.tickets].list,
+                        accessLevel = user[UserTable.access],
+                        time = user[UserTable.time],
+                    )
+                }.firstOrNull()
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            return null
+        }
+
+        return result
+    }
+
+    fun getById(identifier: UUID): User? {
+        var result: User? = null
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                result = UserTable.selectAll().where { UserTable.identifier eq  identifier.toString() }.map { user ->
+                    User(
+                        identifier = UUID.fromString(user[UserTable.identifier]),
+                        username = user[UserTable.username],
+                        password = user[UserTable.password],
+                        name = PersonName(user[UserTable.firstName], user[UserTable.lastName]),
+                        notes = user[UserTable.notes].notes,
+                        contactInfo = user[UserTable.contactInfo],
+                        tickets = user[UserTable.tickets].list,
+                        accessLevel = user[UserTable.access],
+                        time = user[UserTable.time],
+                    )
+                }.firstOrNull()
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            return null
+        }
+
+        return result
+    }
+
     fun addAll(items: List<User>): Boolean {
         try {
             transaction {

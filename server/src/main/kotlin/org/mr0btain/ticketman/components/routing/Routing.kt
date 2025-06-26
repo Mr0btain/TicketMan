@@ -21,9 +21,6 @@ fun Application.configureRouting(
     }
 
     routing {
-        get("/") {
-            call.respondText("Hello World!")
-        }
         // Static plugin. Try to access `/static/index.html`
         staticResources("/static", "static")
 
@@ -33,7 +30,7 @@ fun Application.configureRouting(
 
         route("/api/user") {
             // TODO: Setup new database flag?
-            userRoute(userService, serverDatabase.userDatabase, false)
+            userRoute(serverDatabase.userDatabase)
         }
 
         route("/api/data/customer") {

@@ -8,6 +8,7 @@ import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
 import org.mr0btain.ticketman.components.repository.UserRepository
 import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.database.UserDatabase
 import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -18,7 +19,7 @@ import kotlin.time.toJavaInstant
 
 class JwtService(
     private val application: Application,
-    private val userRepository: UserRepository
+    private val userDatabase: UserDatabase
 ) {
     private val secret = getConfigProperty("jwt.secret")
     private val issuer = getConfigProperty("jwt.issuer")
@@ -70,13 +71,20 @@ class JwtService(
 
     fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
         val id = UUID.fromString(extractId(credential))
-        val foundUser = id?.let(userRepository::findById)
+        val foundUser = id?.let(userDatabase::getById)
 
         return foundUser?.let {
             if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {
                 JWTPrincipal(credential.payload)
             } else null
         }
+    }
+
+    /**
+     * For essentially no validation
+     */
+    fun customNewValidator(credential: JWTCredential): JWTPrincipal? {
+        return JWTPrincipal(credential.payload)
     }
 
     // Confirms access level is high enough or not

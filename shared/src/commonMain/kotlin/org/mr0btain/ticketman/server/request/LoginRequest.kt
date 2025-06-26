@@ -6,7 +6,6 @@ import java.util.UUID
 
 @Serializable
 data class LoginRequest(
-    @Serializable(with = UUIDSerializer::class)
-    val identifier: UUID,
+    val username: String,
     val password: String
 )

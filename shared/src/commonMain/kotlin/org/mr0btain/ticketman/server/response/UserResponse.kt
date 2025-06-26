@@ -9,7 +9,5 @@ import java.util.UUID
 data class UserResponse(
     @Serializable(with = UUIDSerializer::class)
     val identifier: UUID,
-    val username: String,
-    val password: String,
     val accessLevel: AccessLevel
 )

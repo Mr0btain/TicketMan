@@ -11,7 +11,7 @@ fun configureDatabase(
     val database = ServerDatabase(appDir, shouldLog)
 
     // Setup tables
-    database.createTables()
+    database.initDatabase()
 
     return database
 }
