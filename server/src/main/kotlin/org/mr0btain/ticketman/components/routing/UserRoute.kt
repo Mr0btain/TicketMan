@@ -9,10 +9,12 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import org.mr0btain.ticketman.data.employee.AccessLevel
 import org.mr0btain.ticketman.database.UserDatabase
 import org.mr0btain.ticketman.server.User
 import org.mr0btain.ticketman.server.hashPassword
 import org.mr0btain.ticketman.server.request.UserRequest
+import org.mr0btain.ticketman.server.response.BooleanResponse
 import org.mr0btain.ticketman.server.response.ServerResponse
 import org.mr0btain.ticketman.server.response.ServerResult
 import org.mr0btain.ticketman.server.response.UserResponse
@@ -25,13 +27,39 @@ import java.util.UUID
 fun Route.userRoute(
     database: UserDatabase
 ) {
-    // TODO: Find a way better way to do this not sure yet this works but I don't like it
-    if (database.getAll()?.isEmpty() ?: true) {
+    // TODO: Not sure if this is the right way to go about this
+    get("/isnewdatabase") {
+        if (database.getAll()?.isEmpty() ?: true) {
+            call.respond(BooleanResponse(true))
+        } else {
+            call.respond(BooleanResponse(false))
+        }
+    }
+
+    post("/register/first") {
+        val identifier = database.getNextId()
+
+        if (database.getAll()?.isEmpty() ?: true && identifier != null) {
+            val userRequest = call.receive<UserRequest>()
+            // First user is always admin
+            val user = userRequest.toModel(identifier).copy(accessLevel = AccessLevel.ADMIN)
+
+            if (database.add(user)) {
+                call.respond(HttpStatusCode.Created, user.toResponse())
+            } else {
+                call.respond(HttpStatusCode.BadRequest)
+            }
+        } else {
+            call.respond(HttpStatusCode.Unauthorized)
+        }
+    }
+
+    authenticate("admin") {
         post("/register") {
             val userRequest = call.receive<UserRequest>()
             val identifier = database.getNextId()
 
-            if (database.getAll()?.isEmpty() ?: true && identifier != null) {
+            if (identifier != null) {
                 val user = userRequest.toModel(identifier)
 
                 if (database.add(user)) {
@@ -39,25 +67,8 @@ fun Route.userRoute(
                 } else {
                     call.respond(HttpStatusCode.BadRequest)
                 }
-            }
-        }
-    } else {
-        authenticate("admin") {
-            post("/register") {
-                val userRequest = call.receive<UserRequest>()
-                val identifier = database.getNextId()
-
-                if (identifier != null) {
-                    val user = userRequest.toModel(identifier)
-
-                    if (database.add(user)) {
-                        call.respond(HttpStatusCode.Created, user.toResponse())
-                    } else {
-                        call.respond(HttpStatusCode.BadRequest)
-                    }
-                } else {
-                    call.respond(HttpStatusCode.BadRequest)
-                }
+            } else {
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }

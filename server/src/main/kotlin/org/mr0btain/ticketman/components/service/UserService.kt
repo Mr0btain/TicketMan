@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.interfaces.DecodedJWT
+import io.ktor.util.collections.getValue
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.database.UserDatabase
@@ -17,12 +18,21 @@ class UserService(
     fun authenticate(loginRequest: LoginRequest): AuthResponse? {
         val foundUser = database.getByUsername(loginRequest.username)
 
+        // Check if user was found and process request
         return if (foundUser != null && foundUser.password == loginRequest.password) {
             val accessToken = jwtService.createAccessToken(foundUser.identifier)
             val refreshToken = jwtService.createRefreshToken(foundUser.identifier)
 
-            tokenDatabase.add(RefreshToken(foundUser.identifier, refreshToken))
+            // Check if we should update or add new token
+            if (tokenDatabase.findById(foundUser.identifier) != null) {
+                if (!tokenDatabase.update(RefreshToken(foundUser.identifier, refreshToken))) {
+                    return null
+                }
+            } else {
+                if (tokenDatabase.add(RefreshToken(foundUser.identifier, refreshToken))) return null
+            }
 
+            // Respond with tokens
             AuthResponse(
                 id = foundUser.identifier,
                 accessToken = accessToken,
@@ -47,14 +57,19 @@ class UserService(
 
     private fun verifyRefreshToken(token: String): DecodedJWT? {
         val decodedJWT = decodeJWT(token)
+        val foundToken = tokenDatabase.findByToken(token)
 
-        return decodedJWT?.let {
-            val audienceMatches = jwtService.audienceMatches(it.audience.first())
+        // Check if token exists in database
+        return if (foundToken != null) {
+            // Not sure if we even need to verify audience since we've already confirmed it exists in database
+            decodedJWT?.let {
+                val audienceMatches = jwtService.audienceMatches(it.audience.first())
 
-            if (audienceMatches) {
-                decodedJWT
-            } else null
-        }
+                if (audienceMatches) {
+                    decodedJWT
+                } else null
+            }
+        } else null
     }
 
     private fun decodeJWT(token: String) = try {

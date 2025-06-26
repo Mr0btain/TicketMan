@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.TokenTable.identifier
 import org.mr0btain.ticketman.components.database.TokenTable.token
 import java.util.UUID
@@ -65,6 +66,25 @@ class TokenDatabase(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 TokenTable.insert { item ->
+                    item[identifier] = refreshToken.identifier.toString()
+                    item[token] = refreshToken.token
+                }
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            return false
+        }
+
+        return true
+    }
+
+    fun update(refreshToken: RefreshToken): Boolean {
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                TokenTable.update(where = { identifier eq refreshToken.identifier.toString()  }) { item ->
                     item[identifier] = refreshToken.identifier.toString()
                     item[token] = refreshToken.token
                 }

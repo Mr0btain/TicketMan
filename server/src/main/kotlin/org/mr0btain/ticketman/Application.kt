@@ -21,7 +21,7 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
-    val database = configureDatabase("/home/nick/.local/share/TicketMan", true)
+    val database = configureDatabase()
     val userRepository = UserRepository()
 
     val jwtService = JwtService(this, database.userDatabase)
