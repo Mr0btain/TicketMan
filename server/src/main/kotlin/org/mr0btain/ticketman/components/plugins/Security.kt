@@ -18,6 +18,7 @@ fun Application.configureSecurity(
     jwtService: JwtService
 ) {
     authentication {
+        // NORMAL access level
         jwt {
             realm = jwtService.realm
             verifier(jwtService.jwtVerifier)
@@ -31,6 +32,7 @@ fun Application.configureSecurity(
             }
         }
 
+        // RESTRICTED access level
         jwt("restricted") {
             realm = jwtService.realm
             verifier(jwtService.jwtVerifier)
@@ -44,6 +46,7 @@ fun Application.configureSecurity(
             }
         }
 
+        // ADMIN Access level
         jwt("admin") {
             realm = jwtService.realm
             verifier(jwtService.jwtVerifier)

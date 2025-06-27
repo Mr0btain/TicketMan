@@ -29,12 +29,13 @@ fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel
 ) {
+    val autoSync = viewModel.autoSyncDatabase.collectAsState(false)
     val darkMode = viewModel.darkMode.collectAsState(false)
     val scrollBarsOnBottom = viewModel.scrollBarsOnBottom.collectAsState()
     val scrollBarsOnRight = viewModel.scrollBarsOnRight.collectAsState()
 
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .padding(8.dp)
             .fillMaxWidth(),
         color = if (darkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
@@ -60,6 +61,16 @@ fun SettingsScreen(
                     onCheck = { text -> viewModel.checkWebAddress(text) },
                     keyboardType = KeyboardType.Text
                 )
+
+                // Dark mode switch
+                SettingsSwitchItem(
+                    name = "Auto Sync With Server",
+                    icon = painterResource(Res.drawable.download_cloud),
+                    iconDesc = "Auto sync data with server",
+                    state = autoSync.value
+                ) {
+                    viewModel.toggleAutoSync()
+                }
             }
 
             SettingsGroup(stringResource(Res.string.settings_third_group)) {

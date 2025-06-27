@@ -29,7 +29,6 @@ import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
 import org.mr0btain.ticketman.components.database.ClientDatabase
-import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.logging.AppLogger
 import org.mr0btain.ticketman.components.network.ServerDatabaseClient
 import org.mr0btain.ticketman.data.shared.PersonName
@@ -58,13 +57,14 @@ class MainViewModel(
     private val clientDatabase: ClientDatabase,
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
-    private companion object {
+    companion object {
         const val TAG = "MainViewModel"
 
-        val DARK_MODE = booleanPreferencesKey("appInDarkMode")
-        val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
-        val SCROLL_BARS_ON_BOTTOM = booleanPreferencesKey("scrollBarsOnBottom")
-        val SCROLL_BARS_ON_RIGHT = booleanPreferencesKey("scrollBarsOnRight")
+        private val AUTO_SYNC_DATABASE = booleanPreferencesKey("autoSyncDatabase")
+        private val DARK_MODE = booleanPreferencesKey("appInDarkMode")
+        private val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
+        private val SCROLL_BARS_ON_BOTTOM = booleanPreferencesKey("scrollBarsOnBottom")
+        private val SCROLL_BARS_ON_RIGHT = booleanPreferencesKey("scrollBarsOnRight")
     }
 
     // Platform the app is running on
@@ -94,6 +94,9 @@ class MainViewModel(
     private val _scrollBarsOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val scrollBarsOnRight = _scrollBarsOnRight.asStateFlow()
 
+    private val _autoSyncDatabase: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    val autoSyncDatabase = _autoSyncDatabase.asStateFlow()
+
     // Pulling it all at once this way saves us from a real hard hitch in the ui when we change these
     fun getSettingsFromPreferences() {
         viewModelScope.launch {
@@ -107,6 +110,17 @@ class MainViewModel(
                 dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] ?: true }.first()
             _scrollBarsOnRight.value =
                 dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_RIGHT] ?: true }.first()
+        }
+    }
+
+    fun toggleAutoSync() {
+        // Update the value
+        val value = !_autoSyncDatabase.value
+
+        _autoSyncDatabase.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[AUTO_SYNC_DATABASE] = value }
         }
     }
 
@@ -126,8 +140,15 @@ class MainViewModel(
         _serverAddress.value = address
 
         viewModelScope.launch {
+            // Update url in database client
             serverDatabaseClient.changeServerUrl(address)
+
+            // Update datastore
             dataStore.edit { preferences -> preferences[SERVER_ADDRESS] = address }
+
+            // TODO: Don't know if we really need this after url change. maybe add an option to settings for auto sync
+            // Run a sync operation
+            syncDatabaseWithServer()
         }
     }
 
@@ -561,6 +582,126 @@ class MainViewModel(
 
     // Server Database
     // ----------------------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Syncs all data between client and server after checking connection with server
+     */
+    suspend fun syncDatabaseWithServer() {
+        // Check server connection
+        if (serverDatabaseClient.checkServerConnection()) {
+            syncCustomers()
+            syncTickets()
+            syncInventory()
+
+            // Log Success
+            AppLogger.m("$TAG:SyncDatabaseWithServer", "SUCCESS")
+        }
+    }
+
+    /**
+     * Sync customers with server database
+     */
+    suspend fun syncCustomers() {
+        // Handle if our database is empty then no reason to sync just pull
+        if (_customerDataList.value.isEmpty()) {
+            serverDatabaseClient.getCustomers()
+                .onSuccess { response ->
+                    _customerDataList.value = response
+                    clientDatabase.customerDatabase.addAll(response)
+
+                    // Log Success
+                    AppLogger.m("$TAG:GetCustomers", "SUCCESS")
+                }.onError { error -> handleNetworkError("GetCustomers", error) }
+        } else {
+            // Else go through with sync
+            serverDatabaseClient.syncCustomers(_customerDataList.value)
+                .onSuccess { response ->
+                    // Get requested data
+                    val requestedData =
+                        _customerDataList.value.filter { response.requested.contains(it.info.identifier) }
+
+                    // Add server data to our database
+                    _customerDataList.value = _customerDataList.value + response.data
+                    clientDatabase.customerDatabase.addAll(response.data)
+
+                    // Send back requested data
+                    serverDatabaseClient.sendCustomers(requestedData)
+
+                    // Log success
+                    AppLogger.m("$TAG:SyncCustomers", "SUCCESS")
+                }.onError { error -> handleNetworkError("SyncCustomers", error) }
+        }
+    }
+
+    /**
+     * Sync inventory with server database
+     */
+    suspend fun syncTickets() {
+        // Handle if our database is empty then no reason to sync just pull
+        if (_ticketDataList.value.isEmpty()) {
+            serverDatabaseClient.getTickets()
+                .onSuccess { response ->
+                    _ticketDataList.value = response
+                    clientDatabase.ticketDatabase.addAll(response)
+
+                    // Log Success
+                    AppLogger.m("$TAG:GetTickets", "SUCCESS")
+                }.onError { error -> handleNetworkError("GetTickets", error) }
+        } else {
+            // Else go through with sync
+            serverDatabaseClient.syncTickets(_ticketDataList.value)
+                .onSuccess { response ->
+                    // Get requested data
+                    val requestedData =
+                        _ticketDataList.value.filter { response.requested.contains(it.identifier) }
+
+                    // Add server data to our database
+                    _ticketDataList.value = _ticketDataList.value + response.data
+                    clientDatabase.ticketDatabase.addAll(response.data)
+
+                    // Send back requested data
+                    serverDatabaseClient.sendTickets(requestedData)
+
+                    // Log success
+                    AppLogger.m("$TAG:SyncTickets", "SUCCESS")
+                }.onError { error -> handleNetworkError("SyncTickets", error) }
+        }
+    }
+
+    /**
+     * Sync inventory with server database
+     */
+    suspend fun syncInventory() {
+        // Handle if our database is empty then no reason to sync just pull
+        if (_inventoryList.value.isEmpty()) {
+            serverDatabaseClient.getInventory()
+                .onSuccess { response ->
+                    _inventoryList.value = response
+                    clientDatabase.inventoryDatabase.addAll(response)
+
+                    // Log Success
+                    AppLogger.m("$TAG:GetInventory", "SUCCESS")
+                }.onError { error -> handleNetworkError("GetInventory", error) }
+        } else {
+            // Else go through with sync
+            serverDatabaseClient.syncInventory(_inventoryList.value)
+                .onSuccess { response ->
+                    // Get requested data
+                    val requestedData =
+                        _inventoryList.value.filter { response.requested.contains(it.identifier) }
+
+                    // Add server data to our database
+                    _inventoryList.value = _inventoryList.value + response.data
+                    clientDatabase.inventoryDatabase.addAll(response.data)
+
+                    // Send back requested data
+                    serverDatabaseClient.sendInventory(requestedData)
+
+                    // Log success
+                    AppLogger.m("$TAG:SyncInventory", "SUCCESS")
+                }.onError { error -> handleNetworkError("SyncInventory", error) }
+        }
+    }
 
     fun getDataFromServer(): Boolean {
         var success = false

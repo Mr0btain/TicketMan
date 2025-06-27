@@ -2,12 +2,10 @@ package org.mr0btain.ticketman
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
-import kotlinx.coroutines.flow.MutableStateFlow
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
-import org.mr0btain.ticketman.components.repository.UserRepository
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
@@ -22,8 +20,6 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
     val database = configureDatabase()
-    val userRepository = UserRepository()
-
     val jwtService = JwtService(this, database.userDatabase)
     val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase)
 
@@ -32,14 +28,12 @@ fun Application.module() {
     configureSecurity(jwtService)
     configureRouting(userService, database)
 
-
     /*
     val testData = generateMockData(10)
-
-    localAppDatabase.addAllCustomers(testData.first)
-    localAppDatabase.addAllTickets(testData.second)
-    localAppDatabase.addAllEmployees(testData.third)
-    localAppDatabase.addAllInventory(generateRandomInventoryItems(10))
+    database.customerDatabase.addAll(testData.first)
+    database.ticketDatabase.addAll(testData.second)
+    database.userDatabase.addAll(testData.third)
+    database.inventoryDatabase.addAll(generateRandomInventoryItems(60))
      */
 
 }

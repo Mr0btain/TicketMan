@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.database
 /**
  * Configures and returns a ServerDatabase
  */
+// TODO: Get this to work with OS
 fun configureDatabase(
 ): ServerDatabase {
     // Initialize database

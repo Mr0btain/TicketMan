@@ -22,9 +22,7 @@ fun Route.customerRoute(database: CustomerDatabase) {
     // Get all customers
     authenticate("restricted") {
         get("/all") {
-            database.getAll()?.let { data ->
-                call.respond(data)
-            } ?: call.respond(HttpStatusCode.NotFound)
+            database.getAll()?.let { data -> call.respond(data) } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
@@ -36,8 +34,10 @@ fun Route.customerRoute(database: CustomerDatabase) {
                 database.add(customer)
                 call.respond(HttpStatusCode.NoContent)
             } catch (ex: IllegalStateException) {
+                ex.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest)
             } catch (ex: JsonConvertException) {
+                ex.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest)
             }
         }
@@ -49,9 +49,7 @@ fun Route.customerRoute(database: CustomerDatabase) {
             try {
                 val customer = call.receive<CustomerData>()
 
-                if (database.update(customer)) {
-                    call.respond(HttpStatusCode.Accepted)
-                } else call.respond(HttpStatusCode.BadRequest)
+                if (database.update(customer)) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest)
@@ -65,9 +63,8 @@ fun Route.customerRoute(database: CustomerDatabase) {
             try {
                 val customers = call.receive<List<CustomerData>>()
 
-                if (database.addAll(customers)) {
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } else call.respond(ServerResponse(ServerResult.FAIL))
+                if (database.addAll(customers)) call.respond(ServerResponse(ServerResult.SUCCESS))
+                else call.respond(ServerResponse(ServerResult.FAIL))
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
@@ -85,11 +82,8 @@ fun Route.customerRoute(database: CustomerDatabase) {
                 return@delete
             }
 
-            if (database.remove(identifier)) {
-                call.respond(ServerResponse(ServerResult.SUCCESS))
-            } else {
-                call.respond(ServerResponse(ServerResult.FAIL))
-            }
+            if (database.remove(identifier)) call.respond(ServerResponse(ServerResult.SUCCESS))
+            else call.respond(ServerResponse(ServerResult.FAIL))
         }
     }
 }

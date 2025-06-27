@@ -9,7 +9,11 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import org.jetbrains.exposed.v1.core.not
+import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.UserDatabase
 import org.mr0btain.ticketman.server.User
 import org.mr0btain.ticketman.server.hashPassword
@@ -29,11 +33,8 @@ fun Route.userRoute(
 ) {
     // TODO: Not sure if this is the right way to go about this
     get("/isnewdatabase") {
-        if (database.getAll()?.isEmpty() ?: true) {
-            call.respond(BooleanResponse(true))
-        } else {
-            call.respond(BooleanResponse(false))
-        }
+        if (database.getAll()?.isEmpty() ?: true) call.respond(BooleanResponse(true))
+        else call.respond(BooleanResponse(false))
     }
 
     post("/register/first") {
@@ -41,17 +42,13 @@ fun Route.userRoute(
 
         if (database.getAll()?.isEmpty() ?: true && identifier != null) {
             val userRequest = call.receive<UserRequest>()
+
             // First user is always admin
             val user = userRequest.toModel(identifier).copy(accessLevel = AccessLevel.ADMIN)
 
-            if (database.add(user)) {
-                call.respond(HttpStatusCode.Created, user.toResponse())
-            } else {
-                call.respond(HttpStatusCode.BadRequest)
-            }
-        } else {
-            call.respond(HttpStatusCode.Unauthorized)
-        }
+            if (database.add(user)) call.respond(HttpStatusCode.Created, user.toResponse())
+            else call.respond(HttpStatusCode.BadRequest)
+        } else call.respond(HttpStatusCode.Unauthorized)
     }
 
     authenticate("admin") {
@@ -62,14 +59,11 @@ fun Route.userRoute(
             if (identifier != null) {
                 val user = userRequest.toModel(identifier)
 
-                if (database.add(user)) {
-                    call.respond(HttpStatusCode.Created, user.toResponse())
-                } else {
-                    call.respond(HttpStatusCode.BadRequest)
-                }
-            } else {
-                call.respond(HttpStatusCode.BadRequest)
-            }
+                if (!database.usernameAlreadyExists(user.username)) {
+                    if (database.add(user)) call.respond(HttpStatusCode.Created, user.toResponse())
+                    else call.respond(HttpStatusCode.BadRequest)
+                } else call.respond(HttpStatusCode.Conflict)
+            } else call.respond(HttpStatusCode.BadRequest)
         }
     }
 
@@ -88,9 +82,8 @@ fun Route.userRoute(
             try {
                 val user = call.receive<User>()
 
-                if (database.update(user)) {
-                    call.respond(HttpStatusCode.Accepted)
-                } else call.respond(HttpStatusCode.BadRequest)
+                if (database.update(user)) call.respond(HttpStatusCode.Accepted)
+                else call.respond(HttpStatusCode.BadRequest)
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest)
@@ -104,9 +97,8 @@ fun Route.userRoute(
             try {
                 val customers = call.receive<List<User>>()
 
-                if (database.addAll(customers)) {
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } else call.respond(ServerResponse(ServerResult.FAIL))
+                if (database.addAll(customers)) call.respond(ServerResponse(ServerResult.SUCCESS))
+                else call.respond(ServerResponse(ServerResult.FAIL))
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
@@ -125,11 +117,8 @@ fun Route.userRoute(
                     return@delete
                 }
 
-                if (database.remove(identifier)) {
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } else {
-                    call.respond(ServerResponse(ServerResult.FAIL))
-                }
+                if (database.remove(identifier)) call.respond(ServerResponse(ServerResult.SUCCESS))
+                else call.respond(ServerResponse(ServerResult.FAIL))
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
@@ -143,6 +132,10 @@ private fun UserRequest.toModel(id: UUID): User =
         identifier = id,
         username = username,
         password = hashPassword(password),
+        name = name,
+        notes = notes,
+        contactInfo = contactInfo,
+        tickets = tickets,
         accessLevel = accessLevel
     )
 

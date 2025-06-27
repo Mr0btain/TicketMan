@@ -6,7 +6,6 @@ import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.application.Application
 import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
-import org.mr0btain.ticketman.components.repository.UserRepository
 import org.mr0btain.ticketman.data.employee.AccessLevel
 import org.mr0btain.ticketman.database.UserDatabase
 import java.util.UUID
@@ -80,14 +79,7 @@ class JwtService(
         }
     }
 
-    /**
-     * For essentially no validation
-     */
-    fun customNewValidator(credential: JWTCredential): JWTPrincipal? {
-        return JWTPrincipal(credential.payload)
-    }
-
-    // Confirms access level is high enough or not
+    // Checks if access level is high enough
     private fun AccessLevel.confirmAccessLevel(minAccessLevel: AccessLevel): Boolean =
         this.level >= minAccessLevel.level
 

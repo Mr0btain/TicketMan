@@ -24,12 +24,16 @@ fun Application.configureRouting(
         // Static plugin. Try to access `/static/index.html`
         staticResources("/static", "static")
 
+        // Just a callback to tell client the server is up
+        route("/") {
+            get { call.respond(HttpStatusCode.OK) }
+        }
+
         route("/api/auth") {
             authRoute(userService)
         }
 
         route("/api/user") {
-            // TODO: Setup new database flag?
             userRoute(serverDatabase.userDatabase)
         }
 

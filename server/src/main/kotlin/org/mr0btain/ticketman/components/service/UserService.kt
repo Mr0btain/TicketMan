@@ -20,8 +20,8 @@ class UserService(
 
         // Check if user was found and process request
         return if (foundUser != null && foundUser.password == loginRequest.password) {
-            val accessToken = jwtService.createAccessToken(foundUser.identifier)
             val refreshToken = jwtService.createRefreshToken(foundUser.identifier)
+            val accessToken = jwtService.createAccessToken(foundUser.identifier)
 
             // Check if we should update or add new token
             if (tokenDatabase.findById(foundUser.identifier) != null) {
@@ -29,7 +29,7 @@ class UserService(
                     return null
                 }
             } else {
-                if (tokenDatabase.add(RefreshToken(foundUser.identifier, refreshToken))) return null
+                if (!tokenDatabase.add(RefreshToken(foundUser.identifier, refreshToken))) return null
             }
 
             // Respond with tokens
@@ -49,9 +49,9 @@ class UserService(
             val foundUser = database.getById(refreshToken.identifier)
             val idFromRefreshToken = UUID.fromString(decodedRefreshToken.getClaim("identifier").asString())
 
-            if (foundUser != null && idFromRefreshToken == foundUser.identifier) {
+            if (foundUser != null && idFromRefreshToken == foundUser.identifier)
                 jwtService.createAccessToken(refreshToken.identifier)
-            } else null
+            else null
         } else null
     }
 
@@ -65,9 +65,7 @@ class UserService(
             decodedJWT?.let {
                 val audienceMatches = jwtService.audienceMatches(it.audience.first())
 
-                if (audienceMatches) {
-                    decodedJWT
-                } else null
+                if (audienceMatches) decodedJWT else null
             }
         } else null
     }
