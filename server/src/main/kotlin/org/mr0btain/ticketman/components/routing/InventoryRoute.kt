@@ -31,7 +31,7 @@ fun Route.inventoryRoute(database: InventoryDatabase) {
     }
 
     authenticate {
-        get("/sync") {
+        post("/sync") {
             val request = call.receive<SyncRequest>()
             val data = database.getAll()
 
@@ -43,10 +43,10 @@ fun Route.inventoryRoute(database: InventoryDatabase) {
                 val dataIdentifiers = data.map { it.identifier }
 
                 // Filter response data so we can send back a response to request those that are not in our database
-                val responseInventory = request.clientData.filter { !dataIdentifiers.contains(it) }
+                val requested = request.clientData.filter { !dataIdentifiers.contains(it) }
 
                 // Send response
-                call.respond(HttpStatusCode.Continue, InventorySyncResponse(responseData, responseInventory))
+                call.respond(HttpStatusCode.OK, InventorySyncResponse(responseData, requested))
             } else call.respond(HttpStatusCode.NotFound)
         }
     }

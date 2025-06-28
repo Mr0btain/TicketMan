@@ -60,7 +60,12 @@ fun NavigationHost(
                 modifier = modifier.fillMaxSize()
             ) {
                 LoginScreen(
-                    onConfirm = { user, pass -> true },
+                    onConfirm = { user, pass ->
+                        mainViewModel.updateUsername(user)
+                        mainViewModel.updatePassword(pass)
+
+                        true
+                    },
                     onDismiss = {},
                     isDarkMode = darkMode.value,
                     snackBarState = snackBarState,

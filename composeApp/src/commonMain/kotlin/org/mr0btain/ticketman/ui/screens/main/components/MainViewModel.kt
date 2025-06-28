@@ -28,12 +28,16 @@ import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
+import org.mr0btain.ticketman.components.data.datastore.createDataStore
 import org.mr0btain.ticketman.components.database.ClientDatabase
 import org.mr0btain.ticketman.components.logging.AppLogger
 import org.mr0btain.ticketman.components.network.ServerDatabaseClient
+import org.mr0btain.ticketman.components.network.createHttpClient
+import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.generateMockData
 import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
@@ -41,6 +45,7 @@ import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.error.onError
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.User
+import org.mr0btain.ticketman.server.response.AuthResponse
 import java.util.UUID
 
 // TODO: Setup error handling in here
@@ -52,11 +57,13 @@ import java.util.UUID
 
 class MainViewModel(
     private val fileManager: FileManager,
-    private val dataStore: DataStore<Preferences>,
-    private val serverDatabaseClient: ServerDatabaseClient,
     private val clientDatabase: ClientDatabase,
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
+
+    private val dataStore = createDataStore()
+    private val serverDatabaseClient = ServerDatabaseClient(createHttpClient(getHttpEngine(), this), dataStore)
+
     companion object {
         const val TAG = "MainViewModel"
 
@@ -65,6 +72,10 @@ class MainViewModel(
         private val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
         private val SCROLL_BARS_ON_BOTTOM = booleanPreferencesKey("scrollBarsOnBottom")
         private val SCROLL_BARS_ON_RIGHT = booleanPreferencesKey("scrollBarsOnRight")
+        private val USER_NAME = stringPreferencesKey("username")
+        private val PASSWORD = stringPreferencesKey("password")
+        private val ACCESS_TOKEN = stringPreferencesKey("accessToken")
+        private val REFRESH_TOKEN = stringPreferencesKey("refreshToken")
     }
 
     // Platform the app is running on
@@ -583,6 +594,60 @@ class MainViewModel(
     // Server Database
     // ----------------------------------------------------------------------------------------------------------------------------
 
+    fun updateUsername(username: String) {
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[USER_NAME] = username }
+        }
+    }
+
+    fun updatePassword(password: String) {
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[PASSWORD] = password }
+        }
+    }
+
+    suspend fun refreshTokens(): AuthResponse? {
+        val token = getRefreshToken()
+
+        if (token.isEmpty()) {
+            serverDatabaseClient.login()
+                .onSuccess { response ->
+                    dataStore.edit { preferences -> preferences[REFRESH_TOKEN] = response.refreshToken }
+                    dataStore.edit { preferences -> preferences[ACCESS_TOKEN] = response.accessToken }
+
+                    return response
+                }
+        } else {
+            serverDatabaseClient.refreshTokens(token)
+                .onSuccess { response ->
+                    dataStore.edit { preferences -> preferences[REFRESH_TOKEN] = response.refreshToken }
+                    dataStore.edit { preferences -> preferences[ACCESS_TOKEN] = response.accessToken }
+
+                    return response
+                }
+        }
+
+        return null
+    }
+
+    fun updateAccessToken(token: String) {
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[ACCESS_TOKEN] = token }
+        }
+    }
+
+    suspend fun getUsername(): String =
+        dataStore.data.map { preferences -> preferences[USER_NAME] ?: "" }.first()
+
+    suspend fun getPassword(): String =
+        dataStore.data.map { preferences -> preferences[PASSWORD] ?: "" }.first()
+
+    suspend fun getAccessToken(): String =
+        dataStore.data.map { preferences -> preferences[ACCESS_TOKEN] ?: "" }.first()
+
+    suspend fun getRefreshToken(): String =
+        dataStore.data.map { preferences -> preferences[REFRESH_TOKEN] ?: "" }.first()
+
     /**
      * Syncs all data between client and server after checking connection with server
      */
@@ -686,16 +751,22 @@ class MainViewModel(
             // Else go through with sync
             serverDatabaseClient.syncInventory(_inventoryList.value)
                 .onSuccess { response ->
-                    // Get requested data
-                    val requestedData =
-                        _inventoryList.value.filter { response.requested.contains(it.identifier) }
+                    // Handle requested data
+                    if (response.requested.isNotEmpty()) {
+                        // Get requested data
+                        val requestedData =
+                            _inventoryList.value.filter { response.requested.contains(it.identifier) }
 
-                    // Add server data to our database
-                    _inventoryList.value = _inventoryList.value + response.data
-                    clientDatabase.inventoryDatabase.addAll(response.data)
+                        // Send back requested data
+                        serverDatabaseClient.sendInventory(requestedData)
+                    }
 
-                    // Send back requested data
-                    serverDatabaseClient.sendInventory(requestedData)
+                    // Handle received data
+                    if (response.data.isNotEmpty()) {
+                        // Add server data to our database
+                        _inventoryList.value = _inventoryList.value + response.data
+                        clientDatabase.inventoryDatabase.addAll(response.data)
+                    }
 
                     // Log success
                     AppLogger.m("$TAG:SyncInventory", "SUCCESS")

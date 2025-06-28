@@ -19,7 +19,7 @@ import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun LoginField(
-    onConfirm: () -> Unit,
+    onConfirm: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val userName = remember { mutableStateOf("") }
@@ -58,7 +58,7 @@ fun LoginField(
             Button(
                 onClick = {
                     // Check if its valid
-                    onConfirm()
+                    onConfirm(userName.value, password.value)
 
                     // Dismiss
                     onDismiss()

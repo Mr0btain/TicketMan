@@ -31,12 +31,4 @@ val dataModule = module {
     single<SnackbarHostState> {
         SnackbarHostState()
     }
-
-    single<DataStore<Preferences>> {
-        createDataStore()
-    }
-
-    single<ServerDatabaseClient> {
-        ServerDatabaseClient(createHttpClient(getHttpEngine()))
-    }
 }
