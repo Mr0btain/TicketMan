@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.components.service.UserService
 // TODO: Persist user data
 // TODO: Add auth to routes for database actions
 // TODO: Setup way for admin to change access levels for things individually
+// TODO: Maybe add ability for different users to have different instances of the databases and add admin settings to force all sync or allow individual
 
 fun main(args: Array<String>) {
     EngineMain.main(args)

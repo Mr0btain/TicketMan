@@ -16,4 +16,6 @@ actual object AppLogger {
     actual fun i(tag: String, message: String) { Log.i(tag, message) }
 
     actual fun m(tag: String, message: String) { println("[$tag] $message") }
+
+    actual fun m(tag: String, message: SimpleError) { println("[$tag] ${message.name}") }
 }

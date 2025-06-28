@@ -11,9 +11,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.customer.CustomerData
-import org.mr0btain.ticketman.data.employee.Employee
 import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.server.User
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 

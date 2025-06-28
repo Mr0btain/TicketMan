@@ -6,7 +6,7 @@ import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.application.Application
 import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
-import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.UserDatabase
 import java.util.UUID
 import kotlin.time.Clock

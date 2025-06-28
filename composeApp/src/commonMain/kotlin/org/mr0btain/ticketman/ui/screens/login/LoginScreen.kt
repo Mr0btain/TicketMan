@@ -8,12 +8,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.ui.screens.login.components.LoginField
+import org.mr0btain.ticketman.ui.screens.login.components.TwoFactorField
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 
 /**
@@ -97,7 +95,8 @@ fun LoginScreen(
             if (selectedTab == 0) {
                 LoginField(
                     onConfirm = { user, pass -> onConfirm(user, pass) },
-                    onDismiss = {}
+                    onDismiss = {},
+                    error = false
                 )
             } else {
                 TwoFactorField(isDarkMode = isDarkMode)

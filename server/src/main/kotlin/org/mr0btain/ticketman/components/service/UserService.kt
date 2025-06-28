@@ -1,11 +1,9 @@
 package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.interfaces.DecodedJWT
-import io.ktor.util.collections.getValue
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.database.UserDatabase
-import org.mr0btain.ticketman.server.User
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import java.util.UUID

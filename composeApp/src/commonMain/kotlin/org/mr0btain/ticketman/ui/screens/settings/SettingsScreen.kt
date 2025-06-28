@@ -56,7 +56,7 @@ fun SettingsScreen(
                     icon = painterResource(Res.drawable.server),
                     iconDesc = "Description",
                     state = viewModel.serverAddress.collectAsState(""),
-                    onSave = { address -> viewModel.saveServerAddress(address) },
+                    onSave = { url -> viewModel.updateServerAddress(url) },
                     inputFilter = { text -> text },
                     onCheck = { text -> viewModel.checkWebAddress(text) },
                     keyboardType = KeyboardType.Text

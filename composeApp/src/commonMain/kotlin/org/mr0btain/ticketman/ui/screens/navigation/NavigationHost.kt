@@ -18,7 +18,6 @@ import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
-import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 
 @Composable
 fun NavigationHost(
@@ -61,8 +60,8 @@ fun NavigationHost(
             ) {
                 LoginScreen(
                     onConfirm = { user, pass ->
-                        mainViewModel.updateUsername(user)
-                        mainViewModel.updatePassword(pass)
+                        mainViewModel.updateStoredUsername(user)
+                        mainViewModel.updateStoredPassword(pass)
 
                         true
                     },

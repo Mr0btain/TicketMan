@@ -7,7 +7,7 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.response.respond
 import org.mr0btain.ticketman.components.service.JwtService
-import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.UserDatabase
 
 /**

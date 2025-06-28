@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.server.request
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
 

@@ -1,11 +1,12 @@
 package org.mr0btain.ticketman.data.inventory
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.shared.Note
 
 @Serializable
 data class InventoryItem(
-    val identifier: Int = Int.MAX_VALUE,
+    override val identifier: Int = Int.MAX_VALUE,
     val name: String = "",
     val description: String = "",
     val stock: Int = Int.MAX_VALUE,
@@ -13,4 +14,4 @@ data class InventoryItem(
     val price: String = "",
     val notes: List<Note> = listOf(),
     val time: Long = Long.MAX_VALUE
-)
+): MainDataItem

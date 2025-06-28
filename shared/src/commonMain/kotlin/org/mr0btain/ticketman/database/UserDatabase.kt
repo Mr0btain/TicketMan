@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.data.customer.TicketList
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.tables.UserTable
-import org.mr0btain.ticketman.server.User
+import org.mr0btain.ticketman.data.user.User
 import java.util.*
 
 class UserDatabase(

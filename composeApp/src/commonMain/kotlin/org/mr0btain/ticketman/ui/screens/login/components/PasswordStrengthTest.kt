@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.login
+package org.mr0btain.ticketman.ui.screens.login.components
 
 fun passwordStrengthCheck(password: String): StrengthPasswordTypes =
     when {
