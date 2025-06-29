@@ -394,7 +394,7 @@ class MainViewModel(
         val local = clientDatabase.ticketDatabase.add(data)
         val server = serverHandler.databaseClient.sendTickets(listOf(data))
 
-        return server && local
+        return local
     }
 
     // Ticket data list
@@ -494,10 +494,9 @@ class MainViewModel(
     // TODO: Add server update
     fun updateCustomerInDatabase(data: CustomerData): Boolean = clientDatabase.customerDatabase.update(data)
 
-    // TODO: Fix
     suspend fun addCustomerToDatabase(data: CustomerData): Boolean {
         val local = clientDatabase.customerDatabase.add(data)
-        val server = serverHandler.databaseClient.sendCustomers(listOf(data))
+        serverHandler.databaseClient.sendCustomers(listOf(data))
 
         return local
     }
@@ -505,7 +504,6 @@ class MainViewModel(
     // Customer data list
     private val _customerDataList: MutableStateFlow<List<CustomerData>> = MutableStateFlow(listOf())
     val customerDataList = _customerDataList.asStateFlow()
-
 
     // Selected Customer
     private val _selectedCustomerId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
@@ -516,9 +514,8 @@ class MainViewModel(
         _selectedCustomerId.value = identifier
     }
 
-    fun getNextCustomerId(): Int? {
-        return clientDatabase.customerDatabase.getNextId()
-    }
+    fun getNextCustomerId(): Int? =
+        clientDatabase.customerDatabase.getNextId()
 
     fun getCustomerForId(id: Int): CustomerData? {
         val result = _customerDataList.value.firstOrNull() { it.info.identifier == id }
@@ -651,9 +648,7 @@ class MainViewModel(
                     AppLogger.m("${TAG}:AddItemToDatabase:Local:TicketInfo", "SUCCESS")
                 } else AppLogger.i("${TAG}:AddItemToDatabase:Local:TicketInfo", "FAIL")
 
-                if (serverHandler.databaseClient.sendTickets(listOf(data))) {
-                    AppLogger.m("${TAG}:AddItemToDatabase:Server:TicketInfo", "SUCCESS")
-                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:TicketInfo", "FAIL")
+                serverHandler.databaseClient.sendTickets(listOf(data))
             }
 
             is InventoryItem -> {
@@ -661,41 +656,35 @@ class MainViewModel(
                     AppLogger.m("${TAG}:AddItemToDatabase:Local:InventoryItem", "SUCCESS")
                 } else AppLogger.i("${TAG}:AddItemToDatabase:Local:InventoryItem", "FAIL")
 
-                if (serverHandler.databaseClient.sendInventory(listOf(data))) {
-                    AppLogger.m("${TAG}:AddItemToDatabase:Server:InventoryItem", "SUCCESS")
-                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:InventoryItem", "FAIL")
+                serverHandler.databaseClient.sendInventory(listOf(data))
             }
         }
     }
 
-    suspend fun removeItemFromDatabase(data: MainDataItem){
+    suspend fun removeItemFromDatabase(data: MainDataItem) {
         when (data) {
             is CustomerData -> {
                 if (clientDatabase.customerDatabase.remove(data.identifier)) {
                     AppLogger.m("${TAG}:AddItemToDatabase:Local:CustomerData", "SUCCESS")
                 } else AppLogger.i("${TAG}:AddItemToDatabase:Local:CustomerData", "FAIL")
 
-                //serverHandler.databaseClient.remove(data.identifier)
+                serverHandler.databaseClient.removeCustomer(data.identifier)
             }
 
             is TicketInfo -> {
-                if (clientDatabase.ticketDatabase.add(data)) {
+                if (clientDatabase.ticketDatabase.remove(data.identifier)) {
                     AppLogger.m("${TAG}:AddItemToDatabase:Local:TicketInfo", "SUCCESS")
                 } else AppLogger.i("${TAG}:AddItemToDatabase:Local:TicketInfo", "FAIL")
 
-                if (serverHandler.databaseClient.sendTickets(listOf(data))) {
-                    AppLogger.m("${TAG}:AddItemToDatabase:Server:TicketInfo", "SUCCESS")
-                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:TicketInfo", "FAIL")
+                serverHandler.databaseClient.removeTicket(data.identifier)
             }
 
             is InventoryItem -> {
-                if (clientDatabase.inventoryDatabase.add(data)) {
+                if (clientDatabase.inventoryDatabase.remove(data.identifier)) {
                     AppLogger.m("${TAG}:AddItemToDatabase:Local:InventoryItem", "SUCCESS")
                 } else AppLogger.i("${TAG}:AddItemToDatabase:Local:InventoryItem", "FAIL")
 
-                if (serverHandler.databaseClient.sendInventory(listOf(data))) {
-                    AppLogger.m("${TAG}:AddItemToDatabase:Server:InventoryItem", "SUCCESS")
-                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:InventoryItem", "FAIL")
+                serverHandler.databaseClient.removeInventoryItem(data.identifier)
             }
         }
     }
@@ -703,22 +692,34 @@ class MainViewModel(
     private val _showLogin: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val showLogin = _showLogin.asStateFlow()
 
+    /**
+     * Update whether we should show the login popup or not
+     */
     fun updateShowLogin(value: Boolean) {
         _showLogin.value = value
     }
 
+    /**
+     * update stored username
+     */
     fun updateStoredUsername(username: String) {
         viewModelScope.launch {
             dataStore.edit { preferences -> preferences[USER_NAME] = username }
         }
     }
 
+    /**
+     * Update stored password
+     */
     fun updateStoredPassword(password: String) {
         viewModelScope.launch {
             dataStore.edit { preferences -> preferences[PASSWORD] = password }
         }
     }
 
+    /**
+     * Update stored access and refresh tokens
+     */
     fun updateStoredAuthTokens(access: String, refresh: String) {
         viewModelScope.launch {
             dataStore.edit { preferences -> preferences[ACCESS_TOKEN] = access }
@@ -726,15 +727,28 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Retrieve stored username
+     */
     suspend fun getStoredUsername(): String =
         dataStore.data.map { preferences -> preferences[USER_NAME] ?: "" }.first()
 
+    // TODO: Make this encrypt on save and decrypt here
+    /**
+     * Retrieve stored access password
+     */
     suspend fun getStoredPassword(): String =
         dataStore.data.map { preferences -> preferences[PASSWORD] ?: "" }.first()
 
+    /**
+     * Retrieve stored access token
+     */
     suspend fun getStoredAccessToken(): String =
         dataStore.data.map { preferences -> preferences[ACCESS_TOKEN] ?: "" }.first()
 
+    /**
+     * Retrieve stored refresh token
+     */
     suspend fun getStoredRefreshToken(): String =
         dataStore.data.map { preferences -> preferences[REFRESH_TOKEN] ?: "" }.first()
 
@@ -767,6 +781,9 @@ class MainViewModel(
         }
     }
 
+    /**
+     * Refresh stored tokens
+     */
     suspend fun refreshTokens(): AuthResponse? {
         val refresh = getStoredRefreshToken()
 
@@ -828,11 +845,6 @@ class MainViewModel(
 
     // TESTING
     // ----------------------------------------------------------------------------------------------------------------------------
-    fun openTestFilePicker() {
-        viewModelScope.launch {
-            FileKit.openFilePicker()
-        }
-    }
 
     fun generateMockDbData() {
         val (customerdata, ticketData, userData) = generateMockData(400)

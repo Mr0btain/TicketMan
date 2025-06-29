@@ -6,7 +6,7 @@ import org.mr0btain.ticketman.data.shared.Note
 
 @Serializable
 data class InventoryItem(
-    override val identifier: Int = Int.MAX_VALUE,
+    override val identifier: String = "",
     val name: String = "",
     val description: String = "",
     val stock: Int = Int.MAX_VALUE,

@@ -11,14 +11,38 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.database.CustomerDatabase
+import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.ServerResponse
 import org.mr0btain.ticketman.server.response.ServerResult
+import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.text.toIntOrNull
 
 /**
  * Customer routes
  */
 fun Route.customerRoute(database: CustomerDatabase) {
+    // Sync between client and server
+    authenticate {
+        post("/sync") {
+            val request = call.receive<SyncRequest>()
+            val data = database.getAll()
+
+            if (data != null) {
+                // Filter items by ones the client does not contain
+                val responseData = data.filter { !request.clientData.contains(it.identifier) }
+
+                // Map all the ids in the local database
+                val dataIdentifiers = data.map { it.identifier }
+
+                // Filter response data so we can send back a response to request those that are not in our database
+                val requested = request.clientData.filter { !dataIdentifiers.contains(it) }
+
+                // Send response
+                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
+            } else call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
     // Get all customers
     authenticate("restricted") {
         get("/all") {
@@ -72,9 +96,9 @@ fun Route.customerRoute(database: CustomerDatabase) {
         }
     }
 
-    // Delete customer
+    // Remove customer
     authenticate {
-        delete("/delete/{customerIdentifier}") {
+        delete("/remove/{customerIdentifier}") {
             val identifier = call.parameters["customerIdentifier"]?.toIntOrNull()
 
             if (identifier == null) {

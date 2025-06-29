@@ -1,35 +1,24 @@
 package org.mr0btain.ticketman.components.network
 
-import io.ktor.client.HttpClient
-import io.ktor.client.call.body
-import io.ktor.client.request.get
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.request.url
-import io.ktor.client.statement.HttpResponse
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import io.ktor.util.network.UnresolvedAddressException
-import kotlinx.serialization.KSerializer
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
+import io.ktor.http.*
+import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.logging.AppLogger
-import org.mr0btain.ticketman.components.network.ServerDatabaseClient.Companion.TAG
 import org.mr0btain.ticketman.data.MainDataItem
-import org.mr0btain.ticketman.data.customer.CustomerData
-import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.CustomerResponse
-import kotlin.reflect.KClass
 
 /**
  * Client for interacting with the server database with a specific type
  */
-class DatabaseClient<T: MainDataItem>(
+class DatabaseClient<T : MainDataItem>(
     val TAG: String,
     val client: HttpClient,
     val serverUrl: String
@@ -98,7 +87,7 @@ class DatabaseClient<T: MainDataItem>(
     suspend fun batchSend(data: List<T>) {
         val response = try {
             client.post {
-                url("$serverUrl/api/data/customer/addAll")
+                url("$serverUrl/api/data/customer/add/all")
                 contentType(ContentType.Application.Json)
                 setBody(data)
             }
@@ -177,11 +166,7 @@ class DatabaseClient<T: MainDataItem>(
 
     suspend fun remove(identifier: Int) {
         val response = try {
-            client.post {
-                url("$serverUrl/remove")
-                contentType(ContentType.Application.Json)
-                setBody(identifier)
-            }
+            client.delete { url("$serverUrl/remove/$identifier") }
         } catch (ex: UnresolvedAddressException) {
             ex.printStackTrace()
             AppLogger.i("$TAG:Get", NetworkError.NO_INTERNET.name)

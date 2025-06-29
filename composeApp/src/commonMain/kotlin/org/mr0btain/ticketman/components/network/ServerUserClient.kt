@@ -20,17 +20,22 @@ import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.ServerHandler
 import java.util.*
 
+/**
+ * Main Client for user services with the server
+ */
 class ServerUserClient(
     private val userHttpClient: HttpClient,
     private val serverHandler: ServerHandler
 ) {
     companion object {
-        const val TAG = "ServerDatabaseClient"
+        const val TAG = "ServerUserClient"
     }
 
     private var serverUrl = ""
 
-    // For updating the server url
+    /**
+     * Changes the url stored in this class
+     */
     fun changeServerUrl(url: String) {
         serverUrl = url
     }
@@ -81,6 +86,9 @@ class ServerUserClient(
         return false
     }
 
+    /**
+     * Refresh tokens for authentication with server
+     */
     suspend fun refreshTokens(token: String): Result<AuthResponse, NetworkError> {
         val response = try {
             // Send request and receive response
@@ -107,6 +115,9 @@ class ServerUserClient(
         return Result.Error(NetworkError.UNKNOWN)
     }
 
+    /**
+     * Checks the connection with the stored server url
+     */
     suspend fun checkServerConnection(): Boolean {
         val response = try {
             userHttpClient.get("${serverUrl}/")
@@ -124,6 +135,9 @@ class ServerUserClient(
         return response.status == HttpStatusCode.OK
     }
 
+    /**
+     * Checks the connection with a specific server url
+     */
     suspend fun checkServerConnection(url: String): Boolean {
         val response = try {
             userHttpClient.get("$url/")

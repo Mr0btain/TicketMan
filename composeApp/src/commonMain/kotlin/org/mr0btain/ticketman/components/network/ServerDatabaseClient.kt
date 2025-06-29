@@ -22,6 +22,9 @@ import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.*
 import kotlin.collections.map
 
+/**
+ * Main database client for interacting with the data clients
+ */
 class ServerDatabaseClient(
     private val databaseHttpClient: HttpClient
 ) {
@@ -31,11 +34,13 @@ class ServerDatabaseClient(
 
     private var serverUrl = ""
 
-    val customerClient =
+    // Clients used to interact with server. Only real difference is the types and server urls
+    // Could possibly combine this into one client somehow. just supplying the url for each call?
+    private val customerClient =
         DatabaseClient<CustomerData>("CustomerClient", databaseHttpClient, "$serverUrl/api/data/customer")
-    val ticketClient =
+    private val ticketClient =
         DatabaseClient<TicketInfo>("TicketClient", databaseHttpClient, "$serverUrl/api/data/ticket")
-    val inventoryClient =
+    private val inventoryClient =
         DatabaseClient<InventoryItem>("InventoryClient", databaseHttpClient, "$serverUrl/api/data/inventory")
 
     // For updating the server url
@@ -56,73 +61,23 @@ class ServerDatabaseClient(
     suspend fun getCustomer(identifier: Int): CustomerData? =
         customerClient.get<CustomerData>(identifier) as CustomerData?
 
-    suspend fun syncTickets(tickets: List<TicketInfo>): Result<TicketSyncResponse, NetworkError> {
-        val list = tickets.map { item -> item.identifier }
+    suspend fun removeCustomer(identifier: Int) =
+        customerClient.remove(identifier)
 
-        val response = try {
-            // Send request and receive response
-            databaseHttpClient.post {
-                url("$serverUrl/api/data/ticket/sync")
-                contentType(ContentType.Application.Json)
-                setBody(SyncRequest(list))
-            }
-        } catch (ex: UnresolvedAddressException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.NO_INTERNET)
-        } catch (ex: SerializationException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.SERIALIZATION)
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.UNKNOWN)
-        }
+    suspend fun syncTickets(tickets: List<TicketInfo>) =
+        ticketClient.sync(tickets)
 
-        return handleHttpResponse<TicketSyncResponse>(response)
-    }
+    suspend fun sendTickets(tickets: List<TicketInfo>) =
+        ticketClient.batchSend(tickets)
 
-    suspend fun sendTickets(tickets: List<TicketInfo>): Boolean {
-        val response = try {
-            databaseHttpClient.post(urlString = "$serverUrl/api/data/ticket/addAll") { tickets }
-        } catch (ex: UnresolvedAddressException) {
-            ex.printStackTrace()
-            AppLogger.e("$TAG:SendTickets", ex.message.toString(), ex)
-            return false
-        } catch (ex: SerializationException) {
-            ex.printStackTrace()
-            AppLogger.e("$TAG:SendTickets", ex.message.toString(), ex)
-            return false
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.e("$TAG:SendTickets", ex.message.toString(), ex)
-            return false
-        }
+    suspend fun getTickets() =
+        ticketClient.getAll()
 
-        handleHttpResponse<CustomerResponse>(response)
-            .onSuccess { return true }
-            .onError {
-                AppLogger.i("$TAG:SendTickets", "$it")
-                return false
-            }
+    suspend fun getTicket(identifier: Int) =
+        ticketClient.get<TicketInfo>(identifier)
 
-        return false
-    }
-
-    suspend fun getTickets(): Result<List<TicketInfo>, NetworkError> {
-        val response = try {
-            databaseHttpClient.get(urlString = "$serverUrl/api/data/tickets/all")
-        } catch (ex: UnresolvedAddressException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.NO_INTERNET)
-        } catch (ex: SerializationException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.SERIALIZATION)
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.UNKNOWN)
-        }
-
-        return handleHttpResponse<List<TicketInfo>>(response)
-    }
+    suspend fun removeTicket(identifier: Int) =
+        ticketClient.remove(identifier)
 
     suspend fun getUsers(): Result<List<User>, NetworkError> {
         val response = try {
@@ -141,73 +96,20 @@ class ServerDatabaseClient(
         return handleHttpResponse<List<User>>(response)
     }
 
-    suspend fun syncInventory(inventory: List<InventoryItem>): Result<InventorySyncResponse, NetworkError> {
-        val list = inventory.map { item -> item.identifier }
+    suspend fun syncInventory(inventory: List<InventoryItem>) =
+        inventoryClient.sync(inventory)
 
-        val response = try {
-            // Send request and receive response
-            databaseHttpClient.post {
-                url("$serverUrl/api/data/inventory/sync")
-                contentType(ContentType.Application.Json)
-                setBody(SyncRequest(list))
-            }
-        } catch (ex: UnresolvedAddressException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.NO_INTERNET)
-        } catch (ex: SerializationException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.SERIALIZATION)
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.UNKNOWN)
-        }
+    suspend fun sendInventory(inventory: List<InventoryItem>) =
+        inventoryClient.batchSend(inventory)
 
-        return handleHttpResponse<InventorySyncResponse>(response)
-    }
+    suspend fun getInventory() =
+        inventoryClient.getAll()
 
-    suspend fun sendInventory(inventory: List<InventoryItem>): Boolean {
-        val response = try {
-            databaseHttpClient.post(urlString = "$serverUrl/api/data/inventory/addAll") { inventory }
-        } catch (ex: UnresolvedAddressException) {
-            ex.printStackTrace()
-            AppLogger.e("$TAG:SendInventory", ex.message.toString(), ex)
-            return false
-        } catch (ex: SerializationException) {
-            ex.printStackTrace()
-            AppLogger.e("$TAG:SendInventory", ex.message.toString(), ex)
-            return false
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.e("$TAG:SendInventory", ex.message.toString(), ex)
-            return false
-        }
+    suspend fun getInventoryItem(identifier: Int) =
+        inventoryClient.get<InventoryItem>(identifier)
 
-        handleHttpResponse<InventoryResponse>(response)
-            .onSuccess { return true }
-            .onError {
-                AppLogger.i("$TAG:SendInventory", "$it")
-                return false
-            }
-
-        return false
-    }
-
-    suspend fun getInventory(): Result<List<InventoryItem>, NetworkError> {
-        val response = try {
-            databaseHttpClient.get(urlString = "$serverUrl/api/data/inventory/all")
-        } catch (ex: UnresolvedAddressException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.NO_INTERNET)
-        } catch (ex: SerializationException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.SERIALIZATION)
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.UNKNOWN)
-        }
-
-        return handleHttpResponse<List<InventoryItem>>(response)
-    }
+    suspend fun removeInventoryItem(identifier: Int) =
+        inventoryClient.remove(identifier)
 }
 
 private suspend inline fun <reified T> handleHttpResponse(response: HttpResponse): Result<T, NetworkError> {

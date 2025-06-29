@@ -11,7 +11,7 @@ import kotlin.random.Random
 
 @Serializable
 data class TicketInfo(
-    override val identifier: Int = Int.MAX_VALUE,
+    override val identifier: String = "",
     val customerId: Int = Int.MAX_VALUE,
     val assignedUser: String = "",
     val device: Device = Device("", ""),

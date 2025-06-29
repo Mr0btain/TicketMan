@@ -21,15 +21,7 @@ import kotlin.text.toIntOrNull
  */
 
 fun Route.inventoryRoute(database: InventoryDatabase) {
-    // Get all inventory
-    authenticate("restricted") {
-        get("/all") {
-            database.getAll()?.let { data ->
-                call.respond(data)
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
-    }
-
+    // Sync between client and server
     authenticate {
         post("/sync") {
             val request = call.receive<SyncRequest>()
@@ -48,6 +40,15 @@ fun Route.inventoryRoute(database: InventoryDatabase) {
                 // Send response
                 call.respond(HttpStatusCode.OK, InventorySyncResponse(responseData, requested))
             } else call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
+    // Get all inventory
+    authenticate("restricted") {
+        get("/all") {
+            database.getAll()?.let { data ->
+                call.respond(data)
+            } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
 

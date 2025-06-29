@@ -5,8 +5,8 @@ import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.json.json
 import org.mr0btain.ticketman.data.shared.Notes
 
-object InventoryTable : IntIdTable("inventory") {
-    val identifier = integer("number")
+object InventoryTable : IntIdTable("inventory"), DataTable {
+    val identifier = text("number")
     val name = text("name")
     val description = text("description")
     val stock = integer("stock")

@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.user
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.Note
@@ -11,8 +12,7 @@ import java.util.UUID
 // TODO: Change to storing password hash instead of raw
 @Serializable
 data class User(
-    @Serializable(with = UUIDSerializer::class)
-    val identifier: UUID = UUID.randomUUID(),
+    override val identifier: String = "",
     val username: String = "",
     val password: String = "",
     val name: PersonName = PersonName(),
@@ -21,7 +21,7 @@ data class User(
     val tickets: List<Int> = listOf(),
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
     val time: Long = Long.MAX_VALUE
-)
+): MainDataItem
 
 // TODO: Flesh out
 fun hashPassword(password: String): String {

@@ -219,7 +219,7 @@ class UserDatabase(
 
 private fun ResultRow.toModal(): User {
     return User(
-        identifier = UUID.fromString(this[UserTable.identifier]),
+        identifier = this[UserTable.identifier],
         username = this[UserTable.username],
         password = this[UserTable.password],
         name = PersonName(this[UserTable.firstName], this[UserTable.lastName]),

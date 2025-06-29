@@ -8,7 +8,6 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.ServerDatabase
 import org.mr0btain.ticketman.components.service.UserService
-import org.mr0btain.ticketman.database.LocalDatabase
 
 fun Application.configureRouting(
     userService: UserService,
