@@ -12,7 +12,7 @@ import kotlin.random.Random
 @Serializable
 data class TicketInfo(
     override val identifier: String = "",
-    val customerId: Int = Int.MAX_VALUE,
+    val customerId: String = "",
     val assignedUser: String = "",
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Long.MAX_VALUE),

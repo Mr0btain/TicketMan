@@ -180,7 +180,7 @@ private fun databaseGetAll(table: DataTable): List<MainDataItem> {
                 CustomerData(
                     identifier = item[CustomerDataTable.identifier],
                     info = CustomerInfo(
-                        identifier = item[CustomerDataTable.identifier].toInt(),
+                        identifier = item[CustomerDataTable.identifier],
                         name = PersonName(
                             firstName = item[CustomerDataTable.firstName],
                             lastName = item[CustomerDataTable.lastName]

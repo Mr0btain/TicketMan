@@ -27,15 +27,15 @@ fun TicketPanel(
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
     scrollBarsOnRight: Boolean,
-    selectedTicketId: Int,
+    selectedTicketId: String,
     ticketList: List<TicketInfo>,
     customerList: List<CustomerData>,
     currentUser: User,
     users: List<User>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
-    onSelectedTicketChange: (Int) -> Unit,
-    onDeleteTicket: (Int) -> Unit,
+    onSelectedTicketChange: (String) -> Unit,
+    onDeleteTicket: (String) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {

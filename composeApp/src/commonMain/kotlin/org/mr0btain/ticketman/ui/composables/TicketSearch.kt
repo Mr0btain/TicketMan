@@ -27,7 +27,7 @@ fun TicketSearch(
     items: List<String>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Int) -> Unit,
+    onClick: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val filteredList = remember(input) { items.filter { it.lowercase().contains(input.lowercase()) } }
@@ -80,7 +80,7 @@ fun TicketSearch(
                         expanded = false
 
                         // Call on click
-                        onClick(option.toInt())
+                        onClick(option)
                     }
                 )
             }

@@ -67,7 +67,7 @@ class TicketDatabase(
 
     }
 
-    fun remove(id: Int): Boolean {
+    fun remove(id: String): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -84,7 +84,7 @@ class TicketDatabase(
         }
     }
 
-    fun getNextId(): Int? {
+    fun getNextId(): String? {
         var result = 0
 
         try {
@@ -93,7 +93,7 @@ class TicketDatabase(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 TicketDataTable.select(TicketDataTable.identifier).forEach { item ->
-                    if (item[TicketDataTable.identifier] > result) result = item[TicketDataTable.identifier]
+                    if (item[TicketDataTable.identifier].toInt() > result) result = item[TicketDataTable.identifier].toInt()
                 }
             }
         } catch (ex: Exception) {
@@ -101,7 +101,7 @@ class TicketDatabase(
             return null
         }
 
-        return (result + 1)
+        return (result + 1).toString()
     }
 
     fun add(data: TicketInfo): Boolean {

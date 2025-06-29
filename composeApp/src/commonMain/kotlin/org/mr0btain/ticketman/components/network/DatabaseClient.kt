@@ -164,7 +164,7 @@ class DatabaseClient<T : MainDataItem>(
         return null
     }
 
-    suspend fun remove(identifier: Int) {
+    suspend fun remove(identifier: String) {
         val response = try {
             client.delete { url("$serverUrl/remove/$identifier") }
         } catch (ex: UnresolvedAddressException) {

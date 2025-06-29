@@ -7,7 +7,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.dialogs.openFilePicker
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -38,10 +37,8 @@ import org.mr0btain.ticketman.generateMockData
 import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.error.onError
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.response.AuthResponse
-import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.ServerHandler
 import java.util.UUID
 
@@ -186,7 +183,7 @@ class MainViewModel(
     }
 
     /**
-     * Check to see if an address is valid. Will have to setup a ping or something to actually check. for now just check text
+     * Check to see if an address is valid. Will have to set up a ping or something to actually check. for now just check text
      */
     fun checkWebAddress(text: String): Boolean {
         var isValid = false
@@ -267,7 +264,7 @@ class MainViewModel(
         }
     }
 
-    fun removeUser(identifier: UUID) {
+    fun removeUser(identifier: String) {
         viewModelScope.launch {
             if (_userList.value.firstOrNull { it.identifier == identifier } != null) {
                 // update list
@@ -285,8 +282,8 @@ class MainViewModel(
         }
     }
 
-    fun getUserForId(identifier: UUID): User? {
-        return userList.value.firstOrNull() { it.identifier == identifier }
+    fun getUserForId(identifier: String): User? {
+        return userList.value.firstOrNull { it.identifier == identifier }
     }
 
     /** Inventory Related Things */
@@ -297,14 +294,14 @@ class MainViewModel(
     val inventoryList = _inventoryList.asStateFlow()
 
     // Inventory selected item id
-    private val _selectedInventoryId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
+    private val _selectedInventoryId: MutableStateFlow<String> = MutableStateFlow("")
     val selectedInventoryId = _selectedInventoryId.asStateFlow()
 
-    fun changeSelectedInventoryId(identifier: Int) {
+    fun changeSelectedInventoryId(identifier: String) {
         _selectedInventoryId.value = identifier
     }
 
-    fun getNextInventoryId(): Int? {
+    fun getNextInventoryId(): String? {
         return clientDatabase.inventoryDatabase.getNextId()
     }
 
@@ -352,7 +349,7 @@ class MainViewModel(
         }
     }
 
-    fun removeInventoryItem(identifier: Int) {
+    fun removeInventoryItem(identifier: String) {
         viewModelScope.launch {
             // Check if item exists or not
             if (_inventoryList.value.firstOrNull { it.identifier == identifier } != null) {
@@ -371,7 +368,7 @@ class MainViewModel(
         }
     }
 
-    fun getInventoryItemForId(identifier: Int): InventoryItem? {
+    fun getInventoryItemForId(identifier: String): InventoryItem? {
         val result = _inventoryList.value.firstOrNull { it.identifier == identifier }
 
         viewModelScope.launch {
@@ -402,15 +399,15 @@ class MainViewModel(
     val ticketDataList = _ticketDataList.asStateFlow()
 
     // Selected ticket tab index
-    private val _selectedTicketId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
+    private val _selectedTicketId: MutableStateFlow<String> = MutableStateFlow("")
     val selectedTicketId = _selectedTicketId.asStateFlow()
 
     // To update selected ticket
-    fun changeSelectedTicketId(identifier: Int) {
+    fun changeSelectedTicketId(identifier: String) {
         _selectedTicketId.value = identifier
     }
 
-    fun getNextTicketId(): Int? {
+    fun getNextTicketId(): String? {
         return clientDatabase.ticketDatabase.getNextId()
     }
 
@@ -459,7 +456,7 @@ class MainViewModel(
         }
     }
 
-    fun removeTicket(identifier: Int) {
+    fun removeTicket(identifier: String) {
         viewModelScope.launch {
             // Check if ticket exists or not
             if (_ticketDataList.value.firstOrNull { it.identifier == identifier } != null) {
@@ -478,8 +475,8 @@ class MainViewModel(
         }
     }
 
-    fun getTicketForId(id: Int): TicketInfo? {
-        val result = _ticketDataList.value.firstOrNull { it.identifier == id }
+    fun getTicketForId(identifier: String): TicketInfo? {
+        val result = _ticketDataList.value.firstOrNull { it.identifier == identifier }
 
         viewModelScope.launch {
             if (result == null) snackBarHost.showSnackbar("Error getting ticket!")
@@ -506,19 +503,19 @@ class MainViewModel(
     val customerDataList = _customerDataList.asStateFlow()
 
     // Selected Customer
-    private val _selectedCustomerId: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
+    private val _selectedCustomerId: MutableStateFlow<String> = MutableStateFlow("")
     val selectedCustomerId = _selectedCustomerId.asStateFlow()
 
     // Call to change customer data
-    fun changeSelectedCustomerId(identifier: Int) {
+    fun changeSelectedCustomerId(identifier: String) {
         _selectedCustomerId.value = identifier
     }
 
-    fun getNextCustomerId(): Int? =
+    fun getNextCustomerId(): String? =
         clientDatabase.customerDatabase.getNextId()
 
-    fun getCustomerForId(id: Int): CustomerData? {
-        val result = _customerDataList.value.firstOrNull() { it.info.identifier == id }
+    fun getCustomerForId(identifier: String): CustomerData? {
+        val result = _customerDataList.value.firstOrNull() { it.identifier == identifier }
 
         if (result == null) viewModelScope.launch {
             AppLogger.m("$TAG:getCustomerForId", "Error getting customer from database")
@@ -532,7 +529,7 @@ class MainViewModel(
     fun updateOrAddCustomer(data: CustomerData) {
         viewModelScope.launch {
             // Check if customer exists or not, if not then add it
-            if (_customerDataList.value.firstOrNull { it.info.identifier == data.info.identifier } != null) {
+            if (_customerDataList.value.firstOrNull { it.identifier == data.identifier } != null) {
                 // Update data in viewmodel
                 // Get index of the item
                 val index = _customerDataList.value.indexOfFirst { it.info.identifier == data.info.identifier }
@@ -557,7 +554,7 @@ class MainViewModel(
             }
 
             // Set selected customer
-            _selectedCustomerId.value = data.info.identifier
+            _selectedCustomerId.value = data.identifier
         }
     }
 
@@ -575,12 +572,12 @@ class MainViewModel(
         }
     }
 
-    fun removeCustomer(identifier: Int) {
+    fun removeCustomer(identifier: String) {
         viewModelScope.launch {
             // Check if customer exists or not
-            if (_customerDataList.value.map { it.info.identifier }.contains(identifier)) {
+            if (_customerDataList.value.map { it.identifier }.contains(identifier)) {
                 // update list
-                _customerDataList.value = _customerDataList.value.filter { it.info.identifier != identifier }
+                _customerDataList.value = _customerDataList.value.filter { it.identifier != identifier }
 
                 // Update database
                 if (!clientDatabase.customerDatabase.remove(identifier)) {
@@ -871,7 +868,7 @@ class MainViewModel(
                 contactInfo = ContactInfo(listOf("Garrison@gmail.com"), listOf("8145367890"))
             ),
             ticketInfo = TicketInfo(
-                identifier = 7865875,
+                identifier = "7865875",
                 assignedUser = UUID.randomUUID().toString(),
                 device = Device("Samsung", "Galaxy S7"),
                 invoice = Invoice(

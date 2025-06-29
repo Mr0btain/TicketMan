@@ -18,7 +18,7 @@ data class User(
     val name: PersonName = PersonName(),
     val notes: List<Note> = listOf(),
     val contactInfo: ContactInfo = ContactInfo(),
-    val tickets: List<Int> = listOf(),
+    val tickets: List<String> = emptyList(),
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
     val time: Long = Long.MAX_VALUE
 ): MainDataItem

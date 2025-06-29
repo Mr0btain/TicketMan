@@ -34,8 +34,8 @@ fun TicketListPane(
     modifier: Modifier = Modifier,
     ticketInfo: List<TicketInfo> = listOf(),
     scrollBarsOnRight: Boolean,
-    selectedId: Int,
-    onClick: (Int) -> Unit,
+    selectedId: String,
+    onClick: (String) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {

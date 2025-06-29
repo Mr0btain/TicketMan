@@ -301,7 +301,7 @@ fun SmallTicketList(
     tickets: List<TicketInfo>,
     scrollBarsOnRight: Boolean,
     isDarkMode: Boolean,
-    onClick: (Int) -> Unit
+    onClick: (String) -> Unit
 ) {
     Surface(
         modifier = modifier

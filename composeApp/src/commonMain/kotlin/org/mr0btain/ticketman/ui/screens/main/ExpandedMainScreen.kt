@@ -90,7 +90,7 @@ fun ExpandedMainScreen(
     // We need this outside of the customer dialog so we can modify this from other dialogs
     // and handle different scenarios
     val tempTicketHolder = remember { mutableStateListOf<TicketInfo>() }
-    val customerTicketList = remember { mutableStateListOf<Int>() }
+    val customerTicketList = remember { mutableStateListOf<String>() }
 
     // For ticket panel
     val ticketList = viewModel.ticketDataList.collectAsState()
@@ -113,7 +113,7 @@ fun ExpandedMainScreen(
 
     // For confirm delete dialog
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
-    var itemToDelete by remember { mutableIntStateOf(Int.MAX_VALUE) }
+    var itemToDelete by remember { mutableStateOf("") }
     var itemToDeleteType by remember { mutableStateOf(MainItemType.NONE) }
     var confirmDeleteDialogText by remember { mutableStateOf("") }
 
@@ -285,7 +285,7 @@ fun ExpandedMainScreen(
                                 viewModel.removeCustomer(itemToDelete)
 
                                 // Reset selected
-                                viewModel.changeSelectedCustomerId(Int.MAX_VALUE)
+                                viewModel.changeSelectedCustomerId("")
                             }
 
                             MainItemType.TICKET -> {
@@ -293,7 +293,7 @@ fun ExpandedMainScreen(
                                 viewModel.removeTicket(itemToDelete)
 
                                 // Reset selected
-                                viewModel.changeSelectedTicketId(Int.MAX_VALUE)
+                                viewModel.changeSelectedTicketId("")
                             }
                             MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
                             MainItemType.INVENTORY -> {
@@ -301,14 +301,14 @@ fun ExpandedMainScreen(
                                 viewModel.removeInventoryItem(itemToDelete)
 
                                 // Reset selected
-                                viewModel.changeSelectedInventoryId(Int.MAX_VALUE)
+                                viewModel.changeSelectedInventoryId("")
                             }
                             MainItemType.NONE -> { /* Do nothing */ }
                         }
                     }
 
                     // Reset values
-                    itemToDelete = Int.MAX_VALUE
+                    itemToDelete = ""
                     itemToDeleteType = MainItemType.NONE
                     confirmDeleteDialogText = ""
 

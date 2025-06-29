@@ -19,6 +19,7 @@ import kotlin.collections.filter
 import kotlin.collections.map
 import kotlin.text.toIntOrNull
 
+/*
 fun Route.dataRoute(database: CustomerDatabase) {
     // Sync between client and server
     authenticate {
@@ -110,3 +111,4 @@ fun Route.dataRoute(database: CustomerDatabase) {
         }
     }
 }
+ */

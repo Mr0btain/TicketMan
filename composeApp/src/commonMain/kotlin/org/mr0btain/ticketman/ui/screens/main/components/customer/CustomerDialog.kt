@@ -44,9 +44,9 @@ import kotlin.math.ceil
 fun CustomerDialog(
     modifier: Modifier = Modifier,
     seedData: CustomerData = CustomerData(),
-    ticketList: SnapshotStateList<Int>,
+    ticketList: SnapshotStateList<String>,
     onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
-    onAddNewTicket: (Int) -> Unit,
+    onAddNewTicket: (String) -> Unit,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
@@ -383,7 +383,7 @@ fun CustomerDialog(
 
                         IconButton(
                             modifier = Modifier.size(26.dp),
-                            onClick = { onAddNewTicket(seedData.info.identifier) }
+                            onClick = { onAddNewTicket(seedData.identifier) }
                         ) {
                             Icon(
                                 modifier = Modifier

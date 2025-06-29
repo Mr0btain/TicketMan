@@ -29,11 +29,8 @@ fun CustomerInfoPane(
     selectedCustomerData: CustomerData,
     tickets: List<TicketInfo>,
     onEditClick: () -> Unit,
-    onTicketClick: (Int) -> Unit
+    onTicketClick: (String) -> Unit
 ) {
-    // Scroll state for basic ifo pane if needed
-    val scrollState = rememberScrollState()
-
     // Sizes for icons and text
     val labelSize = 12.sp
     val textSize = 16.sp

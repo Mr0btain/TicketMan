@@ -19,10 +19,10 @@ class CustomerHandler(
     val data = _data.asStateFlow()
 
     // Selected Customer
-    private val _selected: MutableStateFlow<Int> = MutableStateFlow(Int.MAX_VALUE)
+    private val _selected: MutableStateFlow<String> = MutableStateFlow("")
     val selected = _selected.asStateFlow()
 
-    override fun setSelectedIdentifier(identifier: Int) {
+    override fun setSelectedIdentifier(identifier: String) {
         _selected.value = identifier
     }
 
@@ -30,14 +30,14 @@ class CustomerHandler(
     /**
      * Retrieves the next identifier for a new customer
      */
-    override fun getNextIdentifier(): Int? {
-        return _data.value.maxOfOrNull { it.info.identifier }
+    override fun getNextIdentifier(): String? {
+        return _data.value.maxOfOrNull { it.identifier }
     }
 
     /**
      * Gets customer data for a specific identifier
      */
-    override fun getForIdentifier(identifier: Int): CustomerData? {
+    override fun getForIdentifier(identifier: String): CustomerData? {
         return _data.value.firstOrNull { it.info.identifier == identifier }
     }
 
@@ -67,7 +67,7 @@ class CustomerHandler(
                 }
 
                 // Set selected customer
-                _selected.value = item.info.identifier
+                _selected.value = item.identifier
 
                 AppLogger.m("$TAG:UpdateOrAdd", "SUCCESS")
             }

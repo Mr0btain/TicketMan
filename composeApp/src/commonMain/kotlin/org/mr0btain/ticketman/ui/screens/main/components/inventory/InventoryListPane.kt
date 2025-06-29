@@ -30,8 +30,8 @@ fun InventoryListPane(
     modifier: Modifier = Modifier,
     items: List<InventoryItem>,
     scrollBarsOnRight: Boolean,
-    selectedId: Int,
-    onClick: (Int) -> Unit,
+    selected: String,
+    onClick: (String) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
@@ -118,7 +118,7 @@ fun InventoryListPane(
                             } else {
                                 if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                             },
-                            selected = selectedId == item.identifier,
+                            selected = selected == item.identifier,
                             inventoryItem = item,
                             nameColumnWidth = nameColumnWidth,
                             stockColumnWidth = stockColumnWidth,
@@ -143,7 +143,7 @@ fun InventoryListPane(
                             } else {
                                 if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                             },
-                            selected = selectedId == item.identifier,
+                            selected = selected == item.identifier,
                             inventoryItem = item,
                             nameColumnWidth = nameColumnWidth,
                             stockColumnWidth = stockColumnWidth,

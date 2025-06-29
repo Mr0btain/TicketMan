@@ -63,7 +63,7 @@ class CustomerDatabase(
 
                 data.forEach { customer ->
                     CustomerDataTable.insert { item ->
-                        item[identifier] = customer.info.identifier
+                        item[identifier] = customer.identifier
                         item[firstName] = customer.info.name.firstName
                         item[lastName] = customer.info.name.lastName
                         item[street] = customer.info.address.street
@@ -85,7 +85,7 @@ class CustomerDatabase(
         }
     }
 
-    fun remove(id: Int): Boolean {
+    fun remove(id: String): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -102,7 +102,8 @@ class CustomerDatabase(
         }
     }
 
-    fun getNextId(): Int? {
+    fun getNextId(): String? {
+        /*
         var result = 0
 
         try {
@@ -120,6 +121,8 @@ class CustomerDatabase(
         }
 
         return (result + 1)
+         */
+        return null
     }
 
     fun add(data: CustomerData): Boolean {
@@ -129,7 +132,7 @@ class CustomerDatabase(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 CustomerDataTable.insert { item ->
-                    item[identifier] = data.info.identifier
+                    item[identifier] = data.identifier
                     item[firstName] = data.info.name.firstName
                     item[lastName] = data.info.name.lastName
                     item[street] = data.info.address.street
@@ -156,8 +159,8 @@ class CustomerDatabase(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerDataTable.update(where = { CustomerDataTable.identifier eq data.info.identifier }) { item ->
-                    item[identifier] = data.info.identifier
+                CustomerDataTable.update(where = { CustomerDataTable.identifier eq data.identifier }) { item ->
+                    item[identifier] = data.identifier
                     item[firstName] = data.info.name.firstName
                     item[lastName] = data.info.name.lastName
                     item[street] = data.info.address.street

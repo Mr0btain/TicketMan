@@ -102,38 +102,12 @@ class ServerHandler(
      */
     suspend fun syncTickets(currentTickets: List<TicketInfo>): List<TicketInfo> {
         // Handle if our database is empty then no reason to sync just pull
-        if (currentTickets.isEmpty()) {
+        return if (currentTickets.isEmpty()) {
             databaseClient.getTickets()
-                .onSuccess { response ->
-                    // Log Success
-                    AppLogger.m("$TAG:SyncTickets:GetTickets", "SUCCESS")
-
-                    // Return result
-                    return response
-                }.onError { error -> handleNetworkError("GetTickets", error) }
         } else {
             // Else go through with sync
             databaseClient.syncTickets(currentTickets)
-                .onSuccess { response ->
-                    // If requested isn't empty handle it
-                    if (response.requested.isNotEmpty()) {
-                        // Get requested data
-                        val requestedData =
-                            currentTickets.filter { response.requested.contains(it.identifier) }
-
-                        // Send back requested data
-                        databaseClient.sendTickets(requestedData)
-                    }
-
-                    // Log success
-                    AppLogger.m("$TAG:SyncTickets", "SUCCESS")
-
-                    // Return result
-                    return response.data
-                }.onError { error -> handleNetworkError("SyncTickets", error) }
         }
-
-        return listOf()
     }
 
     /**
@@ -141,38 +115,12 @@ class ServerHandler(
      */
     suspend fun syncInventory(currentInventory: List<InventoryItem>): List<InventoryItem> {
         // Handle if our database is empty then no reason to sync just pull
-        if (currentInventory.isEmpty()) {
+        return if (currentInventory.isEmpty()) {
             databaseClient.getInventory()
-                .onSuccess { response ->
-                    // Log Success
-                    AppLogger.m("$TAG:SyncInventory:GetInventory", "SUCCESS")
-
-                    // Return result
-                    return response
-                }.onError { error -> handleNetworkError("GetInventory", error) }
         } else {
             // Else go through with sync
             databaseClient.syncInventory(currentInventory)
-                .onSuccess { response ->
-                    // If requested isn't empty handle it
-                    if (response.requested.isNotEmpty()) {
-                        // Get requested data
-                        val requestedData =
-                            currentInventory.filter { response.requested.contains(it.identifier) }
-
-                        // Send back requested data
-                        databaseClient.sendInventory(requestedData)
-                    }
-
-                    // Log success
-                    AppLogger.m("$TAG:SyncInventory", "SUCCESS")
-
-                    // Return result
-                    return response.data
-                }.onError { error -> handleNetworkError("SyncInventory", error) }
         }
-
-        return listOf()
     }
 
     // TODO: It seems okhttp throws stuff into log before we actually reach this and it never makes it to the logs

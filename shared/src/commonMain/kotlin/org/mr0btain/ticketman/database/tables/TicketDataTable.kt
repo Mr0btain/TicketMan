@@ -12,7 +12,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 
 object TicketDataTable: IntIdTable("tickets"), DataTable {
     val identifier = text("number")
-    val customerId = integer("customerId")
+    val customerId = text("customerId")
     val assignedUser = varchar("assignedUser", 36)
     val device = json<Device>("device", Json.Default)
     val status = json<TicketStatus>("status", Json.Default)

@@ -4,8 +4,6 @@ import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
 import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.components.logging.AppLogger
@@ -14,13 +12,8 @@ import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.error.onError
-import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.*
-import kotlin.collections.map
 
 /**
  * Main database client for interacting with the data clients
@@ -61,7 +54,7 @@ class ServerDatabaseClient(
     suspend fun getCustomer(identifier: Int): CustomerData? =
         customerClient.get<CustomerData>(identifier) as CustomerData?
 
-    suspend fun removeCustomer(identifier: Int) =
+    suspend fun removeCustomer(identifier: String) =
         customerClient.remove(identifier)
 
     suspend fun syncTickets(tickets: List<TicketInfo>) =
@@ -76,7 +69,7 @@ class ServerDatabaseClient(
     suspend fun getTicket(identifier: Int) =
         ticketClient.get<TicketInfo>(identifier)
 
-    suspend fun removeTicket(identifier: Int) =
+    suspend fun removeTicket(identifier: String) =
         ticketClient.remove(identifier)
 
     suspend fun getUsers(): Result<List<User>, NetworkError> {
@@ -108,7 +101,7 @@ class ServerDatabaseClient(
     suspend fun getInventoryItem(identifier: Int) =
         inventoryClient.get<InventoryItem>(identifier)
 
-    suspend fun removeInventoryItem(identifier: Int) =
+    suspend fun removeInventoryItem(identifier: String) =
         inventoryClient.remove(identifier)
 }
 

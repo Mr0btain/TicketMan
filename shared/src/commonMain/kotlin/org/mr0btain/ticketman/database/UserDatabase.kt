@@ -165,7 +165,7 @@ class UserDatabase(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 UserTable.insert { item ->
-                    item[UserTable.identifier] = user.identifier.toString()
+                    item[UserTable.identifier] = user.identifier
                     item[UserTable.username] = user.username
                     item[UserTable.password] = user.password
                     item[UserTable.firstName] = user.name.firstName
@@ -195,7 +195,7 @@ class UserDatabase(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 UserTable.update(where = { UserTable.identifier eq uuid}) { item ->
-                    item[UserTable.identifier] = user.identifier.toString()
+                    item[UserTable.identifier] = user.identifier
                     item[UserTable.username] = user.username
                     item[UserTable.password] = user.password
                     item[UserTable.firstName] = user.name.firstName

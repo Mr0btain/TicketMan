@@ -25,8 +25,8 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerInfo: List<CustomerInfo>,
-    onClick: (Int) -> Unit,
-    selectedCustomerId: Int,
+    onClick: (String) -> Unit,
+    selectedCustomerId: String,
     lazyListState: LazyListState,
     scope: CoroutineScope,
     scrollBarsOnRight: Boolean,
@@ -141,7 +141,7 @@ private fun CustomerHeaderBox(
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (Int) -> Unit,
+    onClick: (String) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customerInfo: CustomerInfo,

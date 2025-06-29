@@ -30,7 +30,7 @@ fun UserSearch(
     items: List<User>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (UUID) -> Unit,
+    onClick: (String) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val filteredList = remember(input) { items.filter {

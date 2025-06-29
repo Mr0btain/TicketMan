@@ -38,18 +38,18 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
 
     customerData.forEach { item ->
         val tickets = mutableListOf<TicketInfo>()
-        val ticketIds = mutableListOf<Int>()
+        val ticketIds = mutableListOf<String>()
 
         // Generate tickets
         (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(item.info.identifier, currentTicketId))
+            tickets.add(generateRandomTicket(item.identifier, currentTicketId.toString()))
 
             currentTicketId++
         }
 
         // Make a list of ticket ids
         tickets.forEach { tick ->
-            ticketIds.add(tick.identifier.toInt())
+            ticketIds.add(tick.identifier)
         }
 
         // Update the customer data
@@ -70,7 +70,7 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
         )
 
         // add ticket to employee
-        users[userId] = user.copy(tickets = user.tickets + ticket.identifier.toInt())
+        users[userId] = user.copy(tickets = user.tickets + ticket.identifier)
     }
 
     println("Generated Customer list: ${customerData.count()}")
@@ -145,7 +145,7 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
             CustomerData(
                 identifier = id,
                 info = CustomerInfo(
-                    identifier = id.toInt(),
+                    identifier = id,
                     name = name,
                     address = generateRandomAddress(),
                     contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
@@ -296,7 +296,7 @@ private fun generateRandomName(): PersonName {
 }
 
 @OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(customerId: Int, ticketId: Int): TicketInfo {
+fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),

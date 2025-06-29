@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.data.shared.Note
 data class CustomerData(
     override val identifier: String = "",
     val info: CustomerInfo = CustomerInfo(),
-    val tickets: List<Int> = listOf(),
+    val tickets: List<String> = listOf(),
     val notes: List<Note> = listOf()
 ): MainDataItem
 
@@ -16,4 +16,4 @@ data class CustomerData(
 Only used for serializing into json for database
  */
 @Serializable
-data class TicketList(val list: List<Int> = listOf())
+data class TicketList(val list: List<String> = listOf())

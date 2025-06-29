@@ -68,7 +68,7 @@ class InventoryDatabase(
 
     }
 
-    fun remove(id: Int): Boolean {
+    fun remove(id: String): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -86,7 +86,7 @@ class InventoryDatabase(
 
     }
 
-    fun getNextId(): Int? {
+    fun getNextId(): String? {
         var result = 0
 
         try {
@@ -95,7 +95,7 @@ class InventoryDatabase(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 InventoryTable.select(InventoryTable.identifier).forEach { item ->
-                    if (item[InventoryTable.identifier] > result) result = item[InventoryTable.identifier]
+                    if (item[InventoryTable.identifier].toInt() > result) result = item[InventoryTable.identifier].toInt()
                 }
             }
         } catch (ex: Exception) {
@@ -103,7 +103,7 @@ class InventoryDatabase(
             return null
         }
 
-        return (result + 1)
+        return (result + 1).toString()
     }
 
     fun add(inventoryItem: InventoryItem): Boolean {

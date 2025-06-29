@@ -33,12 +33,12 @@ fun InventoryPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     inventoryList: List<InventoryItem>,
-    selectedInventoryItemId: Int,
+    selectedInventoryItemId: String,
     scrollBarsOnRight: Boolean,
-    onSelectedInventoryItemChange: (Int) -> Unit,
+    onSelectedInventoryItemChange: (String) -> Unit,
     onAddInventoryItem: () -> Unit,
-    onEditInventoryItem: (Int) -> Unit,
-    onDeleteInventoryItem: (Int) -> Unit,
+    onEditInventoryItem: (String) -> Unit,
+    onDeleteInventoryItem: (String) -> Unit,
     coroutineScope: CoroutineScope,
     inventoryListState: LazyListState
 ) {
@@ -109,7 +109,7 @@ fun InventoryPanel(
                 // List of all the inventory items
                 InventoryListPane(
                     isDarkMode = isDarkMode,
-                    selectedId = selectedInventoryItemId,
+                    selected = selectedInventoryItemId,
                     items = inventoryList,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onClick = {

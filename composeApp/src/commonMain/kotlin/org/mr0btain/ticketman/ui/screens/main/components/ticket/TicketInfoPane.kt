@@ -70,7 +70,7 @@ fun TicketInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = if (ticketInfo.identifier != Int.MAX_VALUE) "Details for: ${ticketInfo.identifier}" else "",
+                        text = if (ticketInfo.identifier.isNotEmpty()) "Details for: ${ticketInfo.identifier}" else "",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -229,7 +229,7 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.identifier != Int.MAX_VALUE) {
+                            if (ticketInfo.identifier.isNotEmpty()) {
                                 TableStatusItem(
                                     status = ticketInfo.status,
                                     darkMode = isDarkMode
@@ -253,7 +253,7 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.identifier != Int.MAX_VALUE) {
+                            if (ticketInfo.identifier.isNotEmpty()) {
                                 TablePriorityItem(
                                     priority = ticketInfo.priority,
                                     darkMode = isDarkMode

@@ -49,7 +49,7 @@ fun TicketDialog(
     val userIds = remember(users) { users.map { it.identifier.toString() } }
 
     // seed data
-    var customerId by remember(seedData) { mutableIntStateOf(seedData.customerId) }
+    var customerId by remember(seedData) { mutableStateOf(seedData.customerId) }
 
     // Assigned employee
     var assignedUser by remember(seedData) { mutableStateOf(seedData.assignedUser) }
@@ -74,7 +74,7 @@ fun TicketDialog(
     var showAddNoteDialog by remember { mutableStateOf(false) }
 
     // For customer search bar
-    var customerSearchBarInput by remember { mutableStateOf(if (seedData.customerId != Int.MAX_VALUE) seedData.customerId.toString() else "") }
+    var customerSearchBarInput by remember { mutableStateOf(if (seedData.customerId.isNotEmpty()) seedData.customerId.toString() else "") }
 
     // For employee search bar
     var userSearchBarInput by remember { mutableStateOf(if (userIds.contains(seedData.assignedUser)) seedData.assignedUser.toString()else "")  }
