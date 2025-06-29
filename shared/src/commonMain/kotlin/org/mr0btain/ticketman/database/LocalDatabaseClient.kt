@@ -21,7 +21,7 @@ import org.mr0btain.ticketman.database.tables.*
 /**
  * Handles interaction between a local database
  */
-class LocalDatabase<T : MainDataItem>(
+class LocalDatabaseClient<T : MainDataItem>(
     private val table: DataTable,
     private val shouldLog: Boolean
 ) {
@@ -46,8 +46,28 @@ class LocalDatabase<T : MainDataItem>(
         return result
     }
 
+    /** Gets an item by its identifier */
+    @Suppress("UNCHECKED_CAST")
+    fun getById(identifier: String): T? {
+        var result: T? = null
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                result =  databaseGetAll(table).firstOrNull { item -> item.identifier == identifier } as T
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            return null
+        }
+
+        return result
+    }
+
     /** Adds all items to the database */
-    fun addAll(data: List<T>): Boolean {
+    fun addAll(data: List<MainDataItem>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -74,9 +94,7 @@ class LocalDatabase<T : MainDataItem>(
 
                 // Delete item
                 if (column != null) {
-                    val _table = table as IntIdTable
-
-                    table.deleteWhere { column eq id }
+                    table.getTableType()?.deleteWhere { column eq id }
                 }
             }
 
@@ -119,7 +137,7 @@ class LocalDatabase<T : MainDataItem>(
     }
 
     /** Adds an item to the database */
-    fun add(data: T): Boolean {
+    fun add(data: MainDataItem): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -136,7 +154,7 @@ class LocalDatabase<T : MainDataItem>(
     }
 
     /** Updates an item in the database */
-    fun update(data: T): Boolean {
+    fun update(data: MainDataItem): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -216,6 +234,7 @@ private fun databaseGetAll(table: DataTable): List<MainDataItem> {
         }
 
         is InventoryTable -> {
+
             table.selectAll().map { item ->
                 InventoryItem(
                     identifier = item[InventoryTable.identifier],

@@ -165,7 +165,9 @@ fun TicketPanel(
             Spacer(Modifier.padding(4.dp))
 
             // --------------------------------- List and Info Panes ---------------------------------------------------
-            Row {
+            Row(
+                modifier = Modifier.sizeIn(maxHeight = 500.dp)
+            ) {
                 // All tickets tab.
                 TicketListPane(
                     isDarkMode = isDarkMode,

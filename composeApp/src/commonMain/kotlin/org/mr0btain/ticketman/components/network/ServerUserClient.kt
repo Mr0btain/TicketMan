@@ -9,35 +9,46 @@ import io.ktor.util.network.*
 import io.ktor.utils.io.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.components.logging.AppLogger
-import org.mr0btain.ticketman.components.network.ServerDatabaseClient.Companion.TAG
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
+import org.mr0btain.ticketman.server.response.TokenResponse
 import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.ServerHandler
 import java.util.*
 
 /**
  * Main Client for user services with the server
  */
+// TODO: Figure out why we keep getting messed up urls when we set this from outside??
 class ServerUserClient(
     private val userHttpClient: HttpClient,
     private val serverHandler: ServerHandler
 ) {
     companion object {
-        const val TAG = "ServerUserClient"
+        private const val TAG = "ServerUserClient"
+        private const val LOGIN_TAG = "$TAG:Login"
+        private const val CHANGE_SERVER_TAG = "$TAG:ChangeServer"
+        private const val CHECK_CREDENTIALS_TAG = "$TAG:CheckCredentials"
+        private const val REFRESH_TOKEN_TAG = "$TAG:RefreshTokens"
+        private const val CHECK_SERVER_CONNECTION_TAG = "$TAG:CheckServerConnection"
+        private const val CHECK_SERVER_CONNECTION_URL_TAG = "$TAG:CheckServerConnectionURL"
     }
 
-    private var serverUrl = ""
+
+    private var serverUrl = "http://localhost:8080"
 
     /**
      * Changes the url stored in this class
      */
     fun changeServerUrl(url: String) {
-        serverUrl = url
+        println("URL saved: $url")
+        //serverUrl = url
+        AppLogger.i(CHANGE_SERVER_TAG, SimpleError.SUCCESS)
     }
 
     /**
@@ -56,61 +67,60 @@ class ServerUserClient(
      * Log in to server using supplied credentials
      */
     suspend fun login(username: String, password: String): Boolean {
-        val response = try {
-            // Send request and receive response
+        networkErrorTryCatch(LOGIN_TAG) {
             userHttpClient.post {
                 url("$serverUrl/api/auth")
                 contentType(ContentType.Application.Json)
                 setBody(LoginRequest(username, password))
             }
-        } catch (ex: UnresolvedAddressException) {
-            AppLogger.m("$TAG:login", ex.toString())
-            return false
-        } catch (ex: SerializationException) {
-            AppLogger.m("$TAG:login", ex.toString())
-            return false
-        } catch (ex: Exception) {
-            AppLogger.m("$TAG:login", ex.toString())
-            return false
-        }
-
-        handleHttpResponse<AuthResponse>(response)
-            .onSuccess { authResponse ->
+        }?.let { response -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response) }
+            ?.onSuccess { authResponse ->
                 serverHandler.updateAuthTokens(authResponse.accessToken, authResponse.refreshToken)
-                AppLogger.m("$TAG:login", "SUCCESS")
                 return true
             }
 
-        AppLogger.i("$TAG:login", "FAIL")
+        AppLogger.i(LOGIN_TAG, "FAIL")
 
         return false
+    }
+
+    /**
+     * Check if credentials are still good in database
+     */
+    suspend fun checkCredentials(username: String, password: String): Boolean {
+        val response = networkErrorTryCatch(CHECK_CREDENTIALS_TAG) {
+            userHttpClient.post {
+                url("$serverUrl/api/auth/user")
+                contentType(ContentType.Application.Json)
+                setBody(LoginRequest(username, password))
+            }
+        }
+
+        return if (response != null && response.status == HttpStatusCode.Accepted) {
+            AppLogger.m(CHECK_CREDENTIALS_TAG, "SUCCESS")
+            true
+        } else {
+            AppLogger.i(CHECK_CREDENTIALS_TAG, "FAIL")
+            false
+        }
     }
 
     /**
      * Refresh tokens for authentication with server
      */
     suspend fun refreshTokens(token: String): Result<AuthResponse, NetworkError> {
-        val response = try {
-            // Send request and receive response
+        networkErrorTryCatch(REFRESH_TOKEN_TAG) {
             userHttpClient.post {
                 url("$serverUrl/api/auth/refresh")
                 contentType(ContentType.Application.Json)
                 setBody(RefreshTokenRequest(token))
             }
-        } catch (ex: UnresolvedAddressException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.NO_INTERNET)
-        } catch (ex: SerializationException) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.SERIALIZATION)
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            return Result.Error(NetworkError.UNKNOWN)
-        }
-
-        // Check if we get a token back or not, else we need to re login
-        handleHttpResponse<RefreshTokenResponse>(response)
-            .onSuccess { return Result.Success(AuthResponse(UUID.randomUUID(), it.token, token)) }
+        }?.let { response -> handleHttpResponse<RefreshTokenResponse>(REFRESH_TOKEN_TAG, response) }
+            ?.onSuccess { accessToken ->
+                serverHandler.updateAuthTokens(accessToken.token, token)
+                // We don't use UUID here so just slap whatever. Maybe make another data class for this??
+                return Result.Success(AuthResponse("", accessToken.token, token))
+            }
 
         return Result.Error(NetworkError.UNKNOWN)
     }
@@ -119,79 +129,21 @@ class ServerUserClient(
      * Checks the connection with the stored server url
      */
     suspend fun checkServerConnection(): Boolean {
-        val response = try {
+        val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_TAG) {
             userHttpClient.get("${serverUrl}/")
-        } catch (ex: UnresolvedAddressException) {
-            AppLogger.m("$TAG:CheckServerConnection", ex.toString())
-            return false
-        } catch (ex: SerializationException) {
-            AppLogger.m("$TAG:CheckServerConnection", ex.toString())
-            return false
-        } catch (ex: Exception) {
-            AppLogger.m("$TAG:CheckServerConnection", ex.toString())
-            return false
         }
 
-        return response.status == HttpStatusCode.OK
+        return response != null && response.status == HttpStatusCode.OK
     }
 
     /**
      * Checks the connection with a specific server url
      */
     suspend fun checkServerConnection(url: String): Boolean {
-        val response = try {
+        val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) {
             userHttpClient.get("$url/")
-        } catch (ex: UnresolvedAddressException) {
-            AppLogger.m("$TAG:CheckServerConnection", ex.toString())
-            return false
-        } catch (ex: SerializationException) {
-            AppLogger.m("$TAG:CheckServerConnection", ex.toString())
-            return false
-        } catch (ex: Exception) {
-            AppLogger.m("$TAG:CheckServerConnection", ex.toString())
-            return false
         }
 
-        return response.status == HttpStatusCode.OK
-    }
-}
-
-private suspend inline fun <reified T> handleHttpResponse(response: HttpResponse): Result<T, NetworkError> {
-    return when (response.status.value) {
-        in 200..299 -> {
-            val response = response.body<T>()
-            AppLogger.m("$TAG:CheckServerConnection", "SUCCESS")
-            Result.Success(response)
-        }
-
-        401 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.UNAUTHORIZED.name)
-            Result.Error(NetworkError.UNAUTHORIZED)
-        }
-
-        409 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.CONFLICT.name)
-            Result.Error(NetworkError.CONFLICT)
-        }
-
-        408 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.REQUEST_TIMEOUT.name)
-            Result.Error(NetworkError.REQUEST_TIMEOUT)
-        }
-
-        413 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.PAYLOAD_TOO_LARGE.name)
-            Result.Error(NetworkError.PAYLOAD_TOO_LARGE)
-        }
-
-        in 500..599 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.SERVER_ERROR.name)
-            Result.Error(NetworkError.SERVER_ERROR)
-        }
-
-        else -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.UNKNOWN.name)
-            Result.Error(NetworkError.UNKNOWN)
-        }
+        return response != null && response.status == HttpStatusCode.OK
     }
 }

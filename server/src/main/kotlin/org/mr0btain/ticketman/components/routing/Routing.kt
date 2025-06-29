@@ -8,6 +8,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.ServerDatabase
 import org.mr0btain.ticketman.components.service.UserService
+import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.inventory.InventoryItem
+import org.mr0btain.ticketman.data.ticket.TicketInfo
 
 fun Application.configureRouting(
     userService: UserService,
@@ -37,15 +40,15 @@ fun Application.configureRouting(
         }
 
         route("/api/data/customer") {
-            customerRoute(serverDatabase.customerDatabase)
+            dataRoute<CustomerData>(serverDatabase.customerDatabase)
         }
 
         route("/api/data/ticket") {
-            ticketRoute(serverDatabase.ticketDatabase)
+            dataRoute<TicketInfo>(serverDatabase.ticketDatabase)
         }
 
         route("/api/data/inventory") {
-            inventoryRoute(serverDatabase.inventoryDatabase)
+            dataRoute<InventoryItem>(serverDatabase.inventoryDatabase)
         }
     }
 }

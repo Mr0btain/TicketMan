@@ -10,11 +10,8 @@ import org.mr0btain.ticketman.components.network.createUserHttpClient
 import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.error.onError
-import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel.Companion.TAG
 
 // TODO: Handle user syncing
 
@@ -25,6 +22,7 @@ class ServerHandler(
     engine: HttpClientEngine,
     private val mainViewModel: MainViewModel
 ) {
+    private val TAG = "ServerHandler"
     private val userHttpClient = mutableStateOf(createUserHttpClient(engine))
     private val databaseHttpClient = mutableStateOf(createDatabaseHttpClient(engine, this))
 

@@ -77,7 +77,8 @@ fun CustomerPanel(
 
                 // Button for adding or deleting a customer
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -100,13 +101,10 @@ fun CustomerPanel(
             Spacer(Modifier.padding(4.dp))
 
             Row(
-                modifier = Modifier
-                    .wrapContentHeight()
-                    .fillMaxWidth()
+                modifier = Modifier.sizeIn(maxHeight = 500.dp)
             ) {
                 CustomerListPane(
-                    modifier = Modifier
-                        .height(500.dp),
+                    modifier = Modifier,
                     customerInfo = sortedCustomerInfo,
                     lazyListState = customerLazyListState,
                     selectedCustomerId = selectedCustomerId,
@@ -123,8 +121,7 @@ fun CustomerPanel(
                 )
 
                 CustomerInfoPane(
-                    modifier = modifier
-                        .height(500.dp),
+                    modifier = modifier,
                     isDarkMode = isDarkMode,
                     selectedCustomerData = customerDataList.singleOrNull() { it.info.identifier == selectedCustomerId }
                         ?: CustomerData(),

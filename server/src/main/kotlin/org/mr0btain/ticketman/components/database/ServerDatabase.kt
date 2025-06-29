@@ -12,7 +12,7 @@ class ServerDatabase(
     appDir: String,
     shouldLog: Boolean = true
 ) {
-    private val databaseHandler = DatabaseHandler("$appDir/server", shouldLog)
+    private val databaseHandler = DatabaseHandler(appDir, shouldLog)
     val tokenDatabase = TokenDatabase(shouldLog)
     val customerDatabase = databaseHandler.customerDatabase
     val ticketDatabase = databaseHandler.ticketDatabase

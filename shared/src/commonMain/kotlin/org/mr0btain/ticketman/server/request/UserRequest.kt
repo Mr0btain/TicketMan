@@ -13,7 +13,7 @@ data class UserRequest(
     val name: PersonName = PersonName(),
     val notes: List<Note> = listOf(),
     val contactInfo: ContactInfo = ContactInfo(),
-    val tickets: List<Int> = listOf(),
+    val tickets: List<String> = listOf(),
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED
 )
 

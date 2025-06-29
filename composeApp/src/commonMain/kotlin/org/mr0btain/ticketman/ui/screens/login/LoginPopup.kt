@@ -29,9 +29,18 @@ fun LoginPopup(
     viewModel: MainViewModel,
     coroutineScope: CoroutineScope
 ) {
-    var state by remember { mutableStateOf(LoginDialogState.Address) }
+    var state by remember { mutableStateOf(LoginDialogState.Login) }
     var labelState by remember { mutableStateOf("Server Address") }
     var error by remember { mutableStateOf(false) }
+    val effect = remember { 0 }
+
+    // We only ever want this to run once
+    // Check connection to the server using stored value, if its good no need to reenter it
+    LaunchedEffect(effect) {
+        if (viewModel.checkServerConnection()) {
+            state = LoginDialogState.Login
+        }
+    }
 
     LoginDialog(
         modifier = modifier,
@@ -41,6 +50,7 @@ fun LoginPopup(
         onLoginConfirm = { user, pass ->
             coroutineScope.launch {
                 // Set state to loading
+                labelState = "Loading"
                 state = LoginDialogState.Loading
 
                 // Try to log in to server
@@ -51,6 +61,7 @@ fun LoginPopup(
                     onDismiss()
                 } else {
                     error = true
+                    labelState = "Login"
                     state = LoginDialogState.Login
                 }
             }
@@ -58,6 +69,7 @@ fun LoginPopup(
         onAddressConfirm = { address ->
             coroutineScope.launch {
                 // Trigger loading screen
+                labelState = "Loading"
                 state = LoginDialogState.Loading
 
                 // Try to hit server
@@ -66,9 +78,11 @@ fun LoginPopup(
                 // Handle result
                 if (result) {
                     error = false
+                    labelState = "Login"
                     state = LoginDialogState.Login
                 } else {
                     error = true
+                    labelState = "Server Address"
                     state = LoginDialogState.Address
                 }
             }

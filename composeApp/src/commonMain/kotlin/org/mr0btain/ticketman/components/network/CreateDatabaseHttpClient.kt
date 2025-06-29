@@ -1,3 +1,5 @@
+@file:Suppress("LocalVariableName")
+
 package org.mr0btain.ticketman.components.network
 
 import io.ktor.client.*
@@ -44,7 +46,7 @@ fun createDatabaseHttpClient(
                     val authResponse = serverHandler.refreshTokens()
 
                     if (authResponse != null) {
-                        AppLogger.i("$TAG:RefreshTokens", "SUCCESS")
+                        AppLogger.m("$TAG:RefreshTokens", "SUCCESS")
                         BearerTokens(authResponse.accessToken, authResponse.refreshToken)
                     } else {
                         AppLogger.i("$TAG:RefreshTokens", "FAIL")

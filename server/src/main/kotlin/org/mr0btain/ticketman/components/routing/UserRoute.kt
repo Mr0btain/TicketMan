@@ -9,9 +9,9 @@ import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.UserDatabase
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.hashPassword
+import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
 import org.mr0btain.ticketman.server.response.ServerResponse
@@ -24,7 +24,7 @@ import java.util.UUID
  */
 
 fun Route.userRoute(
-    database: UserDatabase
+    database: LocalDatabaseClient<User>
 ) {
     // TODO: Not sure if this is the right way to go about this
     get("/isnewdatabase") {
@@ -51,10 +51,12 @@ fun Route.userRoute(
             val userRequest = call.receive<UserRequest>()
             val identifier = database.getNextId()
 
+
             if (identifier != null) {
                 val user = userRequest.toModel(identifier)
+                val userExists = database.getAll()?.map { it.username }?.contains(user.username)
 
-                if (!database.usernameAlreadyExists(user.username)) {
+                if (userExists != null && !userExists) {
                     if (database.add(user)) call.respond(HttpStatusCode.Created, user.toResponse())
                     else call.respond(HttpStatusCode.BadRequest)
                 } else call.respond(HttpStatusCode.Conflict)
@@ -105,7 +107,7 @@ fun Route.userRoute(
     authenticate("admin") {
         delete("/delete/{userIdentifier}") {
             try {
-                val identifier = UUID.fromString(call.parameters["userIdentifier"])
+                val identifier = call.parameters["userIdentifier"]
 
                 if (identifier == null) {
                     call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
@@ -122,7 +124,7 @@ fun Route.userRoute(
     }
 }
 
-private fun UserRequest.toModel(id: UUID): User =
+private fun UserRequest.toModel(id: String): User =
     User(
         identifier = id,
         username = username,

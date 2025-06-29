@@ -7,7 +7,8 @@ import io.ktor.server.application.Application
 import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.UserDatabase
+import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.database.LocalDatabaseClient
 import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -18,7 +19,7 @@ import kotlin.time.toJavaInstant
 
 class JwtService(
     private val application: Application,
-    private val userDatabase: UserDatabase
+    private val userDatabase: LocalDatabaseClient<User>
 ) {
     private val secret = getConfigProperty("jwt.secret")
     private val issuer = getConfigProperty("jwt.issuer")
@@ -41,12 +42,12 @@ class JwtService(
      */
 
     @OptIn(ExperimentalTime::class)
-    fun createJwtToken(identifier: UUID, expiresIn: Duration): String =
+    fun createJwtToken(identifier: String, expiresIn: Duration): String =
         JWT
             .create()
             .withAudience(audience)
             .withIssuer(issuer)
-            .withClaim("identifier", identifier.toString())
+            .withClaim("identifier", identifier)
             .withExpiresAt(Clock.System.now().plus(expiresIn).toJavaInstant())
             .sign(Algorithm.HMAC256(secret))
 
@@ -54,23 +55,30 @@ class JwtService(
      * Generates an access token
      */
 
-    fun createAccessToken(id: UUID): String =
-        createJwtToken(id, 1.hours)
+    fun createAccessToken(identifier: String): String =
+        createJwtToken(identifier, 1.hours)
 
     /**
      * Generates a refresh token
      */
 
-    fun createRefreshToken(id: UUID): String =
-        createJwtToken(id,  365.days)
+    fun createRefreshToken(identifier: String): String =
+        createJwtToken(identifier,  365.days)
 
     /**
      * Verify credentials along with access level to verify if its legit and allowed
      */
 
     fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
-        val id = UUID.fromString(extractId(credential))
-        val foundUser = id?.let(userDatabase::getById)
+        println("Credential ID: ${credential.payload.id}")
+        println("Expires at: ${credential.payload.expiresAt}")
+        println("Credential jwtid ${credential.jwtId}")
+        println("Audience: ${credential.audience}")
+        val id = extractId(credential)
+        val foundUser = id?.let { userDatabase.getById(it) }
+
+        println(id)
+        println("Found: $foundUser")
 
         return foundUser?.let {
             if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {

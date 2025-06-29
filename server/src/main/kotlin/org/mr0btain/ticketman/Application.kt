@@ -9,11 +9,13 @@ import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 
 // TODO: Persist user data
 // TODO: Add auth to routes for database actions
 // TODO: Setup way for admin to change access levels for things individually
 // TODO: Maybe add ability for different users to have different instances of the databases and add admin settings to force all sync or allow individual
+// TODO: Add logging into this server stuff
 
 fun main(args: Array<String>) {
     EngineMain.main(args)

@@ -7,13 +7,14 @@ import io.ktor.client.statement.*
 import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.components.logging.AppLogger
-import org.mr0btain.ticketman.components.network.ServerDatabaseClient.Companion.TAG
+import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.error.SimpleError
 
 /**
  * Main database client for interacting with the data clients
@@ -22,23 +23,29 @@ class ServerDatabaseClient(
     private val databaseHttpClient: HttpClient
 ) {
     companion object {
-        const val TAG = "ServerDatabaseClient"
+        private const val TAG = "ServerDatabaseClient"
+        private const val CUSTOMER_CLIENT_TAG = "$TAG:CustomerClient"
+        private const val TICKET_CLIENT_TAG = "$TAG:TicketClient"
+        private const val INVENTORY_CLIENT_TAG = "$TAG:InventoryClient"
+        private const val CHANGE_SERVER_URL_TAG = "$TAG:ChangeServerUrl"
     }
 
-    private var serverUrl = ""
+    private var serverUrl = "http://localhost:8080"
 
     // Clients used to interact with server. Only real difference is the types and server urls
     // Could possibly combine this into one client somehow. just supplying the url for each call?
     private val customerClient =
-        DatabaseClient<CustomerData>("CustomerClient", databaseHttpClient, "$serverUrl/api/data/customer")
+        DatabaseClient<CustomerData>(CUSTOMER_CLIENT_TAG, databaseHttpClient, "$serverUrl/api/data/customer")
     private val ticketClient =
-        DatabaseClient<TicketInfo>("TicketClient", databaseHttpClient, "$serverUrl/api/data/ticket")
+        DatabaseClient<TicketInfo>(TICKET_CLIENT_TAG, databaseHttpClient, "$serverUrl/api/data/ticket")
     private val inventoryClient =
-        DatabaseClient<InventoryItem>("InventoryClient", databaseHttpClient, "$serverUrl/api/data/inventory")
+        DatabaseClient<InventoryItem>(INVENTORY_CLIENT_TAG, databaseHttpClient, "$serverUrl/api/data/inventory")
 
     // For updating the server url
     fun changeServerUrl(url: String) {
-        serverUrl = url
+        println("Server Change: $url")
+        AppLogger.m(CHANGE_SERVER_URL_TAG, SimpleError.SUCCESS)
+        //serverUrl = url
     }
 
     suspend fun syncCustomers(data: List<CustomerData>): List<CustomerData> =
@@ -48,7 +55,7 @@ class ServerDatabaseClient(
         customerClient.batchSend(customers)
 
     suspend fun getCustomers(): List<CustomerData> =
-        customerClient.getAll()
+        customerClient.getAll<CustomerData>()
 
     // TODO: Maybe add try catch to this when casting? it shouldn't ever not be the type but who knows
     suspend fun getCustomer(identifier: Int): CustomerData? =
@@ -64,7 +71,7 @@ class ServerDatabaseClient(
         ticketClient.batchSend(tickets)
 
     suspend fun getTickets() =
-        ticketClient.getAll()
+        ticketClient.getAll<TicketInfo>()
 
     suspend fun getTicket(identifier: Int) =
         ticketClient.get<TicketInfo>(identifier)
@@ -72,6 +79,7 @@ class ServerDatabaseClient(
     suspend fun removeTicket(identifier: String) =
         ticketClient.remove(identifier)
 
+    // TODO: Gonna be getting rid of this
     suspend fun getUsers(): Result<List<User>, NetworkError> {
         val response = try {
             databaseHttpClient.get(urlString = "$serverUrl/api/data/user/all")
@@ -86,7 +94,7 @@ class ServerDatabaseClient(
             return Result.Error(NetworkError.UNKNOWN)
         }
 
-        return handleHttpResponse<List<User>>(response)
+        return handleHttpResponse<List<User>>("$TAG:GetUsers", response)
     }
 
     suspend fun syncInventory(inventory: List<InventoryItem>) =
@@ -96,51 +104,11 @@ class ServerDatabaseClient(
         inventoryClient.batchSend(inventory)
 
     suspend fun getInventory() =
-        inventoryClient.getAll()
+        inventoryClient.getAll<InventoryItem>()
 
     suspend fun getInventoryItem(identifier: Int) =
         inventoryClient.get<InventoryItem>(identifier)
 
     suspend fun removeInventoryItem(identifier: String) =
         inventoryClient.remove(identifier)
-}
-
-private suspend inline fun <reified T> handleHttpResponse(response: HttpResponse): Result<T, NetworkError> {
-    return when (response.status.value) {
-        in 200..299 -> {
-            val response = response.body<T>()
-            AppLogger.m("$TAG:CheckServerConnection", "SUCCESS")
-            Result.Success(response)
-        }
-
-        401 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.UNAUTHORIZED.name)
-            Result.Error(NetworkError.UNAUTHORIZED)
-        }
-
-        409 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.CONFLICT.name)
-            Result.Error(NetworkError.CONFLICT)
-        }
-
-        408 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.REQUEST_TIMEOUT.name)
-            Result.Error(NetworkError.REQUEST_TIMEOUT)
-        }
-
-        413 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.PAYLOAD_TOO_LARGE.name)
-            Result.Error(NetworkError.PAYLOAD_TOO_LARGE)
-        }
-
-        in 500..599 -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.SERVER_ERROR.name)
-            Result.Error(NetworkError.SERVER_ERROR)
-        }
-
-        else -> {
-            AppLogger.m("$TAG:CheckServerConnection", NetworkError.UNKNOWN.name)
-            Result.Error(NetworkError.UNKNOWN)
-        }
-    }
 }

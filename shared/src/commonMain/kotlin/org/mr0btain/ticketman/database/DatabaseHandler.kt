@@ -31,8 +31,8 @@ class DatabaseHandler(
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")
     //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
 
-    val customerDatabase = LocalDatabase<CustomerData>(CustomerDataTable, shouldLog)
-    val ticketDatabase = LocalDatabase<TicketInfo>(TicketDataTable, shouldLog)
-    val inventoryDatabase = LocalDatabase<InventoryItem>(InventoryTable, shouldLog)
-    val userDatabase = LocalDatabase<User>(UserTable, shouldLog)
+    val customerDatabase = LocalDatabaseClient<CustomerData>(CustomerDataTable, shouldLog)
+    val ticketDatabase = LocalDatabaseClient<TicketInfo>(TicketDataTable, shouldLog)
+    val inventoryDatabase = LocalDatabaseClient<InventoryItem>(InventoryTable, shouldLog)
+    val userDatabase = LocalDatabaseClient<User>(UserTable, shouldLog)
 }

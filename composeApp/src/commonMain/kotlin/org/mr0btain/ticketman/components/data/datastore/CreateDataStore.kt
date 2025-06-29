@@ -21,7 +21,7 @@ private val lock = SynchronizedObject()
 // App directory and directory for file to save items in
 private val appDir = FileKit.filesDir.path
 
-val dataStoreFileName = "$appDir/data/config/app.preferences_pb"
+val dataStoreFileName = "$appDir/data/client/config/app.preferences_pb"
 
 @OptIn(InternalCoroutinesApi::class)
 fun getDataStore(producePath: () -> String): DataStore<Preferences> =

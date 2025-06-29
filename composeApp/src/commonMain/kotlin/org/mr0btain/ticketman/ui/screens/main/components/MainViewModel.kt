@@ -59,7 +59,7 @@ class MainViewModel(
     private val serverHandler = ServerHandler(getHttpEngine(), this)
 
     companion object {
-        const val TAG = "MainViewModel"
+        private const val TAG = "MainViewModel"
 
         private val AUTO_SYNC_DATABASE = booleanPreferencesKey("autoSyncDatabase")
         private val DARK_MODE = booleanPreferencesKey("appInDarkMode")
@@ -793,13 +793,13 @@ class MainViewModel(
                     return authResponse
                 }
 
-            // If we make it this far then we know that wasn't successful so try getting both
+            // If we make it this far then we know that wasn't successful
             if (serverHandler.userClient.login()) {
-                return AuthResponse(UUID.randomUUID(), getStoredAccessToken(), getStoredRefreshToken())
+                return AuthResponse(UUID.randomUUID().toString(), getStoredAccessToken(), getStoredRefreshToken())
             }
         } else {
             if (serverHandler.userClient.login()) {
-                return AuthResponse(UUID.randomUUID(), getStoredAccessToken(), getStoredRefreshToken())
+                return AuthResponse(UUID.randomUUID().toString(), getStoredAccessToken(), getStoredRefreshToken())
             }
         }
 
@@ -834,7 +834,16 @@ class MainViewModel(
 
     init {
         viewModelScope.launch {
-            if (getStoredUsername().isEmpty() || getStoredPassword().isEmpty()) {
+            val username = getStoredUsername()
+            val password = getStoredPassword()
+
+            if (username.isEmpty() || password.isEmpty()) {
+                _showLogin.value = true
+            } else if (!serverHandler.userClient.checkCredentials(username, password)) {
+                // Clear stored credentials and popup login
+                updateStoredUsername("")
+                updateStoredPassword("")
+
                 _showLogin.value = true
             }
         }

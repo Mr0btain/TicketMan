@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui.screens.main.components.customer
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.customer.CustomerInfo
+import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
@@ -81,30 +83,56 @@ fun CustomerListPane(
 
             HorizontalDivider(modifier = Modifier.width(680.dp))
 
-            PlatformLazyColumnScrollable(
-                modifier = Modifier
-                    .width(700.dp),
-                state = lazyListState,
-                scope = scope,
-                scrollBarOnRight = scrollBarsOnRight,
-                isVisible = customerInfo.isNotEmpty()
-            ) {
-                itemsIndexed(customerInfo) { index, info ->
-                    CustomerTableItem(
-                        customerInfo = info,
-                        selected = info.identifier == selectedCustomerId,
-                        color = if (!isDarkMode) {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                        } else {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                        },
-                        nameWidth = nameColumnWidth,
-                        addressWidth = addressColumnWidth,
-                        contactWidth = contactColumnWidth,
-                        onClick = onClick
-                    )
+            if (getPlatform().name.contains("Java")) {
+                PlatformLazyColumnScrollable(
+                    modifier = Modifier
+                        .width(700.dp),
+                    state = lazyListState,
+                    scope = scope,
+                    scrollBarOnRight = scrollBarsOnRight,
+                    isVisible = customerInfo.isNotEmpty()
+                ) {
+                    itemsIndexed(customerInfo) { index, info ->
+                        CustomerTableItem(
+                            customerInfo = info,
+                            selected = info.identifier == selectedCustomerId,
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            nameWidth = nameColumnWidth,
+                            addressWidth = addressColumnWidth,
+                            contactWidth = contactColumnWidth,
+                            onClick = onClick
+                        )
 
-                    Spacer(Modifier.padding(2.dp))
+                        Spacer(Modifier.padding(2.dp))
+                    }
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .width(700.dp),
+                    state = lazyListState
+                ) {
+                    itemsIndexed(customerInfo) { index, info ->
+                        CustomerTableItem(
+                            customerInfo = info,
+                            selected = info.identifier == selectedCustomerId,
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            nameWidth = nameColumnWidth,
+                            addressWidth = addressColumnWidth,
+                            contactWidth = contactColumnWidth,
+                            onClick = onClick
+                        )
+
+                        Spacer(Modifier.padding(2.dp))
+                    }
                 }
             }
         }
