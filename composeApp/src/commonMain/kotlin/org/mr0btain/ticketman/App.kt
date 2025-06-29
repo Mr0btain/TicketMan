@@ -8,10 +8,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
+import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
@@ -29,7 +31,6 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Make option to import database data from file?
 // TODO: Add remote database stuff
 // TODO: Administration screen
-// TODO: Inventory screen
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -56,10 +57,13 @@ fun App() {
         //mainViewModel.generateMockDbData()
 
         // Pull data from local database
-        mainViewModel.updateDataFromDb()
+        mainViewModel.pullDataFromLocalDatabase()
 
         // Current employee info
         val currentEmployee = mainViewModel.user.collectAsState()
+
+        // Should we show login popup or not
+        val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
         val navDestinations = listOf(
             NavigationItem(
@@ -92,6 +96,15 @@ fun App() {
             darkTheme = mainViewModel.darkMode.collectAsState(false).value
         ) {
             println("Platform: ${mainViewModel.platform}")
+
+            if (shouldShowLogin.value) {
+                LoginPopup(
+                    modifier = Modifier.padding(24.dp),
+                    viewModel = mainViewModel,
+                    onDismiss = { mainViewModel.updateShowLogin(!shouldShowLogin.value) },
+                    coroutineScope = mainScope
+                )
+            }
 
             // Check if were on desktop
             if (mainViewModel.platform.contains("Java")) {

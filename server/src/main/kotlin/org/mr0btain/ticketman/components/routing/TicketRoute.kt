@@ -18,9 +18,7 @@ fun Route.ticketRoute(database: TicketDatabase) {
     // Get all tickets
     authenticate("restricted") {
         get("/all") {
-            database.getAll()?.let { data ->
-                call.respond(data)
-            } ?: call.respond(HttpStatusCode.NotFound)
+            database.getAll()?.let { data -> call.respond(data) } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
@@ -29,6 +27,7 @@ fun Route.ticketRoute(database: TicketDatabase) {
         post("/add") {
             try {
                 val ticket = call.receive<TicketInfo>()
+
                 database.add(ticket)
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } catch (ex: Exception) {
@@ -43,6 +42,7 @@ fun Route.ticketRoute(database: TicketDatabase) {
         post("/update") {
             try {
                 val ticket = call.receive<TicketInfo>()
+
                 database.update(ticket)
                 call.respond(ServerResponse(ServerResult.SUCCESS))
             } catch (ex: Exception) {
@@ -58,9 +58,8 @@ fun Route.ticketRoute(database: TicketDatabase) {
             try {
                 val tickets = call.receive<List<TicketInfo>>()
 
-                if (database.addAll(tickets)) {
-                    call.respond(ServerResponse(ServerResult.SUCCESS))
-                } else call.respond(ServerResponse(ServerResult.FAIL))
+                if (database.addAll(tickets)) call.respond(ServerResponse(ServerResult.SUCCESS))
+                else call.respond(ServerResponse(ServerResult.FAIL))
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
@@ -78,11 +77,8 @@ fun Route.ticketRoute(database: TicketDatabase) {
                 return@delete
             }
 
-            if (database.remove(identifier)) {
-                call.respond(ServerResponse(ServerResult.SUCCESS))
-            } else {
-                call.respond(ServerResponse(ServerResult.FAIL))
-            }
+            if (database.remove(identifier)) call.respond(ServerResponse(ServerResult.SUCCESS))
+            else call.respond(ServerResponse(ServerResult.FAIL))
         }
     }
 }

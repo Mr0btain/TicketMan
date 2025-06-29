@@ -1,0 +1,139 @@
+package org.mr0btain.ticketman.ui.screens.login
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
+import org.mr0btain.ticketman.ui.screens.login.components.LoginDialogState
+import org.mr0btain.ticketman.ui.screens.login.components.LoginField
+import org.mr0btain.ticketman.ui.screens.login.components.ServerAddressField
+import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+
+
+@Composable
+fun LoginPopup(
+    modifier: Modifier,
+    onDismiss: () -> Unit,
+    viewModel: MainViewModel,
+    coroutineScope: CoroutineScope
+) {
+    var state by remember { mutableStateOf(LoginDialogState.Address) }
+    var labelState by remember { mutableStateOf("Server Address") }
+    var error by remember { mutableStateOf(false) }
+
+    LoginDialog(
+        modifier = modifier,
+        state = state,
+        labelState = labelState,
+        error = error,
+        onLoginConfirm = { user, pass ->
+            coroutineScope.launch {
+                // Set state to loading
+                state = LoginDialogState.Loading
+
+                // Try to log in to server
+                val result = viewModel.loginToServer(user, pass)
+
+                // If we've successfully logged in then call dismiss and move on
+                if (result) {
+                    onDismiss()
+                } else {
+                    error = true
+                    state = LoginDialogState.Login
+                }
+            }
+        },
+        onAddressConfirm = { address ->
+            coroutineScope.launch {
+                // Trigger loading screen
+                state = LoginDialogState.Loading
+
+                // Try to hit server
+                val result = viewModel.checkNewServerConnection(address)
+
+                // Handle result
+                if (result) {
+                    error = false
+                    state = LoginDialogState.Login
+                } else {
+                    error = true
+                    state = LoginDialogState.Address
+                }
+            }
+        },
+        onDismiss = {}
+    )
+}
+
+@Composable
+private fun LoginDialog(
+    modifier: Modifier = Modifier,
+    state: LoginDialogState,
+    labelState: String,
+    error: Boolean,
+    onAddressConfirm: (String) -> Unit,
+    onLoginConfirm: (user: String, pass: String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val padding = 48.dp
+
+    Dialog(
+        onDismissRequest = onDismiss
+    ) {
+        Surface(
+            modifier = modifier,
+            color = MaterialTheme.colorScheme.secondaryContainer,
+            shape = RoundedCornerShape(10.dp),
+            shadowElevation = 10.dp
+        ) {
+            AnimatedContent(
+                targetState = state,
+                transitionSpec = {
+                    fadeIn(
+                        animationSpec = tween(3000)
+                    ) togetherWith fadeOut(animationSpec = tween(3000))
+                },
+                label = labelState
+            ) { targetState ->
+                when (targetState) {
+                    LoginDialogState.Address -> {
+                        ServerAddressField(
+                            modifier = Modifier.padding(padding),
+                            onContinue = { address -> onAddressConfirm(address) },
+                            error = error
+                        )
+                    }
+
+                    LoginDialogState.Login -> {
+                        LoginField(
+                            modifier = Modifier.padding(padding),
+                            error = error,
+                            onConfirm = { user, pass -> onLoginConfirm(user, pass) },
+                            onDismiss = {
+                                // Do nothing as we need to log in
+                            }
+                        )
+                    }
+
+                    LoginDialogState.Loading -> {
+                        CircularLoading(
+                            Modifier.padding(padding)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}

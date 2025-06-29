@@ -3,15 +3,14 @@ package org.mr0btain.ticketman.components.database
 /**
  * Configures and returns a ServerDatabase
  */
+// TODO: Get this to work with OS
 fun configureDatabase(
-    appDir: String,
-    shouldLog: Boolean = true
 ): ServerDatabase {
     // Initialize database
-    val database = ServerDatabase(appDir, shouldLog)
+    val database = ServerDatabase("/home/nick/.local/share/TicketMan/data/server", true)
 
     // Setup tables
-    database.createTables()
+    database.initDatabase()
 
     return database
 }

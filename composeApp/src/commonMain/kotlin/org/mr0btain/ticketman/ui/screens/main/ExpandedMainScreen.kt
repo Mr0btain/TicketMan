@@ -391,14 +391,6 @@ fun ExpandedMainScreen(
                             )
                         }
                     }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    Button(
-                        onClick = { viewModel.getDataFromServer() }
-                    ) {
-                        Text("Get Server Data")
-                    }
                 }
 
                 HorizontalDivider(

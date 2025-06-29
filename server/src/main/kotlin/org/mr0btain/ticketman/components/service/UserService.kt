@@ -1,42 +1,36 @@
 package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.interfaces.DecodedJWT
-import org.mr0btain.ticketman.components.repository.RefreshTokenRepository
-import org.mr0btain.ticketman.components.repository.UserRepository
-import org.mr0btain.ticketman.server.User
+import org.mr0btain.ticketman.components.database.RefreshToken
+import org.mr0btain.ticketman.components.database.TokenDatabase
+import org.mr0btain.ticketman.database.UserDatabase
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import java.util.UUID
 
 class UserService(
-    private val userRepository: UserRepository,
+    private val database: UserDatabase,
     private val jwtService: JwtService,
-    private val refreshTokenRepository: RefreshTokenRepository
+    private val tokenDatabase: TokenDatabase
 ) {
-    fun findAll(): List<User> =
-        userRepository.findAll()
-
-    fun findById(id: String): User? =
-        userRepository.findById(UUID.fromString(id))
-
-    fun save(user: User): User? {
-        val foundUser = userRepository.findById(user.identifier)
-
-        return if (foundUser == null) {
-            userRepository.save(user)
-            user
-        } else null
-    }
     fun authenticate(loginRequest: LoginRequest): AuthResponse? {
-        val id = loginRequest.identifier
-        val foundUser = userRepository.findById(id)
+        val foundUser = database.getByUsername(loginRequest.username)
 
+        // Check if user was found and process request
         return if (foundUser != null && foundUser.password == loginRequest.password) {
-            val accessToken = jwtService.createAccessToken(id)
-            val refreshToken = jwtService.createRefreshToken(id)
+            val refreshToken = jwtService.createRefreshToken(foundUser.identifier)
+            val accessToken = jwtService.createAccessToken(foundUser.identifier)
 
-            refreshTokenRepository.save(refreshToken, id)
+            // Check if we should update or add new token
+            if (tokenDatabase.findById(foundUser.identifier) != null) {
+                if (!tokenDatabase.update(RefreshToken(foundUser.identifier, refreshToken))) {
+                    return null
+                }
+            } else {
+                if (!tokenDatabase.add(RefreshToken(foundUser.identifier, refreshToken))) return null
+            }
 
+            // Respond with tokens
             AuthResponse(
                 id = foundUser.identifier,
                 accessToken = accessToken,
@@ -47,28 +41,31 @@ class UserService(
 
     fun refreshToken(token: String): String? {
         val decodedRefreshToken = verifyRefreshToken(token)
-        val persistedId = refreshTokenRepository.findIdByToken(token)
+        val refreshToken = tokenDatabase.findByToken(token)
 
-        return if (decodedRefreshToken != null && persistedId != null) {
-            val foundUser = userRepository.findById(persistedId)
+        return if (decodedRefreshToken != null && refreshToken != null) {
+            val foundUser = database.getById(refreshToken.identifier)
             val idFromRefreshToken = UUID.fromString(decodedRefreshToken.getClaim("identifier").asString())
 
-            if (foundUser != null && idFromRefreshToken == foundUser.identifier) {
-                jwtService.createAccessToken(persistedId)
-            } else null
+            if (foundUser != null && idFromRefreshToken == foundUser.identifier)
+                jwtService.createAccessToken(refreshToken.identifier)
+            else null
         } else null
     }
 
     private fun verifyRefreshToken(token: String): DecodedJWT? {
         val decodedJWT = decodeJWT(token)
+        val foundToken = tokenDatabase.findByToken(token)
 
-        return decodedJWT?.let {
-            val audienceMatches = jwtService.audienceMatches(it.audience.first())
+        // Check if token exists in database
+        return if (foundToken != null) {
+            // Not sure if we even need to verify audience since we've already confirmed it exists in database
+            decodedJWT?.let {
+                val audienceMatches = jwtService.audienceMatches(it.audience.first())
 
-            if (audienceMatches) {
-                decodedJWT
-            } else null
-        }
+                if (audienceMatches) decodedJWT else null
+            }
+        } else null
     }
 
     private fun decodeJWT(token: String) = try {

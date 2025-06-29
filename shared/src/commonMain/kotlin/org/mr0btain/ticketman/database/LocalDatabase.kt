@@ -13,7 +13,7 @@ class LocalDatabase(
     // TODO: Setup data encryption for sensitive info
 
     // Connect to the local database
-    private val db = Database.connect("jdbc:h2:$appDir/data/testData;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    private val db = Database.connect("jdbc:h2:$appDir/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
 
     //Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")

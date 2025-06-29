@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.logging
 
+import org.mr0btain.ticketman.error.SimpleError
+
 // TODO: Setup method to store these
 /**
  * Logger to log any messages or errors
@@ -11,6 +13,8 @@ expect object AppLogger {
     fun d(tag: String, message: String)
     /** Info */
     fun i(tag: String, message: String)
+    fun i(tag: String, message: SimpleError)
     /** General message */
     fun m(tag: String, message: String)
+    fun m(tag: String, message: SimpleError)
 }

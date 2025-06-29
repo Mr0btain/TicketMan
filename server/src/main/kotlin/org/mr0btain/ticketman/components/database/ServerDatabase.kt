@@ -12,7 +12,7 @@ class ServerDatabase(
     appDir: String,
     shouldLog: Boolean = true
 ) {
-    private val localDatabase = LocalDatabase(appDir, shouldLog)
+    private val localDatabase = LocalDatabase("$appDir/server", shouldLog)
     val tokenDatabase = TokenDatabase(shouldLog)
     val customerDatabase = localDatabase.customerDatabase
     val ticketDatabase = localDatabase.ticketDatabase
@@ -22,9 +22,17 @@ class ServerDatabase(
     /**
      * Creates tables if they don't exist
      */
-    fun createTables() {
+    fun initDatabase() {
         transaction {
-            SchemaUtils.create(CustomerDataTable, TicketDataTable, InventoryTable, UserTable, TokenTable)
+            val databaseList = SchemaUtils.listDatabases()
+
+            if (databaseList.isNotEmpty()) {
+                if (SchemaUtils.listTables().size != 4) {
+                    SchemaUtils.create(CustomerDataTable, TicketDataTable, InventoryTable, UserTable, TokenTable)
+                }
+            } else {
+                SchemaUtils.create(CustomerDataTable, TicketDataTable, InventoryTable, UserTable, TokenTable)
+            }
         }
     }
 }

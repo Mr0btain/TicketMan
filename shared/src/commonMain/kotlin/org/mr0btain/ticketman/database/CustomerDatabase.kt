@@ -26,6 +26,7 @@ class CustomerDatabase(
 
                 result = CustomerDataTable.selectAll().map { item ->
                     CustomerData(
+                        identifier = item[CustomerDataTable.identifier],
                         info = CustomerInfo(
                             identifier = item[CustomerDataTable.identifier],
                             name = PersonName(

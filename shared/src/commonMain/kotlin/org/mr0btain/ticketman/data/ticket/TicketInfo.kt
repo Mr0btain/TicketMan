@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.ticket
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.getTime
@@ -10,7 +11,7 @@ import kotlin.random.Random
 
 @Serializable
 data class TicketInfo(
-    val identifier: Int = Int.MAX_VALUE,
+    override val identifier: Int = Int.MAX_VALUE,
     val customerId: Int = Int.MAX_VALUE,
     val assignedUser: String = "",
     val device: Device = Device("", ""),
@@ -19,7 +20,7 @@ data class TicketInfo(
     val updates: List<Note> = listOf(),
     val invoice: Invoice = Invoice(),
     val time: Long = Long.MAX_VALUE
-)
+): MainDataItem
 
 fun randomTicketStatus(): TicketStatus {
     val values = TicketStatusType.entries.toTypedArray()

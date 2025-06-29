@@ -18,7 +18,6 @@ import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
-import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 
 @Composable
 fun NavigationHost(
@@ -60,7 +59,12 @@ fun NavigationHost(
                 modifier = modifier.fillMaxSize()
             ) {
                 LoginScreen(
-                    onConfirm = { user, pass -> true },
+                    onConfirm = { user, pass ->
+                        mainViewModel.updateStoredUsername(user)
+                        mainViewModel.updateStoredPassword(pass)
+
+                        true
+                    },
                     onDismiss = {},
                     isDarkMode = darkMode.value,
                     snackBarState = snackBarState,

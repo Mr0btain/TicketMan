@@ -1,11 +1,19 @@
 package org.mr0btain.ticketman.server.request
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.data.customer.ContactInfo
+import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PersonName
 
 @Serializable
 data class UserRequest(
     val username: String,
     val password: String,
-    val accessLevel: AccessLevel
+    val name: PersonName = PersonName(),
+    val notes: List<Note> = listOf(),
+    val contactInfo: ContactInfo = ContactInfo(),
+    val tickets: List<Int> = listOf(),
+    val accessLevel: AccessLevel = AccessLevel.RESTRICTED
 )
+

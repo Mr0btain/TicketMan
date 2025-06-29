@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.login
+package org.mr0btain.ticketman.ui.screens.login.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border

@@ -1,8 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.material3.SnackbarHostState
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
@@ -22,26 +20,29 @@ import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.customer.CustomerData
 import org.mr0btain.ticketman.data.customer.CustomerInfo
-import org.mr0btain.ticketman.data.employee.AccessLevel
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.InventoryItem
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
+import org.mr0btain.ticketman.components.data.datastore.createDataStore
 import org.mr0btain.ticketman.components.database.ClientDatabase
-import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.logging.AppLogger
-import org.mr0btain.ticketman.components.network.ServerDatabaseClient
+import org.mr0btain.ticketman.components.network.getHttpEngine
+import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketInfo
 import org.mr0btain.ticketman.generateMockData
 import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.onError
 import org.mr0btain.ticketman.error.onSuccess
-import org.mr0btain.ticketman.server.User
+import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.server.response.RefreshTokenResponse
+import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.ServerHandler
 import java.util.UUID
 
 // TODO: Setup error handling in here
@@ -53,18 +54,25 @@ import java.util.UUID
 
 class MainViewModel(
     private val fileManager: FileManager,
-    private val dataStore: DataStore<Preferences>,
-    private val serverDatabaseClient: ServerDatabaseClient,
     private val clientDatabase: ClientDatabase,
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
-    private companion object {
+    private val dataStore = createDataStore()
+
+    private val serverHandler = ServerHandler(getHttpEngine(), this)
+
+    companion object {
         const val TAG = "MainViewModel"
 
-        val DARK_MODE = booleanPreferencesKey("appInDarkMode")
-        val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
-        val SCROLL_BARS_ON_BOTTOM = booleanPreferencesKey("scrollBarsOnBottom")
-        val SCROLL_BARS_ON_RIGHT = booleanPreferencesKey("scrollBarsOnRight")
+        private val AUTO_SYNC_DATABASE = booleanPreferencesKey("autoSyncDatabase")
+        private val DARK_MODE = booleanPreferencesKey("appInDarkMode")
+        private val SERVER_ADDRESS = stringPreferencesKey("serverAddress")
+        private val SCROLL_BARS_ON_BOTTOM = booleanPreferencesKey("scrollBarsOnBottom")
+        private val SCROLL_BARS_ON_RIGHT = booleanPreferencesKey("scrollBarsOnRight")
+        private val USER_NAME = stringPreferencesKey("username")
+        private val PASSWORD = stringPreferencesKey("password")
+        private val ACCESS_TOKEN = stringPreferencesKey("accessToken")
+        private val REFRESH_TOKEN = stringPreferencesKey("refreshToken")
     }
 
     // Platform the app is running on
@@ -94,19 +102,33 @@ class MainViewModel(
     private val _scrollBarsOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val scrollBarsOnRight = _scrollBarsOnRight.asStateFlow()
 
+    private val _autoSyncDatabase: MutableStateFlow<Boolean> = MutableStateFlow(true)
+    val autoSyncDatabase = _autoSyncDatabase.asStateFlow()
+
     // Pulling it all at once this way saves us from a real hard hitch in the ui when we change these
     fun getSettingsFromPreferences() {
         viewModelScope.launch {
             _darkMode.value = dataStore.data.map { preferences -> preferences[DARK_MODE] ?: false }.first()
 
-            val server = dataStore.data.map { preferences -> preferences[SERVER_ADDRESS] ?: "" }.first()
-            _serverAddress.value = server
-            serverDatabaseClient.changeServerUrl(server)
+            val url = dataStore.data.map { preferences -> preferences[SERVER_ADDRESS] ?: "" }.first()
+            _serverAddress.value = url
+            serverHandler.updateServerUrl(url)
 
             _scrollBarsOnBottom.value =
                 dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_BOTTOM] ?: true }.first()
             _scrollBarsOnRight.value =
                 dataStore.data.map { preferences -> preferences[SCROLL_BARS_ON_RIGHT] ?: true }.first()
+        }
+    }
+
+    fun toggleAutoSync() {
+        // Update the value
+        val value = !_autoSyncDatabase.value
+
+        _autoSyncDatabase.value = value
+
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[AUTO_SYNC_DATABASE] = value }
         }
     }
 
@@ -126,9 +148,19 @@ class MainViewModel(
         _serverAddress.value = address
 
         viewModelScope.launch {
-            serverDatabaseClient.changeServerUrl(address)
+            // Update datastore
             dataStore.edit { preferences -> preferences[SERVER_ADDRESS] = address }
+
+            // Run a sync operation if auto sync is enabled
+            if (_autoSyncDatabase.value) {
+                syncDatabaseWithServer()
+            }
         }
+    }
+
+    fun updateServerAddress(url: String) {
+        saveServerAddress(url)
+        serverHandler.updateServerUrl(url)
     }
 
     fun toggleScrollBarsOnBottom() {
@@ -234,7 +266,6 @@ class MainViewModel(
             }
         }
     }
-
 
     fun removeUser(identifier: UUID) {
         viewModelScope.launch {
@@ -356,6 +387,16 @@ class MainViewModel(
     /** Ticket Related Things */
     // -----------------------------------------------------------------------------------------------------------------------
 
+    // TODO: Add server update
+    fun updateTicketInDatabase(data: TicketInfo): Boolean = clientDatabase.ticketDatabase.update(data)
+
+    suspend fun addTicketToDatabase(data: TicketInfo): Boolean {
+        val local = clientDatabase.ticketDatabase.add(data)
+        val server = serverHandler.databaseClient.sendTickets(listOf(data))
+
+        return server && local
+    }
+
     // Ticket data list
     private val _ticketDataList: MutableStateFlow<List<TicketInfo>> = MutableStateFlow(listOf())
     val ticketDataList = _ticketDataList.asStateFlow()
@@ -449,6 +490,17 @@ class MainViewModel(
 
     /** Customer related things */
     // ----------------------------------------------------------------------------------------------------------------------------
+
+    // TODO: Add server update
+    fun updateCustomerInDatabase(data: CustomerData): Boolean = clientDatabase.customerDatabase.update(data)
+
+    // TODO: Fix
+    suspend fun addCustomerToDatabase(data: CustomerData): Boolean {
+        val local = clientDatabase.customerDatabase.add(data)
+        val server = serverHandler.databaseClient.sendCustomers(listOf(data))
+
+        return local
+    }
 
     // Customer data list
     private val _customerDataList: MutableStateFlow<List<CustomerData>> = MutableStateFlow(listOf())
@@ -548,8 +600,8 @@ class MainViewModel(
     // Local Database
     // --------------------------------------------------------------------------------------------------------------------------
 
-    // TODO: Employee needs fleshed out
-    fun updateDataFromDb() {
+    // TODO: User needs fleshed out
+    fun pullDataFromLocalDatabase() {
         // Read data from db and update it in view model
         getCustomers()
         getTicketsFromDatabase()
@@ -559,82 +611,217 @@ class MainViewModel(
         println("Selected User: ${_user.value}")
     }
 
-    // Server Database
+    // Server Stuff
     // ----------------------------------------------------------------------------------------------------------------------------
 
-    fun getDataFromServer(): Boolean {
-        var success = false
+    // TODO: Add server update
+    fun updateItemInDatabase(data: MainDataItem) {
+        when (data) {
+            is CustomerData -> {
+                if (clientDatabase.customerDatabase.update(data)) {
+                    AppLogger.m("${TAG}:UpdateItemInDatabase:CustomerData", "SUCCESS")
+                } else AppLogger.i("${TAG}:UpdateItemInDatabase:CustomerData", "FAIL")
+            }
 
-        viewModelScope.launch {
-            serverDatabaseClient.getCustomers()
-                .onSuccess { data ->
-                    _customerDataList.value = data
-                    success = true
-                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got customer data")
-                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
-
-            serverDatabaseClient.getTickets()
-                .onSuccess { data ->
-                    _ticketDataList.value = data
-                    success = true
-                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got ticket data")
-                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
-
-            serverDatabaseClient.getUsers()
-                .onSuccess { data ->
-                    _userList.value = data
-                    success = true
-                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got employee data")
-                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
-
-            serverDatabaseClient.getInventory()
-                .onSuccess { data ->
-                    _inventoryList.value = data
-                    success = true
-                    AppLogger.m("$TAG:GetDataFromServer", "SUCCESS got inventory data")
-                }.onError { error -> handleNetworkError("GetDataFromServer", error) }
+            is TicketInfo -> {
+                if (clientDatabase.ticketDatabase.update(data)) {
+                    AppLogger.m("${TAG}:UpdateItemInDatabase:TicketInfo", "SUCCESS")
+                } else AppLogger.i("${TAG}:UpdateItemInDatabase:TicketInfo", "FAIL")
+            }
+            is InventoryItem -> {
+                if (clientDatabase.inventoryDatabase.update(data)) {
+                    AppLogger.m("${TAG}:UpdateItemInDatabase:InventoryItem", "SUCCESS")
+                } else AppLogger.i("${TAG}:UpdateItemInDatabase:InventoryItem", "FAIL")
+            }
         }
-
-        return success
     }
 
-    // TODO: It seems okhttp throws stuff into log before we actually reach this and it never makes it to the logs
-    private fun handleNetworkError(caller: String, error: NetworkError) {
-        when (error) {
-            NetworkError.REQUEST_TIMEOUT -> {
-                AppLogger.m("$TAG:$caller", error.name)
+    suspend fun addItemToDatabase(data: MainDataItem){
+        when (data) {
+            is CustomerData -> {
+                if (clientDatabase.customerDatabase.add(data)) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Local:CustomerData", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Local:CustomerData", "FAIL")
+
+                serverHandler.databaseClient.sendCustomers(listOf(data))
             }
 
-            NetworkError.UNAUTHORIZED -> {
-                AppLogger.i("$TAG:$caller", error.name)
+            is TicketInfo -> {
+                if (clientDatabase.ticketDatabase.add(data)) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Local:TicketInfo", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Local:TicketInfo", "FAIL")
+
+                if (serverHandler.databaseClient.sendTickets(listOf(data))) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Server:TicketInfo", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:TicketInfo", "FAIL")
             }
 
-            NetworkError.CONFLICT -> {
-                AppLogger.i("$TAG:$caller", error.name)
+            is InventoryItem -> {
+                if (clientDatabase.inventoryDatabase.add(data)) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Local:InventoryItem", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Local:InventoryItem", "FAIL")
+
+                if (serverHandler.databaseClient.sendInventory(listOf(data))) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Server:InventoryItem", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:InventoryItem", "FAIL")
+            }
+        }
+    }
+
+    suspend fun removeItemFromDatabase(data: MainDataItem){
+        when (data) {
+            is CustomerData -> {
+                if (clientDatabase.customerDatabase.remove(data.identifier)) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Local:CustomerData", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Local:CustomerData", "FAIL")
+
+                //serverHandler.databaseClient.remove(data.identifier)
             }
 
-            NetworkError.TOO_MANY_REQUESTS -> {
-                AppLogger.i("$TAG:$caller", error.name)
+            is TicketInfo -> {
+                if (clientDatabase.ticketDatabase.add(data)) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Local:TicketInfo", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Local:TicketInfo", "FAIL")
+
+                if (serverHandler.databaseClient.sendTickets(listOf(data))) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Server:TicketInfo", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:TicketInfo", "FAIL")
             }
 
-            NetworkError.NO_INTERNET -> {
-                AppLogger.m("$TAG:$caller", error.name)
+            is InventoryItem -> {
+                if (clientDatabase.inventoryDatabase.add(data)) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Local:InventoryItem", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Local:InventoryItem", "FAIL")
+
+                if (serverHandler.databaseClient.sendInventory(listOf(data))) {
+                    AppLogger.m("${TAG}:AddItemToDatabase:Server:InventoryItem", "SUCCESS")
+                } else AppLogger.i("${TAG}:AddItemToDatabase:Server:InventoryItem", "FAIL")
+            }
+        }
+    }
+
+    private val _showLogin: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val showLogin = _showLogin.asStateFlow()
+
+    fun updateShowLogin(value: Boolean) {
+        _showLogin.value = value
+    }
+
+    fun updateStoredUsername(username: String) {
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[USER_NAME] = username }
+        }
+    }
+
+    fun updateStoredPassword(password: String) {
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[PASSWORD] = password }
+        }
+    }
+
+    fun updateStoredAuthTokens(access: String, refresh: String) {
+        viewModelScope.launch {
+            dataStore.edit { preferences -> preferences[ACCESS_TOKEN] = access }
+            dataStore.edit { preferences -> preferences[REFRESH_TOKEN] = refresh }
+        }
+    }
+
+    suspend fun getStoredUsername(): String =
+        dataStore.data.map { preferences -> preferences[USER_NAME] ?: "" }.first()
+
+    suspend fun getStoredPassword(): String =
+        dataStore.data.map { preferences -> preferences[PASSWORD] ?: "" }.first()
+
+    suspend fun getStoredAccessToken(): String =
+        dataStore.data.map { preferences -> preferences[ACCESS_TOKEN] ?: "" }.first()
+
+    suspend fun getStoredRefreshToken(): String =
+        dataStore.data.map { preferences -> preferences[REFRESH_TOKEN] ?: "" }.first()
+
+    /**
+     * Hits the server at the specific address and see if we get a response and updates urls if successful
+     */
+    suspend fun checkNewServerConnection(url: String): Boolean = serverHandler.checkNewServerConnection(url)
+
+    /**
+     * Hits the saved server to see if we get a response
+     */
+    suspend fun checkServerConnection(): Boolean = serverHandler.checkServerConnection()
+
+    /**
+     * Try to log in to server with username and password
+     */
+    suspend fun loginToServer(user: String, pass: String): Boolean {
+        val result = serverHandler.login(user, pass)
+
+        if (result) {
+            // Save username and password
+            updateStoredUsername(user)
+            updateStoredPassword(pass)
+
+            AppLogger.m("$TAG:LoginToServer", "SUCCESS")
+            return true
+        } else {
+            AppLogger.i("$TAG:LoginToServer", "SUCCESS")
+            return false
+        }
+    }
+
+    suspend fun refreshTokens(): AuthResponse? {
+        val refresh = getStoredRefreshToken()
+
+        if (refresh.isNotEmpty()) {
+            val response = serverHandler.userClient.refreshTokens(refresh)
+
+            response
+                .onSuccess { authResponse ->
+                    AppLogger.m("$TAG:refreshTokens", "SUCCESS")
+                    return authResponse
+                }
+
+            // If we make it this far then we know that wasn't successful so try getting both
+            if (serverHandler.userClient.login()) {
+                return AuthResponse(UUID.randomUUID(), getStoredAccessToken(), getStoredRefreshToken())
+            }
+        } else {
+            if (serverHandler.userClient.login()) {
+                return AuthResponse(UUID.randomUUID(), getStoredAccessToken(), getStoredRefreshToken())
+            }
+        }
+
+        return null
+    }
+
+    /**
+     * Syncs all data between client and server after checking connection with server
+     */
+    suspend fun syncDatabaseWithServer() {
+        // Check server connection
+        if (checkServerConnection()) {
+            // Sync Customers
+            serverHandler.syncCustomers(_customerDataList.value).let { data ->
+                _customerDataList.value = _customerDataList.value + data
             }
 
-            NetworkError.PAYLOAD_TOO_LARGE -> {
-                AppLogger.i("$TAG:$caller", error.name)
+            // Sync tickets
+            serverHandler.syncTickets(_ticketDataList.value).let { data ->
+                _ticketDataList.value = _ticketDataList.value + data
             }
 
-            NetworkError.SERVER_ERROR -> {
-                AppLogger.i("$TAG:$caller", error.name)
+            // Sync Inventory
+            serverHandler.syncInventory(_inventoryList.value).let { data ->
+                _inventoryList.value = _inventoryList.value + data
             }
 
-            NetworkError.SERIALIZATION -> {
-                AppLogger.i("$TAG:$caller", error.name)
-            }
+            // Log Success
+            AppLogger.m("$TAG:SyncDatabaseWithServer", "SUCCESS")
+        }
+    }
 
-            NetworkError.UNKNOWN -> {
-                AppLogger.i("$TAG:$caller", error.name)
+    init {
+        viewModelScope.launch {
+            if (getStoredUsername().isEmpty() || getStoredPassword().isEmpty()) {
+                _showLogin.value = true
             }
         }
     }

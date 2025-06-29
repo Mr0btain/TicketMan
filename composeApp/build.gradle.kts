@@ -169,5 +169,10 @@ compose.desktop {
             modules("jdk.unsupported")
             modules("jdk.unsupported.desktop")
         }
+
+        tasks.withType<JavaExec>().configureEach {
+            systemProperty("syncSphereDebug", System.getProperty("syncSphereDebug"))
+        }
+
     }
 }

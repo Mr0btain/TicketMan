@@ -23,7 +23,7 @@ fun Route.authRoute(userService: UserService) {
         val authResponse: AuthResponse? = userService.authenticate(loginRequest)
 
         authResponse?.let {
-            call.respond(authResponse)
+            call.respond(HttpStatusCode.Accepted, authResponse)
         } ?: call.respond(HttpStatusCode.Unauthorized)
     }
 
@@ -33,7 +33,7 @@ fun Route.authRoute(userService: UserService) {
         val newAccessToken: String? = userService.refreshToken(request.token)
 
         newAccessToken?.let {
-            call.respond(RefreshTokenResponse(newAccessToken))
+            call.respond(HttpStatusCode.Created, RefreshTokenResponse(newAccessToken))
         } ?: call.respond(HttpStatusCode.Unauthorized)
     }
 }

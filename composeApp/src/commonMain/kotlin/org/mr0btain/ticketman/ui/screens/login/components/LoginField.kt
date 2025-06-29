@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.login
+package org.mr0btain.ticketman.ui.screens.login.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,56 +19,53 @@ import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun LoginField(
-    onConfirm: () -> Unit,
+    modifier: Modifier = Modifier,
+    error: Boolean,
+    onConfirm: (String, String) -> Unit,
     onDismiss: () -> Unit
 ) {
     val userName = remember { mutableStateOf("") }
     val password = remember { mutableStateOf("") }
     val showPassword = remember { mutableStateOf(false) }
 
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = 10.dp
+    Column(
+        modifier = modifier.padding(28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
     ) {
-        Column(
-            modifier = Modifier.padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+        Text(
+            text = stringResource(Res.string.login_text),
+            fontSize = 36.sp,
+            fontWeight = FontWeight.Bold
+        )
+
+        Spacer(Modifier.padding(12.dp))
+
+        LoginTextField(
+            username = userName.value,
+            error = error,
+            onUsernameChange = { userName.value = it },
+            password = password.value,
+            onPasswordChange = { password.value = it },
+            showPassword = showPassword.value,
+            showPasswordOnClick = { showPassword.value = !showPassword.value }
+        )
+
+        Spacer(Modifier.padding(12.dp))
+
+        Button(
+            onClick = {
+                // Check if its valid
+                onConfirm(userName.value, password.value)
+
+                // Dismiss
+                onDismiss()
+            }
         ) {
             Text(
-                text = stringResource(Res.string.login_text),
-                fontSize = 36.sp,
-                fontWeight = FontWeight.Bold
+                text = stringResource(Res.string.login_button_text),
+                fontSize = 18.sp
             )
-
-            Spacer(Modifier.padding(12.dp))
-
-            LoginTextField(
-                username = userName.value,
-                onUsernameChange = { userName.value = it },
-                password = password.value,
-                onPasswordChange = { password.value = it },
-                showPassword = showPassword.value,
-                showPasswordOnClick = { showPassword.value = !showPassword.value }
-            )
-
-            Spacer(Modifier.padding(12.dp))
-
-            Button(
-                onClick = {
-                    // Check if its valid
-                    onConfirm()
-
-                    // Dismiss
-                    onDismiss()
-                }
-            ) {
-                Text(
-                    text = stringResource(Res.string.login_button_text),
-                    fontSize = 18.sp
-                )
-            }
         }
     }
 }
@@ -76,6 +73,7 @@ fun LoginField(
 @Composable
 private fun LoginTextField(
     modifier: Modifier = Modifier,
+    error: Boolean,
     username: String,
     onUsernameChange: (text: String) -> Unit = {},
     password: String,
@@ -107,9 +105,7 @@ private fun LoginTextField(
                 keyboardType = KeyboardType.Email,
                 imeAction = ImeAction.Next
             ),
-            colors = OutlinedTextFieldDefaults.colors(
-
-            )
+            isError = error
         )
 
         Spacer(Modifier.padding(6.dp))
@@ -143,8 +139,9 @@ private fun LoginTextField(
             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation('*'),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Password,
-                imeAction = ImeAction.Done
-            )
+                imeAction = ImeAction.Next
+            ),
+            isError = error
         )
     }
 }

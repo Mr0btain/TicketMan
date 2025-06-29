@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.database
 
+import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.*
@@ -8,7 +9,7 @@ import org.mr0btain.ticketman.data.customer.TicketList
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.tables.UserTable
-import org.mr0btain.ticketman.server.User
+import org.mr0btain.ticketman.data.user.User
 import java.util.*
 
 class UserDatabase(
@@ -22,19 +23,62 @@ class UserDatabase(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = UserTable.selectAll().map { user ->
-                    User(
-                        identifier = UUID.fromString(user[UserTable.identifier]),
-                        username = user[UserTable.username],
-                        password = user[UserTable.password],
-                        name = PersonName(user[UserTable.firstName], user[UserTable.lastName]),
-                        notes = user[UserTable.notes].notes,
-                        contactInfo = user[UserTable.contactInfo],
-                        tickets = user[UserTable.tickets].list,
-                        accessLevel = user[UserTable.access],
-                        time = user[UserTable.time],
-                    )
-                }
+                result = UserTable.selectAll().map { user -> user.toModal() }
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            return null
+        }
+
+        return result
+    }
+
+    fun getByUsername(username: String): User? {
+        var result: User? = null
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                result = UserTable.selectAll().where { UserTable.username eq username }.map { user ->
+                    user.toModal()
+                }.firstOrNull()
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            return null
+        }
+
+        return result
+    }
+
+    fun usernameAlreadyExists(username: String): Boolean {
+        var result = false
+
+        transaction {
+            // If we should log, setup logger
+            if (shouldLog) addLogger(StdOutSqlLogger)
+
+            val userExists = UserTable.select(UserTable.username).where { UserTable.username eq username }.firstOrNull()
+
+            if (userExists != null) result = true
+        }
+
+        return result
+    }
+
+    fun getById(identifier: UUID): User? {
+        var result: User? = null
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                result = UserTable.selectAll().where { UserTable.identifier eq  identifier.toString() }.map { user ->
+                    user.toModal()
+                }.firstOrNull()
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
@@ -85,9 +129,7 @@ class UserDatabase(
 
                 // Just a double check to make sure ID is unique
                 while (!isUnique) {
-                    if (identifiers.contains(result)) {
-                        result = UUID.randomUUID()
-                    } else isUnique = true
+                    if (identifiers.contains(result)) result = UUID.randomUUID() else isUnique = true
                 }
             }
         } catch (ex: Exception) {
@@ -151,6 +193,7 @@ class UserDatabase(
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
+
                 UserTable.update(where = { UserTable.identifier eq uuid}) { item ->
                     item[UserTable.identifier] = user.identifier.toString()
                     item[UserTable.username] = user.username
@@ -172,4 +215,18 @@ class UserDatabase(
         }
 
     }
+}
+
+private fun ResultRow.toModal(): User {
+    return User(
+        identifier = UUID.fromString(this[UserTable.identifier]),
+        username = this[UserTable.username],
+        password = this[UserTable.password],
+        name = PersonName(this[UserTable.firstName], this[UserTable.lastName]),
+        notes = this[UserTable.notes].notes,
+        contactInfo = this[UserTable.contactInfo],
+        tickets = this[UserTable.tickets].list,
+        accessLevel = this[UserTable.access],
+        time = this[UserTable.time],
+    )
 }

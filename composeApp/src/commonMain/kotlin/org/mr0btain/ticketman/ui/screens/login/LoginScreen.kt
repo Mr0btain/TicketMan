@@ -1,41 +1,18 @@
 package org.mr0btain.ticketman.ui.screens.login
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.layout.wrapContentSize
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.stringResource
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.ui.screens.login.components.LoginField
+import org.mr0btain.ticketman.ui.screens.login.components.TwoFactorField
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.login_button_text
-import ticketman.composeapp.generated.resources.login_text
 
 /**
  * Login screen composable made for dialog but can be used either way
@@ -73,7 +50,6 @@ fun LoginScreen(
                         .wrapContentWidth(),
                     containerColor = Color.Transparent
                 ) {
-                    // My Tickets
                     Tab(
                         selected = selectedTab == 0,
                         onClick = { selectedTab = 0 },
@@ -88,7 +64,6 @@ fun LoginScreen(
                         }
                     )
 
-                    // All Tickets
                     Tab(
                         selected = selectedTab == 1,
                         onClick = { selectedTab = 1 },
@@ -109,16 +84,19 @@ fun LoginScreen(
 
             Button(
                 onClick = {
-                    viewModel.testPdf()
+                    viewModel.viewModelScope.launch {
+                        viewModel.syncDatabaseWithServer()
+                    }
                 }
             ) {
-                Text("generate Fake Pdf")
+                Text("Sync Server")
             }
 
             if (selectedTab == 0) {
                 LoginField(
-                    onConfirm = {},
-                    onDismiss = {}
+                    onConfirm = { user, pass -> onConfirm(user, pass) },
+                    onDismiss = {},
+                    error = false
                 )
             } else {
                 TwoFactorField(isDarkMode = isDarkMode)
