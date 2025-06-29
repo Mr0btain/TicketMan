@@ -22,6 +22,9 @@ import java.util.UUID
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 
+/**
+ * A bunch of half-assed clobbered together functions that spit out random test data. Its beautiful chaos
+ */
 fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<User>> {
     // Generate some mock customer data
     val customerData = generateMockCustomerData(num)
@@ -46,7 +49,7 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
 
         // Make a list of ticket ids
         tickets.forEach { tick ->
-            ticketIds.add(tick.identifier)
+            ticketIds.add(tick.identifier.toInt())
         }
 
         // Update the customer data
@@ -63,11 +66,11 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
 
         // Set ticket data assigned employee
         newTicketData[index] = ticket.copy(
-            assignedUser = user.identifier.toString()
+            assignedUser = user.identifier
         )
 
         // add ticket to employee
-        users[userId] = user.copy(tickets = user.tickets + ticket.identifier)
+        users[userId] = user.copy(tickets = user.tickets + ticket.identifier.toInt())
     }
 
     println("Generated Customer list: ${customerData.count()}")
@@ -101,7 +104,7 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
         val stock = Random.nextInt(1, 500)
         val costVal = Random.nextDouble(0.5, 50.0)
         val priceVal = costVal * Random.nextDouble(1.2, 2.5)
-        val identifier = Random.nextInt(100000, 999999)
+        val identifier = Random.nextInt(100000, 999999).toString()
         val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
 
         InventoryItem(
@@ -119,13 +122,13 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
 
 fun generateMockCustomerData(num: Int): List<CustomerData> {
     val data = mutableListOf<CustomerData>()
-    val ids = mutableListOf<Int>()
+    val ids = mutableListOf<String>()
 
     (0..num).forEach { i ->
-        var id = Random.nextInt(0, 9999)
+        var id = Random.nextInt(0, 9999).toString()
 
         while (ids.contains(id)) {
-            id = Random.nextInt(0, 9999)
+            id = Random.nextInt(0, 9999).toString()
         }
 
         ids.add(id)
@@ -142,7 +145,7 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
             CustomerData(
                 identifier = id,
                 info = CustomerInfo(
-                    identifier = id,
+                    identifier = id.toInt(),
                     name = name,
                     address = generateRandomAddress(),
                     contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
@@ -177,7 +180,7 @@ fun generateMockUserData(num: Int): List<User> {
         // Create and return User object
         users.add(
             User(
-                identifier = UUID.randomUUID(),
+                identifier = UUID.randomUUID().toString(),
                 username = "${name.firstName}_${name.lastName}",
                 password = name.lastName,
                 name = name,
@@ -209,7 +212,7 @@ fun generateMockUserData(num: Int): List<User> {
 
         users.add(
             User(
-                identifier = UUID.randomUUID(),
+                identifier = UUID.randomUUID().toString(),
                 username = "${name.firstName}_${name.lastName}",
                 password = name.lastName,
                 name = name,
@@ -336,7 +339,7 @@ fun generateRandomTicket(customerId: Int, ticketId: Int): TicketInfo {
     }
 
     return TicketInfo(
-        identifier = ticketId,
+        identifier = ticketId.toString(),
         customerId = customerId,
         assignedUser = "",
         device = Device(manufacturer, model),

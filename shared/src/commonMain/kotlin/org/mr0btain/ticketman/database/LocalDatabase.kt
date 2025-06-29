@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.database
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.core.dao.id.IdTable
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -23,10 +22,11 @@ import org.mr0btain.ticketman.database.tables.*
  * Handles interaction between a local database
  */
 class LocalDatabase<T : MainDataItem>(
-    val table: IdTable<DataTable>,
-    val shouldLog: Boolean
+    private val table: DataTable,
+    private val shouldLog: Boolean
 ) {
     /** Gets all items from database */
+    @Suppress("UNCHECKED_CAST")
     fun getAll(): List<T>? {
         var result = listOf<T>()
 
@@ -35,9 +35,8 @@ class LocalDatabase<T : MainDataItem>(
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                result = databaseGetAll(table)
 
-                result = table.selectAll().toModel(table) as List<T>
+                result = databaseGetAll(table) as List<T>
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
@@ -75,6 +74,8 @@ class LocalDatabase<T : MainDataItem>(
 
                 // Delete item
                 if (column != null) {
+                    val _table = table as IntIdTable
+
                     table.deleteWhere { column eq id }
                 }
             }
@@ -99,11 +100,14 @@ class LocalDatabase<T : MainDataItem>(
                 // Get proper column
                 val column = table.identifier()
 
+                // TODO: Make sure this works without mapping it to int
                 // Go through and get the highest number
                 if (column != null) {
-                    table.select(column).map { it[column] }.maxOfOrNull { it }?.let {
+                    table.getTableType()?.select(column)?.map { it[column] }?.let { list ->
+                        list.maxOfOrNull { it }?.let {
                         result = it.toInt()
-                    } ?: { error = true }
+                        } ?: { error = true }
+                    }
                 }
             }
         } catch (ex: Exception) {
@@ -149,8 +153,18 @@ class LocalDatabase<T : MainDataItem>(
     }
 }
 
+private fun DataTable.getTableType(): IntIdTable? {
+    return when (this) {
+        is CustomerDataTable -> this
+        is TicketDataTable -> this
+        is InventoryTable -> this
+        is UserTable -> this
+        else -> null
+    }
+}
+
 /** gets the column depending on the type of table */
-private fun IdTable<DataTable>.identifier(): Column<String>? {
+private fun DataTable.identifier(): Column<String>? {
     return when (this) {
         is CustomerDataTable -> this.identifier
         is TicketDataTable -> this.identifier
@@ -159,7 +173,7 @@ private fun IdTable<DataTable>.identifier(): Column<String>? {
     }
 }
 
-private fun databaseGetAll(table: IntIdTable): List<MainDataItem> {
+private fun databaseGetAll(table: DataTable): List<MainDataItem> {
     return when (table) {
         is CustomerDataTable -> {
             table.selectAll().map { item ->
@@ -236,84 +250,7 @@ private fun databaseGetAll(table: IntIdTable): List<MainDataItem> {
     }
 }
 
-private fun <T: DataTable> Query.toModel(table: IdTable<T>): List<MainDataItem>? {
-    return when (table) {
-        is CustomerDataTable -> {
-            this.map { item ->
-                CustomerData(
-                    identifier = item[CustomerDataTable.identifier],
-                    info = CustomerInfo(
-                        identifier = item[CustomerDataTable.identifier].toInt(),
-                        name = PersonName(
-                            firstName = item[CustomerDataTable.firstName],
-                            lastName = item[CustomerDataTable.lastName]
-                        ),
-                        address = Address(
-                            street = item[CustomerDataTable.street],
-                            city = item[CustomerDataTable.city],
-                            state = item[CustomerDataTable.state],
-                            zip = item[CustomerDataTable.zip]
-                        ),
-                        contactInfo = item[CustomerDataTable.contactInfo],
-                        time = item[CustomerDataTable.time]
-                    ),
-                    tickets = item[CustomerDataTable.tickets].list,
-                    notes = item[CustomerDataTable.notes].notes
-                )
-            }
-        }
-
-        is TicketDataTable -> {
-            this.map { item ->
-                TicketInfo(
-                    identifier = item[TicketDataTable.identifier],
-                    customerId = item[TicketDataTable.customerId],
-                    device = item[TicketDataTable.device],
-                    assignedUser = item[TicketDataTable.assignedUser],
-                    priority = item[TicketDataTable.priority],
-                    status = item[TicketDataTable.status],
-                    updates = item[TicketDataTable.updates].notes,
-                    time = item[TicketDataTable.time]
-                )
-            }
-        }
-
-        is InventoryTable -> {
-            this.map { item ->
-                InventoryItem(
-                    identifier = item[InventoryTable.identifier],
-                    name = item[InventoryTable.name],
-                    description = item[InventoryTable.description],
-                    stock = item[InventoryTable.stock],
-                    cost = item[InventoryTable.cost],
-                    price = item[InventoryTable.price],
-                    notes = item[InventoryTable.notes].notes,
-                    time = item[InventoryTable.time]
-                )
-            }
-        }
-
-        is UserTable -> {
-            this.map { item ->
-                User(
-                    identifier = item[UserTable.identifier],
-                    username = item[UserTable.username],
-                    password = item[UserTable.password],
-                    name = PersonName(item[UserTable.firstName], item[UserTable.lastName]),
-                    notes = item[UserTable.notes].notes,
-                    contactInfo = item[UserTable.contactInfo],
-                    tickets = item[UserTable.tickets].list,
-                    accessLevel = item[UserTable.access],
-                    time = item[UserTable.time],
-                )
-            }
-        }
-
-        else -> emptyList()
-    }
-}
-
-private fun databaseInsert(data: MainDataItem, table: IdTable<DataTable>) {
+private fun databaseInsert(data: MainDataItem, table: DataTable) {
     when (table) {
         is CustomerDataTable -> {
             if (data is CustomerData) {
@@ -371,7 +308,7 @@ private fun databaseInsert(data: MainDataItem, table: IdTable<DataTable>) {
     }
 }
 
-private fun databaseUpdate(data: MainDataItem, table: IdTable<DataTable>) {
+private fun databaseUpdate(data: MainDataItem, table: DataTable) {
     when (table) {
         is CustomerDataTable -> {
             if (data is CustomerData) {
