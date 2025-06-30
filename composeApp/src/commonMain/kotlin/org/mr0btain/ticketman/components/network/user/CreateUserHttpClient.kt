@@ -1,14 +1,11 @@
-package org.mr0btain.ticketman.components.network
+package org.mr0btain.ticketman.components.network.user
 
 import io.ktor.client.*
 import io.ktor.client.engine.*
-import io.ktor.client.plugins.auth.*
-import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 
 fun createUserHttpClient(
     engine: HttpClientEngine

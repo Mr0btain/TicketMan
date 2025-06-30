@@ -10,9 +10,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
@@ -87,10 +89,11 @@ fun LoginPopup(
                 }
             }
         },
-        onDismiss = {}
+        onDismiss = onDismiss
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun LoginDialog(
     modifier: Modifier = Modifier,
@@ -104,7 +107,8 @@ private fun LoginDialog(
     val padding = 48.dp
 
     Dialog(
-        onDismissRequest = onDismiss
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
     ) {
         Surface(
             modifier = modifier,

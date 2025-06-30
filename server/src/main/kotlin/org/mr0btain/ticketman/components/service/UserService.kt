@@ -3,11 +3,10 @@ package org.mr0btain.ticketman.components.service
 import com.auth0.jwt.interfaces.DecodedJWT
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
-import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
-import java.util.UUID
 
 class UserService(
     private val database: LocalDatabaseClient<User>,
@@ -16,16 +15,11 @@ class UserService(
 ) {
     fun authenticate(loginRequest: LoginRequest): AuthResponse? {
         val foundUser = database.getAll()?.firstOrNull { it.username == loginRequest.username }
-        println("Aithenticating")
-        println(loginRequest)
-        println(foundUser)
 
         // Check if user was found and process request
         return if (foundUser != null && foundUser.password == loginRequest.password) {
             val refreshToken = jwtService.createRefreshToken(foundUser.identifier)
             val accessToken = jwtService.createAccessToken(foundUser.identifier)
-            println(refreshToken)
-            println(accessToken)
 
             // Check if we should update or add new token
             if (tokenDatabase.findById(foundUser.identifier) != null) {

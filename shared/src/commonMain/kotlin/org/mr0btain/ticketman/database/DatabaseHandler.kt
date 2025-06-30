@@ -1,10 +1,10 @@
 package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.jdbc.Database
-import org.mr0btain.ticketman.data.customer.CustomerData
-import org.mr0btain.ticketman.data.inventory.InventoryItem
-import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.database.tables.CustomerDataTable
 import org.mr0btain.ticketman.database.tables.InventoryTable
 import org.mr0btain.ticketman.database.tables.TicketDataTable
@@ -24,15 +24,18 @@ class DatabaseHandler(
     appDir: String,
     shouldLog: Boolean = true
 ) {
+    companion object {
+        private const val TAG = "DatabaseHandler"
+    }
     // Connect to the local database
-    private val db = Database.connect("jdbc:h2:$appDir/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    private val db = Database.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
 
     //Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")
     //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
 
-    val customerDatabase = LocalDatabaseClient<CustomerData>(CustomerDataTable, shouldLog)
-    val ticketDatabase = LocalDatabaseClient<TicketInfo>(TicketDataTable, shouldLog)
-    val inventoryDatabase = LocalDatabaseClient<InventoryItem>(InventoryTable, shouldLog)
-    val userDatabase = LocalDatabaseClient<User>(UserTable, shouldLog)
+    val customerDatabase = LocalDatabaseClient<CustomerData>("$TAG:CustomerDatabaseClient", CustomerDataTable, shouldLog)
+    val ticketDatabase = LocalDatabaseClient<TicketInfo>("$TAG:TicketDatabaseClient", TicketDataTable, shouldLog)
+    val inventoryDatabase = LocalDatabaseClient<InventoryItem>("$TAG:InventoryDatabaseClient", InventoryTable, shouldLog)
+    val userDatabase = LocalDatabaseClient<User>("$TAG:UserDatabaseClient", UserTable, shouldLog)
 }

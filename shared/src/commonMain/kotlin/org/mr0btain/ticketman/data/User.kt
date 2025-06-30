@@ -1,13 +1,10 @@
-package org.mr0btain.ticketman.data.user
+package org.mr0btain.ticketman.data
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.util.UUIDSerializer
-import java.util.UUID
 
 // TODO: Change to storing password hash instead of raw
 @Serializable

@@ -1,34 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.main
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.Button
-import androidx.compose.material3.DividerDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -36,14 +11,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.logging.AppLogger
-import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.customer.CustomerInfo
-import org.mr0btain.ticketman.data.inventory.InventoryItem
+import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.getTime
-import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerDialog
@@ -156,7 +131,7 @@ fun ExpandedMainScreen(
                     isTicketForNewCustomer = true
 
                     // Seed data with customer id
-                    val newIdentifier = viewModel.getNextTicketId()
+                    val newIdentifier = viewModel.ticketHandler.getNextId()
 
                     // Check if our identifier is not null
                     if (newIdentifier != null) {
@@ -225,7 +200,7 @@ fun ExpandedMainScreen(
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
                 coroutineScope.launch {
-                    val newIdentifier = viewModel.getNextCustomerId()
+                    val newIdentifier = viewModel.customerHandler.getNextId()
 
                     // Check if we can get a new identifier
                     if (newIdentifier != null) {
@@ -251,7 +226,7 @@ fun ExpandedMainScreen(
                 coroutineScope.launch {
                     when (reason) {
                         DialogDismissReason.CONTINUE -> {
-                            viewModel.updateOrAddInventoryItem(item!!)
+                            viewModel.inventoryHandler.update(item!!)
                         }
 
                         else -> {
@@ -282,7 +257,7 @@ fun ExpandedMainScreen(
                         when (itemToDeleteType) {
                             MainItemType.CUSTOMER -> {
                                 // Remove customer
-                                viewModel.removeCustomer(itemToDelete)
+                                viewModel.customerHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.changeSelectedCustomerId("")
@@ -290,7 +265,7 @@ fun ExpandedMainScreen(
 
                             MainItemType.TICKET -> {
                                 // Remove ticket
-                                viewModel.removeTicket(itemToDelete)
+                                viewModel.ticketHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.changeSelectedTicketId("")
@@ -298,7 +273,7 @@ fun ExpandedMainScreen(
                             MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
                             MainItemType.INVENTORY -> {
                                 // Remove item
-                                viewModel.removeInventoryItem(itemToDelete)
+                                viewModel.inventoryHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.changeSelectedInventoryId("")
@@ -391,6 +366,21 @@ fun ExpandedMainScreen(
                             )
                         }
                     }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 8.dp),
+                        horizontalArrangement = Arrangement.End,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // TODO: Make this only work if not logged in or hide if logged in
+                        Button(
+                            onClick = { viewModel.updateShowLogin(true) }
+                        ) {
+                            Text("Log In")
+                        }
+                    }
                 }
 
                 HorizontalDivider(
@@ -405,7 +395,7 @@ fun ExpandedMainScreen(
                             isDarkMode = isDarkMode,
                             onAddCustomer = { name ->
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.getNextCustomerId()
+                                    val newIdentifier = viewModel.customerHandler.getNextId()
 
                                     // Check if we can et a new identifier
                                     if (newIdentifier != null) {
@@ -428,7 +418,7 @@ fun ExpandedMainScreen(
                             },
                             onEditCustomer = {
                                 coroutineScope.launch {
-                                    val customer = viewModel.getCustomerForId(selectedCustomer.value)
+                                    val customer = viewModel.customerHandler.get(selectedCustomer.value)
 
                                     if (customer != null) {
                                         // Set seed data
@@ -461,7 +451,7 @@ fun ExpandedMainScreen(
                             },
                             onTicketClick = { identifier ->
                                 coroutineScope.launch {
-                                    val ticket = viewModel.getTicketForId(identifier)
+                                    val ticket = viewModel.ticketHandler.get(identifier)
 
                                     if (ticket != null) {
                                         // Set selected ticket
@@ -500,7 +490,7 @@ fun ExpandedMainScreen(
                             scrollBarsOnRight = scrollBarsOnRight,
                             onAddNewTicket = {
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.getNextTicketId()
+                                    val newIdentifier = viewModel.ticketHandler.getNextId()
 
                                     if (newIdentifier != null) {
                                         // Set up seed data
@@ -520,7 +510,7 @@ fun ExpandedMainScreen(
                             },
                             onEditTicket = {
                                 coroutineScope.launch {
-                                    val ticket = viewModel.getTicketForId(selectedTicket.value)
+                                    val ticket = viewModel.ticketHandler.get(selectedTicket.value)
 
                                     if (ticket != null) {
                                         // Get seed data
@@ -565,7 +555,7 @@ fun ExpandedMainScreen(
                             onSelectedInventoryItemChange = { viewModel.changeSelectedInventoryId(it) },
                             onAddInventoryItem = {
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.getNextInventoryId()
+                                    val newIdentifier = viewModel.inventoryHandler.getNextId()
 
                                     if (newIdentifier != null) {
                                         // Set seed data
@@ -586,7 +576,7 @@ fun ExpandedMainScreen(
                             },
                             onEditInventoryItem = { item ->
                                 coroutineScope.launch {
-                                    val inventoryItem = viewModel.getInventoryItemForId(item)
+                                    val inventoryItem = viewModel.inventoryHandler.get(item)
 
                                     if (inventoryItem != null) {
                                         // Set seed data

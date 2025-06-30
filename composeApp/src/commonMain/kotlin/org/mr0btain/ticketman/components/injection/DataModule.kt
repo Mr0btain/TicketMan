@@ -5,6 +5,7 @@ import org.koin.dsl.module
 import org.mr0btain.ticketman.components.data.FileManager
 import org.mr0btain.ticketman.components.database.ClientDatabase
 import org.mr0btain.ticketman.components.database.configureDatabase
+import org.mr0btain.ticketman.database.DatabaseHandler
 
 val dataModule = module {
     //example

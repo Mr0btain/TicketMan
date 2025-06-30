@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.injection
 import org.koin.core.module.dsl.viewModel
 import org.koin.dsl.module
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.initMainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsViewModel
 
 val viewModelModule = module {
@@ -16,11 +17,13 @@ val viewModelModule = module {
         )
     }
 
-    viewModel { MainViewModel(
-        fileManager = get(),
-        clientDatabase = get(),
-        snackBarHost = get()
-    ) }
+    viewModel {
+        initMainViewModel(
+            fileManager = get(),
+            clientDatabase = get(),
+            snackBarHost = get()
+        )
+    }
 }
 
 

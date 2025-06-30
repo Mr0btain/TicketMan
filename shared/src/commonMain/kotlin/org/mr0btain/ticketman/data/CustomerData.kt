@@ -1,7 +1,7 @@
-package org.mr0btain.ticketman.data.customer
+package org.mr0btain.ticketman.data
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.data.MainDataItem
+import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.Note
 
 @Serializable

@@ -2,10 +2,10 @@ package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.data.inventory.InventoryItem
+import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.AMPM
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
@@ -13,10 +13,10 @@ import org.mr0btain.ticketman.data.shared.Time
 import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.data.shared.parseDateToLong
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.data.ticket.randomTicketPriority
-import org.mr0btain.ticketman.data.ticket.randomTicketStatus
-import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.randomTicketPriority
+import org.mr0btain.ticketman.data.randomTicketStatus
+import org.mr0btain.ticketman.data.User
 import java.text.DecimalFormat
 import java.util.UUID
 import kotlin.random.Random

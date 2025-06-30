@@ -39,10 +39,6 @@ fun App() {
         // TODO: Maybe combine these? don't really need both of them
         // View Models
         val mainViewModel = koinViewModel<MainViewModel>()
-        //val settingsViewModel = koinViewModel<SettingsViewModel>()
-
-        // Pull settings from datastore
-        mainViewModel.getSettingsFromPreferences()
 
         // For snack bar messages
         val snackBarHostState = mainViewModel.snackBarHost

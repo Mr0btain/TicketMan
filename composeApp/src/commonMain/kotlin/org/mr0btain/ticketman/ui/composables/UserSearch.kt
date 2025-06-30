@@ -9,8 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
-import org.mr0btain.ticketman.data.user.User
-import java.util.UUID
+import org.mr0btain.ticketman.data.User
 
 /**
  * SearchBox for searching users. Will return an id or a name and a true if they want to add new if it doesn't exist

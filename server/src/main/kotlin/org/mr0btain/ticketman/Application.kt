@@ -2,6 +2,7 @@ package org.mr0btain.ticketman
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import org.jetbrains.exposed.v1.core.exposedLogger
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
@@ -10,6 +11,7 @@ import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import java.util.logging.Logger
 
 // TODO: Persist user data
 // TODO: Add auth to routes for database actions
@@ -25,6 +27,8 @@ fun Application.module() {
     val database = configureDatabase()
     val jwtService = JwtService(this, database.userDatabase)
     val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase)
+
+    println("USER: ${database.userDatabase.getAll()?.firstOrNull { it.accessLevel == AccessLevel.ADMIN }}")
 
     configureSerialization()
     configureContentNegotiation()

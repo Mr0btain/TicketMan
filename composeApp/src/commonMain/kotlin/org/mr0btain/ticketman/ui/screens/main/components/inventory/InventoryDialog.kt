@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.inventory.InventoryItem
+import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.SubItemType
@@ -39,7 +39,7 @@ fun InventoryDialog(
     // seed data
     var name by remember(seedData) { mutableStateOf(seedData.name) }
     var description by remember(seedData) { mutableStateOf(seedData.description) }
-    var stock by remember(seedData) { mutableStateOf(if (seedData.stock != Int.MAX_VALUE) seedData.stock else 0) }
+    var stock by remember(seedData) { mutableStateOf(if (seedData.stock != Int.MAX_VALUE) seedData.stock.toString() else "0") }
     val price = rememberTextFieldState(seedData.price.filter { it.isDigit() })
     val cost = rememberTextFieldState(seedData.cost.filter { it.isDigit() })
 
@@ -166,8 +166,8 @@ fun InventoryDialog(
 
                     // ------------------------- Stock -------------------------------
                     OutlinedTextField(
-                        value = stock.toString(),
-                        onValueChange = { change -> stock = change.filter { it.isDigit() }.toInt() },
+                        value = stock,
+                        onValueChange = { change -> stock = change.filter { it.isDigit() } },
                         label = { Text("Stock") }
                     )
 
@@ -241,7 +241,7 @@ fun InventoryDialog(
                                 identifier = seedData.identifier,
                                 name = name,
                                 description = description,
-                                stock = stock,
+                                stock = stock.toIntOrNull() ?: 0,
                                 price = price.text.toString(),
                                 cost = cost.text.toString(),
                                 time = if (seedData.time != Long.MAX_VALUE) seedData.time else getTime()

@@ -21,7 +21,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.formatTime
-import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
@@ -81,7 +81,7 @@ fun AddOrDeleteButtonRow(
         // Delete Item Button
         Button(
             onClick = onDeleteClick,
-            shape = RoundedCornerShape(8.dp),
+            //shape = RoundedCornerShape(8.dp),
             colors = ButtonDefaults.buttonColors().copy(containerColor = MaterialTheme.colorScheme.error)
         ) {
             Text(text = "Delete $label")
@@ -92,7 +92,7 @@ fun AddOrDeleteButtonRow(
         // Add Item Button
         Button(
             onClick = onAddClick,
-            shape = RoundedCornerShape(8.dp)
+            //shape = RoundedCornerShape(8.dp)
         ) {
             Text(text = "Add $label")
         }

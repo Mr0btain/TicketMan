@@ -1,13 +1,22 @@
 package org.mr0btain.ticketman.components.network
 
-import io.ktor.client.call.body
-import io.ktor.client.statement.HttpResponse
-import io.ktor.util.network.UnresolvedAddressException
+import io.ktor.client.call.*
+import io.ktor.client.statement.*
+import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
-import org.mr0btain.ticketman.components.logging.AppLogger
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
+
+inline fun <reified T> safeCastList(value: Any?): List<T>? {
+    val list = value as? List<*> ?: return null
+    return if (list.all { it is T }) list.filterIsInstance<T>() else null
+}
+
+inline fun <reified T> safeCast(value: Any?): T? {
+    return value as? T
+}
 
 inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
     return try {
@@ -27,37 +36,36 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
     }
 }
 
-suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): org.mr0btain.ticketman.error.Result<T, NetworkError> {
+suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): Result<T, NetworkError> {
     return when (response.status.value) {
         in 200..299 -> {
-            val response = response.body<T>()
             AppLogger.m(tag, SimpleError.SUCCESS)
-            org.mr0btain.ticketman.error.Result.Success(response)
+            Result.Success(response.body<T>())
         }
 
         401 -> {
             AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)
-            org.mr0btain.ticketman.error.Result.Error(NetworkError.UNAUTHORIZED)
+            Result.Error(NetworkError.UNAUTHORIZED)
         }
 
         409 -> {
             AppLogger.i(tag, NetworkError.CONFLICT.name)
-            org.mr0btain.ticketman.error.Result.Error(NetworkError.CONFLICT)
+            Result.Error(NetworkError.CONFLICT)
         }
 
         408 -> {
             AppLogger.i(tag, NetworkError.REQUEST_TIMEOUT.name)
-            org.mr0btain.ticketman.error.Result.Error(NetworkError.REQUEST_TIMEOUT)
+            Result.Error(NetworkError.REQUEST_TIMEOUT)
         }
 
         413 -> {
             AppLogger.i(tag, NetworkError.PAYLOAD_TOO_LARGE.name)
-            org.mr0btain.ticketman.error.Result.Error(NetworkError.PAYLOAD_TOO_LARGE)
+            Result.Error(NetworkError.PAYLOAD_TOO_LARGE)
         }
 
         in 500..599 -> {
             AppLogger.i(tag, NetworkError.SERVER_ERROR.name)
-            org.mr0btain.ticketman.error.Result.Error(NetworkError.SERVER_ERROR)
+            Result.Error(NetworkError.SERVER_ERROR)
         }
 
         else -> {

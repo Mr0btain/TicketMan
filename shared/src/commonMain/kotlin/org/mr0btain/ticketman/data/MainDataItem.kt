@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.data
 
-interface MainDataItem {
+import kotlinx.serialization.Serializable
+
+@Serializable
+sealed interface MainDataItem {
     val identifier: String
 }

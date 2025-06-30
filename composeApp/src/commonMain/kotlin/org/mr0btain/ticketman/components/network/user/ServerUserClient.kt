@@ -1,25 +1,26 @@
-package org.mr0btain.ticketman.components.network
+package org.mr0btain.ticketman.components.network.user
 
-import io.ktor.client.*
-import io.ktor.client.call.*
-import io.ktor.client.request.*
-import io.ktor.client.statement.*
-import io.ktor.http.*
-import io.ktor.util.network.*
-import io.ktor.utils.io.*
-import kotlinx.serialization.SerializationException
-import org.mr0btain.ticketman.components.logging.AppLogger
+import io.ktor.client.HttpClient
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
+import io.ktor.http.contentType
+import io.ktor.utils.io.InternalAPI
+import org.mr0btain.ticketman.components.network.ServerHandler
+import org.mr0btain.ticketman.components.network.handleHttpResponse
+import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.error.onSuccess
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
-import org.mr0btain.ticketman.server.response.TokenResponse
-import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.ServerHandler
-import java.util.*
 
 /**
  * Main Client for user services with the server
@@ -39,16 +40,14 @@ class ServerUserClient(
         private const val CHECK_SERVER_CONNECTION_URL_TAG = "$TAG:CheckServerConnectionURL"
     }
 
-
-    private var serverUrl = "http://localhost:8080"
+    private var serverUrl = ""
 
     /**
      * Changes the url stored in this class
      */
     fun changeServerUrl(url: String) {
-        println("URL saved: $url")
-        //serverUrl = url
-        AppLogger.i(CHANGE_SERVER_TAG, SimpleError.SUCCESS)
+        serverUrl = url
+        AppLogger.m(CHANGE_SERVER_TAG, SimpleError.SUCCESS)
     }
 
     /**
@@ -57,8 +56,8 @@ class ServerUserClient(
     @OptIn(InternalAPI::class)
     suspend fun login(): Boolean {
         // Get username and password
-        val username = serverHandler.getUsername()
-        val password = serverHandler.getPassword()
+        val username = serverHandler.getUsername() ?: ""
+        val password = serverHandler.getPassword() ?: ""
 
         return login(username, password)
     }
@@ -96,7 +95,7 @@ class ServerUserClient(
             }
         }
 
-        return if (response != null && response.status == HttpStatusCode.Accepted) {
+        return if (response != null && response.status == HttpStatusCode.Companion.Accepted) {
             AppLogger.m(CHECK_CREDENTIALS_TAG, "SUCCESS")
             true
         } else {
@@ -129,21 +128,27 @@ class ServerUserClient(
      * Checks the connection with the stored server url
      */
     suspend fun checkServerConnection(): Boolean {
-        val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_TAG) {
-            userHttpClient.get("${serverUrl}/")
-        }
+        println(serverUrl)
+        return if (serverUrl.isNotEmpty()) {
+            val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_TAG) {
+                userHttpClient.get("${serverUrl}/")
+            }
 
-        return response != null && response.status == HttpStatusCode.OK
+            response != null && response.status == HttpStatusCode.Companion.OK
+        } else false
     }
 
     /**
      * Checks the connection with a specific server url
      */
     suspend fun checkServerConnection(url: String): Boolean {
-        val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) {
-            userHttpClient.get("$url/")
-        }
+        println(url)
+        return if (url.isNotEmpty()) {
+            val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) {
+                userHttpClient.get("$url/")
+            }
 
-        return response != null && response.status == HttpStatusCode.OK
+            response != null && response.status == HttpStatusCode.Companion.OK
+        } else false
     }
 }

@@ -1,22 +1,15 @@
 package org.mr0btain.ticketman.components.routing
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.JsonConvertException
-import io.ktor.server.auth.authenticate
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
+import io.ktor.http.*
+import io.ktor.serialization.*
+import io.ktor.server.auth.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
 import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.ServerResponse
-import org.mr0btain.ticketman.server.response.ServerResult
 import org.mr0btain.ticketman.server.response.SyncResponse
-import kotlin.collections.filter
-import kotlin.collections.map
 
 inline fun <reified T : MainDataItem> Route.dataRoute(database: LocalDatabaseClient<T>) {
     // Sync between client and server
@@ -88,11 +81,11 @@ inline fun <reified T : MainDataItem> Route.dataRoute(database: LocalDatabaseCli
             try {
                 val data = call.receive<List<T>>()
 
-                if (database.addAll(data)) call.respond(HttpStatusCode.Accepted, ServerResponse(ServerResult.SUCCESS))
-                else call.respond(HttpStatusCode.NotFound, ServerResponse(ServerResult.FAIL))
+                if (database.addAll(data)) call.respond(HttpStatusCode.Accepted)
+                else call.respond(HttpStatusCode.NotFound)
             } catch (ex: Exception) {
                 ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest, ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
@@ -103,12 +96,12 @@ inline fun <reified T : MainDataItem> Route.dataRoute(database: LocalDatabaseCli
             val identifier = call.parameters["identifier"]
 
             if (identifier == null) {
-                call.respond(HttpStatusCode.NotFound, ServerResponse(ServerResult.FAIL, "Identifier is null"))
+                call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted, ServerResponse(ServerResult.SUCCESS))
-            else call.respond(HttpStatusCode.BadRequest, ServerResponse(ServerResult.FAIL))
+            if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted)
+            else call.respond(HttpStatusCode.BadRequest)
         }
     }
 }

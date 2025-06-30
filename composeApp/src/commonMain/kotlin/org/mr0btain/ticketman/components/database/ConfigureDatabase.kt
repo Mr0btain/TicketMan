@@ -4,11 +4,13 @@ import io.github.vinceglb.filekit.FileKit
 import io.github.vinceglb.filekit.filesDir
 import io.github.vinceglb.filekit.path
 
+/**
+ * Initialises the client database
+ */
+
 fun configureDatabase(): ClientDatabase {
-    val database = ClientDatabase(FileKit.filesDir.path)
-
-    // Create tables if they don't exist
-    database.createTables()
-
-    return database
+    return ClientDatabase("${FileKit.filesDir.path}/data").also { database ->
+        /** Anything you want to run before using the database do it here */
+        database.initDatabase()
+    }
 }

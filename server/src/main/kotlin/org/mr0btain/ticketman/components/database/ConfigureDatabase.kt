@@ -1,16 +1,13 @@
 package org.mr0btain.ticketman.components.database
 
 /**
- * Configures and returns a ServerDatabase
+ * Initializes the server database
  */
-// TODO: Get this to work with OS
+// TODO: Get this to work with OS file dir
 fun configureDatabase(
 ): ServerDatabase {
-    // Initialize database
-    val database = ServerDatabase("/home/nick/.local/share/TicketMan/data/server", true)
-
-    // Setup tables
-    database.initDatabase()
-
-    return database
+    return ServerDatabase("/home/nick/.local/share/TicketMan/data/server").also { database ->
+        /** Anything you want to run before using the database do it here */
+        database.initDatabase()
+    }
 }

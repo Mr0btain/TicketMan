@@ -1,6 +1,6 @@
 @file:Suppress("LocalVariableName")
 
-package org.mr0btain.ticketman.components.network
+package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
 import io.ktor.client.engine.*
@@ -10,9 +10,8 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.logging.AppLogger
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.ServerHandler
+import org.mr0btain.ticketman.components.network.ServerHandler
+import org.mr0btain.ticketman.logging.AppLogger
 
 fun createDatabaseHttpClient(
     engine: HttpClientEngine,
@@ -32,16 +31,16 @@ fun createDatabaseHttpClient(
         install(Auth) {
             bearer {
                 loadTokens {
-                    AppLogger.m("$TAG:RefreshTokens", "Loading tokens")
+                    AppLogger.m("$TAG:LoadTokens", "Loading stored tokens")
                     // Load tokens from a local storage and return them as the 'BearerTokens' instance
-                    val accessToken = serverHandler.getAccessToken()
-                    val refreshToken = serverHandler.getRefreshToken()
+                    val accessToken = serverHandler.getAccessToken() ?: ""
+                    val refreshToken = serverHandler.getRefreshToken() ?: ""
 
                     BearerTokens(accessToken, refreshToken)
                 }
 
                 refreshTokens {
-                    AppLogger.m("$TAG:RefreshTokens", "Refreshing tokens")
+                    AppLogger.m("$TAG:RefreshTokens", "Refreshing tokens with server")
                     // Refresh tokens and return them as the 'BearerTokens' instance
                     val authResponse = serverHandler.refreshTokens()
 

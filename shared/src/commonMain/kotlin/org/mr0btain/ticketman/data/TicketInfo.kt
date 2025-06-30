@@ -1,12 +1,14 @@
-package org.mr0btain.ticketman.data.ticket
+package org.mr0btain.ticketman.data
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.getTime
-import org.mr0btain.ticketman.util.UUIDSerializer
-import java.util.UUID
+import org.mr0btain.ticketman.data.ticket.Device
+import org.mr0btain.ticketman.data.ticket.TicketPriority
+import org.mr0btain.ticketman.data.ticket.TicketPriorityType
+import org.mr0btain.ticketman.data.ticket.TicketStatus
+import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import kotlin.random.Random
 
 @Serializable
