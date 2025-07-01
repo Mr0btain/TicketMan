@@ -7,6 +7,7 @@ plugins {
 
 group = "org.mr0btain.ticketman"
 version = "1.0.0"
+
 application {
     mainClass.set("org.mr0btain.ticketman.ApplicationKt")
     

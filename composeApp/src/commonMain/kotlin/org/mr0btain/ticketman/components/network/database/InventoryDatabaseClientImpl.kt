@@ -31,36 +31,40 @@ class InventoryDatabaseClientImpl(
     }
 
     override suspend fun sync(data: List<MainDataItem>): List<InventoryItem> {
-        val identifiers = data.map { it.identifier }
+        if (serverUrl.isNotBlank()) {
+            val identifiers = data.map { it.identifier }
 
-        networkErrorTryCatch(SYNC_TAG) {
-            client.post {
-                url("$serverUrl/sync")
-                contentType(ContentType.Application.Json)
-                setBody(SyncRequest(identifiers))
-            }
-        }?.let { response -> handleHttpResponse<SyncResponse>(SYNC_TAG, response) }
-            ?.onSuccess { syncResponse ->
-                val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
+            networkErrorTryCatch(SYNC_TAG) {
+                client.post {
+                    url("$serverUrl/sync")
+                    contentType(ContentType.Application.Json)
+                    setBody(SyncRequest(identifiers))
+                }
+            }?.let { response -> handleHttpResponse<SyncResponse>(SYNC_TAG, response) }
+                ?.onSuccess { syncResponse ->
+                    val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
 
-                batchSend(requested)
+                    batchSend(requested)
 
-                return syncResponse.data.filterIsInstance<InventoryItem>()
-            }
+                    return syncResponse.data.filterIsInstance<InventoryItem>()
+                }
+        }
 
         return listOf()
     }
 
     override suspend fun getAll(): List<InventoryItem> {
-        networkErrorTryCatch(GET_ALL_TAG) {
-            client.get("${serverUrl}/all")
-        }?.let { response -> handleHttpResponse<List<InventoryItem>>(GET_ALL_TAG, response) }
-            ?.onSuccess { value ->
-                // If we reach this then something has gone wrong
-                AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(GET_ALL_TAG) {
+                client.get("${serverUrl}/all")
+            }?.let { response -> handleHttpResponse<List<InventoryItem>>(GET_ALL_TAG, response) }
+                ?.onSuccess { value ->
+                    // If we reach this then something has gone wrong
+                    AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
 
-                return value
-            }
+                    return value
+                }
+        }
 
         return emptyList()
     }

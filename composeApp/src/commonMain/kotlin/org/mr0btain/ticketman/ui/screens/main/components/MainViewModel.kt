@@ -518,7 +518,7 @@ class MainViewModel(
     suspend fun refreshTokens(): AuthResponse? {
         val refresh = getStoredRefreshToken()
 
-        if (refresh?.isNotEmpty() == true) {
+        if (refresh?.isNotEmpty() == true && _serverAddress.value.isNotEmpty()) {
             val response = serverHandler.userClient.refreshTokens(refresh)
 
             response
@@ -545,7 +545,6 @@ class MainViewModel(
      * Syncs all data between client and server after checking connection with server
      */
     suspend fun syncDatabaseWithServer() {
-        // Check server connection
         if (loginCheck()) {
             // Sync Data
             customerHandler.sync()
@@ -558,7 +557,7 @@ class MainViewModel(
     }
 
     suspend fun loginCheck(): Boolean {
-        return if (checkServerConnection()) {
+        return if (_serverAddress.value.isNotBlank() && checkServerConnection()) {
             // Get stored values
             val username = getStoredUsername() ?: ""
             val password = getStoredPassword() ?: ""

@@ -66,19 +66,21 @@ class ServerUserClient(
      * Log in to server using supplied credentials
      */
     suspend fun login(username: String, password: String): Boolean {
-        networkErrorTryCatch(LOGIN_TAG) {
-            userHttpClient.post {
-                url("$serverUrl/api/auth")
-                contentType(ContentType.Application.Json)
-                setBody(LoginRequest(username, password))
-            }
-        }?.let { response -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response) }
-            ?.onSuccess { authResponse ->
-                serverHandler.updateAuthTokens(authResponse.accessToken, authResponse.refreshToken)
-                return true
-            }
+        if (checkServerConnection()) {
+            networkErrorTryCatch(LOGIN_TAG) {
+                userHttpClient.post {
+                    url("$serverUrl/api/auth")
+                    contentType(ContentType.Application.Json)
+                    setBody(LoginRequest(username, password))
+                }
+            }?.let { response -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response) }
+                ?.onSuccess { authResponse ->
+                    serverHandler.updateAuthTokens(authResponse.accessToken, authResponse.refreshToken)
+                    return true
+                }
 
-        AppLogger.i(LOGIN_TAG, "FAIL")
+            AppLogger.i(LOGIN_TAG, "FAIL")
+        }
 
         return false
     }
@@ -87,39 +89,43 @@ class ServerUserClient(
      * Check if credentials are still good in database
      */
     suspend fun checkCredentials(username: String, password: String): Boolean {
-        val response = networkErrorTryCatch(CHECK_CREDENTIALS_TAG) {
-            userHttpClient.post {
-                url("$serverUrl/api/auth/user")
-                contentType(ContentType.Application.Json)
-                setBody(LoginRequest(username, password))
+        if (checkServerConnection()) {
+            val response = networkErrorTryCatch(CHECK_CREDENTIALS_TAG) {
+                userHttpClient.post {
+                    url("$serverUrl/api/auth/user")
+                    contentType(ContentType.Application.Json)
+                    setBody(LoginRequest(username, password))
+                }
             }
-        }
 
-        return if (response != null && response.status == HttpStatusCode.Companion.Accepted) {
-            AppLogger.m(CHECK_CREDENTIALS_TAG, "SUCCESS")
-            true
-        } else {
-            AppLogger.i(CHECK_CREDENTIALS_TAG, "FAIL")
-            false
-        }
+            return if (response != null && response.status == HttpStatusCode.Companion.Accepted) {
+                AppLogger.m(CHECK_CREDENTIALS_TAG, "SUCCESS")
+                true
+            } else {
+                AppLogger.i(CHECK_CREDENTIALS_TAG, "FAIL")
+                false
+            }
+        } else return false
     }
 
     /**
      * Refresh tokens for authentication with server
      */
     suspend fun refreshTokens(token: String): Result<AuthResponse, NetworkError> {
-        networkErrorTryCatch(REFRESH_TOKEN_TAG) {
-            userHttpClient.post {
-                url("$serverUrl/api/auth/refresh")
-                contentType(ContentType.Application.Json)
-                setBody(RefreshTokenRequest(token))
-            }
-        }?.let { response -> handleHttpResponse<RefreshTokenResponse>(REFRESH_TOKEN_TAG, response) }
-            ?.onSuccess { accessToken ->
-                serverHandler.updateAuthTokens(accessToken.token, token)
-                // We don't use UUID here so just slap whatever. Maybe make another data class for this??
-                return Result.Success(AuthResponse("", accessToken.token, token))
-            }
+        if (checkServerConnection()) {
+            networkErrorTryCatch(REFRESH_TOKEN_TAG) {
+                userHttpClient.post {
+                    url("$serverUrl/api/auth/refresh")
+                    contentType(ContentType.Application.Json)
+                    setBody(RefreshTokenRequest(token))
+                }
+            }?.let { response -> handleHttpResponse<RefreshTokenResponse>(REFRESH_TOKEN_TAG, response) }
+                ?.onSuccess { accessToken ->
+                    serverHandler.updateAuthTokens(accessToken.token, token)
+                    // We don't use UUID here so just slap whatever. Maybe make another data class for this??
+                    return Result.Success(AuthResponse("", accessToken.token, token))
+                }
+        }
 
         return Result.Error(NetworkError.UNKNOWN)
     }
@@ -128,8 +134,7 @@ class ServerUserClient(
      * Checks the connection with the stored server url
      */
     suspend fun checkServerConnection(): Boolean {
-        println(serverUrl)
-        return if (serverUrl.isNotEmpty()) {
+        return if (serverUrl.isNotBlank()) {
             val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_TAG) {
                 userHttpClient.get("${serverUrl}/")
             }
@@ -142,8 +147,7 @@ class ServerUserClient(
      * Checks the connection with a specific server url
      */
     suspend fun checkServerConnection(url: String): Boolean {
-        println(url)
-        return if (url.isNotEmpty()) {
+        return if (url.isNotBlank()) {
             val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) {
                 userHttpClient.get("$url/")
             }

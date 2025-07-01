@@ -31,42 +31,40 @@ class CustomerDatabaseClientImpl(
     }
 
     override suspend fun sync(data: List<MainDataItem>): List<CustomerData> {
-        val identifiers = data.map { it.identifier }
+        if (serverUrl.isNotBlank()) {
+            val identifiers = data.map { it.identifier }
 
-        println("TAG: $SYNC_TAG")
-        println("Syncing...")
-        println("URL: $serverUrl")
+            networkErrorTryCatch(SYNC_TAG) {
+                client.post {
+                    url("$serverUrl/sync")
+                    contentType(ContentType.Application.Json)
+                    setBody(SyncRequest(identifiers))
+                }
+            }?.let { response -> handleHttpResponse<SyncResponse>(SYNC_TAG, response) }
+                ?.onSuccess { syncResponse ->
+                    val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
 
+                    batchSend(requested)
 
-        networkErrorTryCatch(SYNC_TAG) {
-            client.post {
-                url("$serverUrl/sync")
-                contentType(ContentType.Application.Json)
-                setBody(SyncRequest(identifiers))
-            }
-        }?.let { response -> handleHttpResponse<SyncResponse>(SYNC_TAG, response) }
-            ?.onSuccess { syncResponse ->
-                println("Response: $syncResponse")
-                val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
-
-                batchSend(requested)
-
-                return syncResponse.data.filterIsInstance<CustomerData>()
-            }
+                    return syncResponse.data.filterIsInstance<CustomerData>()
+                }
+        }
 
         return listOf()
     }
 
     override suspend fun getAll(): List<CustomerData> {
-        networkErrorTryCatch(GET_ALL_TAG) {
-            client.get("${serverUrl}/all")
-        }?.let { response -> handleHttpResponse<List<CustomerData>>(GET_ALL_TAG, response) }
-            ?.onSuccess { value ->
-                // If we reach this then something has gone wrong
-                AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(GET_ALL_TAG) {
+                client.get("${serverUrl}/all")
+            }?.let { response -> handleHttpResponse<List<CustomerData>>(GET_ALL_TAG, response) }
+                ?.onSuccess { value ->
+                    // If we reach this then something has gone wrong
+                    AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
 
-                return value
-            }
+                    return value
+                }
+        }
 
         return emptyList()
     }

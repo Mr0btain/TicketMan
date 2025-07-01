@@ -29,36 +29,40 @@ class UserDatabaseClientImpl(
     override fun changeUrl(url: String) { serverUrl = "$url/api/data/user" }
 
     override suspend fun sync(data: List<MainDataItem>): List<User> {
-        val identifiers = data.map { it.identifier }
+        if (serverUrl.isNotBlank()) {
+            val identifiers = data.map { it.identifier }
 
-        networkErrorTryCatch(SYNC_TAG) {
-            client.post {
-                url("$serverUrl/sync")
-                contentType(ContentType.Application.Json)
-                setBody(SyncRequest(identifiers))
-            }
-        }?.let { response -> handleHttpResponse<SyncResponse>(SYNC_TAG, response) }
-            ?.onSuccess { syncResponse ->
-                val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
+            networkErrorTryCatch(SYNC_TAG) {
+                client.post {
+                    url("$serverUrl/sync")
+                    contentType(ContentType.Application.Json)
+                    setBody(SyncRequest(identifiers))
+                }
+            }?.let { response -> handleHttpResponse<SyncResponse>(SYNC_TAG, response) }
+                ?.onSuccess { syncResponse ->
+                    val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
 
-                batchSend(requested)
+                    batchSend(requested)
 
-                return syncResponse.data.filterIsInstance<User>()
-            }
+                    return syncResponse.data.filterIsInstance<User>()
+                }
+        }
 
         return listOf()
     }
 
     override suspend fun getAll(): List<User> {
-        networkErrorTryCatch(GET_ALL_TAG) {
-            client.get("${serverUrl}/all")
-        }?.let { response -> handleHttpResponse<List<User>>(GET_ALL_TAG, response) }
-            ?.onSuccess { value ->
-                // If we reach this then something has gone wrong
-                AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(GET_ALL_TAG) {
+                client.get("${serverUrl}/all")
+            }?.let { response -> handleHttpResponse<List<User>>(GET_ALL_TAG, response) }
+                ?.onSuccess { value ->
+                    // If we reach this then something has gone wrong
+                    AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
 
-                return value
-            }
+                    return value
+                }
+        }
 
         return emptyList()
     }

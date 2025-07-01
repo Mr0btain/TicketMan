@@ -29,40 +29,48 @@ abstract class DatabaseClient(
     abstract suspend fun sync(data: List<MainDataItem>): List<MainDataItem>
 
     suspend fun send(data: MainDataItem) {
-        networkErrorTryCatch(SEND_TAG) {
-            client.post {
-                url("$serverUrl/add")
-                contentType(ContentType.Application.Json)
-                setBody(data)
-            }
-        }?.let { response -> handleHttpResponse(SEND_TAG, response) }
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(SEND_TAG) {
+                client.post {
+                    url("$serverUrl/add")
+                    contentType(ContentType.Application.Json)
+                    setBody(data)
+                }
+            }?.let { response -> handleHttpResponse(SEND_TAG, response) }
+        }
     }
 
     suspend fun batchSend(data: List<MainDataItem>) {
-        networkErrorTryCatch(BATCH_SEND_TAG) {
-            client.post {
-                url("$serverUrl/add/all")
-                contentType(ContentType.Application.Json)
-                setBody(data)
-            }
-        }?.let { response -> handleHttpResponse(BATCH_SEND_TAG, response) }
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(BATCH_SEND_TAG) {
+                client.post {
+                    url("$serverUrl/add/all")
+                    contentType(ContentType.Application.Json)
+                    setBody(data)
+                }
+            }?.let { response -> handleHttpResponse(BATCH_SEND_TAG, response) }
+        }
     }
 
     abstract suspend fun getAll(): List<MainDataItem>
 
     suspend fun update(data: MainDataItem) {
-        networkErrorTryCatch(UPDATE_TAG) {
-            client.post {
-                url("$serverUrl/update")
-                contentType(ContentType.Application.Json)
-                setBody(data)
-            }
-        }?.let { response -> handleHttpResponse(SEND_TAG, response) }
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(UPDATE_TAG) {
+                client.post {
+                    url("$serverUrl/update")
+                    contentType(ContentType.Application.Json)
+                    setBody(data)
+                }
+            }?.let { response -> handleHttpResponse(SEND_TAG, response) }
+        }
     }
 
     suspend fun remove(identifier: String) {
-        networkErrorTryCatch(REMOVE_TAG) {
-            client.delete { url("$serverUrl/remove/$identifier") }
-        }?.let { response -> handleHttpResponse(REMOVE_TAG, response) }
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(REMOVE_TAG) {
+                client.delete { url("$serverUrl/remove/$identifier") }
+            }?.let { response -> handleHttpResponse(REMOVE_TAG, response) }
+        }
     }
 }

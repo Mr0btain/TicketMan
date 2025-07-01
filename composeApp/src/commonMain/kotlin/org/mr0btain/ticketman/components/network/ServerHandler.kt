@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.components.network
 
-import io.ktor.client.engine.HttpClientEngine
+import io.ktor.client.engine.*
 import org.mr0btain.ticketman.components.network.database.ServerDatabaseClient
 import org.mr0btain.ticketman.components.network.database.createDatabaseHttpClient
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.components.network.user.createUserHttpClient
 import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 
@@ -27,8 +28,12 @@ class ServerHandler(
      * Sets url to the server in all clients
      */
     fun setUrl(url: String) {
-        userClient.changeServerUrl(url)
-        databaseClient.changeServerUrl(url)
+        if (url.isNotBlank()) {
+            userClient.changeServerUrl(url)
+            databaseClient.changeServerUrl(url)
+        } else {
+            AppLogger.m("$TAG:SetUrl", "FAIL: Url is empty")
+        }
     }
 
     /**
@@ -73,32 +78,23 @@ class ServerHandler(
      * Hits a new server at the specific address and see if we get a response and update clients with url
      */
     suspend fun checkNewServerConnection(url: String): Boolean {
-        println("$url")
-        return if (url.isNotEmpty()) {
-            // Test connection
-            val result = userClient.checkServerConnection(url)
+        // Test connection
+        val result = userClient.checkServerConnection(url)
 
-            if (result) {
-                // Save new address
-                mainViewModel.saveServerAddress(url)
+        return if (result) {
+            // Save new address
+            mainViewModel.saveServerAddress(url)
 
-                // Update client urls
-                updateServerUrl(url)
+            // Update client urls
+            updateServerUrl(url)
 
-                // Log success
-                AppLogger.m("$TAG:CheckNewServerConnection", "SUCCESS")
+            // Log success
+            AppLogger.m("$TAG:CheckNewServerConnection", SimpleError.SUCCESS)
 
-                // Return success
-                true
-            } else {
-                // Log fail
-                AppLogger.i("$TAG:CheckNewServerConnection", "FAIL")
-
-                // Return result
-                false
-            }
+            // Return success
+            true
         } else {
-            AppLogger.i("$TAG:CheckNewServerConnection", "FAIL: URL is empty")
+            AppLogger.m("$TAG:CheckNewServerConnection", SimpleError.FAIL)
             false
         }
     }

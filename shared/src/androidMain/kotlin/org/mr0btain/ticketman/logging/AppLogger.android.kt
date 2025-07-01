@@ -1,6 +1,7 @@
-package org.mr0btain.ticketman.components.logging
+package org.mr0btain.ticketman.logging
 
 import android.util.Log
+import org.mr0btain.ticketman.error.SimpleError
 
 actual object AppLogger {
     actual fun e(tag: String, message: String, throwable: Throwable?) {
@@ -18,4 +19,5 @@ actual object AppLogger {
     actual fun m(tag: String, message: String) { println("[$tag] $message") }
 
     actual fun m(tag: String, message: SimpleError) { println("[$tag] ${message.name}") }
+    actual fun i(tag: String, message: SimpleError) { Log.i("[$tag]", message.name) }
 }
