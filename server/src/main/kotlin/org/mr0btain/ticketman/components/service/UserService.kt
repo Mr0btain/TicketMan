@@ -5,11 +5,12 @@ import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.database.LocalDatabaseClient
+import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 
 class UserService(
-    private val database: LocalDatabaseClient<User>,
+    private val database: UserLocalDatabaseClientImpl,
     private val jwtService: JwtService,
     private val tokenDatabase: TokenDatabase
 ) {

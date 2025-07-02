@@ -7,11 +7,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.database.LocalDatabaseClient
+import org.mr0btain.ticketman.database.TicketLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 
-fun Route.ticketRoute(database: LocalDatabaseClient<TicketInfo>) {
+fun Route.ticketRoute(database: TicketLocalDatabaseClientImpl) {
     // Sync between client and server
     authenticate {
         post("/sync") {

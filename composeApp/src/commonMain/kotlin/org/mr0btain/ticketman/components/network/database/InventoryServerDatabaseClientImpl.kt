@@ -6,29 +6,26 @@ import io.ktor.http.*
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainDataItem
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 
-class TicketDatabaseClientImpl(
-    private val client: HttpClient
-): DatabaseClient(client) {
-    override val TAG = "TicketDatabaseClient"
-    override val SYNC_TAG = "${TAG}:Sync"
-    override val GET_ALL_TAG = "${TAG}:GetAll"
-    override val SEND_TAG = "$TAG:Send"
-    override val BATCH_SEND_TAG = "$TAG:BatchSend"
-    override val UPDATE_TAG = "$TAG:Update"
-    override val REMOVE_TAG = "$TAG:Remove"
-
+class InventoryServerDatabaseClientImpl(
+    val client: HttpClient
+) : ServerDatabaseClient(
+    tag = "InventoryDatabaseClient",
+    client = client
+) {
     override var serverUrl = ""
 
-    override fun changeUrl(url: String) { serverUrl = "$url/api/data/ticket" }
+    override fun changeUrl(url: String) {
+        serverUrl = "$url/api/data/inventory"
+    }
 
-    override suspend fun sync(data: List<MainDataItem>): List<TicketInfo> {
+    override suspend fun sync(data: List<MainDataItem>): List<InventoryItem> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 
@@ -44,18 +41,18 @@ class TicketDatabaseClientImpl(
 
                     batchSend(requested)
 
-                    return syncResponse.data.filterIsInstance<TicketInfo>()
+                    return syncResponse.data.filterIsInstance<InventoryItem>()
                 }
         }
 
         return listOf()
     }
 
-    override suspend fun getAll(): List<TicketInfo> {
+    override suspend fun getAll(): List<InventoryItem> {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
-            }?.let { response -> handleHttpResponse<List<TicketInfo>>(GET_ALL_TAG, response) }
+            }?.let { response -> handleHttpResponse<List<InventoryItem>>(GET_ALL_TAG, response) }
                 ?.onSuccess { value ->
                     // If we reach this then something has gone wrong
                     AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)

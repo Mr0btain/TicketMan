@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.network
 
 import io.ktor.client.engine.*
-import org.mr0btain.ticketman.components.network.database.ServerDatabaseClient
+import org.mr0btain.ticketman.components.network.database.ServerDatabaseClientHandler
 import org.mr0btain.ticketman.components.network.database.createDatabaseHttpClient
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
@@ -22,7 +22,7 @@ class ServerHandler(
     private val TAG = "ServerHandler"
 
     val userClient = ServerUserClient(createUserHttpClient(engine), this)
-    val databaseClient = ServerDatabaseClient(createDatabaseHttpClient(engine, this))
+    val databaseClient = ServerDatabaseClientHandler(createDatabaseHttpClient(engine, this))
 
     /**
      * Sets url to the server in all clients

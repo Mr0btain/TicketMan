@@ -1,28 +1,15 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
-import org.jetbrains.exposed.v1.jdbc.addLogger
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.MainDataItem
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.data.TicketList
-import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.*
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable
+import org.mr0btain.ticketman.database.tables.*
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.city
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.contactInfo
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.firstName
@@ -34,10 +21,6 @@ import org.mr0btain.ticketman.database.tables.CustomerDataTable.street
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.tickets
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.time
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.zip
-import org.mr0btain.ticketman.database.tables.DataTable
-import org.mr0btain.ticketman.database.tables.InventoryTable
-import org.mr0btain.ticketman.database.tables.TicketDataTable
-import org.mr0btain.ticketman.database.tables.UserTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
@@ -287,163 +270,6 @@ class CustomerLocalDatabaseClientImpl(
             e.printStackTrace()
             AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
             return false
-        }
-    }
-}
-
-private fun databaseGetAll(table: DataTable): List<MainDataItem> {
-    return when (table) {
-
-        is TicketDataTable -> {
-            table.selectAll().map { item ->
-                TicketInfo(
-                    identifier = item[TicketDataTable.identifier],
-                    customerId = item[TicketDataTable.customerId],
-                    device = item[TicketDataTable.device],
-                    assignedUser = item[TicketDataTable.assignedUser],
-                    priority = item[TicketDataTable.priority],
-                    status = item[TicketDataTable.status],
-                    updates = item[TicketDataTable.updates].notes,
-                    time = item[TicketDataTable.time]
-                )
-            }
-        }
-
-        is InventoryTable -> {
-            table.selectAll().map { item ->
-                InventoryItem(
-                    identifier = item[InventoryTable.identifier],
-                    name = item[InventoryTable.name],
-                    description = item[InventoryTable.description],
-                    stock = item[InventoryTable.stock],
-                    cost = item[InventoryTable.cost],
-                    price = item[InventoryTable.price],
-                    notes = item[InventoryTable.notes].notes,
-                    time = item[InventoryTable.time]
-                )
-            }
-        }
-
-        is UserTable -> {
-            table.selectAll().map { item ->
-                User(
-                    identifier = item[UserTable.identifier],
-                    username = item[UserTable.username],
-                    password = item[UserTable.password],
-                    name = PersonName(item[UserTable.firstName], item[UserTable.lastName]),
-                    notes = item[UserTable.notes].notes,
-                    contactInfo = item[UserTable.contactInfo],
-                    tickets = item[UserTable.tickets].list,
-                    accessLevel = item[UserTable.access],
-                    time = item[UserTable.time],
-                )
-            }
-        }
-
-        else -> emptyList()
-    }
-}
-
-private fun databaseInsert(data: MainDataItem, table: DataTable) {
-    when (table) {
-
-        is TicketDataTable -> {
-            if (data is TicketInfo) {
-                TicketDataTable.insert { item ->
-                    item[TicketDataTable.identifier] = data.identifier
-                    item[TicketDataTable.customerId] = data.customerId
-                    item[TicketDataTable.device] = data.device
-                    item[TicketDataTable.assignedUser] = data.assignedUser
-                    item[TicketDataTable.priority] = data.priority
-                    item[TicketDataTable.status] = data.status
-                    item[TicketDataTable.updates] = Notes(data.updates)
-                    item[TicketDataTable.time] = data.time
-                }
-            }
-        }
-
-        is InventoryTable -> {
-            if (data is InventoryItem) {
-                InventoryTable.insert { item ->
-                    item[InventoryTable.identifier] = data.identifier
-                    item[InventoryTable.name] = data.name
-                    item[InventoryTable.description] = data.description
-                    item[InventoryTable.stock] = data.stock
-                    item[InventoryTable.cost] = data.cost
-                    item[InventoryTable.price] = data.price
-                    item[InventoryTable.notes] = Notes(data.notes)
-                    item[InventoryTable.time] = data.time
-                }
-            }
-        }
-
-        is UserTable -> {
-            if (data is User) {
-                UserTable.insert { item ->
-                    item[UserTable.identifier] = data.identifier
-                    item[UserTable.username] = data.username
-                    item[UserTable.password] = data.password
-                    item[UserTable.firstName] = data.name.firstName
-                    item[UserTable.lastName] = data.name.lastName
-                    item[UserTable.tickets] = TicketList(data.tickets)
-                    item[UserTable.contactInfo] = data.contactInfo
-                    item[UserTable.notes] = Notes(data.notes)
-                    item[UserTable.access] = data.accessLevel
-                    item[UserTable.time] = data.time
-                }
-            }
-        }
-    }
-}
-
-private fun databaseBatchInsert(data: List<MainDataItem>, table: DataTable) {
-    when (table) {
-
-        is TicketDataTable -> {
-            data.filterIsInstance<TicketInfo>().let { list ->
-                TicketDataTable.batchInsert(list) { item ->
-                    this[TicketDataTable.identifier] = item.identifier
-                    this[TicketDataTable.customerId] = item.customerId
-                    this[TicketDataTable.device] = item.device
-                    this[TicketDataTable.assignedUser] = item.assignedUser
-                    this[TicketDataTable.priority] = item.priority
-                    this[TicketDataTable.status] = item.status
-                    this[TicketDataTable.updates] = Notes(item.updates)
-                    this[TicketDataTable.time] = item.time
-                }
-            }
-        }
-
-        is InventoryTable -> {
-            data.filterIsInstance<InventoryItem>().let { list ->
-                InventoryTable.batchInsert(list) { item ->
-                    this[InventoryTable.identifier] = item.identifier
-                    this[InventoryTable.name] = item.name
-                    this[InventoryTable.description] = item.description
-                    this[InventoryTable.stock] = item.stock
-                    this[InventoryTable.cost] = item.cost
-                    this[InventoryTable.price] = item.price
-                    this[InventoryTable.notes] = Notes(item.notes)
-                    this[InventoryTable.time] = item.time
-                }
-            }
-        }
-
-        is UserTable -> {
-            data.filterIsInstance<User>().let { list ->
-                UserTable.batchInsert(list) { item ->
-                    this[UserTable.identifier] = item.identifier
-                    this[UserTable.username] = item.username
-                    this[UserTable.password] = item.password
-                    this[UserTable.firstName] = item.name.firstName
-                    this[UserTable.lastName] = item.name.lastName
-                    this[UserTable.tickets] = TicketList(item.tickets)
-                    this[UserTable.contactInfo] = item.contactInfo
-                    this[UserTable.notes] = Notes(item.notes)
-                    this[UserTable.access] = item.accessLevel
-                    this[UserTable.time] = item.time
-                }
-            }
         }
     }
 }

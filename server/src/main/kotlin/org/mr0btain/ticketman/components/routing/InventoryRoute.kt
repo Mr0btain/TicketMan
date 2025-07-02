@@ -7,11 +7,11 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.database.LocalDatabaseClient
+import org.mr0btain.ticketman.database.InventoryLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 
-fun Route.inventoryRoute(database: LocalDatabaseClient<InventoryItem>) {
+fun Route.inventoryRoute(database: InventoryLocalDatabaseClientImpl) {
     // Sync between client and server
     authenticate {
         post("/sync") {

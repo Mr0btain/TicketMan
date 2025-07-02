@@ -131,7 +131,7 @@ fun ExpandedMainScreen(
                     isTicketForNewCustomer = true
 
                     // Seed data with customer id
-                    val newIdentifier = viewModel.ticketHandler.getNextId()
+                    val newIdentifier = viewModel.ticketDataHandler.getNextId()
 
                     // Check if our identifier is not null
                     if (newIdentifier != null) {
@@ -200,7 +200,7 @@ fun ExpandedMainScreen(
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
                 coroutineScope.launch {
-                    val newIdentifier = viewModel.customerHandler.getNextId()
+                    val newIdentifier = viewModel.customerDataHandler.getNextId()
 
                     // Check if we can get a new identifier
                     if (newIdentifier != null) {
@@ -226,7 +226,7 @@ fun ExpandedMainScreen(
                 coroutineScope.launch {
                     when (reason) {
                         DialogDismissReason.CONTINUE -> {
-                            viewModel.inventoryHandler.update(item!!)
+                            viewModel.inventoryDataHandler.update(item!!)
                         }
 
                         else -> {
@@ -257,7 +257,7 @@ fun ExpandedMainScreen(
                         when (itemToDeleteType) {
                             MainItemType.CUSTOMER -> {
                                 // Remove customer
-                                viewModel.customerHandler.remove(itemToDelete)
+                                viewModel.customerDataHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.changeSelectedCustomerId("")
@@ -265,7 +265,7 @@ fun ExpandedMainScreen(
 
                             MainItemType.TICKET -> {
                                 // Remove ticket
-                                viewModel.ticketHandler.remove(itemToDelete)
+                                viewModel.ticketDataHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.changeSelectedTicketId("")
@@ -273,7 +273,7 @@ fun ExpandedMainScreen(
                             MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
                             MainItemType.INVENTORY -> {
                                 // Remove item
-                                viewModel.inventoryHandler.remove(itemToDelete)
+                                viewModel.inventoryDataHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.changeSelectedInventoryId("")
@@ -395,7 +395,7 @@ fun ExpandedMainScreen(
                             isDarkMode = isDarkMode,
                             onAddCustomer = { name ->
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.customerHandler.getNextId()
+                                    val newIdentifier = viewModel.customerDataHandler.getNextId()
 
                                     // Check if we can et a new identifier
                                     if (newIdentifier != null) {
@@ -418,7 +418,7 @@ fun ExpandedMainScreen(
                             },
                             onEditCustomer = {
                                 coroutineScope.launch {
-                                    val customer = viewModel.customerHandler.get(selectedCustomer.value)
+                                    val customer = viewModel.customerDataHandler.get(selectedCustomer.value)
 
                                     if (customer != null) {
                                         // Set seed data
@@ -451,7 +451,7 @@ fun ExpandedMainScreen(
                             },
                             onTicketClick = { identifier ->
                                 coroutineScope.launch {
-                                    val ticket = viewModel.ticketHandler.get(identifier)
+                                    val ticket = viewModel.ticketDataHandler.get(identifier)
 
                                     if (ticket != null) {
                                         // Set selected ticket
@@ -490,7 +490,7 @@ fun ExpandedMainScreen(
                             scrollBarsOnRight = scrollBarsOnRight,
                             onAddNewTicket = {
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.ticketHandler.getNextId()
+                                    val newIdentifier = viewModel.ticketDataHandler.getNextId()
 
                                     if (newIdentifier != null) {
                                         // Set up seed data
@@ -510,7 +510,7 @@ fun ExpandedMainScreen(
                             },
                             onEditTicket = {
                                 coroutineScope.launch {
-                                    val ticket = viewModel.ticketHandler.get(selectedTicket.value)
+                                    val ticket = viewModel.ticketDataHandler.get(selectedTicket.value)
 
                                     if (ticket != null) {
                                         // Get seed data
@@ -555,7 +555,7 @@ fun ExpandedMainScreen(
                             onSelectedInventoryItemChange = { viewModel.changeSelectedInventoryId(it) },
                             onAddInventoryItem = {
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.inventoryHandler.getNextId()
+                                    val newIdentifier = viewModel.inventoryDataHandler.getNextId()
 
                                     if (newIdentifier != null) {
                                         // Set seed data
@@ -576,7 +576,7 @@ fun ExpandedMainScreen(
                             },
                             onEditInventoryItem = { item ->
                                 coroutineScope.launch {
-                                    val inventoryItem = viewModel.inventoryHandler.get(item)
+                                    val inventoryItem = viewModel.inventoryDataHandler.get(item)
 
                                     if (inventoryItem != null) {
                                         // Set seed data

@@ -23,7 +23,6 @@ import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoi
 import org.mr0btain.ticketman.components.data.components.settings.UserSettings
 import org.mr0btain.ticketman.components.database.ClientDatabase
 import org.mr0btain.ticketman.components.network.getHttpEngine
-import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.TicketInfo
@@ -35,7 +34,11 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.components.network.ServerHandler
 import org.mr0btain.ticketman.error.SimpleError
-import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.MainDataItemHandler
+import org.mr0btain.ticketman.generateRandomInventoryItems
+import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.CustomerDataHandler
+import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.InventoryDataHandler
+import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.TicketDataHandler
+import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.UserDataHandler
 import java.util.UUID
 
 // TODO: Setup log in button and log in status
@@ -56,6 +59,15 @@ class MainViewModel(
         private const val TAG = "MainViewModel"
     }
 
+    // TODO: Add a way to check if we have network connection, and once we do have it run a check and sync
+    fun init() {
+        viewModelScope.launch {
+            // Pull settings from database
+            getSettingsFromDatabase()
+            syncDatabaseWithServer()
+        }
+    }
+
     // Platform the app is running on
     val platform = getPlatform().name
 
@@ -66,6 +78,69 @@ class MainViewModel(
     // To update the main tab index
     fun changeMainTabIndex(update: Int) {
         _selectedMainTabIndex.value = update
+    }
+
+    private val _showLogin: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val showLogin = _showLogin.asStateFlow()
+
+    /**
+     * Update whether we should show the login popup or not
+     */
+    fun updateShowLogin(value: Boolean) {
+        _showLogin.value = value
+    }
+
+    /** Data Handlers. Mostly just to organise the mess in the view model. Probably not the best way to do it, but it looks much, much better */
+    // -----------------------------------------------------------------------------------------------------------------------
+    // TODO: Setup access level stuff
+    // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
+
+    val userDataHandler = UserDataHandler(
+        localDatabaseClient = localDatabase.userDatabase,
+        serverDatabaseClient = serverHandler.databaseClient.userClient
+    )
+
+    // Inventory handler
+    val inventoryDataHandler = InventoryDataHandler(
+        localDatabaseClient = localDatabase.inventoryDatabase,
+        serverDatabaseClient = serverHandler.databaseClient.inventoryClient
+    )
+
+    // Ticket handler
+    val ticketDataHandler = TicketDataHandler(
+        localDatabaseClient = localDatabase.ticketDatabase,
+        serverDatabaseClient = serverHandler.databaseClient.ticketClient
+    )
+
+    // Customer handler
+    val customerDataHandler = CustomerDataHandler(
+        localDatabaseClient = localDatabase.customerDatabase,
+        serverDatabaseClient = serverHandler.databaseClient.customerClient
+    )
+
+    // TODO: User needs fleshed out
+    private fun populateDataFromLocalDatabases() {
+        viewModelScope.launch {
+            customerDataHandler.populateListFromDatabase()
+            ticketDataHandler.populateListFromDatabase()
+            inventoryDataHandler.populateListFromDatabase()
+            userDataHandler.populateListFromDatabase()
+        }
+    }
+
+    /**
+     * Syncs all data between client and server after checking connection with server
+     */
+    suspend fun syncDatabaseWithServer() {
+        if (loginCheck()) {
+            // Sync Data
+            customerDataHandler.sync()
+            ticketDataHandler.sync()
+            inventoryDataHandler.sync()
+
+            // Log Success
+            AppLogger.m("$TAG:SyncDatabaseWithServer", "SUCCESS")
+        }
     }
 
     /** Settings section */
@@ -175,263 +250,8 @@ class MainViewModel(
         return isValid
     }
 
-    // filtering only number
-    fun filterNumbers(text: String): String = text.filter {
-        it.isDigit()
-    }
-
-    // Check if text is a number
-    fun checkNumber(text: String): Boolean {
-        val value = text.toDoubleOrNull() ?: return false
-        return value >= 0
-    }
-
-    /** User Related Things */
-    // -----------------------------------------------------------------------------------------------------------------------
-
-    // TODO: User handler
-
-    // TODO: Setup access level stuff
-    // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
-    // User stuff
-    private val _user: MutableStateFlow<User> = MutableStateFlow(User())
-    val user = _user.asStateFlow()
-
-    // Employee list
-    private val _userList: MutableStateFlow<List<User>> = MutableStateFlow(listOf())
-    val userList = _userList.asStateFlow()
-
-    // To update the user id
-    fun updateOrAddUser(user: User) {
-        viewModelScope.launch {
-            // Check if item exists or not, if not then add it
-            if (_userList.value.firstOrNull { it.identifier == user.identifier } != null) {
-                // Update data in viewmodel
-                // Get index of the item
-                val index = _userList.value.indexOfFirst { it.identifier == user.identifier }
-
-                // update list with new data
-                _userList.value = _userList.value.toMutableList().also { it[index] = user }
-
-                // Update database
-                if (!localDatabase.userDatabase.update(user)) {
-                    AppLogger.m("$TAG:updateOrAddUser", "Error updating user in database")
-                    snackBarHost.showSnackbar("Error updating user!")
-                }
-            } else {
-                // Else add new item to view model
-                _userList.value = _userList.value + user
-
-                // Add to database
-                if (!localDatabase.userDatabase.add(user)) {
-                    AppLogger.m("$TAG:updateOrAddUser", "Error adding user to database")
-                }
-            }
-        }
-    }
-    /** Inventory Related Things */
-    // -----------------------------------------------------------------------------------------------------------------------
-
-    // Inventory handler
-    val inventoryHandler = MainDataItemHandler<InventoryItem>(
-        tag = "InventoryItemHandler",
-        viewModel = this,
-        localDatabaseClient = localDatabase.inventoryDatabase,
-        serverClient = serverHandler.databaseClient.inventoryClient
-    )
-
-    // Inventory list
-    private val _inventoryList: MutableStateFlow<List<InventoryItem>> = MutableStateFlow(listOf())
-    val inventoryList = _inventoryList.asStateFlow()
-
-    // Inventory selected item id
-    private val _selectedInventoryId: MutableStateFlow<String> = MutableStateFlow("")
-    val selectedInventoryId = _selectedInventoryId.asStateFlow()
-
-    fun changeSelectedInventoryId(identifier: String) {
-        _selectedInventoryId.value = identifier
-    }
-
-    /** Ticket Related Things */
-    // -----------------------------------------------------------------------------------------------------------------------
-
-    // Ticket handler
-    val ticketHandler = MainDataItemHandler<TicketInfo>(
-        tag = "TicketHandler",
-        viewModel = this,
-        localDatabaseClient = localDatabase.ticketDatabase,
-        serverHandler.databaseClient.ticketClient
-    )
-
-    // Ticket data list
-    private val _ticketDataList: MutableStateFlow<List<TicketInfo>> = MutableStateFlow(listOf())
-    val ticketDataList = _ticketDataList.asStateFlow()
-
-    // Selected ticket tab index
-    private val _selectedTicketId: MutableStateFlow<String> = MutableStateFlow("")
-    val selectedTicketId = _selectedTicketId.asStateFlow()
-
-    // To update selected ticket
-    fun changeSelectedTicketId(identifier: String) {
-        _selectedTicketId.value = identifier
-    }
-
-    // Add or update ticket info if it exists
-    fun updateOrAddTicket(data: TicketInfo) {
-        viewModelScope.launch {
-            // Check if ticket exists or not, if not then add it
-            if (_ticketDataList.value.map { it.identifier }.contains(data.identifier)) {
-                // Update data in viewmodel
-                // Get index of the item
-                val index = _ticketDataList.value.indexOfFirst { it.identifier == data.identifier }
-
-                // update list with new data
-                _ticketDataList.value = _ticketDataList.value.toMutableList().also { it[index] = data }
-
-                // Update database
-                if (!localDatabase.ticketDatabase.update(data)) {
-                    AppLogger.m("$TAG:updateOrAddTicket", "Error updating ticket in database")
-                    snackBarHost.showSnackbar("Error updating ticket!")
-                }
-            } else {
-                // Else add new ticket to view model
-                _ticketDataList.value = _ticketDataList.value + data
-
-                // Add to database
-                if (!localDatabase.ticketDatabase.add(data)) {
-                    AppLogger.m("$TAG:updateOrAddTicket", "Error adding ticket to database")
-                    snackBarHost.showSnackbar("Error adding ticket!")
-                }
-            }
-
-            _selectedTicketId.value = data.identifier
-        }
-    }
-
-    /** Customer related things */
-    // ----------------------------------------------------------------------------------------------------------------------------
-
-    // Customer handler
-    val customerHandler = MainDataItemHandler<CustomerData>(
-        tag = "CustomerHandler",
-        viewModel = this,
-        localDatabaseClient = localDatabase.customerDatabase,
-        serverClient = serverHandler.databaseClient.customerClient
-    )
-
-    // Customer data list
-    private val _customerDataList: MutableStateFlow<List<CustomerData>> = MutableStateFlow(listOf())
-    val customerDataList = _customerDataList.asStateFlow()
-
-    // Selected Customer
-    private val _selectedCustomerId: MutableStateFlow<String> = MutableStateFlow("")
-    val selectedCustomerId = _selectedCustomerId.asStateFlow()
-
-    // Call to change customer data
-    fun changeSelectedCustomerId(identifier: String) {
-        _selectedCustomerId.value = identifier
-    }
-
-    // Add or update customer info if it exists
-    fun updateOrAddCustomer(data: CustomerData) {
-        viewModelScope.launch {
-            // Check if customer exists or not, if not then add it
-            if (_customerDataList.value.firstOrNull { it.identifier == data.identifier } != null) {
-                // Update data in viewmodel
-                // Get index of the item
-                val index = _customerDataList.value.indexOfFirst { it.info.identifier == data.info.identifier }
-
-                // update list with new data
-                _customerDataList.value = _customerDataList.value.toMutableList().also { it[index] = data }
-
-                // Update database
-                if (!localDatabase.customerDatabase.update(data)) {
-                    AppLogger.m("$TAG:updateOrAddCustomer", "Error updating customer in database")
-                    snackBarHost.showSnackbar("Error updating customer!")
-                }
-            } else {
-                // Else add to list in view model
-                _customerDataList.value = _customerDataList.value + data
-
-                // Add to database
-                if (!localDatabase.customerDatabase.add(data)) {
-                    AppLogger.m("$TAG:updateOrAddCustomer", "Error adding customer to database")
-                    snackBarHost.showSnackbar("Error adding customer!")
-                }
-            }
-
-            // Set selected customer
-            _selectedCustomerId.value = data.identifier
-        }
-    }
-
-    // Local Database
-    // --------------------------------------------------------------------------------------------------------------------------
-
-    // TODO: User needs fleshed out
-    fun pullDataFromLocalDatabase() {
-        viewModelScope.launch {
-            // Read data from db and update it in view model
-            customerHandler.getAll()?.let { _customerDataList.value = it }
-            ticketHandler.getAll()?.let { _ticketDataList.value = it }
-            inventoryHandler.getAll()?.let { _inventoryList.value = it }
-
-            //_user.value = userList.value.firstOrNull { it.accessLevel == AccessLevel.ADMIN } ?: User()
-            //println("Selected User: ${_user.value}")
-        }
-    }
-
     // Server Stuff
     // ----------------------------------------------------------------------------------------------------------------------------
-
-    /**
-     * get all of an item from local database
-     */
-    @Suppress("UNCHECKED_CAST")
-    private suspend inline fun <reified T : MainDataItem> getAllFromLocalDatabase(): List<T>? {
-        return coroutineScope {
-            try {
-                when (T::class) {
-                    CustomerData::class -> localDatabase.customerDatabase.getAll() as? List<T>?
-                    TicketInfo::class -> localDatabase.ticketDatabase.getAll() as? List<T>?
-                    InventoryItem::class -> localDatabase.inventoryDatabase.getAll() as? List<T>?
-                    User::class -> localDatabase.userDatabase.getAll() as? List<T>?
-                    else -> {
-                        AppLogger.i("$TAG:GetAllFromDatabase", SimpleError.FAIL)
-                        null
-                    }
-                }
-            } catch (ex: Exception) {
-                AppLogger.i("$TAG:GetAllFromDatabase", SimpleError.FAIL)
-                null
-            }
-        }
-    }
-
-    /**
-     * Get next id for item
-     */
-    private suspend inline fun <reified T : MainDataItem> getNextIdentifier(): String? {
-        return coroutineScope {
-            when (T::class) {
-                CustomerData::class -> { localDatabase.customerDatabase.getNextId() }
-                TicketInfo::class -> localDatabase.ticketDatabase.getNextId()
-                InventoryItem::class -> localDatabase.inventoryDatabase.getNextId()
-                User::class -> localDatabase.userDatabase.getNextId()
-                else -> null
-            }
-        }
-    }
-
-    private val _showLogin: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val showLogin = _showLogin.asStateFlow()
-
-    /**
-     * Update whether we should show the login popup or not
-     */
-    fun updateShowLogin(value: Boolean) {
-        _showLogin.value = value
-    }
 
     /**
      * update stored username
@@ -540,22 +360,6 @@ class MainViewModel(
         return null
     }
 
-
-    /**
-     * Syncs all data between client and server after checking connection with server
-     */
-    suspend fun syncDatabaseWithServer() {
-        if (loginCheck()) {
-            // Sync Data
-            customerHandler.sync()
-            ticketHandler.sync()
-            inventoryHandler.sync()
-
-            // Log Success
-            AppLogger.m("$TAG:SyncDatabaseWithServer", "SUCCESS")
-        }
-    }
-
     suspend fun loginCheck(): Boolean {
         return if (_serverAddress.value.isNotBlank() && checkServerConnection()) {
             // Get stored values
@@ -571,40 +375,17 @@ class MainViewModel(
         } else false
     }
 
-    fun bulkAddCustomers(data: List<CustomerData>) { _customerDataList.value = _customerDataList.value + data }
-
-    fun bulkAddTickets(data: List<TicketInfo>) { _ticketDataList.value = _ticketDataList.value + data }
-
-    fun bulkAddInventory(data: List<InventoryItem>) { _inventoryList.value = _inventoryList.value + data }
-
-    fun bulkAddUsers(data: List<User>) { _userList.value = _userList.value + data }
-
-    // TODO: Add a way to check if we have network connection, and once we do have it run a check and sync
-    fun init() {
-        viewModelScope.launch {
-            // Pull settings from database
-            getSettingsFromDatabase()
-
-            syncDatabaseWithServer()
-        }
-    }
-
     // TESTING
     // ----------------------------------------------------------------------------------------------------------------------------
 
     fun generateMockDbData() {
-        val (customerdata, ticketData, userData) = generateMockData(400)
-
-        //clientDatabase.ticketDatabase.addAll(ticketData)
-
-        // Add the generated values to the database
-        //clientDatabase.customerDatabase.addAll(customerdata)
-
-        // Add all employees
-        //clientDatabase.userDatabase.addAll(userData)
-
-        // Generate and add inventory items
-        //clientDatabase.inventoryDatabase.addAll(generateRandomInventoryItems(60))
+        viewModelScope.launch {
+            val (customerData, ticketData, userData) = generateMockData(400)
+            customerDataHandler.addAll(customerData)
+            ticketDataHandler.addAll(ticketData)
+            userDataHandler.addAll(userData)
+            inventoryDataHandler.addAll(generateRandomInventoryItems(120))
+        }
     }
 
     fun testPdf() {

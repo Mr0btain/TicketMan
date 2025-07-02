@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.hashPassword
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.LocalDatabaseClient
+import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
 import org.mr0btain.ticketman.server.response.UserResponse
@@ -18,7 +19,7 @@ import org.mr0btain.ticketman.server.response.UserResponse
  */
 
 fun Route.userRoute(
-    database: LocalDatabaseClient<User>
+    database: UserLocalDatabaseClientImpl
 ) {
     // TODO: Not sure if this is the right way to go about this
     get("/isnewdatabase") {

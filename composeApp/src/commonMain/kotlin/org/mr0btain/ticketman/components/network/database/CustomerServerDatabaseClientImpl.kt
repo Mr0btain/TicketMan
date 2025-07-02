@@ -13,17 +13,12 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 
-class CustomerDatabaseClientImpl(
+class CustomerServerDatabaseClientImpl(
     val client: HttpClient
-) : DatabaseClient(client) {
-    override val TAG = "CustomerDatabaseClient"
-    override val SYNC_TAG = "${TAG}:Sync"
-    override val GET_ALL_TAG = "${TAG}:GetAll"
-    override val SEND_TAG = "$TAG:Send"
-    override val BATCH_SEND_TAG = "$TAG:BatchSend"
-    override val UPDATE_TAG = "$TAG:Update"
-    override val REMOVE_TAG = "$TAG:Remove"
-
+) : ServerDatabaseClient(
+    tag = "CustomerDatabaseClient",
+    client = client
+) {
     override var serverUrl = ""
 
     override fun changeUrl(url: String) {

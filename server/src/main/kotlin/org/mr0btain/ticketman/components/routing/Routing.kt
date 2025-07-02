@@ -40,18 +40,15 @@ fun Application.configureRouting(
         }
 
         route("/api/data/customer") {
-            dataRoute<CustomerData>(serverDatabase.customerDatabase)
-            //customerRoute(serverDatabase.customerDatabase)
+            customerRoute(serverDatabase.customerDatabase)
         }
 
         route("/api/data/ticket") {
-            dataRoute<TicketInfo>(serverDatabase.ticketDatabase)
-            //ticketRoute(serverDatabase.ticketDatabase)
+            ticketRoute(serverDatabase.ticketDatabase)
         }
 
         route("/api/data/inventory") {
-            dataRoute<InventoryItem>(serverDatabase.inventoryDatabase)
-            //inventoryRoute(serverDatabase.inventoryDatabase)
+            inventoryRoute(serverDatabase.inventoryDatabase)
         }
     }
 }

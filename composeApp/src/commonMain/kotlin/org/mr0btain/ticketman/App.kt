@@ -53,7 +53,7 @@ fun App() {
         //mainViewModel.generateMockDbData()
 
         // Pull data from local database
-        mainViewModel.pullDataFromLocalDatabase()
+        mainViewModel.populateDataFromLocalDatabases()
 
         // Current employee info
         val currentEmployee = mainViewModel.user.collectAsState()
