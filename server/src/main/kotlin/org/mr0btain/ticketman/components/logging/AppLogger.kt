@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.logging
 import java.util.logging.Level
 import java.util.logging.Logger
 
+/*
 object AppLogger {
     private val logger: Logger = Logger.getLogger(AppLogger::class.java.name)
 
@@ -35,3 +36,4 @@ object AppLogger {
         //println("[$tag] $message")
     }
 }
+ */

@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.ui.screens.main.components.customer
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -12,9 +11,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.shared.formatTime
-import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
@@ -29,11 +28,8 @@ fun CustomerInfoPane(
     selectedCustomerData: CustomerData,
     tickets: List<TicketInfo>,
     onEditClick: () -> Unit,
-    onTicketClick: (Int) -> Unit
+    onTicketClick: (String) -> Unit
 ) {
-    // Scroll state for basic ifo pane if needed
-    val scrollState = rememberScrollState()
-
     // Sizes for icons and text
     val labelSize = 12.sp
     val textSize = 16.sp

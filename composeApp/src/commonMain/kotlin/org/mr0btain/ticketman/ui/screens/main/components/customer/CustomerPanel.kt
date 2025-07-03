@@ -10,9 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirst
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
@@ -23,14 +23,14 @@ fun CustomerPanel(
     modifier: Modifier = Modifier,
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
-    selectedCustomerId: Int,
+    selectedCustomerId: String,
     customerDataList: List<CustomerData>,
     ticketList: List<TicketInfo>,
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
-    onCustomerSelectionChange: (Int) -> Unit,
-    onDeleteCustomer: (Int) -> Unit,
-    onTicketClick: (Int) -> Unit,
+    onCustomerSelectionChange: (String) -> Unit,
+    onDeleteCustomer: (String) -> Unit,
+    onTicketClick: (String) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     isDarkMode: Boolean
@@ -77,7 +77,8 @@ fun CustomerPanel(
 
                 // Button for adding or deleting a customer
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -100,13 +101,10 @@ fun CustomerPanel(
             Spacer(Modifier.padding(4.dp))
 
             Row(
-                modifier = Modifier
-                    .wrapContentHeight()
-                    .fillMaxWidth()
+                modifier = Modifier.sizeIn(maxHeight = 500.dp)
             ) {
                 CustomerListPane(
-                    modifier = Modifier
-                        .height(500.dp),
+                    modifier = Modifier,
                     customerInfo = sortedCustomerInfo,
                     lazyListState = customerLazyListState,
                     selectedCustomerId = selectedCustomerId,
@@ -123,8 +121,7 @@ fun CustomerPanel(
                 )
 
                 CustomerInfoPane(
-                    modifier = modifier
-                        .height(500.dp),
+                    modifier = modifier,
                     isDarkMode = isDarkMode,
                     selectedCustomerData = customerDataList.singleOrNull() { it.info.identifier == selectedCustomerId }
                         ?: CustomerData(),

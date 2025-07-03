@@ -10,9 +10,9 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 
 // TODO: Setup time stamps for notes or updates, times for when tickets added and such
 
-object TicketDataTable: IntIdTable("tickets") {
-    val identifier = integer("number")
-    val customerId = integer("customerId")
+object TicketDataTable: IntIdTable("tickets"), DataTable {
+    val identifier = text("number")
+    val customerId = text("customerId")
     val assignedUser = varchar("assignedUser", 36)
     val device = json<Device>("device", Json.Default)
     val status = json<TicketStatus>("status", Json.Default)

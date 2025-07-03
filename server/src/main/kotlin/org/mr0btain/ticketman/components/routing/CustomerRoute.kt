@@ -1,38 +1,56 @@
 package org.mr0btain.ticketman.components.routing
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.serialization.JsonConvertException
-import io.ktor.server.auth.authenticate
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import org.mr0btain.ticketman.data.customer.CustomerData
-import org.mr0btain.ticketman.database.CustomerDatabase
-import org.mr0btain.ticketman.server.response.ServerResponse
-import org.mr0btain.ticketman.server.response.ServerResult
-import kotlin.text.toIntOrNull
+import io.ktor.http.*
+import io.ktor.serialization.*
+import io.ktor.server.auth.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.database.CustomerLocalDatabaseClientImpl
+import org.mr0btain.ticketman.server.request.SyncRequest
+import org.mr0btain.ticketman.server.response.SyncResponse
 
-/**
- * Customer routes
- */
-fun Route.customerRoute(database: CustomerDatabase) {
-    // Get all customers
-    authenticate("restricted") {
-        get("/all") {
-            database.getAll()?.let { data -> call.respond(data) } ?: call.respond(HttpStatusCode.NotFound)
+fun Route.customerRoute(database: CustomerLocalDatabaseClientImpl) {
+    // Sync between client and server
+    authenticate {
+        post("/sync") {
+            val request = call.receive<SyncRequest>()
+
+            database.getAll()?.let { data ->
+                // Filter items by ones the client does not contain
+                val responseData = data.filter { !request.clientData.contains(it.identifier) }
+
+                // Map all the ids in the local database
+                val dataIdentifiers = data.map { it.identifier }
+
+                // Filter response data so we can send back a response to request those that are not in our database
+                val requested = request.clientData.filter { !dataIdentifiers.contains(it) }
+
+                // Send response
+                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
+            } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
-    // Adding new customer
+    // Get all
+    authenticate("restricted") {
+        get("/all") {
+            database.getAll()?.let { data ->
+                call.respond(HttpStatusCode.Accepted, data)
+            } ?: call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
+    // Adding new
     authenticate {
         post("/add") {
             try {
-                val customer = call.receive<CustomerData>()
-                database.add(customer)
-                call.respond(HttpStatusCode.NoContent)
+                val item = call.receive<CustomerData>()
+
+                database.add(item)
+
+                call.respond(HttpStatusCode.Accepted)
             } catch (ex: IllegalStateException) {
                 ex.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest)
@@ -47,9 +65,9 @@ fun Route.customerRoute(database: CustomerDatabase) {
     authenticate {
         post("/update") {
             try {
-                val customer = call.receive<CustomerData>()
+                val data = call.receive<CustomerData>()
 
-                if (database.update(customer)) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
+                if (database.update(data)) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
             } catch (ex: Exception) {
                 ex.printStackTrace()
                 call.respond(HttpStatusCode.BadRequest)
@@ -61,29 +79,29 @@ fun Route.customerRoute(database: CustomerDatabase) {
     authenticate {
         post("/add/all") {
             try {
-                val customers = call.receive<List<CustomerData>>()
+                val data = call.receive<List<CustomerData>>()
 
-                if (database.addAll(customers)) call.respond(ServerResponse(ServerResult.SUCCESS))
-                else call.respond(ServerResponse(ServerResult.FAIL))
+                if (database.addAll(data)) call.respond(HttpStatusCode.Accepted)
+                else call.respond(HttpStatusCode.NotFound)
             } catch (ex: Exception) {
                 ex.printStackTrace()
-                call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Delete customer
+    // Remove customer
     authenticate {
-        delete("/delete/{customerIdentifier}") {
-            val identifier = call.parameters["customerIdentifier"]?.toIntOrNull()
+        delete("/remove/{identifier}") {
+            val identifier = call.parameters["identifier"]
 
             if (identifier == null) {
-                call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
+                call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            if (database.remove(identifier)) call.respond(ServerResponse(ServerResult.SUCCESS))
-            else call.respond(ServerResponse(ServerResult.FAIL))
+            if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted)
+            else call.respond(HttpStatusCode.BadRequest)
         }
     }
 }

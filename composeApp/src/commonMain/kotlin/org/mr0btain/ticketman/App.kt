@@ -39,10 +39,6 @@ fun App() {
         // TODO: Maybe combine these? don't really need both of them
         // View Models
         val mainViewModel = koinViewModel<MainViewModel>()
-        //val settingsViewModel = koinViewModel<SettingsViewModel>()
-
-        // Pull settings from datastore
-        mainViewModel.getSettingsFromPreferences()
 
         // For snack bar messages
         val snackBarHostState = mainViewModel.snackBarHost
@@ -56,11 +52,8 @@ fun App() {
         // Generate some mock data and add it to the database in memory
         //mainViewModel.generateMockDbData()
 
-        // Pull data from local database
-        mainViewModel.pullDataFromLocalDatabase()
-
         // Current employee info
-        val currentEmployee = mainViewModel.user.collectAsState()
+        val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
 
         // Should we show login popup or not
         val shouldShowLogin = mainViewModel.showLogin.collectAsState()

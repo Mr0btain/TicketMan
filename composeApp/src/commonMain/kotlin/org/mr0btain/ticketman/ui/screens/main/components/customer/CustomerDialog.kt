@@ -17,7 +17,7 @@ import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
@@ -44,9 +44,9 @@ import kotlin.math.ceil
 fun CustomerDialog(
     modifier: Modifier = Modifier,
     seedData: CustomerData = CustomerData(),
-    ticketList: SnapshotStateList<Int>,
+    ticketList: SnapshotStateList<String>,
     onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
-    onAddNewTicket: (Int) -> Unit,
+    onAddNewTicket: (String) -> Unit,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
@@ -383,7 +383,7 @@ fun CustomerDialog(
 
                         IconButton(
                             modifier = Modifier.size(26.dp),
-                            onClick = { onAddNewTicket(seedData.info.identifier) }
+                            onClick = { onAddNewTicket(seedData.identifier) }
                         ) {
                             Icon(
                                 modifier = Modifier

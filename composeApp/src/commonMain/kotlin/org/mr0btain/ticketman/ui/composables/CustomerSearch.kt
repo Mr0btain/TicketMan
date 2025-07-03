@@ -27,7 +27,7 @@ fun CustomerSearch(
     items: List<CustomerInfo>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Int) -> Unit
+    onClick: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 

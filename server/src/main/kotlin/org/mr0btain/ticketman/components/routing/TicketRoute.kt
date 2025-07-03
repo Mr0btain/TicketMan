@@ -1,84 +1,107 @@
 package org.mr0btain.ticketman.components.routing
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.authenticate
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.database.TicketDatabase
-import org.mr0btain.ticketman.server.response.ServerResponse
-import org.mr0btain.ticketman.server.response.ServerResult
-import kotlin.text.toIntOrNull
+import io.ktor.http.*
+import io.ktor.serialization.*
+import io.ktor.server.auth.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.database.TicketLocalDatabaseClientImpl
+import org.mr0btain.ticketman.server.request.SyncRequest
+import org.mr0btain.ticketman.server.response.SyncResponse
 
-fun Route.ticketRoute(database: TicketDatabase) {
-    // Get all tickets
-    authenticate("restricted") {
-        get("/all") {
-            database.getAll()?.let { data -> call.respond(data) } ?: call.respond(HttpStatusCode.NotFound)
+fun Route.ticketRoute(database: TicketLocalDatabaseClientImpl) {
+    // Sync between client and server
+    authenticate {
+        post("/sync") {
+            val request = call.receive<SyncRequest>()
+
+            database.getAll()?.let { data ->
+                // Filter items by ones the client does not contain
+                val responseData = data.filter { !request.clientData.contains(it.identifier) }
+
+                // Map all the ids in the local database
+                val dataIdentifiers = data.map { it.identifier }
+
+                // Filter response data so we can send back a response to request those that are not in our database
+                val requested = request.clientData.filter { !dataIdentifiers.contains(it) }
+
+                // Send response
+                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
+            } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
-    // Add New Ticket
+    // Get all
+    authenticate("restricted") {
+        get("/all") {
+            database.getAll()?.let { data ->
+                call.respond(HttpStatusCode.Accepted, data)
+            } ?: call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
+    // Adding new
     authenticate {
         post("/add") {
             try {
-                val ticket = call.receive<TicketInfo>()
+                val item = call.receive<TicketInfo>()
 
-                database.add(ticket)
-                call.respond(ServerResponse(ServerResult.SUCCESS))
-            } catch (ex: Exception) {
+                database.add(item)
+
+                call.respond(HttpStatusCode.Accepted)
+            } catch (ex: IllegalStateException) {
                 ex.printStackTrace()
-                call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
+            } catch (ex: JsonConvertException) {
+                ex.printStackTrace()
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Update ticket
+    // Update Customer
     authenticate {
         post("/update") {
             try {
-                val ticket = call.receive<TicketInfo>()
+                val data = call.receive<TicketInfo>()
 
-                database.update(ticket)
-                call.respond(ServerResponse(ServerResult.SUCCESS))
+                if (database.update(data)) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
             } catch (ex: Exception) {
                 ex.printStackTrace()
-                call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Bulk add tickets
+    // Bulk add customers mostly for syncing
     authenticate {
         post("/add/all") {
             try {
-                val tickets = call.receive<List<TicketInfo>>()
+                val data = call.receive<List<TicketInfo>>()
 
-                if (database.addAll(tickets)) call.respond(ServerResponse(ServerResult.SUCCESS))
-                else call.respond(ServerResponse(ServerResult.FAIL))
+                if (database.addAll(data)) call.respond(HttpStatusCode.Accepted)
+                else call.respond(HttpStatusCode.NotFound)
             } catch (ex: Exception) {
                 ex.printStackTrace()
-                call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Delete ticket
+    // Remove customer
     authenticate {
-        delete("/delete/{ticketIdentifier}") {
-            val identifier = call.parameters["ticketIdentifier"]?.toIntOrNull()
+        delete("/remove/{identifier}") {
+            val identifier = call.parameters["identifier"]
 
             if (identifier == null) {
-                call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
+                call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            if (database.remove(identifier)) call.respond(ServerResponse(ServerResult.SUCCESS))
-            else call.respond(ServerResponse(ServerResult.FAIL))
+            if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted)
+            else call.respond(HttpStatusCode.BadRequest)
         }
     }
 }

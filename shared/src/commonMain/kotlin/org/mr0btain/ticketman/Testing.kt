@@ -2,10 +2,10 @@ package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.customer.CustomerData
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.data.inventory.InventoryItem
+import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.AMPM
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
@@ -13,15 +13,18 @@ import org.mr0btain.ticketman.data.shared.Time
 import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.data.shared.parseDateToLong
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.data.ticket.randomTicketPriority
-import org.mr0btain.ticketman.data.ticket.randomTicketStatus
-import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.randomTicketPriority
+import org.mr0btain.ticketman.data.randomTicketStatus
+import org.mr0btain.ticketman.data.User
 import java.text.DecimalFormat
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 
+/**
+ * A bunch of half-assed clobbered together functions that spit out random test data. Its beautiful chaos
+ */
 fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<User>> {
     // Generate some mock customer data
     val customerData = generateMockCustomerData(num)
@@ -35,11 +38,11 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
 
     customerData.forEach { item ->
         val tickets = mutableListOf<TicketInfo>()
-        val ticketIds = mutableListOf<Int>()
+        val ticketIds = mutableListOf<String>()
 
         // Generate tickets
         (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(item.info.identifier, currentTicketId))
+            tickets.add(generateRandomTicket(item.identifier, currentTicketId.toString()))
 
             currentTicketId++
         }
@@ -63,7 +66,7 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
 
         // Set ticket data assigned employee
         newTicketData[index] = ticket.copy(
-            assignedUser = user.identifier.toString()
+            assignedUser = user.identifier
         )
 
         // add ticket to employee
@@ -101,7 +104,7 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
         val stock = Random.nextInt(1, 500)
         val costVal = Random.nextDouble(0.5, 50.0)
         val priceVal = costVal * Random.nextDouble(1.2, 2.5)
-        val identifier = Random.nextInt(100000, 999999)
+        val identifier = Random.nextInt(100000, 999999).toString()
         val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
 
         InventoryItem(
@@ -119,13 +122,13 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
 
 fun generateMockCustomerData(num: Int): List<CustomerData> {
     val data = mutableListOf<CustomerData>()
-    val ids = mutableListOf<Int>()
+    val ids = mutableListOf<String>()
 
     (0..num).forEach { i ->
-        var id = Random.nextInt(0, 9999)
+        var id = Random.nextInt(0, 9999).toString()
 
         while (ids.contains(id)) {
-            id = Random.nextInt(0, 9999)
+            id = Random.nextInt(0, 9999).toString()
         }
 
         ids.add(id)
@@ -177,7 +180,7 @@ fun generateMockUserData(num: Int): List<User> {
         // Create and return User object
         users.add(
             User(
-                identifier = UUID.randomUUID(),
+                identifier = UUID.randomUUID().toString(),
                 username = "${name.firstName}_${name.lastName}",
                 password = name.lastName,
                 name = name,
@@ -209,7 +212,7 @@ fun generateMockUserData(num: Int): List<User> {
 
         users.add(
             User(
-                identifier = UUID.randomUUID(),
+                identifier = UUID.randomUUID().toString(),
                 username = "${name.firstName}_${name.lastName}",
                 password = name.lastName,
                 name = name,
@@ -293,7 +296,7 @@ private fun generateRandomName(): PersonName {
 }
 
 @OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(customerId: Int, ticketId: Int): TicketInfo {
+fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),
@@ -336,7 +339,7 @@ fun generateRandomTicket(customerId: Int, ticketId: Int): TicketInfo {
     }
 
     return TicketInfo(
-        identifier = ticketId,
+        identifier = ticketId.toString(),
         customerId = customerId,
         assignedUser = "",
         device = Device(manufacturer, model),

@@ -27,6 +27,13 @@ fun Route.authRoute(userService: UserService) {
         } ?: call.respond(HttpStatusCode.Unauthorized)
     }
 
+    post("/user") {
+        val request = call.receive<LoginRequest>()
+        val authenticated = userService.authenticateUser(request)
+
+        if (authenticated) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.Unauthorized)
+    }
+
     post("/refresh") {
         val request = call.receive<RefreshTokenRequest>()
 
@@ -36,4 +43,6 @@ fun Route.authRoute(userService: UserService) {
             call.respond(HttpStatusCode.Created, RefreshTokenResponse(newAccessToken))
         } ?: call.respond(HttpStatusCode.Unauthorized)
     }
+
+
 }

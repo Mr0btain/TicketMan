@@ -13,6 +13,7 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
@@ -60,8 +61,12 @@ fun NavigationHost(
             ) {
                 LoginScreen(
                     onConfirm = { user, pass ->
-                        mainViewModel.updateStoredUsername(user)
-                        mainViewModel.updateStoredPassword(pass)
+                        if (user.isNotEmpty() && pass.isNotEmpty()) {
+                            coroutineScope.launch {
+                                mainViewModel.dataHandler.updateStoredUsername(user)
+                                mainViewModel.dataHandler.updateStoredPassword(pass)
+                            }
+                        }
 
                         true
                     },

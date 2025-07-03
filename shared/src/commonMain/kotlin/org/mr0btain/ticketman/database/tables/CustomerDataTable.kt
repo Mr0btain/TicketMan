@@ -4,13 +4,13 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
 import org.jetbrains.exposed.v1.json.json
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.customer.TicketList
+import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.shared.Notes
 
 // TODO: Maybe encrypt whole data and just leave first last and identifier unencrypted
 
-object CustomerDataTable : IntIdTable("customer") {
-    val identifier = integer("number")
+object CustomerDataTable : IntIdTable("customer"), DataTable {
+    val identifier = text("number")
     val firstName = text("firstname")
     val lastName = text("lastname")
     val street = text("street")

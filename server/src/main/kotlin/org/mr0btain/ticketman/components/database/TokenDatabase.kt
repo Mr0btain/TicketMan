@@ -15,17 +15,16 @@ import java.util.UUID
 class TokenDatabase(
     private val shouldLog: Boolean
 ) {
-    fun findById(uuid: UUID): RefreshToken? {
-        val ident = uuid.toString()
+    fun findById(identifier: String): RefreshToken? {
         var found: RefreshToken? = null
 
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                TokenTable.selectAll().where { identifier eq ident }.firstOrNull()?.let { item ->
+                TokenTable.selectAll().where { TokenTable.identifier eq identifier }.firstOrNull()?.let { item ->
                     found = RefreshToken(
-                        identifier = UUID.fromString(item[identifier]),
+                        identifier = item[TokenTable.identifier],
                         token = item[token]
                     )
                 }
@@ -47,7 +46,7 @@ class TokenDatabase(
 
                 TokenTable.selectAll().where { token eq refreshToken }.firstOrNull()?.let { item ->
                     found = RefreshToken(
-                        identifier = UUID.fromString(item[identifier]),
+                        identifier = item[identifier],
                         token = item[token]
                     )
                 }
@@ -97,15 +96,13 @@ class TokenDatabase(
         return true
     }
 
-    fun remove(uuid: UUID): Boolean {
-        val ident = uuid.toString()
-
+    fun remove(identifier: String): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TokenTable.deleteWhere { identifier eq ident }
+                TokenTable.deleteWhere { this.identifier eq identifier }
             }
         } catch (ex: Exception) {
             ex.printStackTrace()

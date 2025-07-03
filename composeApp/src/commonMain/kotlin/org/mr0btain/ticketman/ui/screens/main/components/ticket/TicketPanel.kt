@@ -10,9 +10,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.customer.CustomerData
-import org.mr0btain.ticketman.data.ticket.TicketInfo
-import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
@@ -27,19 +27,19 @@ fun TicketPanel(
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
     scrollBarsOnRight: Boolean,
-    selectedTicketId: Int,
+    selectedTicketId: String,
     ticketList: List<TicketInfo>,
     customerList: List<CustomerData>,
     currentUser: User,
     users: List<User>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
-    onSelectedTicketChange: (Int) -> Unit,
-    onDeleteTicket: (Int) -> Unit,
+    onSelectedTicketChange: (String) -> Unit,
+    onDeleteTicket: (String) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
-    val currentUserId = remember(currentUser) { currentUser.identifier.toString() }
+    val currentUserId = remember(currentUser) { currentUser.identifier }
 
     // Sorted tickets by which tab were on
     val sortedTickets = remember(selectedPanel, ticketList, currentUser) {
@@ -165,7 +165,9 @@ fun TicketPanel(
             Spacer(Modifier.padding(4.dp))
 
             // --------------------------------- List and Info Panes ---------------------------------------------------
-            Row {
+            Row(
+                modifier = Modifier.sizeIn(maxHeight = 500.dp)
+            ) {
                 // All tickets tab.
                 TicketListPane(
                     isDarkMode = isDarkMode,

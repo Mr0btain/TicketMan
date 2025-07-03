@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
@@ -20,8 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.inventory.InventoryItem
-import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.ui.composables.InventorySearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
@@ -33,12 +34,12 @@ fun InventoryPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     inventoryList: List<InventoryItem>,
-    selectedInventoryItemId: Int,
+    selectedInventoryItemId: String,
     scrollBarsOnRight: Boolean,
-    onSelectedInventoryItemChange: (Int) -> Unit,
+    onSelectedInventoryItemChange: (String) -> Unit,
     onAddInventoryItem: () -> Unit,
-    onEditInventoryItem: (Int) -> Unit,
-    onDeleteInventoryItem: (Int) -> Unit,
+    onEditInventoryItem: (String) -> Unit,
+    onDeleteInventoryItem: (String) -> Unit,
     coroutineScope: CoroutineScope,
     inventoryListState: LazyListState
 ) {
@@ -105,11 +106,13 @@ fun InventoryPanel(
             Spacer(Modifier.padding(4.dp))
 
             // --------------------------------- List and Info Panes ---------------------------------------------------
-            Row {
+            Row(
+                modifier = Modifier.sizeIn(maxHeight = 500.dp)
+            ) {
                 // List of all the inventory items
                 InventoryListPane(
                     isDarkMode = isDarkMode,
-                    selectedId = selectedInventoryItemId,
+                    selected = selectedInventoryItemId,
                     items = inventoryList,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onClick = {

@@ -10,9 +10,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
@@ -29,9 +31,18 @@ fun LoginPopup(
     viewModel: MainViewModel,
     coroutineScope: CoroutineScope
 ) {
-    var state by remember { mutableStateOf(LoginDialogState.Address) }
+    var state by remember { mutableStateOf(LoginDialogState.Login) }
     var labelState by remember { mutableStateOf("Server Address") }
     var error by remember { mutableStateOf(false) }
+    val effect = remember { 0 }
+
+    // We only ever want this to run once
+    // Check connection to the server using stored value, if its good no need to reenter it
+    LaunchedEffect(effect) {
+        if (viewModel.dataHandler.checkServerConnection()) {
+            state = LoginDialogState.Login
+        }
+    }
 
     LoginDialog(
         modifier = modifier,
@@ -41,16 +52,18 @@ fun LoginPopup(
         onLoginConfirm = { user, pass ->
             coroutineScope.launch {
                 // Set state to loading
+                labelState = "Loading"
                 state = LoginDialogState.Loading
 
                 // Try to log in to server
-                val result = viewModel.loginToServer(user, pass)
+                val result = viewModel.dataHandler.loginToServer(user, pass)
 
                 // If we've successfully logged in then call dismiss and move on
                 if (result) {
                     onDismiss()
                 } else {
                     error = true
+                    labelState = "Login"
                     state = LoginDialogState.Login
                 }
             }
@@ -58,25 +71,29 @@ fun LoginPopup(
         onAddressConfirm = { address ->
             coroutineScope.launch {
                 // Trigger loading screen
+                labelState = "Loading"
                 state = LoginDialogState.Loading
 
                 // Try to hit server
-                val result = viewModel.checkNewServerConnection(address)
+                val result = viewModel.dataHandler.checkNewServerConnection(address)
 
                 // Handle result
                 if (result) {
                     error = false
+                    labelState = "Login"
                     state = LoginDialogState.Login
                 } else {
                     error = true
+                    labelState = "Server Address"
                     state = LoginDialogState.Address
                 }
             }
         },
-        onDismiss = {}
+        onDismiss = onDismiss
     )
 }
 
+@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun LoginDialog(
     modifier: Modifier = Modifier,
@@ -90,7 +107,8 @@ private fun LoginDialog(
     val padding = 48.dp
 
     Dialog(
-        onDismissRequest = onDismiss
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
     ) {
         Surface(
             modifier = modifier,

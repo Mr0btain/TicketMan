@@ -10,7 +10,7 @@ import com.lowagie.text.Table
 import com.lowagie.text.pdf.BaseFont
 import com.lowagie.text.pdf.PdfWriter
 import org.mr0btain.ticketman.data.customer.CustomerInfo
-import org.mr0btain.ticketman.data.ticket.TicketInfo
+import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.components.utils.formatIntToMoney
 import java.awt.Color
 import java.io.FileOutputStream

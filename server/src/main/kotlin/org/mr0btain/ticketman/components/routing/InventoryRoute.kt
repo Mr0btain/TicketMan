@@ -1,41 +1,23 @@
 package org.mr0btain.ticketman.components.routing
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.authenticate
-import io.ktor.server.request.receive
-import io.ktor.server.response.respond
-import io.ktor.server.routing.Route
-import io.ktor.server.routing.delete
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
-import org.mr0btain.ticketman.data.inventory.InventoryItem
-import org.mr0btain.ticketman.database.InventoryDatabase
+import io.ktor.http.*
+import io.ktor.serialization.*
+import io.ktor.server.auth.*
+import io.ktor.server.request.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.database.InventoryLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.InventorySyncResponse
-import org.mr0btain.ticketman.server.response.ServerResponse
-import org.mr0btain.ticketman.server.response.ServerResult
-import kotlin.text.toIntOrNull
+import org.mr0btain.ticketman.server.response.SyncResponse
 
-/**
- * Inventory routes
- */
-
-fun Route.inventoryRoute(database: InventoryDatabase) {
-    // Get all inventory
-    authenticate("restricted") {
-        get("/all") {
-            database.getAll()?.let { data ->
-                call.respond(data)
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
-    }
-
+fun Route.inventoryRoute(database: InventoryLocalDatabaseClientImpl) {
+    // Sync between client and server
     authenticate {
         post("/sync") {
             val request = call.receive<SyncRequest>()
-            val data = database.getAll()
 
-            if (data != null) {
+            database.getAll()?.let { data ->
                 // Filter items by ones the client does not contain
                 val responseData = data.filter { !request.clientData.contains(it.identifier) }
 
@@ -46,68 +28,80 @@ fun Route.inventoryRoute(database: InventoryDatabase) {
                 val requested = request.clientData.filter { !dataIdentifiers.contains(it) }
 
                 // Send response
-                call.respond(HttpStatusCode.OK, InventorySyncResponse(responseData, requested))
-            } else call.respond(HttpStatusCode.NotFound)
+                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
+            } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
-    // Add New item
+    // Get all
+    authenticate("restricted") {
+        get("/all") {
+            database.getAll()?.let { data ->
+                call.respond(HttpStatusCode.Accepted, data)
+            } ?: call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
+    // Adding new
     authenticate {
         post("/add") {
             try {
-                val inventoryItem = call.receive<InventoryItem>()
+                val item = call.receive<InventoryItem>()
 
-                database.add(inventoryItem)
-                call.respond(ServerResponse(ServerResult.SUCCESS))
-            } catch (ex: Exception) {
+                database.add(item)
+
+                call.respond(HttpStatusCode.Accepted)
+            } catch (ex: IllegalStateException) {
                 ex.printStackTrace()
-                call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
+            } catch (ex: JsonConvertException) {
+                ex.printStackTrace()
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Update item
+    // Update Customer
     authenticate {
         post("/update") {
             try {
-                val inventoryItem = call.receive<InventoryItem>()
+                val data = call.receive<InventoryItem>()
 
-                database.update(inventoryItem)
-                call.respond(ServerResponse(ServerResult.SUCCESS))
+                if (database.update(data)) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
             } catch (ex: Exception) {
                 ex.printStackTrace()
-                call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Bulk add employees
+    // Bulk add customers mostly for syncing
     authenticate {
         post("/add/all") {
             try {
-                val inventoryItems = call.receive<List<InventoryItem>>()
+                val data = call.receive<List<InventoryItem>>()
 
-                if (database.addAll(inventoryItems)) call.respond(ServerResponse(ServerResult.SUCCESS))
-                else call.respond(ServerResponse(ServerResult.FAIL))
+                if (database.addAll(data)) call.respond(HttpStatusCode.Accepted)
+                else call.respond(HttpStatusCode.NotFound)
             } catch (ex: Exception) {
                 ex.printStackTrace()
-                call.respond(ServerResponse(ServerResult.FAIL, ex.toString()))
+                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Delete item
+    // Remove customer
     authenticate {
-        delete("/delete/{inventoryIdentifier}") {
-            val identifier = call.parameters["inventoryIdentifier"]?.toIntOrNull()
+        delete("/remove/{identifier}") {
+            val identifier = call.parameters["identifier"]
 
             if (identifier == null) {
-                call.respond(ServerResponse(ServerResult.FAIL, "Identifier is null"))
+                call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            if (database.remove(identifier)) call.respond(ServerResponse(ServerResult.SUCCESS))
-            else call.respond(ServerResponse(ServerResult.FAIL))
+            if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted)
+            else call.respond(HttpStatusCode.BadRequest)
         }
     }
 }
