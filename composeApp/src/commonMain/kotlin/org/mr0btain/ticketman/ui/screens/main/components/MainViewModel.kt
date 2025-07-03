@@ -21,7 +21,7 @@ import org.mr0btain.ticketman.util.AppDir
  */
 
 class MainViewModel(
-    private val appDir: AppDir,
+    appDir: AppDir,
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
 
