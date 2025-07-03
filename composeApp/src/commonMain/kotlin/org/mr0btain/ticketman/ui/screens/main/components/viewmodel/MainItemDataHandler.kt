@@ -9,6 +9,9 @@ import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
+/**
+ * Base class for a MainDataItem handler
+ */
 abstract class MainItemDataHandler<T: MainDataItem>(
     private val localDatabaseClient: LocalDatabaseClient,
     private val serverDatabaseClient: ServerDatabaseClient

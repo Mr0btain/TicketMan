@@ -26,7 +26,7 @@ import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.util.AppDir
 
 /**
- * Handles all interactions to any data.
+ * Handles and holds handlers for data operations and such
  */
 class DataHandler(
     appDir: AppDir,
@@ -36,39 +36,59 @@ class DataHandler(
         private const val TAG = "DataHandler"
         private const val SYNC_TAG = "$TAG:Sync"
     }
+
+    /**
+     * Handles interactions with the server
+     */
     private val serverHandler = ServerHandler(getHttpEngine(), this)
+
+    /**
+     * Handles interactions with the local database
+     */
     private val clientDatabase = configureDatabase(appDir)
     
     private var autoSync = true
 
-    /** Data Handlers. Mostly just to organise the mess in the view model. Probably not the best way to do it, but it looks much, much better */
+    /** Data Handlers. Mostly just to organise the mess. Maybe not the best way to do it, but it looks much, much better */
     // -----------------------------------------------------------------------------------------------------------------------
     // TODO: Setup access level stuff
     // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
 
+    /**
+     * Handles user data operations
+     */
     val userDataHandler = UserDataHandlerImpl(
         localDatabaseClient = clientDatabase.userDatabase,
         serverDatabaseClient = serverHandler.databaseClient.userClient
     )
 
-    // Inventory handler
+    /**
+     * Handles inventory data operations
+     */
     val inventoryDataHandler = InventoryDataHandlerImpl(
         localDatabaseClient = clientDatabase.inventoryDatabase,
         serverDatabaseClient = serverHandler.databaseClient.inventoryClient
     )
 
-    // Ticket handler
+    /**
+     * Handles ticket data operations
+     */
     val ticketDataHandler = TicketDataHandlerImpl(
         localDatabaseClient = clientDatabase.ticketDatabase,
         serverDatabaseClient = serverHandler.databaseClient.ticketClient
     )
 
-    // Customer handler
+    /**
+     * Handles customer data operations
+     */
     val customerDataHandler = CustomerDataHandlerImpl(
         localDatabaseClient = clientDatabase.customerDatabase,
         serverDatabaseClient = serverHandler.databaseClient.customerClient
     )
-    
+
+    /**
+     * Syncs data between local and server databases
+     */
     suspend fun syncData(): Boolean {
         return coroutineScope {
             try {
@@ -186,6 +206,9 @@ class DataHandler(
         return null
     }
 
+    /**
+     * Pulls saved settings
+     */
     suspend fun getSettings(): UserSettings? {
         return coroutineScope {
             val result = clientDatabase.settingsDatabase.getSettings()
@@ -200,16 +223,28 @@ class DataHandler(
         }
     }
 
+    /**
+     * Saves settings
+     */
     fun saveSettings(userSettings: UserSettings) {
         scope.launch {
             clientDatabase.settingsDatabase.saveSettings(userSettings)
         }
     }
-    
+
+    /**
+     * Update server url
+     */
     fun updateServerUrl(url: String) = serverHandler.updateServerUrl(url)
 
+    /**
+     * Checks connection with the saved server
+     */
     suspend fun checkServerConnection(): Boolean = serverHandler.checkServerConnection()
 
+    /**
+     * Checks connection with a specific url
+     */
     suspend fun checkNewServerConnection(url: String): Boolean = serverHandler.checkNewServerConnection(url)
 
     /**
