@@ -1,15 +1,13 @@
 package org.mr0btain.ticketman.components.database
 
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.filesDir
-import io.github.vinceglb.filekit.path
+import org.mr0btain.ticketman.util.AppDir
 
 /**
  * Initialises the client database
  */
 
-fun configureDatabase(): ClientDatabase {
-    return ClientDatabase("${FileKit.filesDir.path}/data").also { database ->
+fun configureDatabase(appDir: AppDir): ClientDatabase {
+    return ClientDatabase("${appDir.path}/data").also { database ->
         /** Anything you want to run before using the database do it here */
         database.initDatabase()
     }

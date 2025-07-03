@@ -10,20 +10,20 @@ import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.DataHandler
 
 /**
  * Handles the interaction and states of server clients
  */
 class ServerHandler(
     engine: HttpClientEngine,
-    private val mainViewModel: MainViewModel
+    private val mainViewModel: DataHandler
 ) {
     private val TAG = "ServerHandler"
 
     val userClient = ServerUserClient(createUserHttpClient(engine), this)
     val databaseClient = ServerDatabaseClientHandler(createDatabaseHttpClient(engine, this))
-
+    
     /**
      * Sets url to the server in all clients
      */
@@ -75,6 +75,11 @@ class ServerHandler(
     }
 
     /**
+     * Checks connection with server using stored url
+     */
+    suspend fun checkServerConnection(): Boolean = userClient.checkServerConnection()
+
+    /**
      * Hits a new server at the specific address and see if we get a response and update clients with url
      */
     suspend fun checkNewServerConnection(url: String): Boolean {
@@ -82,12 +87,6 @@ class ServerHandler(
         val result = userClient.checkServerConnection(url)
 
         return if (result) {
-            // Save new address
-            mainViewModel.saveServerAddress(url)
-
-            // Update client urls
-            updateServerUrl(url)
-
             // Log success
             AppLogger.m("$TAG:CheckNewServerConnection", SimpleError.SUCCESS)
 
@@ -142,9 +141,4 @@ class ServerHandler(
             databaseClient.inventoryClient.sync(currentInventory)
         }
     }
-
-    /**
-     * Checks connection with server using stored url
-     */
-    suspend fun checkServerConnection(): Boolean = userClient.checkServerConnection()
 }

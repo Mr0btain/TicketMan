@@ -1,33 +1,6 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.Column
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
-import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.MainDataItem
-import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.customer.CustomerInfo
-import org.mr0btain.ticketman.data.TicketList
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.shared.Notes
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.database.tables.*
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.city
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.contactInfo
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.firstName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.lastName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.notes
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.state
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.street
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.tickets
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.time
-import org.mr0btain.ticketman.error.SimpleError
-import org.mr0btain.ticketman.logging.AppLogger
 
 /**
  * Handles interaction between a local database

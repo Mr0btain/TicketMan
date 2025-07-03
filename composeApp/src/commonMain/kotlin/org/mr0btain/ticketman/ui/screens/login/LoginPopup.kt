@@ -39,7 +39,7 @@ fun LoginPopup(
     // We only ever want this to run once
     // Check connection to the server using stored value, if its good no need to reenter it
     LaunchedEffect(effect) {
-        if (viewModel.checkServerConnection()) {
+        if (viewModel.dataHandler.checkServerConnection()) {
             state = LoginDialogState.Login
         }
     }
@@ -56,7 +56,7 @@ fun LoginPopup(
                 state = LoginDialogState.Loading
 
                 // Try to log in to server
-                val result = viewModel.loginToServer(user, pass)
+                val result = viewModel.dataHandler.loginToServer(user, pass)
 
                 // If we've successfully logged in then call dismiss and move on
                 if (result) {
@@ -75,7 +75,7 @@ fun LoginPopup(
                 state = LoginDialogState.Loading
 
                 // Try to hit server
-                val result = viewModel.checkNewServerConnection(address)
+                val result = viewModel.dataHandler.checkNewServerConnection(address)
 
                 // Handle result
                 if (result) {

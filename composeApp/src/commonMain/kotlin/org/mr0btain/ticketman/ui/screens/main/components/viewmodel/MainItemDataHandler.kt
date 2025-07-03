@@ -3,37 +3,50 @@ package org.mr0btain.ticketman.ui.screens.main.components.viewmodel
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import org.mr0btain.ticketman.components.network.database.CustomerServerDatabaseClientImpl
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.database.CustomerLocalDatabaseClientImpl
+import org.mr0btain.ticketman.components.network.database.ServerDatabaseClient
+import org.mr0btain.ticketman.data.MainDataItem
+import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
-/**
- * Handles all the data interactions we may need. Mostly here to help organize this mess in the view model
- */
-class CustomerDataHandler(
-    private val localDatabaseClient: CustomerLocalDatabaseClientImpl,
-    private val serverDatabaseClient: CustomerServerDatabaseClientImpl
+abstract class MainItemDataHandler<T: MainDataItem>(
+    private val localDatabaseClient: LocalDatabaseClient,
+    private val serverDatabaseClient: ServerDatabaseClient
 ) {
     // TODO: Don't know if we even have to handle logging as in the clients themselves they handle it
-    private val TAG = "CustomerDataHandler"
-    private val ADD_TAG = "$TAG:Add"
-    private val ADD_ALL_TAG = "$TAG:AddAll"
-    private val UPDATE_TAG = "$TAG:Update"
-    private val REMOVE_TAG = "$TAG:Remove"
-    private val UPDATE_OR_ADD_TAG = "$TAG:UpdateOrAdd"
+    abstract val TAG: String
+    private val ADD_TAG = "${this.javaClass.simpleName}:Add"
+    private val ADD_ALL_TAG = "${this.javaClass.simpleName}:AddAll"
+    private val UPDATE_TAG = "${this.javaClass.simpleName}:Update"
+    private val REMOVE_TAG = "${this.javaClass.simpleName}:Remove"
+    private val UPDATE_OR_ADD_TAG = "${this.javaClass.simpleName}:UpdateOrAdd"
 
-    private val _dataList: MutableStateFlow<List<CustomerData>> = MutableStateFlow(listOf())
+    private val _dataList: MutableStateFlow<List<T>> = MutableStateFlow(listOf())
     val dataList = _dataList.asStateFlow()
 
     private val _selectedId: MutableStateFlow<String> = MutableStateFlow("")
     val selectedId = _selectedId.asStateFlow()
 
     /**
+     * Sets the data list
+     */
+    fun setDataList(data: List<T>) {
+        _dataList.value = data
+    }
+
+    /**
+     * Sets the selected Id
+     */
+    fun setSelectedId(identifier: String) {
+        _selectedId.value = identifier
+    }
+
+    fun clearSelectedId() = { _selectedId.value = "" }
+
+    /**
      * Adds or updates an item depending on weather it exists in the database or not
      */
-    suspend fun addOrUpdate(data: CustomerData) {
+    suspend fun addOrUpdate(data: T) {
         coroutineScope {
             // Check if customer exists or not, if not then add it
             if (_dataList.value.firstOrNull { it.identifier == data.identifier } != null) {
@@ -82,23 +95,17 @@ class CustomerDataHandler(
     /**
      * Gets an item from the list by identifier
      */
-    fun get(identifier: String): CustomerData? = _dataList.value.firstOrNull { it.identifier == identifier }
+    fun get(identifier: String): T? = _dataList.value.firstOrNull { it.identifier == identifier }
 
     /**
      * Gets data from local database and populates dataList with it
      */
-    suspend fun populateListFromDatabase() {
-        coroutineScope {
-            localDatabaseClient.getAll()?.let {
-                    items -> _dataList.value = items
-            }
-        }
-    }
+    abstract suspend fun populateListFromDatabase()
 
     /**
      * Adds an item to the databases
      */
-    suspend fun add(item: CustomerData) {
+    suspend fun add(item: T) {
         coroutineScope {
             try {
                 _dataList.value += item
@@ -116,7 +123,7 @@ class CustomerDataHandler(
     /**
      * Adds a list of items to the database
      */
-    suspend fun addAll(data: List<CustomerData>) {
+    suspend fun addAll(data: List<T>) {
         coroutineScope {
             try {
                 _dataList.value += data

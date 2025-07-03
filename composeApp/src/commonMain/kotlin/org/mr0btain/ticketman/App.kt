@@ -52,11 +52,8 @@ fun App() {
         // Generate some mock data and add it to the database in memory
         //mainViewModel.generateMockDbData()
 
-        // Pull data from local database
-        mainViewModel.populateDataFromLocalDatabases()
-
         // Current employee info
-        val currentEmployee = mainViewModel.user.collectAsState()
+        val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
 
         // Should we show login popup or not
         val shouldShowLogin = mainViewModel.showLogin.collectAsState()

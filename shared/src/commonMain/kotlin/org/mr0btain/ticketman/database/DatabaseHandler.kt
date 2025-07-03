@@ -1,14 +1,6 @@
 package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.jdbc.Database
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.database.tables.CustomerDataTable
-import org.mr0btain.ticketman.database.tables.InventoryTable
-import org.mr0btain.ticketman.database.tables.TicketDataTable
-import org.mr0btain.ticketman.database.tables.UserTable
 
 // TODO: Flesh these out better to support copying syncing and such between dbs
 // TODO: Add encryption

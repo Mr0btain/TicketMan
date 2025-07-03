@@ -90,14 +90,6 @@ kotlin {
             // Window Size class
             implementation(libs.window.size.multiplatform)
 
-            // FileKit
-            implementation(libs.filekit.dialogs)
-            implementation(libs.filekit.coil)
-
-            // Datastore for preferences
-            implementation(libs.datastore.preferences)
-            implementation(libs.datastore)
-
             // ktor http stuff
             implementation(libs.bundles.ktorClient)
 
