@@ -12,13 +12,14 @@ import org.jetbrains.exposed.v1.jdbc.Database
 /**
  * Handles/holds local databases
  */
-class DatabaseHandler(
+abstract class DatabaseHandler(
     appDir: String,
     shouldLog: Boolean = true
 ) {
     companion object {
-        private const val TAG = "DatabaseHandler"
+        const val TAG = "DatabaseHandler"
     }
+
     // Connect to the local database
     private val db = Database.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
 

@@ -87,6 +87,18 @@ class DataHandler(
     )
 
     /**
+     * Populates each handlers data list with data from the local database
+     */
+    suspend fun populate() {
+        coroutineScope {
+            customerDataHandler.populateListFromDatabase()
+            ticketDataHandler.populateListFromDatabase()
+            inventoryDataHandler.populateListFromDatabase()
+            userDataHandler.populateListFromDatabase()
+        }
+    }
+
+    /**
      * Syncs data between local and server databases
      */
     suspend fun syncData(): Boolean {

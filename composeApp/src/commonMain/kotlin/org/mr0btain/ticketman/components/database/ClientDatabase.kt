@@ -17,32 +17,33 @@ import org.mr0btain.ticketman.logging.AppLogger
 class ClientDatabase(
     appDir: String,
     shouldLog: Boolean = true
-) {
-    private val databaseHandler = DatabaseHandler(appDir, shouldLog)
-    val customerDatabase = databaseHandler.customerDatabase
-    val ticketDatabase = databaseHandler.ticketDatabase
-    val inventoryDatabase = databaseHandler.inventoryDatabase
-    val userDatabase = databaseHandler.userDatabase
+): DatabaseHandler(appDir, shouldLog) {
     val settingsDatabase = SettingsDatabase(shouldLog)
 
     /**
      * Initialize the database in case it were dealing with a new install or something happened to database
      */
     fun initDatabase() {
-        transaction {
-            val databaseList = SchemaUtils.listDatabases()
+        try {
+            transaction {
+                val databaseList = SchemaUtils.listDatabases()
 
-            if (databaseList.isNotEmpty()) {
-                if (SchemaUtils.listTables().size != 5) {
+                if (databaseList.isNotEmpty()) {
+                    if (SchemaUtils.listTables().size != 5) {
+                        SchemaUtils.create(CustomerDataTable, TicketDataTable, InventoryTable, UserTable, SettingsTable)
+                    }
+                } else {
                     SchemaUtils.create(CustomerDataTable, TicketDataTable, InventoryTable, UserTable, SettingsTable)
                 }
-            } else {
-                SchemaUtils.create(CustomerDataTable, TicketDataTable, InventoryTable, UserTable, SettingsTable)
             }
+
+            settingsDatabase.initialize()
+
+            AppLogger.m("ClientDatabase: Initialize", SimpleError.SUCCESS)
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            AppLogger.i("$TAG: Initialize", SimpleError.SUCCESS)
         }
 
-        settingsDatabase.initialize()
-
-        AppLogger.m("ClientDatabase: Initialize", SimpleError.SUCCESS)
     }
 }

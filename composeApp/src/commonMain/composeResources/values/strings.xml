@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Ticket Manager</string>
+    <string name="app_name">TicketMan</string>
 
     <string name="username_string">Username</string>
     <string name="password_string">Password</string>

@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.database
 
 import org.mr0btain.ticketman.util.AppDir
 
+
 /**
  * Initialises the client database
  */

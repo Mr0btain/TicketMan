@@ -24,7 +24,6 @@ class MainViewModel(
     appDir: AppDir,
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
-
     companion object {
         private const val TAG = "MainViewModel"
         private const val INIT_TAG = "$TAG:Init"
@@ -42,19 +41,17 @@ class MainViewModel(
                 _autoSyncDatabase.value = result.autoSync
             } ?: AppLogger.i(INIT_TAG, SimpleError.FAIL)
 
-            dataHandler.customerDataHandler.populateListFromDatabase()
-            dataHandler.ticketDataHandler.populateListFromDatabase()
-            dataHandler.userDataHandler.populateListFromDatabase()
-            dataHandler.inventoryDataHandler.populateListFromDatabase()
+            // Populate data lists from local
+            dataHandler.populate()
 
             if (!dataHandler.syncData()) AppLogger.i(INIT_TAG, SimpleError.FAIL)
         }
     }
 
+    /**
+     * Main data handler where most of the functions and data is held
+     */
     val dataHandler = DataHandler(appDir, viewModelScope)
-
-    // Platform the app is running on
-    val platform = getPlatform().name
 
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
@@ -74,7 +71,6 @@ class MainViewModel(
     fun updateShowLogin(value: Boolean) {
         _showLogin.value = value
     }
-
 
     /** Settings section */
     // ----------------------------------------------------------------------------------------------------------------------
@@ -106,15 +102,10 @@ class MainViewModel(
         saveSettings()
     }
 
-    fun saveServerAddress(address: String) {
-        // update value
-        _serverAddress.value = address
-        saveSettings()
-    }
-
-    fun updateServerAddress(url: String) {
-        saveServerAddress(url)
+    fun updateServerUrl(url: String) {
+        _serverAddress.value = url
         dataHandler.updateServerUrl(url)
+        saveSettings()
     }
 
     fun toggleScrollBarsOnBottom() {
@@ -127,22 +118,6 @@ class MainViewModel(
         val value = !_scrollBarsOnRight.value
         _scrollBarsOnRight.value = value
         saveSettings()
-    }
-
-    /**
-     * Check to see if an address is valid. Will have to set up a ping or something to actually check. for now just check text
-     */
-    fun checkWebAddress(text: String): Boolean {
-        var isValid = false
-
-        // basic placeholder check
-        if (text.startsWith("http://") || text.startsWith("https://") && text.endsWith(".com")) isValid = true
-
-        // Basic ip check to see if there is enough digits
-        val ipcheck = text.filter { it.isDigit() }
-        if (ipcheck.length >= 6) isValid = true
-
-        return isValid
     }
 
     private fun saveSettings() {
