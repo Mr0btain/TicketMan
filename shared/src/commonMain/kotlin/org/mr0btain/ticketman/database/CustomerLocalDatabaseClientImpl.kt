@@ -7,7 +7,6 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.tables.CustomerDataTable
@@ -52,21 +51,18 @@ class CustomerLocalDatabaseClientImpl(
                 result = CustomerDataTable.selectAll().map { item ->
                     CustomerData(
                         identifier = item[identifier],
-                        info = CustomerInfo(
-                            identifier = item[identifier],
-                            name = PersonName(
-                                firstName = item[firstName],
-                                lastName = item[lastName]
-                            ),
-                            address = Address(
-                                street = item[street],
-                                city = item[city],
-                                state = item[state],
-                                zip = item[zip]
-                            ),
-                            contactInfo = item[contactInfo],
-                            time = item[time]
+                        name = PersonName(
+                            firstName = item[firstName],
+                            lastName = item[lastName]
                         ),
+                        address = Address(
+                            street = item[street],
+                            city = item[city],
+                            state = item[state],
+                            zip = item[zip]
+                        ),
+                        contactInfo = item[contactInfo],
+                        time = item[time],
                         tickets = item[tickets].list,
                         notes = item[notes].notes
                     )
@@ -95,21 +91,18 @@ class CustomerLocalDatabaseClientImpl(
                 result = CustomerDataTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
                     CustomerData(
                         identifier = item[CustomerDataTable.identifier],
-                        info = CustomerInfo(
-                            identifier = item[CustomerDataTable.identifier],
-                            name = PersonName(
-                                firstName = item[firstName],
-                                lastName = item[lastName]
-                            ),
-                            address = Address(
-                                street = item[street],
-                                city = item[city],
-                                state = item[state],
-                                zip = item[zip]
-                            ),
-                            contactInfo = item[contactInfo],
-                            time = item[time]
+                        name = PersonName(
+                            firstName = item[firstName],
+                            lastName = item[lastName]
                         ),
+                        address = Address(
+                            street = item[street],
+                            city = item[city],
+                            state = item[state],
+                            zip = item[zip]
+                        ),
+                        contactInfo = item[contactInfo],
+                        time = item[time],
                         tickets = item[tickets].list,
                         notes = item[notes].notes
                     )
@@ -135,16 +128,16 @@ class CustomerLocalDatabaseClientImpl(
 
                 CustomerDataTable.batchInsert(data) { item ->
                     this[identifier] = item.identifier
-                    this[firstName] = item.info.name.firstName
-                    this[lastName] = item.info.name.lastName
-                    this[street] = item.info.address.street
-                    this[city] = item.info.address.city
-                    this[state] = item.info.address.state
-                    this[zip] = item.info.address.zip
+                    this[firstName] = item.name.firstName
+                    this[lastName] = item.name.lastName
+                    this[street] = item.address.street
+                    this[city] = item.address.city
+                    this[state] = item.address.state
+                    this[zip] = item.address.zip
                     this[tickets] = TicketList(item.tickets)
                     this[notes] = Notes(item.notes)
-                    this[contactInfo] = item.info.contactInfo
-                    this[time] = item.info.time
+                    this[contactInfo] = item.contactInfo
+                    this[time] = item.time
                 }
 
                 AppLogger.m(ADD_ALL_TAG, SimpleError.SUCCESS)
@@ -217,16 +210,16 @@ class CustomerLocalDatabaseClientImpl(
 
                 CustomerDataTable.insert { item ->
                     item[identifier] = data.identifier
-                    item[firstName] = data.info.name.firstName
-                    item[lastName] = data.info.name.lastName
-                    item[street] = data.info.address.street
-                    item[city] = data.info.address.city
-                    item[state] = data.info.address.state
-                    item[zip] = data.info.address.zip
+                    item[firstName] = data.name.firstName
+                    item[lastName] = data.name.lastName
+                    item[street] = data.address.street
+                    item[city] = data.address.city
+                    item[state] = data.address.state
+                    item[zip] = data.address.zip
                     item[tickets] = TicketList(data.tickets)
                     item[notes] = Notes(data.notes)
-                    item[contactInfo] = data.info.contactInfo
-                    item[time] = data.info.time
+                    item[contactInfo] = data.contactInfo
+                    item[time] = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
@@ -249,16 +242,16 @@ class CustomerLocalDatabaseClientImpl(
 
                 CustomerDataTable.update({ IdentifierColumn eq data.identifier }) { item ->
                     item[identifier] = data.identifier
-                    item[firstName] = data.info.name.firstName
-                    item[lastName] = data.info.name.lastName
-                    item[street] = data.info.address.street
-                    item[city] = data.info.address.city
-                    item[state] = data.info.address.state
-                    item[zip] = data.info.address.zip
+                    item[firstName] = data.name.firstName
+                    item[lastName] = data.name.lastName
+                    item[street] = data.address.street
+                    item[city] = data.address.city
+                    item[state] = data.address.state
+                    item[zip] = data.address.zip
                     item[tickets] = TicketList(data.tickets)
                     item[notes] = Notes(data.notes)
-                    item[contactInfo] = data.info.contactInfo
-                    item[time] = data.info.time
+                    item[contactInfo] = data.contactInfo
+                    item[time] = data.time
 
                     AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
                     }

@@ -40,7 +40,10 @@ fun Application.configureRouting(
         }
 
         route("/api/data/customer") {
-            customerRoute(serverDatabase.customerDatabase)
+            customerRoute(
+                database = serverDatabase.customerDatabase,
+                userDatabase = serverDatabase.userDatabase
+                )
         }
 
         route("/api/data/ticket") {

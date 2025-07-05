@@ -188,7 +188,7 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customerData = customerList.firstOrNull { it.info.identifier == selectedTicket.customerId }
+                    customerData = customerList.firstOrNull { it.identifier == selectedTicket.customerId }
                         ?: CustomerData(),
                     assignedUserName = (users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser }
                         ?: User()).name,

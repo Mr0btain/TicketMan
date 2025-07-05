@@ -15,15 +15,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.customer.CustomerInfo
-import org.mr0btain.ticketman.data.shared.DialogDismissReason
-import org.mr0btain.ticketman.data.shared.MainItemType
-import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.shared.SubItemType
+import org.mr0btain.ticketman.data.shared.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
@@ -51,18 +46,18 @@ fun CustomerDialog(
     scrollBarsOnRight: Boolean
 ) {
     // Name
-    var firstName by remember(seedData) { mutableStateOf(seedData.info.name.firstName) }
-    var lastName by remember(seedData) { mutableStateOf(seedData.info.name.lastName) }
+    var firstName by remember(seedData) { mutableStateOf(seedData.name.firstName) }
+    var lastName by remember(seedData) { mutableStateOf(seedData.name.lastName) }
 
     // Address
-    var street by remember(seedData) { mutableStateOf(seedData.info.address.street) }
-    var city by remember(seedData) { mutableStateOf(seedData.info.address.city) }
-    var state by remember(seedData) { mutableStateOf(seedData.info.address.state) }
-    var zip by remember(seedData) { mutableStateOf(seedData.info.address.zip) }
+    var street by remember(seedData) { mutableStateOf(seedData.address.street) }
+    var city by remember(seedData) { mutableStateOf(seedData.address.city) }
+    var state by remember(seedData) { mutableStateOf(seedData.address.state) }
+    var zip by remember(seedData) { mutableStateOf(seedData.address.zip) }
 
     // Mutable lists
-    val email = remember(seedData) { seedData.info.contactInfo.email.toMutableStateList() }
-    val phone = remember(seedData) { seedData.info.contactInfo.phone.toMutableStateList() }
+    val email = remember(seedData) { seedData.contactInfo.email.toMutableStateList() }
+    val phone = remember(seedData) { seedData.contactInfo.phone.toMutableStateList() }
     val notes = remember(seedData) { seedData.notes.toMutableStateList() }
 
     // For deleting item dialog
@@ -198,9 +193,9 @@ fun CustomerDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = if (seedData.info.name.firstName.isEmpty() && seedData.info.name.lastName.isEmpty()) {
-                            "Add Customer: ${seedData.info.identifier}"
-                        } else "Edit Customer: ${seedData.info.name.firstName} ${seedData.info.name.lastName}",
+                        text = if (seedData.name.firstName.isEmpty() && seedData.name.lastName.isEmpty()) {
+                            "Add Customer: ${seedData.identifier}"
+                        } else "Edit Customer: ${seedData.name.firstName} ${seedData.name.lastName}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp,
                         maxLines = 1
@@ -460,21 +455,19 @@ fun CustomerDialog(
                         // Call dismiss with continue
                         onDismiss(
                             CustomerData(
-                                info = CustomerInfo(
-                                    identifier = seedData.info.identifier,
-                                    name = PersonName(
-                                        firstName.lowercase().replaceFirstChar { it.uppercase() },
-                                        lastName.lowercase().replaceFirstChar { it.uppercase() }
-                                    ),
-                                    address = Address(
-                                        street.lowercase().replaceFirstChar { it.uppercase() },
-                                        city.lowercase().replaceFirstChar { it.uppercase() },
-                                        state.lowercase().replaceFirstChar { it.uppercase() },
-                                        zip
-                                    ),
-                                    contactInfo = ContactInfo(email, phone),
-                                    time = seedData.info.time
+                                identifier = seedData.identifier,
+                                name = PersonName(
+                                    firstName.lowercase().replaceFirstChar { it.uppercase() },
+                                    lastName.lowercase().replaceFirstChar { it.uppercase() }
                                 ),
+                                address = Address(
+                                    street.lowercase().replaceFirstChar { it.uppercase() },
+                                    city.lowercase().replaceFirstChar { it.uppercase() },
+                                    state.lowercase().replaceFirstChar { it.uppercase() },
+                                    zip
+                                ),
+                                contactInfo = ContactInfo(email, phone),
+                                time = seedData.time,
                                 tickets = ticketList,
                                 notes = notes
                             ),

@@ -3,7 +3,6 @@ package org.mr0btain.ticketman
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.AMPM
@@ -144,13 +143,10 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
         data.add(
             CustomerData(
                 identifier = id,
-                info = CustomerInfo(
-                    identifier = id,
-                    name = name,
-                    address = generateRandomAddress(),
-                    contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
-                    time = getFakeTime()
-                ),
+                name = name,
+                address = generateRandomAddress(),
+                contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
+                time = getFakeTime(),
                 notes = notes
             )
         )

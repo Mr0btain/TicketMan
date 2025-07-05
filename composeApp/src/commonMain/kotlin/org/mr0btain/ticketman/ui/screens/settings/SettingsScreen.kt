@@ -6,11 +6,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
+import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
@@ -26,12 +34,22 @@ import ticketman.composeapp.generated.resources.*
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
+    scope: CoroutineScope
 ) {
+    val TAG = "SettingsScreen"
+    val CHECK_URL_TAG = "$TAG:CheckUrl"
+
+
     val autoSync = viewModel.autoSyncDatabase.collectAsState(false)
     val darkMode = viewModel.darkMode.collectAsState(false)
     val scrollBarsOnBottom = viewModel.scrollBarsOnBottom.collectAsState()
     val scrollBarsOnRight = viewModel.scrollBarsOnRight.collectAsState()
+
+    // Server Url Stuff
+    val serverUrl = viewModel.serverAddress.collectAsState()
+    var isUrlError by remember { mutableStateOf(false) }
+    var showUrlEditDialog by remember { mutableStateOf(false) }
 
     Surface(
         modifier = modifier
@@ -51,14 +69,32 @@ fun SettingsScreen(
             SettingsGroup(name = stringResource(Res.string.settings_second_group)) {
                 // Server address item
                 SettingsTextItem(
-                    name = "Server Address:",
+                    name = "Server Url:",
                     icon = painterResource(Res.drawable.server),
                     iconDesc = "Description",
-                    state = viewModel.serverAddress.collectAsState(""),
-                    onSave = { url -> viewModel.updateServerUrl(url) },
+                    value = serverUrl.value,
+                    onConfirmChange = { url ->
+                        scope.launch {
+                            try {
+                                if ( viewModel.dataHandler.checkNewServerConnection(url)) {
+                                    viewModel.updateServerUrl(url)
+                                    isUrlError = false
+                                    showUrlEditDialog = false
+                                    AppLogger.m(CHECK_URL_TAG, SimpleError.SUCCESS)
+                                } else isUrlError = true
+                            } catch (ex: Exception) {
+                                ex.printStackTrace()
+                                AppLogger.i(CHECK_URL_TAG, SimpleError.FAIL)
+                                isUrlError = true
+                            }
+                        }
+                    },
                     inputFilter = { text -> text },
-                    onCheck = { text -> true },
-                    keyboardType = KeyboardType.Text
+                    keyboardType = KeyboardType.Text,
+                    isError = isUrlError,
+                    showDialog = showUrlEditDialog,
+                    surfaceOnClick = { showUrlEditDialog = true},
+                    dialogDismiss = { showUrlEditDialog = false }
                 )
 
                 // Dark mode switch

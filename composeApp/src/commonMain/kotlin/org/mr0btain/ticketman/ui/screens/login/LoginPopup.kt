@@ -50,11 +50,11 @@ fun LoginPopup(
         labelState = labelState,
         error = error,
         onLoginConfirm = { user, pass ->
-            coroutineScope.launch {
-                // Set state to loading
-                labelState = "Loading"
-                state = LoginDialogState.Loading
+            // Set state to loading
+            labelState = "Loading"
+            state = LoginDialogState.Loading
 
+            coroutineScope.launch {
                 // Try to log in to server
                 val result = viewModel.dataHandler.loginToServer(user, pass)
 
@@ -69,11 +69,11 @@ fun LoginPopup(
             }
         },
         onAddressConfirm = { address ->
-            coroutineScope.launch {
-                // Trigger loading screen
-                labelState = "Loading"
-                state = LoginDialogState.Loading
+            // Trigger loading screen
+            labelState = "Loading"
+            state = LoginDialogState.Loading
 
+            coroutineScope.launch {
                 // Try to hit server
                 val result = viewModel.dataHandler.checkNewServerConnection(address)
 

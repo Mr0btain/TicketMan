@@ -20,28 +20,29 @@ fun SettingsTextItem(
     icon: Painter,
     iconDesc: String,
     name: String,
-    state: State<String>,
-    onSave: (String) -> Unit,
+    value: String,
+    onConfirmChange: (String) -> Unit,
+    isError: Boolean,
     inputFilter: (String) -> String, // input filter for the preference
-    onCheck: (String) -> Boolean,
-    keyboardType: KeyboardType
+    keyboardType: KeyboardType,
+    showDialog: Boolean,
+    surfaceOnClick: () -> Unit,
+    dialogDismiss: () -> Unit
 ) {
+    var textFieldValue by remember { mutableStateOf(value) }
 
-    var isDialogShown by remember { mutableStateOf(false) }
-
-    if (isDialogShown) {
-        Dialog(onDismissRequest = { isDialogShown = isDialogShown.not() }) {
+    if (showDialog) {
+        Dialog(onDismissRequest = { dialogDismiss() }) {
             TextEditDialog(
                 name = name,
-                storedValue = state,
-                onSave = onSave,
-                onCheck = onCheck,
+                value = textFieldValue,
+                onValueChange = { textFieldValue = it },
+                onConfirm = onConfirmChange,
                 inputFilter = inputFilter,
                 keyboardType = keyboardType,
-                buttonText = "Next"
-            ) {
-                isDialogShown = isDialogShown.not()
-            }
+                buttonText = "Next",
+                isError = isError
+            )
         }
     }
 
@@ -49,9 +50,7 @@ fun SettingsTextItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        onClick = {
-            isDialogShown = isDialogShown.not()
-        },
+        onClick = surfaceOnClick,
         shape = RoundedCornerShape(32.dp)
     ) {
         Column(
@@ -81,7 +80,7 @@ fun SettingsTextItem(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
-                    text = state.value,
+                    text = value,
                     style = MaterialTheme.typography.bodyLarge,
                     textAlign = TextAlign.Start,
                     fontSize = 20.sp

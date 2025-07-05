@@ -3,20 +3,10 @@ package org.mr0btain.ticketman.ui.screens.main.components.viewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.components.invoice.makeTicketInvoicePdf
 import org.mr0btain.ticketman.components.data.components.settings.UserSettings
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.network.ServerHandler
 import org.mr0btain.ticketman.components.network.getHttpEngine
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.customer.CustomerInfo
-import org.mr0btain.ticketman.data.invoice.Charge
-import org.mr0btain.ticketman.data.invoice.ChargeType
-import org.mr0btain.ticketman.data.invoice.Invoice
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.generateMockData
@@ -309,14 +299,13 @@ class DataHandler(
     }
 
     fun testPdf() {
+        /*
         makeTicketInvoicePdf(
             filePath = "",
             fileName = "SampleTest.pdf",
-            customerInfo = CustomerInfo(
-                name = PersonName("Eric", "Garrison"),
-                address = Address("134 Maple Dr", "Six Mile Run", "PA", "16679"),
-                contactInfo = ContactInfo(listOf("Garrison@gmail.com"), listOf("8145367890"))
-            ),
+            name = PersonName("Eric", "Garrison"),
+            address = Address("134 Maple Dr", "Six Mile Run", "PA", "16679"),
+            contactInfo = ContactInfo(listOf("Garrison@gmail.com"), listOf("8145367890")),
             ticketInfo = TicketInfo(
                 identifier = "7865875",
                 assignedUser = "",
@@ -349,5 +338,6 @@ class DataHandler(
                 )
             )
         )
+         */
     }
 }

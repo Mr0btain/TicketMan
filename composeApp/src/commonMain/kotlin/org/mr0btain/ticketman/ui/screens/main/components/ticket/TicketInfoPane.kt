@@ -126,7 +126,7 @@ fun TicketInfoPane(
                         // Customer name
                         SimpleTextItem(
                             label = "Customer",
-                            text = customerData.info.name.firstName + " " + customerData.info.name.lastName
+                            text = customerData.name.firstName + " " + customerData.name.lastName
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -183,7 +183,7 @@ fun TicketInfoPane(
 
                         // Contacts for customer block
                         ContactsBlock(
-                            customerInfo = customerData.info,
+                            customerData = customerData,
                             labelSize = 16.sp
                         )
                     }

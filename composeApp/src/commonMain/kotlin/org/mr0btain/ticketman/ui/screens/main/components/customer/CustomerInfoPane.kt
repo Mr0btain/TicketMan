@@ -36,7 +36,7 @@ fun CustomerInfoPane(
     val iconSize = 18.dp
 
     // Time formated
-    val time = formatTime(selectedCustomerData.info.time)
+    val time = formatTime(selectedCustomerData.time)
 
     // Main Body
     Surface(
@@ -69,7 +69,7 @@ fun CustomerInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = selectedCustomerData.info.name.firstName + " " + selectedCustomerData.info.name.lastName,
+                        text = selectedCustomerData.name.firstName + " " + selectedCustomerData.name.lastName,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -136,7 +136,7 @@ fun CustomerInfoPane(
                             Spacer(Modifier.padding(4.dp))
 
                             // Check if we have a sensible date to display, then show it
-                            if (selectedCustomerData.info.time != Long.MAX_VALUE) {
+                            if (selectedCustomerData.time != Long.MAX_VALUE) {
                                 Text(
                                     modifier = Modifier,
                                     text = "${time.month}/${time.day}/${time.year}",
@@ -166,21 +166,21 @@ fun CustomerInfoPane(
                                 // Street
                                 Text(
                                     modifier = Modifier,
-                                    text = selectedCustomerData.info.address.street,
+                                    text = selectedCustomerData.address.street,
                                     fontSize = textSize
                                 )
 
                                 // City and state
                                 Text(
                                     modifier = Modifier,
-                                    text = selectedCustomerData.info.address.city + " " + selectedCustomerData.info.address.state,
+                                    text = selectedCustomerData.address.city + " " + selectedCustomerData.address.state,
                                     fontSize = textSize
                                 )
 
                                 // Zip
                                 Text(
                                     modifier = Modifier,
-                                    text = selectedCustomerData.info.address.zip,
+                                    text = selectedCustomerData.address.zip,
                                     fontSize = textSize
                                 )
                             }
@@ -188,7 +188,7 @@ fun CustomerInfoPane(
 
                         // ------------ Contacts section ---------------
                         ContactsBlock(
-                            customerInfo = selectedCustomerData.info,
+                            customerData = selectedCustomerData,
                             labelSize = labelSize,
                             textSize = textSize,
                             iconSize = iconSize

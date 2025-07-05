@@ -50,7 +50,10 @@ fun NavigationHost(
         }
 
         composable(Screen.Settings.route) {
-            SettingsScreen(viewModel = mainViewModel)
+            SettingsScreen(
+                viewModel = mainViewModel,
+                scope = coroutineScope
+            )
         }
 
         composable(Screen.Login.route) {

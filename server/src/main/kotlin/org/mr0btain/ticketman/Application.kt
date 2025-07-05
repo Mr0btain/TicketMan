@@ -41,7 +41,8 @@ fun Application.module() {
         configureRouting(userService, database)
 
         /*
-        val testData = generateMockData(10)
+
+val testData = generateMockData(20)
         database.customerDatabase.addAll(testData.first)
         database.ticketDatabase.addAll(testData.second)
         database.userDatabase.addAll(testData.third)

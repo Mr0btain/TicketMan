@@ -11,19 +11,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.customer.CustomerInfo
+import org.mr0btain.ticketman.components.utils.isNewTicket
+import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.components.utils.isNewTicket
-import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
-import org.mr0btain.ticketman.ui.composables.UserSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
+import org.mr0btain.ticketman.ui.composables.UserSearch
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
@@ -38,7 +38,7 @@ import ticketman.composeapp.generated.resources.plus
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
-    customerInfo: List<CustomerInfo>,
+    customerData: List<CustomerData>,
     users: List<User>,
     onAddNewCustomer: (PersonName) -> Unit,
     onDismiss: (TicketInfo?, DialogDismissReason) -> Unit,
@@ -180,7 +180,7 @@ fun TicketDialog(
                     Spacer(Modifier.padding(4.dp))
 
                     CustomerSearch(
-                        items = customerInfo,
+                        items = customerData,
                         input = customerSearchBarInput,
                         onInputChange = { customerSearchBarInput = it },
                         onClick = { item ->

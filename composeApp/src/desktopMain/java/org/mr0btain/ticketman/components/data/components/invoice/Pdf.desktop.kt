@@ -9,16 +9,16 @@ import com.lowagie.text.Phrase
 import com.lowagie.text.Table
 import com.lowagie.text.pdf.BaseFont
 import com.lowagie.text.pdf.PdfWriter
-import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.components.utils.formatIntToMoney
+import org.mr0btain.ticketman.data.CustomerData
 import java.awt.Color
 import java.io.FileOutputStream
 
 actual fun makeTicketInvoicePdf(
     filePath: String,
     fileName: String,
-    customerInfo: CustomerInfo,
+    customerData: CustomerData,
     ticketInfo: TicketInfo
 ) {
     // Pdf file to output to
@@ -37,10 +37,10 @@ actual fun makeTicketInvoicePdf(
 
     // Customer information section
     val customerInfoParagraph = listOf(
-        "${customerInfo.name.firstName} ${customerInfo.name.lastName}",
-        customerInfo.address.street,
-        "${customerInfo.address.city}, ${customerInfo.address.state}",
-        customerInfo.address.zip
+        "${customerData.name.firstName} ${customerData.name.lastName}",
+        customerData.address.street,
+        "${customerData.address.city}, ${customerData.address.state}",
+        customerData.address.zip
     )
 
     // Invoice / ticket information section

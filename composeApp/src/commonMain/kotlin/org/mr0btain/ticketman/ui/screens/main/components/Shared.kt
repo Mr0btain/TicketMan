@@ -18,10 +18,10 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.customer.CustomerInfo
+import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.formatTime
-import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
@@ -429,7 +429,7 @@ fun SmallTicketList(
 // ----------------------------- Contacts for customer ----------------------------------
 @Composable
 fun ContactsBlock(
-    customerInfo: CustomerInfo,
+    customerData: CustomerData,
     labelSize: TextUnit = 12.sp,
     textSize: TextUnit = 16.sp,
     iconSize: Dp = 18.dp
@@ -453,8 +453,8 @@ fun ContactsBlock(
             horizontalAlignment = Alignment.Start
         ) {
             // Email section
-            if (customerInfo.contactInfo.email.isNotEmpty()) {
-                customerInfo.contactInfo.email.forEach { mail ->
+            if (customerData.contactInfo.email.isNotEmpty()) {
+                customerData.contactInfo.email.forEach { mail ->
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -479,7 +479,7 @@ fun ContactsBlock(
             Spacer(Modifier.padding(2.dp))
 
             // Phone number section
-            customerInfo.contactInfo.phone.forEach { item ->
+            customerData.contactInfo.phone.forEach { item ->
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically

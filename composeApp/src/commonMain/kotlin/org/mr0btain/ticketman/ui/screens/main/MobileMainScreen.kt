@@ -13,7 +13,6 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.getTime
@@ -190,7 +189,7 @@ fun MobileMainScreen(
             },
             isDarkMode = isDarkMode,
             seedData = ticketSeedData,
-            customerInfo = customerData.value.map { it.info },
+            customerData = customerData.value.map { it },
             users = userList.value,
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
@@ -200,7 +199,7 @@ fun MobileMainScreen(
                     // Check if we can get a new identifier
                     if (newIdentifier != null) {
                         // Add seeded data if there is any
-                        customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = newIdentifier))
+                        customerSeedData = CustomerData(name = name, time = getTime(), identifier = newIdentifier)
 
                         // Trigger dialog
                         showCustomerDialog = true

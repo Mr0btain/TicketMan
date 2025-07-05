@@ -3,15 +3,21 @@ package org.mr0btain.ticketman.components.routing
 import io.ktor.http.*
 import io.ktor.serialization.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.CustomerLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 
-fun Route.customerRoute(database: CustomerLocalDatabaseClientImpl) {
+fun Route.customerRoute(
+    database: CustomerLocalDatabaseClientImpl,
+    userDatabase: UserLocalDatabaseClientImpl
+) {
     // Sync between client and server
     authenticate {
         post("/sync") {
@@ -36,6 +42,29 @@ fun Route.customerRoute(database: CustomerLocalDatabaseClientImpl) {
     // Get all
     authenticate("restricted") {
         get("/all") {
+            call.principal<JWTPrincipal>()
+                ?.payload
+                ?.getClaim("identifier")
+                ?.asString()
+                ?.let { identifier ->
+                    userDatabase.getById(identifier)?.let { user ->
+                        when (user.accessLevel) {
+                            AccessLevel.ADMIN -> call.respond(HttpStatusCode.Accepted, database.getAll() ?: emptyList())
+                            else -> call.respond(
+                                HttpStatusCode.Accepted,
+                                database.getAll()?.map { item ->
+                                    CustomerData(
+                                        identifier = item.identifier,
+                                        name = item.name,
+                                        time = item.time,
+                                        tickets = item.tickets,
+                                        notes = item.notes
+                                    )
+                                } ?: emptyList()
+                            )
+                        }
+                    } ?: call.respond(HttpStatusCode.NotFound)
+                } ?: call.respond(HttpStatusCode.NotAcceptable)
             database.getAll()?.let { data ->
                 call.respond(HttpStatusCode.Accepted, data)
             } ?: call.respond(HttpStatusCode.NotFound)

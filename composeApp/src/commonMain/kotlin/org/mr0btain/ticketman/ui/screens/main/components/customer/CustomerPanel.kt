@@ -36,13 +36,13 @@ fun CustomerPanel(
     isDarkMode: Boolean
 ) {
     // Hopefully this saves on calculations and updates properly
-    val sortedCustomerInfo = remember(customerDataList) { customerDataList.map { it.info }.sortedBy { it.name.firstName + it.name.lastName } }
+    val sortedCustomerInfo = remember(customerDataList) { customerDataList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
 
     // For search input
     var searchInput by remember { mutableStateOf("") }
 
     // Search list
-    val searchItems = remember(customerDataList) { customerDataList.map { it.info } }
+    val searchItems = remember(customerDataList) { customerDataList.map { it } }
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectUpdateFromClick by remember { mutableStateOf(false) }
@@ -123,7 +123,7 @@ fun CustomerPanel(
                 CustomerInfoPane(
                     modifier = modifier,
                     isDarkMode = isDarkMode,
-                    selectedCustomerData = customerDataList.singleOrNull() { it.info.identifier == selectedCustomerId }
+                    selectedCustomerData = customerDataList.singleOrNull { it.identifier == selectedCustomerId }
                         ?: CustomerData(),
                     onEditClick = { onEditCustomer() },
                     tickets = ticketList.filter { it.customerId == selectedCustomerId },

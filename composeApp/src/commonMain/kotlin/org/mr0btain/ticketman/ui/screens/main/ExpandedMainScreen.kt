@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
@@ -199,7 +198,7 @@ fun ExpandedMainScreen(
             },
             isDarkMode = isDarkMode,
             seedData = ticketSeedData,
-            customerInfo = customerData.value.map { it.info },
+            customerData = customerData.value.map { it },
             users = userList.value,
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
@@ -209,7 +208,7 @@ fun ExpandedMainScreen(
                     // Check if we can get a new identifier
                     if (newIdentifier != null) {
                         // Add seeded data if there is any
-                        customerSeedData = CustomerData(info = CustomerInfo(name = name, time = getTime(), identifier = newIdentifier))
+                        customerSeedData = CustomerData(name = name, time = getTime(), identifier = newIdentifier)
 
                         // Trigger dialog
                         showCustomerDialog = true
@@ -407,11 +406,9 @@ fun ExpandedMainScreen(
                                     if (newIdentifier != null) {
                                         // Set seed data
                                         customerSeedData = CustomerData(
-                                            info = CustomerInfo(
-                                                name = name,
-                                                time = getTime(),
-                                                identifier = newIdentifier
-                                            )
+                                            name = name,
+                                            time = getTime(),
+                                            identifier = newIdentifier
                                         )
 
                                         // Trigger dialog
@@ -444,7 +441,7 @@ fun ExpandedMainScreen(
                                     // TODO: Maybe add name of customer to this as well?
                                     // TODO: Add ability to delete tickets for customer as well
                                     // Check if item exists
-                                    if (customerData.value.firstOrNull { it.info.identifier == id } != null) {
+                                    if (customerData.value.firstOrNull { it.identifier == id } != null) {
                                         // Set values
                                         itemToDelete = id
                                         itemToDeleteType = MainItemType.CUSTOMER

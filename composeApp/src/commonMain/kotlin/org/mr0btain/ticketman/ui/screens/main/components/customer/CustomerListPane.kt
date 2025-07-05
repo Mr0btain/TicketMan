@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.customer.CustomerInfo
+import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
@@ -26,7 +26,7 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 @Composable
 fun CustomerListPane(
     modifier: Modifier = Modifier,
-    customerInfo: List<CustomerInfo>,
+    customerInfo: List<CustomerData>,
     onClick: (String) -> Unit,
     selectedCustomerId: String,
     lazyListState: LazyListState,
@@ -94,7 +94,7 @@ fun CustomerListPane(
                 ) {
                     itemsIndexed(customerInfo) { index, info ->
                         CustomerTableItem(
-                            customerInfo = info,
+                            customerData = info,
                             selected = info.identifier == selectedCustomerId,
                             color = if (!isDarkMode) {
                                 if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
@@ -118,7 +118,7 @@ fun CustomerListPane(
                 ) {
                     itemsIndexed(customerInfo) { index, info ->
                         CustomerTableItem(
-                            customerInfo = info,
+                            customerData = info,
                             selected = info.identifier == selectedCustomerId,
                             color = if (!isDarkMode) {
                                 if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
@@ -172,7 +172,7 @@ private fun CustomerTableItem(
     onClick: (String) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
-    customerInfo: CustomerInfo,
+    customerData: CustomerData,
     nameWidth: Dp,
     addressWidth: Dp,
     contactWidth: Dp,
@@ -182,7 +182,7 @@ private fun CustomerTableItem(
         modifier = modifier
             .padding(2.dp)
             .clickable(
-                onClick = { onClick(customerInfo.identifier) }
+                onClick = { onClick(customerData.identifier) }
             ),
         shape = RoundedCornerShape(8.dp),
         shadowElevation = 4.dp,
@@ -199,7 +199,7 @@ private fun CustomerTableItem(
                     .width(nameWidth - 4.dp)
             ) {
                 TableCardTextItem(
-                    customerInfo.name.firstName + " " + customerInfo.name.lastName
+                    customerData.name.firstName + " " + customerData.name.lastName
                 )
             }
 
@@ -210,7 +210,7 @@ private fun CustomerTableItem(
                     .padding(start = 4.dp)
                     .width(addressWidth - 6.dp)
             ) {
-                TableCardTextItem(customerInfo.address.street)
+                TableCardTextItem(customerData.address.street)
             }
 
             TableDivider()
@@ -221,7 +221,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 8.dp)
                 ) {
-                    TableCardTextItem(customerInfo.contactInfo.email.getOrElse(0) { "" })
+                    TableCardTextItem(customerData.contactInfo.email.getOrElse(0) { "" })
                 }
             } else {
                 Box(
@@ -229,7 +229,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 6.dp)
                 ) {
-                    TableCardTextItem(customerInfo.contactInfo.phone.getOrElse(0) { "" })
+                    TableCardTextItem(customerData.contactInfo.phone.getOrElse(0) { "" })
                 }
             }
         }
