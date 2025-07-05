@@ -4,12 +4,13 @@ import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.*
+import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.database.tables.*
+import org.mr0btain.ticketman.database.tables.CustomerDataTable
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.city
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.contactInfo
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.firstName
@@ -35,6 +36,8 @@ class CustomerLocalDatabaseClientImpl(
     override val GET_NEXT_ID_TAG = "$TAG:GetNextId"
     override val ADD_TAG = "$TAG:Add"
     override val UPDATE_TAG = "$TAG:Update"
+
+    override val IdentifierColumn = CustomerDataTable.identifier
 
     /** Gets all items from database */
     override fun getAll(): List<CustomerData>? {
@@ -89,7 +92,7 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerDataTable.selectAll().where { CustomerDataTable.identifier eq identifier }.map { item ->
+                result = CustomerDataTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
                     CustomerData(
                         identifier = item[CustomerDataTable.identifier],
                         info = CustomerInfo(
@@ -130,7 +133,7 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerDataTable.batchInsert(data.filterIsInstance<CustomerData>()) { item ->
+                CustomerDataTable.batchInsert(data) { item ->
                     this[identifier] = item.identifier
                     this[firstName] = item.info.name.firstName
                     this[lastName] = item.info.name.lastName
@@ -161,7 +164,7 @@ class CustomerLocalDatabaseClientImpl(
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                CustomerDataTable.deleteWhere { identifier eq id }
+                CustomerDataTable.deleteWhere { IdentifierColumn eq id }
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -184,7 +187,7 @@ class CustomerLocalDatabaseClientImpl(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 CustomerDataTable
-                    .select(identifier)
+                    .select(IdentifierColumn)
                     .map { it[identifier] }
                     .let { list ->
                         list.maxOfOrNull { it }?.let {
@@ -244,7 +247,7 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerDataTable.update({ identifier eq data.identifier }) { item ->
+                CustomerDataTable.update({ IdentifierColumn eq data.identifier }) { item ->
                     item[identifier] = data.identifier
                     item[firstName] = data.info.name.firstName
                     item[lastName] = data.info.name.lastName

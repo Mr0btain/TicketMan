@@ -4,7 +4,6 @@ import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.identifier
@@ -23,6 +22,8 @@ class TicketLocalDatabaseClientImpl(
     override val GET_NEXT_ID_TAG = "$TAG:GetNextId"
     override val ADD_TAG = "$TAG:Add"
     override val UPDATE_TAG = "$TAG:Update"
+
+    override val IdentifierColumn = TicketDataTable.identifier
 
     /** Gets all items from database */
     override fun getAll(): List<TicketInfo>? {
@@ -67,7 +68,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketDataTable.selectAll().where { TicketDataTable.identifier eq identifier }.map { item ->
+                result = TicketDataTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
                     TicketInfo(
                         identifier = item[TicketDataTable.identifier],
                         customerId = item[TicketDataTable.customerId],
@@ -98,7 +99,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketDataTable.batchInsert(data.filterIsInstance<TicketInfo>()) { item ->
+                TicketDataTable.batchInsert(data) { item ->
                     this[TicketDataTable.identifier] = item.identifier
                     this[TicketDataTable.customerId] = item.customerId
                     this[TicketDataTable.device] = item.device
@@ -126,7 +127,8 @@ class TicketLocalDatabaseClientImpl(
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                TicketDataTable.deleteWhere { identifier eq id }
+
+                TicketDataTable.deleteWhere { IdentifierColumn eq id }
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -149,7 +151,7 @@ class TicketLocalDatabaseClientImpl(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 TicketDataTable
-                    .select(identifier)
+                    .select(IdentifierColumn)
                     .map { it[identifier] }
                     .let { list ->
                         list.maxOfOrNull { it }?.let {
@@ -206,7 +208,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketDataTable.update({ identifier eq data.identifier }) { item ->
+                TicketDataTable.update({ IdentifierColumn eq data.identifier }) { item ->
                     item[TicketDataTable.identifier] = data.identifier
                     item[TicketDataTable.customerId] = data.customerId
                     item[TicketDataTable.device] = data.device

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.database
 
+import org.jetbrains.exposed.v1.core.Column
 import org.mr0btain.ticketman.data.MainDataItem
 
 /**
@@ -16,6 +17,12 @@ interface LocalDatabaseClient<T: MainDataItem> {
     val GET_NEXT_ID_TAG: String
     val ADD_TAG: String
     val UPDATE_TAG: String
+
+
+    // We have to explicitly set this, or we may run into what i think is a race condition sort of. When hitting the database
+    // the columns were ending up being columns from other tables. EX: when updating a ticket after updating a customer it would
+    // try to use CustomerTable.number and not TicketTable.number
+    val IdentifierColumn: Column<String>
 
     /** Gets all items from database */
     fun getAll(): List<T>?

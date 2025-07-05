@@ -5,7 +5,6 @@ import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.database.tables.InventoryTable
 import org.mr0btain.ticketman.error.SimpleError
@@ -22,6 +21,8 @@ class InventoryLocalDatabaseClientImpl(
     override val GET_NEXT_ID_TAG = "$TAG:GetNextId"
     override val ADD_TAG = "$TAG:Add"
     override val UPDATE_TAG = "$TAG:Update"
+
+    override val IdentifierColumn = InventoryTable.identifier
 
     /** Gets all items from database */
     override fun getAll(): List<InventoryItem>? {
@@ -66,7 +67,7 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = InventoryTable.selectAll().where { InventoryTable.identifier eq identifier }.map { item ->
+                result = InventoryTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
                     InventoryItem(
                         identifier = item[InventoryTable.identifier],
                         name = item[InventoryTable.name],
@@ -97,7 +98,7 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                InventoryTable.batchInsert(data.filterIsInstance<InventoryItem>()) { item ->
+                InventoryTable.batchInsert(data) { item ->
                     this[InventoryTable.identifier] = item.identifier
                     this[InventoryTable.name] = item.name
                     this[InventoryTable.description] = item.description
@@ -125,7 +126,7 @@ class InventoryLocalDatabaseClientImpl(
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                InventoryTable.deleteWhere { identifier eq id }
+                InventoryTable.deleteWhere { IdentifierColumn eq id }
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -144,7 +145,7 @@ class InventoryLocalDatabaseClientImpl(
         return try {
             transaction {
                 InventoryTable
-                    .select(InventoryTable.identifier)
+                    .select(IdentifierColumn)
                     .map { it[InventoryTable.identifier] }
                     .let { list ->
                         list.maxOfOrNull { it }?.let {
@@ -200,7 +201,7 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                InventoryTable.update({ InventoryTable.identifier eq data.identifier }) { item ->
+                InventoryTable.update({ IdentifierColumn eq data.identifier }) { item ->
                     item[InventoryTable.identifier] = data.identifier
                     item[InventoryTable.name] = data.name
                     item[InventoryTable.description] = data.description

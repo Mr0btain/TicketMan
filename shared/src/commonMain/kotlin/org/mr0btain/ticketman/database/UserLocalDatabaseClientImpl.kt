@@ -2,33 +2,13 @@ package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.jdbc.addLogger
-import org.jetbrains.exposed.v1.jdbc.batchInsert
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.customer.CustomerInfo
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.city
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.contactInfo
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.firstName
 import org.mr0btain.ticketman.database.tables.CustomerDataTable.identifier
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.lastName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.notes
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.state
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.street
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.tickets
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.time
 import org.mr0btain.ticketman.database.tables.UserTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
@@ -44,6 +24,8 @@ class UserLocalDatabaseClientImpl(
     override val GET_NEXT_ID_TAG = "$TAG:GetNextId"
     override val ADD_TAG = "$TAG:Add"
     override val UPDATE_TAG = "$TAG:Update"
+
+    override val IdentifierColumn = UserTable.identifier
 
     /** Gets all items from database */
     override fun getAll(): List<User>? {
@@ -89,7 +71,7 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = UserTable.selectAll().where { UserTable.identifier eq identifier }.map { item ->
+                result = UserTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
                     User(
                         identifier = item[UserTable.identifier],
                         username = item[UserTable.username],
@@ -121,7 +103,7 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                UserTable.batchInsert(data.filterIsInstance<User>()) { item ->
+                UserTable.batchInsert(data) { item ->
                     this[UserTable.identifier] = item.identifier
                     this[UserTable.username] = item.username
                     this[UserTable.password] = item.password
@@ -151,7 +133,7 @@ class UserLocalDatabaseClientImpl(
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                UserTable.deleteWhere { identifier eq id }
+                UserTable.deleteWhere { IdentifierColumn eq id }
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -174,7 +156,7 @@ class UserLocalDatabaseClientImpl(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 UserTable
-                    .select(identifier)
+                    .select(IdentifierColumn)
                     .map { it[identifier] }
                     .let { list ->
                         list.maxOfOrNull { it }?.let {
@@ -233,7 +215,7 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                UserTable.update({ identifier eq data.identifier }) { item ->
+                UserTable.update({ IdentifierColumn eq data.identifier }) { item ->
                     item[UserTable.identifier] = data.identifier
                     item[UserTable.username] = data.username
                     item[UserTable.password] = data.password
