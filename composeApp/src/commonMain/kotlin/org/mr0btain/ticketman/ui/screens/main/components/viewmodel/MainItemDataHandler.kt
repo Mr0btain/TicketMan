@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.logging.AppLogger
  * Base class for a MainDataItem handler
  */
 abstract class MainItemDataHandler<T: MainDataItem>(
-    private val localDatabaseClient: LocalDatabaseClient,
+    private val localDatabaseClient: LocalDatabaseClient<T>,
     private val serverDatabaseClient: ServerDatabaseClient
 ) {
     // TODO: Don't know if we even have to handle logging as in the clients themselves they handle it
