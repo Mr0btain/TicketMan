@@ -70,15 +70,8 @@ class JwtService(
      */
 
     fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
-        println("Credential ID: ${credential.payload.id}")
-        println("Expires at: ${credential.payload.expiresAt}")
-        println("Credential jwtid ${credential.jwtId}")
-        println("Audience: ${credential.audience}")
         val id = extractId(credential)
         val foundUser = id?.let { userDatabase.getById(it) }
-
-        println(id)
-        println("Found: $foundUser")
 
         return foundUser?.let {
             if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {

@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
 import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -62,9 +63,28 @@ fun Route.userRoute(
     // Get all customers
     authenticate("restricted") {
         get("/all") {
-            database.getAll()?.let { data ->
-                call.respond(data)
-            } ?: call.respond(HttpStatusCode.NotFound)
+            call.principal<JWTPrincipal>()
+                ?.payload
+                ?.getClaim("identifier")
+                ?.asString()
+                ?.let { identifier ->
+                    database.getById(identifier)?.let { user ->
+                        when (user.accessLevel) {
+                            AccessLevel.ADMIN -> call.respond(HttpStatusCode.Accepted, database.getAll() ?: emptyList())
+                            else -> call.respond(
+                                HttpStatusCode.Accepted,
+                                database.getAll()?.map { item ->
+                                    User(
+                                        identifier = item.identifier,
+                                        name = item.name,
+                                        tickets = item.tickets,
+                                        time = item.time
+                                    )
+                                } ?: emptyList()
+                            )
+                        }
+                    } ?: call.respond(HttpStatusCode.NotFound)
+            } ?: call.respond(HttpStatusCode.NotAcceptable)
         }
     }
 
