@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.logging.AppLogger
 
 class InventoryLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
-) : LocalDatabaseClient {
+) : LocalDatabaseClient<InventoryItem> {
     override val TAG = "InventoryLocalDatabaseClient"
     override val GET_ALL_TAG = "$TAG:GetAll"
     override val GET_BY_ID_TAG = "$TAG:GetById"
@@ -91,7 +91,7 @@ class InventoryLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<MainDataItem>): Boolean {
+    override fun addAll(data: List<InventoryItem>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -165,26 +165,24 @@ class InventoryLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: MainDataItem): Boolean {
+    override fun add(data: InventoryItem): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is InventoryItem) {
-                    InventoryTable.insert { item ->
-                        item[InventoryTable.identifier] = data.identifier
-                        item[InventoryTable.name] = data.name
-                        item[InventoryTable.description] = data.description
-                        item[InventoryTable.stock] = data.stock
-                        item[InventoryTable.cost] = data.cost
-                        item[InventoryTable.price] = data.price
-                        item[InventoryTable.notes] = Notes(data.notes)
-                        item[InventoryTable.time] = data.time
-                    }
+                InventoryTable.insert { item ->
+                    item[InventoryTable.identifier] = data.identifier
+                    item[InventoryTable.name] = data.name
+                    item[InventoryTable.description] = data.description
+                    item[InventoryTable.stock] = data.stock
+                    item[InventoryTable.cost] = data.cost
+                    item[InventoryTable.price] = data.price
+                    item[InventoryTable.notes] = Notes(data.notes)
+                    item[InventoryTable.time] = data.time
+                }
 
-                    AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(ADD_TAG, SimpleError.FAIL)
+                AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
             }
 
             return true
@@ -196,26 +194,24 @@ class InventoryLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: MainDataItem): Boolean {
+    override fun update(data: InventoryItem): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is InventoryItem) {
-                    InventoryTable.update({ InventoryTable.identifier eq data.identifier }) { item ->
-                        item[InventoryTable.identifier] = data.identifier
-                        item[InventoryTable.name] = data.name
-                        item[InventoryTable.description] = data.description
-                        item[InventoryTable.stock] = data.stock
-                        item[InventoryTable.cost] = data.cost
-                        item[InventoryTable.price] = data.price
-                        item[InventoryTable.notes] = Notes(data.notes)
-                        item[InventoryTable.time] = data.time
-                    }
+                InventoryTable.update({ InventoryTable.identifier eq data.identifier }) { item ->
+                    item[InventoryTable.identifier] = data.identifier
+                    item[InventoryTable.name] = data.name
+                    item[InventoryTable.description] = data.description
+                    item[InventoryTable.stock] = data.stock
+                    item[InventoryTable.cost] = data.cost
+                    item[InventoryTable.price] = data.price
+                    item[InventoryTable.notes] = Notes(data.notes)
+                    item[InventoryTable.time] = data.time
+                }
 
-                    AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(UPDATE_TAG, SimpleError.FAIL)
+                AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
             }
 
             return true

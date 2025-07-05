@@ -26,7 +26,7 @@ import org.mr0btain.ticketman.logging.AppLogger
 
 class CustomerLocalDatabaseClientImpl(
     private val shouldLog: Boolean
-) : LocalDatabaseClient {
+) : LocalDatabaseClient<CustomerData> {
     override val TAG = "CustomerLocalDatabaseClient"
     override val GET_ALL_TAG = "$TAG:GetAll"
     override val GET_BY_ID_TAG = "$TAG:GetById"
@@ -124,7 +124,7 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<MainDataItem>): Boolean {
+    override fun addAll(data: List<CustomerData>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -206,29 +206,27 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: MainDataItem): Boolean {
+    override fun add(data: CustomerData): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is CustomerData) {
-                    CustomerDataTable.insert { item ->
-                        item[identifier] = data.identifier
-                        item[firstName] = data.info.name.firstName
-                        item[lastName] = data.info.name.lastName
-                        item[street] = data.info.address.street
-                        item[city] = data.info.address.city
-                        item[state] = data.info.address.state
-                        item[zip] = data.info.address.zip
-                        item[tickets] = TicketList(data.tickets)
-                        item[notes] = Notes(data.notes)
-                        item[contactInfo] = data.info.contactInfo
-                        item[time] = data.info.time
-                    }
+                CustomerDataTable.insert { item ->
+                    item[identifier] = data.identifier
+                    item[firstName] = data.info.name.firstName
+                    item[lastName] = data.info.name.lastName
+                    item[street] = data.info.address.street
+                    item[city] = data.info.address.city
+                    item[state] = data.info.address.state
+                    item[zip] = data.info.address.zip
+                    item[tickets] = TicketList(data.tickets)
+                    item[notes] = Notes(data.notes)
+                    item[contactInfo] = data.info.contactInfo
+                    item[time] = data.info.time
+                }
 
-                    AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(ADD_TAG, SimpleError.FAIL)
+                AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
             }
 
             return true
@@ -240,29 +238,27 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: MainDataItem): Boolean {
+    override fun update(data: CustomerData): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is CustomerData) {
-                    CustomerDataTable.update({ identifier eq data.identifier }) { item ->
-                        item[identifier] = data.identifier
-                        item[firstName] = data.info.name.firstName
-                        item[lastName] = data.info.name.lastName
-                        item[street] = data.info.address.street
-                        item[city] = data.info.address.city
-                        item[state] = data.info.address.state
-                        item[zip] = data.info.address.zip
-                        item[tickets] = TicketList(data.tickets)
-                        item[notes] = Notes(data.notes)
-                        item[contactInfo] = data.info.contactInfo
-                        item[time] = data.info.time
-                    }
+                CustomerDataTable.update({ identifier eq data.identifier }) { item ->
+                    item[identifier] = data.identifier
+                    item[firstName] = data.info.name.firstName
+                    item[lastName] = data.info.name.lastName
+                    item[street] = data.info.address.street
+                    item[city] = data.info.address.city
+                    item[state] = data.info.address.state
+                    item[zip] = data.info.address.zip
+                    item[tickets] = TicketList(data.tickets)
+                    item[notes] = Notes(data.notes)
+                    item[contactInfo] = data.info.contactInfo
+                    item[time] = data.info.time
 
                     AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(UPDATE_TAG, SimpleError.FAIL)
+                    }
             }
 
             return true

@@ -35,7 +35,7 @@ import org.mr0btain.ticketman.logging.AppLogger
 
 class UserLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
-) : LocalDatabaseClient {
+) : LocalDatabaseClient<User> {
     override val TAG = "UserLocalDatabaseClient"
     override val GET_ALL_TAG = "$TAG:GetAll"
     override val GET_BY_ID_TAG = "$TAG:GetById"
@@ -115,7 +115,7 @@ class UserLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<MainDataItem>): Boolean {
+    override fun addAll(data: List<User>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -196,28 +196,26 @@ class UserLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: MainDataItem): Boolean {
+    override fun add(data: User): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is User) {
-                    UserTable.insert { item ->
-                        item[UserTable.identifier] = data.identifier
-                        item[UserTable.username] = data.username
-                        item[UserTable.password] = data.password
-                        item[UserTable.firstName] = data.name.firstName
-                        item[UserTable.lastName] = data.name.lastName
-                        item[UserTable.tickets] = TicketList(data.tickets)
-                        item[UserTable.contactInfo] = data.contactInfo
-                        item[UserTable.notes] = Notes(data.notes)
-                        item[UserTable.access] = data.accessLevel
-                        item[UserTable.time] = data.time
-                    }
+                UserTable.insert { item ->
+                    item[UserTable.identifier] = data.identifier
+                    item[UserTable.username] = data.username
+                    item[UserTable.password] = data.password
+                    item[UserTable.firstName] = data.name.firstName
+                    item[UserTable.lastName] = data.name.lastName
+                    item[UserTable.tickets] = TicketList(data.tickets)
+                    item[UserTable.contactInfo] = data.contactInfo
+                    item[UserTable.notes] = Notes(data.notes)
+                    item[UserTable.access] = data.accessLevel
+                    item[UserTable.time] = data.time
+                }
 
-                    AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(ADD_TAG, SimpleError.FAIL)
+                AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
             }
 
             return true
@@ -229,28 +227,26 @@ class UserLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: MainDataItem): Boolean {
+    override fun update(data: User): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is User) {
-                    UserTable.update({ identifier eq data.identifier }) { item ->
-                        item[UserTable.identifier] = data.identifier
-                        item[UserTable.username] = data.username
-                        item[UserTable.password] = data.password
-                        item[UserTable.firstName] = data.name.firstName
-                        item[UserTable.lastName] = data.name.lastName
-                        item[UserTable.tickets] = TicketList(data.tickets)
-                        item[UserTable.contactInfo] = data.contactInfo
-                        item[UserTable.notes] = Notes(data.notes)
-                        item[UserTable.access] = data.accessLevel
-                        item[UserTable.time] = data.time
-                    }
+                UserTable.update({ identifier eq data.identifier }) { item ->
+                    item[UserTable.identifier] = data.identifier
+                    item[UserTable.username] = data.username
+                    item[UserTable.password] = data.password
+                    item[UserTable.firstName] = data.name.firstName
+                    item[UserTable.lastName] = data.name.lastName
+                    item[UserTable.tickets] = TicketList(data.tickets)
+                    item[UserTable.contactInfo] = data.contactInfo
+                    item[UserTable.notes] = Notes(data.notes)
+                    item[UserTable.access] = data.accessLevel
+                    item[UserTable.time] = data.time
+                }
 
-                    AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(UPDATE_TAG, SimpleError.FAIL)
+                AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
             }
 
             return true

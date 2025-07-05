@@ -14,7 +14,7 @@ import org.mr0btain.ticketman.logging.AppLogger
 
 class TicketLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
-) : LocalDatabaseClient {
+) : LocalDatabaseClient<TicketInfo> {
     override val TAG = "TicketLocalDatabaseClient"
     override val GET_ALL_TAG = "$TAG:GetAll"
     override val GET_BY_ID_TAG = "$TAG:GetById"
@@ -92,7 +92,7 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<MainDataItem>): Boolean {
+    override fun addAll(data: List<TicketInfo>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -171,26 +171,24 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: MainDataItem): Boolean {
+    override fun add(data: TicketInfo): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is TicketInfo) {
-                    TicketDataTable.insert { item ->
-                        item[TicketDataTable.identifier] = data.identifier
-                        item[TicketDataTable.customerId] = data.customerId
-                        item[TicketDataTable.device] = data.device
-                        item[TicketDataTable.assignedUser] = data.assignedUser
-                        item[TicketDataTable.priority] = data.priority
-                        item[TicketDataTable.status] = data.status
-                        item[TicketDataTable.updates] = Notes(data.updates)
-                        item[TicketDataTable.time] = data.time
-                    }
+                TicketDataTable.insert { item ->
+                    item[TicketDataTable.identifier] = data.identifier
+                    item[TicketDataTable.customerId] = data.customerId
+                    item[TicketDataTable.device] = data.device
+                    item[TicketDataTable.assignedUser] = data.assignedUser
+                    item[TicketDataTable.priority] = data.priority
+                    item[TicketDataTable.status] = data.status
+                    item[TicketDataTable.updates] = Notes(data.updates)
+                    item[TicketDataTable.time] = data.time
+                }
 
-                    AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(ADD_TAG, SimpleError.FAIL)
+                AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
             }
 
             return true
@@ -202,26 +200,24 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: MainDataItem): Boolean {
+    override fun update(data: TicketInfo): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                if (data is TicketInfo) {
-                    TicketDataTable.update({ identifier eq data.identifier }) { item ->
-                        item[TicketDataTable.identifier] = data.identifier
-                        item[TicketDataTable.customerId] = data.customerId
-                        item[TicketDataTable.device] = data.device
-                        item[TicketDataTable.assignedUser] = data.assignedUser
-                        item[TicketDataTable.priority] = data.priority
-                        item[TicketDataTable.status] = data.status
-                        item[TicketDataTable.updates] = Notes(data.updates)
-                        item[TicketDataTable.time] = data.time
-                    }
+                TicketDataTable.update({ identifier eq data.identifier }) { item ->
+                    item[TicketDataTable.identifier] = data.identifier
+                    item[TicketDataTable.customerId] = data.customerId
+                    item[TicketDataTable.device] = data.device
+                    item[TicketDataTable.assignedUser] = data.assignedUser
+                    item[TicketDataTable.priority] = data.priority
+                    item[TicketDataTable.status] = data.status
+                    item[TicketDataTable.updates] = Notes(data.updates)
+                    item[TicketDataTable.time] = data.time
+                }
 
-                    AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
-                } else AppLogger.m(UPDATE_TAG, SimpleError.FAIL)
+                AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
             }
 
             return true

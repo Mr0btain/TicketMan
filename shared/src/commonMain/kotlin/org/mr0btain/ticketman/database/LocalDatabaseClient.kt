@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.data.MainDataItem
  */
 
 @Suppress("PropertyName")
-interface LocalDatabaseClient {
+interface LocalDatabaseClient<T: MainDataItem> {
     val TAG: String
     val GET_ALL_TAG: String
     val GET_BY_ID_TAG: String
@@ -18,13 +18,13 @@ interface LocalDatabaseClient {
     val UPDATE_TAG: String
 
     /** Gets all items from database */
-    fun getAll(): List<MainDataItem>?
+    fun getAll(): List<T>?
 
     /** Gets an item by its identifier */
-    fun getById(identifier: String): MainDataItem?
+    fun getById(identifier: String): T?
 
     /** Adds all items to the database */
-    fun addAll(data: List<MainDataItem>): Boolean
+    fun addAll(data: List<T>): Boolean
 
     /** Removes an item from the database */
     fun remove(id: String): Boolean
@@ -33,8 +33,8 @@ interface LocalDatabaseClient {
     fun getNextId(): String?
 
     /** Adds an item to the database */
-    fun add(data: MainDataItem): Boolean
+    fun add(data: T): Boolean
 
     /** Updates an item in the database */
-    fun update(data: MainDataItem): Boolean
+    fun update(data: T): Boolean
 }
