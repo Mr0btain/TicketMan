@@ -6,6 +6,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import kotlinx.coroutines.CoroutineScope
+import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 
 /**
@@ -23,7 +24,7 @@ fun MainScreen(
     isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
-    val platform = viewModel.platform
+    val platform = getPlatform().name
 
     // Check if were on Desktop or mobile
     if (platform.contains("Java")) {

@@ -57,7 +57,7 @@ fun SettingsScreen(
                     state = viewModel.serverAddress.collectAsState(""),
                     onSave = { url -> viewModel.updateServerUrl(url) },
                     inputFilter = { text -> text },
-                    onCheck = { text -> viewModel.checkWebAddress(text) },
+                    onCheck = { text -> true },
                     keyboardType = KeyboardType.Text
                 )
 

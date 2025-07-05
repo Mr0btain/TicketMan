@@ -88,7 +88,7 @@ fun App() {
         AppTheme(
             darkTheme = mainViewModel.darkMode.collectAsState(false).value
         ) {
-            println("Platform: ${mainViewModel.platform}")
+            println("Platform: ${getPlatform().name}")
 
             if (shouldShowLogin.value) {
                 LoginPopup(
@@ -100,7 +100,7 @@ fun App() {
             }
 
             // Check if were on desktop
-            if (mainViewModel.platform.contains("Java")) {
+            if (getPlatform().name.contains("Java")) {
                 SideAppNav(
                     navHostController = navigator,
                     content = { paddingValues ->
