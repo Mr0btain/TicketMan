@@ -31,6 +31,7 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Make option to import database data from file?
 // TODO: Add remote database stuff
 // TODO: Administration screen
+// TODO: Implement okio for file opening and saving/exporting and such
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable

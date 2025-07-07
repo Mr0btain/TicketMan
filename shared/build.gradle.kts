@@ -62,9 +62,11 @@ kotlin {
             implementation(libs.h2)
             implementation(libs.postgresql)
 
-            // FileKit
-            implementation(libs.filekit.core)
+            // FileOps
+            //implementation(libs.bundles.fileOps)
+            implementation(libs.kotlinx.io)
         }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
         }

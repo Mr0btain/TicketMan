@@ -11,6 +11,8 @@ import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.encryption.testSecureClient
+import org.mr0btain.ticketman.encryption.testSecureClient2
 import org.mr0btain.ticketman.util.AppDir
 import java.util.logging.Logger
 
@@ -39,6 +41,10 @@ fun Application.module() {
         configureContentNegotiation()
         configureSecurity(jwtService)
         configureRouting(userService, database)
+
+        testSecureClient()
+
+        testSecureClient2()
 
         /*
 
