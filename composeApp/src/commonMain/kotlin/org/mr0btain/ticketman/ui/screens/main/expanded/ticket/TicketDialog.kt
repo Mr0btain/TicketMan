@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.components.ticket
+package org.mr0btain.ticketman.ui.screens.main.expanded.ticket
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

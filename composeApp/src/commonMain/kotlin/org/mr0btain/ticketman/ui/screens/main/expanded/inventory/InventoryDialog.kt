@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.components.inventory
+package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape

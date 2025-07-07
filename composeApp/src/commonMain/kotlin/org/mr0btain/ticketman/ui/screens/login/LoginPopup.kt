@@ -108,7 +108,7 @@ private fun LoginDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
+        properties = DialogProperties()
     ) {
         Surface(
             modifier = modifier,

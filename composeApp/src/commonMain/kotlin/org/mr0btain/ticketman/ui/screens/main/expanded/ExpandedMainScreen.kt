@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main
+package org.mr0btain.ticketman.ui.screens.main.expanded
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -20,12 +20,12 @@ import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerDialog
-import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerPanel
-import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryDialog
-import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryPanel
-import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketDialog
-import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketPanel
+import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
+import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerPanel
+import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryDialog
+import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryPanel
+import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
+import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
 
 // Probably don't need some of these actions in a coroutine.
 // But the less we have to do on the main thread the better

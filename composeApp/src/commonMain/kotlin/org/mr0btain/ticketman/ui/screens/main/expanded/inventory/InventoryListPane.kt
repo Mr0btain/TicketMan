@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.components.inventory
+package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable

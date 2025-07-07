@@ -8,6 +8,8 @@ import androidx.compose.runtime.Composable
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.main.expanded.ExpandedMainScreen
+import org.mr0btain.ticketman.ui.screens.main.mobile.MobileMainScreen
 
 /**
  * The main landing screen

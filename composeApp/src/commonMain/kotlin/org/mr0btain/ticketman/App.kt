@@ -50,7 +50,7 @@ fun App() {
         val mainScope = rememberCoroutineScope()
 
         // Generate some mock data and add it to the database in memory
-        //mainViewModel.generateMockDbData()
+        //mainViewModel.dataHandler.generateMockDbData()
 
         // Current employee info
         val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()

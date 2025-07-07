@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
 
@@ -26,17 +27,19 @@ fun SettingsSwitchItem(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        onClick = onClick,
-        shape = RoundedCornerShape(32.dp)
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp)
         ) {
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Icon(
                         icon,
                         contentDescription = iconDesc,
@@ -49,11 +52,11 @@ fun SettingsSwitchItem(
                         text = name,
                         modifier = Modifier.padding(16.dp),
                         style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Start,
+                        textAlign = TextAlign.Start
                     )
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(Modifier.padding(8.dp))
 
                 Switch(
                     checked = state,

@@ -1,13 +1,24 @@
-package org.mr0btain.ticketman.ui.screens.main
+package org.mr0btain.ticketman.ui.screens.main.mobile
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Tab
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.data.CustomerData
@@ -19,10 +30,12 @@ import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.main.components.customer.CustomerDialog
-import org.mr0btain.ticketman.ui.screens.main.components.inventory.InventoryDialog
-import org.mr0btain.ticketman.ui.screens.main.components.ticket.TicketDialog
+import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
+import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryDialog
+import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
+import org.mr0btain.ticketman.ui.screens.main.mobile.customer.CustomerPanelMobile
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MobileMainScreen(
     modifier: Modifier = Modifier,
@@ -294,8 +307,157 @@ fun MobileMainScreen(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .verticalScroll(columnState)
     ) {
+        SecondaryTabRow(
+            selectedTabIndex = tabIndex.value,
+            modifier = Modifier
+                .padding(4.dp),
+            containerColor = Color.Transparent
+        ) {
+            // Customer Tab
+            Tab(
+                selected = tabIndex.value == 0,
+                onClick = { viewModel.changeMainTabIndex(0) },
+                modifier = Modifier.wrapContentWidth(),
+                text = {
+                    Text(
+                        text = "Customers",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            )
 
+            // Ticket Tab
+            Tab(
+                selected = tabIndex.value == 1,
+                onClick = { viewModel.changeMainTabIndex(1) },
+                modifier = Modifier.wrapContentWidth(),
+                text = {
+                    Text(
+                        text = "Tickets",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            )
+
+            // Inventory Tab
+            Tab(
+                selected = tabIndex.value == 2,
+                onClick = { viewModel.changeMainTabIndex(2) },
+                modifier = Modifier.wrapContentWidth(),
+                text = {
+                    Text(
+                        text = "Inventory",
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 1,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            )
+        }
+
+        Spacer(Modifier.padding(4.dp))
+
+        when (tabIndex.value) {
+            // Customer
+            0 -> {
+                CustomerPanelMobile(
+                    isDarkMode = isDarkMode,
+                    onAddCustomer = { name ->
+                        coroutineScope.launch {
+                            val newIdentifier = viewModel.dataHandler.customerDataHandler.getNextId()
+
+                            // Check if we can et a new identifier
+                            if (newIdentifier != null) {
+                                // Set seed data
+                                customerSeedData = CustomerData(
+                                    name = name,
+                                    time = getTime(),
+                                    identifier = newIdentifier
+                                )
+
+                                // Trigger dialog
+                                showCustomerDialog = true
+                            } else {
+                                AppLogger.m("ExpandedMainScreen:onAddCustomer", "Error adding customer ID was null!")
+                                snackBarState.showSnackbar("Error getting new customer id!")
+                            }
+                        }
+                    },
+                    onEditCustomer = {
+                        coroutineScope.launch {
+                            val customer = viewModel.dataHandler.customerDataHandler.get(selectedCustomer.value)
+
+                            if (customer != null) {
+                                // Set seed data
+                                customerSeedData = customer
+
+                                // Trigger dialog
+                                showCustomerDialog = true
+                            } else {
+                                AppLogger.m("ExpandedMainScreen:onEditCustomer", "Error getting customer data. value was null!")
+                                snackBarState.showSnackbar("Error getting customer data!")
+                            }
+                        }
+                    },
+                    onCustomerSelectionChange = { id -> viewModel.dataHandler.customerDataHandler.setSelectedId(id)},
+                    onDeleteCustomer = { id ->
+                        coroutineScope.launch {
+                            // TODO: Maybe add name of customer to this as well?
+                            // TODO: Add ability to delete tickets for customer as well
+                            // Check if item exists
+                            if (customerData.value.firstOrNull { it.identifier == id } != null) {
+                                // Set values
+                                itemToDelete = id
+                                itemToDeleteType = MainItemType.CUSTOMER
+                                confirmDeleteDialogText = "Customer: $id"
+
+                                // Trigger the dialog
+                                showConfirmDeleteDialog = true
+                            }
+                        }
+                    },
+                    onTicketClick = { identifier ->
+                        coroutineScope.launch {
+                            val ticket = viewModel.dataHandler.ticketDataHandler.get(identifier)
+
+                            if (ticket != null) {
+                                // Set selected ticket
+                                viewModel.dataHandler.ticketDataHandler.setSelectedId(identifier)
+
+                                // Get seed data
+                                ticketSeedData = ticket
+
+                                // Pop up ticket dialog
+                                showTicketDialog = true
+                            } else {
+                                AppLogger.m("ExpandedMainScreen:onTicketClick", "Error getting ticket info, data was null!")
+                                snackBarState.showSnackbar("Error getting ticket info!")
+                            }
+                        }
+                    },
+                    selectedCustomerId = selectedCustomer.value,
+                    customerDataList = customerData.value,
+                    ticketList = ticketList.value,
+                    customerLazyListState = customerLazyListState,
+                    coroutineScope = coroutineScope,
+                    scrollBarsOnRight = scrollBarsOnRight
+                )
+            }
+
+            // Ticket
+            1 -> {
+
+            }
+
+            // Inventory
+            2 -> {
+
+            }
+        }
     }
 }

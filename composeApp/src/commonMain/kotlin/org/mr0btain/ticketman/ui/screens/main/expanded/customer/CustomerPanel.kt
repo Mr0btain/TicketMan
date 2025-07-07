@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.components.customer
+package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
@@ -121,7 +121,7 @@ fun CustomerPanel(
                 )
 
                 CustomerInfoPane(
-                    modifier = modifier,
+                    modifier = Modifier,
                     isDarkMode = isDarkMode,
                     selectedCustomerData = customerDataList.singleOrNull { it.identifier == selectedCustomerId }
                         ?: CustomerData(),

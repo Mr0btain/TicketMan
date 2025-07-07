@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.settings
 
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
@@ -54,8 +55,8 @@ fun SettingsScreen(
     Surface(
         modifier = modifier
             .padding(8.dp)
-            .fillMaxWidth(),
-        color = if (darkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
+            .fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
         PlatformColumnScrollable(
             modifier = Modifier.padding(16.dp),
@@ -99,7 +100,7 @@ fun SettingsScreen(
 
                 // Dark mode switch
                 SettingsSwitchItem(
-                    name = "Auto Sync With Server",
+                    name = "Server Auto Sync",
                     icon = painterResource(Res.drawable.download_cloud),
                     iconDesc = "Auto sync data with server",
                     state = autoSync.value
@@ -121,7 +122,7 @@ fun SettingsScreen(
 
                 // Scroll bars on bottom
                 SettingsSwitchItem(
-                    name = "Horizontal ScrollBars on the Bottom",
+                    name = "Horizontal ScrollBars\non the Bottom",
                     icon = if (scrollBarsOnBottom.value) painterResource(Res.drawable.arrow_down_circle) else painterResource(Res.drawable.arrow_up_circle),
                     iconDesc = "Position of horizontal scroll bars",
                     state = scrollBarsOnBottom.value
@@ -131,7 +132,7 @@ fun SettingsScreen(
 
                 // Scroll bars on right
                 SettingsSwitchItem(
-                    name = "Vertical ScrollBars on the Right",
+                    name = "Vertical ScrollBars\non the Right",
                     icon = if (scrollBarsOnRight.value) painterResource(Res.drawable.arrow_right_circle) else painterResource(Res.drawable.arrow_left_circle),
                     iconDesc = "Position of vertical scroll bars",
                     state = scrollBarsOnRight.value
