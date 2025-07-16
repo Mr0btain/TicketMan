@@ -238,6 +238,18 @@ private fun getFakeTime(): Long {
     )
 }
 
+fun generateRandomWordMessage(wordCount: Int = 10): String {
+    val words = listOf("alpha", "beta", "delta", "test", "secure", "encrypt", "random", "message", "kotlin", "cipher")
+    return (1..wordCount).joinToString(" ") { words.random() }
+}
+
+fun generateJsonLikeMessage(): String {
+    val id = Random.nextInt(1000, 9999)
+    val name = generateRandomName()
+    val email = "$name@example.com"
+    return """{"id":$id,"name":"$name","email":"$email"}"""
+}
+
 private fun generateRandomAddress(): Address {
     val streets = listOf(
         "Main", "Oak Ave", "Maple", "Pine", "Elm", "Cedar", "Willow", "Dad", "Mom", "Peach", "Apple",

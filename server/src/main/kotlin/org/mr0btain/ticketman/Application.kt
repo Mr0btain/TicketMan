@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.encryption.testEncryptionHandler
 import org.mr0btain.ticketman.encryption.testSecureClient
 import org.mr0btain.ticketman.encryption.testSecureClient2
 import org.mr0btain.ticketman.util.AppDir
@@ -42,13 +43,14 @@ fun Application.module() {
         configureSecurity(jwtService)
         configureRouting(userService, database)
 
-        testSecureClient()
+        testEncryptionHandler()
 
-        testSecureClient2()
+        //testSecureClient()
+        //testSecureClient2()
 
         /*
 
-val testData = generateMockData(20)
+        val testData = generateMockData(20)
         database.customerDatabase.addAll(testData.first)
         database.ticketDatabase.addAll(testData.second)
         database.userDatabase.addAll(testData.third)

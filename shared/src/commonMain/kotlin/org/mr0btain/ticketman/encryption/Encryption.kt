@@ -10,17 +10,9 @@ import java.util.*
 import javax.crypto.Cipher
 import javax.crypto.KeyAgreement
 import javax.crypto.SecretKey
-import javax.crypto.spec.ChaCha20ParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import java.security.*
 import javax.crypto.spec.IvParameterSpec
-
-data class EncryptedMessage(
-    val senderName: String,
-    val ciphertext: ByteArray,
-    val nonce: ByteArray,
-    val signature: ByteArray
-)
 
 // TODO: Use authentication to discern who it is and their public key
 // TODO: Store public keys somehow. probably just in ram
@@ -87,7 +79,7 @@ class SecureClient(val name: String) {
         sig.initVerify(senderSigningKey)
         sig.update(message.ciphertext)
         if (!sig.verify(message.signature)) {
-            throw SecurityException("Invalid signature from ${message.senderName}")
+            throw SecurityException("Invalid signature from ${message.senderIdentifier}")
         }
 
         // Decrypt
