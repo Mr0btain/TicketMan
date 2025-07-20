@@ -41,8 +41,6 @@ class DataHandler(
 
     /** Data Handlers. Mostly just to organise the mess. Maybe not the best way to do it, but it looks much, much better */
     // -----------------------------------------------------------------------------------------------------------------------
-    // TODO: Setup access level stuff
-    // TODO: Should probably set it up so that we only get regular data for everyone else unless the user is Admin then pull sensitive data.
 
     /**
      * Handles user data operations
@@ -118,7 +116,7 @@ class DataHandler(
                 // TODO: Flesh this out
                 // Sync users
                 clientDatabase.userDatabase.getAll()?.let { data ->
-                    val result = serverHandler.databaseClient.userClient.sync(data)
+                    val result = serverHandler.syncUsers(data)
 
                     if (result.isNotEmpty()) userDataHandler.addAll(result)
                 }

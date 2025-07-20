@@ -109,39 +109,20 @@ class ServerHandler(
     /**
      * Sync customers with server database and returns the values local database doesn't have
      */
-    suspend fun syncCustomers(currentCustomerList: List<CustomerData>): List<CustomerData> {
-        // Handle if our database is empty then no reason to sync just pull
-        return if (currentCustomerList.isEmpty()) {
-            databaseClient.customerClient.getAll()
-        } else {
-            // Else go through with sync
-            databaseClient.customerClient.sync(currentCustomerList)
-        }
-    }
+    suspend fun syncCustomers(currentCustomerList: List<CustomerData>): List<CustomerData> = databaseClient.customerClient.sync(currentCustomerList)
 
     /**
      * Sync inventory with server database and returns the values local database doesn't have
      */
-    suspend fun syncTickets(currentTickets: List<TicketInfo>): List<TicketInfo> {
-        // Handle if our database is empty then no reason to sync just pull
-        return if (currentTickets.isEmpty()) {
-            databaseClient.ticketClient.getAll()
-        } else {
-            // Else go through with sync
-            databaseClient.ticketClient.sync(currentTickets)
-        }
-    }
+    suspend fun syncTickets(currentTickets: List<TicketInfo>): List<TicketInfo> = databaseClient.ticketClient.sync(currentTickets)
 
     /**
      * Sync inventory with server database and returns the values local database doesn't have
      */
-    suspend fun syncInventory(currentInventory: List<InventoryItem>): List<InventoryItem> {
-        // Handle if our database is empty then no reason to sync just pull
-        return if (currentInventory.isEmpty()) {
-            databaseClient.inventoryClient.getAll()
-        } else {
-            // Else go through with sync
-            databaseClient.inventoryClient.sync(currentInventory)
-        }
-    }
+    suspend fun syncInventory(currentInventory: List<InventoryItem>): List<InventoryItem> = databaseClient.inventoryClient.sync(currentInventory)
+
+    /**
+     * Sync inventory with server database and returns the values local database doesn't have
+     */
+    suspend fun syncUsers(currentUsers: List<User>): List<User> = databaseClient.userClient.sync(currentUsers)
 }

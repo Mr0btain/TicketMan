@@ -8,7 +8,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.encryption.PeerKeyData
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.UserService
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.KeyRequest
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
@@ -21,7 +21,8 @@ import kotlin.uuid.Uuid
  * Authorization routes
  */
 
-// TODO: Setup Encryption. We should exchange keys somehow before we login so login info is encrypted
+// TODO: These let make it a bit hard to follow. Maybe expand them to if statements to make it easier to understand
+// TODO: Add logging
 
 @OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
 fun Route.authRoute(
@@ -29,60 +30,92 @@ fun Route.authRoute(
     encryptionService: EncryptionService
 ) {
     post {
-        val encryptedData = call.receive<EncryptedMessage>()
+        // Receive encrypted data from the request body and parse it into an EncryptedMessage object
+        val encryptedData = call.receive<EncryptedData>()
+        // Get the identifier for the user
         val identifier = encryptionService.findClientIdentifier(encryptedData)
 
-        encryptionService.decryptMessage(identifier, encryptedData)?.let { decrypted ->
-            userService.authenticate(
-                Json.decodeFromString(decrypted)
-            )?.let { authResponse ->
-                encryptionService.updateKey(identifier, authResponse.id)
+        // Attempt to decrypt the message using the client's identifier
+        encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
 
-                encryptionService.encryptMessage(authResponse.id, Json.encodeToString(authResponse))
+            // Try to parse the decrypted message into a LoginRequest and authenticate the user
+            userService.authenticate(Json.decodeFromString<LoginRequest>(decrypted))?.let { authResponse ->
+
+                // If authentication is successful, update the encryption key for this client
+                encryptionService.updateKeyIdentifier(identifier, authResponse.id)
+
+                // Encrypt the authentication response using the updated key
+                encryptionService.encryptData(authResponse.id, Json.encodeToString(authResponse))
                     ?.let { encryptedResponse ->
+                        // Respond to the client with the encrypted authentication response
                         call.respond(HttpStatusCode.Accepted, encryptedResponse)
-                    } ?: call.respond(HttpStatusCode.InternalServerError)
-            } ?: call.respond(HttpStatusCode.Unauthorized)
-        } ?: call.respond(HttpStatusCode.InternalServerError)
+                    } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
+
+            } ?: call.respond(HttpStatusCode.Unauthorized) // Handle failed authentication
+
+        } ?: call.respond(HttpStatusCode.InternalServerError) // Handle decryption failure
     }
+
 
     post("/user") {
-        val encryptedData = call.receive<EncryptedMessage>()
+        // Receive encrypted data from the request body and parse it into an EncryptedMessage object
+        val encryptedData = call.receive<EncryptedData>()
+        // Get the identifier for the user
         val identifier = encryptionService.findClientIdentifier(encryptedData)
 
-        encryptionService.decryptMessage(identifier, encryptedData)?.let { decrypted ->
+        // Attempt to decrypt the message using the client's credentials
+        encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
+
+            // Try to parse the decrypted message into a user object and authenticate
             userService.authenticateUser(Json.decodeFromString(decrypted))?.let { user ->
-                encryptionService.updateKey(identifier, user.identifier)
+
+                // If authentication is successful, update the encryption identifier with the user's identifier
+                encryptionService.updateKeyIdentifier(identifier, user.identifier)
+
+                // Respond with HTTP 202 Accepted if authentication and key update are successful
                 call.respond(HttpStatusCode.Accepted)
-            } ?: call.respond(HttpStatusCode.Unauthorized)
-        } ?: call.respond(HttpStatusCode.InternalServerError)
+
+            } ?: call.respond(HttpStatusCode.Unauthorized) // Respond with 401 if authentication fails
+        } ?: call.respond(HttpStatusCode.InternalServerError) // Respond with 500 if decryption fails
     }
+
 
     // Get Tokens
     post("/refresh") {
-        val encryptedData = call.receive<EncryptedMessage>()
+        // Receive encrypted data from the request body and parse it into an EncryptedMessage object
+        val encryptedData = call.receive<EncryptedData>()
+        // Get the identifier for the user
         val identifier = encryptionService.findClientIdentifier(encryptedData)
 
-        encryptionService.decryptMessage(identifier, encryptedData)?.let { decrypted ->
+        // Attempt to decrypt the message using the client's identifier
+        encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
+            // Deserialize the decrypted payload into a RefreshTokenRequest object
             val request = Json.decodeFromString<RefreshTokenRequest>(decrypted)
+
+            // Try to refresh the token using the provided refresh token
             userService.refreshToken(request.token)?.let { token ->
-                encryptionService.encryptMessage(
-                    identifier,
-                    Json.encodeToString(RefreshTokenResponse(token))
-                )?.let { encryptedData ->
+
+                // If the token was refreshed successfully, encrypt the new token into a response
+                encryptionService.encryptData(identifier, Json.encodeToString(RefreshTokenResponse(token)))
+                    ?.let { encryptedData ->
+                    // Respond with the encrypted refreshed token
                     call.respond(HttpStatusCode.Accepted, encryptedData)
-                } ?: call.respond(HttpStatusCode.InternalServerError)
-            } ?: call.respond(HttpStatusCode.Unauthorized)
-        } ?: call.respond(HttpStatusCode.InternalServerError)
+
+                } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
+            } ?: call.respond(HttpStatusCode.Unauthorized) // Handle token refresh failure (e.g., invalid token)
+        } ?: call.respond(HttpStatusCode.InternalServerError) // Handle decryption failure
     }
+
 
     // Register a public key for encryption
     post("/key/request") {
+        // Receive key request
         val keyRequest = call.receive<KeyRequest>()
-        // Assign random uuid here to store the key for now till we register it to a user
+        // Assign random uuid here to store the key for now till we register it to a user on login
         val id = Uuid.random().toString()
 
-        encryptionService.addKey(
+        // Add key to key storage
+        encryptionService.registerKey(
             identifier = id,
             peerKeyData = PeerKeyData(
                 publicKey = keyRequest.publicKey,
@@ -90,13 +123,14 @@ fun Route.authRoute(
             )
         )
 
-        call.respond(HttpStatusCode.Accepted, encryptionService.getKeyResponse())
+        call.respond(HttpStatusCode.Accepted, encryptionService.getPublicKeyResponse())
     }
 
     // Client can call this and check if keys are good
     post("/key/check") {
         try {
-            val message = call.receive<EncryptedMessage>()
+            // Receive encrypted data from the request body and parse it into an EncryptedMessage object
+            val message = call.receive<EncryptedData>()
 
             encryptionService.findAndDecrypt(message)?.let { decrypted ->
                 if (decrypted == "KeyCheck") {

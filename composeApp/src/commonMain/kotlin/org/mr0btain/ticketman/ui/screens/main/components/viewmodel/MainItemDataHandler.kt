@@ -12,17 +12,18 @@ import org.mr0btain.ticketman.logging.AppLogger
 /**
  * Base class for a MainDataItem handler
  */
+@Suppress("PrivatePropertyName")
 abstract class MainItemDataHandler<T: MainDataItem>(
     private val localDatabaseClient: LocalDatabaseClient<T>,
-    private val serverDatabaseClient: ServerDatabaseClient
+    private val serverDatabaseClient: ServerDatabaseClient,
+    tag: String
 ) {
     // TODO: Don't know if we even have to handle logging as in the clients themselves they handle it
-    abstract val TAG: String
-    private val ADD_TAG = "${this.javaClass.simpleName}:Add"
-    private val ADD_ALL_TAG = "${this.javaClass.simpleName}:AddAll"
-    private val UPDATE_TAG = "${this.javaClass.simpleName}:Update"
-    private val REMOVE_TAG = "${this.javaClass.simpleName}:Remove"
-    private val UPDATE_OR_ADD_TAG = "${this.javaClass.simpleName}:UpdateOrAdd"
+    private val ADD_TAG = "$tag:Add"
+    private val ADD_ALL_TAG = "$tag:AddAll"
+    private val UPDATE_TAG = "$tag:Update"
+    private val REMOVE_TAG = "$tag:Remove"
+    private val UPDATE_OR_ADD_TAG = "$tag:UpdateOrAdd"
 
     private val _dataList: MutableStateFlow<List<T>> = MutableStateFlow(listOf())
     val dataList = _dataList.asStateFlow()
@@ -38,7 +39,7 @@ abstract class MainItemDataHandler<T: MainDataItem>(
     }
 
     /**
-     * Sets the selected Id
+     * Sets the selected ID
      */
     fun setSelectedId(identifier: String) {
         _selectedId.value = identifier
@@ -53,7 +54,6 @@ abstract class MainItemDataHandler<T: MainDataItem>(
         coroutineScope {
             // Check if customer exists or not, if not then add it
             if (_dataList.value.firstOrNull { it.identifier == data.identifier } != null) {
-                // Update data in viewmodel
                 // Get index of the item
                 val index = _dataList.value.indexOfFirst { it.identifier == data.identifier }
 

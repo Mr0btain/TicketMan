@@ -81,11 +81,11 @@ suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpRes
 fun handleHttpResponse(tag: String, response: HttpResponse) {
     when (response.status.value) {
         in 200..299 -> AppLogger.m(tag, SimpleError.SUCCESS)
-        401 -> AppLogger.m(tag, NetworkError.UNAUTHORIZED.name)
-        409 -> AppLogger.m(tag, NetworkError.CONFLICT.name)
-        408 -> AppLogger.m(tag, NetworkError.REQUEST_TIMEOUT.name)
-        413 -> AppLogger.m(tag, NetworkError.PAYLOAD_TOO_LARGE.name)
-        in 500..599 -> AppLogger.m(tag, NetworkError.SERVER_ERROR.name)
-        else -> AppLogger.m(tag, NetworkError.UNKNOWN.name)
+        401 -> AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)
+        409 -> AppLogger.i(tag, NetworkError.CONFLICT.name)
+        408 -> AppLogger.i(tag, NetworkError.REQUEST_TIMEOUT.name)
+        413 -> AppLogger.i(tag, NetworkError.PAYLOAD_TOO_LARGE.name)
+        in 500..599 -> AppLogger.i(tag, NetworkError.SERVER_ERROR.name)
+        else -> AppLogger.i(tag, NetworkError.UNKNOWN.name)
     }
 }

@@ -6,7 +6,7 @@ import io.ktor.server.request.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
 
 fun RoutingCall.getIdentifierFromToken(): String? {
     val principal = principal<JWTPrincipal>()
@@ -15,27 +15,27 @@ fun RoutingCall.getIdentifierFromToken(): String? {
 
 // TODO: Add some response here
 suspend inline fun <reified T : Any> RoutingCall.handleDecryption(encryptionService: EncryptionService): T? {
-    val encryptedMessage = receive<EncryptedMessage>()
+    val encryptedData = receive<EncryptedData>()
 
     return getIdentifierFromToken()?.let { identifier ->
-        encryptionService.decryptMessage(identifier, encryptedMessage)?.let { decryptedMessage ->
+        encryptionService.decryptData(identifier, encryptedData)?.let { decryptedMessage ->
             Json.decodeFromString<T>(decryptedMessage)
         }
     }
 }
 
 // TODO: Add some response here
-fun RoutingCall.handleEncryption(encryptionService: EncryptionService, data: String): EncryptedMessage? {
+fun RoutingCall.handleEncryption(encryptionService: EncryptionService, data: String): EncryptedData? {
     return getIdentifierFromToken()?.let { identifier ->
-        encryptionService.encryptMessage(
+        encryptionService.encryptData(
             identifier = identifier,
-            message = data
+            data = data
         )
     }
 }
 
 suspend inline fun <reified T : Any> RoutingCall.findAndDecrypt(encryptionService: EncryptionService): T? {
-    return receive<EncryptedMessage>().let { encryptedMessage ->
+    return receive<EncryptedData>().let { encryptedMessage ->
         encryptionService.findAndDecrypt(encryptedMessage)?. let { decrypted ->
             Json.decodeFromString<T>(decrypted)
         }

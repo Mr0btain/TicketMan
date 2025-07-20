@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
-import io.ktor.serialization.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
@@ -10,13 +9,14 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.CustomerLocalDatabaseClientImpl
 import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
+
+// TODO: Add more comments to help understand whats going on
 
 fun Route.customerRoute(
     database: CustomerLocalDatabaseClientImpl,
@@ -27,9 +27,9 @@ fun Route.customerRoute(
     authenticate {
         post("/sync") {
             call.getIdentifierFromToken()?.let { identifier ->
-                val encryptedMessage = call.receive<EncryptedMessage>()
+                val encryptedData = call.receive<EncryptedData>()
 
-                encryptionService.decryptMessage(identifier, encryptedMessage)?.let {
+                encryptionService.decryptData(identifier, encryptedData)?.let {
                     Json.decodeFromString<SyncRequest>(it)
                 }?.let { syncRequest ->
                     database.getAll()?.let { data ->
@@ -42,9 +42,9 @@ fun Route.customerRoute(
                         // Filter response data so we can send back a response to request those that are not in our database
                         val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
 
-                        encryptionService.encryptMessage(
+                        encryptionService.encryptData(
                             identifier = identifier,
-                            message = Json.encodeToString(SyncResponse(responseData, requested))
+                            data = Json.encodeToString(SyncResponse(responseData, requested))
                         )?.let { response ->
                             call.respond(HttpStatusCode.OK, response)
                         } ?: call.respond(HttpStatusCode.InternalServerError)
@@ -65,18 +65,18 @@ fun Route.customerRoute(
                 userDatabase.getById(identifier)?.let { user ->
                     when (user.accessLevel) {
                         AccessLevel.ADMIN -> {
-                            encryptionService.encryptMessage(
+                            encryptionService.encryptData(
                                 identifier = identifier,
-                                message = encoded
+                                data = encoded
                             )?.let { encryptedMessage ->
                                 call.respond(HttpStatusCode.Accepted, encryptedMessage)
                             }
                         }
 
                         else -> {
-                            encryptionService.encryptMessage(
+                            encryptionService.encryptData(
                                 identifier = identifier,
-                                message = Json.encodeToString(
+                                data = Json.encodeToString(
                                     database.getAll()?.map { item ->
                                         CustomerData(
                                             identifier = item.identifier,
@@ -99,9 +99,9 @@ fun Route.customerRoute(
     authenticate {
         post("/add") {
             call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptMessage(
+                encryptionService.decryptData(
                     identifier = identifier,
-                    message = call.receive<EncryptedMessage>()
+                    data = call.receive<EncryptedData>()
                 )?.let { message ->
                     database.add(Json.decodeFromString<CustomerData>(message))
 
@@ -115,9 +115,9 @@ fun Route.customerRoute(
     authenticate {
         post("/update") {
             call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptMessage(
+                encryptionService.decryptData(
                     identifier = identifier,
-                    message = call.receive<EncryptedMessage>()
+                    data = call.receive<EncryptedData>()
                 )?.let { message ->
                     if (database.update(Json.decodeFromString<CustomerData>(message)))
                         call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)

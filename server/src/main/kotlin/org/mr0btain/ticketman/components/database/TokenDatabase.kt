@@ -2,19 +2,24 @@ package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.jdbc.addLogger
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.TokenTable.identifier
 import org.mr0btain.ticketman.components.database.TokenTable.token
-import java.util.UUID
+import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.logging.AppLogger
 
+@Suppress("PrivatePropertyName")
 class TokenDatabase(
     private val shouldLog: Boolean
 ) {
+    private val TAG = "TokenDatabase"
+    private val FIND_BY_ID_TAG = "$TAG:FindById"
+    private val FIND_BY_TOKEN_TAG = "$TAG:FindByToken"
+    private val ADD_TAG = "$TAG:Add"
+    private val UPDATE_TAG = "$TAG:Update"
+    private val REMOVE_TAG = "$TAG:Remove"
+
     fun findById(identifier: String): RefreshToken? {
         var found: RefreshToken? = null
 
@@ -27,10 +32,13 @@ class TokenDatabase(
                         identifier = item[TokenTable.identifier],
                         token = item[token]
                     )
-                }
+                } ?: AppLogger.i(FIND_BY_ID_TAG, SimpleError.FAIL)
             }
+
+            AppLogger.m(FIND_BY_ID_TAG, SimpleError.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
+            AppLogger.i(FIND_BY_ID_TAG, SimpleError.FAIL)
         }
 
         return found
@@ -49,10 +57,13 @@ class TokenDatabase(
                         identifier = item[identifier],
                         token = item[token]
                     )
-                }
+                } ?: AppLogger.i(FIND_BY_TOKEN_TAG, SimpleError.FAIL)
             }
+
+            AppLogger.m(FIND_BY_TOKEN_TAG, SimpleError.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
+            AppLogger.i(FIND_BY_TOKEN_TAG, SimpleError.FAIL)
         }
 
         return found
@@ -69,8 +80,11 @@ class TokenDatabase(
                     item[token] = refreshToken.token
                 }
             }
+
+            AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
+            AppLogger.i(ADD_TAG, SimpleError.FAIL)
             return false
         }
 
@@ -88,8 +102,11 @@ class TokenDatabase(
                     item[token] = refreshToken.token
                 }
             }
+
+            AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
+            AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
             return false
         }
 
@@ -104,8 +121,11 @@ class TokenDatabase(
 
                 TokenTable.deleteWhere { this.identifier eq identifier }
             }
+
+            AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
+            AppLogger.i(REMOVE_TAG, SimpleError.FAIL)
             return false
         }
 

@@ -1,18 +1,15 @@
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
-import io.ktor.serialization.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
-import io.ktor.server.response.*
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
-import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.database.TicketLocalDatabaseClientImpl
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 
@@ -24,9 +21,9 @@ fun Route.ticketRoute(
     authenticate {
         post("/sync") {
             call.getIdentifierFromToken()?.let { identifier ->
-                val encryptedMessage = call.receive<EncryptedMessage>()
+                val encryptedData = call.receive<EncryptedData>()
 
-                encryptionService.decryptMessage(identifier, encryptedMessage)?.let {
+                encryptionService.decryptData(identifier, encryptedData)?.let {
                     Json.decodeFromString<SyncRequest>(it)
                 }?.let { syncRequest ->
                     database.getAll()?.let { data ->
@@ -39,9 +36,9 @@ fun Route.ticketRoute(
                         // Filter response data so we can send back a response to request those that are not in our database
                         val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
 
-                        encryptionService.encryptMessage(
+                        encryptionService.encryptData(
                             identifier = identifier,
-                            message = Json.encodeToString(SyncResponse(responseData, requested))
+                            data = Json.encodeToString(SyncResponse(responseData, requested))
                         )?.let { response ->
                             call.respond(HttpStatusCode.OK, response)
                         } ?: call.respond(HttpStatusCode.InternalServerError)
@@ -68,9 +65,9 @@ fun Route.ticketRoute(
     authenticate {
         post("/add") {
             call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptMessage(
+                encryptionService.decryptData(
                     identifier = identifier,
-                    message = call.receive<EncryptedMessage>()
+                    data = call.receive<EncryptedData>()
                 )?.let { message ->
                     database.add(Json.decodeFromString<TicketInfo>(message))
 
@@ -84,9 +81,9 @@ fun Route.ticketRoute(
     authenticate {
         post("/update") {
             call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptMessage(
+                encryptionService.decryptData(
                     identifier = identifier,
-                    message = call.receive<EncryptedMessage>()
+                    data = call.receive<EncryptedData>()
                 )?.let { message ->
                     if (database.update(Json.decodeFromString<TicketInfo>(message)))
                         call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)

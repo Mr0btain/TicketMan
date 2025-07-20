@@ -2,48 +2,65 @@ package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.encryption.PeerKeyData
 import org.mr0btain.ticketman.components.encryption.ServerEncryptionHandler
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
+import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.KeyResponse
 
+/**
+ * Service used to handle encryption and decryption of data sent to and from server
+ * Anything decrypted will be returned as a string that can be serialized to its class
+ */
+
+@Suppress("PrivatePropertyName")
 class EncryptionService() {
     private val handler = ServerEncryptionHandler()
     private val keyStorage = mutableMapOf<String, PeerKeyData>()
 
-    /** Add a key to the key storage */
-    fun addKey(identifier: String, peerKeyData: PeerKeyData) {
+    private val TAG = "EncryptionService"
+    private val REGISTER_KEYS_TAG = "$TAG:RegisterKey"
+    private val UPDATE_KEY_IDENTIFIER = "$TAG:UpdateKeyIdentifier"
+
+    /** Inserts a key into storage */
+    fun registerKey(identifier: String, peerKeyData: PeerKeyData) {
         if (keyStorage.containsKey(identifier)) {
             keyStorage.replace(identifier, peerKeyData)
+            AppLogger.m(REGISTER_KEYS_TAG, "Key Found, Updating Identifier")
         } else {
             keyStorage.put(identifier, peerKeyData)
+            AppLogger.m(REGISTER_KEYS_TAG, "Registering new key")
         }
     }
 
     /** Updates the id for a key in key storage */
-    fun updateKey(oldId: String, newId: String) {
+    fun updateKeyIdentifier(oldId: String, newId: String) {
         keyStorage[oldId]?.let { peerKeyData ->
             keyStorage.remove(oldId)
             keyStorage.put(newId, peerKeyData)
-        }
+            AppLogger.m(UPDATE_KEY_IDENTIFIER, SimpleError.SUCCESS)
+        } ?: AppLogger.i(UPDATE_KEY_IDENTIFIER, "Identifier Not Found")
     }
 
-    /** Encrypt a message to a specific client */
-    fun encryptMessage(identifier: String, message: String): EncryptedMessage? {
+    /** Encrypt data to a specific client */
+    fun encryptData(identifier: String, data: String): EncryptedData? {
         return keyStorage[identifier]?.let { peerKey ->
-            handler.encryptAndSignMessage(message, peerKey.publicKey)
+            handler.encryptAndSignData(data, peerKey.publicKey)
         }
     }
 
-    fun findAndDecrypt(message: EncryptedMessage): String? {
-        val identifier = findClientIdentifier(message)
-        return decryptMessage(identifier, message)
+    /** Try to decrypt data with all keys in database */
+    fun findAndDecrypt(data: EncryptedData): String? {
+        val identifier = findClientIdentifier(data)
+        return decryptData(identifier, data)
     }
 
-    fun findClientIdentifier(message: EncryptedMessage): String {
+    /** Finds an identifier for the encrypted data if one exists */
+    fun findClientIdentifier(data: EncryptedData): String {
         // Try and find a match and update identifier if we do find one
         var identifier = ""
 
         keyStorage.forEach { key ->
-            if (handler.verifySignature(message, key.value.signingKey)) {
+            if (handler.verifySignature(data, key.value.signingKey)) {
                 identifier = key.key
                 return@forEach
             }
@@ -52,18 +69,18 @@ class EncryptionService() {
         return identifier
     }
 
-    /** Decrypt a message from a client */
-    fun decryptMessage(identifier: String, message: EncryptedMessage): String? {
+    /** Decrypt data from a client */
+    fun decryptData(identifier: String, data: EncryptedData): String? {
         val storedKeys = keyStorage[identifier]
 
         return if (storedKeys != null) {
-            handler.verifyAndDecryptMessage(message, storedKeys.publicKey, storedKeys.signingKey)
+            handler.verifyAndDecryptData(data, storedKeys.publicKey, storedKeys.signingKey)
         } else {
             // Try and find a match and update identifier if we do find one
             var oldIdentifier = ""
 
             keyStorage.forEach { key ->
-                if (handler.verifySignature(message, key.value.signingKey)) {
+                if (handler.verifySignature(data, key.value.signingKey)) {
                     oldIdentifier = key.key
                     return@forEach
                 }
@@ -74,13 +91,13 @@ class EncryptionService() {
                 keyStorage.remove(oldIdentifier)
                 keyStorage.put(identifier, keys)
 
-                handler.decryptMessage(message, keys.publicKey)
+                handler.decryptData(data, keys.publicKey)
             }
         }
     }
 
     /** Get keys needed to send messages to server */
-    fun getKeyResponse(): KeyResponse {
+    fun getPublicKeyResponse(): KeyResponse {
         return KeyResponse(
             publicKey = handler.xPublicKey,
             publicSignature = handler.getSigningPublicKey()

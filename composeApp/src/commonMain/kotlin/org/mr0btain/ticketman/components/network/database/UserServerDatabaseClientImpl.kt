@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
@@ -38,14 +38,14 @@ class UserServerDatabaseClientImpl(
                         url("$serverUrl/sync")
                         contentType(ContentType.Application.Json)
                         setBody(
-                            encryptionHandler.encryptAndSignMessage(
+                            encryptionHandler.encryptData(
                                 Json.encodeToString(SyncRequest(identifiers))
                             )
                         )
                     }
-                }?.let { response -> handleHttpResponse<EncryptedMessage>(SYNC_TAG, response) }
+                }?.let { response -> handleHttpResponse<EncryptedData>(SYNC_TAG, response) }
                     ?.onSuccess { encryptedMessage ->
-                        encryptionHandler.verifyAndDecryptMessage(encryptedMessage)?.let { decrypted ->
+                        encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
                             val syncResponse = Json.decodeFromString<SyncResponse>(decrypted)
                             val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
 
@@ -64,9 +64,9 @@ class UserServerDatabaseClientImpl(
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
-            }?.let { response -> handleHttpResponse<EncryptedMessage>(GET_ALL_TAG, response) }
+            }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
                 ?.onSuccess { value ->
-                    encryptionHandler.verifyAndDecryptMessage(value)?.let { decrypted ->
+                    encryptionHandler.decryptData(value)?.let { decrypted ->
                         return Json.decodeFromString<List<User>>(decrypted)
                     }
                 }

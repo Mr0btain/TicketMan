@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.components.network.encryption
 
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
+import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.KeyResponse
 import java.security.*
 import java.security.interfaces.XECPrivateKey
@@ -16,6 +18,7 @@ import kotlin.uuid.ExperimentalUuidApi
 // TODO: Add error handling
 // TODO: Setup logging
 
+@Suppress("PrivatePropertyName")
 @OptIn(ExperimentalUuidApi::class)
 class ClientEncryptionHandler() {
     // X25519 keys for key exchange
@@ -28,6 +31,11 @@ class ClientEncryptionHandler() {
     private var sharedSecret: ByteArray? = null
     private var symmetricKey: SecretKey? = null
     private var serverSignature: PublicKey? = null
+
+    private val TAG = "EncryptionHandler"
+    private val DERIVE_SHARED_KEY_TAG = "$TAG:DeriveSharedKey"
+    private val ENCRYPT_TAG = "$TAG:Encrypt"
+    private val DECRYPT_TAG = "$TAG:Decrypt"
 
     init {
         // Generate X25519 key pair
@@ -45,22 +53,29 @@ class ClientEncryptionHandler() {
     fun getSigningPublicKey(): PublicKey = edKeyPair.public
 
     // Derives a shared symmetric key using X25519 key agreement with the server's public key.
-// This key is later used for message encryption/decryption.
+    // This key is later used for message encryption/decryption.
     fun deriveSharedKey(keyResponse: KeyResponse) {
-        val keyAgreement = KeyAgreement.getInstance("X25519")
-        keyAgreement.init(xPrivateKey) // Initialize with client's private X25519 key
-        keyAgreement.doPhase(keyResponse.publicKey, true) // Use server's public key to derive shared secret
-        sharedSecret = keyAgreement.generateSecret()
+        try {
+            val keyAgreement = KeyAgreement.getInstance("X25519")
+            keyAgreement.init(xPrivateKey) // Initialize with client's private X25519 key
+            keyAgreement.doPhase(keyResponse.publicKey, true) // Use server's public key to derive shared secret
+            sharedSecret = keyAgreement.generateSecret()
 
-        serverSignature = keyResponse.publicSignature // Store server's Ed25519 public key for signature verification
+            serverSignature = keyResponse.publicSignature // Store server's Ed25519 public key for signature verification
 
-        // Derive symmetric key from shared secret using SHA-256 hash
-        val hash = MessageDigest.getInstance("SHA-256").digest(sharedSecret)
-        symmetricKey = SecretKeySpec(hash.copyOf(32), "ChaCha20")
+            // Derive symmetric key from shared secret using SHA-256 hash
+            val hash = MessageDigest.getInstance("SHA-256").digest(sharedSecret)
+            symmetricKey = SecretKeySpec(hash.copyOf(32), "ChaCha20")
+
+            AppLogger.m(DERIVE_SHARED_KEY_TAG, SimpleError.SUCCESS)
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+            AppLogger.i(DERIVE_SHARED_KEY_TAG, SimpleError.FAIL)
+        }
     }
 
     // Encrypts the message using ChaCha20-Poly1305 and signs the ciphertext using Ed25519
-    fun encryptAndSignMessage(encodedItem: String): EncryptedMessage? {
+    fun encryptData(encodedItem: String): EncryptedData? {
         return try {
             //requireNotNull(symmetricKey) { "Shared key must be derived first." }
             if (symmetricKey == null) return null
@@ -82,15 +97,18 @@ class ClientEncryptionHandler() {
             signature.update(ciphertext)
             val sigBytes = signature.sign()
 
-            EncryptedMessage(ciphertext, nonce, sigBytes)
+            AppLogger.m(ENCRYPT_TAG, SimpleError.SUCCESS)
+
+            EncryptedData(ciphertext, nonce, sigBytes)
         } catch (ex: Exception) {
             ex.printStackTrace()
+            AppLogger.i(ENCRYPT_TAG, SimpleError.FAIL)
             null
         }
     }
 
     // Verifies the signature of a received message and decrypts it
-    fun verifyAndDecryptMessage(encryptedData: EncryptedMessage): String? {
+    fun decryptData(encryptedData: EncryptedData): String? {
         return try {
             requireNotNull(symmetricKey) { "Shared key must be derived first." }
             requireNotNull(serverSignature) { "Server Signature must be received first." }
@@ -98,7 +116,7 @@ class ClientEncryptionHandler() {
             // Verify the message signature using the server's Ed25519 public key
             val sig = Signature.getInstance("Ed25519")
             sig.initVerify(serverSignature)
-            sig.update(encryptedData.ciphertext)
+            sig.update(encryptedData.cipherText)
             if (!sig.verify(encryptedData.signature)) {
                 throw SecurityException("Invalid signature from $encryptedData")
             }
@@ -106,11 +124,14 @@ class ClientEncryptionHandler() {
             // Decrypt the message using ChaCha20-Poly1305 with the nonce and shared symmetric key
             val cipher = Cipher.getInstance("ChaCha20-Poly1305")
             cipher.init(Cipher.DECRYPT_MODE, symmetricKey, IvParameterSpec(encryptedData.nonce))
-            val plaintext = cipher.doFinal(encryptedData.ciphertext)
+            val plaintext = cipher.doFinal(encryptedData.cipherText)
+
+            AppLogger.m(DECRYPT_TAG, SimpleError.SUCCESS)
 
             String(plaintext, Charsets.UTF_8) // Return the original plaintext string
         } catch (ex: Exception) {
             ex.printStackTrace()
+            AppLogger.i(DECRYPT_TAG, SimpleError.FAIL)
             null
         }
 

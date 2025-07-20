@@ -39,7 +39,7 @@ abstract class ServerDatabaseClient(
                     url("$serverUrl/add")
                     contentType(ContentType.Application.Json)
                     setBody(
-                        encryptionHandler.encryptAndSignMessage(
+                        encryptionHandler.encryptData(
                             Json.encodeToString(data)
                         )
                     )
@@ -55,7 +55,7 @@ abstract class ServerDatabaseClient(
                     url("$serverUrl/add/all")
                     contentType(ContentType.Application.Json)
                     setBody(
-                        encryptionHandler.encryptAndSignMessage(
+                        encryptionHandler.encryptData(
                             Json.encodeToString(data)
                         )
                     )
@@ -73,7 +73,7 @@ abstract class ServerDatabaseClient(
                     url("$serverUrl/update")
                     contentType(ContentType.Application.Json)
                     setBody(
-                        encryptionHandler.encryptAndSignMessage(
+                        encryptionHandler.encryptData(
                             Json.encodeToString(data)
                         )
                     )

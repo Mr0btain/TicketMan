@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.data.encryption.EncryptedMessage
+import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.error.onSuccess
@@ -100,14 +100,14 @@ class ServerUserClient(
                     url("$serverUrl/api/auth")
                     contentType(ContentType.Application.Json)
                     setBody(
-                        encryptionHandler.encryptAndSignMessage(
+                        encryptionHandler.encryptData(
                             Json.encodeToString(LoginRequest(username, password))
                         )
                     )
                 }
-            }?.let { response -> handleHttpResponse<EncryptedMessage>(LOGIN_TAG, response) }
+            }?.let { response -> handleHttpResponse<EncryptedData>(LOGIN_TAG, response) }
                 ?.onSuccess { message ->
-                    encryptionHandler.verifyAndDecryptMessage(message)?.let { decrypted ->
+                    encryptionHandler.decryptData(message)?.let { decrypted ->
                         val authResponse = Json.decodeFromString<AuthResponse>(decrypted)
 
                         serverHandler.updateAuthTokens(authResponse.accessToken, authResponse.refreshToken)
@@ -128,7 +128,7 @@ class ServerUserClient(
      */
     suspend fun checkCryptoKeysWithServer() {
         try {
-            val message = encryptionHandler.encryptAndSignMessage("KeyCheck")
+            val message = encryptionHandler.encryptData("KeyCheck")
 
             if (message != null) {
                 networkErrorTryCatch(CHECK_KEYS_TAG) {
@@ -163,7 +163,7 @@ class ServerUserClient(
                 url("$serverUrl/api/auth/user")
                 contentType(ContentType.Application.Json)
                 setBody(
-                    encryptionHandler.encryptAndSignMessage(
+                    encryptionHandler.encryptData(
                         Json.encodeToString(LoginRequest(username, password))
                     )
                 )
@@ -189,7 +189,7 @@ class ServerUserClient(
                     url("$serverUrl/api/auth/refresh")
                     contentType(ContentType.Application.Json)
                     setBody(
-                        encryptionHandler.encryptAndSignMessage(
+                        encryptionHandler.encryptData(
                             Json.encodeToString(RefreshTokenRequest(token))
                         )
                     )

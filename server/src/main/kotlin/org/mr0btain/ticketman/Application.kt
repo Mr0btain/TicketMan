@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.util.AppDir
 
 // TODO: Setup way for admin to change access levels for things individually
@@ -29,7 +30,6 @@ fun Application.module() {
     val path = this.environment.config.property("env.dataPath").getString()
     val appDir = AppDir().path
 
-    println("Path: $path")
     println("AppDir: $appDir")
 
     // TODO: Eventually we will switch this over to use an environment variable or the directory the app is running in
@@ -47,6 +47,8 @@ fun Application.module() {
         configureContentNegotiation()
         configureSecurity(jwtService)
         configureRouting(userService, database, encryptionService)
+
+        AppLogger.m("SERVER", "Server initialized!")
 
         /*
         val testData = generateMockData(20)
