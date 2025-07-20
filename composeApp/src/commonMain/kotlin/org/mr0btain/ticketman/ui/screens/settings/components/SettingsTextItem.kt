@@ -29,14 +29,11 @@ fun SettingsTextItem(
     surfaceOnClick: () -> Unit,
     dialogDismiss: () -> Unit
 ) {
-    var textFieldValue by remember { mutableStateOf(value) }
-
     if (showDialog) {
         Dialog(onDismissRequest = { dialogDismiss() }) {
             TextEditDialog(
                 name = name,
-                value = textFieldValue,
-                onValueChange = { textFieldValue = it },
+                value = value,
                 onConfirm = onConfirmChange,
                 inputFilter = inputFilter,
                 keyboardType = keyboardType,

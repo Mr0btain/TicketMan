@@ -40,16 +40,8 @@ class UserService(
         } else null
     }
 
-    fun authenticateUser(loginRequest: LoginRequest): Boolean {
-        val foundUser = database.getAll()?.firstOrNull { it.username == loginRequest.username }
-
-        // Check if user was found and process request
-        return if (foundUser != null && foundUser.password == loginRequest.password) {
-            // Check if we should update or add new token
-            if (tokenDatabase.findById(foundUser.identifier) != null) {
-                true
-            } else false
-        } else false
+    fun authenticateUser(loginRequest: LoginRequest): User? {
+        return database.getAll()?.firstOrNull { it.username == loginRequest.username }
     }
 
     fun refreshToken(token: String): String? {

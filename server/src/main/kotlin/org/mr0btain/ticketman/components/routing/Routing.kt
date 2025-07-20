@@ -7,14 +7,13 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.ServerDatabase
+import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.UserService
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.TicketInfo
 
 fun Application.configureRouting(
     userService: UserService,
-    serverDatabase: ServerDatabase
+    serverDatabase: ServerDatabase,
+    encryptionService: EncryptionService
 ) {
     install(StatusPages) {
         exception<Throwable> { call, cause ->
@@ -32,26 +31,36 @@ fun Application.configureRouting(
         }
 
         route("/api/auth") {
-            authRoute(userService)
+            authRoute(userService, encryptionService)
         }
 
         route("/api/user") {
-            userRoute(serverDatabase.userDatabase)
+            userRoute(
+                database = serverDatabase.userDatabase,
+                encryptionService = encryptionService
+            )
         }
 
         route("/api/data/customer") {
             customerRoute(
                 database = serverDatabase.customerDatabase,
-                userDatabase = serverDatabase.userDatabase
+                userDatabase = serverDatabase.userDatabase,
+                encryptionService = encryptionService
                 )
         }
 
         route("/api/data/ticket") {
-            ticketRoute(serverDatabase.ticketDatabase)
+            ticketRoute(
+                database = serverDatabase.ticketDatabase,
+                encryptionService = encryptionService
+            )
         }
 
         route("/api/data/inventory") {
-            inventoryRoute(serverDatabase.inventoryDatabase)
+            inventoryRoute(
+                database = serverDatabase.inventoryDatabase,
+                encryptionService = encryptionService
+            )
         }
     }
 }

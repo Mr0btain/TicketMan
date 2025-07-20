@@ -6,10 +6,10 @@ import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.hashPassword
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
@@ -18,9 +18,11 @@ import org.mr0btain.ticketman.server.response.UserResponse
 /**
  * User routes
  */
+// TODO: Figure out encryption
 
 fun Route.userRoute(
-    database: UserLocalDatabaseClientImpl
+    database: UserLocalDatabaseClientImpl,
+    encryptionService: EncryptionService
 ) {
     // TODO: Not sure if this is the right way to go about this
     get("/isnewdatabase") {

@@ -14,6 +14,7 @@ jwt:
 
 env:
     name: "$NAME:Server"
+    dataPath: "$DATA_PATH:"
 # postgres:
 #  url: "jdbc:postgresql://localhost/default"
 #  user: username

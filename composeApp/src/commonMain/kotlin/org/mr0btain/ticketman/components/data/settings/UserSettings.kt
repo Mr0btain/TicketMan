@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.data.components.settings
+package org.mr0btain.ticketman.components.data.settings
 
 import kotlinx.serialization.Serializable
 

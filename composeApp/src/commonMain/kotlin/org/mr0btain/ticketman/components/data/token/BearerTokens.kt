@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.data.components.token
+package org.mr0btain.ticketman.components.data.token
 
 import kotlinx.serialization.Serializable
 

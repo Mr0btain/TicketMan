@@ -21,7 +21,7 @@ abstract class DatabaseHandler(
     }
 
     // Connect to the local database
-    private val db = Database.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    protected val db = Database.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
 
     //Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")

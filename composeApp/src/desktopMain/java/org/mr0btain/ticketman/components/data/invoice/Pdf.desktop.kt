@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.data.components.invoice
+package org.mr0btain.ticketman.components.data.invoice
 
 import com.lowagie.text.Cell
 import com.lowagie.text.Document

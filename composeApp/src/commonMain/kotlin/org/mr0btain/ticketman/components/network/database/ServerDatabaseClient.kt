@@ -7,6 +7,8 @@ import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainDataItem
@@ -14,16 +16,17 @@ import org.mr0btain.ticketman.data.MainDataItem
 @Suppress("PropertyName")
 abstract class ServerDatabaseClient(
     tag: String,
-    private val client: HttpClient
+    private val client: HttpClient,
+    private val encryptionHandler: ClientEncryptionHandler
 ) {
-    val SYNC_TAG = "$tag:Sync"
-    val GET_ALL_TAG = "$tag:GetAll"
-    val SEND_TAG = "$tag:Send"
-    val BATCH_SEND_TAG = "$tag:BatchSend"
-    val UPDATE_TAG = "$tag:Update"
-    val REMOVE_TAG = "$tag:Remove"
+    protected val SYNC_TAG = "$tag:Sync"
+    protected val GET_ALL_TAG = "$tag:GetAll"
+    protected val SEND_TAG = "$tag:Send"
+    protected val BATCH_SEND_TAG = "$tag:BatchSend"
+    protected val UPDATE_TAG = "$tag:Update"
+    protected val REMOVE_TAG = "$tag:Remove"
 
-    abstract var serverUrl: String
+    protected abstract var serverUrl: String
 
     abstract fun changeUrl(url: String)
 
@@ -35,7 +38,11 @@ abstract class ServerDatabaseClient(
                 client.post {
                     url("$serverUrl/add")
                     contentType(ContentType.Application.Json)
-                    setBody(data)
+                    setBody(
+                        encryptionHandler.encryptAndSignMessage(
+                            Json.encodeToString(data)
+                        )
+                    )
                 }
             }?.let { response -> handleHttpResponse(SEND_TAG, response) }
         }
@@ -47,7 +54,11 @@ abstract class ServerDatabaseClient(
                 client.post {
                     url("$serverUrl/add/all")
                     contentType(ContentType.Application.Json)
-                    setBody(data)
+                    setBody(
+                        encryptionHandler.encryptAndSignMessage(
+                            Json.encodeToString(data)
+                        )
+                    )
                 }
             }?.let { response -> handleHttpResponse(BATCH_SEND_TAG, response) }
         }
@@ -61,7 +72,11 @@ abstract class ServerDatabaseClient(
                 client.post {
                     url("$serverUrl/update")
                     contentType(ContentType.Application.Json)
-                    setBody(data)
+                    setBody(
+                        encryptionHandler.encryptAndSignMessage(
+                            Json.encodeToString(data)
+                        )
+                    )
                 }
             }?.let { response -> handleHttpResponse(SEND_TAG, response) }
         }

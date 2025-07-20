@@ -16,10 +16,14 @@ import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.data.randomTicketPriority
 import org.mr0btain.ticketman.data.randomTicketStatus
 import org.mr0btain.ticketman.data.User
+import java.io.File
+import java.io.FileOutputStream
+import java.security.SecureRandom
 import java.text.DecimalFormat
 import java.util.UUID
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * A bunch of half-assed clobbered together functions that spit out random test data. Its beautiful chaos
@@ -176,7 +180,7 @@ fun generateMockUserData(num: Int): List<User> {
         // Create and return User object
         users.add(
             User(
-                identifier = UUID.randomUUID().toString(),
+                identifier = randomIdentifier(),
                 username = "${name.firstName}_${name.lastName}",
                 password = name.lastName,
                 name = name,
@@ -236,18 +240,6 @@ private fun getFakeTime(): Long {
             ampm = AMPM.entries.random()
         )
     )
-}
-
-fun generateRandomWordMessage(wordCount: Int = 10): String {
-    val words = listOf("alpha", "beta", "delta", "test", "secure", "encrypt", "random", "message", "kotlin", "cipher")
-    return (1..wordCount).joinToString(" ") { words.random() }
-}
-
-fun generateJsonLikeMessage(): String {
-    val id = Random.nextInt(1000, 9999)
-    val name = generateRandomName()
-    val email = "$name@example.com"
-    return """{"id":$id,"name":"$name","email":"$email"}"""
 }
 
 private fun generateRandomAddress(): Address {
@@ -454,5 +446,31 @@ private fun generateRandomPhoneNumber(): String {
         append(Random.nextInt(100, 999))  // Prefix
         append("-")
         append(Random.nextInt(1000, 9999)) // Line number
+    }
+}
+
+@OptIn(ExperimentalUuidApi::class)
+private fun randomIdentifier(): String = Uuid.random().toString()
+
+fun generateRandomFile(path: String, sizeInBytes: Long) {
+    val bufferSize = 1024 * 1024 // 1 MB buffer
+    val buffer = ByteArray(bufferSize)
+    val random = SecureRandom()
+    val file = File(path)
+
+    FileOutputStream(file).use { output ->
+        var bytesWritten: Long = 0
+        while (bytesWritten < sizeInBytes) {
+            val remaining = sizeInBytes - bytesWritten
+            val toWrite = if (remaining < bufferSize) remaining.toInt() else bufferSize
+
+            random.nextBytes(buffer)
+            output.write(buffer, 0, toWrite)
+            bytesWritten += toWrite
+
+            // Optional: Print progress
+            val percent = (bytesWritten * 100) / sizeInBytes
+            println("Generated $bytesWritten / $sizeInBytes bytes ($percent%)")
+        }
     }
 }

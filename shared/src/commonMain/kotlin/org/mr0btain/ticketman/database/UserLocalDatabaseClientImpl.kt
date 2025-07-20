@@ -8,23 +8,17 @@ import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.identifier
 import org.mr0btain.ticketman.database.tables.UserTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
 class UserLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
-) : LocalDatabaseClient<User> {
-    override val TAG = "UserLocalDatabaseClient"
-    override val GET_ALL_TAG = "$TAG:GetAll"
-    override val GET_BY_ID_TAG = "$TAG:GetById"
-    override val ADD_ALL_TAG = "$TAG:AddAll"
-    override val REMOVE_TAG = "$TAG:Remove"
-    override val GET_NEXT_ID_TAG = "$TAG:GetNextId"
-    override val ADD_TAG = "$TAG:Add"
-    override val UPDATE_TAG = "$TAG:Update"
-
+) : LocalDatabaseClient<User>(
+    tag = "UserLocalDatabaseClient",
+    table = UserTable,
+    shouldLog = shouldLog
+) {
     override val IdentifierColumn = UserTable.identifier
 
     /** Gets all items from database */
@@ -143,38 +137,6 @@ class UserLocalDatabaseClientImpl(
             AppLogger.m(REMOVE_TAG, SimpleError.FAIL)
             return false
         }
-    }
-
-    /** Gets the next identifier */
-    override fun getNextId(): String? {
-        var result = 0
-        var error = false
-
-        try {
-            transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                UserTable
-                    .select(IdentifierColumn)
-                    .map { it[identifier] }
-                    .let { list ->
-                        list.maxOfOrNull { it }?.let {
-                            result = it.toInt()
-                            AppLogger.m(GET_NEXT_ID_TAG, SimpleError.SUCCESS)
-                        } ?: {
-                            error = true
-                            AppLogger.i(GET_NEXT_ID_TAG, SimpleError.FAIL)
-                        }
-                    }
-            }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.m(GET_NEXT_ID_TAG, SimpleError.FAIL)
-            return null
-        }
-
-        return if (error) null else (result + 1).toString()
     }
 
     /** Adds an item to the database */

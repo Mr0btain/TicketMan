@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.util.AppDir
  */
 
 fun configureDatabase(appDir: AppDir): ClientDatabase {
-    return ClientDatabase("${appDir.path}/data").also { database ->
+    return ClientDatabase("${appDir.path}/client").also { database ->
         /** Anything you want to run before using the database do it here */
         database.initDatabase()
     }

@@ -7,34 +7,49 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.CustomerLocalDatabaseClientImpl
 import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
+import org.mr0btain.ticketman.data.encryption.EncryptedMessage
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 
 fun Route.customerRoute(
     database: CustomerLocalDatabaseClientImpl,
-    userDatabase: UserLocalDatabaseClientImpl
+    userDatabase: UserLocalDatabaseClientImpl,
+    encryptionService: EncryptionService
 ) {
     // Sync between client and server
     authenticate {
         post("/sync") {
-            val request = call.receive<SyncRequest>()
+            call.getIdentifierFromToken()?.let { identifier ->
+                val encryptedMessage = call.receive<EncryptedMessage>()
 
-            database.getAll()?.let { data ->
-                // Filter items by ones the client does not contain
-                val responseData = data.filter { !request.clientData.contains(it.identifier) }
+                encryptionService.decryptMessage(identifier, encryptedMessage)?.let {
+                    Json.decodeFromString<SyncRequest>(it)
+                }?.let { syncRequest ->
+                    database.getAll()?.let { data ->
+                        // Filter items by ones the client does not contain
+                        val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }
 
-                // Map all the ids in the local database
-                val dataIdentifiers = data.map { it.identifier }
+                        // Map all the ids in the local database
+                        val dataIdentifiers = data.map { it.identifier }
 
-                // Filter response data so we can send back a response to request those that are not in our database
-                val requested = request.clientData.filter { !dataIdentifiers.contains(it) }
+                        // Filter response data so we can send back a response to request those that are not in our database
+                        val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
 
-                // Send response
-                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
+                        encryptionService.encryptMessage(
+                            identifier = identifier,
+                            message = Json.encodeToString(SyncResponse(responseData, requested))
+                        )?.let { response ->
+                            call.respond(HttpStatusCode.OK, response)
+                        } ?: call.respond(HttpStatusCode.InternalServerError)
+                    } ?: call.respond(HttpStatusCode.NotFound)
+                }?: call.respond(HttpStatusCode.InternalServerError)
             } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
@@ -42,79 +57,81 @@ fun Route.customerRoute(
     // Get all
     authenticate("restricted") {
         get("/all") {
-            call.principal<JWTPrincipal>()
-                ?.payload
-                ?.getClaim("identifier")
-                ?.asString()
-                ?.let { identifier ->
-                    userDatabase.getById(identifier)?.let { user ->
-                        when (user.accessLevel) {
-                            AccessLevel.ADMIN -> call.respond(HttpStatusCode.Accepted, database.getAll() ?: emptyList())
-                            else -> call.respond(
-                                HttpStatusCode.Accepted,
-                                database.getAll()?.map { item ->
-                                    CustomerData(
-                                        identifier = item.identifier,
-                                        name = item.name,
-                                        time = item.time,
-                                        tickets = item.tickets,
-                                        notes = item.notes
-                                    )
-                                } ?: emptyList()
-                            )
+            val identifier = call.principal<JWTPrincipal>()?.payload?.getClaim("identifier")?.asString()
+            val data = database.getAll() ?: emptyList()
+            val encoded = Json.encodeToString(data)
+
+            if (identifier != null) {
+                userDatabase.getById(identifier)?.let { user ->
+                    when (user.accessLevel) {
+                        AccessLevel.ADMIN -> {
+                            encryptionService.encryptMessage(
+                                identifier = identifier,
+                                message = encoded
+                            )?.let { encryptedMessage ->
+                                call.respond(HttpStatusCode.Accepted, encryptedMessage)
+                            }
                         }
-                    } ?: call.respond(HttpStatusCode.NotFound)
-                } ?: call.respond(HttpStatusCode.NotAcceptable)
-            database.getAll()?.let { data ->
-                call.respond(HttpStatusCode.Accepted, data)
-            } ?: call.respond(HttpStatusCode.NotFound)
+
+                        else -> {
+                            encryptionService.encryptMessage(
+                                identifier = identifier,
+                                message = Json.encodeToString(
+                                    database.getAll()?.map { item ->
+                                        CustomerData(
+                                            identifier = item.identifier,
+                                            name = item.name,
+                                            time = item.time,
+                                            tickets = item.tickets,
+                                            notes = item.notes
+                                        )
+                                    } ?: emptyList()
+                                )
+                            )?.let { encryptedMessage -> call.respond(HttpStatusCode.Accepted, encryptedMessage) }
+                        }
+                    }
+                } ?: call.respond(HttpStatusCode.NotFound)
+            } else call.respond(HttpStatusCode.BadRequest)
         }
     }
 
     // Adding new
     authenticate {
         post("/add") {
-            try {
-                val item = call.receive<CustomerData>()
+            call.getIdentifierFromToken()?.let { identifier ->
+                encryptionService.decryptMessage(
+                    identifier = identifier,
+                    message = call.receive<EncryptedMessage>()
+                )?.let { message ->
+                    database.add(Json.decodeFromString<CustomerData>(message))
 
-                database.add(item)
-
-                call.respond(HttpStatusCode.Accepted)
-            } catch (ex: IllegalStateException) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
-            } catch (ex: JsonConvertException) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
-            }
+                    call.respond(HttpStatusCode.Accepted)
+                }?: call.respond(HttpStatusCode.InternalServerError)
+            }?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
-    // Update Customer
+    // Update
     authenticate {
         post("/update") {
-            try {
-                val data = call.receive<CustomerData>()
-
-                if (database.update(data)) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
-            }
+            call.getIdentifierFromToken()?.let { identifier ->
+                encryptionService.decryptMessage(
+                    identifier = identifier,
+                    message = call.receive<EncryptedMessage>()
+                )?.let { message ->
+                    if (database.update(Json.decodeFromString<CustomerData>(message)))
+                        call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
+                }?: call.respond(HttpStatusCode.InternalServerError)
+            }?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
-    // Bulk add customers mostly for syncing
+    // Bulk add mostly for syncing
     authenticate {
         post("/add/all") {
-            try {
-                val data = call.receive<List<CustomerData>>()
-
-                if (database.addAll(data)) call.respond(HttpStatusCode.Accepted)
+            call.handleDecryption<List<CustomerData>>(encryptionService)?.let { result ->
+                if (database.addAll(result)) call.respond(HttpStatusCode.Accepted)
                 else call.respond(HttpStatusCode.NotFound)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }

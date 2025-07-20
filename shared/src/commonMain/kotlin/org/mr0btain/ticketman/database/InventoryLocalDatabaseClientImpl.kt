@@ -12,16 +12,11 @@ import org.mr0btain.ticketman.logging.AppLogger
 
 class InventoryLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
-) : LocalDatabaseClient<InventoryItem> {
-    override val TAG = "InventoryLocalDatabaseClient"
-    override val GET_ALL_TAG = "$TAG:GetAll"
-    override val GET_BY_ID_TAG = "$TAG:GetById"
-    override val ADD_ALL_TAG = "$TAG:AddAll"
-    override val REMOVE_TAG = "$TAG:Remove"
-    override val GET_NEXT_ID_TAG = "$TAG:GetNextId"
-    override val ADD_TAG = "$TAG:Add"
-    override val UPDATE_TAG = "$TAG:Update"
-
+) : LocalDatabaseClient<InventoryItem>(
+    tag = "InventoryDatabaseClient",
+    table = InventoryTable,
+    shouldLog = shouldLog
+) {
     override val IdentifierColumn = InventoryTable.identifier
 
     /** Gets all items from database */
@@ -135,33 +130,6 @@ class InventoryLocalDatabaseClientImpl(
             e.printStackTrace()
             AppLogger.m(REMOVE_TAG, SimpleError.FAIL)
             return false
-        }
-    }
-
-    /** Gets the next identifier */
-    override fun getNextId(): String? {
-        var result = 0
-
-        return try {
-            transaction {
-                InventoryTable
-                    .select(IdentifierColumn)
-                    .map { it[InventoryTable.identifier] }
-                    .let { list ->
-                        list.maxOfOrNull { it }?.let {
-                            result = it.toInt()
-                            AppLogger.m(GET_NEXT_ID_TAG, SimpleError.SUCCESS)
-                        } ?: {
-                            AppLogger.i(GET_NEXT_ID_TAG, SimpleError.FAIL)
-                        }
-                    }
-            }
-
-            (result + 1).toString()
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.m(GET_NEXT_ID_TAG, SimpleError.FAIL)
-            null
         }
     }
 

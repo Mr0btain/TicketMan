@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.components.database
 
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -8,7 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import org.mr0btain.ticketman.components.data.components.settings.UserSettings
+import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 

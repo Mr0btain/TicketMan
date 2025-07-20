@@ -3,11 +3,13 @@ package org.mr0btain.ticketman.components.network
 import io.ktor.client.engine.*
 import org.mr0btain.ticketman.components.network.database.ServerDatabaseClientHandler
 import org.mr0btain.ticketman.components.network.database.createDatabaseHttpClient
+import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
 import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.DataHandler
@@ -17,20 +19,24 @@ import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.DataHandler
  */
 class ServerHandler(
     engine: HttpClientEngine,
-    private val mainViewModel: DataHandler
+    private val dataHandler: DataHandler
 ) {
     private val TAG = "ServerHandler"
 
-    val userClient = ServerUserClient(createUserHttpClient(engine), this)
-    val databaseClient = ServerDatabaseClientHandler(createDatabaseHttpClient(engine, this))
+    val encryptionHandler = ClientEncryptionHandler()
+    val userClient = ServerUserClient(createUserHttpClient(engine), this, encryptionHandler)
+    val databaseClient = ServerDatabaseClientHandler(createDatabaseHttpClient(engine, this), encryptionHandler)
     
     /**
      * Sets url to the server in all clients
      */
-    fun setUrl(url: String) {
+    suspend fun setUrl(url: String) {
         if (url.isNotBlank()) {
             userClient.changeServerUrl(url)
             databaseClient.changeServerUrl(url)
+
+            // Run a server check so we can update keys and such
+            checkServerConnection()
         } else {
             AppLogger.m("$TAG:SetUrl", "FAIL: Url is empty")
         }
@@ -39,40 +45,37 @@ class ServerHandler(
     /**
      * Gets stored username from database
      */
-    suspend fun getUsername() = mainViewModel.getStoredUsername()
+    suspend fun getUsername() = dataHandler.getStoredUsername()
 
     /**
      * Gets stored password from database
      */
-    suspend fun getPassword() = mainViewModel.getStoredPassword()
+    suspend fun getPassword() = dataHandler.getStoredPassword()
 
     /**
      * Gets stored access token from database
      */
-    suspend fun getAccessToken() = mainViewModel.getStoredAccessToken()
+    suspend fun getAccessToken() = dataHandler.getStoredAccessToken()
 
     /**
      * Gets both stored tokens from database
      */
-    suspend fun getRefreshToken() = mainViewModel.getStoredRefreshToken()
+    suspend fun getRefreshToken() = dataHandler.getStoredRefreshToken()
+
+    /**
+     * Gets both stored tokens from database
+     */
+    suspend fun setUser(user: User) = dataHandler.userDataHandler.setCurrent(user)
 
     /**
      * Refreshes tokens for authentication
      */
-    suspend fun refreshTokens() = mainViewModel.refreshTokens()
+    suspend fun refreshTokens() = dataHandler.refreshTokens()
 
     /**
      * Updates stored tokens in database
      */
-    suspend fun updateAuthTokens(access: String, refresh: String) = mainViewModel.updateStoredAuthTokens(access, refresh)
-
-    /**
-     * Updates urls clients use
-     */
-    fun updateServerUrl(url: String) {
-        userClient.changeServerUrl(url)
-        databaseClient.changeServerUrl(url)
-    }
+    suspend fun updateAuthTokens(access: String, refresh: String) = dataHandler.updateStoredAuthTokens(access, refresh)
 
     /**
      * Checks connection with server using stored url

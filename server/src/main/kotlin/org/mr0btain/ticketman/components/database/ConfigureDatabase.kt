@@ -7,7 +7,7 @@ package org.mr0btain.ticketman.components.database
 fun configureDatabase(
     databaseDirectory: String
 ): ServerDatabase {
-    return ServerDatabase("$databaseDirectory/data/server").also { database ->
+    return ServerDatabase("$databaseDirectory/server").also { database ->
         /** Anything you want to run before using the database do it here */
         database.initDatabase()
     }

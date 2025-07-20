@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.ui.screens.main.components.viewmodel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.components.settings.UserSettings
+import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.network.ServerHandler
 import org.mr0btain.ticketman.components.network.getHttpEngine
@@ -96,30 +96,31 @@ class DataHandler(
             try {
                 // Sync customers
                 clientDatabase.customerDatabase.getAll()?.let { data ->
-                    customerDataHandler.addAll(
-                        serverHandler.syncCustomers(data)
-                    )
+                    val result = serverHandler.syncCustomers(data)
+
+                    if (result.isNotEmpty()) customerDataHandler.addAll(result)
                 }
-                
+
                 // Sync tickets
                 clientDatabase.ticketDatabase.getAll()?.let { data ->
-                    ticketDataHandler.addAll(
-                        serverHandler.syncTickets(data)
-                    )
+                    val result = serverHandler.syncTickets(data)
+
+                    if (result.isNotEmpty()) ticketDataHandler.addAll(result)
                 }
-                
+
                 // Sync inventory
                 clientDatabase.inventoryDatabase.getAll()?.let { data ->
-                    inventoryDataHandler.addAll(
-                        serverHandler.syncInventory(data)
-                    )
+                    val result = serverHandler.syncInventory(data)
+
+                    if (result.isNotEmpty()) inventoryDataHandler.addAll(result)
                 }
-                
+
+                // TODO: Flesh this out
                 // Sync users
                 clientDatabase.userDatabase.getAll()?.let { data ->
-                    userDataHandler.addAll(
-                        serverHandler.databaseClient.userClient.sync(data)
-                    )
+                    val result = serverHandler.databaseClient.userClient.sync(data)
+
+                    if (result.isNotEmpty()) userDataHandler.addAll(result)
                 }
 
                 AppLogger.m(SYNC_TAG, SimpleError.SUCCESS)
@@ -237,7 +238,7 @@ class DataHandler(
     /**
      * Update server url
      */
-    fun updateServerUrl(url: String) = serverHandler.updateServerUrl(url)
+    suspend fun updateServerUrl(url: String) = serverHandler.setUrl(url)
 
     /**
      * Checks connection with the saved server
@@ -279,7 +280,7 @@ class DataHandler(
             // Check if the essential values are empty
             if (username.isEmpty() || password.isEmpty()) { false }
             // Check credentials with server
-            else if (serverHandler.userClient.checkCredentials(username, password)) { true }
+            else if (serverHandler.userClient.checkLoginCredentials(username, password)) { true }
             // else we've failed
             else { false }
         } else false

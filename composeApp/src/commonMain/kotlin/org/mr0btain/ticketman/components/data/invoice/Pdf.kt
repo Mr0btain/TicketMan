@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.components.data.components.invoice
+package org.mr0btain.ticketman.components.data.invoice
 
 import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.TicketInfo

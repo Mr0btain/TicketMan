@@ -6,9 +6,8 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.components.settings.UserSettings
+import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.error.SimpleError
-import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.DataHandler
 import org.mr0btain.ticketman.util.AppDir
@@ -27,6 +26,7 @@ class MainViewModel(
     companion object {
         private const val TAG = "MainViewModel"
         private const val INIT_TAG = "$TAG:Init"
+        private const val INIT_SYNC_TAG = "$TAG:Init_Sync"
     }
 
     // TODO: Add a way to check if we have network connection, and once we do have it run a check and sync
@@ -44,7 +44,12 @@ class MainViewModel(
             // Populate data lists from local
             dataHandler.populate()
 
-            if (!dataHandler.syncData()) AppLogger.i(INIT_TAG, SimpleError.FAIL)
+            if (dataHandler.loginCheck()) {
+                if (dataHandler.syncData())
+                    AppLogger.m(INIT_SYNC_TAG, SimpleError.SUCCESS)
+                else
+                    AppLogger.i(INIT_SYNC_TAG, SimpleError.FAIL)
+            } else AppLogger.i(INIT_SYNC_TAG, "No Connection or Not Logged in")
         }
     }
 
@@ -104,8 +109,10 @@ class MainViewModel(
 
     fun updateServerUrl(url: String) {
         _serverAddress.value = url
-        dataHandler.updateServerUrl(url)
-        saveSettings()
+        viewModelScope.launch {
+            dataHandler.updateServerUrl(url)
+            saveSettings()
+        }
     }
 
     fun toggleScrollBarsOnBottom() {

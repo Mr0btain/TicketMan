@@ -8,15 +8,12 @@ import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.Notes
 
-object UserTable : IntIdTable("user"), DataTable {
-    val identifier = varchar("identifier", 36)
+object UserTable : DataIntTable("user") {
     val username = text("username")
     val password = text("password")
     val firstName = text("firstname")
     val lastName = text("lastname")
-    val tickets = json<TicketList>("tickets", Json.Default)
-    val contactInfo = json<ContactInfo>("contact", Json.Default)
-    val notes = json<Notes>("notes", Json.Default)
-    val access = json<AccessLevel>("access", Json.Default)
-    val time = long("time")
+    val tickets = json<TicketList>("tickets", Json { ignoreUnknownKeys = true })
+    val contactInfo = json<ContactInfo>("contact", Json { ignoreUnknownKeys = true })
+    val access = json<AccessLevel>("access", Json { ignoreUnknownKeys = true })
 }

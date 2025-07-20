@@ -5,10 +5,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
@@ -81,6 +84,8 @@ private fun LoginTextField(
     showPassword: Boolean,
     showPasswordOnClick: () -> Unit = {}
 ) {
+    val focusRequester = remember { FocusRequester() }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -88,6 +93,7 @@ private fun LoginTextField(
     ) {
         // Username field
         OutlinedTextField(
+            modifier = Modifier.focusRequester(focusRequester),
             label = {
                 Text(stringResource(Res.string.username_string))
             },
@@ -144,4 +150,6 @@ private fun LoginTextField(
             isError = error
         )
     }
+
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }

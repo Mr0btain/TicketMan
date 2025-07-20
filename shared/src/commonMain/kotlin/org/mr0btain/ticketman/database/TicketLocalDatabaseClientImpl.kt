@@ -6,23 +6,17 @@ import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.data.shared.Notes
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.identifier
 import org.mr0btain.ticketman.database.tables.TicketDataTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
 class TicketLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
-) : LocalDatabaseClient<TicketInfo> {
-    override val TAG = "TicketLocalDatabaseClient"
-    override val GET_ALL_TAG = "$TAG:GetAll"
-    override val GET_BY_ID_TAG = "$TAG:GetById"
-    override val ADD_ALL_TAG = "$TAG:AddAll"
-    override val REMOVE_TAG = "$TAG:Remove"
-    override val GET_NEXT_ID_TAG = "$TAG:GetNextId"
-    override val ADD_TAG = "$TAG:Add"
-    override val UPDATE_TAG = "$TAG:Update"
-
+) : LocalDatabaseClient<TicketInfo>(
+    tag = "TicketLocalDatabaseClient",
+    table = TicketDataTable,
+    shouldLog = shouldLog
+) {
     override val IdentifierColumn = TicketDataTable.identifier
 
     /** Gets all items from database */
@@ -43,7 +37,7 @@ class TicketLocalDatabaseClientImpl(
                         assignedUser = item[TicketDataTable.assignedUser],
                         priority = item[TicketDataTable.priority],
                         status = item[TicketDataTable.status],
-                        updates = item[TicketDataTable.updates].notes,
+                        updates = item[TicketDataTable.notes].notes,
                         time = item[TicketDataTable.time]
                     )
                 }
@@ -76,7 +70,7 @@ class TicketLocalDatabaseClientImpl(
                         assignedUser = item[TicketDataTable.assignedUser],
                         priority = item[TicketDataTable.priority],
                         status = item[TicketDataTable.status],
-                        updates = item[TicketDataTable.updates].notes,
+                        updates = item[TicketDataTable.notes].notes,
                         time = item[TicketDataTable.time]
                     )
                 }.firstOrNull()
@@ -106,7 +100,7 @@ class TicketLocalDatabaseClientImpl(
                     this[TicketDataTable.assignedUser] = item.assignedUser
                     this[TicketDataTable.priority] = item.priority
                     this[TicketDataTable.status] = item.status
-                    this[TicketDataTable.updates] = Notes(item.updates)
+                    this[TicketDataTable.notes] = Notes(item.updates)
                     this[TicketDataTable.time] = item.time
                 }
 
@@ -140,38 +134,6 @@ class TicketLocalDatabaseClientImpl(
         }
     }
 
-    /** Gets the next identifier */
-    override fun getNextId(): String? {
-        var result = 0
-        var error = false
-
-        try {
-            transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                TicketDataTable
-                    .select(IdentifierColumn)
-                    .map { it[identifier] }
-                    .let { list ->
-                        list.maxOfOrNull { it }?.let {
-                            result = it.toInt()
-                            AppLogger.m(GET_NEXT_ID_TAG, SimpleError.SUCCESS)
-                        } ?: {
-                            error = true
-                            AppLogger.i(GET_NEXT_ID_TAG, SimpleError.FAIL)
-                        }
-                    }
-            }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.m(GET_NEXT_ID_TAG, SimpleError.FAIL)
-            return null
-        }
-
-        return if (error) null else (result + 1).toString()
-    }
-
     /** Adds an item to the database */
     override fun add(data: TicketInfo): Boolean {
         try {
@@ -186,7 +148,7 @@ class TicketLocalDatabaseClientImpl(
                     item[TicketDataTable.assignedUser] = data.assignedUser
                     item[TicketDataTable.priority] = data.priority
                     item[TicketDataTable.status] = data.status
-                    item[TicketDataTable.updates] = Notes(data.updates)
+                    item[TicketDataTable.notes] = Notes(data.updates)
                     item[TicketDataTable.time] = data.time
                 }
 
@@ -215,7 +177,7 @@ class TicketLocalDatabaseClientImpl(
                     item[TicketDataTable.assignedUser] = data.assignedUser
                     item[TicketDataTable.priority] = data.priority
                     item[TicketDataTable.status] = data.status
-                    item[TicketDataTable.updates] = Notes(data.updates)
+                    item[TicketDataTable.notes] = Notes(data.updates)
                     item[TicketDataTable.time] = data.time
                 }
 

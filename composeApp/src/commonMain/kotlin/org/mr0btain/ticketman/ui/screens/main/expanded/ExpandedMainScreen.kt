@@ -379,6 +379,17 @@ fun ExpandedMainScreen(
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        // TODO: ---------------------------------------------------------------------------------------
+                        Button(
+                            onClick = {
+                                coroutineScope.launch {
+                                    viewModel.dataHandler.syncData()
+                                }
+                            }
+                        ) {
+                            Text("Sync")
+                        }
+
                         // TODO: Make this only work if not logged in or hide if logged in
                         Button(
                             onClick = { viewModel.updateShowLogin(true) }

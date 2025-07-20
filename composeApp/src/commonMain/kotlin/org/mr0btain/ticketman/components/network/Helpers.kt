@@ -36,6 +36,9 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
     }
 }
 
+/**
+ * Handles the http response form server logging the result whether it be a fail or success
+ */
 suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): Result<T, NetworkError> {
     return when (response.status.value) {
         in 200..299 -> {
