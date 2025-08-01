@@ -54,47 +54,6 @@ fun Route.customerRoute(
         }
     }
 
-    // Get all
-    authenticate("restricted") {
-        get("/all") {
-            val identifier = call.principal<JWTPrincipal>()?.payload?.getClaim("identifier")?.asString()
-            val data = database.getAll() ?: emptyList()
-            val encoded = Json.encodeToString(data)
-
-            if (identifier != null) {
-                userDatabase.getById(identifier)?.let { user ->
-                    when (user.accessLevel) {
-                        AccessLevel.ADMIN -> {
-                            encryptionService.encryptData(
-                                identifier = identifier,
-                                data = encoded
-                            )?.let { encryptedMessage ->
-                                call.respond(HttpStatusCode.Accepted, encryptedMessage)
-                            }
-                        }
-
-                        else -> {
-                            encryptionService.encryptData(
-                                identifier = identifier,
-                                data = Json.encodeToString(
-                                    database.getAll()?.map { item ->
-                                        CustomerData(
-                                            identifier = item.identifier,
-                                            name = item.name,
-                                            time = item.time,
-                                            tickets = item.tickets,
-                                            notes = item.notes
-                                        )
-                                    } ?: emptyList()
-                                )
-                            )?.let { encryptedMessage -> call.respond(HttpStatusCode.Accepted, encryptedMessage) }
-                        }
-                    }
-                } ?: call.respond(HttpStatusCode.NotFound)
-            } else call.respond(HttpStatusCode.BadRequest)
-        }
-    }
-
     // Adding new
     authenticate {
         post("/add") {
