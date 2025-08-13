@@ -31,14 +31,15 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Make option to import database data from file?
 // TODO: Add remote database stuff
 // TODO: Administration screen
-// TODO: Implement okio for file opening and saving/exporting and such
+// TODO: Implement okio for file opening and saving/exporting and such for like an entire database
+// TODO: Add ability to store pictures for tickets for before and after
+// TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun App() {
     KoinContext {
-        // TODO: Maybe combine these? don't really need both of them
-        // View Models
+        // View Model
         val mainViewModel = koinViewModel<MainViewModel>()
 
         // For snack bar messages
@@ -82,10 +83,6 @@ fun App() {
             )
         )
 
-        // TODO: I don't think using window size class is the best way to go for differentiating between desktop and mobile as it
-        // causes us to end up hitting the database everytime screen size class changes in desktop. We should move the window size
-        // class state down the tree to avoid it recomposing the entire app when we resize the screen on desktop
-
         AppTheme(
             darkTheme = mainViewModel.darkMode.collectAsState(false).value
         ) {
@@ -100,7 +97,7 @@ fun App() {
                 )
             }
 
-            // Check if were on desktop
+            // Check if were on desktop, if so we can avoid using window size class entirely.
             if (getPlatform().name.contains("Java")) {
                 SideAppNav(
                     navHostController = navigator,
@@ -142,7 +139,6 @@ fun App() {
                     )
                 } else {
                     // Phone screen
-                    // TODO: Test on actual phone screen
                     BottomNavigationDrawer(
                         navController = navigator,
                         coroutineScope = mainScope,
