@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
+import org.mr0btain.ticketman.ui.screens.dashboard.DashboardScreen
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -38,24 +39,23 @@ fun NavigationHost(
         navController = navHostController,
         startDestination = startDestination
     ) {
-        composable(Screen.Main.route) {
-            MainScreen(
+        composable(Screen.Admin.route) {
+            AdminScreen(
                 viewModel = mainViewModel,
-                coroutineScope = coroutineScope,
                 isDarkMode = darkMode.value,
-                snackBarState = snackBarState,
-                scrollBarsOnRight = scrollBarsOnRight.value,
-                scrollBarsOnBottom = scrollBarsOnBottom.value
+                snackBarState = snackBarState
             )
         }
 
-        composable(Screen.Settings.route) {
-            SettingsScreen(
+        composable(Screen.Dashboard.route) {
+            DashboardScreen(
                 viewModel = mainViewModel,
-                scope = coroutineScope
+                isDarkMode = darkMode.value,
+                snackBarState = snackBarState
             )
         }
 
+        // TEMPORARY
         composable(Screen.Login.route) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -81,11 +81,21 @@ fun NavigationHost(
             }
         }
 
-        composable(Screen.Admin.route) {
-            AdminScreen(
+        composable(Screen.Main.route) {
+            MainScreen(
                 viewModel = mainViewModel,
+                coroutineScope = coroutineScope,
                 isDarkMode = darkMode.value,
-                snackBarState = snackBarState
+                snackBarState = snackBarState,
+                scrollBarsOnRight = scrollBarsOnRight.value,
+                scrollBarsOnBottom = scrollBarsOnBottom.value
+            )
+        }
+
+        composable(Screen.Settings.route) {
+            SettingsScreen(
+                viewModel = mainViewModel,
+                scope = coroutineScope
             )
         }
     }

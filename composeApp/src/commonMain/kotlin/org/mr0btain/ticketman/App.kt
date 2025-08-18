@@ -24,6 +24,7 @@ import org.mr0btain.ticketman.ui.theme.AppTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.home
+import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
 import ticketman.composeapp.generated.resources.user
 
@@ -34,6 +35,7 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Implement okio for file opening and saving/exporting and such for like an entire database
 // TODO: Add ability to store pictures for tickets for before and after
 // TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
+// TODO: Add terminal screen. Essentially a screen that can be used to easily make a ticket at a POS and stuff
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -62,7 +64,22 @@ fun App() {
 
         val navDestinations = listOf(
             NavigationItem(
-                title = "Home",
+                title = "Admin",
+                icon = painterResource(Res.drawable.archive),
+                route = Screen.Admin.route
+            ),
+            NavigationItem(
+                title = "Dashboard",
+                icon = painterResource(Res.drawable.monitor),
+                route = Screen.Dashboard.route
+            ),
+            NavigationItem(
+                title = "Login",
+                icon = painterResource(Res.drawable.user),
+                route = Screen.Login.route
+            ),
+            NavigationItem(
+                title = "Main",
                 icon = painterResource(Res.drawable.home),
                 route = Screen.Main.route
             ),
@@ -70,16 +87,6 @@ fun App() {
                 title = "Settings",
                 icon = painterResource(Res.drawable.settings),
                 route = Screen.Settings.route
-            ),
-            NavigationItem(
-                title = "Admin",
-                icon = painterResource(Res.drawable.archive),
-                route = Screen.Admin.route
-            ),
-            NavigationItem(
-                title = "Login",
-                icon = painterResource(Res.drawable.user),
-                route = Screen.Login.route
             )
         )
 

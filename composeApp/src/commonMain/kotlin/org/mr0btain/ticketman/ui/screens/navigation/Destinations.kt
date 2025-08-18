@@ -8,5 +8,6 @@ enum class Destinations {
     LOGIN,
     MAIN,
     SETTINGS,
-    ADMIN
+    ADMIN,
+    DASHBOARD
 }

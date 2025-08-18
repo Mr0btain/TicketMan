@@ -17,9 +17,6 @@ import org.mr0btain.ticketman.util.AppDir
 // TODO: Setup way for admin to change access levels for things individually
 // TODO: Maybe add ability for different users to have different instances of the databases and add admin settings to force all sync or allow individual
 
-// TODO: Figure out better way to identify users so we can determine admin or not?
-// TECHNICALLY if everything is encrypted then only that user could send a message that we could decrypt. else it wouldn't decrypt and be null. So not sure if this even matters
-
 // Currently im thinking we first pass keys, then we log in, then on approval we assign the user a random identifier and refresh the encryption key
 // that we store for that specific user. So when we talk first, its un-encrypted. then once were encrypted and user logs in we respond with the unique identifier
 // that's used from then on. so it would be ever-changing between sessions.
@@ -42,7 +39,7 @@ fun Application.module() {
     println("AppDir: $appDir")
 
     // TODO: Eventually we will switch this over to use an environment variable or the directory the app is running in
-    // as this is typical for servers. For now i need it to be in a specific place on my laptops so were using this
+
     // Check path dir
     if (path.isNotBlank() || appDir != null) {
         val database = configureDatabase(path.ifBlank { appDir.toString() })
