@@ -26,17 +26,19 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.info
 import ticketman.composeapp.generated.resources.tag
+import ticketman.composeapp.generated.resources.trello
 import ticketman.composeapp.generated.resources.user
+
+// TODO: Were gonna have to move some dialog states up the chain so we can call them from say the view model.
 
 @Composable
 fun DashboardScreen(
     viewModel: MainViewModel,
-    isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
+        color = MaterialTheme.colorScheme.background
     ) {
         Box(
             modifier = Modifier.padding(16.dp),
@@ -50,25 +52,37 @@ fun DashboardScreen(
                 DashboardItem(
                     icon = painterResource(Res.drawable.tag),
                     label = "Add Ticket",
-                    description = "Add a new ticket"
+                    description = "Add a new ticket",
+                    onClick = {
+                        println("Add Ticket Click")
+                    }
                 )
 
                 DashboardItem(
                     icon = painterResource(Res.drawable.user),
                     label = "Add Customer",
-                    description = "Add a new customer"
+                    description = "Add a new customer",
+                    onClick = {
+                        println("Add Customer Click")
+                    }
                 )
 
                 DashboardItem(
-                    icon = painterResource(Res.drawable.info),
+                    icon = painterResource(Res.drawable.trello),
                     label = "Ticket Status",
-                    description = "Check status of a ticket"
+                    description = "Check status of a ticket",
+                    onClick = {
+                        println("Status Click")
+                    }
                 )
 
                 DashboardItem(
                     icon = painterResource(Res.drawable.archive),
                     label = "Inventory",
-                    description = "Check inventory items"
+                    description = "Inventory items",
+                    onClick = {
+                        println("Add Inventory Click")
+                    }
                 )
             }
         }

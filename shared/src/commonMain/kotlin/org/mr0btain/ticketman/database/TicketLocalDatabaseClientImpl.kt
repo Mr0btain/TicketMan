@@ -37,7 +37,7 @@ class TicketLocalDatabaseClientImpl(
                         assignedUser = item[TicketDataTable.assignedUser],
                         priority = item[TicketDataTable.priority],
                         status = item[TicketDataTable.status],
-                        updates = item[TicketDataTable.notes].notes,
+                        updates = item[TicketDataTable.updates],
                         time = item[TicketDataTable.time]
                     )
                 }
@@ -70,7 +70,7 @@ class TicketLocalDatabaseClientImpl(
                         assignedUser = item[TicketDataTable.assignedUser],
                         priority = item[TicketDataTable.priority],
                         status = item[TicketDataTable.status],
-                        updates = item[TicketDataTable.notes].notes,
+                        updates = item[TicketDataTable.updates],
                         time = item[TicketDataTable.time]
                     )
                 }.firstOrNull()
@@ -100,7 +100,7 @@ class TicketLocalDatabaseClientImpl(
                     this[TicketDataTable.assignedUser] = item.assignedUser
                     this[TicketDataTable.priority] = item.priority
                     this[TicketDataTable.status] = item.status
-                    this[TicketDataTable.notes] = Notes(item.updates)
+                    this[TicketDataTable.updates] = item.updates
                     this[TicketDataTable.time] = item.time
                 }
 
@@ -148,7 +148,7 @@ class TicketLocalDatabaseClientImpl(
                     item[TicketDataTable.assignedUser] = data.assignedUser
                     item[TicketDataTable.priority] = data.priority
                     item[TicketDataTable.status] = data.status
-                    item[TicketDataTable.notes] = Notes(data.updates)
+                    item[TicketDataTable.updates] = data.updates
                     item[TicketDataTable.time] = data.time
                 }
 
@@ -177,7 +177,7 @@ class TicketLocalDatabaseClientImpl(
                     item[TicketDataTable.assignedUser] = data.assignedUser
                     item[TicketDataTable.priority] = data.priority
                     item[TicketDataTable.status] = data.status
-                    item[TicketDataTable.notes] = Notes(data.updates)
+                    item[TicketDataTable.updates] = data.updates
                     item[TicketDataTable.time] = data.time
                 }
 

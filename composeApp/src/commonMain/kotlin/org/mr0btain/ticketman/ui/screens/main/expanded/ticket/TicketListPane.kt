@@ -220,7 +220,7 @@ private fun TicketTableItem(
             ) {
                 if (ticketInfo.updates.isNotEmpty()) {
                     TableCardTextItem(
-                        ticketInfo.updates.last().author + " : " + ticketInfo.updates.last().text
+                        ticketInfo.updates.last().note.author + " : " + ticketInfo.updates.last().note.text
                     )
                 }
             }

@@ -124,6 +124,11 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 serialize = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [bundles]
+fileKit = [
+    "filekit-core",
+    "filekit-dialogs",
+    "filekit-dialogs-compose"
+]
 ktorServer = [
     "logback",
     "ktor-serverCore",

@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import kotlin.random.Random
 
 @Serializable
@@ -19,7 +20,7 @@ data class TicketInfo(
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Long.MAX_VALUE),
     val priority: TicketPriority = TicketPriority(TicketPriorityType.LOW, Long.MAX_VALUE),
-    val updates: List<Note> = listOf(),
+    val updates: List<TicketUpdate> = listOf(),
     val invoice: Invoice = Invoice(),
     val time: Long = Long.MAX_VALUE
 ): MainDataItem

@@ -16,11 +16,13 @@ import org.mr0btain.ticketman.data.TicketInfo
 import org.mr0btain.ticketman.data.randomTicketPriority
 import org.mr0btain.ticketman.data.randomTicketStatus
 import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import java.io.File
 import java.io.FileOutputStream
 import java.security.SecureRandom
 import java.text.DecimalFormat
 import java.util.UUID
+import javax.swing.plaf.basic.BasicInternalFrameTitlePane
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -332,20 +334,29 @@ fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
     val model = manufacturersAndModels[manufacturer]!!.random()
 
     // Generate random notes
-    val notes = List(Random.nextInt(1, 4)) {
+    val updates = mutableListOf<TicketUpdate>()
+
+    for (i in 0..Random.nextInt(1, 4)) {
         val author = "${firstNames.random()} ${lastNames.random()}"
         val message = noteMessages.random()
-        Note(author, message, getTime())
+
+        updates.add(
+            TicketUpdate(
+                identifier = i,
+                note = Note(author, message, getTime()),
+                listOf()
+            )
+        )
     }
 
     return TicketInfo(
-        identifier = ticketId.toString(),
+        identifier = ticketId,
         customerId = customerId,
         assignedUser = "",
         device = Device(manufacturer, model),
         status = randomTicketStatus(),
         priority = randomTicketPriority(),
-        updates = notes,
+        updates = updates,
         time = getFakeTime()
     )
 }

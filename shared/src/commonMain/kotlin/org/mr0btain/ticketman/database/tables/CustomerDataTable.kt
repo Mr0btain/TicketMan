@@ -18,4 +18,5 @@ object CustomerDataTable : DataIntTable("customer") {
     val zip = text("zip")
     val tickets = json<TicketList>("tickets", Json { ignoreUnknownKeys = true })
     val contactInfo = json<ContactInfo>("contact", Json { ignoreUnknownKeys = true })
+    val notes = json<Notes>("notes", Json { ignoreUnknownKeys = true })
 }

@@ -11,4 +11,5 @@ object InventoryTable : DataIntTable("inventory") {
     val stock = integer("stock")
     val cost = varchar("cost", 100)
     val price = varchar("price", 100)
+    val notes = json<Notes>("notes", Json { ignoreUnknownKeys = true })
 }

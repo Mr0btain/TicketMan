@@ -400,19 +400,19 @@ fun SmallTicketList(
                             Column(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                ticket.updates.take(3).forEach { note ->
+                                ticket.updates.take(3).forEach { update ->
                                     Row(
                                         modifier = Modifier.padding(4.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            text = note.author + ": ",
+                                            text = update.note.author + ": ",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.SemiBold
                                         )
 
                                         Text(
-                                            text = note.text,
+                                            text = update.note.text,
                                             fontSize = 14.sp
                                         )
                                     }

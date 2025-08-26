@@ -263,9 +263,8 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        NotesBlock(
-                            label = "",
-                            notes = ticketInfo.updates,
+                        UpdatesBlock(
+                            updates = ticketInfo.updates,
                             labelSize = 16.sp
                         )
                     }

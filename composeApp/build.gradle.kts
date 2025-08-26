@@ -95,6 +95,9 @@ kotlin {
 
             implementation(libs.bundles.exposed)
 
+            // FileKit for file operations
+            implementation(libs.bundles.fileKit)
+
         }
 
         commonTest.dependencies {

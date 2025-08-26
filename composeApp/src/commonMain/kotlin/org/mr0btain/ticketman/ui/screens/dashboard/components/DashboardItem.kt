@@ -19,14 +19,15 @@ fun DashboardItem(
     modifier: Modifier = Modifier,
     icon: Painter,
     label: String,
-    description: String
+    description: String,
+    onClick: () -> Unit
 ) {
     Button(
         modifier = modifier
             .padding(16.dp)
             .size(220.dp),
         shape = RoundedCornerShape(24.dp),
-        onClick = {}
+        onClick = onClick
     ) {
         Column(
             modifier = Modifier

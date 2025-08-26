@@ -20,21 +20,22 @@ import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.ticket.Device
+import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.composables.UserSearch
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.dialog.NoteDialog
+import org.mr0btain.ticketman.ui.dialog.EditUpdateDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
-import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 
 // TODO: Add checks to make sure its not blank
-// TODO: Add ability to edit update?
+// TODO: Add ability to trigger new customer
+
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
@@ -70,25 +71,29 @@ fun TicketDialog(
     var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
     var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
 
-    // For adding note dialog
-    var showAddNoteDialog by remember { mutableStateOf(false) }
+    // For editing or adding updates dialog
+    var showEditUpdateDialog by remember { mutableStateOf(false) }
+    var updateSeed by remember { mutableStateOf(TicketUpdate()) }
 
     // For customer search bar
-    var customerSearchBarInput by remember { mutableStateOf(if (seedData.customerId.isNotEmpty()) seedData.customerId.toString() else "") }
+    var customerSearchBarInput by remember { mutableStateOf(seedData.customerId.ifEmpty { "" }) }
 
     // For employee search bar
-    var userSearchBarInput by remember { mutableStateOf(if (userIds.contains(seedData.assignedUser)) seedData.assignedUser.toString()else "")  }
+    var userSearchBarInput by remember { mutableStateOf(if (userIds.contains(seedData.assignedUser)) seedData.assignedUser else "")  }
 
-    // Add Note dialog
-    if (showAddNoteDialog) {
-        NoteDialog(
+    // Edit or add update dialog
+    if (showEditUpdateDialog) {
+        EditUpdateDialog(
             isDarkMode = isDarkMode,
-            label = "Update",
-            onConfirm = { item ->
-                // Add to out list
-                updates.add(item)
+            seedData = updateSeed,
+            onConfirm = { update ->
+                // Remove old if exists
+                updates.removeIf { it.identifier == update.identifier }
+
+                // Add edited or new to list
+                updates.add(update)
             },
-            onDismissRequest = { showAddNoteDialog = false }
+            onDismissRequest = { showEditUpdateDialog = false }
         )
     }
 
@@ -96,7 +101,7 @@ fun TicketDialog(
     if (showConfirmDeleteScreen) {
         ConfirmDeleteDialog(
             itemName = when (itemForDelete) {
-                SubItemType.UPDATE -> updates[itemUpForDeleteIndex].author + "'s Update"
+                SubItemType.UPDATE -> updates[itemUpForDeleteIndex].note.author + "'s Update"
                 else -> ""
             },
             isDarkMode = isDarkMode,
@@ -185,7 +190,7 @@ fun TicketDialog(
                         onInputChange = { customerSearchBarInput = it },
                         onClick = { item ->
                             // Set search bar text
-                            customerSearchBarInput = item.toString()
+                            customerSearchBarInput = item
 
                             // Set customer id
                             customerId = item
@@ -284,7 +289,10 @@ fun TicketDialog(
 
                         IconButton(
                             modifier = Modifier.size(26.dp),
-                            onClick = { showAddNoteDialog = true }
+                            onClick = {
+                                updateSeed = TicketUpdate(identifier = updates.lastIndex + 1)
+                                showEditUpdateDialog = true
+                            }
                         ) {
                             Icon(
                                 modifier = Modifier
@@ -298,12 +306,11 @@ fun TicketDialog(
 
                     Spacer(Modifier.padding(4.dp))
 
-                    DialogNoteList(
-                        notes = updates,
-                        onDeleteClick = { item ->
-                            itemForDelete = SubItemType.NOTE
-                            itemUpForDeleteIndex = item
-                            showConfirmDeleteScreen = true
+                    EditableUpdatesBlock(
+                        updates = updates,
+                        onEditClick = { update ->
+                            updateSeed = update
+                            showEditUpdateDialog = true
                         }
                     )
                 }

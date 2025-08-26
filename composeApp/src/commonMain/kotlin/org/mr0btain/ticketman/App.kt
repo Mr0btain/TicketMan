@@ -30,12 +30,14 @@ import ticketman.composeapp.generated.resources.user
 
 // TODO: Work on UI for mobile size screens
 // TODO: Make option to import database data from file?
-// TODO: Add remote database stuff
+
 // TODO: Administration screen
 // TODO: Implement okio for file opening and saving/exporting and such for like an entire database
-// TODO: Add ability to store pictures for tickets for before and after
 // TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
-// TODO: Add terminal screen. Essentially a screen that can be used to easily make a ticket at a POS and stuff
+
+// TODO: Make dedicated screens for adding tickets and such and just have nav handle it
+// TODO: Should also add dedicated screens for working on tickets or changing them.
+// TODO: Add ability to store pictures for tickets for before and after
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable

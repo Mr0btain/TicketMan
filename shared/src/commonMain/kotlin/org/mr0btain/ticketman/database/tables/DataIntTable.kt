@@ -7,6 +7,5 @@ import org.mr0btain.ticketman.data.shared.Notes
 
 open class DataIntTable(name: String): IntIdTable(name) {
     val identifier = text("identifier")
-    val notes = json<Notes>("notes", Json { ignoreUnknownKeys = true })
     val time = long("time")
 }

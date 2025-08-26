@@ -50,7 +50,6 @@ fun NavigationHost(
         composable(Screen.Dashboard.route) {
             DashboardScreen(
                 viewModel = mainViewModel,
-                isDarkMode = darkMode.value,
                 snackBarState = snackBarState
             )
         }
