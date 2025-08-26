@@ -12,8 +12,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.utils.isNewTicket
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
@@ -39,11 +39,11 @@ import ticketman.composeapp.generated.resources.plus
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
-    customerData: List<CustomerData>,
+    customerData: List<Customer>,
     users: List<User>,
     onAddNewCustomer: (PersonName) -> Unit,
-    onDismiss: (TicketInfo?, DialogDismissReason) -> Unit,
-    seedData: TicketInfo,
+    onDismiss: (Ticket?, DialogDismissReason) -> Unit,
+    seedData: Ticket,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
@@ -324,7 +324,7 @@ fun TicketDialog(
                     onConfirmClick = {
                         // Call dismiss with data
                         onDismiss(
-                            TicketInfo(
+                            Ticket(
                                 identifier = seedData.identifier,
                                 customerId = customerId,
                                 assignedUser = assignedUser,

@@ -13,13 +13,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.formatTime
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
-import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
@@ -31,13 +30,14 @@ import ticketman.composeapp.generated.resources.tag
 fun TicketInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    customerData: CustomerData,
+    customer: Customer,
     scrollBarsOnRight: Boolean,
     assignedUserName: PersonName,
-    ticketInfo: TicketInfo,
-    onEditClick: () -> Unit
+    ticket: Ticket,
+    onEditClick: () -> Unit,
+    onImageClick: (List<String>) -> Unit,
 ) {
-    val date = formatTime(ticketInfo.time)
+    val date = formatTime(ticket.time)
 
     // Main Body
     Surface(
@@ -70,7 +70,7 @@ fun TicketInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = if (ticketInfo.identifier.isNotEmpty()) "Details for: ${ticketInfo.identifier}" else "",
+                        text = if (ticket.identifier.isNotEmpty()) "Details for: ${ticket.identifier}" else "",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -126,7 +126,7 @@ fun TicketInfoPane(
                         // Customer name
                         SimpleTextItem(
                             label = "Customer",
-                            text = customerData.name.firstName + " " + customerData.name.lastName
+                            text = customer.name.firstName + " " + customer.name.lastName
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -134,7 +134,7 @@ fun TicketInfoPane(
                         // Device manufacturer
                         SimpleTextItem(
                             label = "Manufacturer",
-                            text = ticketInfo.device.manufacturer
+                            text = ticket.device.manufacturer
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -142,7 +142,7 @@ fun TicketInfoPane(
                         // Device model
                         SimpleTextItem(
                             label = "Model",
-                            text = ticketInfo.device.model
+                            text = ticket.device.model
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -150,7 +150,7 @@ fun TicketInfoPane(
                         // Date created
                         SimpleTextItem(
                             label = "Created",
-                            text = if (ticketInfo.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                            text = if (ticket.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -171,8 +171,8 @@ fun TicketInfoPane(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (ticketInfo.assignedUser.isNotEmpty()) {
-                                        assignedUserName.firstName + " " + assignedUserName.lastName + ": " + ticketInfo.assignedUser
+                                    text = if (ticket.assignedUser.isNotEmpty()) {
+                                        assignedUserName.firstName + " " + assignedUserName.lastName + ": " + ticket.assignedUser
                                     } else "",
                                     fontSize = 18.sp
                                 )
@@ -183,7 +183,7 @@ fun TicketInfoPane(
 
                         // Contacts for customer block
                         ContactsBlock(
-                            customerData = customerData,
+                            customer = customer,
                             labelSize = 16.sp
                         )
                     }
@@ -204,7 +204,7 @@ fun TicketInfoPane(
                             .padding(20.dp),
                         scrollBarOnRight = scrollBarsOnRight,
                         backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        isVisible = ticketInfo.updates.isNotEmpty()
+                        isVisible = ticket.updates.isNotEmpty()
                     ) {
                         Text(
                             text = "Updates",
@@ -229,9 +229,9 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.identifier.isNotEmpty()) {
+                            if (ticket.identifier.isNotEmpty()) {
                                 TableStatusItem(
-                                    status = ticketInfo.status,
+                                    status = ticket.status,
                                     darkMode = isDarkMode
                                 )
                             }
@@ -253,9 +253,9 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticketInfo.identifier.isNotEmpty()) {
+                            if (ticket.identifier.isNotEmpty()) {
                                 TablePriorityItem(
-                                    priority = ticketInfo.priority,
+                                    priority = ticket.priority,
                                     darkMode = isDarkMode
                                 )
                             }
@@ -264,8 +264,9 @@ fun TicketInfoPane(
                         Spacer(Modifier.padding(4.dp))
 
                         UpdatesBlock(
-                            updates = ticketInfo.updates,
-                            labelSize = 16.sp
+                            updates = ticket.updates,
+                            labelSize = 16.sp,
+                            onImageClick = onImageClick
                         )
                     }
                 }

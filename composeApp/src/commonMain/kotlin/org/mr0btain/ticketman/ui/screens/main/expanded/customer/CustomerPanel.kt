@@ -10,9 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirst
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
@@ -24,8 +24,8 @@ fun CustomerPanel(
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
     selectedCustomerId: String,
-    customerDataList: List<CustomerData>,
-    ticketList: List<TicketInfo>,
+    customerList: List<Customer>,
+    ticketList: List<Ticket>,
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (String) -> Unit,
@@ -36,13 +36,13 @@ fun CustomerPanel(
     isDarkMode: Boolean
 ) {
     // Hopefully this saves on calculations and updates properly
-    val sortedCustomerInfo = remember(customerDataList) { customerDataList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
+    val sortedCustomerInfo = remember(customerList) { customerList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
 
     // For search input
     var searchInput by remember { mutableStateOf("") }
 
     // Search list
-    val searchItems = remember(customerDataList) { customerDataList.map { it } }
+    val searchItems = remember(customerList) { customerList.map { it } }
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectUpdateFromClick by remember { mutableStateOf(false) }
@@ -123,8 +123,8 @@ fun CustomerPanel(
                 CustomerInfoPane(
                     modifier = Modifier,
                     isDarkMode = isDarkMode,
-                    selectedCustomerData = customerDataList.singleOrNull { it.identifier == selectedCustomerId }
-                        ?: CustomerData(),
+                    selectedCustomer = customerList.singleOrNull { it.identifier == selectedCustomerId }
+                        ?: Customer(),
                     onEditClick = { onEditCustomer() },
                     tickets = ticketList.filter { it.customerId == selectedCustomerId },
                     onTicketClick = onTicketClick,

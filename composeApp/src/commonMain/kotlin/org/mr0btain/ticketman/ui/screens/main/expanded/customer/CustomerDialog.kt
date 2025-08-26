@@ -15,7 +15,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.shared.*
@@ -38,9 +38,9 @@ import kotlin.math.ceil
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
-    seedData: CustomerData = CustomerData(),
+    seedData: Customer = Customer(),
     ticketList: SnapshotStateList<String>,
-    onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
+    onDismiss: (Customer?, DialogDismissReason) -> Unit,
     onAddNewTicket: (String) -> Unit,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
@@ -454,7 +454,7 @@ fun CustomerDialog(
                     onConfirmClick = {
                         // Call dismiss with continue
                         onDismiss(
-                            CustomerData(
+                            Customer(
                                 identifier = seedData.identifier,
                                 name = PersonName(
                                     firstName.lowercase().replaceFirstChar { it.uppercase() },

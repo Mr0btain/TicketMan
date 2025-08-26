@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.ui.composables.InventorySearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 
@@ -44,7 +44,7 @@ fun InventoryPanel(
     inventoryListState: LazyListState
 ) {
     // Selected inventory item info
-    val selectedInventoryItem = inventoryList.firstOrNull() { it.identifier == selectedInventoryItemId } ?: TicketInfo()
+    val selectedInventoryItem = inventoryList.firstOrNull() { it.identifier == selectedInventoryItemId } ?: Ticket()
 
     // For search input
     var searchInput by remember { mutableStateOf("") }

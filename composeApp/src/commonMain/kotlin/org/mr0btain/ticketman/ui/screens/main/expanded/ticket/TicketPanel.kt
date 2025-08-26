@@ -10,8 +10,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
@@ -28,14 +28,15 @@ fun TicketPanel(
     onSelectedPanelChange: (Int) -> Unit,
     scrollBarsOnRight: Boolean,
     selectedTicketId: String,
-    ticketList: List<TicketInfo>,
-    customerList: List<CustomerData>,
+    ticketList: List<Ticket>,
+    customerList: List<Customer>,
     currentUser: User,
     users: List<User>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (String) -> Unit,
     onDeleteTicket: (String) -> Unit,
+    onImageClick: (List<String>) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
@@ -52,7 +53,7 @@ fun TicketPanel(
 
     // Selected ticket info
     val selectedTicket =
-        remember(selectedTicketId) { ticketList.firstOrNull() { it.identifier == selectedTicketId } ?: TicketInfo() }
+        remember(selectedTicketId) { ticketList.firstOrNull() { it.identifier == selectedTicketId } ?: Ticket() }
 
     // For search input
     var searchInput by remember { mutableStateOf("") }
@@ -171,7 +172,7 @@ fun TicketPanel(
                 // All tickets tab.
                 TicketListPane(
                     isDarkMode = isDarkMode,
-                    ticketInfo = sortedTickets,
+                    ticket = sortedTickets,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onClick = { ticket ->
                         // Update from click
@@ -188,12 +189,12 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customerData = customerList.firstOrNull { it.identifier == selectedTicket.customerId }
-                        ?: CustomerData(),
+                    customer = customerList.firstOrNull { it.identifier == selectedTicket.customerId }
+                        ?: Customer(),
                     assignedUserName = (users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser }
                         ?: User()).name,
                     isDarkMode = isDarkMode,
-                    ticketInfo = selectedTicket,
+                    ticket = selectedTicket,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onEditClick = {
                         // Call edit ticket

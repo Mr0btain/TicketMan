@@ -2,19 +2,16 @@ package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
 import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
-import org.mr0btain.ticketman.data.CustomerData
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.data.hashPassword
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
-import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse

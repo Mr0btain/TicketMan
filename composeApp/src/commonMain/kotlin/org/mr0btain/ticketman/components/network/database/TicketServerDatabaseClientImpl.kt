@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainDataItem
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
@@ -28,7 +28,7 @@ class TicketServerDatabaseClientImpl(
         serverUrl = "$url/api/data/ticket"
     }
 
-    override suspend fun sync(data: List<MainDataItem>): List<TicketInfo> {
+    override suspend fun sync(data: List<MainDataItem>): List<Ticket> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 
@@ -51,7 +51,7 @@ class TicketServerDatabaseClientImpl(
 
                             if (requested.isNotEmpty()) batchSend(requested)
 
-                            return syncResponse.data.filterIsInstance<TicketInfo>()
+                            return syncResponse.data.filterIsInstance<Ticket>()
                         }
                     }
             } else return getAll()
@@ -60,14 +60,14 @@ class TicketServerDatabaseClientImpl(
         return listOf()
     }
 
-    override suspend fun getAll(): List<TicketInfo> {
+    override suspend fun getAll(): List<Ticket> {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
             }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
                 ?.onSuccess { encryptedMessage ->
                     encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<TicketInfo>>(decrypted)
+                        return Json.decodeFromString<List<Ticket>>(decrypted)
                     }
                 }
         }

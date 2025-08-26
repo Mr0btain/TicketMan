@@ -6,9 +6,9 @@ import org.mr0btain.ticketman.components.network.database.createDatabaseHttpClie
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
@@ -109,12 +109,12 @@ class ServerHandler(
     /**
      * Sync customers with server database and returns the values local database doesn't have
      */
-    suspend fun syncCustomers(currentCustomerList: List<CustomerData>): List<CustomerData> = databaseClient.customerClient.sync(currentCustomerList)
+    suspend fun syncCustomers(currentCustomerList: List<Customer>): List<Customer> = databaseClient.customerClient.sync(currentCustomerList)
 
     /**
      * Sync inventory with server database and returns the values local database doesn't have
      */
-    suspend fun syncTickets(currentTickets: List<TicketInfo>): List<TicketInfo> = databaseClient.ticketClient.sync(currentTickets)
+    suspend fun syncTickets(currentTickets: List<Ticket>): List<Ticket> = databaseClient.ticketClient.sync(currentTickets)
 
     /**
      * Sync inventory with server database and returns the values local database doesn't have

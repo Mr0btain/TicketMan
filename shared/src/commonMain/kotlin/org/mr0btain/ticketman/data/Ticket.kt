@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.data
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.invoice.Invoice
-import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketPriority
@@ -13,7 +12,7 @@ import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import kotlin.random.Random
 
 @Serializable
-data class TicketInfo(
+data class Ticket(
     override val identifier: String = "",
     val customerId: String = "",
     val assignedUser: String = "",

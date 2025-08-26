@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -20,7 +19,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,7 +60,7 @@ fun EditUpdateDialog(
     var author by remember { mutableStateOf(seedData.note.author) }
     var text by remember { mutableStateOf(seedData.note.text) }
     val time = remember { if (seedData.note.time != Long.MAX_VALUE) seedData.note.time else getTime() }
-    val photos = remember { seedData.photos.toMutableStateList() }
+    val photos = remember { seedData.images.toMutableStateList() }
 
     // File dialog for adding an image
     val launcher = rememberFilePickerLauncher(
@@ -195,7 +193,7 @@ fun EditUpdateDialog(
                                 TicketUpdate(
                                     identifier = seedData.identifier,
                                     note = Note(authorName, text.replaceFirstChar { it.uppercase() }, time),
-                                    photos = photos
+                                    images = photos
                                 )
                             )
 

@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.MainDataItem
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
@@ -28,7 +28,7 @@ class CustomerServerDatabaseClientImpl(
         serverUrl = "$url/api/data/customer"
     }
 
-    override suspend fun sync(data: List<MainDataItem>): List<CustomerData> {
+    override suspend fun sync(data: List<MainDataItem>): List<Customer> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 
@@ -52,7 +52,7 @@ class CustomerServerDatabaseClientImpl(
 
                             if (requested.isNotEmpty()) batchSend(requested)
 
-                            return syncResponse.data.filterIsInstance<CustomerData>()
+                            return syncResponse.data.filterIsInstance<Customer>()
                         }
                     }
             } else return getAll()
@@ -61,14 +61,14 @@ class CustomerServerDatabaseClientImpl(
         return listOf()
     }
 
-    override suspend fun getAll(): List<CustomerData> {
+    override suspend fun getAll(): List<Customer> {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
             }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
                 ?.onSuccess { encryptedMessage ->
                     encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<CustomerData>>(decrypted)
+                        return Json.decodeFromString<List<Customer>>(decrypted)
                     }
                 }
         }

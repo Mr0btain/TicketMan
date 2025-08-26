@@ -1,10 +1,10 @@
 package org.mr0btain.ticketman.components.utils
 
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 
 // TODO: Need a better way to determine if its a new ticket or not
-fun TicketInfo.isNewTicket(): Boolean {
+fun Ticket.isNewTicket(): Boolean {
     return when {
         customerId.isEmpty() -> false
         updates.isNotEmpty() -> false

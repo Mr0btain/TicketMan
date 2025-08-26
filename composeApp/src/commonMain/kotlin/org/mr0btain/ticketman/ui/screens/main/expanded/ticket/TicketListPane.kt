@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
@@ -32,7 +32,7 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
 fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    ticketInfo: List<TicketInfo> = listOf(),
+    ticket: List<Ticket> = listOf(),
     scrollBarsOnRight: Boolean,
     selectedId: String,
     onClick: (String) -> Unit,
@@ -103,9 +103,9 @@ fun TicketListPane(
                 state = state,
                 scope = coroutineScope,
                 scrollBarOnRight = scrollBarsOnRight,
-                isVisible = ticketInfo.isNotEmpty()
+                isVisible = ticket.isNotEmpty()
             ) {
-                itemsIndexed(ticketInfo) { index, item ->
+                itemsIndexed(ticket) { index, item ->
                     TicketTableItem(
                         color = if (!isDarkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
@@ -113,7 +113,7 @@ fun TicketListPane(
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                         },
                         selected = selectedId == item.identifier,
-                        ticketInfo = item,
+                        ticket = item,
                         numberWidth = numberColumnWidth,
                         priorityWidth = priorityColumnWidth,
                         noteWidth = noteColumnWidth,
@@ -158,7 +158,7 @@ private fun TicketTableItem(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surface,
     selected: Boolean,
-    ticketInfo: TicketInfo,
+    ticket: Ticket,
     numberWidth: Dp,
     priorityWidth: Dp,
     noteWidth: Dp,
@@ -190,7 +190,7 @@ private fun TicketTableItem(
                 contentAlignment = Alignment.Center
             ) {
                 TableTicketIdItem(
-                    label = ticketInfo.identifier.toString(),
+                    label = ticket.identifier.toString(),
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }
@@ -205,7 +205,7 @@ private fun TicketTableItem(
             ) {
 
                 TablePriorityItem(
-                    priority = ticketInfo.priority,
+                    priority = ticket.priority,
                     darkMode = isDarkMode,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
@@ -218,9 +218,9 @@ private fun TicketTableItem(
                     .padding(start = 4.dp)
                     .width(noteWidth + sizeAdjust.dp)
             ) {
-                if (ticketInfo.updates.isNotEmpty()) {
+                if (ticket.updates.isNotEmpty()) {
                     TableCardTextItem(
-                        ticketInfo.updates.last().note.author + " : " + ticketInfo.updates.last().note.text
+                        ticket.updates.last().note.author + " : " + ticket.updates.last().note.text
                     )
                 }
             }
@@ -234,7 +234,7 @@ private fun TicketTableItem(
                 contentAlignment = Alignment.Center
             ) {
                 TableStatusItem(
-                    status = ticketInfo.status,
+                    status = ticket.status,
                     darkMode = isDarkMode,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )

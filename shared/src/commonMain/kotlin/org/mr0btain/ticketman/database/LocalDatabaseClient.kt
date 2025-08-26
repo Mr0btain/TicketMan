@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.MainDataItem
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.identifier
+import org.mr0btain.ticketman.database.tables.CustomerTable.identifier
 import org.mr0btain.ticketman.database.tables.DataIntTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger

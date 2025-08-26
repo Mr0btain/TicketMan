@@ -12,8 +12,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.formatTime
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
@@ -28,8 +28,8 @@ fun CustomerInfoPaneMobile(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean,
-    selectedCustomerData: CustomerData,
-    tickets: List<TicketInfo>,
+    selectedCustomer: Customer,
+    tickets: List<Ticket>,
     onEditClick: () -> Unit,
     onTicketClick: (String) -> Unit
 ) {
@@ -39,7 +39,7 @@ fun CustomerInfoPaneMobile(
     val iconSize = 18.dp
 
     // Time formated
-    val time = formatTime(selectedCustomerData.time)
+    val time = formatTime(selectedCustomer.time)
 
     // Main Body
     Column(
@@ -73,7 +73,7 @@ fun CustomerInfoPaneMobile(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = selectedCustomerData.name.firstName + " " + selectedCustomerData.name.lastName,
+                        text = selectedCustomer.name.firstName + " " + selectedCustomer.name.lastName,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -137,7 +137,7 @@ fun CustomerInfoPaneMobile(
                         Spacer(Modifier.padding(4.dp))
 
                         // Check if we have a sensible date to display, then show it
-                        if (selectedCustomerData.time != Long.MAX_VALUE) {
+                        if (selectedCustomer.time != Long.MAX_VALUE) {
                             Text(
                                 modifier = Modifier,
                                 text = "${time.month}/${time.day}/${time.year}",
@@ -167,21 +167,21 @@ fun CustomerInfoPaneMobile(
                             // Street
                             Text(
                                 modifier = Modifier,
-                                text = selectedCustomerData.address.street,
+                                text = selectedCustomer.address.street,
                                 fontSize = textSize
                             )
 
                             // City and state
                             Text(
                                 modifier = Modifier,
-                                text = selectedCustomerData.address.city + " " + selectedCustomerData.address.state,
+                                text = selectedCustomer.address.city + " " + selectedCustomer.address.state,
                                 fontSize = textSize
                             )
 
                             // Zip
                             Text(
                                 modifier = Modifier,
-                                text = selectedCustomerData.address.zip,
+                                text = selectedCustomer.address.zip,
                                 fontSize = textSize
                             )
                         }
@@ -189,7 +189,7 @@ fun CustomerInfoPaneMobile(
 
                     // ------------ Contacts section ---------------
                     ContactsBlock(
-                        customerData = selectedCustomerData,
+                        customer = selectedCustomer,
                         labelSize = labelSize,
                         textSize = textSize,
                         iconSize = iconSize
@@ -197,7 +197,7 @@ fun CustomerInfoPaneMobile(
 
                     // ------------ Notes section ---------------
                     NotesBlock(
-                        notes = selectedCustomerData.notes,
+                        notes = selectedCustomer.notes,
                         labelSize = labelSize,
                         textSize = textSize
                     )

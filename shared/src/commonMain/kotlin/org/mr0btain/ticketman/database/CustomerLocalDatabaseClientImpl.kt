@@ -4,38 +4,38 @@ import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.shared.Notes
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.city
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.contactInfo
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.firstName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.identifier
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.lastName
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.notes
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.state
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.street
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.tickets
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.time
-import org.mr0btain.ticketman.database.tables.CustomerDataTable.zip
+import org.mr0btain.ticketman.database.tables.CustomerTable
+import org.mr0btain.ticketman.database.tables.CustomerTable.city
+import org.mr0btain.ticketman.database.tables.CustomerTable.contactInfo
+import org.mr0btain.ticketman.database.tables.CustomerTable.firstName
+import org.mr0btain.ticketman.database.tables.CustomerTable.identifier
+import org.mr0btain.ticketman.database.tables.CustomerTable.lastName
+import org.mr0btain.ticketman.database.tables.CustomerTable.notes
+import org.mr0btain.ticketman.database.tables.CustomerTable.state
+import org.mr0btain.ticketman.database.tables.CustomerTable.street
+import org.mr0btain.ticketman.database.tables.CustomerTable.tickets
+import org.mr0btain.ticketman.database.tables.CustomerTable.time
+import org.mr0btain.ticketman.database.tables.CustomerTable.zip
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
 class CustomerLocalDatabaseClientImpl(
     private val shouldLog: Boolean
-) : LocalDatabaseClient<CustomerData>(
+) : LocalDatabaseClient<Customer>(
     tag = "CustomerLocalDatabaseClient",
-    table = CustomerDataTable,
+    table = CustomerTable,
     shouldLog = shouldLog
 ) {
-    override val IdentifierColumn = CustomerDataTable.identifier
+    override val IdentifierColumn = CustomerTable.identifier
 
     /** Gets all items from database */
-    override fun getAll(): List<CustomerData>? {
-        var result = listOf<CustomerData>()
+    override fun getAll(): List<Customer>? {
+        var result = listOf<Customer>()
 
         try {
             // Go into database and convert data to customer data item
@@ -43,8 +43,8 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerDataTable.selectAll().map { item ->
-                    CustomerData(
+                result = CustomerTable.selectAll().map { item ->
+                    Customer(
                         identifier = item[IdentifierColumn],
                         name = PersonName(
                             firstName = item[firstName],
@@ -75,17 +75,17 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: String): CustomerData? {
-        var result: CustomerData? = null
+    override fun getById(identifier: String): Customer? {
+        var result: Customer? = null
 
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerDataTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
-                    CustomerData(
-                        identifier = item[CustomerDataTable.identifier],
+                result = CustomerTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
+                    Customer(
+                        identifier = item[CustomerTable.identifier],
                         name = PersonName(
                             firstName = item[firstName],
                             lastName = item[lastName]
@@ -115,13 +115,13 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<CustomerData>): Boolean {
+    override fun addAll(data: List<Customer>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerDataTable.batchInsert(data) { item ->
+                CustomerTable.batchInsert(data) { item ->
                     this[identifier] = item.identifier
                     this[firstName] = item.name.firstName
                     this[lastName] = item.name.lastName
@@ -152,7 +152,7 @@ class CustomerLocalDatabaseClientImpl(
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                CustomerDataTable.deleteWhere { IdentifierColumn eq id }
+                CustomerTable.deleteWhere { IdentifierColumn eq id }
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -165,13 +165,13 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: CustomerData): Boolean {
+    override fun add(data: Customer): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerDataTable.insert { item ->
+                CustomerTable.insert { item ->
                     item[identifier] = data.identifier
                     item[firstName] = data.name.firstName
                     item[lastName] = data.name.lastName
@@ -197,13 +197,13 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: CustomerData): Boolean {
+    override fun update(data: Customer): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerDataTable.update({ IdentifierColumn eq data.identifier }) { item ->
+                CustomerTable.update({ IdentifierColumn eq data.identifier }) { item ->
                     item[identifier] = data.identifier
                     item[firstName] = data.name.firstName
                     item[lastName] = data.name.lastName

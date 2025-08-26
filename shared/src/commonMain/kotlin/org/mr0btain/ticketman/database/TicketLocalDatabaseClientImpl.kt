@@ -4,24 +4,23 @@ import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.data.shared.Notes
-import org.mr0btain.ticketman.database.tables.TicketDataTable
+import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.database.tables.TicketTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
 class TicketLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
-) : LocalDatabaseClient<TicketInfo>(
+) : LocalDatabaseClient<Ticket>(
     tag = "TicketLocalDatabaseClient",
-    table = TicketDataTable,
+    table = TicketTable,
     shouldLog = shouldLog
 ) {
-    override val IdentifierColumn = TicketDataTable.identifier
+    override val IdentifierColumn = TicketTable.identifier
 
     /** Gets all items from database */
-    override fun getAll(): List<TicketInfo>? {
-        var result = listOf<TicketInfo>()
+    override fun getAll(): List<Ticket>? {
+        var result = listOf<Ticket>()
 
         try {
             // Go into database and convert data to customer data item
@@ -29,16 +28,16 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketDataTable.selectAll().map { item ->
-                    TicketInfo(
-                        identifier = item[TicketDataTable.identifier],
-                        customerId = item[TicketDataTable.customerId],
-                        device = item[TicketDataTable.device],
-                        assignedUser = item[TicketDataTable.assignedUser],
-                        priority = item[TicketDataTable.priority],
-                        status = item[TicketDataTable.status],
-                        updates = item[TicketDataTable.updates],
-                        time = item[TicketDataTable.time]
+                result = TicketTable.selectAll().map { item ->
+                    Ticket(
+                        identifier = item[TicketTable.identifier],
+                        customerId = item[TicketTable.customerId],
+                        device = item[TicketTable.device],
+                        assignedUser = item[TicketTable.assignedUser],
+                        priority = item[TicketTable.priority],
+                        status = item[TicketTable.status],
+                        updates = item[TicketTable.updates],
+                        time = item[TicketTable.time]
                     )
                 }
 
@@ -54,24 +53,24 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: String): TicketInfo? {
-        var result: TicketInfo? = null
+    override fun getById(identifier: String): Ticket? {
+        var result: Ticket? = null
 
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketDataTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
-                    TicketInfo(
-                        identifier = item[TicketDataTable.identifier],
-                        customerId = item[TicketDataTable.customerId],
-                        device = item[TicketDataTable.device],
-                        assignedUser = item[TicketDataTable.assignedUser],
-                        priority = item[TicketDataTable.priority],
-                        status = item[TicketDataTable.status],
-                        updates = item[TicketDataTable.updates],
-                        time = item[TicketDataTable.time]
+                result = TicketTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
+                    Ticket(
+                        identifier = item[TicketTable.identifier],
+                        customerId = item[TicketTable.customerId],
+                        device = item[TicketTable.device],
+                        assignedUser = item[TicketTable.assignedUser],
+                        priority = item[TicketTable.priority],
+                        status = item[TicketTable.status],
+                        updates = item[TicketTable.updates],
+                        time = item[TicketTable.time]
                     )
                 }.firstOrNull()
 
@@ -87,21 +86,21 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<TicketInfo>): Boolean {
+    override fun addAll(data: List<Ticket>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketDataTable.batchInsert(data) { item ->
-                    this[TicketDataTable.identifier] = item.identifier
-                    this[TicketDataTable.customerId] = item.customerId
-                    this[TicketDataTable.device] = item.device
-                    this[TicketDataTable.assignedUser] = item.assignedUser
-                    this[TicketDataTable.priority] = item.priority
-                    this[TicketDataTable.status] = item.status
-                    this[TicketDataTable.updates] = item.updates
-                    this[TicketDataTable.time] = item.time
+                TicketTable.batchInsert(data) { item ->
+                    this[TicketTable.identifier] = item.identifier
+                    this[TicketTable.customerId] = item.customerId
+                    this[TicketTable.device] = item.device
+                    this[TicketTable.assignedUser] = item.assignedUser
+                    this[TicketTable.priority] = item.priority
+                    this[TicketTable.status] = item.status
+                    this[TicketTable.updates] = item.updates
+                    this[TicketTable.time] = item.time
                 }
 
                 AppLogger.m(ADD_ALL_TAG, SimpleError.SUCCESS)
@@ -122,7 +121,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketDataTable.deleteWhere { IdentifierColumn eq id }
+                TicketTable.deleteWhere { IdentifierColumn eq id }
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -135,21 +134,21 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: TicketInfo): Boolean {
+    override fun add(data: Ticket): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketDataTable.insert { item ->
-                    item[TicketDataTable.identifier] = data.identifier
-                    item[TicketDataTable.customerId] = data.customerId
-                    item[TicketDataTable.device] = data.device
-                    item[TicketDataTable.assignedUser] = data.assignedUser
-                    item[TicketDataTable.priority] = data.priority
-                    item[TicketDataTable.status] = data.status
-                    item[TicketDataTable.updates] = data.updates
-                    item[TicketDataTable.time] = data.time
+                TicketTable.insert { item ->
+                    item[TicketTable.identifier] = data.identifier
+                    item[TicketTable.customerId] = data.customerId
+                    item[TicketTable.device] = data.device
+                    item[TicketTable.assignedUser] = data.assignedUser
+                    item[TicketTable.priority] = data.priority
+                    item[TicketTable.status] = data.status
+                    item[TicketTable.updates] = data.updates
+                    item[TicketTable.time] = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
@@ -164,21 +163,21 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: TicketInfo): Boolean {
+    override fun update(data: Ticket): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketDataTable.update({ IdentifierColumn eq data.identifier }) { item ->
-                    item[TicketDataTable.identifier] = data.identifier
-                    item[TicketDataTable.customerId] = data.customerId
-                    item[TicketDataTable.device] = data.device
-                    item[TicketDataTable.assignedUser] = data.assignedUser
-                    item[TicketDataTable.priority] = data.priority
-                    item[TicketDataTable.status] = data.status
-                    item[TicketDataTable.updates] = data.updates
-                    item[TicketDataTable.time] = data.time
+                TicketTable.update({ IdentifierColumn eq data.identifier }) { item ->
+                    item[TicketTable.identifier] = data.identifier
+                    item[TicketTable.customerId] = data.customerId
+                    item[TicketTable.device] = data.device
+                    item[TicketTable.assignedUser] = data.assignedUser
+                    item[TicketTable.priority] = data.priority
+                    item[TicketTable.status] = data.status
+                    item[TicketTable.updates] = data.updates
+                    item[TicketTable.time] = data.time
                 }
 
                 AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)

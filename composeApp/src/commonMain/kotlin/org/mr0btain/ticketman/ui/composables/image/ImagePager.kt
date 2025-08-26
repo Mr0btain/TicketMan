@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.ui.composables.image
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -38,6 +39,7 @@ import kotlin.math.absoluteValue
 fun ImagePager(
     modifier: Modifier = Modifier,
     imageData: List<String>,
+    onImageClick: () -> Unit,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     imageMaxWidth: Dp,
     imageMaxHeight: Dp
@@ -96,6 +98,10 @@ fun ImagePager(
                 if (images.size >= page) {
                     images[page]?.let {
                         Image(
+                            modifier = Modifier
+                                .clickable(
+                                    onClick = { }
+                                ),
                             bitmap = it,
                             contentDescription = "",
                         )

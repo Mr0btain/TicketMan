@@ -2,7 +2,7 @@ package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.AMPM
@@ -12,7 +12,7 @@ import org.mr0btain.ticketman.data.shared.Time
 import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.data.shared.parseDateToLong
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.randomTicketPriority
 import org.mr0btain.ticketman.data.randomTicketStatus
 import org.mr0btain.ticketman.data.User
@@ -22,7 +22,6 @@ import java.io.FileOutputStream
 import java.security.SecureRandom
 import java.text.DecimalFormat
 import java.util.UUID
-import javax.swing.plaf.basic.BasicInternalFrameTitlePane
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -30,7 +29,7 @@ import kotlin.uuid.Uuid
 /**
  * A bunch of half-assed clobbered together functions that spit out random test data. Its beautiful chaos
  */
-fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<User>> {
+fun generateMockData(num: Int): Triple<List<Customer>, List<Ticket>, List<User>> {
     // Generate some mock customer data
     val customerData = generateMockCustomerData(num)
     val users = generateMockUserData(6).toMutableList()
@@ -38,11 +37,11 @@ fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, Lis
     var currentTicketId = Random.nextInt(0, 9999)
 
     // Hold the new data
-    val newCustomerData = mutableListOf<CustomerData>()
-    val newTicketData = mutableListOf<TicketInfo>()
+    val newCustomerData = mutableListOf<Customer>()
+    val newTicketData = mutableListOf<Ticket>()
 
     customerData.forEach { item ->
-        val tickets = mutableListOf<TicketInfo>()
+        val tickets = mutableListOf<Ticket>()
         val ticketIds = mutableListOf<String>()
 
         // Generate tickets
@@ -125,8 +124,8 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
     }
 }
 
-fun generateMockCustomerData(num: Int): List<CustomerData> {
-    val data = mutableListOf<CustomerData>()
+fun generateMockCustomerData(num: Int): List<Customer> {
+    val data = mutableListOf<Customer>()
     val ids = mutableListOf<String>()
 
     (0..num).forEach { i ->
@@ -147,7 +146,7 @@ fun generateMockCustomerData(num: Int): List<CustomerData> {
         }
 
         data.add(
-            CustomerData(
+            Customer(
                 identifier = id,
                 name = name,
                 address = generateRandomAddress(),
@@ -298,7 +297,7 @@ private fun generateRandomName(): PersonName {
 }
 
 @OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
+fun generateRandomTicket(customerId: String, ticketId: String): Ticket {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),
@@ -349,7 +348,7 @@ fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
         )
     }
 
-    return TicketInfo(
+    return Ticket(
         identifier = ticketId,
         customerId = customerId,
         assignedUser = "",

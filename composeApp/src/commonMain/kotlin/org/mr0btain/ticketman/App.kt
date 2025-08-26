@@ -39,6 +39,8 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Should also add dedicated screens for working on tickets or changing them.
 // TODO: Add ability to store pictures for tickets for before and after
 
+// TODO: Maybe make a separate image table for holding images and then just have each an individual identifier and get them when needed to save memory
+
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun App() {

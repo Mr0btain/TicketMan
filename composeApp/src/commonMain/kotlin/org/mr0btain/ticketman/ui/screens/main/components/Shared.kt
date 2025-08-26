@@ -18,8 +18,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.formatTime
 import org.mr0btain.ticketman.data.ticket.TicketPriority
@@ -298,7 +298,7 @@ fun TableCardTextItem(
 @Composable
 fun SmallTicketList(
     modifier: Modifier = Modifier,
-    tickets: List<TicketInfo>,
+    tickets: List<Ticket>,
     scrollBarsOnRight: Boolean,
     isDarkMode: Boolean,
     onClick: (String) -> Unit
@@ -429,7 +429,7 @@ fun SmallTicketList(
 // ----------------------------- Contacts for customer ----------------------------------
 @Composable
 fun ContactsBlock(
-    customerData: CustomerData,
+    customer: Customer,
     labelSize: TextUnit = 12.sp,
     textSize: TextUnit = 16.sp,
     iconSize: Dp = 18.dp
@@ -453,8 +453,8 @@ fun ContactsBlock(
             horizontalAlignment = Alignment.Start
         ) {
             // Email section
-            if (customerData.contactInfo.email.isNotEmpty()) {
-                customerData.contactInfo.email.forEach { mail ->
+            if (customer.contactInfo.email.isNotEmpty()) {
+                customer.contactInfo.email.forEach { mail ->
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
@@ -479,7 +479,7 @@ fun ContactsBlock(
             Spacer(Modifier.padding(2.dp))
 
             // Phone number section
-            customerData.contactInfo.phone.forEach { item ->
+            customer.contactInfo.phone.forEach { item ->
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically

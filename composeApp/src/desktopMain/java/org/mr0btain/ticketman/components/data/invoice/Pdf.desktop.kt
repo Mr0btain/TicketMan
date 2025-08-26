@@ -9,17 +9,17 @@ import com.lowagie.text.Phrase
 import com.lowagie.text.Table
 import com.lowagie.text.pdf.BaseFont
 import com.lowagie.text.pdf.PdfWriter
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.components.utils.formatIntToMoney
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import java.awt.Color
 import java.io.FileOutputStream
 
 actual fun makeTicketInvoicePdf(
     filePath: String,
     fileName: String,
-    customerData: CustomerData,
-    ticketInfo: TicketInfo
+    customer: Customer,
+    ticket: Ticket
 ) {
     // Pdf file to output to
     val pdfOutputFile = FileOutputStream("$filePath/$fileName")
@@ -37,17 +37,17 @@ actual fun makeTicketInvoicePdf(
 
     // Customer information section
     val customerInfoParagraph = listOf(
-        "${customerData.name.firstName} ${customerData.name.lastName}",
-        customerData.address.street,
-        "${customerData.address.city}, ${customerData.address.state}",
-        customerData.address.zip
+        "${customer.name.firstName} ${customer.name.lastName}",
+        customer.address.street,
+        "${customer.address.city}, ${customer.address.state}",
+        customer.address.zip
     )
 
     // Invoice / ticket information section
     val invoiceParagraph = listOf(
-        "Invoice #: ${ticketInfo.invoice.invoiceNumber}",
-        "Ticket #: ${ticketInfo.identifier}",
-        "Employee #: ${ticketInfo.assignedUser}"
+        "Invoice #: ${ticket.invoice.invoiceNumber}",
+        "Ticket #: ${ticket.identifier}",
+        "Employee #: ${ticket.assignedUser}"
     )
 
     // PDF stuff
@@ -72,7 +72,7 @@ actual fun makeTicketInvoicePdf(
     }
 
     // Add charges to table
-    ticketInfo.invoice.charges.forEach{ charge ->
+    ticket.invoice.charges.forEach{ charge ->
         myTable.apply {
             addCell(Cell(Phrase(charge.name, columnItemsFont)))
             addCell(Cell(Phrase(charge.description, columnItemsFont)))
@@ -84,7 +84,7 @@ actual fun makeTicketInvoicePdf(
 
     // Get the total of the charges
     var total = 0
-    ticketInfo.invoice.charges.forEach { total += it.cost * it.amount }
+    ticket.invoice.charges.forEach { total += it.cost * it.amount }
 
     // Last table add total
     myTable.apply {

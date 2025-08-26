@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
 
 @Serializable
-data class CustomerData(
+data class Customer(
     override val identifier: String = "",
     val name: PersonName = PersonName(),
     val address: Address = Address(),

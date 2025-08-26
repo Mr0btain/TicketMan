@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SecondaryTabRow
@@ -21,9 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.data.CustomerData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.TicketInfo
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.getTime
@@ -59,13 +58,13 @@ fun MobileMainScreen(
     val customerLazyListState = rememberLazyListState()
 
     // For customer dialog
-    var customerSeedData by remember { mutableStateOf(CustomerData()) }
+    var customerSeedData by remember { mutableStateOf(Customer()) }
     var showCustomerDialog by remember { mutableStateOf(false) }
     var isTicketForNewCustomer by remember { mutableStateOf(false) }
 
     // We need this outside of the customer dialog so we can modify this from other dialogs
     // and handle different scenarios
-    val tempTicketHolder = remember { mutableStateListOf<TicketInfo>() }
+    val tempTicketHolder = remember { mutableStateListOf<Ticket>() }
     val customerTicketList = remember { mutableStateListOf<String>() }
 
     // For ticket panel
@@ -76,7 +75,7 @@ fun MobileMainScreen(
 
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
-    var ticketSeedData by remember { mutableStateOf(TicketInfo()) }
+    var ticketSeedData by remember { mutableStateOf(Ticket()) }
 
     // For Inventory panel
     val inventoryList = viewModel.dataHandler.inventoryDataHandler.dataList.collectAsState()
@@ -120,7 +119,7 @@ fun MobileMainScreen(
                     }
 
                     // Reset starter data
-                    customerSeedData = CustomerData()
+                    customerSeedData = Customer()
 
                     // Reset customer ticket stuff
                     tempTicketHolder.clear()
@@ -140,7 +139,7 @@ fun MobileMainScreen(
 
                     // Check if our identifier is not null
                     if (newIdentifier != null) {
-                        ticketSeedData = TicketInfo(
+                        ticketSeedData = Ticket(
                             customerId = customerId,
                             time = getTime(),
                             identifier = newIdentifier
@@ -194,7 +193,7 @@ fun MobileMainScreen(
                     }
 
                     // Reset seed data
-                    ticketSeedData = TicketInfo()
+                    ticketSeedData = Ticket()
 
                     // Close dialog
                     showTicketDialog = false
@@ -212,7 +211,7 @@ fun MobileMainScreen(
                     // Check if we can get a new identifier
                     if (newIdentifier != null) {
                         // Add seeded data if there is any
-                        customerSeedData = CustomerData(name = name, time = getTime(), identifier = newIdentifier)
+                        customerSeedData = Customer(name = name, time = getTime(), identifier = newIdentifier)
 
                         // Trigger dialog
                         showCustomerDialog = true
@@ -374,7 +373,7 @@ fun MobileMainScreen(
                             // Check if we can et a new identifier
                             if (newIdentifier != null) {
                                 // Set seed data
-                                customerSeedData = CustomerData(
+                                customerSeedData = Customer(
                                     name = name,
                                     time = getTime(),
                                     identifier = newIdentifier
@@ -441,7 +440,7 @@ fun MobileMainScreen(
                         }
                     },
                     selectedCustomerId = selectedCustomer.value,
-                    customerDataList = customerData.value,
+                    customerList = customerData.value,
                     ticketList = ticketList.value,
                     customerLazyListState = customerLazyListState,
                     coroutineScope = coroutineScope,
