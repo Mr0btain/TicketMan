@@ -23,15 +23,18 @@ import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     items: List<InventoryItem>,
     scrollBarsOnRight: Boolean,
-    selected: String,
-    onClick: (String) -> Unit,
+    selected: Uuid,
+    onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {

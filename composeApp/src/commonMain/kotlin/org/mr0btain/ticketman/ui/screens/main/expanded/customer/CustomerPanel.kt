@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
 import androidx.compose.foundation.layout.*
@@ -13,8 +15,11 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.shared.toStringName
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // TODO: Should really offload some of the calculations on the lists to before we call this screen
 
@@ -23,14 +28,14 @@ fun CustomerPanel(
     modifier: Modifier = Modifier,
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
-    selectedCustomerId: String,
     customerList: List<Customer>,
-    ticketList: List<Ticket>,
+    selectedCustomer: Customer,
+    selectedCustomerTickets: List<Ticket>,
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
-    onCustomerSelectionChange: (String) -> Unit,
-    onDeleteCustomer: (String) -> Unit,
-    onTicketClick: (String) -> Unit,
+    onCustomerSelectionChange: (Uuid) -> Unit,
+    onDeleteCustomer: (Uuid) -> Unit,
+    onTicketClick: (Uuid) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     isDarkMode: Boolean
@@ -66,11 +71,11 @@ fun CustomerPanel(
                     items = searchItems,
                     input = searchInput,
                     onClick = {
-                        // Set search input
-                        searchInput = it.toString()
-
                         // Call selection change
                         onCustomerSelectionChange(it)
+
+                        // Set search input
+                        searchInput = selectedCustomer.name.toStringName()
                               },
                     onInputChange = { searchInput = it }
                 )
@@ -90,7 +95,7 @@ fun CustomerPanel(
                         },
                         onDeleteClick = {
                             // Trigger delete ticket dialog/ confirm
-                            onDeleteCustomer(selectedCustomerId)
+                            onDeleteCustomer(selectedCustomer.identifier)
                         }
                     )
 
@@ -107,7 +112,7 @@ fun CustomerPanel(
                     modifier = Modifier,
                     customerInfo = sortedCustomerInfo,
                     lazyListState = customerLazyListState,
-                    selectedCustomerId = selectedCustomerId,
+                    selectedCustomerId = selectedCustomer.identifier,
                     scope = coroutineScope,
                     scrollBarsOnRight = scrollBarsOnRight,
                     isDarkMode = isDarkMode,
@@ -123,10 +128,10 @@ fun CustomerPanel(
                 CustomerInfoPane(
                     modifier = Modifier,
                     isDarkMode = isDarkMode,
-                    selectedCustomer = customerList.singleOrNull { it.identifier == selectedCustomerId }
+                    selectedCustomer = customerList.singleOrNull { it.identifier == selectedCustomer }
                         ?: Customer(),
                     onEditClick = { onEditCustomer() },
-                    tickets = ticketList.filter { it.customerId == selectedCustomerId },
+                    tickets = selectedCustomerTickets,
                     onTicketClick = onTicketClick,
                     scrollBarsOnRight = scrollBarsOnRight
                 )
@@ -135,13 +140,13 @@ fun CustomerPanel(
     }
 
     // On list update or search scroll to selected item
-    LaunchedEffect(selectedCustomerId) {
+    LaunchedEffect(selectedCustomer) {
         if (!isSelectUpdateFromClick) {
             // Get index of visible items
             val visibleItemIndex = customerLazyListState.layoutInfo.visibleItemsInfo.map { it.index }
 
-            if (visibleItemIndex.isNotEmpty() && sortedCustomerInfo.map { it.identifier }.contains(selectedCustomerId)) {
-                val index = sortedCustomerInfo.indexOf(sortedCustomerInfo.fastFirst { it.identifier == selectedCustomerId })
+            if (visibleItemIndex.isNotEmpty() && sortedCustomerInfo.map { it.identifier }.contains(selectedCustomer.identifier)) {
+                val index = sortedCustomerInfo.indexOf(sortedCustomerInfo.fastFirst { it.identifier == selectedCustomer })
 
                 if (index < visibleItemIndex.first() || index > visibleItemIndex.last() && index >= 0) {
                     customerLazyListState.animateScrollToItem(

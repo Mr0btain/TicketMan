@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
@@ -13,6 +15,8 @@ import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // TODO: Add more comments to help understand whats going on
 
@@ -103,7 +107,7 @@ fun Route.customerRoute(
                 return@delete
             }
 
-            if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted)
+            if (database.remove(Uuid.parse(identifier))) call.respond(HttpStatusCode.Accepted)
             else call.respond(HttpStatusCode.BadRequest)
         }
     }

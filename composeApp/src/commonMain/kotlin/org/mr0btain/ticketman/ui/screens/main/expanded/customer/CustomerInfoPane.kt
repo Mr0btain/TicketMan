@@ -19,7 +19,10 @@ import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SmallTicketList
 import ticketman.composeapp.generated.resources.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun CustomerInfoPane(
     modifier: Modifier = Modifier,
@@ -28,7 +31,7 @@ fun CustomerInfoPane(
     selectedCustomer: Customer,
     tickets: List<Ticket>,
     onEditClick: () -> Unit,
-    onTicketClick: (String) -> Unit
+    onTicketClick: (Uuid) -> Unit
 ) {
     // Sizes for icons and text
     val labelSize = 12.sp
@@ -196,7 +199,7 @@ fun CustomerInfoPane(
 
                         // ------------ Notes section ---------------
                         NotesBlock(
-                            notes = selectedCustomer.notes,
+                            notes = emptyList(),
                             labelSize = labelSize,
                             textSize = textSize
                         )

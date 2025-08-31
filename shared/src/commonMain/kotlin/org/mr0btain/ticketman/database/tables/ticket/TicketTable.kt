@@ -1,19 +1,15 @@
-package org.mr0btain.ticketman.database.tables
+package org.mr0btain.ticketman.database.tables.ticket
 
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.core.dao.id.UUIDTable
 import org.jetbrains.exposed.v1.json.json
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketStatus
-import org.mr0btain.ticketman.data.ticket.TicketUpdate
 
-// TODO: Setup time stamps for notes or updates, times for when tickets added and such
-
-object TicketTable: DataIntTable("tickets") {
-    val customerId = text("customerId")
-    val assignedUser = varchar("assignedUser", 36)
+object TicketTable: UUIDTable("tickets") {
     val device = json<Device>("device", Json { ignoreUnknownKeys = true })
     val status = json<TicketStatus>("status", Json { ignoreUnknownKeys = true })
     val priority = json<TicketPriority>("priority", Json { ignoreUnknownKeys = true })
-    val updates = json<List<TicketUpdate>>("updates", Json { ignoreUnknownKeys = true })
+    val time = long("time")
 }

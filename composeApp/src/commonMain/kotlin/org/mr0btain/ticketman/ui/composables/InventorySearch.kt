@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.InventoryItem
+import kotlin.uuid.ExperimentalUuidApi
 
 /**
  * SearchBox for searching inventory. Will return an id
@@ -31,7 +32,7 @@ import org.mr0btain.ticketman.data.InventoryItem
  * @param onClick Event called when clicking, identifier is returned for item
  */
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
 @Composable
 fun InventorySearch(
     modifier: Modifier = Modifier,

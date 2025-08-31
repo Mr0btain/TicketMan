@@ -8,7 +8,10 @@ import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class UserService(
     private val database: UserLocalDatabaseClientImpl,
     private val jwtService: JwtService,
@@ -19,16 +22,16 @@ class UserService(
 
         // Check if user was found and process request
         return if (foundUser != null && foundUser.password == loginRequest.password) {
-            val refreshToken = jwtService.createRefreshToken(foundUser.identifier)
-            val accessToken = jwtService.createAccessToken(foundUser.identifier)
+            val refreshToken = jwtService.createRefreshToken(foundUser.identifier.toString())
+            val accessToken = jwtService.createAccessToken(foundUser.identifier.toString())
 
             // Check if we should update or add new token
-            if (tokenDatabase.findById(foundUser.identifier) != null) {
-                if (!tokenDatabase.update(RefreshToken(foundUser.identifier, refreshToken))) {
+            if (tokenDatabase.findById(foundUser.identifier.toString()) != null) {
+                if (!tokenDatabase.update(RefreshToken(foundUser.identifier.toString(), refreshToken))) {
                     return null
                 }
             } else {
-                if (!tokenDatabase.add(RefreshToken(foundUser.identifier, refreshToken))) return null
+                if (!tokenDatabase.add(RefreshToken(foundUser.identifier.toString(), refreshToken))) return null
             }
 
             // Respond with tokens
@@ -49,10 +52,10 @@ class UserService(
         val refreshToken = tokenDatabase.findByToken(token)
 
         return if (decodedRefreshToken != null && refreshToken != null) {
-            val foundUser = database.getById(refreshToken.identifier)
+            val foundUser = database.getById(Uuid.parse(refreshToken.identifier))
             val idFromRefreshToken = decodedRefreshToken.getClaim("identifier").asString()
 
-            if (foundUser != null && idFromRefreshToken == foundUser.identifier)
+            if (foundUser != null && idFromRefreshToken == foundUser.identifier.toString())
                 jwtService.createAccessToken(refreshToken.identifier)
             else null
         } else null

@@ -7,3 +7,7 @@ data class PersonName(
     val firstName: String = "",
     val lastName: String = ""
 )
+
+fun PersonName.toStringName(): String {
+    return "$firstName $lastName"
+}

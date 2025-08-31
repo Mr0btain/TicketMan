@@ -496,7 +496,7 @@ fun ExpandedMainScreen(
                                     }
                                 }
                             },
-                            selectedCustomerId = selectedCustomer.value,
+                            selectedCustomer = selectedCustomer.value,
                             customerList = customerData.value,
                             ticketList = ticketList.value,
                             customerLazyListState = customerLazyListState,

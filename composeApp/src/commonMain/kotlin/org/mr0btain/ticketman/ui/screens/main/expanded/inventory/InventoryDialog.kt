@@ -16,6 +16,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.InventoryItem
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
@@ -26,8 +27,10 @@ import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRo
 import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
+import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Add ability to edit notes?
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
@@ -44,7 +47,7 @@ fun InventoryDialog(
     val cost = rememberTextFieldState(seedData.cost.filter { it.isDigit() })
 
     // Mutable lists
-    val notes = remember(seedData) { seedData.notes.toMutableStateList() }
+    val notes = mutableStateListOf<Note>() //remember(seedData) { seedData.notes.toMutableStateList() }
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }

@@ -176,7 +176,7 @@ fun InventoryInfoPane(
                             .padding(20.dp),
                         scrollBarOnRight = scrollBarsOnRight,
                         backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        isVisible = inventoryItem.notes.isNotEmpty()
+                        isVisible = false //inventoryItem.notes.isNotEmpty()
                     ) {
                         Text(
                             text = "Notes",
@@ -189,7 +189,7 @@ fun InventoryInfoPane(
                         Spacer(Modifier.padding(8.dp))
 
                         NotesBlock(
-                            notes = inventoryItem.notes
+                            notes = emptyList()
                         )
                     }
                 }

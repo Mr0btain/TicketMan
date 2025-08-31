@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.shared.*
@@ -664,7 +665,7 @@ private fun CustomerDialogNoteList(
                     Spacer(Modifier.padding(2.dp))
 
                     Text(
-                        text = item.text,
+                        text = item.message,
                         fontSize = 12.sp
                     )
                 }

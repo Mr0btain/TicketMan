@@ -17,6 +17,7 @@ import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.formatTime
 import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
@@ -25,7 +26,9 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.tag
+import kotlin.uuid.ExperimentalUuidApi
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TicketInfoPane(
     modifier: Modifier = Modifier,
@@ -36,6 +39,7 @@ fun TicketInfoPane(
     ticket: Ticket,
     onEditClick: () -> Unit,
     onImageClick: (List<String>) -> Unit,
+    ticketUpdates: List<TicketUpdate>
 ) {
     val date = formatTime(ticket.time)
 
@@ -70,7 +74,7 @@ fun TicketInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = if (ticket.identifier.isNotEmpty()) "Details for: ${ticket.identifier}" else "",
+                        text = "Details for: ${ticket.identifier}",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -171,9 +175,7 @@ fun TicketInfoPane(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = if (ticket.assignedUser.isNotEmpty()) {
-                                        assignedUserName.firstName + " " + assignedUserName.lastName + ": " + ticket.assignedUser
-                                    } else "",
+                                    text = assignedUserName.firstName + " " + assignedUserName.lastName,
                                     fontSize = 18.sp
                                 )
                             }
@@ -204,7 +206,7 @@ fun TicketInfoPane(
                             .padding(20.dp),
                         scrollBarOnRight = scrollBarsOnRight,
                         backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        isVisible = ticket.updates.isNotEmpty()
+                        isVisible = ticketUpdates.isNotEmpty()
                     ) {
                         Text(
                             text = "Updates",
@@ -229,12 +231,10 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticket.identifier.isNotEmpty()) {
-                                TableStatusItem(
-                                    status = ticket.status,
-                                    darkMode = isDarkMode
-                                )
-                            }
+                            TableStatusItem(
+                                status = ticket.status,
+                                darkMode = isDarkMode
+                            )
                         }
 
                         Spacer(Modifier.padding(4.dp))
@@ -253,18 +253,16 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            if (ticket.identifier.isNotEmpty()) {
-                                TablePriorityItem(
-                                    priority = ticket.priority,
-                                    darkMode = isDarkMode
-                                )
-                            }
+                            TablePriorityItem(
+                                priority = ticket.priority,
+                                darkMode = isDarkMode
+                            )
                         }
 
                         Spacer(Modifier.padding(4.dp))
 
                         UpdatesBlock(
-                            updates = ticket.updates,
+                            updates = ticketUpdates,
                             labelSize = 16.sp,
                             onImageClick = onImageClick
                         )

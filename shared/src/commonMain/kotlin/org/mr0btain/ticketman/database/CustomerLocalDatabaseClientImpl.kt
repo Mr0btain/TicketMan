@@ -1,38 +1,33 @@
 package org.mr0btain.ticketman.database
 
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.addLogger
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.TicketList
-import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.shared.Notes
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.database.tables.CustomerTable
-import org.mr0btain.ticketman.database.tables.CustomerTable.city
-import org.mr0btain.ticketman.database.tables.CustomerTable.contactInfo
-import org.mr0btain.ticketman.database.tables.CustomerTable.firstName
-import org.mr0btain.ticketman.database.tables.CustomerTable.identifier
-import org.mr0btain.ticketman.database.tables.CustomerTable.lastName
-import org.mr0btain.ticketman.database.tables.CustomerTable.notes
-import org.mr0btain.ticketman.database.tables.CustomerTable.state
-import org.mr0btain.ticketman.database.tables.CustomerTable.street
-import org.mr0btain.ticketman.database.tables.CustomerTable.tickets
-import org.mr0btain.ticketman.database.tables.CustomerTable.time
-import org.mr0btain.ticketman.database.tables.CustomerTable.zip
+import org.mr0btain.ticketman.data.image.Image
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
+import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
+import org.mr0btain.ticketman.database.tables.customer.CustomerTable
+import org.mr0btain.ticketman.database.tables.customer.toCustomer
+import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
+@OptIn(ExperimentalUuidApi::class)
 class CustomerLocalDatabaseClientImpl(
     private val shouldLog: Boolean
 ) : LocalDatabaseClient<Customer>(
     tag = "CustomerLocalDatabaseClient",
-    table = CustomerTable,
     shouldLog = shouldLog
 ) {
-    override val IdentifierColumn = CustomerTable.identifier
-
     /** Gets all items from database */
     override fun getAll(): List<Customer>? {
         var result = listOf<Customer>()
@@ -43,25 +38,7 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerTable.selectAll().map { item ->
-                    Customer(
-                        identifier = item[IdentifierColumn],
-                        name = PersonName(
-                            firstName = item[firstName],
-                            lastName = item[lastName]
-                        ),
-                        address = Address(
-                            street = item[street],
-                            city = item[city],
-                            state = item[state],
-                            zip = item[zip]
-                        ),
-                        contactInfo = item[contactInfo],
-                        time = item[time],
-                        tickets = item[tickets].list,
-                        notes = item[notes].notes
-                    )
-                }
+                result = CustomerEntity.all().map { item -> item.toCustomer()}
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -75,7 +52,7 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: String): Customer? {
+    override fun getById(identifier: Uuid): Customer? {
         var result: Customer? = null
 
         try {
@@ -83,25 +60,7 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
-                    Customer(
-                        identifier = item[CustomerTable.identifier],
-                        name = PersonName(
-                            firstName = item[firstName],
-                            lastName = item[lastName]
-                        ),
-                        address = Address(
-                            street = item[street],
-                            city = item[city],
-                            state = item[state],
-                            zip = item[zip]
-                        ),
-                        contactInfo = item[contactInfo],
-                        time = item[time],
-                        tickets = item[tickets].list,
-                        notes = item[notes].notes
-                    )
-                }.firstOrNull()
+                result = CustomerEntity.findById(identifier.toJavaUuid())?.toCustomer()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -121,18 +80,17 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerTable.batchInsert(data) { item ->
-                    this[identifier] = item.identifier
-                    this[firstName] = item.name.firstName
-                    this[lastName] = item.name.lastName
-                    this[street] = item.address.street
-                    this[city] = item.address.city
-                    this[state] = item.address.state
-                    this[zip] = item.address.zip
-                    this[tickets] = TicketList(item.tickets)
-                    this[notes] = Notes(item.notes)
-                    this[contactInfo] = item.contactInfo
-                    this[time] = item.time
+                data.forEach { item ->
+                    // Convert kotlin uuid to java for database
+                    val identifier = item.identifier.toJavaUuid()
+
+                    // Insert into database
+                    CustomerEntity.new(identifier) {
+                        name = item.name
+                        address = item.address
+                        contactInfo = item.contactInfo
+                        time = item.time
+                    }
                 }
 
                 AppLogger.m(ADD_ALL_TAG, SimpleError.SUCCESS)
@@ -147,12 +105,14 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Removes an item from the database */
-    override fun remove(id: String): Boolean {
+    override fun remove(identifier: Uuid): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                CustomerTable.deleteWhere { IdentifierColumn eq id }
+
+                CustomerEntity.findById(identifier.toJavaUuid())?.delete()
+
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -171,18 +131,15 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerTable.insert { item ->
-                    item[identifier] = data.identifier
-                    item[firstName] = data.name.firstName
-                    item[lastName] = data.name.lastName
-                    item[street] = data.address.street
-                    item[city] = data.address.city
-                    item[state] = data.address.state
-                    item[zip] = data.address.zip
-                    item[tickets] = TicketList(data.tickets)
-                    item[notes] = Notes(data.notes)
-                    item[contactInfo] = data.contactInfo
-                    item[time] = data.time
+                // Convert kotlin uuid to java for database
+                val identifier = data.identifier.toJavaUuid()
+
+                // Insert into database
+                CustomerEntity.new(identifier) {
+                    name = data.name
+                    address = data.address
+                    contactInfo = data.contactInfo
+                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
@@ -203,21 +160,16 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerTable.update({ IdentifierColumn eq data.identifier }) { item ->
-                    item[identifier] = data.identifier
-                    item[firstName] = data.name.firstName
-                    item[lastName] = data.name.lastName
-                    item[street] = data.address.street
-                    item[city] = data.address.city
-                    item[state] = data.address.state
-                    item[zip] = data.address.zip
-                    item[tickets] = TicketList(data.tickets)
-                    item[notes] = Notes(data.notes)
-                    item[contactInfo] = data.contactInfo
-                    item[time] = data.time
-
-                    AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
+                CustomerEntity
+                    .findById(data.identifier.toJavaUuid())
+                    ?.apply {
+                        name = data.name
+                        address = data.address
+                        contactInfo = data.contactInfo
+                        time = data.time
                     }
+
+                AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
             }
 
             return true
@@ -226,5 +178,74 @@ class CustomerLocalDatabaseClientImpl(
             AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
             return false
         }
+    }
+
+    /** Adds a note to an item and linking it to that item */
+    override fun addNote(identifier: Uuid, note: Note, images: List<Image>): Boolean {
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                // Insert the note into database and get its entity
+                val noteEntity = insertNote(note, images)
+
+                // Add note to customer notes
+                CustomerEntity.findByIdAndUpdate(identifier.toJavaUuid()) { customerEntity ->
+                    customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
+                }
+
+                AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
+            }
+
+            return true
+        } catch (ex: Exception) {
+            AppLogger.i(ADD_NOTE_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return false
+    }
+
+    /** Removes a note and its images from the database */
+    override fun removeNote(identifier: Uuid): Boolean {
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                // Find the note if it exists
+                val note = NoteEntity.findById(identifier.toJavaUuid()) ?: return@transaction
+
+                // No clue if this actually works or not??
+                CustomerTable
+                    .join(
+                        CustomerNoteTable, onColumn = CustomerTable.id, otherColumn = CustomerNoteTable.customer,
+                        joinType = JoinType.INNER,
+                    )
+                    .select(CustomerNoteTable.note eq note.id)
+                    .limit(1)
+                    .map { CustomerEntity.wrapRow(it) }
+                    .firstOrNull()
+                    ?.let { customerEntity ->
+                        customerEntity.notes = SizedCollection(customerEntity.notes.filter { it != note })
+                    }
+
+                // Delete linked images
+                note.images.forEach { it.delete() }
+
+                // Delete the note (Exposed will remove NoteImageTable entries automatically)
+                note.delete()
+            }
+
+            AppLogger.m(REMOVE_NOTE_TAG, SimpleError.SUCCESS)
+
+            return true
+        } catch (ex: Exception) {
+            AppLogger.m(REMOVE_NOTE_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return false
     }
 }

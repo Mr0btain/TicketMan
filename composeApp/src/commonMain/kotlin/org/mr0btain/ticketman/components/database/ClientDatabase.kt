@@ -3,10 +3,10 @@ package org.mr0btain.ticketman.components.database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.database.DatabaseHandler
-import org.mr0btain.ticketman.database.tables.CustomerTable
-import org.mr0btain.ticketman.database.tables.InventoryTable
-import org.mr0btain.ticketman.database.tables.TicketTable
-import org.mr0btain.ticketman.database.tables.UserTable
+import org.mr0btain.ticketman.database.tables.customer.CustomerTable
+import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
+import org.mr0btain.ticketman.database.tables.ticket.TicketTable
+import org.mr0btain.ticketman.database.tables.user.UserTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 

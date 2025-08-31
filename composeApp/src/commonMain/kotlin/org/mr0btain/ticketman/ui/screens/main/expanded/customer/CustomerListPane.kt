@@ -22,13 +22,16 @@ import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerInfo: List<Customer>,
-    onClick: (String) -> Unit,
-    selectedCustomerId: String,
+    onClick: (Uuid) -> Unit,
+    selectedCustomerId: Uuid,
     lazyListState: LazyListState,
     scope: CoroutineScope,
     scrollBarsOnRight: Boolean,
@@ -166,10 +169,11 @@ private fun CustomerHeaderBox(
 // TODO: Make onclick go to customer details screen when its done. or a popup?
 // TODO: Make icon reflect if there is a ticket not completed?
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (String) -> Unit,
+    onClick: (Uuid) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,

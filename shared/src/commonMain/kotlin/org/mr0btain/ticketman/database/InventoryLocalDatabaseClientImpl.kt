@@ -1,24 +1,26 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.shared.Notes
-import org.mr0btain.ticketman.database.tables.InventoryTable
+import org.mr0btain.ticketman.data.image.Image
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.database.tables.inventory.InventoryEntity
+import org.mr0btain.ticketman.database.tables.inventory.toInventoryItem
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
+@OptIn(ExperimentalUuidApi::class)
 class InventoryLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
 ) : LocalDatabaseClient<InventoryItem>(
     tag = "InventoryDatabaseClient",
-    table = InventoryTable,
     shouldLog = shouldLog
 ) {
-    override val IdentifierColumn = InventoryTable.identifier
-
     /** Gets all items from database */
     override fun getAll(): List<InventoryItem>? {
         var result = listOf<InventoryItem>()
@@ -29,18 +31,7 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = InventoryTable.selectAll().map { item ->
-                    InventoryItem(
-                        identifier = item[InventoryTable.identifier],
-                        name = item[InventoryTable.name],
-                        description = item[InventoryTable.description],
-                        stock = item[InventoryTable.stock],
-                        cost = item[InventoryTable.cost],
-                        price = item[InventoryTable.price],
-                        notes = item[InventoryTable.notes].notes,
-                        time = item[InventoryTable.time]
-                    )
-                }
+                result = InventoryEntity.all().map { item -> item.toInventoryItem() }
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -54,7 +45,7 @@ class InventoryLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: String): InventoryItem? {
+    override fun getById(identifier: Uuid): InventoryItem? {
         var result: InventoryItem? = null
 
         try {
@@ -62,18 +53,7 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = InventoryTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
-                    InventoryItem(
-                        identifier = item[InventoryTable.identifier],
-                        name = item[InventoryTable.name],
-                        description = item[InventoryTable.description],
-                        stock = item[InventoryTable.stock],
-                        cost = item[InventoryTable.cost],
-                        price = item[InventoryTable.price],
-                        notes = item[InventoryTable.notes].notes,
-                        time = item[InventoryTable.time]
-                    )
-                }.firstOrNull()
+                result = InventoryEntity.findById(identifier.toJavaUuid())?.toInventoryItem()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -93,15 +73,19 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                InventoryTable.batchInsert(data) { item ->
-                    this[InventoryTable.identifier] = item.identifier
-                    this[InventoryTable.name] = item.name
-                    this[InventoryTable.description] = item.description
-                    this[InventoryTable.stock] = item.stock
-                    this[InventoryTable.cost] = item.cost
-                    this[InventoryTable.price] = item.price
-                    this[InventoryTable.notes] = Notes(item.notes)
-                    this[InventoryTable.time] = item.time
+                data.forEach { item ->
+                    // Convert kotlin uuid to java for database
+                    val identifier = item.identifier.toJavaUuid()
+
+                    // Insert into database
+                    InventoryEntity.new(identifier) {
+                        name = item.name
+                        description = item.description
+                        stock = item.stock
+                        cost = item.cost
+                        price = item.price
+                        time = item.time
+                    }
                 }
 
                 AppLogger.m(ADD_ALL_TAG, SimpleError.SUCCESS)
@@ -116,12 +100,14 @@ class InventoryLocalDatabaseClientImpl(
     }
 
     /** Removes an item from the database */
-    override fun remove(id: String): Boolean {
+    override fun remove(identifier: Uuid): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                InventoryTable.deleteWhere { IdentifierColumn eq id }
+
+                InventoryEntity.findById(identifier.toJavaUuid())?.delete()
+
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -140,15 +126,17 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                InventoryTable.insert { item ->
-                    item[InventoryTable.identifier] = data.identifier
-                    item[InventoryTable.name] = data.name
-                    item[InventoryTable.description] = data.description
-                    item[InventoryTable.stock] = data.stock
-                    item[InventoryTable.cost] = data.cost
-                    item[InventoryTable.price] = data.price
-                    item[InventoryTable.notes] = Notes(data.notes)
-                    item[InventoryTable.time] = data.time
+                // Convert kotlin uuid to java for database
+                val identifier = data.identifier.toJavaUuid()
+
+                // Insert into database
+                InventoryEntity.new(identifier) {
+                    name = data.name
+                    description = data.description
+                    stock = data.stock
+                    cost = data.cost
+                    price = data.price
+                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
@@ -169,16 +157,16 @@ class InventoryLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                InventoryTable.update({ IdentifierColumn eq data.identifier }) { item ->
-                    item[InventoryTable.identifier] = data.identifier
-                    item[InventoryTable.name] = data.name
-                    item[InventoryTable.description] = data.description
-                    item[InventoryTable.stock] = data.stock
-                    item[InventoryTable.cost] = data.cost
-                    item[InventoryTable.price] = data.price
-                    item[InventoryTable.notes] = Notes(data.notes)
-                    item[InventoryTable.time] = data.time
-                }
+                InventoryEntity
+                    .findById(data.identifier.toJavaUuid())
+                    ?.apply {
+                        name = data.name
+                        description = data.description
+                        stock = data.stock
+                        cost = data.cost
+                        price = data.price
+                        time = data.time
+                    }
 
                 AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
             }
@@ -189,5 +177,13 @@ class InventoryLocalDatabaseClientImpl(
             AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
             return false
         }
+    }
+
+    override fun addNote(identifier: Uuid, note: Note, images: List<Image>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeNote(identifier: Uuid): Boolean {
+        TODO("Not yet implemented")
     }
 }

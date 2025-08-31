@@ -62,7 +62,7 @@ fun UpdatesBlock(
                 // Text
                 Text(
                     modifier = Modifier,
-                    text = update.note.text,
+                    text = update.note.message,
                     fontSize = textSize
                 )
 

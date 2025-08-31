@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
@@ -17,6 +19,8 @@ import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
 import org.mr0btain.ticketman.server.response.SyncResponse
 import org.mr0btain.ticketman.server.response.UserResponse
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * User routes
@@ -90,9 +94,9 @@ fun Route.userRoute(
     }
 
     post("/register/first") {
-        val identifier = database.getNextId()
+        val identifier = Uuid.random()
 
-        if (database.getAll()?.isEmpty() ?: true && identifier != null) {
+        if (database.getAll()?.isEmpty() ?: true) {
             val userRequest = call.receive<UserRequest>()
 
             // TODO: Figure this out
@@ -107,18 +111,16 @@ fun Route.userRoute(
     authenticate("admin") {
         post("/register") {
             val userRequest = call.receive<UserRequest>()
-            val identifier = database.getNextId()
+            val identifier = Uuid.random()
 
 
-            if (identifier != null) {
-                val user = userRequest.toModel(identifier)
-                val userExists = database.getAll()?.map { it.username }?.contains(user.username)
+            val user = userRequest.toModel(identifier)
+            val userExists = database.getAll()?.map { it.username }?.contains(user.username)
 
-                if (userExists != null && !userExists) {
-                    if (database.add(user)) call.respond(HttpStatusCode.Created, user.toResponse())
-                    else call.respond(HttpStatusCode.BadRequest)
-                } else call.respond(HttpStatusCode.Conflict)
-            } else call.respond(HttpStatusCode.BadRequest)
+            if (userExists != null && !userExists) {
+                if (database.add(user)) call.respond(HttpStatusCode.Created, user.toResponse())
+                else call.respond(HttpStatusCode.BadRequest)
+            } else call.respond(HttpStatusCode.Conflict)
         }
     }
 
@@ -163,7 +165,7 @@ fun Route.userRoute(
                     return@delete
                 }
 
-                if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted)
+                if (database.remove(Uuid.parse(identifier))) call.respond(HttpStatusCode.Accepted)
                 else call.respond(HttpStatusCode.BadRequest)
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -173,15 +175,13 @@ fun Route.userRoute(
     }
 }
 
-private fun UserRequest.toModel(id: String): User =
+private fun UserRequest.toModel(id: Uuid): User =
     User(
         identifier = id,
         username = username,
         password = hashPassword(password),
         name = name,
-        notes = notes,
         contactInfo = contactInfo,
-        tickets = tickets,
         accessLevel = accessLevel
     )
 

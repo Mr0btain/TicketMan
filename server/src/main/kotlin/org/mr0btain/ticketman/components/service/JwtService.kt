@@ -16,6 +16,8 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaInstant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 class JwtService(
     private val application: Application,
@@ -69,9 +71,10 @@ class JwtService(
      * Verify credentials along with access level to verify if its legit and allowed
      */
 
+    @OptIn(ExperimentalUuidApi::class)
     fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
         val id = extractId(credential)
-        val foundUser = id?.let { userDatabase.getById(it) }
+        val foundUser = id?.let { userDatabase.getById(Uuid.parse(it)) }
 
         return foundUser?.let {
             if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {

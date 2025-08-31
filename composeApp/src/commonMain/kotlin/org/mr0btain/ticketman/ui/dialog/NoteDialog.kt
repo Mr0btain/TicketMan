@@ -38,7 +38,7 @@ fun NoteDialog(
     onDismissRequest: () -> Unit
 ) {
     var author by remember { mutableStateOf(seedData.author) }
-    var text by remember { mutableStateOf(seedData.text) }
+    var text by remember { mutableStateOf(seedData.message) }
     val time = remember { if (seedData.time != Long.MAX_VALUE) seedData.time else getTime() }
 
     Dialog(

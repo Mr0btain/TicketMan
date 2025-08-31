@@ -30,6 +30,8 @@ import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // This holds things used between all panes
 
@@ -124,7 +126,7 @@ fun DialogNoteList(
                     Spacer(Modifier.padding(2.dp))
 
                     Text(
-                        text = item.text,
+                        text = item.message,
                         fontSize = 12.sp
                     )
                 }
@@ -295,13 +297,14 @@ fun TableCardTextItem(
 }
 
 // TODO: Add time to this
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun SmallTicketList(
     modifier: Modifier = Modifier,
     tickets: List<Ticket>,
     scrollBarsOnRight: Boolean,
     isDarkMode: Boolean,
-    onClick: (String) -> Unit
+    onClick: (Uuid) -> Unit
 ) {
     Surface(
         modifier = modifier
@@ -400,6 +403,7 @@ fun SmallTicketList(
                             Column(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
+                                /*
                                 ticket.updates.take(3).forEach { update ->
                                     Row(
                                         modifier = Modifier.padding(4.dp),
@@ -417,6 +421,7 @@ fun SmallTicketList(
                                         )
                                     }
                                 }
+                                 */
                             }
                         }
                     }
@@ -592,7 +597,7 @@ fun NotesBlock(
                 // Text
                 Text(
                     modifier = Modifier,
-                    text = note.text,
+                    text = note.message,
                     fontSize = textSize
                 )
             }

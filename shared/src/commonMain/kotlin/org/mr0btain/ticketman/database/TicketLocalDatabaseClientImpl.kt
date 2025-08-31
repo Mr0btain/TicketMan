@@ -1,23 +1,26 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.database.tables.TicketTable
+import org.mr0btain.ticketman.data.image.Image
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
+import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
+@OptIn(ExperimentalUuidApi::class)
 class TicketLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
 ) : LocalDatabaseClient<Ticket>(
     tag = "TicketLocalDatabaseClient",
-    table = TicketTable,
     shouldLog = shouldLog
 ) {
-    override val IdentifierColumn = TicketTable.identifier
-
     /** Gets all items from database */
     override fun getAll(): List<Ticket>? {
         var result = listOf<Ticket>()
@@ -28,18 +31,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketTable.selectAll().map { item ->
-                    Ticket(
-                        identifier = item[TicketTable.identifier],
-                        customerId = item[TicketTable.customerId],
-                        device = item[TicketTable.device],
-                        assignedUser = item[TicketTable.assignedUser],
-                        priority = item[TicketTable.priority],
-                        status = item[TicketTable.status],
-                        updates = item[TicketTable.updates],
-                        time = item[TicketTable.time]
-                    )
-                }
+                result = TicketEntity.all().map { item -> item.toTicket() }
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -53,7 +45,7 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: String): Ticket? {
+    override fun getById(identifier: Uuid): Ticket? {
         var result: Ticket? = null
 
         try {
@@ -61,18 +53,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
-                    Ticket(
-                        identifier = item[TicketTable.identifier],
-                        customerId = item[TicketTable.customerId],
-                        device = item[TicketTable.device],
-                        assignedUser = item[TicketTable.assignedUser],
-                        priority = item[TicketTable.priority],
-                        status = item[TicketTable.status],
-                        updates = item[TicketTable.updates],
-                        time = item[TicketTable.time]
-                    )
-                }.firstOrNull()
+                result = TicketEntity.findById(identifier.toJavaUuid())?.toTicket()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -92,15 +73,17 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketTable.batchInsert(data) { item ->
-                    this[TicketTable.identifier] = item.identifier
-                    this[TicketTable.customerId] = item.customerId
-                    this[TicketTable.device] = item.device
-                    this[TicketTable.assignedUser] = item.assignedUser
-                    this[TicketTable.priority] = item.priority
-                    this[TicketTable.status] = item.status
-                    this[TicketTable.updates] = item.updates
-                    this[TicketTable.time] = item.time
+                data.forEach { item ->
+                    // Convert kotlin uuid to java for database
+                    val identifier = item.identifier.toJavaUuid()
+
+                    // Insert into database
+                    TicketEntity.new(identifier) {
+                        device = item.device
+                        status = item.status
+                        priority = item.priority
+                        time = item.time
+                    }
                 }
 
                 AppLogger.m(ADD_ALL_TAG, SimpleError.SUCCESS)
@@ -115,13 +98,14 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Removes an item from the database */
-    override fun remove(id: String): Boolean {
+    override fun remove(identifier: Uuid): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketTable.deleteWhere { IdentifierColumn eq id }
+                TicketEntity.findById(identifier.toJavaUuid())?.delete()
+
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -140,15 +124,15 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketTable.insert { item ->
-                    item[TicketTable.identifier] = data.identifier
-                    item[TicketTable.customerId] = data.customerId
-                    item[TicketTable.device] = data.device
-                    item[TicketTable.assignedUser] = data.assignedUser
-                    item[TicketTable.priority] = data.priority
-                    item[TicketTable.status] = data.status
-                    item[TicketTable.updates] = data.updates
-                    item[TicketTable.time] = data.time
+                // Convert kotlin uuid to java for database
+                val identifier = data.identifier.toJavaUuid()
+
+                // Insert into database
+                TicketEntity.new(identifier) {
+                    device = data.device
+                    status = data.status
+                    priority = data.priority
+                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
@@ -169,16 +153,13 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketTable.update({ IdentifierColumn eq data.identifier }) { item ->
-                    item[TicketTable.identifier] = data.identifier
-                    item[TicketTable.customerId] = data.customerId
-                    item[TicketTable.device] = data.device
-                    item[TicketTable.assignedUser] = data.assignedUser
-                    item[TicketTable.priority] = data.priority
-                    item[TicketTable.status] = data.status
-                    item[TicketTable.updates] = data.updates
-                    item[TicketTable.time] = data.time
-                }
+                TicketEntity
+                    .findByIdAndUpdate(data.identifier.toJavaUuid()) { item ->
+                        item.device = data.device
+                        item.status = data.status
+                        item.priority = data.priority
+                        item.time = data.time
+                    }
 
                 AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
             }
@@ -189,5 +170,13 @@ class TicketLocalDatabaseClientImpl(
             AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
             return false
         }
+    }
+
+    override fun addNote(identifier: Uuid, note: Note, images: List<Image>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeNote(identifier: Uuid): Boolean {
+        TODO("Not yet implemented")
     }
 }

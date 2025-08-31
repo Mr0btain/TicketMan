@@ -67,7 +67,7 @@ fun EditableUpdatesBlock(
                     // Text
                     Text(
                         modifier = Modifier,
-                        text = update.note.text,
+                        text = update.note.message,
                         fontSize = textSize
                     )
 

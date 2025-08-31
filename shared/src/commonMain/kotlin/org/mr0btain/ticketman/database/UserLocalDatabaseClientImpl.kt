@@ -1,26 +1,26 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.TicketList
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.data.shared.Notes
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.database.tables.UserTable
+import org.mr0btain.ticketman.data.image.Image
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.database.tables.user.UserEntity
+import org.mr0btain.ticketman.database.tables.user.toUser
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
+@OptIn(ExperimentalUuidApi::class)
 class UserLocalDatabaseClientImpl(
     private val shouldLog: Boolean = true
 ) : LocalDatabaseClient<User>(
     tag = "UserLocalDatabaseClient",
-    table = UserTable,
     shouldLog = shouldLog
 ) {
-    override val IdentifierColumn = UserTable.identifier
-
     /** Gets all items from database */
     override fun getAll(): List<User>? {
         var result = listOf<User>()
@@ -31,19 +31,7 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = UserTable.selectAll().map { item ->
-                    User(
-                        identifier = item[UserTable.identifier],
-                        username = item[UserTable.username],
-                        password = item[UserTable.password],
-                        name = PersonName(item[UserTable.firstName], item[UserTable.lastName]),
-                        notes = item[UserTable.notes].notes,
-                        contactInfo = item[UserTable.contactInfo],
-                        tickets = item[UserTable.tickets].list,
-                        accessLevel = item[UserTable.access],
-                        time = item[UserTable.time],
-                    )
-                }
+                result = UserEntity.all().map { item -> item.toUser() }
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -57,7 +45,7 @@ class UserLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: String): User? {
+    override fun getById(identifier: Uuid): User? {
         var result: User? = null
 
         try {
@@ -65,19 +53,7 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = UserTable.selectAll().where { IdentifierColumn eq identifier }.map { item ->
-                    User(
-                        identifier = item[UserTable.identifier],
-                        username = item[UserTable.username],
-                        password = item[UserTable.password],
-                        name = PersonName(item[UserTable.firstName], item[UserTable.lastName]),
-                        notes = item[UserTable.notes].notes,
-                        contactInfo = item[UserTable.contactInfo],
-                        tickets = item[UserTable.tickets].list,
-                        accessLevel = item[UserTable.access],
-                        time = item[UserTable.time],
-                    )
-                }.firstOrNull()
+                result = UserEntity.findById(identifier.toJavaUuid())?.toUser()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -97,17 +73,19 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                UserTable.batchInsert(data) { item ->
-                    this[UserTable.identifier] = item.identifier
-                    this[UserTable.username] = item.username
-                    this[UserTable.password] = item.password
-                    this[UserTable.firstName] = item.name.firstName
-                    this[UserTable.lastName] = item.name.lastName
-                    this[UserTable.tickets] = TicketList(item.tickets)
-                    this[UserTable.contactInfo] = item.contactInfo
-                    this[UserTable.notes] = Notes(item.notes)
-                    this[UserTable.access] = item.accessLevel
-                    this[UserTable.time] = item.time
+                data.forEach { item ->
+                    // Convert kotlin uuid to java for database
+                    val identifier = item.identifier.toJavaUuid()
+
+                    // Insert into database
+                    UserEntity.new(identifier) {
+                        username = item.username
+                        password = item.password
+                        name = item.name
+                        contactInfo = item.contactInfo
+                        access = item.accessLevel
+                        time = item.time
+                    }
                 }
 
                 AppLogger.m(ADD_ALL_TAG, SimpleError.SUCCESS)
@@ -122,12 +100,14 @@ class UserLocalDatabaseClientImpl(
     }
 
     /** Removes an item from the database */
-    override fun remove(id: String): Boolean {
+    override fun remove(identifier: Uuid): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
-                UserTable.deleteWhere { IdentifierColumn eq id }
+
+                UserEntity.findById(identifier.toJavaUuid())?.delete()
+
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
 
@@ -146,17 +126,17 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                UserTable.insert { item ->
-                    item[UserTable.identifier] = data.identifier
-                    item[UserTable.username] = data.username
-                    item[UserTable.password] = data.password
-                    item[UserTable.firstName] = data.name.firstName
-                    item[UserTable.lastName] = data.name.lastName
-                    item[UserTable.tickets] = TicketList(data.tickets)
-                    item[UserTable.contactInfo] = data.contactInfo
-                    item[UserTable.notes] = Notes(data.notes)
-                    item[UserTable.access] = data.accessLevel
-                    item[UserTable.time] = data.time
+                // Convert kotlin uuid to java for database
+                val identifier = data.identifier.toJavaUuid()
+
+                // Insert into database
+                UserEntity.new(identifier) {
+                    username = data.username
+                    password = data.password
+                    name = data.name
+                    contactInfo = data.contactInfo
+                    access = data.accessLevel
+                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
@@ -177,18 +157,16 @@ class UserLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                UserTable.update({ IdentifierColumn eq data.identifier }) { item ->
-                    item[UserTable.identifier] = data.identifier
-                    item[UserTable.username] = data.username
-                    item[UserTable.password] = data.password
-                    item[UserTable.firstName] = data.name.firstName
-                    item[UserTable.lastName] = data.name.lastName
-                    item[UserTable.tickets] = TicketList(data.tickets)
-                    item[UserTable.contactInfo] = data.contactInfo
-                    item[UserTable.notes] = Notes(data.notes)
-                    item[UserTable.access] = data.accessLevel
-                    item[UserTable.time] = data.time
-                }
+                UserEntity
+                    .findById(data.identifier.toJavaUuid())
+                    ?.apply {
+                        username = data.username
+                        password = data.password
+                        name = data.name
+                        contactInfo = data.contactInfo
+                        access = data.accessLevel
+                        time = data.time
+                    }
 
                 AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
             }
@@ -199,5 +177,13 @@ class UserLocalDatabaseClientImpl(
             AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
             return false
         }
+    }
+
+    override fun addNote(identifier: Uuid, note: Note, images: List<Image>): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    override fun removeNote(identifier: Uuid): Boolean {
+        TODO("Not yet implemented")
     }
 }

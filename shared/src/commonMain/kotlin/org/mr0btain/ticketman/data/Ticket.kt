@@ -10,17 +10,15 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import kotlin.random.Random
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
-data class Ticket(
-    override val identifier: String = "",
-    val customerId: String = "",
-    val assignedUser: String = "",
+data class Ticket @OptIn(ExperimentalUuidApi::class) constructor(
+    override val identifier: Uuid = Uuid.random(),
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Long.MAX_VALUE),
     val priority: TicketPriority = TicketPriority(TicketPriorityType.LOW, Long.MAX_VALUE),
-    val updates: List<TicketUpdate> = listOf(),
-    val invoice: Invoice = Invoice(),
     val time: Long = Long.MAX_VALUE
 ): MainDataItem
 

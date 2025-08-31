@@ -2,10 +2,11 @@ package org.mr0btain.ticketman.server.response
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Serializable
-data class UserResponse(
-    val identifier: String,
+data class UserResponse @OptIn(ExperimentalUuidApi::class) constructor(
+    val identifier: Uuid,
     val accessLevel: AccessLevel
 )

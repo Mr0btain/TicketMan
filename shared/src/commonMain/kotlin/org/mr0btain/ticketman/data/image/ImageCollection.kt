@@ -11,5 +11,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ImageCollection(
     val selectedImage: Int = 0,
-    val images: List<String> = emptyList()
+    val images: List<ByteArray> = emptyList()
 )

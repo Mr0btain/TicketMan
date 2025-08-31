@@ -58,7 +58,7 @@ fun EditUpdateDialog(
     scope: CoroutineScope = rememberCoroutineScope()
 ) {
     var author by remember { mutableStateOf(seedData.note.author) }
-    var text by remember { mutableStateOf(seedData.note.text) }
+    var text by remember { mutableStateOf(seedData.note.message) }
     val time = remember { if (seedData.note.time != Long.MAX_VALUE) seedData.note.time else getTime() }
     val photos = remember { seedData.images.toMutableStateList() }
 

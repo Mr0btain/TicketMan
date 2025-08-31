@@ -8,6 +8,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * SearchBox for searching tickets. Will return an id or a name and a true if they want to add new if it doesn't exist
@@ -15,22 +17,22 @@ import androidx.compose.ui.unit.sp
  * @param items List of all tickets
  * @param input The state of the text field
  * @param onInputChange Event called when typing
- * @param onClick Event called when clicking, string passed is identifier for ticket
+ * @param onClick Event called when clicking, Uuid passed is identifier for ticket
  */
 
 // TODO: Possibly add some extra details into prefix like customer name?
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
 @Composable
 fun TicketSearch(
     modifier: Modifier = Modifier,
-    items: List<String>,
+    items: List<Uuid>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (String) -> Unit,
+    onClick: (Uuid) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val filteredList = remember(input) { items.filter { it.lowercase().contains(input.lowercase()) } }
+    val filteredList = remember(input) { items.filter { it.toString().lowercase().contains(input.lowercase()) } }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -49,7 +51,7 @@ fun TicketSearch(
             label = { Text("Search Tickets") },
             prefix = {
                 // Get matching ticket if there is one
-                val ticket = remember(input) { items.filter { it == input } }
+                val ticket = remember(input) { items.filter { it.toString() == input } }
 
                 // Show prefix
                 if (ticket.isNotEmpty()) { Text("Ticket:") }

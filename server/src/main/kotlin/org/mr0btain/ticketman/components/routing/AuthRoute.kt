@@ -33,27 +33,25 @@ fun Route.authRoute(
         // Receive encrypted data from the request body and parse it into an EncryptedMessage object
         val encryptedData = call.receive<EncryptedData>()
         // Get the identifier for the user
-        val identifier = encryptionService.findClientIdentifier(encryptedData)
+        encryptionService.findClientIdentifier(encryptedData)?.let { identifier ->
+            // Attempt to decrypt the message using the client's identifier
+            encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
 
-        // Attempt to decrypt the message using the client's identifier
-        encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
+                // Try to parse the decrypted message into a LoginRequest and authenticate the user
+                userService.authenticate(Json.decodeFromString<LoginRequest>(decrypted))?.let { authResponse ->
 
-            // Try to parse the decrypted message into a LoginRequest and authenticate the user
-            userService.authenticate(Json.decodeFromString<LoginRequest>(decrypted))?.let { authResponse ->
+                    // If authentication is successful, update the encryption key for this client
+                    encryptionService.updateKeyIdentifier(identifier, authResponse.id)
 
-                // If authentication is successful, update the encryption key for this client
-                encryptionService.updateKeyIdentifier(identifier, authResponse.id)
-
-                // Encrypt the authentication response using the updated key
-                encryptionService.encryptData(authResponse.id, Json.encodeToString(authResponse))
-                    ?.let { encryptedResponse ->
-                        // Respond to the client with the encrypted authentication response
-                        call.respond(HttpStatusCode.Accepted, encryptedResponse)
-                    } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
-
-            } ?: call.respond(HttpStatusCode.Unauthorized) // Handle failed authentication
-
-        } ?: call.respond(HttpStatusCode.InternalServerError) // Handle decryption failure
+                    // Encrypt the authentication response using the updated key
+                    encryptionService.encryptData(authResponse.id, Json.encodeToString(authResponse))
+                        ?.let { encryptedResponse ->
+                            // Respond to the client with the encrypted authentication response
+                            call.respond(HttpStatusCode.Accepted, encryptedResponse)
+                        } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
+                } ?: call.respond(HttpStatusCode.Unauthorized) // Handle failed authentication
+            } ?: call.respond(HttpStatusCode.InternalServerError) // Handle decryption failure
+        } ?: call.respond(HttpStatusCode.NotFound) // Handle user not doing
     }
 
 
@@ -61,22 +59,22 @@ fun Route.authRoute(
         // Receive encrypted data from the request body and parse it into an EncryptedMessage object
         val encryptedData = call.receive<EncryptedData>()
         // Get the identifier for the user
-        val identifier = encryptionService.findClientIdentifier(encryptedData)
+        encryptionService.findClientIdentifier(encryptedData)?.let { identifier ->
+            // Attempt to decrypt the message using the client's credentials
+            encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
 
-        // Attempt to decrypt the message using the client's credentials
-        encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
+                // Try to parse the decrypted message into a user object and authenticate
+                userService.authenticateUser(Json.decodeFromString(decrypted))?.let { user ->
 
-            // Try to parse the decrypted message into a user object and authenticate
-            userService.authenticateUser(Json.decodeFromString(decrypted))?.let { user ->
+                    // If authentication is successful, update the encryption identifier with the user's identifier
+                    encryptionService.updateKeyIdentifier(identifier, user.identifier)
 
-                // If authentication is successful, update the encryption identifier with the user's identifier
-                encryptionService.updateKeyIdentifier(identifier, user.identifier)
+                    // Respond with HTTP 202 Accepted if authentication and key update are successful
+                    call.respond(HttpStatusCode.Accepted)
 
-                // Respond with HTTP 202 Accepted if authentication and key update are successful
-                call.respond(HttpStatusCode.Accepted)
-
-            } ?: call.respond(HttpStatusCode.Unauthorized) // Respond with 401 if authentication fails
-        } ?: call.respond(HttpStatusCode.InternalServerError) // Respond with 500 if decryption fails
+                } ?: call.respond(HttpStatusCode.Unauthorized) // Respond with 401 if authentication fails
+            } ?: call.respond(HttpStatusCode.InternalServerError) // Respond with 500 if decryption fails
+        } ?: call.respond(HttpStatusCode.NotFound) // Handle user not found
     }
 
 
@@ -85,25 +83,25 @@ fun Route.authRoute(
         // Receive encrypted data from the request body and parse it into an EncryptedMessage object
         val encryptedData = call.receive<EncryptedData>()
         // Get the identifier for the user
-        val identifier = encryptionService.findClientIdentifier(encryptedData)
+        encryptionService.findClientIdentifier(encryptedData)?.let { identifier ->
+            // Attempt to decrypt the message using the client's identifier
+            encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
+                // Deserialize the decrypted payload into a RefreshTokenRequest object
+                val request = Json.decodeFromString<RefreshTokenRequest>(decrypted)
 
-        // Attempt to decrypt the message using the client's identifier
-        encryptionService.decryptData(identifier, encryptedData)?.let { decrypted ->
-            // Deserialize the decrypted payload into a RefreshTokenRequest object
-            val request = Json.decodeFromString<RefreshTokenRequest>(decrypted)
+                // Try to refresh the token using the provided refresh token
+                userService.refreshToken(request.token)?.let { token ->
 
-            // Try to refresh the token using the provided refresh token
-            userService.refreshToken(request.token)?.let { token ->
+                    // If the token was refreshed successfully, encrypt the new token into a response
+                    encryptionService.encryptData(identifier, Json.encodeToString(RefreshTokenResponse(token)))
+                        ?.let { encryptedData ->
+                            // Respond with the encrypted refreshed token
+                            call.respond(HttpStatusCode.Accepted, encryptedData)
 
-                // If the token was refreshed successfully, encrypt the new token into a response
-                encryptionService.encryptData(identifier, Json.encodeToString(RefreshTokenResponse(token)))
-                    ?.let { encryptedData ->
-                    // Respond with the encrypted refreshed token
-                    call.respond(HttpStatusCode.Accepted, encryptedData)
-
-                } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
-            } ?: call.respond(HttpStatusCode.Unauthorized) // Handle token refresh failure (e.g., invalid token)
-        } ?: call.respond(HttpStatusCode.InternalServerError) // Handle decryption failure
+                        } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
+                } ?: call.respond(HttpStatusCode.Unauthorized) // Handle token refresh failure (e.g., invalid token)
+            } ?: call.respond(HttpStatusCode.InternalServerError) // Handle decryption failure
+        } ?: call.respond(HttpStatusCode.NotFound) // Handle client not found
     }
 
 
@@ -112,7 +110,7 @@ fun Route.authRoute(
         // Receive key request
         val keyRequest = call.receive<KeyRequest>()
         // Assign random uuid here to store the key for now till we register it to a user on login
-        val id = Uuid.random().toString()
+        val id = Uuid.random()
 
         // Add key to key storage
         encryptionService.registerKey(

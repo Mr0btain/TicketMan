@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalUuidApi::class)
+
 package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
@@ -42,11 +44,11 @@ fun generateMockData(num: Int): Triple<List<Customer>, List<Ticket>, List<User>>
 
     customerData.forEach { item ->
         val tickets = mutableListOf<Ticket>()
-        val ticketIds = mutableListOf<String>()
+        val ticketIds = mutableListOf<Uuid>()
 
         // Generate tickets
         (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(item.identifier, currentTicketId.toString()))
+            tickets.add(generateRandomTicket())
 
             currentTicketId++
         }
@@ -57,7 +59,7 @@ fun generateMockData(num: Int): Triple<List<Customer>, List<Ticket>, List<User>>
         }
 
         // Update the customer data
-        newCustomerData.add(item.copy(tickets = ticketIds))
+        //newCustomerData.add(item.copy(tickets = ticketIds))
 
         // Add the tickets to the result
         newTicketData.addAll(tickets)
@@ -68,13 +70,8 @@ fun generateMockData(num: Int): Triple<List<Customer>, List<Ticket>, List<User>>
         val userId = Random.nextInt(0, 6)
         val user = users[userId]
 
-        // Set ticket data assigned employee
-        newTicketData[index] = ticket.copy(
-            assignedUser = user.identifier
-        )
-
         // add ticket to employee
-        users[userId] = user.copy(tickets = user.tickets + ticket.identifier)
+        //users[userId] = user.copy(tickets = user.tickets + ticket.identifier)
     }
 
     println("Generated Customer list: ${customerData.count()}")
@@ -108,7 +105,7 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
         val stock = Random.nextInt(1, 500)
         val costVal = Random.nextDouble(0.5, 50.0)
         val priceVal = costVal * Random.nextDouble(1.2, 2.5)
-        val identifier = Random.nextInt(100000, 999999).toString()
+        val identifier = Uuid.random()
         val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
 
         InventoryItem(
@@ -118,7 +115,7 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
             stock = stock,
             cost = "$${formatter.format(costVal)}",
             price = "$${formatter.format(priceVal)}",
-            notes = generateRandomInventoryNotes(Random.nextInt(0, 4)),
+            //notes = generateRandomInventoryNotes(Random.nextInt(0, 4)),
             time = now - timeOffset
         )
     }
@@ -126,14 +123,10 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
 
 fun generateMockCustomerData(num: Int): List<Customer> {
     val data = mutableListOf<Customer>()
-    val ids = mutableListOf<String>()
+    val ids = mutableListOf<Uuid>()
 
     (0..num).forEach { i ->
-        var id = Random.nextInt(0, 9999).toString()
-
-        while (ids.contains(id)) {
-            id = Random.nextInt(0, 9999).toString()
-        }
+        var id = Uuid.random()
 
         ids.add(id)
 
@@ -152,7 +145,7 @@ fun generateMockCustomerData(num: Int): List<Customer> {
                 address = generateRandomAddress(),
                 contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
                 time = getFakeTime(),
-                notes = notes
+                //notes = notes
             )
         )
     }
@@ -181,13 +174,11 @@ fun generateMockUserData(num: Int): List<User> {
         // Create and return User object
         users.add(
             User(
-                identifier = randomIdentifier(),
+                identifier = Uuid.random(),
                 username = "${name.firstName}_${name.lastName}",
                 password = name.lastName,
                 name = name,
-                notes = notes,
                 contactInfo = contactInfo,
-                tickets = listOf(),
                 accessLevel = accessLevel,
                 time = getFakeTime()
             )
@@ -213,13 +204,11 @@ fun generateMockUserData(num: Int): List<User> {
 
         users.add(
             User(
-                identifier = UUID.randomUUID().toString(),
+                identifier = Uuid.random(),
                 username = "${name.firstName}_${name.lastName}",
                 password = name.lastName,
                 name = name,
-                notes = notes,
                 contactInfo = contactInfo,
-                tickets = listOf(),
                 accessLevel = accessLevel,
                 time = getFakeTime()
             )
@@ -297,7 +286,7 @@ private fun generateRandomName(): PersonName {
 }
 
 @OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(customerId: String, ticketId: String): Ticket {
+fun generateRandomTicket(): Ticket {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),
@@ -339,6 +328,7 @@ fun generateRandomTicket(customerId: String, ticketId: String): Ticket {
         val author = "${firstNames.random()} ${lastNames.random()}"
         val message = noteMessages.random()
 
+        /*
         updates.add(
             TicketUpdate(
                 identifier = i,
@@ -346,16 +336,14 @@ fun generateRandomTicket(customerId: String, ticketId: String): Ticket {
                 listOf()
             )
         )
+         */
     }
 
     return Ticket(
-        identifier = ticketId,
-        customerId = customerId,
-        assignedUser = "",
+        identifier = Uuid.random(),
         device = Device(manufacturer, model),
         status = randomTicketStatus(),
         priority = randomTicketPriority(),
-        updates = updates,
         time = getFakeTime()
     )
 }
@@ -383,7 +371,7 @@ private fun generateCustomerNote(): Note {
     val author = "${firstNames.random()} ${lastNames.random()}"
     val message = customerNotes.random()
 
-    return Note(author, message, getTime())
+    return Note(Uuid.random(), author, message, getTime())
 }
 
 // Function to generate a random employee note
@@ -407,7 +395,7 @@ fun generateEmployeeNote(): Note {
         "has a positive attitude and motivates others in the workplace."
     )
 
-    return Note(authors.random(), noteTopics.random(), getTime())
+    return Note(Uuid.random(), authors.random(), noteTopics.random(), getTime())
 }
 
 fun generateRandomInventoryNotes(count: Int): List<Note> {
@@ -424,7 +412,7 @@ fun generateRandomInventoryNotes(count: Int): List<Note> {
         val quantity = Random.nextInt(1, 100)
 
         val text = "Found $quantity $component(s) in $location - Status: $condition."
-        Note(author, text)
+        Note(Uuid.random(), author, text)
     }
 }
 

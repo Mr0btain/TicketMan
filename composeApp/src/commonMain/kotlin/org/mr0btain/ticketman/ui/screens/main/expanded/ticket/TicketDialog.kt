@@ -32,10 +32,12 @@ import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRo
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
+import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Add checks to make sure its not blank
 // TODO: Add ability to trigger new customer
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
@@ -47,7 +49,7 @@ fun TicketDialog(
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
-    val userIds = remember(users) { users.map { it.identifier.toString() } }
+    val userIds = remember(users) { users.map { it.identifier } }
 
     // seed data
     var customerId by remember(seedData) { mutableStateOf(seedData.customerId) }
@@ -306,6 +308,7 @@ fun TicketDialog(
 
                     Spacer(Modifier.padding(4.dp))
 
+                    /*
                     EditableUpdatesBlock(
                         updates = updates,
                         onEditClick = { update ->
@@ -313,6 +316,7 @@ fun TicketDialog(
                             showEditUpdateDialog = true
                         }
                     )
+                     */
                 }
 
                 Spacer(Modifier.padding(8.dp))
@@ -326,12 +330,9 @@ fun TicketDialog(
                         onDismiss(
                             Ticket(
                                 identifier = seedData.identifier,
-                                customerId = customerId,
-                                assignedUser = assignedUser,
                                 device = Device(deviceManufacturer, deviceModel),
                                 status = status,
                                 priority = priority,
-                                updates = updates,
                                 time = seedData.time
                             ),
                             DialogDismissReason.CONTINUE
