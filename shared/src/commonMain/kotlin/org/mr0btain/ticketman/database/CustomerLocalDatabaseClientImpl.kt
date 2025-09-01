@@ -8,13 +8,17 @@ import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.image.Image
+import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.toCustomer
+import org.mr0btain.ticketman.database.tables.image.toImage
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
+import org.mr0btain.ticketman.database.tables.note.toNote
+import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
@@ -23,11 +27,14 @@ import kotlin.uuid.toJavaUuid
 
 @OptIn(ExperimentalUuidApi::class)
 class CustomerLocalDatabaseClientImpl(
-    private val shouldLog: Boolean
+    private val shouldLog: Boolean,
+    tag: String = "CustomerLocalDatabaseClient"
 ) : LocalDatabaseClient<Customer>(
-    tag = "CustomerLocalDatabaseClient",
+    tag = tag,
     shouldLog = shouldLog
 ) {
+    private val GET_TICKETS_TAG = "$tag:GetTickets"
+
     /** Gets all items from database */
     override fun getAll(): List<Customer>? {
         var result = listOf<Customer>()
@@ -180,8 +187,34 @@ class CustomerLocalDatabaseClientImpl(
         }
     }
 
+    /** Gets all tickets for a customer */
+    fun getTickets(identifier: Uuid): List<Ticket> {
+        val tickets = mutableListOf<Ticket>()
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                    tickets.addAll(
+                        customerEntity.tickets
+                            .map { ticketEntity -> ticketEntity.toTicket() }
+                    )
+
+                    AppLogger.m(GET_TICKETS_TAG, SimpleError.SUCCESS)
+                } ?: AppLogger.i(GET_TICKETS_TAG, "Could not find customer!")
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(GET_TICKETS_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return tickets
+    }
+
     /** Adds a note to an item and linking it to that item */
-    override fun addNote(identifier: Uuid, note: Note, images: List<Image>): Boolean {
+    override fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -205,6 +238,30 @@ class CustomerLocalDatabaseClientImpl(
         }
 
         return false
+    }
+
+    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>> {
+        val result = mutableMapOf<Note, List<StoredImage>>()
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                    customerEntity.notes.forEach { noteEntity ->
+                        result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
+                    }
+
+                    AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)
+                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find customer!")
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(GET_NOTES_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return result
     }
 
     /** Removes a note and its images from the database */

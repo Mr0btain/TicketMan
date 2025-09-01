@@ -31,7 +31,7 @@ fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerInfo: List<Customer>,
     onClick: (Uuid) -> Unit,
-    selectedCustomerId: Uuid,
+    selectedCustomerId: Uuid?,
     lazyListState: LazyListState,
     scope: CoroutineScope,
     scrollBarsOnRight: Boolean,

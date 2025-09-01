@@ -3,8 +3,7 @@ package org.mr0btain.ticketman.database.tables.inventory
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
@@ -21,12 +20,12 @@ class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var time by InventoryTable.time
 
     // For notes assigned to customer
-    val notes by NoteEntity via InventoryNoteTable
+    var notes by NoteEntity via InventoryNoteTable
 }
 
 @OptIn(ExperimentalUuidApi::class)
-fun InventoryEntity.toInventoryItem(): InventoryItem {
-    return InventoryItem(
+fun InventoryEntity.toInventoryItem(): Inventory {
+    return Inventory(
         identifier = id.value.toKotlinUuid(),
         name = name,
         description = description,

@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
@@ -31,7 +31,7 @@ import kotlin.uuid.Uuid
 fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    items: List<InventoryItem>,
+    items: List<Inventory>,
     scrollBarsOnRight: Boolean,
     selected: Uuid,
     onClick: (Uuid) -> Unit,
@@ -194,7 +194,7 @@ private fun InventoryTableItem(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.surface,
     selected: Boolean,
-    inventoryItem: InventoryItem,
+    inventoryItem: Inventory,
     nameColumnWidth: Dp,
     stockColumnWidth: Dp,
     descriptionColumnWidth: Dp,

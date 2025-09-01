@@ -20,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -38,14 +39,13 @@ import kotlin.math.absoluteValue
 @Composable
 fun ImagePager(
     modifier: Modifier = Modifier,
-    imageData: List<String>,
+    imageData: List<ImageBitmap>,
     onImageClick: () -> Unit,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     imageMaxWidth: Dp,
     imageMaxHeight: Dp
 ) {
     val pagerState = rememberPagerState(pageCount = { imageData.size })
-    val images = remember(imageData.size) { imageData.map { decodeBase64ToImageBitmap(it) } }
 
     Row(
         modifier = modifier,
@@ -95,17 +95,13 @@ fun ImagePager(
                     }
             ) {
                 // Actual image
-                if (images.size >= page) {
-                    images[page]?.let {
-                        Image(
-                            modifier = Modifier
-                                .clickable(
-                                    onClick = { }
-                                ),
-                            bitmap = it,
-                            contentDescription = "",
-                        )
-                    }
+                if (imageData.size >= page) {
+                    Image(
+                        modifier = Modifier
+                            .clickable(onClick = { onImageClick() }),
+                        bitmap = imageData[page],
+                        contentDescription = "",
+                    )
                 }
             }
         }
@@ -114,7 +110,7 @@ fun ImagePager(
         IconButton(
             onClick = {
                 coroutineScope.launch {
-                    if (pagerState.currentPage + 1 <= images.size) pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                    if (pagerState.currentPage + 1 <= imageData.size) pagerState.animateScrollToPage(pagerState.currentPage + 1)
                 }
             }
         ) {

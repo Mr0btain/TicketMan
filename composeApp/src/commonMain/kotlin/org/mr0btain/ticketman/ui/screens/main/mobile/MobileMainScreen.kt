@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
@@ -84,7 +84,7 @@ fun MobileMainScreen(
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
-    var inventorySeedData by remember { mutableStateOf(InventoryItem()) }
+    var inventorySeedData by remember { mutableStateOf(Inventory()) }
 
     // For confirm delete dialog
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
@@ -243,7 +243,7 @@ fun MobileMainScreen(
                     }
 
                     // Reset seed data
-                    inventorySeedData = InventoryItem()
+                    inventorySeedData = Inventory()
 
                     // Close dialog
                     showInventoryDialog = false

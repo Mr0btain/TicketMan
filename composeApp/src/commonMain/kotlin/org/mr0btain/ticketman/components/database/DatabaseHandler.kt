@@ -1,55 +1,43 @@
-package org.mr0btain.ticketman.ui.screens.main.components.viewmodel
+package org.mr0btain.ticketman.components.database
 
+import androidx.compose.ui.graphics.ImageBitmap
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.databasesDir
+import io.github.vinceglb.filekit.div
+import io.github.vinceglb.filekit.write
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.network.database.ServerDatabaseClient
-import org.mr0btain.ticketman.data.MainDataItem
+import org.mr0btain.ticketman.components.utils.toByteArray
+import org.mr0btain.ticketman.components.utils.toImageBitmap
+import org.mr0btain.ticketman.data.MainData
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.database.LocalDatabaseClient
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Base class for a MainDataItem handler
  */
+@OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
-abstract class MainItemDataHandler<T: MainDataItem>(
+abstract class DatabaseHandler<T: MainData>(
+    tag: String,
     private val localDatabaseClient: LocalDatabaseClient<T>,
     private val serverDatabaseClient: ServerDatabaseClient,
-    tag: String
+    private val imageDir: String
 ) {
-    // TODO: Don't know if we even have to handle logging as in the clients themselves they handle it
+    // TODO: Don't know if we even have to handle logging as in the clients themselves handle it
     private val ADD_TAG = "$tag:Add"
     private val ADD_ALL_TAG = "$tag:AddAll"
     private val UPDATE_TAG = "$tag:Update"
     private val REMOVE_TAG = "$tag:Remove"
     private val UPDATE_OR_ADD_TAG = "$tag:UpdateOrAdd"
 
-    private val _dataList: MutableStateFlow<List<T>> = MutableStateFlow(listOf())
-    val dataList = _dataList.asStateFlow()
-
-    private val _selectedId: MutableStateFlow<String> = MutableStateFlow("")
-    val selectedId = _selectedId.asStateFlow()
-
-    /**
-     * Sets the data list
-     */
-    fun setDataList(data: List<T>) {
-        _dataList.value = data
-    }
-
-    /**
-     * Sets the selected ID
-     */
-    fun setSelectedId(identifier: String) {
-        _selectedId.value = identifier
-    }
-
-    fun clearSelectedId() = { _selectedId.value = "" }
-
-    /**
-     * Adds or updates an item depending on weather it exists in the database or not
-     */
+    /** Adds or updates an item depending on weather it exists in the database or not */
     suspend fun addOrUpdate(data: T) {
         coroutineScope {
             // Check if customer exists or not, if not then add it
@@ -81,33 +69,71 @@ abstract class MainItemDataHandler<T: MainDataItem>(
         }
     }
 
-    /**
-     * Syncs data between server and local databases
-     */
+    /** Syncs data between server and local databases */
     suspend fun sync() {
-        coroutineScope {
-            localDatabaseClient.getAll()?.let { serverDatabaseClient.sync(it) }
-        }
+        localDatabaseClient.getAll()?.let { serverDatabaseClient.sync(it) }
     }
 
-    /**
-     * Gets the next identifier for an item
-     */
-    fun getNextId(): String? = localDatabaseClient.getNextId()
+    /** Gets an item by identifier */
+    fun get(identifier: Uuid): T? = localDatabaseClient.getById(identifier)
 
-    /**
-     * Gets an item from the list by identifier
-     */
-    fun get(identifier: String): T? = _dataList.value.firstOrNull { it.identifier == identifier }
+    fun getNotes(identifier: Uuid): List<NoteData> {
+        val databaseResult = localDatabaseClient.getNotes(identifier)
+        val result = mutableListOf<NoteData>()
 
-    /**
-     * Gets data from local database and populates dataList with it
-     */
-    abstract suspend fun populateListFromDatabase()
+        databaseResult.forEach {
+            val imageData = mutableListOf<ImageBitmap>()
 
-    /**
-     * Adds an item to the databases
-     */
+            it.value.forEach { image ->
+                val fileHandler = FileKit.databasesDir / image.path
+
+                if (fileHandler.file.exists()) {
+                    imageData.add(
+                        fileHandler.file
+                            .readBytes()
+                            .toImageBitmap()
+                    )
+                }
+            }
+
+            result.add(
+                NoteData(
+                    note = it.key,
+                    images = imageData
+                )
+            )
+        }
+
+        return result
+    }
+
+    // TODO: Add serverside
+    suspend fun addImagesToNote(identifier: Uuid, images: List<ImageBitmap>) {
+        val imageResult = mutableListOf<StoredImage>()
+
+        // Save images to disk first
+        images.forEach { imageBitmap ->
+            // Get id and file
+            val id = Uuid.Companion.random().toString()
+            val file = FileKit.databasesDir / imageDir / id
+
+            // Write file
+            file.write(imageBitmap.toByteArray())
+
+            // Add result
+            imageResult.add(
+                StoredImage(
+                    path = imageDir + id,
+                    time = getTime()
+                )
+            )
+        }
+
+        // Send images to database
+        localDatabaseClient.addImagesToNote(identifier, imageResult)
+    }
+
+    /** Adds an item to the databases */
     suspend fun add(item: T) {
         coroutineScope {
             try {
@@ -123,9 +149,7 @@ abstract class MainItemDataHandler<T: MainDataItem>(
         }
     }
 
-    /**
-     * Adds a list of items to the database
-     */
+    /** Adds a list of items to the database */
     suspend fun addAll(data: List<T>) {
         coroutineScope {
             try {
@@ -141,10 +165,8 @@ abstract class MainItemDataHandler<T: MainDataItem>(
         }
     }
 
-    /**
-     * Removes an item from the database
-     */
-    suspend fun remove(identifier: String) {
+    /** Removes an item from the database */
+    suspend fun remove(identifier: Uuid) {
         coroutineScope {
             try {
                 _dataList.value = dataList.value.filter { it.identifier != identifier }

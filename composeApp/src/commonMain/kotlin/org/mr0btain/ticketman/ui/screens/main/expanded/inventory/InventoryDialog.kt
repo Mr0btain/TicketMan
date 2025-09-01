@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.Note
@@ -34,8 +34,8 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
-    onDismiss: (InventoryItem?, DialogDismissReason) -> Unit,
-    seedData: InventoryItem,
+    onDismiss: (Inventory?, DialogDismissReason) -> Unit,
+    seedData: Inventory,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
@@ -240,7 +240,7 @@ fun InventoryDialog(
                     onConfirmClick = {
                         // Call dismiss with data
                         onDismiss(
-                            InventoryItem(
+                            Inventory(
                                 identifier = seedData.identifier,
                                 name = name,
                                 description = description,

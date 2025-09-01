@@ -11,7 +11,9 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.MainDataItem
+import org.mr0btain.ticketman.data.MainData
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Suppress("PropertyName")
 abstract class ServerDatabaseClient(
@@ -30,9 +32,9 @@ abstract class ServerDatabaseClient(
 
     abstract fun changeUrl(url: String)
 
-    abstract suspend fun sync(data: List<MainDataItem>): List<MainDataItem>
+    abstract suspend fun sync(data: List<MainData>): List<MainData>
 
-    suspend fun send(data: MainDataItem) {
+    suspend fun send(data: MainData) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(SEND_TAG) {
                 client.post {
@@ -48,7 +50,7 @@ abstract class ServerDatabaseClient(
         }
     }
 
-    suspend fun batchSend(data: List<MainDataItem>) {
+    suspend fun batchSend(data: List<MainData>) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(BATCH_SEND_TAG) {
                 client.post {
@@ -64,9 +66,9 @@ abstract class ServerDatabaseClient(
         }
     }
 
-    abstract suspend fun getAll(): List<MainDataItem>
+    abstract suspend fun getAll(): List<MainData>
 
-    suspend fun update(data: MainDataItem) {
+    suspend fun update(data: MainData) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(UPDATE_TAG) {
                 client.post {
@@ -82,7 +84,8 @@ abstract class ServerDatabaseClient(
         }
     }
 
-    suspend fun remove(identifier: String) {
+    @OptIn(ExperimentalUuidApi::class)
+    suspend fun remove(identifier: Uuid) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(REMOVE_TAG) {
                 client.delete { url("$serverUrl/remove/$identifier") }

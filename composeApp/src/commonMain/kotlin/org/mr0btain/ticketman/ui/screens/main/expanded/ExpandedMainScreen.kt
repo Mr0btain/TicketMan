@@ -11,8 +11,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.getTime
@@ -27,15 +30,13 @@ import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryPanel
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
-
-// Probably don't need some of these actions in a coroutine.
-// But the less we have to do on the main thread the better
-// I guess.
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // TODO: Maybe make this expect actual of some sort for different platforms or screen sizes
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
 @Composable
 fun ExpandedMainScreen(
     viewModel: MainViewModel,
@@ -49,46 +50,46 @@ fun ExpandedMainScreen(
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
     // User stuff
-    val userList = viewModel.dataHandler.userDataHandler.dataList.collectAsState()
-    val currentUser = viewModel.dataHandler.userDataHandler.current.collectAsState()
+    //val userList = viewModel.dataHandler.userDataHandler.dataList.collectAsState()
+    val currentUser = viewModel.selectedUserData.collectAsState()
 
     // For customer panel
-    val customerData = viewModel.dataHandler.customerDataHandler.dataList.collectAsState()
-    val selectedCustomer = viewModel.dataHandler.customerDataHandler.selectedId.collectAsState()
+    //val customerData = viewModel.dataHandler.customerDataHandler.dataList.collectAsState()
+    val selectedCustomer = viewModel.selectedCustomerData.collectAsState()
     val customerLazyListState = rememberLazyListState()
 
     // For customer dialog
-    var customerSeedData by remember { mutableStateOf(Customer()) }
+    var customerSeedData: CustomerData by remember { mutableStateOf(CustomerData()) }
     var showCustomerDialog by remember { mutableStateOf(false) }
     var isTicketForNewCustomer by remember { mutableStateOf(false) }
 
     // We need this outside of the customer dialog so we can modify this from other dialogs
     // and handle different scenarios
     val tempTicketHolder = remember { mutableStateListOf<Ticket>() }
-    val customerTicketList = remember { mutableStateListOf<String>() }
+    val customerTicketList = remember { mutableStateListOf<Uuid>() }
 
     // For ticket panel
-    val ticketList = viewModel.dataHandler.ticketDataHandler.dataList.collectAsState()
-    val selectedTicket = viewModel.dataHandler.ticketDataHandler.selectedId.collectAsState()
+    //val ticketList = viewModel.dataHandler.ticketDataHandler.dataList.collectAsState()
+    val selectedTicket = viewModel.selectedTicketData.collectAsState()
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
 
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
-    var ticketSeedData by remember { mutableStateOf(Ticket()) }
+    var ticketSeedData by remember { mutableStateOf(TicketData()) }
 
     // For Inventory panel
-    val inventoryList = viewModel.dataHandler.inventoryDataHandler.dataList.collectAsState()
+    //val inventoryList = viewModel.dataHandler.inventoryDataHandler.dataList.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
-    val selectedInventoryId = viewModel.dataHandler.inventoryDataHandler.selectedId.collectAsState()
+    val selectedInventory = viewModel.selectedInventoryData.collectAsState()
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
-    var inventorySeedData by remember { mutableStateOf(InventoryItem()) }
+    var inventorySeedData by remember { mutableStateOf(InventoryData()) }
 
     // For confirm delete dialog
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
-    var itemToDelete by remember { mutableStateOf("") }
+    var itemToDelete by remember { mutableStateOf(Uuid.random()) }
     var itemToDeleteType by remember { mutableStateOf(MainItemType.NONE) }
     var confirmDeleteDialogText by remember { mutableStateOf("") }
 
@@ -106,11 +107,11 @@ fun ExpandedMainScreen(
                         DialogDismissReason.CONTINUE -> {
                             // Add or update customer
                             data?.let { customerData ->
-                                viewModel.dataHandler.customerDataHandler.addOrUpdate(customerData)
+                                //viewModel.dataHandler.customerDataHandler.addOrUpdate(customerData)
 
                                 // Check for new tickets and add
                                 tempTicketHolder.forEach { ticket ->
-                                    if (customerData.tickets.contains(ticket.identifier)) viewModel.dataHandler.ticketDataHandler.addOrUpdate(ticket)
+                                    //if (customerData.tickets.contains(ticket.identifier)) viewModel.dataHandler.ticketDataHandler.addOrUpdate(ticket)
                                 }
                             }
                         }
@@ -121,7 +122,7 @@ fun ExpandedMainScreen(
                     }
 
                     // Reset starter data
-                    customerSeedData = Customer()
+                    customerSeedData = CustomerData()
 
                     // Reset customer ticket stuff
                     tempTicketHolder.clear()
@@ -136,23 +137,10 @@ fun ExpandedMainScreen(
                     // Set is for new customer so ticket dialog knows wht to do with it
                     isTicketForNewCustomer = true
 
-                    // Seed data with customer id
-                    val newIdentifier = viewModel.dataHandler.ticketDataHandler.getNextId()
+                    ticketSeedData = TicketData()
 
-                    // Check if our identifier is not null
-                    if (newIdentifier != null) {
-                        ticketSeedData = Ticket(
-                            customerId = customerId,
-                            time = getTime(),
-                            identifier = newIdentifier
-                        )
-
-                        // Pop up the dialog
-                        showTicketDialog = true
-                    } else {
-                        AppLogger.m("ExpandedMainScreen:onAddNewTicket", "Error adding new ticket ID was null!")
-                        snackBarState.showSnackbar("Error getting new ticket id!")
-                    }
+                    // Pop up the dialog
+                    showTicketDialog = true
                 }
             },
             isDarkMode = isDarkMode,
@@ -195,7 +183,7 @@ fun ExpandedMainScreen(
                     }
 
                     // Reset seed data
-                    ticketSeedData = Ticket()
+                    ticketSeedData = TicketData()
 
                     // Close dialog
                     showTicketDialog = false
@@ -203,24 +191,16 @@ fun ExpandedMainScreen(
             },
             isDarkMode = isDarkMode,
             seedData = ticketSeedData,
-            customerData = customerData.value.map { it },
+            customerData = customerData.value,
             users = userList.value,
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
                 coroutineScope.launch {
-                    val newIdentifier = viewModel.dataHandler.customerDataHandler.getNextId()
+                    // Add seeded data if there is any
+                    customerSeedData = Customer(name = name, time = getTime())
 
-                    // Check if we can get a new identifier
-                    if (newIdentifier != null) {
-                        // Add seeded data if there is any
-                        customerSeedData = Customer(name = name, time = getTime(), identifier = newIdentifier)
-
-                        // Trigger dialog
-                        showCustomerDialog = true
-                    } else {
-                        AppLogger.m("ExpandedMainScreen:onAddNewCustomer", "Error adding new customer ID was null!")
-                        snackBarState.showSnackbar("Error getting new customer id!")
-                    }
+                    // Trigger dialog
+                    showCustomerDialog = true
                 }
             }
         )
@@ -245,7 +225,7 @@ fun ExpandedMainScreen(
                     }
 
                     // Reset seed data
-                    inventorySeedData = InventoryItem()
+                    inventorySeedData = Inventory()
 
                     // Close dialog
                     showInventoryDialog = false
@@ -293,7 +273,7 @@ fun ExpandedMainScreen(
                     }
 
                     // Reset values
-                    itemToDelete = ""
+                    itemToDelete = Uuid.random()
                     itemToDeleteType = MainItemType.NONE
                     confirmDeleteDialogText = ""
 
@@ -397,7 +377,7 @@ fun ExpandedMainScreen(
                         Button(
                             onClick = {
                                 coroutineScope.launch {
-                                    viewModel.dataHandler.syncData()
+                                    // Nothing ATM
                                 }
                             }
                         ) {
@@ -421,36 +401,24 @@ fun ExpandedMainScreen(
 
                 when (tabIndex.value) {
                     0 -> {
+                        val customerList = remember { viewModel.getCustomers() ?: emptyList() }
+
                         CustomerPanel(
                             isDarkMode = isDarkMode,
                             onAddCustomer = { name ->
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.dataHandler.customerDataHandler.getNextId()
+                                    // Set seed data
+                                    customerSeedData = CustomerData(customer = Customer(name = name, time = getTime()))
 
-                                    // Check if we can et a new identifier
-                                    if (newIdentifier != null) {
-                                        // Set seed data
-                                        customerSeedData = Customer(
-                                            name = name,
-                                            time = getTime(),
-                                            identifier = newIdentifier
-                                        )
-
-                                        // Trigger dialog
-                                        showCustomerDialog = true
-                                    } else {
-                                        AppLogger.m("ExpandedMainScreen:onAddCustomer", "Error adding customer ID was null!")
-                                        snackBarState.showSnackbar("Error getting new customer id!")
-                                    }
+                                    // Trigger dialog
+                                    showCustomerDialog = true
                                 }
                             },
                             onEditCustomer = {
                                 coroutineScope.launch {
-                                    val customer = viewModel.dataHandler.customerDataHandler.get(selectedCustomer.value)
-
-                                    if (customer != null) {
+                                    if (customerList.firstOrNull { it.identifier == selectedCustomer.value.customer.identifier } != null) {
                                         // Set seed data
-                                        customerSeedData = customer
+                                        customerSeedData = selectedCustomer.value
 
                                         // Trigger dialog
                                         showCustomerDialog = true
@@ -460,13 +428,13 @@ fun ExpandedMainScreen(
                                     }
                                 }
                             },
-                            onCustomerSelectionChange = { id -> viewModel.dataHandler.customerDataHandler.setSelectedId(id)},
+                            onCustomerSelectionChange = { id -> viewModel.updateSelectedCustomer(id) },
                             onDeleteCustomer = { id ->
                                 coroutineScope.launch {
                                     // TODO: Maybe add name of customer to this as well?
                                     // TODO: Add ability to delete tickets for customer as well
                                     // Check if item exists
-                                    if (customerData.value.firstOrNull { it.identifier == id } != null) {
+                                    if (customerList.firstOrNull { it.identifier == id } != null) {
                                         // Set values
                                         itemToDelete = id
                                         itemToDeleteType = MainItemType.CUSTOMER
@@ -479,26 +447,17 @@ fun ExpandedMainScreen(
                             },
                             onTicketClick = { identifier ->
                                 coroutineScope.launch {
-                                    val ticket = viewModel.dataHandler.ticketDataHandler.get(identifier)
+                                    viewModel.updateSelectedTicket(identifier)
 
-                                    if (ticket != null) {
-                                        // Set selected ticket
-                                        viewModel.dataHandler.ticketDataHandler.setSelectedId(identifier)
+                                    // Get seed data
+                                    ticketSeedData = viewModel.selectedTicketData.value
 
-                                        // Get seed data
-                                        ticketSeedData = ticket
-
-                                        // Pop up ticket dialog
-                                        showTicketDialog = true
-                                    } else {
-                                        AppLogger.m("ExpandedMainScreen:onTicketClick", "Error getting ticket info, data was null!")
-                                        snackBarState.showSnackbar("Error getting ticket info!")
-                                    }
+                                    // Pop up ticket dialog
+                                    showTicketDialog = true
                                 }
                             },
                             selectedCustomer = selectedCustomer.value,
-                            customerList = customerData.value,
-                            ticketList = ticketList.value,
+                            customerList = customerList,
                             customerLazyListState = customerLazyListState,
                             coroutineScope = coroutineScope,
                             scrollBarsOnRight = scrollBarsOnRight,
@@ -508,56 +467,47 @@ fun ExpandedMainScreen(
 
                     // Ticket Panel
                     1 -> {
+                        val ticketList = remember { viewModel.getTickets() ?: emptyList() }
+
                         TicketPanel(
                             isDarkMode = isDarkMode,
-                            selectedTicketId = selectedTicket.value,
-                            ticketList = ticketList.value,
-                            customerList = customerData.value,
+                            ticketList = ticketList,
                             currentUser = currentUser.value,
-                            users = userList.value,
                             scrollBarsOnRight = scrollBarsOnRight,
+                            selectedTicket = selectedTicket.value,
                             onAddNewTicket = {
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.dataHandler.ticketDataHandler.getNextId()
+                                    // Set up seed data
+                                    ticketSeedData = TicketData()
 
-                                    if (newIdentifier != null) {
-                                        // Set up seed data
-                                        ticketSeedData = Ticket(
-                                            identifier = newIdentifier,
-                                            assignedUser = currentUser.value.identifier.toString(),
-                                            time = getTime()
-                                        )
-
-                                        // Show the dialog
-                                        showTicketDialog = true
-                                    } else {
-                                        AppLogger.m("ExpandedMainScreen:onAddNewTicket", "Error getting new ticket id, id was null!")
-                                        snackBarState.showSnackbar("Error getting new ticket id!")
-                                    }
+                                    // Show the dialog
+                                    showTicketDialog = true
                                 }
                             },
                             onEditTicket = {
                                 coroutineScope.launch {
-                                    val ticket = viewModel.dataHandler.ticketDataHandler.get(selectedTicket.value)
-
-                                    if (ticket != null) {
+                                    // Check if the ticket is an actual ticket and not a blank
+                                    if (ticketList.firstOrNull { it.identifier == selectedTicket.value.ticket.identifier } != null) {
                                         // Get seed data
-                                        ticketSeedData = ticket
+                                        ticketSeedData = selectedTicket.value
 
                                         // Trigger dialog if we have an actual item selected
                                         showTicketDialog = true
                                     } else {
-                                        AppLogger.m("ExpandedMainScreen:onEditTicket", "Error getting ticket info, data was null!")
+                                        AppLogger.m(
+                                            "ExpandedMainScreen:onEditTicket",
+                                            "Error getting ticket info, data was null!"
+                                        )
                                         snackBarState.showSnackbar("Error getting ticket info!")
                                     }
                                 }
                             },
-                            onSelectedTicketChange = { id -> viewModel.dataHandler.ticketDataHandler.setSelectedId(id) },
+                            onSelectedTicketChange = { id -> viewModel.updateSelectedTicket(id) },
                             onSelectedPanelChange = { selectedTicketPanel = it },
                             onDeleteTicket = { id ->
                                 coroutineScope.launch {
                                     // Make sure item exists
-                                    if (ticketList.value.firstOrNull { it.identifier == id } != null) {
+                                    if (ticketList.firstOrNull { it.identifier == id } != null) {
                                         // Set values
                                         itemToDelete = id
                                         itemToDeleteType = MainItemType.TICKET
@@ -570,45 +520,36 @@ fun ExpandedMainScreen(
                             },
                             selectedPanel = selectedTicketPanel,
                             ticketListState = ticketLazyListState,
-                            coroutineScope = coroutineScope
+                            coroutineScope = coroutineScope,
+                            onImageClick = {
+                                // Nothing yet
+                            }
                         )
                     }
 
                     // Inventory panel
                     2 -> {
+                        val inventoryList = remember { viewModel.getInventory() ?: emptyList() }
+
                         InventoryPanel(
                             isDarkMode = isDarkMode,
-                            inventoryList = inventoryList.value,
-                            selectedInventoryItemId = selectedInventoryId.value,
-                            onSelectedInventoryItemChange = { viewModel.dataHandler.inventoryDataHandler.setSelectedId(it) },
-                            onAddInventoryItem = {
+                            inventoryList = inventoryList,
+                            selectedInventory = selectedInventory.value,
+                            onSelectedInventoryChange = { id -> viewModel.updateSelectedTicket(id) },
+                            onAddInventory = {
                                 coroutineScope.launch {
-                                    val newIdentifier = viewModel.dataHandler.inventoryDataHandler.getNextId()
+                                    // Set seed data
+                                    inventorySeedData = InventoryData()
 
-                                    if (newIdentifier != null) {
-                                        // Set seed data
-                                        inventorySeedData = InventoryItem(
-                                            cost = "000",
-                                            price = "000",
-                                            identifier = newIdentifier,
-                                            time = getTime()
-                                        )
-
-                                        // Popup dialog
-                                        showInventoryDialog = true
-                                    } else {
-                                        AppLogger.m("ExpandedMainScreen:onAddInventoryItem", "Error getting new inventory ID, ID was null")
-                                        snackBarState.showSnackbar("Error getting new inventory id!")
-                                    }
+                                    // Popup dialog
+                                    showInventoryDialog = true
                                 }
                             },
-                            onEditInventoryItem = { item ->
+                            onEditInventory = {
                                 coroutineScope.launch {
-                                    val inventoryItem = viewModel.dataHandler.inventoryDataHandler.get(item)
-
-                                    if (inventoryItem != null) {
+                                    if (inventoryList.firstOrNull { it.identifier == selectedInventory.value.inventory.identifier } != null) {
                                         // Set seed data
-                                        inventorySeedData = inventoryItem
+                                        inventorySeedData = selectedInventory.value
 
                                         // Popup dialog
                                         showInventoryDialog = true
@@ -618,17 +559,14 @@ fun ExpandedMainScreen(
                                     }
                                 }
                             },
-                            onDeleteInventoryItem = { id ->
+                            onDeleteInventory = {
                                 coroutineScope.launch {
-                                    // Get item so we can get the name
-                                    val item = inventoryList.value.firstOrNull { it.identifier == id }
-
                                     // Check if its valid
-                                    if (item != null) {
+                                    if (inventoryList.firstOrNull { it.identifier == selectedInventory.value.inventory.identifier } != null) {
                                         // Set values
-                                        itemToDelete = id
+                                        itemToDelete = selectedInventory.value.inventory.identifier
                                         itemToDeleteType = MainItemType.INVENTORY
-                                        confirmDeleteDialogText = "${item.name}: $id"
+                                        confirmDeleteDialogText = selectedInventory.value.inventory.name
 
                                         // Trigger the dialog
                                         showConfirmDeleteDialog = true

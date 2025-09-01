@@ -66,6 +66,7 @@ fun UpdatesBlock(
                     fontSize = textSize
                 )
 
+                /*
                 if (update.images.isNotEmpty()) {
                     Spacer(Modifier.padding(2.dp))
 
@@ -79,6 +80,7 @@ fun UpdatesBlock(
                         imageMaxHeight = 200.dp
                     )
                 }
+                 */
 
                 Spacer(Modifier.padding(2.dp))
             }

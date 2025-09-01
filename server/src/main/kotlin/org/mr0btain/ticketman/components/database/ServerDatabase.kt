@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.database.DatabaseHandler
+import org.mr0btain.ticketman.database.LocalDatabaseHandler
 import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.logging.AppLogger
 class ServerDatabase(
     appDir: String,
     shouldLog: Boolean = true
-): DatabaseHandler(appDir, shouldLog) {
+): LocalDatabaseHandler(appDir, shouldLog) {
     val tokenDatabase = TokenDatabase(shouldLog)
 
     private val TAG = "ServerDatabase"

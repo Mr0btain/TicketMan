@@ -19,4 +19,5 @@
     <string name="password_preference_key">Password</string>
     <string name="refresh_token_preference_key">RefreshToken</string>
     <string name="access_token_preference_key">AccessToken</string>
+    <string name="image_directory">Client/Images</string>
 </resources>

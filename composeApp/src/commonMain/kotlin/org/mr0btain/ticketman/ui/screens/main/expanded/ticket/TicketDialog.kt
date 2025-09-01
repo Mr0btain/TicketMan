@@ -11,23 +11,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.utils.isNewTicket
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.composables.UserSearch
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.dialog.EditUpdateDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
@@ -45,7 +45,7 @@ fun TicketDialog(
     users: List<User>,
     onAddNewCustomer: (PersonName) -> Unit,
     onDismiss: (Ticket?, DialogDismissReason) -> Unit,
-    seedData: Ticket,
+    seedData: TicketData,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
@@ -58,15 +58,15 @@ fun TicketDialog(
     var assignedUser by remember(seedData) { mutableStateOf(seedData.assignedUser) }
 
     // Device
-    var deviceManufacturer by remember(seedData) { mutableStateOf(seedData.device.manufacturer) }
-    var deviceModel by remember(seedData) { mutableStateOf(seedData.device.model) }
+    var deviceManufacturer by remember(seedData) { mutableStateOf(seedData.ticket.device.manufacturer) }
+    var deviceModel by remember(seedData) { mutableStateOf(seedData.ticket.device.model) }
 
     // Status and priority
-    var status by remember(seedData) { mutableStateOf(seedData.status) }
-    var priority by remember(seedData) { mutableStateOf(seedData.priority) }
+    var status by remember(seedData) { mutableStateOf(seedData.ticket.status) }
+    var priority by remember(seedData) { mutableStateOf(seedData.ticket.priority) }
 
     // Mutable lists
-    val updates = remember(seedData) { seedData.updates.toMutableStateList() }
+    val notes = remember(seedData) { seedData.notes.toMutableStateList() }
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
@@ -75,35 +75,37 @@ fun TicketDialog(
 
     // For editing or adding updates dialog
     var showEditUpdateDialog by remember { mutableStateOf(false) }
-    var updateSeed by remember { mutableStateOf(TicketUpdate()) }
+    var noteSeed by remember { mutableStateOf(Note()) }
 
     // For customer search bar
-    var customerSearchBarInput by remember { mutableStateOf(seedData.customerId.ifEmpty { "" }) }
+    var customerSearchBarInput by remember { mutableStateOf(seedData.customerId.toString()) }
 
     // For employee search bar
-    var userSearchBarInput by remember { mutableStateOf(if (userIds.contains(seedData.assignedUser)) seedData.assignedUser else "")  }
+    var userSearchBarInput by remember { mutableStateOf(if (userIds.contains(seedData.assignedUser)) seedData.assignedUser.toString() else "")  }
 
     // Edit or add update dialog
     if (showEditUpdateDialog) {
+        /*
         EditUpdateDialog(
             isDarkMode = isDarkMode,
-            seedData = updateSeed,
+            seedData = noteSeed,
             onConfirm = { update ->
                 // Remove old if exists
-                updates.removeIf { it.identifier == update.identifier }
+                notes.removeIf { it.identifier == update.identifier }
 
                 // Add edited or new to list
-                updates.add(update)
+                notes.add(update)
             },
             onDismissRequest = { showEditUpdateDialog = false }
         )
+         */
     }
 
     // Delete item dialog
     if (showConfirmDeleteScreen) {
         ConfirmDeleteDialog(
             itemName = when (itemForDelete) {
-                SubItemType.UPDATE -> updates[itemUpForDeleteIndex].note.author + "'s Update"
+                SubItemType.UPDATE -> notes[itemUpForDeleteIndex].author + "'s Update"
                 else -> ""
             },
             isDarkMode = isDarkMode,
@@ -113,7 +115,7 @@ fun TicketDialog(
                     when (itemForDelete) {
                         SubItemType.UPDATE -> {
                             // Remove item from list
-                            updates.removeAt(itemUpForDeleteIndex)
+                            notes.removeAt(itemUpForDeleteIndex)
                         }
 
                         // For everything else do nothing
@@ -155,7 +157,7 @@ fun TicketDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = if (seedData.isNewTicket()) "Add New Ticket: ${seedData.identifier}" else "Edit Ticket: ${seedData.identifier}",
+                        text = if (seedData.ticket.isNewTicket()) "Add New Ticket: ${seedData.ticket.identifier}" else "Edit Ticket: ${seedData.ticket.identifier}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp,
                         maxLines = 1
@@ -192,7 +194,7 @@ fun TicketDialog(
                         onInputChange = { customerSearchBarInput = it },
                         onClick = { item ->
                             // Set search bar text
-                            customerSearchBarInput = item
+                            customerSearchBarInput = item.toString()
 
                             // Set customer id
                             customerId = item
@@ -219,7 +221,7 @@ fun TicketDialog(
                             userSearchBarInput = item.toString()
 
                             // Set user id
-                            assignedUser = item.toString()
+                            assignedUser = item
                         }
                     )
 
@@ -292,7 +294,7 @@ fun TicketDialog(
                         IconButton(
                             modifier = Modifier.size(26.dp),
                             onClick = {
-                                updateSeed = TicketUpdate(identifier = updates.lastIndex + 1)
+                                noteSeed = Note()
                                 showEditUpdateDialog = true
                             }
                         ) {
@@ -329,11 +331,11 @@ fun TicketDialog(
                         // Call dismiss with data
                         onDismiss(
                             Ticket(
-                                identifier = seedData.identifier,
+                                identifier = seedData.ticket.identifier,
                                 device = Device(deviceManufacturer, deviceModel),
                                 status = status,
                                 priority = priority,
-                                time = seedData.time
+                                time = seedData.ticket.time
                             ),
                             DialogDismissReason.CONTINUE
                         )

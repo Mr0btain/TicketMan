@@ -20,3 +20,17 @@ actual fun ImageBitmap.encodeToBase64(): String {
     val byteArray = outputStream.toByteArray()
     return Base64.getEncoder().encodeToString(byteArray)
 }
+
+actual fun ByteArray.toImageBitmap(): ImageBitmap {
+    val bufferedImage = ImageIO.read(inputStream())
+    return bufferedImage.toComposeImageBitmap()
+}
+
+actual fun ImageBitmap.toByteArray(): ByteArray {
+    val bufferedImage = toAwtImage()
+    val outputStream = ByteArrayOutputStream()
+
+    ImageIO.write(bufferedImage, "png", outputStream)
+
+    return outputStream.toByteArray()
+}

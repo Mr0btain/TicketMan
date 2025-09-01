@@ -22,7 +22,7 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var time by UserTable.time
 
     // For notes assigned to customer
-    val notes by NoteEntity via UserNoteTable
+    var notes by NoteEntity via UserNoteTable
 
     // For tickets assigned to customer
     val tickets by TicketEntity via UserTicketTable

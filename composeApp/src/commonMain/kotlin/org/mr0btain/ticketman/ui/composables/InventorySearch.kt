@@ -20,7 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
@@ -36,10 +36,10 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun InventorySearch(
     modifier: Modifier = Modifier,
-    items: List<InventoryItem>,
+    items: List<Inventory>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (InventoryItem) -> Unit,
+    onClick: (Inventory) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val filteredList = remember(input) { items.filter { "${it.name}${it.identifier}".lowercase().contains(input.lowercase()) } }

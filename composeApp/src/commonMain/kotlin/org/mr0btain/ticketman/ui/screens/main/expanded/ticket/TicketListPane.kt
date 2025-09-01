@@ -25,17 +25,20 @@ import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticket: List<Ticket> = listOf(),
     scrollBarsOnRight: Boolean,
-    selectedId: String,
-    onClick: (String) -> Unit,
+    selectedId: Uuid,
+    onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
@@ -153,6 +156,7 @@ private fun TicketHeaderBox(
     }
 }
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun TicketTableItem(
     modifier: Modifier = Modifier,
@@ -218,11 +222,13 @@ private fun TicketTableItem(
                     .padding(start = 4.dp)
                     .width(noteWidth + sizeAdjust.dp)
             ) {
+                /*
                 if (ticket.updates.isNotEmpty()) {
                     TableCardTextItem(
                         ticket.updates.last().note.author + " : " + ticket.updates.last().note.text
                     )
                 }
+                 */
             }
 
             TableDivider()

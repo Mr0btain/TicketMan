@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.shared.formatTime
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
@@ -26,7 +26,7 @@ import ticketman.composeapp.generated.resources.package_icon
 fun InventoryInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    inventoryItem: InventoryItem,
+    inventoryItem: Inventory,
     scrollBarsOnRight: Boolean,
     onEditClick: () -> Unit
 ) {

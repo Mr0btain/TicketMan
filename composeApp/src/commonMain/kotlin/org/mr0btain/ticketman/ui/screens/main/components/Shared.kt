@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.Note
@@ -26,6 +27,7 @@ import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
@@ -552,7 +554,7 @@ fun TableDivider() {
 @Composable
 fun NotesBlock(
     label: String = "Notes",
-    notes: List<Note>,
+    notes: List<NoteData>,
     labelSize: TextUnit = 12.sp,
     textSize: TextUnit = 16.sp
 ) {
@@ -573,33 +575,109 @@ fun NotesBlock(
             Spacer(Modifier.padding(2.dp))
         }
 
-        notes.forEach { note ->
-            Column {
-                // Actual text of the note
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = note.author + ": ",
-                        fontSize = textSize,
-                        fontWeight = FontWeight.SemiBold
-                    )
+        notes.forEach { noteData ->
+            noteData.note?.let { note ->
+                Column {
+                    // Actual text of the note
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = note.author + ": ",
+                            fontSize = textSize,
+                            fontWeight = FontWeight.SemiBold
+                        )
 
+                        Text(
+                            text = formatTime(note.time).toString(),
+                            fontSize = (textSize.value - 4).sp,
+                            maxLines = 1
+                        )
+                    }
+
+                    // Text
                     Text(
-                        text = formatTime(note.time).toString(),
-                        fontSize = (textSize.value - 4).sp,
-                        maxLines = 1
+                        modifier = Modifier,
+                        text = note.message,
+                        fontSize = textSize
                     )
                 }
+            }
+        }
+    }
+}
 
+@Composable
+fun NewNotesBlock(
+    label: String = "Notes",
+    noteData: List<NoteData>,
+    onImageClick: () -> Unit,
+    labelSize: TextUnit = 12.sp,
+    textSize: TextUnit = 16.sp
+) {
+    Column(
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.SpaceBetween
+    ) {
+        // Label
+        if (label.isNotBlank()) {
+            Text(
+                modifier = Modifier
+                    .padding(2.dp),
+                text = label,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = labelSize
+            )
 
-                // Text
-                Text(
-                    modifier = Modifier,
-                    text = note.message,
-                    fontSize = textSize
-                )
+            Spacer(Modifier.padding(2.dp))
+        }
+
+        noteData.sortedByDescending { it.note?.time }.forEach { data ->
+            data.note?.let { note ->
+                Column {
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        // Author
+                        Text(
+                            text = note.author + ": ",
+                            fontSize = textSize,
+                            fontWeight = FontWeight.SemiBold
+                        )
+
+                        // Time
+                        Text(
+                            text = formatTime(note.time).toString(),
+                            fontSize = (textSize.value - 4).sp,
+                            maxLines = 1
+                        )
+                    }
+
+                    // Text
+                    Text(
+                        modifier = Modifier,
+                        text = note.message,
+                        fontSize = textSize
+                    )
+
+                    if (data.images.isNotEmpty()) {
+                        Spacer(Modifier.padding(2.dp))
+
+                        ImagePager(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(200.dp),
+                            imageData = data.images,
+                            onImageClick = { onImageClick() },
+                            imageMaxWidth = 300.dp,
+                            imageMaxHeight = 200.dp
+                        )
+                    }
+
+                    Spacer(Modifier.padding(2.dp))
+                }
             }
         }
     }

@@ -15,7 +15,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
@@ -31,35 +33,38 @@ import ticketman.composeapp.generated.resources.edit_2
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
 import kotlin.math.ceil
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // TODO: Add checks to make sure its not blank
 // TODO: Add ability to assign already existing tickets to customer.
 // TODO: Add ability to edit note
 // TODO: Find better way to remove items based off more than just an index?
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
-    seedData: Customer = Customer(),
-    ticketList: SnapshotStateList<String>,
-    onDismiss: (Customer?, DialogDismissReason) -> Unit,
-    onAddNewTicket: (String) -> Unit,
+    seedData: CustomerData,
+    onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
+    onAddNewTicket: () -> Unit,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
     // Name
-    var firstName by remember(seedData) { mutableStateOf(seedData.name.firstName) }
-    var lastName by remember(seedData) { mutableStateOf(seedData.name.lastName) }
+    var firstName by remember(seedData) { mutableStateOf(seedData.customer.name.firstName) }
+    var lastName by remember(seedData) { mutableStateOf(seedData.customer.name.lastName) }
 
     // Address
-    var street by remember(seedData) { mutableStateOf(seedData.address.street) }
-    var city by remember(seedData) { mutableStateOf(seedData.address.city) }
-    var state by remember(seedData) { mutableStateOf(seedData.address.state) }
-    var zip by remember(seedData) { mutableStateOf(seedData.address.zip) }
+    var street by remember(seedData) { mutableStateOf(seedData.customer.address.street) }
+    var city by remember(seedData) { mutableStateOf(seedData.customer.address.city) }
+    var state by remember(seedData) { mutableStateOf(seedData.customer.address.state) }
+    var zip by remember(seedData) { mutableStateOf(seedData.customer.address.zip) }
 
     // Mutable lists
-    val email = remember(seedData) { seedData.contactInfo.email.toMutableStateList() }
-    val phone = remember(seedData) { seedData.contactInfo.phone.toMutableStateList() }
-    val notes = remember(seedData) { seedData.notes.toMutableStateList() }
+    val email = remember(seedData) { seedData.customer.contactInfo.email.toMutableStateList() }
+    val phone = remember(seedData) { seedData.customer.contactInfo.phone.toMutableStateList() }
+    val notes =  remember(seedData) { seedData.notes.toMutableStateList() }
+    val tickets = remember(seedData) { seedData.tickets.toMutableStateList() }
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
@@ -82,7 +87,7 @@ fun CustomerDialog(
             label = "Note",
             onConfirm = { item ->
                 // Add to out list
-                notes.add(item)
+                //notes.add(item)
             },
             onDismissRequest = {
                 // Reset seed data
@@ -128,7 +133,7 @@ fun CustomerDialog(
                 SubItemType.TICKET -> itemForDelete.toString()
                 SubItemType.EMAIL -> email[itemUpForDeleteIndex]
                 SubItemType.PHONE -> phone[itemUpForDeleteIndex]
-                SubItemType.NOTE -> notes[itemUpForDeleteIndex].author + "'s Note"
+                SubItemType.NOTE -> notes[itemUpForDeleteIndex].note.author + "'s Note"
                 else -> ""
             },
             isDarkMode = isDarkMode,
@@ -138,7 +143,7 @@ fun CustomerDialog(
                     when (itemForDelete) {
                         SubItemType.TICKET -> {
                             // Remove item from list
-                            ticketList.removeAt(itemUpForDeleteIndex)
+                            tickets.removeAt(itemUpForDeleteIndex)
                         }
 
                         SubItemType.EMAIL -> {
@@ -194,9 +199,9 @@ fun CustomerDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = if (seedData.name.firstName.isEmpty() && seedData.name.lastName.isEmpty()) {
-                            "Add Customer: ${seedData.identifier}"
-                        } else "Edit Customer: ${seedData.name.firstName} ${seedData.name.lastName}",
+                        text = if (seedData.customer.name.toStringName().isEmpty()) {
+                            "Add Customer"
+                        } else "Edit Customer: ${seedData.customer.name.toStringName()}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp,
                         maxLines = 1
@@ -379,7 +384,7 @@ fun CustomerDialog(
 
                         IconButton(
                             modifier = Modifier.size(26.dp),
-                            onClick = { onAddNewTicket(seedData.identifier) }
+                            onClick = { onAddNewTicket() }
                         ) {
                             Icon(
                                 modifier = Modifier
@@ -395,7 +400,7 @@ fun CustomerDialog(
 
                     // ------------------------- Ticket list -------------------------------
                     CustomerDialogTicketList(
-                        items = ticketList.map { it.toString() },
+                        items = emptyList(),
                         onDeleteClick = { item ->
                             itemForDelete = SubItemType.TICKET
                             itemUpForDeleteIndex = item
@@ -434,6 +439,7 @@ fun CustomerDialog(
 
                     Spacer(Modifier.padding(4.dp))
 
+                    /*
                     CustomerDialogNoteList(
                         notes = notes,
                         onDeleteClick = { item ->
@@ -442,6 +448,7 @@ fun CustomerDialog(
                             showConfirmDeleteScreen = true
                         }
                     )
+                     */
 
                     Spacer(Modifier.padding(4.dp))
                 }
@@ -455,21 +462,23 @@ fun CustomerDialog(
                     onConfirmClick = {
                         // Call dismiss with continue
                         onDismiss(
-                            Customer(
-                                identifier = seedData.identifier,
-                                name = PersonName(
-                                    firstName.lowercase().replaceFirstChar { it.uppercase() },
-                                    lastName.lowercase().replaceFirstChar { it.uppercase() }
+                            CustomerData(
+                                customer = Customer(
+                                    identifier = seedData.customer.identifier,
+                                    name = PersonName(
+                                        firstName.lowercase().replaceFirstChar { it.uppercase() },
+                                        lastName.lowercase().replaceFirstChar { it.uppercase() }
+                                    ),
+                                    address = Address(
+                                        street.lowercase().replaceFirstChar { it.uppercase() },
+                                        city.lowercase().replaceFirstChar { it.uppercase() },
+                                        state.lowercase().replaceFirstChar { it.uppercase() },
+                                        zip
+                                    ),
+                                    contactInfo = ContactInfo(email, phone),
+                                    time = seedData.customer.time
                                 ),
-                                address = Address(
-                                    street.lowercase().replaceFirstChar { it.uppercase() },
-                                    city.lowercase().replaceFirstChar { it.uppercase() },
-                                    state.lowercase().replaceFirstChar { it.uppercase() },
-                                    zip
-                                ),
-                                contactInfo = ContactInfo(email, phone),
-                                time = seedData.time,
-                                tickets = ticketList,
+                                tickets = tickets,
                                 notes = notes
                             ),
                             DialogDismissReason.CONTINUE

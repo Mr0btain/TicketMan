@@ -10,16 +10,19 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // TODO: Add hours worked/ inventory items to a list of expense and charges
 // TODO: Add invoice and ability to export
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
 @Composable
 fun TicketPanel(
     modifier: Modifier = Modifier,
@@ -27,33 +30,25 @@ fun TicketPanel(
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
     scrollBarsOnRight: Boolean,
-    selectedTicketId: String,
+    selectedTicket: TicketData,
     ticketList: List<Ticket>,
-    customerList: List<Customer>,
-    currentUser: User,
-    users: List<User>,
+    currentUser: UserData,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
-    onSelectedTicketChange: (String) -> Unit,
-    onDeleteTicket: (String) -> Unit,
+    onSelectedTicketChange: (Uuid) -> Unit,
+    onDeleteTicket: (Uuid) -> Unit,
     onImageClick: (List<String>) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
-    val currentUserId = remember(currentUser) { currentUser.identifier }
-
     // Sorted tickets by which tab were on
     val sortedTickets = remember(selectedPanel, ticketList, currentUser) {
         if (selectedPanel == 0) {
-            ticketList.sortedBy { it.identifier }.filter { it.assignedUser == currentUserId }.reversed()
+            ticketList.sortedBy { it.identifier }.reversed() //.filter { it.assignedUser == currentUserId }.reversed()
         } else {
             ticketList.sortedBy { it.identifier }.reversed()
         }
     }
-
-    // Selected ticket info
-    val selectedTicket =
-        remember(selectedTicketId) { ticketList.firstOrNull() { it.identifier == selectedTicketId } ?: Ticket() }
 
     // For search input
     var searchInput by remember { mutableStateOf("") }
@@ -82,7 +77,7 @@ fun TicketPanel(
                 // Search box
                 TicketSearch(
                     modifier = Modifier.padding(start = 8.dp),
-                    items = searchItems.map { it.toString() },
+                    items = searchItems,
                     input = searchInput,
                     onInputChange = { searchInput = it },
                     onClick = {
@@ -101,7 +96,7 @@ fun TicketPanel(
                     modifier = Modifier.width(260.dp)
                 ) {
                     SecondaryTabRow(
-                        selectedTabIndex = selectedPanel.toInt(),
+                        selectedTabIndex = selectedPanel,
                         modifier = Modifier
                             .padding(top = 4.dp)
                             .wrapContentWidth(),
@@ -155,7 +150,7 @@ fun TicketPanel(
                         },
                         onDeleteClick = {
                             // Trigger delete ticket dialog/ confirm
-                            onDeleteTicket(selectedTicketId)
+                            onDeleteTicket(selectedTicket.ticket.identifier)
                         }
                     )
 
@@ -181,7 +176,7 @@ fun TicketPanel(
                         // Update selected ticket
                         onSelectedTicketChange(ticket)
                     },
-                    selectedId = selectedTicket.identifier,
+                    selectedId = selectedTicket.ticket.identifier,
                     state = ticketListState,
                     coroutineScope = coroutineScope
                 )
@@ -189,17 +184,17 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customer = customerList.firstOrNull { it.identifier == selectedTicket.customerId }
-                        ?: Customer(),
-                    assignedUserName = (users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser }
-                        ?: User()).name,
+                    customer = selectedTicket.customer,
+                    assignedUserName = selectedTicket.assignedUser.name, //(users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser } ?: User()).name,
                     isDarkMode = isDarkMode,
-                    ticket = selectedTicket,
+                    ticketData = selectedTicket,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onEditClick = {
                         // Call edit ticket
                         onEditTicket()
-                    }
+                    },
+                    onImageClick = { },
+                    ticketUpdates = emptyList()
                 )
             }
         }
@@ -210,14 +205,14 @@ fun TicketPanel(
     // TODO: Maybe make this also switch to the right tab as well
     // On certain list update scroll to selected item
     // This will only really happen if we add a new ticket
-    LaunchedEffect(selectedTicketId, selectedPanel) {
+    LaunchedEffect(selectedTicket.ticket.identifier, selectedPanel) {
         if (!isSelectedUpdateFromClick) {
             // Check to see if were even on the list were selecting the ticket for, this comes up if
             // were on mytickets tab, and we add a new ticket that isn't assigned to our employee
             // then there's no reason to scroll to it as were not even on that list
-            if (sortedTickets.map { it.identifier }.contains(selectedTicketId)) {
+            if (sortedTickets.map { it.identifier }.contains(selectedTicket.ticket.identifier)) {
                 // Get index of our item
-                val index = sortedTickets.indexOf(selectedTicket)
+                val index = sortedTickets.indexOf(selectedTicket.ticket)
 
                 // Get index of visible items
                 val visibleItemIndex = ticketListState.layoutInfo.visibleItemsInfo.map { it.index }

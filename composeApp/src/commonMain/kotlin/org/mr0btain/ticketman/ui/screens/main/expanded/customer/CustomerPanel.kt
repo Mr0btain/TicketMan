@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirst
 import kotlinx.coroutines.CoroutineScope
+import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.Ticket
@@ -29,8 +30,7 @@ fun CustomerPanel(
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
     customerList: List<Customer>,
-    selectedCustomer: Customer,
-    selectedCustomerTickets: List<Ticket>,
+    selectedCustomer: CustomerData,
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (Uuid) -> Unit,
@@ -75,15 +75,16 @@ fun CustomerPanel(
                         onCustomerSelectionChange(it)
 
                         // Set search input
-                        searchInput = selectedCustomer.name.toStringName()
+                        selectedCustomer.customer?.let { customer ->
+                            searchInput = customer.name.toStringName()
+                        }
                               },
                     onInputChange = { searchInput = it }
                 )
 
                 // Button for adding or deleting a customer
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -95,7 +96,9 @@ fun CustomerPanel(
                         },
                         onDeleteClick = {
                             // Trigger delete ticket dialog/ confirm
-                            onDeleteCustomer(selectedCustomer.identifier)
+                            selectedCustomer.customer?.let { customer ->
+                                onDeleteCustomer(customer.identifier)
+                            }
                         }
                     )
 
@@ -112,7 +115,7 @@ fun CustomerPanel(
                     modifier = Modifier,
                     customerInfo = sortedCustomerInfo,
                     lazyListState = customerLazyListState,
-                    selectedCustomerId = selectedCustomer.identifier,
+                    selectedCustomerId = selectedCustomer.customer?.identifier,
                     scope = coroutineScope,
                     scrollBarsOnRight = scrollBarsOnRight,
                     isDarkMode = isDarkMode,
@@ -128,10 +131,8 @@ fun CustomerPanel(
                 CustomerInfoPane(
                     modifier = Modifier,
                     isDarkMode = isDarkMode,
-                    selectedCustomer = customerList.singleOrNull { it.identifier == selectedCustomer }
-                        ?: Customer(),
+                    selectedCustomer = selectedCustomer,
                     onEditClick = { onEditCustomer() },
-                    tickets = selectedCustomerTickets,
                     onTicketClick = onTicketClick,
                     scrollBarsOnRight = scrollBarsOnRight
                 )
@@ -145,7 +146,7 @@ fun CustomerPanel(
             // Get index of visible items
             val visibleItemIndex = customerLazyListState.layoutInfo.visibleItemsInfo.map { it.index }
 
-            if (visibleItemIndex.isNotEmpty() && sortedCustomerInfo.map { it.identifier }.contains(selectedCustomer.identifier)) {
+            if (visibleItemIndex.isNotEmpty() && sortedCustomerInfo.map { it.identifier }.contains(selectedCustomer.customer?.identifier)) {
                 val index = sortedCustomerInfo.indexOf(sortedCustomerInfo.fastFirst { it.identifier == selectedCustomer })
 
                 if (index < visibleItemIndex.first() || index > visibleItemIndex.last() && index >= 0) {

@@ -9,7 +9,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.database.InventoryLocalDatabaseClientImpl
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
@@ -72,7 +72,7 @@ fun Route.inventoryRoute(
                     identifier = identifier,
                     data = call.receive<EncryptedData>()
                 )?.let { message ->
-                    database.add(Json.decodeFromString<InventoryItem>(message))
+                    database.add(Json.decodeFromString<Inventory>(message))
 
                     call.respond(HttpStatusCode.Accepted)
                 }?: call.respond(HttpStatusCode.InternalServerError)
@@ -88,7 +88,7 @@ fun Route.inventoryRoute(
                     identifier = identifier,
                     data = call.receive<EncryptedData>()
                 )?.let { message ->
-                    if (database.update(Json.decodeFromString<InventoryItem>(message)))
+                    if (database.update(Json.decodeFromString<Inventory>(message)))
                         call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
                 }?: call.respond(HttpStatusCode.InternalServerError)
             }?: call.respond(HttpStatusCode.NotFound)
@@ -98,7 +98,7 @@ fun Route.inventoryRoute(
     // Bulk add mostly for syncing
     authenticate {
         post("/add/all") {
-            call.handleDecryption<List<InventoryItem>>(encryptionService)?.let { result ->
+            call.handleDecryption<List<Inventory>>(encryptionService)?.let { result ->
                 if (database.addAll(result)) call.respond(HttpStatusCode.Accepted)
                 else call.respond(HttpStatusCode.NotFound)
             }

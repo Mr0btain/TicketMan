@@ -6,7 +6,7 @@ import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.shared.AMPM
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
@@ -23,7 +23,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.security.SecureRandom
 import java.text.DecimalFormat
-import java.util.UUID
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -82,7 +81,7 @@ fun generateMockData(num: Int): Triple<List<Customer>, List<Ticket>, List<User>>
     return Triple(newCustomerData, newTicketData, users)
 }
 
-fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
+fun generateRandomInventoryItems(count: Int): List<Inventory> {
     val itemNames = listOf(
         "iPhone 11 Screen", "Galaxy S10 Screen", "Charging Port", "Battery Pack", "IC Chip A12",
         "Logic Board Connector", "Touch Controller", "Screen Adhesive", "Camera Module", "Speaker Assembly",
@@ -108,7 +107,7 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
         val identifier = Uuid.random()
         val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
 
-        InventoryItem(
+        Inventory(
             identifier = identifier,
             name = name,
             description = description,

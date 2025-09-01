@@ -2,8 +2,8 @@ package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.MainDataItem
-import org.mr0btain.ticketman.data.image.Image
+import org.mr0btain.ticketman.data.MainData
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
@@ -17,7 +17,7 @@ import kotlin.uuid.toJavaUuid
 
 @Suppress("PropertyName")
 @OptIn(ExperimentalUuidApi::class)
-abstract class LocalDatabaseClient<T: MainDataItem>(
+abstract class LocalDatabaseClient<T: MainData>(
     tag: String,
     private val shouldLog: Boolean
 ) {
@@ -30,6 +30,7 @@ abstract class LocalDatabaseClient<T: MainDataItem>(
     protected val ADD_NOTE_TAG = "$tag:AddNote"
     protected val REMOVE_NOTE_TAG = "$tag:RemoveNote"
     protected val ADD_IMAGE_TO_NOTE_TAG = "$tag:AddImageToNote"
+    protected val GET_NOTES_TAG = "$tag:GetNotes"
 
     /** Gets all items from database */
     abstract fun getAll(): List<T>?
@@ -50,7 +51,7 @@ abstract class LocalDatabaseClient<T: MainDataItem>(
     abstract fun update(data: T): Boolean
 
     /** Adds a note to the database */
-    protected fun insertNote(note: Note, images: List<Image>): NoteEntity {
+    protected fun insertNote(note: Note, images: List<StoredImage>): NoteEntity {
         return transaction {
             // Add new note to database
             val entity = NoteEntity.new(note.identifier.toJavaUuid()) {
@@ -75,12 +76,15 @@ abstract class LocalDatabaseClient<T: MainDataItem>(
     }
 
     /** Adds a note to an item and linking it to that item */
-    abstract fun addNote(identifier: Uuid, note: Note, images: List<Image>): Boolean
+    abstract fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean
+
+    /** Returns a list of pairs of note and their respective images as bytearrays to be converted to a usable image */
+    abstract fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>
 
     /** Removes a note and its images from the database */
     abstract fun removeNote(identifier: Uuid): Boolean
 
-    fun addImagesToNote(identifier: Uuid, images: List<Image>) {
+    fun addImagesToNote(identifier: Uuid, images: List<StoredImage>) {
         try {
             transaction {
                 NoteEntity.findById(identifier.toJavaUuid())?.let { noteEntity ->

@@ -2,12 +2,10 @@ package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.jdbc.Database
 
-// TODO: Setup data encryption for sensitive info
-
 /**
  * Handles/holds local databases
  */
-abstract class DatabaseHandler(
+abstract class LocalDatabaseHandler(
     appDir: String,
     shouldLog: Boolean = true
 ) {

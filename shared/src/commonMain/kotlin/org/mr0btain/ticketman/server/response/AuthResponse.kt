@@ -6,7 +6,7 @@ import kotlin.uuid.Uuid
 
 @Serializable
 data class AuthResponse @OptIn(ExperimentalUuidApi::class) constructor(
-    val id: Uuid,
-    val accessToken: String,
-    val refreshToken: String
+    val id: Uuid?,
+    val accessToken: String?,
+    val refreshToken: String?
 )

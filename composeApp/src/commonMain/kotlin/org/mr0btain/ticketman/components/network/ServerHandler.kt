@@ -7,12 +7,12 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.InventoryItem
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.DataHandler
+import org.mr0btain.ticketman.components.database.DataHandler
 
 /**
  * Handles the interaction and states of server clients
@@ -119,7 +119,7 @@ class ServerHandler(
     /**
      * Sync inventory with server database and returns the values local database doesn't have
      */
-    suspend fun syncInventory(currentInventory: List<InventoryItem>): List<InventoryItem> = databaseClient.inventoryClient.sync(currentInventory)
+    suspend fun syncInventory(currentInventory: List<Inventory>): List<Inventory> = databaseClient.inventoryClient.sync(currentInventory)
 
     /**
      * Sync inventory with server database and returns the values local database doesn't have

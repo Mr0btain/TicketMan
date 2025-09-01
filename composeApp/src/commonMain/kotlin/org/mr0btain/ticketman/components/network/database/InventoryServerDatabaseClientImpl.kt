@@ -7,13 +7,15 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.MainDataItem
+import org.mr0btain.ticketman.data.Inventory
+import org.mr0btain.ticketman.data.MainData
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
+import kotlin.uuid.ExperimentalUuidApi
 
+@OptIn(ExperimentalUuidApi::class)
 class InventoryServerDatabaseClientImpl(
     val client: HttpClient,
     private val encryptionHandler: ClientEncryptionHandler
@@ -28,7 +30,7 @@ class InventoryServerDatabaseClientImpl(
         serverUrl = "$url/api/data/inventory"
     }
 
-    override suspend fun sync(data: List<MainDataItem>): List<InventoryItem> {
+    override suspend fun sync(data: List<MainData>): List<Inventory> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 
@@ -51,7 +53,7 @@ class InventoryServerDatabaseClientImpl(
 
                             if (requested.isNotEmpty()) batchSend(requested)
 
-                            return syncResponse.data.filterIsInstance<InventoryItem>()
+                            return syncResponse.data.filterIsInstance<Inventory>()
                         }
                     }
             } else return getAll()
@@ -60,14 +62,14 @@ class InventoryServerDatabaseClientImpl(
         return listOf()
     }
 
-    override suspend fun getAll(): List<InventoryItem> {
+    override suspend fun getAll(): List<Inventory> {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
             }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
                 ?.onSuccess { encryptedMessage ->
                     encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<InventoryItem>>(decrypted)
+                        return Json.decodeFromString<List<Inventory>>(decrypted)
                     }
                 }
         }

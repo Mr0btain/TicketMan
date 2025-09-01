@@ -6,11 +6,21 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.settings.UserSettings
+import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.DataHandler
+import org.mr0btain.ticketman.components.database.DataHandler
+import org.mr0btain.ticketman.components.database.local.CustomerLocalDatabase
+import org.mr0btain.ticketman.components.database.local.InventoryLocalDatabase
+import org.mr0btain.ticketman.components.database.local.TicketLocalDatabase
+import org.mr0btain.ticketman.components.database.local.UserLocalDatabase
 import org.mr0btain.ticketman.util.AppDir
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 // TODO: Setup log in button and log in status
 
@@ -19,8 +29,8 @@ import org.mr0btain.ticketman.util.AppDir
  * Used to store data that needs to persist for the lifetime of the app
  */
 
+@OptIn(ExperimentalUuidApi::class)
 class MainViewModel(
-    appDir: AppDir,
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
     companion object {
@@ -28,6 +38,13 @@ class MainViewModel(
         private const val INIT_TAG = "$TAG:Init"
         private const val INIT_SYNC_TAG = "$TAG:Init_Sync"
     }
+
+    val shouldLog = true
+
+    private val customerLocalDatabase = CustomerLocalDatabase(shouldLog)
+    private val ticketLocalDatabase = TicketLocalDatabase(shouldLog)
+    private val inventoryLocalDatabase = InventoryLocalDatabase(shouldLog)
+    private val userLocalDatabase = UserLocalDatabase(shouldLog)
 
     // TODO: Add a way to check if we have network connection, and once we do have it run a check and sync
     fun init() {
@@ -53,10 +70,57 @@ class MainViewModel(
         }
     }
 
-    /**
-     * Main data handler where most of the functions and data is held
-     */
-    val dataHandler = DataHandler(appDir, viewModelScope)
+    /** Main data handler where most of the functions and data is held*/
+    //val dataHandler = DataHandler(appDir, viewModelScope)
+
+    private val _selectedCustomerData: MutableStateFlow<CustomerData> = MutableStateFlow(CustomerData())
+    val selectedCustomerData = _selectedCustomerData.asStateFlow()
+
+    fun updateSelectedCustomer(identifier: Uuid) {
+        viewModelScope.launch {
+            customerLocalDatabase.getById(identifier)?.let { customer ->
+                val notes = customerLocalDatabase.getNotes(identifier)
+                val tickets = customerLocalDatabase.getTickets(identifier)
+
+                _selectedCustomerData.value = CustomerData(customer, notes,tickets)
+            }
+        }
+    }
+
+    fun getCustomers() = customerLocalDatabase.getAll()
+
+    private val _selectedTicketData: MutableStateFlow<TicketData> = MutableStateFlow(TicketData())
+    val selectedTicketData = _selectedTicketData.asStateFlow()
+
+    fun updateSelectedTicket(identifier: Uuid) {
+        viewModelScope.launch {
+            ticketLocalDatabase.getById(identifier)?.let { ticket ->
+                val notes = ticketLocalDatabase.getNotes(identifier)
+
+                _selectedTicketData.value = TicketData(ticket, notes)
+            }
+        }
+    }
+
+    fun getTickets() = ticketLocalDatabase.getAll()
+
+    private val _selectedInventoryData: MutableStateFlow<InventoryData> = MutableStateFlow(InventoryData())
+    val selectedInventoryData = _selectedInventoryData.asStateFlow()
+
+    fun updateSelectedInventory(identifier: Uuid) {
+        viewModelScope.launch {
+            inventoryLocalDatabase.getById(identifier)?.let { inventory ->
+                val notes = inventoryLocalDatabase.getNotes(identifier)
+
+                _selectedInventoryData.value = InventoryData(inventory, notes)
+            }
+        }
+    }
+
+    fun getInventory() = inventoryLocalDatabase.getAll()
+
+    private val _selectedUserData: MutableStateFlow<UserData> = MutableStateFlow(UserData())
+    val selectedUserData = _selectedUserData.asStateFlow()
 
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
@@ -70,9 +134,7 @@ class MainViewModel(
     private val _showLogin: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val showLogin = _showLogin.asStateFlow()
 
-    /**
-     * Update whether we should show the login popup or not
-     */
+    /** Update whether we should show the login popup or not*/
     fun updateShowLogin(value: Boolean) {
         _showLogin.value = value
     }

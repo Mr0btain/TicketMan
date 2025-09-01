@@ -8,12 +8,14 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.MainDataItem
+import org.mr0btain.ticketman.data.MainData
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
+import kotlin.uuid.ExperimentalUuidApi
 
+@OptIn(ExperimentalUuidApi::class)
 class CustomerServerDatabaseClientImpl(
     val client: HttpClient,
     private val encryptionHandler: ClientEncryptionHandler
@@ -28,7 +30,7 @@ class CustomerServerDatabaseClientImpl(
         serverUrl = "$url/api/data/customer"
     }
 
-    override suspend fun sync(data: List<MainDataItem>): List<Customer> {
+    override suspend fun sync(data: List<MainData>): List<Customer> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 

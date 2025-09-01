@@ -13,10 +13,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.formatTime
-import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
@@ -36,12 +36,12 @@ fun TicketInfoPane(
     customer: Customer,
     scrollBarsOnRight: Boolean,
     assignedUserName: PersonName,
-    ticket: Ticket,
+    ticketData: TicketData,
     onEditClick: () -> Unit,
     onImageClick: (List<String>) -> Unit,
     ticketUpdates: List<TicketUpdate>
 ) {
-    val date = formatTime(ticket.time)
+    val date = formatTime(ticketData.ticket.time)
 
     // Main Body
     Surface(
@@ -74,7 +74,7 @@ fun TicketInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = "Details for: ${ticket.identifier}",
+                        text = "Details for: ${ticketData.ticket.identifier}",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -138,7 +138,7 @@ fun TicketInfoPane(
                         // Device manufacturer
                         SimpleTextItem(
                             label = "Manufacturer",
-                            text = ticket.device.manufacturer
+                            text = ticketData.ticket.device.manufacturer
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -146,7 +146,7 @@ fun TicketInfoPane(
                         // Device model
                         SimpleTextItem(
                             label = "Model",
-                            text = ticket.device.model
+                            text = ticketData.ticket.device.model
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -154,7 +154,7 @@ fun TicketInfoPane(
                         // Date created
                         SimpleTextItem(
                             label = "Created",
-                            text = if (ticket.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                            text = if (ticketData.ticket.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
                         )
 
                         Spacer(Modifier.padding(4.dp))
@@ -232,7 +232,7 @@ fun TicketInfoPane(
                             Spacer(Modifier.padding(4.dp))
 
                             TableStatusItem(
-                                status = ticket.status,
+                                status = ticketData.ticket.status,
                                 darkMode = isDarkMode
                             )
                         }
@@ -254,7 +254,7 @@ fun TicketInfoPane(
                             Spacer(Modifier.padding(4.dp))
 
                             TablePriorityItem(
-                                priority = ticket.priority,
+                                priority = ticketData.ticket.priority,
                                 darkMode = isDarkMode
                             )
                         }

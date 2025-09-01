@@ -1,10 +1,9 @@
-package org.mr0btain.ticketman.ui.screens.main.components.viewmodel
+package org.mr0btain.ticketman.components.database
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.settings.UserSettings
-import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.network.ServerHandler
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.error.SimpleError
@@ -13,13 +12,22 @@ import org.mr0btain.ticketman.generateMockData
 import org.mr0btain.ticketman.generateRandomInventoryItems
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.components.database.CustomerDatabaseHandlerImpl
+import org.mr0btain.ticketman.components.database.InventoryDatabaseHandlerImpl
+import org.mr0btain.ticketman.components.database.TicketDatabaseHandlerImpl
+import org.mr0btain.ticketman.components.database.UserDatabaseHandlerImpl
 import org.mr0btain.ticketman.util.AppDir
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.image_directory
+import kotlin.uuid.ExperimentalUuidApi
 
 /**
  * Handles and holds handlers for data operations and such
  */
+@OptIn(ExperimentalUuidApi::class)
 class DataHandler(
     appDir: AppDir,
+    private val imageDir: String = Res.string.image_directory.toString(),
     private val scope: CoroutineScope
 ) {
     companion object {
@@ -27,56 +35,46 @@ class DataHandler(
         private const val SYNC_TAG = "$TAG:Sync"
     }
 
-    /**
-     * Handles interactions with the server
-     */
+    /** Handles interactions with the server */
     private val serverHandler = ServerHandler(getHttpEngine(), this)
 
-    /**
-     * Handles interactions with the local database
-     */
+    /** Handles interactions with the local database */
     private val clientDatabase = configureDatabase(appDir)
-    
+
     private var autoSync = true
 
     /** Data Handlers. Mostly just to organise the mess. Maybe not the best way to do it, but it looks much, much better */
     // -----------------------------------------------------------------------------------------------------------------------
 
-    /**
-     * Handles user data operations
-     */
-    val userDataHandler = UserDataHandlerImpl(
+    /** Handles user data operations */
+    val userDataHandler = UserDatabaseHandlerImpl(
         localDatabaseClient = clientDatabase.userDatabase,
-        serverDatabaseClient = serverHandler.databaseClient.userClient
+        serverDatabaseClient = serverHandler.databaseClient.userClient,
+        imageDir = imageDir
     )
 
-    /**
-     * Handles inventory data operations
-     */
-    val inventoryDataHandler = InventoryDataHandlerImpl(
+    /** Handles inventory data operations */
+    val inventoryDataHandler = InventoryDatabaseHandlerImpl(
         localDatabaseClient = clientDatabase.inventoryDatabase,
-        serverDatabaseClient = serverHandler.databaseClient.inventoryClient
+        serverDatabaseClient = serverHandler.databaseClient.inventoryClient,
+        imageDir = imageDir
     )
 
-    /**
-     * Handles ticket data operations
-     */
-    val ticketDataHandler = TicketDataHandlerImpl(
+    /** Handles ticket data operations */
+    val ticketDataHandler = TicketDatabaseHandlerImpl(
         localDatabaseClient = clientDatabase.ticketDatabase,
-        serverDatabaseClient = serverHandler.databaseClient.ticketClient
+        serverDatabaseClient = serverHandler.databaseClient.ticketClient,
+        imageDir = imageDir
     )
 
-    /**
-     * Handles customer data operations
-     */
-    val customerDataHandler = CustomerDataHandlerImpl(
+    /** Handles customer data operations */
+    val customerDataHandler = CustomerDatabaseHandlerImpl(
         localDatabaseClient = clientDatabase.customerDatabase,
-        serverDatabaseClient = serverHandler.databaseClient.customerClient
+        serverDatabaseClient = serverHandler.databaseClient.customerClient,
+        imageDir = imageDir
     )
 
-    /**
-     * Populates each handlers data list with data from the local database
-     */
+    /** Populates each handlers data list with data from the local database*/
     suspend fun populate() {
         coroutineScope {
             customerDataHandler.populateListFromDatabase()
@@ -86,9 +84,7 @@ class DataHandler(
         }
     }
 
-    /**
-     * Syncs data between local and server databases
-     */
+    /** Syncs data between local and server databases */
     suspend fun syncData(): Boolean {
         return coroutineScope {
             try {
@@ -131,23 +127,17 @@ class DataHandler(
         }
     }
 
-    /**
-     * update stored username
-     */
+    /** update stored username */
     suspend fun updateStoredUsername(username: String) {
         coroutineScope { clientDatabase.settingsDatabase.setUsername(username) }
     }
 
-    /**
-     * Update stored password
-     */
+    /** Update stored password */
     suspend fun updateStoredPassword(password: String) {
         coroutineScope { clientDatabase.settingsDatabase.setPassword(password) }
     }
 
-    /**
-     * Update stored access and refresh tokens
-     */
+    /** Update stored access and refresh tokens */
     suspend fun updateStoredAuthTokens(access: String, refresh: String) {
         coroutineScope {
             clientDatabase.settingsDatabase.setAccessToken(access)
@@ -155,33 +145,23 @@ class DataHandler(
         }
     }
 
-    /**
-     * Retrieve stored username
-     */
+    /** Retrieve stored username */
     suspend fun getStoredUsername(): String? =
         coroutineScope { clientDatabase.settingsDatabase.getUsername() }
 
-    /**
-     * Retrieve stored access password
-     */
+    /** Retrieve stored access password */
     suspend fun getStoredPassword(): String? =
         coroutineScope { clientDatabase.settingsDatabase.getPassword() }
 
-    /**
-     * Retrieve stored access token
-     */
+    /** Retrieve stored access token */
     suspend fun getStoredAccessToken(): String? =
         coroutineScope { clientDatabase.settingsDatabase.getAccessToken() }
 
-    /**
-     * Retrieve stored refresh token
-     */
+    /** Retrieve stored refresh token */
     suspend fun getStoredRefreshToken(): String? =
         coroutineScope { clientDatabase.settingsDatabase.getRefreshToken() }
 
-    /**
-     * Refresh stored tokens
-     */
+    /** Refresh stored tokens */
     suspend fun refreshTokens(): AuthResponse? {
         val refresh = getStoredRefreshToken()
 
@@ -196,20 +176,18 @@ class DataHandler(
 
             // If we make it this far then we know that wasn't successful
             if (serverHandler.userClient.login()) {
-                return AuthResponse("", getStoredAccessToken() ?: "", getStoredRefreshToken() ?: "")
+                return AuthResponse(null, getStoredAccessToken(), getStoredRefreshToken())
             }
         } else {
             if (serverHandler.userClient.login()) {
-                return AuthResponse("", getStoredAccessToken() ?: "", getStoredRefreshToken() ?: "")
+                return AuthResponse(null, getStoredAccessToken(), getStoredRefreshToken())
             }
         }
 
         return null
     }
 
-    /**
-     * Pulls saved settings
-     */
+    /** Pulls saved settings */
     suspend fun getSettings(): UserSettings? {
         return coroutineScope {
             val result = clientDatabase.settingsDatabase.getSettings()
@@ -218,39 +196,29 @@ class DataHandler(
                 // Update internal values
                 serverHandler.setUrl(result.serverUrl)
                 autoSync = result.autoSync
-                
+
                 result
             } else null
         }
     }
 
-    /**
-     * Saves settings
-     */
+    /** Saves settings */
     fun saveSettings(userSettings: UserSettings) {
         scope.launch {
             clientDatabase.settingsDatabase.saveSettings(userSettings)
         }
     }
 
-    /**
-     * Update server url
-     */
+    /** Update server url */
     suspend fun updateServerUrl(url: String) = serverHandler.setUrl(url)
 
-    /**
-     * Checks connection with the saved server
-     */
+    /** Checks connection with the saved server */
     suspend fun checkServerConnection(): Boolean = serverHandler.checkServerConnection()
 
-    /**
-     * Checks connection with a specific url
-     */
+    /** Checks connection with a specific url */
     suspend fun checkNewServerConnection(url: String): Boolean = serverHandler.checkNewServerConnection(url)
 
-    /**
-     * Try to log in to server with username and password
-     */
+    /** Try to log in to server with username and password */
     suspend fun loginToServer(user: String, pass: String): Boolean {
         val result = serverHandler.login(user, pass)
 

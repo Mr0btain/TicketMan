@@ -21,8 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.ui.composables.InventorySearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 import kotlin.uuid.ExperimentalUuidApi
@@ -35,19 +35,16 @@ import kotlin.uuid.Uuid
 fun InventoryPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    inventoryList: List<InventoryItem>,
-    selectedInventoryItemId: Uuid,
+    inventoryList: List<Inventory>,
+    selectedInventory: InventoryData,
     scrollBarsOnRight: Boolean,
-    onSelectedInventoryItemChange: (Uuid) -> Unit,
-    onAddInventoryItem: () -> Unit,
-    onEditInventoryItem: (Uuid) -> Unit,
-    onDeleteInventoryItem: (Uuid) -> Unit,
+    onSelectedInventoryChange: (Uuid) -> Unit,
+    onAddInventory: () -> Unit,
+    onEditInventory: () -> Unit,
+    onDeleteInventory: () -> Unit,
     coroutineScope: CoroutineScope,
     inventoryListState: LazyListState
 ) {
-    // Selected inventory item info
-    val selectedInventoryItem = inventoryList.firstOrNull() { it.identifier == selectedInventoryItemId } ?: Ticket()
-
     // For search input
     var searchInput by remember { mutableStateOf("") }
 
@@ -78,7 +75,7 @@ fun InventoryPanel(
                         searchInput = "${it.name}: ${it.identifier}"
 
                         // Call selected item change
-                        onSelectedInventoryItemChange(it.identifier)
+                        onSelectedInventoryChange(it.identifier)
                     }
                 )
 
@@ -93,11 +90,11 @@ fun InventoryPanel(
                     AddOrDeleteButtonRow(
                         onAddClick = {
                             // Trigger new item dialog
-                            onAddInventoryItem()
+                            onAddInventory()
                         },
                         onDeleteClick = {
                             // Trigger delete item dialog/ confirm
-                            onDeleteInventoryItem(selectedInventoryItemId)
+                            onDeleteInventory()
                         }
                     )
 
@@ -114,7 +111,7 @@ fun InventoryPanel(
                 // List of all the inventory items
                 InventoryListPane(
                     isDarkMode = isDarkMode,
-                    selected = selectedInventoryItemId,
+                    selected = selectedInventory.inventory.identifier,
                     items = inventoryList,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onClick = {
@@ -122,7 +119,7 @@ fun InventoryPanel(
                         isSelectedUpdateFromClick = true
 
                         // change selected item
-                        onSelectedInventoryItemChange(it)
+                        onSelectedInventoryChange(it)
                     },
                     state = inventoryListState,
                     coroutineScope = coroutineScope
@@ -131,8 +128,8 @@ fun InventoryPanel(
                 InventoryInfoPane(
                     isDarkMode = isDarkMode,
                     scrollBarsOnRight = scrollBarsOnRight,
-                    inventoryItem = inventoryList.firstOrNull { it.identifier == selectedInventoryItemId } ?: InventoryItem(),
-                    onEditClick = { onEditInventoryItem(selectedInventoryItemId) }
+                    inventoryItem = inventoryList.firstOrNull { it.identifier == selectedInventory } ?: Inventory(),
+                    onEditClick = { onEditInventory() }
                 )
             }
         }
@@ -140,10 +137,10 @@ fun InventoryPanel(
 
     // --------------------------------- Launched effect for selected ticket ---------------------------------------------------
 
-    LaunchedEffect(selectedInventoryItemId) {
+    LaunchedEffect(selectedInventory) {
         if (!isSelectedUpdateFromClick) {
             // Get index of our item
-            val index = inventoryList.indexOf(selectedInventoryItem)
+            val index = inventoryList.indexOf(selectedInventory.inventory)
 
             // Get index of visible items
             val visibleItemIndex = inventoryListState.layoutInfo.visibleItemsInfo.map { it.index }

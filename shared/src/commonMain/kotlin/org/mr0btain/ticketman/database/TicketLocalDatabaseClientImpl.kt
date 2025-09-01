@@ -1,12 +1,21 @@
 package org.mr0btain.ticketman.database
 
+import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
+import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.addLogger
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.image.Image
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.database.tables.image.toImage
+import org.mr0btain.ticketman.database.tables.note.NoteEntity
+import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
+import org.mr0btain.ticketman.database.tables.ticket.TicketNoteTable
+import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
@@ -172,11 +181,94 @@ class TicketLocalDatabaseClientImpl(
         }
     }
 
-    override fun addNote(identifier: Uuid, note: Note, images: List<Image>): Boolean {
-        TODO("Not yet implemented")
+    override fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean {
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                // Insert the note into database and get its entity
+                val noteEntity = insertNote(note, images)
+
+                // Add note to customer notes
+                TicketEntity.findByIdAndUpdate(identifier.toJavaUuid()) { ticketEntity ->
+                    ticketEntity.notes = SizedCollection(ticketEntity.notes + noteEntity)
+                }
+
+                AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
+            }
+
+            return true
+        } catch (ex: Exception) {
+            AppLogger.i(ADD_NOTE_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return false
+    }
+
+    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>> {
+        val result = mutableMapOf<Note, List<StoredImage>>()
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                TicketEntity.findById(identifier.toJavaUuid())?.let { ticketEntity ->
+                    ticketEntity.notes.forEach { noteEntity ->
+                        result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
+                    }
+
+                    AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)
+                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find inventory item!")
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(GET_NOTES_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return result
     }
 
     override fun removeNote(identifier: Uuid): Boolean {
-        TODO("Not yet implemented")
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                // Find the note if it exists
+                val note = NoteEntity.findById(identifier.toJavaUuid()) ?: return@transaction
+
+                // No clue if this actually works or not??
+                TicketTable
+                    .join(
+                        TicketNoteTable, onColumn = TicketTable.id, otherColumn = TicketNoteTable.ticket,
+                        joinType = JoinType.INNER,
+                    )
+                    .select(TicketNoteTable.note eq note.id)
+                    .limit(1)
+                    .map { TicketEntity.wrapRow(it) }
+                    .firstOrNull()
+                    ?.let { ticketEntity ->
+                        ticketEntity.notes = SizedCollection(ticketEntity.notes.filter { it != note })
+                    }
+
+                // Delete linked images
+                note.images.forEach { it.delete() }
+
+                // Delete the note (Exposed will remove NoteImageTable entries automatically)
+                note.delete()
+            }
+
+            AppLogger.m(REMOVE_NOTE_TAG, SimpleError.SUCCESS)
+
+            return true
+        } catch (ex: Exception) {
+            AppLogger.m(REMOVE_NOTE_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return false
     }
 }

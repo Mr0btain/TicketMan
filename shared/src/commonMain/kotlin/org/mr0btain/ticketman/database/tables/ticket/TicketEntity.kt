@@ -20,7 +20,7 @@ class TicketEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var time by TicketTable.time
 
     // For images assigned to note
-    val notes by NoteEntity via TicketNoteTable
+    var notes by NoteEntity via TicketNoteTable
 }
 
 @OptIn(ExperimentalUuidApi::class)
