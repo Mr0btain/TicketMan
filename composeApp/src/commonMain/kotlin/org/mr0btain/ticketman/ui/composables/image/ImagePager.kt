@@ -4,18 +4,16 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.PageSize
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
@@ -25,13 +23,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.exists
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.utils.decodeBase64ToImageBitmap
+import org.mr0btain.ticketman.components.utils.toImageBitmap
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.logging.AppLogger
 import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.arrow_left_circle
-import ticketman.composeapp.generated.resources.arrow_right_circle
 import ticketman.composeapp.generated.resources.chevron_left
 import ticketman.composeapp.generated.resources.chevron_right
 import kotlin.math.absoluteValue
@@ -39,13 +40,29 @@ import kotlin.math.absoluteValue
 @Composable
 fun ImagePager(
     modifier: Modifier = Modifier,
-    imageData: List<ImageBitmap>,
+    imageData: List<StoredImage>,
     onImageClick: () -> Unit,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     imageMaxWidth: Dp,
     imageMaxHeight: Dp
 ) {
     val pagerState = rememberPagerState(pageCount = { imageData.size })
+    val images = remember(imageData) { mutableStateListOf<ImageBitmap>() }
+
+    LaunchedEffect(imageData) {
+        try {
+            imageData.forEach { storedImage ->
+                val file = PlatformFile(storedImage.path)
+
+                if (file.exists()) {
+                    images.add(file.file.readBytes().toImageBitmap())
+                }
+            }
+        } catch (ex: Exception) {
+            AppLogger.i("ImagePager", SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+    }
 
     Row(
         modifier = modifier,
@@ -95,11 +112,11 @@ fun ImagePager(
                     }
             ) {
                 // Actual image
-                if (imageData.size >= page) {
+                if (images.size >= page) {
                     Image(
                         modifier = Modifier
                             .clickable(onClick = { onImageClick() }),
-                        bitmap = imageData[page],
+                        bitmap = images[page],
                         contentDescription = "",
                     )
                 }

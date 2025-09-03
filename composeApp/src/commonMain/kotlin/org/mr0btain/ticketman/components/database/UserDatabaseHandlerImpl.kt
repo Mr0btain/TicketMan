@@ -1,16 +1,15 @@
 package org.mr0btain.ticketman.components.database
 
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import org.mr0btain.ticketman.components.network.database.UserServerDatabaseClientImpl
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.UserLocalDatabaseImpl
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
 class UserDatabaseHandlerImpl(
-    private val localDatabaseClient: UserLocalDatabaseClientImpl,
+    private val localDatabaseClient: UserLocalDatabaseImpl,
     serverDatabaseClient: UserServerDatabaseClientImpl,
     imageDir: String
 ) : DatabaseHandler<User>("UserDataHandler", localDatabaseClient, serverDatabaseClient, imageDir) {
@@ -24,9 +23,5 @@ class UserDatabaseHandlerImpl(
         _current.value = user
     }
 
-    override suspend fun populateListFromDatabase() {
-        coroutineScope {
-            localDatabaseClient.getAll()?.let { items -> setDataList(items) }
-        }
-    }
+
 }

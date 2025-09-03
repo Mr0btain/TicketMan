@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
@@ -34,17 +35,17 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
-    onDismiss: (Inventory?, DialogDismissReason) -> Unit,
-    seedData: Inventory,
+    onDismiss: (InventoryData?, DialogDismissReason) -> Unit,
+    seedData: InventoryData,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
     // seed data
-    var name by remember(seedData) { mutableStateOf(seedData.name) }
-    var description by remember(seedData) { mutableStateOf(seedData.description) }
-    var stock by remember(seedData) { mutableStateOf(if (seedData.stock != Int.MAX_VALUE) seedData.stock.toString() else "0") }
-    val price = rememberTextFieldState(seedData.price.filter { it.isDigit() })
-    val cost = rememberTextFieldState(seedData.cost.filter { it.isDigit() })
+    var name by remember(seedData) { mutableStateOf(seedData.inventory.name) }
+    var description by remember(seedData) { mutableStateOf(seedData.inventory.description) }
+    var stock by remember(seedData) { mutableStateOf(if (seedData.inventory.stock != Int.MAX_VALUE) seedData.inventory.stock.toString() else "0") }
+    val price = rememberTextFieldState(seedData.inventory.price.filter { it.isDigit() })
+    val cost = rememberTextFieldState(seedData.inventory.cost.filter { it.isDigit() })
 
     // Mutable lists
     val notes = mutableStateListOf<Note>() //remember(seedData) { seedData.notes.toMutableStateList() }
@@ -127,7 +128,7 @@ fun InventoryDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = if (seedData.name.isEmpty()) "Add Item: ${seedData.identifier}" else "Edit Item: ${seedData.name}",
+                        text = if (seedData.inventory.name.isEmpty()) "Add Item" else "Edit Item: ${seedData.inventory.name}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp,
                         maxLines = 1
@@ -240,14 +241,16 @@ fun InventoryDialog(
                     onConfirmClick = {
                         // Call dismiss with data
                         onDismiss(
-                            Inventory(
-                                identifier = seedData.identifier,
-                                name = name,
-                                description = description,
-                                stock = stock.toIntOrNull() ?: 0,
-                                price = price.text.toString(),
-                                cost = cost.text.toString(),
-                                time = if (seedData.time != Long.MAX_VALUE) seedData.time else getTime()
+                            InventoryData(
+                                inventory = Inventory(
+                                    identifier = seedData.inventory.identifier,
+                                    name = name,
+                                    description = description,
+                                    stock = stock.toIntOrNull() ?: 0,
+                                    price = price.text.toString(),
+                                    cost = cost.text.toString(),
+                                    time = if (seedData.inventory.time != Long.MAX_VALUE) seedData.inventory.time else getTime()
+                                )
                             ),
                             DialogDismissReason.CONTINUE
                         )

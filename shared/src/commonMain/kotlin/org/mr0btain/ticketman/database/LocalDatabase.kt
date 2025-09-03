@@ -17,7 +17,7 @@ import kotlin.uuid.toJavaUuid
 
 @Suppress("PropertyName")
 @OptIn(ExperimentalUuidApi::class)
-abstract class LocalDatabaseClient<T: MainData>(
+abstract class LocalDatabase<T: MainData>(
     tag: String,
     private val shouldLog: Boolean
 ) {
@@ -27,6 +27,7 @@ abstract class LocalDatabaseClient<T: MainData>(
     protected val REMOVE_TAG = "$tag:Remove"
     protected val ADD_TAG = "$tag:Add"
     protected val UPDATE_TAG = "$tag:Update"
+    protected val INSERT_NOTE_TAG = "$tag:InsertNote"
     protected val ADD_NOTE_TAG = "$tag:AddNote"
     protected val REMOVE_NOTE_TAG = "$tag:RemoveNote"
     protected val ADD_IMAGE_TO_NOTE_TAG = "$tag:AddImageToNote"
@@ -51,27 +52,33 @@ abstract class LocalDatabaseClient<T: MainData>(
     abstract fun update(data: T): Boolean
 
     /** Adds a note to the database */
-    protected fun insertNote(note: Note, images: List<StoredImage>): NoteEntity {
-        return transaction {
-            // Add new note to database
-            val entity = NoteEntity.new(note.identifier.toJavaUuid()) {
-                author = note.author
-                message = note.message
-                time = note.time
-            }
-
-            // Add images and keep a list of them to add to note image table
-            val imageCollection = images.map { image ->
-                ImageEntity.new {
-                    path = image.path
-                    time = image.time
+    protected fun insertNote(note: Note, storedImages: List<StoredImage>): NoteEntity? {
+        return try {
+            transaction {
+                // Add new note to database
+                val entity = NoteEntity.new(note.identifier.toJavaUuid()) {
+                    author = note.author
+                    message = note.message
+                    time = note.time
                 }
+
+                if (storedImages.isNotEmpty()) {
+                    // Add images and keep a list of them to add to note image table
+                    val imageCollection = storedImages.map { image ->
+                        ImageEntity.new {
+                            path = image.path
+                            time = image.time
+                        }
+                    }
+
+                    entity.images = SizedCollection(imageCollection)
+                }
+
+                entity
             }
-
-            // Add images to the note image table
-            entity.images = SizedCollection(imageCollection)
-
-            entity
+        } catch (ex: Exception) {
+            AppLogger.i(INSERT_NOTE_TAG, SimpleError.FAIL)
+            null
         }
     }
 

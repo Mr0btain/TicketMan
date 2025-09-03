@@ -10,8 +10,8 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.database.CustomerLocalDatabaseClientImpl
-import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.CustomerLocalDatabaseImpl
+import org.mr0btain.ticketman.database.UserLocalDatabaseImpl
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
@@ -21,8 +21,8 @@ import kotlin.uuid.Uuid
 // TODO: Add more comments to help understand whats going on
 
 fun Route.customerRoute(
-    database: CustomerLocalDatabaseClientImpl,
-    userDatabase: UserLocalDatabaseClientImpl,
+    database: CustomerLocalDatabaseImpl,
+    userDatabase: UserLocalDatabaseImpl,
     encryptionService: EncryptionService
 ) {
     // Sync between client and server

@@ -19,7 +19,7 @@ class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var price by InventoryTable.price
     var time by InventoryTable.time
 
-    // For notes assigned to customer
+    // For notes
     var notes by NoteEntity via InventoryNoteTable
 }
 

@@ -28,60 +28,33 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * A bunch of half-assed clobbered together functions that spit out random test data. Its beautiful chaos
+ * Generates a random customer for testing
  */
-fun generateMockData(num: Int): Triple<List<Customer>, List<Ticket>, List<User>> {
+fun generateMockCustomer(): Pair<Customer, List<Note>> {
+    val name = generateRandomName()
+
     // Generate some mock customer data
-    val customerData = generateMockCustomerData(num)
-    val users = generateMockUserData(6).toMutableList()
+    val customerData = Customer(
+        identifier = Uuid.random(),
+        name = generateRandomName(),
+        address = generateRandomAddress(),
+        contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
+        time = getFakeTime()
+    )
+    val notes = mutableListOf<Note>()
 
-    var currentTicketId = Random.nextInt(0, 9999)
-
-    // Hold the new data
-    val newCustomerData = mutableListOf<Customer>()
-    val newTicketData = mutableListOf<Ticket>()
-
-    customerData.forEach { item ->
-        val tickets = mutableListOf<Ticket>()
-        val ticketIds = mutableListOf<Uuid>()
-
-        // Generate tickets
-        (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket())
-
-            currentTicketId++
-        }
-
-        // Make a list of ticket ids
-        tickets.forEach { tick ->
-            ticketIds.add(tick.identifier)
-        }
-
-        // Update the customer data
-        //newCustomerData.add(item.copy(tickets = ticketIds))
-
-        // Add the tickets to the result
-        newTicketData.addAll(tickets)
+    // Generate notes
+    (0..Random.nextInt(0, 4)).forEach { _ ->
+        notes.add(generateCustomerNote())
     }
 
-    newTicketData.forEachIndexed { index, ticket ->
-        // Get random employee
-        val userId = Random.nextInt(0, 6)
-        val user = users[userId]
-
-        // add ticket to employee
-        //users[userId] = user.copy(tickets = user.tickets + ticket.identifier)
-    }
-
-    println("Generated Customer list: ${customerData.count()}")
-    println("Generated ticket list: ${newTicketData.count()}")
-    println("Generated user list: ${users.count()}")
-
-
-    return Triple(newCustomerData, newTicketData, users)
+    return Pair(customerData, notes)
 }
 
-fun generateRandomInventoryItems(count: Int): List<Inventory> {
+/**
+ * Generates a random inventory for testing
+ */
+fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
     val itemNames = listOf(
         "iPhone 11 Screen", "Galaxy S10 Screen", "Charging Port", "Battery Pack", "IC Chip A12",
         "Logic Board Connector", "Touch Controller", "Screen Adhesive", "Camera Module", "Speaker Assembly",
@@ -97,126 +70,60 @@ fun generateRandomInventoryItems(count: Int): List<Inventory> {
 
     val formatter = DecimalFormat("#.00")
     val now = getFakeTime()
+    val costVal = Random.nextDouble(0.5, 50.0)
+    val priceVal = costVal * Random.nextDouble(1.2, 2.5)
+    val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
+    val notes = mutableListOf<Note>()
 
-    return List(count) {
-        val name = itemNames.random()
-        val description = descriptions.random()
-        val stock = Random.nextInt(1, 500)
-        val costVal = Random.nextDouble(0.5, 50.0)
-        val priceVal = costVal * Random.nextDouble(1.2, 2.5)
-        val identifier = Uuid.random()
-        val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
+    // Generate notes
+    (0..Random.nextInt(0, 12)).forEach { _ ->
+        notes.add(generateCustomerNote())
+    }
 
+    return Pair(
         Inventory(
-            identifier = identifier,
-            name = name,
-            description = description,
-            stock = stock,
+            identifier = Uuid.random(),
+            name = itemNames.random(),
+            description = descriptions.random(),
+            stock = Random.nextInt(1, 500),
             cost = "$${formatter.format(costVal)}",
             price = "$${formatter.format(priceVal)}",
-            //notes = generateRandomInventoryNotes(Random.nextInt(0, 4)),
             time = now - timeOffset
-        )
-    }
+        ),
+        notes
+    )
 }
 
-fun generateMockCustomerData(num: Int): List<Customer> {
-    val data = mutableListOf<Customer>()
-    val ids = mutableListOf<Uuid>()
+/**
+ * Generates a random user for testing
+ */
+fun generateMockUser(): Pair<User, List<Note>> {
+    val accessLevel = AccessLevel.entries.random()
+    val name = generateRandomName()
+    val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
 
-    (0..num).forEach { i ->
-        var id = Uuid.random()
+    // Random ContactInfo (emails and phone numbers)
+    val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
+    val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
+    val contactInfo = ContactInfo(email, phone)
 
-        ids.add(id)
-
-        val name = generateRandomName()
-        val notes = mutableListOf<Note>()
-
-        // Generate notes
-        (0..Random.nextInt(0, 4)).forEach { _ ->
-            notes.add(generateCustomerNote())
-        }
-
-        data.add(
-            Customer(
-                identifier = id,
-                name = name,
-                address = generateRandomAddress(),
-                contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
-                time = getFakeTime(),
-                //notes = notes
-            )
-        )
-    }
-
-    return data
+    return Pair(
+        User(
+            identifier = Uuid.random(),
+            username = "${name.firstName}_${name.lastName}",
+            password = name.lastName,
+            name = name,
+            contactInfo = contactInfo,
+            accessLevel = accessLevel,
+            time = getFakeTime()
+        ),
+        notes
+    )
 }
 
-// Function to generate random employee data
-fun generateMockUserData(num: Int): List<User> {
-    val users = mutableListOf<User>()
-
-    for (i in 0..num) {
-        // Random AccessLevel
-        val accessLevel = AccessLevel.entries.random()
-
-        val name = generateRandomName()
-
-        // Random Notes
-        val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
-
-        // Random ContactInfo (emails and phone numbers)
-        val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
-        val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
-        val contactInfo = ContactInfo(email, phone)
-
-        // Create and return User object
-        users.add(
-            User(
-                identifier = Uuid.random(),
-                username = "${name.firstName}_${name.lastName}",
-                password = name.lastName,
-                name = name,
-                contactInfo = contactInfo,
-                accessLevel = accessLevel,
-                time = getFakeTime()
-            )
-        )
-    }
-
-    if (!users.map { it.accessLevel }.contains(AccessLevel.ADMIN)) {
-        // Random AccessLevel
-        val accessLevel = AccessLevel.ADMIN
-
-        // Random identifier
-        val identifier = Random.nextInt(0, 9999)
-
-        val name = generateRandomName()
-
-        // Random Notes
-        val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
-
-        // Random ContactInfo (emails and phone numbers)
-        val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
-        val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
-        val contactInfo = ContactInfo(email, phone)
-
-        users.add(
-            User(
-                identifier = Uuid.random(),
-                username = "${name.firstName}_${name.lastName}",
-                password = name.lastName,
-                name = name,
-                contactInfo = contactInfo,
-                accessLevel = accessLevel,
-                time = getFakeTime()
-            )
-        )
-    }
-
-    return users
-}
-
+/**
+ * Generates a fake time for testing
+ */
 private fun getFakeTime(): Long {
     return parseDateToLong(
         Time(
@@ -231,6 +138,9 @@ private fun getFakeTime(): Long {
     )
 }
 
+/**
+ * Generates a random address for testing
+ */
 private fun generateRandomAddress(): Address {
     val streets = listOf(
         "Main", "Oak Ave", "Maple", "Pine", "Elm", "Cedar", "Willow", "Dad", "Mom", "Peach", "Apple",
@@ -260,6 +170,9 @@ private fun generateRandomAddress(): Address {
     )
 }
 
+/**
+ * Generates a random name for testing
+ */
 private fun generateRandomName(): PersonName {
     val firstNames = listOf(
         "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
@@ -284,8 +197,11 @@ private fun generateRandomName(): PersonName {
     return PersonName(firstNames.random(), lastNames.random())
 }
 
+/**
+ * Generates a random ticket for testing
+ */
 @OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(): Ticket {
+fun generateRandomTicket(): Pair<Ticket, List<Note>> {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),
@@ -321,32 +237,32 @@ fun generateRandomTicket(): Ticket {
     val model = manufacturersAndModels[manufacturer]!!.random()
 
     // Generate random notes
-    val updates = mutableListOf<TicketUpdate>()
+    val notes = mutableListOf<Note>()
 
     for (i in 0..Random.nextInt(1, 4)) {
         val author = "${firstNames.random()} ${lastNames.random()}"
         val message = noteMessages.random()
 
-        /*
-        updates.add(
-            TicketUpdate(
-                identifier = i,
-                note = Note(author, message, getTime()),
-                listOf()
-            )
+        notes.add(
+            Note(Uuid.random(), author, message)
         )
-         */
     }
 
-    return Ticket(
-        identifier = Uuid.random(),
-        device = Device(manufacturer, model),
-        status = randomTicketStatus(),
-        priority = randomTicketPriority(),
-        time = getFakeTime()
+    return Pair(
+        Ticket(
+            identifier = Uuid.random(),
+            device = Device(manufacturer, model),
+            status = randomTicketStatus(),
+            priority = randomTicketPriority(),
+            time = getFakeTime()
+        ),
+        notes
     )
 }
 
+/**
+ * Generates a random customer note for testing
+ */
 private fun generateCustomerNote(): Note {
     val firstNames = listOf("James", "Emily", "Michael", "Sarah", "David", "Laura", "Chris", "Amanda", "Daniel", "Jessica")
     val lastNames = listOf("Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis")
@@ -373,7 +289,9 @@ private fun generateCustomerNote(): Note {
     return Note(Uuid.random(), author, message, getTime())
 }
 
-// Function to generate a random employee note
+/**
+ * Generates a random employee note for testing
+ */
 fun generateEmployeeNote(): Note {
     // List of potential authors for the note
     val authors = listOf("Manager", "HR", "Supervisor", "Team Lead", "Peer", "Self")
@@ -397,6 +315,9 @@ fun generateEmployeeNote(): Note {
     return Note(Uuid.random(), authors.random(), noteTopics.random(), getTime())
 }
 
+/**
+ * Generates random inventory notes for testing
+ */
 fun generateRandomInventoryNotes(count: Int): List<Note> {
     val authors = listOf("Alice", "Bob", "Charlie", "Dana", "Eli", "Frank")
     val components = listOf("resistor", "capacitor", "transistor", "diode", "IC", "inductor")
@@ -415,6 +336,9 @@ fun generateRandomInventoryNotes(count: Int): List<Note> {
     }
 }
 
+/**
+ * Generates a random contact info for testing
+ */
 private fun generateRandomContactInfo(firstName: String? = null, lastName: String? = null): ContactInfo {
     val domains = listOf("gmail.com", "yahoo.com", "outlook.com", "icloud.com", "protonmail.com")
 
@@ -435,6 +359,9 @@ private fun generateRandomContactInfo(firstName: String? = null, lastName: Strin
     return ContactInfo(listOf(email), phone)
 }
 
+/**
+ * Generates a random phone number for testing
+ */
 private fun generateRandomPhoneNumber(): String {
     // Random US-style phone number (XXX-XXX-XXXX)
     return buildString {
@@ -446,9 +373,9 @@ private fun generateRandomPhoneNumber(): String {
     }
 }
 
-@OptIn(ExperimentalUuidApi::class)
-private fun randomIdentifier(): String = Uuid.random().toString()
-
+/**
+ * Generates a random file for testing
+ */
 fun generateRandomFile(path: String, sizeInBytes: Long) {
     val bufferSize = 1024 * 1024 // 1 MB buffer
     val buffer = ByteArray(bufferSize)

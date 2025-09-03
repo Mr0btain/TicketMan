@@ -14,6 +14,5 @@ object UserTable : UUIDTable("user") {
     val name = json<PersonName>("name", Json { ignoreUnknownKeys = true })
     val contactInfo = json<ContactInfo>("contact", Json { ignoreUnknownKeys = true })
     val access = json<AccessLevel>("access", Json { ignoreUnknownKeys = true })
-    val notes = json<List<Note>>("notes", Json { ignoreUnknownKeys = true })
     val time = long("time")
 }

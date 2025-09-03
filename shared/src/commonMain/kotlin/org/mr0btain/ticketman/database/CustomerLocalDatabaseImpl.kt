@@ -7,15 +7,18 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
+import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
+import org.mr0btain.ticketman.database.tables.customer.CustomerTable
+import org.mr0btain.ticketman.database.tables.customer.toCustomer
 import org.mr0btain.ticketman.database.tables.image.toImage
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
-import org.mr0btain.ticketman.database.tables.ticket.TicketNoteTable
-import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
@@ -24,15 +27,19 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 @OptIn(ExperimentalUuidApi::class)
-class TicketLocalDatabaseClientImpl(
-    private val shouldLog: Boolean = true
-) : LocalDatabaseClient<Ticket>(
-    tag = "TicketLocalDatabaseClient",
+class CustomerLocalDatabaseImpl(
+    tag: String = "CustomerLocalDatabase",
+    private val shouldLog: Boolean = false
+) : LocalDatabase<Customer>(
+    tag = tag,
     shouldLog = shouldLog
 ) {
+    private val GET_TICKETS_TAG = "$tag:GetTickets"
+    private val ADD_TICKET_TAG = "$tag:AddTicket"
+
     /** Gets all items from database */
-    override fun getAll(): List<Ticket>? {
-        var result = listOf<Ticket>()
+    override fun getAll(): List<Customer>? {
+        var result = listOf<Customer>()
 
         try {
             // Go into database and convert data to customer data item
@@ -40,7 +47,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketEntity.all().map { item -> item.toTicket() }
+                result = CustomerEntity.all().map { item -> item.toCustomer()}
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -54,15 +61,15 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: Uuid): Ticket? {
-        var result: Ticket? = null
+    override fun getById(identifier: Uuid): Customer? {
+        var result: Customer? = null
 
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketEntity.findById(identifier.toJavaUuid())?.toTicket()
+                result = CustomerEntity.findById(identifier.toJavaUuid())?.toCustomer()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -76,7 +83,7 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<Ticket>): Boolean {
+    override fun addAll(data: List<Customer>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -87,10 +94,10 @@ class TicketLocalDatabaseClientImpl(
                     val identifier = item.identifier.toJavaUuid()
 
                     // Insert into database
-                    TicketEntity.new(identifier) {
-                        device = item.device
-                        status = item.status
-                        priority = item.priority
+                    CustomerEntity.new(identifier) {
+                        name = item.name
+                        address = item.address
+                        contactInfo = item.contactInfo
                         time = item.time
                     }
                 }
@@ -113,7 +120,7 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketEntity.findById(identifier.toJavaUuid())?.delete()
+                CustomerEntity.findById(identifier.toJavaUuid())?.delete()
 
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
@@ -127,7 +134,7 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: Ticket): Boolean {
+    override fun add(data: Customer): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -137,10 +144,10 @@ class TicketLocalDatabaseClientImpl(
                 val identifier = data.identifier.toJavaUuid()
 
                 // Insert into database
-                TicketEntity.new(identifier) {
-                    device = data.device
-                    status = data.status
-                    priority = data.priority
+                CustomerEntity.new(identifier) {
+                    name = data.name
+                    address = data.address
+                    contactInfo = data.contactInfo
                     time = data.time
                 }
 
@@ -156,18 +163,19 @@ class TicketLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: Ticket): Boolean {
+    override fun update(data: Customer): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketEntity
-                    .findByIdAndUpdate(data.identifier.toJavaUuid()) { item ->
-                        item.device = data.device
-                        item.status = data.status
-                        item.priority = data.priority
-                        item.time = data.time
+                CustomerEntity
+                    .findById(data.identifier.toJavaUuid())
+                    ?.apply {
+                        name = data.name
+                        address = data.address
+                        contactInfo = data.contactInfo
+                        time = data.time
                     }
 
                 AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
@@ -181,6 +189,55 @@ class TicketLocalDatabaseClientImpl(
         }
     }
 
+    /** Adds a ticket to a customer, assuming that ticket and customer already exist in the database */
+    fun addTicket(customerId: Uuid, ticketId: Uuid) {
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                // Get ticket entity
+                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
+                    // Get customer entity
+                    CustomerEntity.findById(customerId.toJavaUuid())?.let { customerEntity ->
+                        // Insert ticket into customer links
+                        customerEntity.tickets = SizedCollection(customerEntity.tickets + ticketEntity)
+                    }
+                }
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(ADD_TICKET_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+    }
+
+    /** Gets all tickets for a customer */
+    fun getTickets(identifier: Uuid): List<Ticket> {
+        val tickets = mutableListOf<Ticket>()
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                    tickets.addAll(
+                        customerEntity.tickets
+                            .map { ticketEntity -> ticketEntity.toTicket() }
+                    )
+
+                    AppLogger.m(GET_TICKETS_TAG, SimpleError.SUCCESS)
+                } ?: AppLogger.i(GET_TICKETS_TAG, "Could not find customer!")
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(GET_TICKETS_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return tickets
+    }
+
+    /** Adds a note to an item and linking it to that item */
     override fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean {
         try {
             transaction {
@@ -188,14 +245,14 @@ class TicketLocalDatabaseClientImpl(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 // Insert the note into database and get its entity
-                val noteEntity = insertNote(note, images)
+                insertNote(note, images)?.let { noteEntity ->
+                    // Add note to customer notes
+                    CustomerEntity.findByIdAndUpdate(identifier.toJavaUuid()) { customerEntity ->
+                        customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
 
-                // Add note to customer notes
-                TicketEntity.findByIdAndUpdate(identifier.toJavaUuid()) { ticketEntity ->
-                    ticketEntity.notes = SizedCollection(ticketEntity.notes + noteEntity)
-                }
-
-                AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
+                        AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
+                    } ?: AppLogger.i(ADD_NOTE_TAG, "Customer not found! $identifier")
+                } ?: AppLogger.i(ADD_NOTE_TAG, "Note entity was null!")
             }
 
             return true
@@ -215,13 +272,13 @@ class TicketLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketEntity.findById(identifier.toJavaUuid())?.let { ticketEntity ->
-                    ticketEntity.notes.forEach { noteEntity ->
+                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                    customerEntity.notes.forEach { noteEntity ->
                         result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
                     }
 
                     AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)
-                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find inventory item!")
+                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find customer!")
             }
         } catch (ex: Exception) {
             AppLogger.i(GET_NOTES_TAG, SimpleError.FAIL)
@@ -231,6 +288,7 @@ class TicketLocalDatabaseClientImpl(
         return result
     }
 
+    /** Removes a note and its images from the database */
     override fun removeNote(identifier: Uuid): Boolean {
         try {
             transaction {
@@ -241,17 +299,17 @@ class TicketLocalDatabaseClientImpl(
                 val note = NoteEntity.findById(identifier.toJavaUuid()) ?: return@transaction
 
                 // No clue if this actually works or not??
-                TicketTable
+                CustomerTable
                     .join(
-                        TicketNoteTable, onColumn = TicketTable.id, otherColumn = TicketNoteTable.ticket,
+                        CustomerNoteTable, onColumn = CustomerTable.id, otherColumn = CustomerNoteTable.customer,
                         joinType = JoinType.INNER,
                     )
-                    .select(TicketNoteTable.note eq note.id)
+                    .select(CustomerNoteTable.note eq note.id)
                     .limit(1)
-                    .map { TicketEntity.wrapRow(it) }
+                    .map { CustomerEntity.wrapRow(it) }
                     .firstOrNull()
-                    ?.let { ticketEntity ->
-                        ticketEntity.notes = SizedCollection(ticketEntity.notes.filter { it != note })
+                    ?.let { customerEntity ->
+                        customerEntity.notes = SizedCollection(customerEntity.notes.filter { it != note })
                     }
 
                 // Delete linked images

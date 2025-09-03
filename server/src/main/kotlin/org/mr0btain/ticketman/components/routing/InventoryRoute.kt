@@ -10,7 +10,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.database.InventoryLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.InventoryLocalDatabaseImpl
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
@@ -18,7 +18,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(
-    database: InventoryLocalDatabaseClientImpl,
+    database: InventoryLocalDatabaseImpl,
     encryptionService: EncryptionService
 ) {
     // Sync between client and server

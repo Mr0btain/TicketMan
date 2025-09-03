@@ -19,7 +19,7 @@ class TicketEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var priority by TicketTable.priority
     var time by TicketTable.time
 
-    // For images assigned to note
+    // For notes
     var notes by NoteEntity via TicketNoteTable
 }
 

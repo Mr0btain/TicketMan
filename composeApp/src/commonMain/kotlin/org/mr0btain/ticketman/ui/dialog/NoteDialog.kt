@@ -27,7 +27,9 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.getTime
+import kotlin.uuid.ExperimentalUuidApi
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun NoteDialog(
     modifier: Modifier = Modifier,
@@ -112,7 +114,7 @@ fun NoteDialog(
                                 .joinToString(" ") { name -> name.lowercase().replaceFirstChar { it.uppercase() } }
 
                             // Call onConfirm
-                            onConfirm(Note(authorName, text.replaceFirstChar { it.uppercase() }, time))
+                            onConfirm(Note(seedData.identifier, authorName, text.replaceFirstChar { it.uppercase() }, time))
 
                             // Dismiss
                             onDismissRequest()

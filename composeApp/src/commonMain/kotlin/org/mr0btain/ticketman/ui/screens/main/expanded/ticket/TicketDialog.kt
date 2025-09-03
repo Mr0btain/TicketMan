@@ -41,21 +41,19 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
-    customerData: List<Customer>,
-    users: List<User>,
     onAddNewCustomer: (PersonName) -> Unit,
     onDismiss: (Ticket?, DialogDismissReason) -> Unit,
     seedData: TicketData,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
-    val userIds = remember(users) { users.map { it.identifier } }
+    //val userIds = remember(users) { users.map { it.identifier } }
 
     // seed data
-    var customerId by remember(seedData) { mutableStateOf(seedData.customerId) }
+    //var customerId by remember(seedData) { mutableStateOf(seedData.customerId) }
 
     // Assigned employee
-    var assignedUser by remember(seedData) { mutableStateOf(seedData.assignedUser) }
+    //var assignedUser by remember(seedData) { mutableStateOf(seedData.assignedUser) }
 
     // Device
     var deviceManufacturer by remember(seedData) { mutableStateOf(seedData.ticket.device.manufacturer) }
@@ -78,10 +76,10 @@ fun TicketDialog(
     var noteSeed by remember { mutableStateOf(Note()) }
 
     // For customer search bar
-    var customerSearchBarInput by remember { mutableStateOf(seedData.customerId.toString()) }
+    var customerSearchBarInput by remember { mutableStateOf("") }
 
     // For employee search bar
-    var userSearchBarInput by remember { mutableStateOf(if (userIds.contains(seedData.assignedUser)) seedData.assignedUser.toString() else "")  }
+    var userSearchBarInput by remember { mutableStateOf("")  }
 
     // Edit or add update dialog
     if (showEditUpdateDialog) {
@@ -105,7 +103,7 @@ fun TicketDialog(
     if (showConfirmDeleteScreen) {
         ConfirmDeleteDialog(
             itemName = when (itemForDelete) {
-                SubItemType.UPDATE -> notes[itemUpForDeleteIndex].author + "'s Update"
+                SubItemType.UPDATE -> notes[itemUpForDeleteIndex].note.author + "'s Update"
                 else -> ""
             },
             isDarkMode = isDarkMode,
@@ -188,6 +186,7 @@ fun TicketDialog(
 
                     Spacer(Modifier.padding(4.dp))
 
+                    /*
                     CustomerSearch(
                         items = customerData,
                         input = customerSearchBarInput,
@@ -197,9 +196,10 @@ fun TicketDialog(
                             customerSearchBarInput = item.toString()
 
                             // Set customer id
-                            customerId = item
+                            //customerId = item
                         }
                     )
+                     */
 
                     Spacer(Modifier.padding(8.dp))
 
@@ -212,6 +212,7 @@ fun TicketDialog(
 
                     Spacer(Modifier.padding(4.dp))
 
+                    /*
                     UserSearch(
                         items = users,
                         input = userSearchBarInput,
@@ -221,9 +222,10 @@ fun TicketDialog(
                             userSearchBarInput = item.toString()
 
                             // Set user id
-                            assignedUser = item
+                            //assignedUser = item
                         }
                     )
+                     */
 
                     Spacer(Modifier.padding(8.dp))
 

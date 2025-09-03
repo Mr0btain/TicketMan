@@ -7,7 +7,7 @@ import org.jetbrains.exposed.v1.jdbc.Database
  */
 abstract class LocalDatabaseHandler(
     appDir: String,
-    shouldLog: Boolean = true
+    shouldLog: Boolean = false
 ) {
     companion object {
         const val TAG = "DatabaseHandler"
@@ -20,8 +20,8 @@ abstract class LocalDatabaseHandler(
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")
     //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
 
-    val customerDatabase = CustomerLocalDatabaseClientImpl(shouldLog)
-    val ticketDatabase = TicketLocalDatabaseClientImpl(shouldLog)
-    val inventoryDatabase = InventoryLocalDatabaseClientImpl(shouldLog)
-    val userDatabase = UserLocalDatabaseClientImpl(shouldLog)
+    val customerDatabase = CustomerLocalDatabaseImpl(shouldLog = shouldLog)
+    val ticketDatabase = TicketLocalDatabaseImpl(shouldLog = shouldLog)
+    val inventoryDatabase = InventoryLocalDatabaseImpl(shouldLog = shouldLog)
+    val userDatabase = UserLocalDatabaseImpl(shouldLog = shouldLog)
 }

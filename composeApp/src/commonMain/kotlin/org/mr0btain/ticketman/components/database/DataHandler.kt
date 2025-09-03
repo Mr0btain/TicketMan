@@ -8,14 +8,10 @@ import org.mr0btain.ticketman.components.network.ServerHandler
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.error.onSuccess
-import org.mr0btain.ticketman.generateMockData
-import org.mr0btain.ticketman.generateRandomInventoryItems
+import org.mr0btain.ticketman.generateMockCustomer
+import org.mr0btain.ticketman.generateRandomInventoryItem
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.AuthResponse
-import org.mr0btain.ticketman.components.database.CustomerDatabaseHandlerImpl
-import org.mr0btain.ticketman.components.database.InventoryDatabaseHandlerImpl
-import org.mr0btain.ticketman.components.database.TicketDatabaseHandlerImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseHandlerImpl
 import org.mr0btain.ticketman.util.AppDir
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.image_directory
@@ -39,7 +35,7 @@ class DataHandler(
     private val serverHandler = ServerHandler(getHttpEngine(), this)
 
     /** Handles interactions with the local database */
-    private val clientDatabase = configureDatabase(appDir)
+    private val clientDatabase = ClientDatabase("")//configureDatabase(appDir)
 
     private var autoSync = true
 
@@ -76,12 +72,14 @@ class DataHandler(
 
     /** Populates each handlers data list with data from the local database*/
     suspend fun populate() {
+        /*
         coroutineScope {
             customerDataHandler.populateListFromDatabase()
             ticketDataHandler.populateListFromDatabase()
             inventoryDataHandler.populateListFromDatabase()
             userDataHandler.populateListFromDatabase()
         }
+         */
     }
 
     /** Syncs data between local and server databases */
@@ -254,16 +252,6 @@ class DataHandler(
 
     // TESTING
     // ----------------------------------------------------------------------------------------------------------------------------
-
-    fun generateMockDbData() {
-        scope.launch {
-            val (customerData, ticketData, userData) = generateMockData(400)
-            customerDataHandler.addAll(customerData)
-            ticketDataHandler.addAll(ticketData)
-            userDataHandler.addAll(userData)
-            inventoryDataHandler.addAll(generateRandomInventoryItems(120))
-        }
-    }
 
     fun testPdf() {
         /*

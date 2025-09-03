@@ -22,12 +22,15 @@ import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.KeyResponse
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Main Client for user services with the server
  */
 // TODO: Setup getting user info from server and setting current user after we get data
 // TODO: Find new way of using identifier, maybe generate a random uuid each time and use that for the duration of the program?
+@OptIn(ExperimentalUuidApi::class)
 class ServerUserClient(
     private val userHttpClient: HttpClient,
     private val serverHandler: ServerHandler,
@@ -110,8 +113,8 @@ class ServerUserClient(
                     encryptionHandler.decryptData(message)?.let { decrypted ->
                         val authResponse = Json.decodeFromString<AuthResponse>(decrypted)
 
-                        serverHandler.updateAuthTokens(authResponse.accessToken, authResponse.refreshToken)
-                        serverHandler.setUser(User(authResponse.id))
+                        //serverHandler.updateAuthTokens(authResponse.accessToken, authResponse.refreshToken)
+                        //serverHandler.setUser(User(authResponse.id))
 
                         return true
                     }
@@ -199,7 +202,7 @@ class ServerUserClient(
                     serverHandler.updateAuthTokens(accessToken.token, token)
 
                     // We don't use UUID here so just slap whatever. Maybe make another data class for this??
-                    return Result.Success(AuthResponse("", accessToken.token, token))
+                    return Result.Success(AuthResponse(Uuid.random(), accessToken.token, token))
                 }
         }
 
@@ -215,7 +218,7 @@ class ServerUserClient(
                 userHttpClient.get("${serverUrl}/")
             }
 
-            if (response != null && response.status == HttpStatusCode.Companion.OK) {
+            if (response != null && response.status == HttpStatusCode.OK) {
                 checkCryptoKeysWithServer()
                 true
             } else false
@@ -231,7 +234,7 @@ class ServerUserClient(
                 userHttpClient.get("$url/")
             }
 
-            if (response != null && response.status == HttpStatusCode.Companion.OK) {
+            if (response != null && response.status == HttpStatusCode.OK) {
                 true
             } else false
         } else false

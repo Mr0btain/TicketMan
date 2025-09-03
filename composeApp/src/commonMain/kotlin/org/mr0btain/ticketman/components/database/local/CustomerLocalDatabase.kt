@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.database.local
 
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.database.CustomerLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.CustomerLocalDatabaseImpl
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -12,7 +12,11 @@ import kotlin.uuid.Uuid
 @OptIn(ExperimentalUuidApi::class)
 class CustomerLocalDatabase(
     shouldLog: Boolean = false,
-    private val localDatabase: CustomerLocalDatabaseClientImpl = CustomerLocalDatabaseClientImpl(shouldLog)
-): ClientLocalDatabase<Customer>(localDatabase) {
-    fun getTickets(identifier: Uuid) = localDatabase.getTickets(identifier)
+    private val localDatabaseImpl: CustomerLocalDatabaseImpl = CustomerLocalDatabaseImpl(shouldLog = shouldLog)
+): ClientLocalDatabase<Customer>(localDatabaseImpl) {
+    /** Adds a ticket to a customer, assuming that ticket and customer already exist in the database */
+    fun addTicket(customerId: Uuid, ticketId: Uuid) = localDatabaseImpl.addTicket(customerId, ticketId)
+
+    /** Gets all tickets for a customer */
+    fun getTickets(identifier: Uuid) = localDatabaseImpl.getTickets(identifier)
 }

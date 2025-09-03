@@ -4,8 +4,10 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.shared.toStringName
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
+import org.mr0btain.ticketman.logging.AppLogger
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.toKotlinUuid
@@ -18,10 +20,10 @@ class CustomerEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var contactInfo by CustomerTable.contactInfo
     var time by CustomerTable.time
 
-    // For notes assigned to customer
+    // For notes
     var notes by NoteEntity via CustomerNoteTable
 
-    // For tickets assigned to customer
+    // For tickets
     var tickets by TicketEntity via CustomerTicketTable
 }
 

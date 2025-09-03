@@ -9,6 +9,8 @@ import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.database.tables.image.ImageTable
 import org.mr0btain.ticketman.database.tables.inventory.InventoryNoteTable
 import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
+import org.mr0btain.ticketman.database.tables.note.NoteImageTable
+import org.mr0btain.ticketman.database.tables.note.NoteTable
 import org.mr0btain.ticketman.database.tables.ticket.TicketNoteTable
 import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.user.UserNoteTable
@@ -33,7 +35,7 @@ class ServerDatabase(
         transaction {
             val databaseList = SchemaUtils.listDatabases()
 
-            if (databaseList.isEmpty() || databaseList.size != 12) {
+            if (databaseList.isEmpty() || databaseList.size != 14) {
                 SchemaUtils.create(
                     CustomerTable,
                     CustomerNoteTable,
@@ -45,6 +47,8 @@ class ServerDatabase(
                     UserTable,
                     UserNoteTable,
                     UserTicketTable,
+                    NoteTable,
+                    NoteImageTable,
                     ImageTable,
                     TokenTable
                 )

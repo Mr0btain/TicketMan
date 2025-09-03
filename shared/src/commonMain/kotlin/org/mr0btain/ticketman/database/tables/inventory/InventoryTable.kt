@@ -11,6 +11,5 @@ object InventoryTable : UUIDTable("inventory") {
     val stock = integer("stock")
     val cost = varchar("cost", 100)
     val price = varchar("price", 100)
-    val notes = json<List<Note>>("notes", Json { ignoreUnknownKeys = true })
     val time = long("time")
 }

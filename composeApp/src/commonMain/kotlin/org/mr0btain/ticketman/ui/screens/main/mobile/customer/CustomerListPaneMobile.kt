@@ -32,6 +32,8 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerListPaneMobile(
@@ -44,6 +46,7 @@ fun CustomerListPaneMobile(
     scrollBarsOnRight: Boolean,
     isDarkMode: Boolean
 ) {
+    /*
     // Column widths
     val nameColumnWidth = 200.dp
     val addressColumnWidth = 200.dp
@@ -120,6 +123,7 @@ fun CustomerListPaneMobile(
             }
         }
     }
+     */
 }
 
 @Composable
@@ -149,10 +153,11 @@ private fun CustomerHeaderBox(
 // TODO: Make onclick go to customer details screen when its done. or a popup?
 // TODO: Make icon reflect if there is a ticket not completed?
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (String) -> Unit,
+    onClick: (Uuid) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,

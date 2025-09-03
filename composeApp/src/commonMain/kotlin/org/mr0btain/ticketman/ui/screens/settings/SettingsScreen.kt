@@ -76,6 +76,7 @@ fun SettingsScreen(
                     value = serverUrl.value,
                     onConfirmChange = { url ->
                         scope.launch {
+                            /*
                             try {
                                 if ( viewModel.dataHandler.checkNewServerConnection(url)) {
                                     viewModel.updateServerUrl(url)
@@ -88,6 +89,7 @@ fun SettingsScreen(
                                 AppLogger.i(CHECK_URL_TAG, SimpleError.FAIL)
                                 isUrlError = true
                             }
+                             */
                         }
                     },
                     inputFilter = { text -> text },

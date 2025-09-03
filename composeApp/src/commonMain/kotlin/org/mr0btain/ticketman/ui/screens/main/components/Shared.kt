@@ -633,8 +633,8 @@ fun NewNotesBlock(
             Spacer(Modifier.padding(2.dp))
         }
 
-        noteData.sortedByDescending { it.note?.time }.forEach { data ->
-            data.note?.let { note ->
+        noteData.sortedByDescending { it.note.time }.forEach { data ->
+            data.note.let { note ->
                 Column {
                     Row(
                         horizontalArrangement = Arrangement.SpaceBetween,

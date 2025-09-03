@@ -21,11 +21,11 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var access by UserTable.access
     var time by UserTable.time
 
-    // For notes assigned to customer
+    // For notes
     var notes by NoteEntity via UserNoteTable
 
-    // For tickets assigned to customer
-    val tickets by TicketEntity via UserTicketTable
+    // For tickets
+    var tickets by TicketEntity via UserTicketTable
 }
 
 @OptIn(ExperimentalUuidApi::class)

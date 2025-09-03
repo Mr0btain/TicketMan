@@ -12,8 +12,10 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
 import kotlin.uuid.ExperimentalUuidApi
@@ -184,8 +186,8 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customer = selectedTicket.customer,
-                    assignedUserName = selectedTicket.assignedUser.name, //(users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser } ?: User()).name,
+                    customer = Customer(), //selectedTicket.customer,
+                    assignedUserName = PersonName(), //selectedTicket.assignedUser.name, //(users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser } ?: User()).name,
                     isDarkMode = isDarkMode,
                     ticketData = selectedTicket,
                     scrollBarsOnRight = scrollBarsOnRight,

@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.database.local
 
 import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.database.TicketLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.TicketLocalDatabaseImpl
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
@@ -11,7 +11,7 @@ import kotlin.uuid.ExperimentalUuidApi
 @OptIn(ExperimentalUuidApi::class)
 class TicketLocalDatabase(
     shouldLog: Boolean = false,
-    private val localDatabase: TicketLocalDatabaseClientImpl = TicketLocalDatabaseClientImpl(shouldLog)
-): ClientLocalDatabase<Ticket>(localDatabase) {
+    localDatabaseImpl: TicketLocalDatabaseImpl = TicketLocalDatabaseImpl(shouldLog = shouldLog)
+): ClientLocalDatabase<Ticket>(localDatabaseImpl) {
 
 }

@@ -18,7 +18,7 @@ class NoteEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var message by NoteTable.message
     var time by NoteTable.time
 
-    // List of images via a table holding references to each
+    // List of images
     var images by ImageEntity via NoteImageTable
 }
 

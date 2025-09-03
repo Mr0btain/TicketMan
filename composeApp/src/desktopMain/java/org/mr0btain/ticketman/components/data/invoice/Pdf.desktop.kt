@@ -45,9 +45,9 @@ actual fun makeTicketInvoicePdf(
 
     // Invoice / ticket information section
     val invoiceParagraph = listOf(
-        "Invoice #: ${ticket.invoice.invoiceNumber}",
-        "Ticket #: ${ticket.identifier}",
-        "Employee #: ${ticket.assignedUser}"
+        "Invoice #: ticket.invoice.invoiceNumber}",
+        "Ticket #: ticket.identifier}",
+        "Employee #: ticket.assignedUser}"
     )
 
     // PDF stuff
@@ -72,6 +72,7 @@ actual fun makeTicketInvoicePdf(
     }
 
     // Add charges to table
+    /*
     ticket.invoice.charges.forEach{ charge ->
         myTable.apply {
             addCell(Cell(Phrase(charge.name, columnItemsFont)))
@@ -81,10 +82,11 @@ actual fun makeTicketInvoicePdf(
             addCell(Cell(Phrase("$ ${formatIntToMoney(charge.cost * charge.amount)}", columnItemsFont)))
         }
     }
+     */
 
     // Get the total of the charges
     var total = 0
-    ticket.invoice.charges.forEach { total += it.cost * it.amount }
+    //ticket.invoice.charges.forEach { total += it.cost * it.amount }
 
     // Last table add total
     myTable.apply {

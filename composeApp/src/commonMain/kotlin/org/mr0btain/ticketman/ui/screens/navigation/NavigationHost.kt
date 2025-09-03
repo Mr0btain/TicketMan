@@ -65,8 +65,8 @@ fun NavigationHost(
                     onConfirm = { user, pass ->
                         if (user.isNotEmpty() && pass.isNotEmpty()) {
                             coroutineScope.launch {
-                                mainViewModel.dataHandler.updateStoredUsername(user)
-                                mainViewModel.dataHandler.updateStoredPassword(pass)
+                                //mainViewModel.dataHandler.updateStoredUsername(user)
+                                //mainViewModel.dataHandler.updateStoredPassword(pass)
                             }
                         }
 

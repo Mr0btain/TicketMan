@@ -9,16 +9,20 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
-import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
-import org.mr0btain.ticketman.database.tables.customer.CustomerTable
-import org.mr0btain.ticketman.database.tables.customer.toCustomer
+import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.image.toImage
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.note.toNote
+import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
+import org.mr0btain.ticketman.database.tables.user.UserEntity
+import org.mr0btain.ticketman.database.tables.user.UserNoteTable
+import org.mr0btain.ticketman.database.tables.user.UserTable
+import org.mr0btain.ticketman.database.tables.user.toUser
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
@@ -26,18 +30,19 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 @OptIn(ExperimentalUuidApi::class)
-class CustomerLocalDatabaseClientImpl(
-    private val shouldLog: Boolean,
-    tag: String = "CustomerLocalDatabaseClient"
-) : LocalDatabaseClient<Customer>(
+class UserLocalDatabaseImpl(
+    tag: String = "UserLocalDatabase",
+    private val shouldLog: Boolean = false
+) : LocalDatabase<User>(
     tag = tag,
     shouldLog = shouldLog
 ) {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
+    private val ADD_TICKET_TAG = "$tag:AddTicket"
 
     /** Gets all items from database */
-    override fun getAll(): List<Customer>? {
-        var result = listOf<Customer>()
+    override fun getAll(): List<User>? {
+        var result = listOf<User>()
 
         try {
             // Go into database and convert data to customer data item
@@ -45,7 +50,7 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerEntity.all().map { item -> item.toCustomer()}
+                result = UserEntity.all().map { item -> item.toUser() }
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -59,15 +64,15 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: Uuid): Customer? {
-        var result: Customer? = null
+    override fun getById(identifier: Uuid): User? {
+        var result: User? = null
 
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerEntity.findById(identifier.toJavaUuid())?.toCustomer()
+                result = UserEntity.findById(identifier.toJavaUuid())?.toUser()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -81,7 +86,7 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Adds all items to the database */
-    override fun addAll(data: List<Customer>): Boolean {
+    override fun addAll(data: List<User>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -92,10 +97,12 @@ class CustomerLocalDatabaseClientImpl(
                     val identifier = item.identifier.toJavaUuid()
 
                     // Insert into database
-                    CustomerEntity.new(identifier) {
+                    UserEntity.new(identifier) {
+                        username = item.username
+                        password = item.password
                         name = item.name
-                        address = item.address
                         contactInfo = item.contactInfo
+                        access = item.accessLevel
                         time = item.time
                     }
                 }
@@ -118,7 +125,7 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerEntity.findById(identifier.toJavaUuid())?.delete()
+                UserEntity.findById(identifier.toJavaUuid())?.delete()
 
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
@@ -132,7 +139,7 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: Customer): Boolean {
+    override fun add(data: User): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -142,10 +149,12 @@ class CustomerLocalDatabaseClientImpl(
                 val identifier = data.identifier.toJavaUuid()
 
                 // Insert into database
-                CustomerEntity.new(identifier) {
+                UserEntity.new(identifier) {
+                    username = data.username
+                    password = data.password
                     name = data.name
-                    address = data.address
                     contactInfo = data.contactInfo
+                    access = data.accessLevel
                     time = data.time
                 }
 
@@ -161,18 +170,20 @@ class CustomerLocalDatabaseClientImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: Customer): Boolean {
+    override fun update(data: User): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerEntity
+                UserEntity
                     .findById(data.identifier.toJavaUuid())
                     ?.apply {
+                        username = data.username
+                        password = data.password
                         name = data.name
-                        address = data.address
                         contactInfo = data.contactInfo
+                        access = data.accessLevel
                         time = data.time
                     }
 
@@ -187,7 +198,29 @@ class CustomerLocalDatabaseClientImpl(
         }
     }
 
-    /** Gets all tickets for a customer */
+    /** Adds a ticket to a user, assuming that ticket and user already exist in the database */
+    fun addTicket(userId: Uuid, ticketId: Uuid) {
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                // Get ticket entity
+                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
+                    // Get user entity
+                    UserEntity.findById(userId.toJavaUuid())?.let { userEntity ->
+                        // Insert ticket into user links
+                        userEntity.tickets = SizedCollection(userEntity.tickets + ticketEntity)
+                    }
+                }
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(ADD_TICKET_TAG, "Couldn't add ticket to user!")
+            ex.printStackTrace()
+        }
+    }
+
+    /** Gets all tickets for a user */
     fun getTickets(identifier: Uuid): List<Ticket> {
         val tickets = mutableListOf<Ticket>()
 
@@ -196,14 +229,14 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
                     tickets.addAll(
-                        customerEntity.tickets
+                        userEntity.tickets
                             .map { ticketEntity -> ticketEntity.toTicket() }
                     )
 
                     AppLogger.m(GET_TICKETS_TAG, SimpleError.SUCCESS)
-                } ?: AppLogger.i(GET_TICKETS_TAG, "Could not find customer!")
+                } ?: AppLogger.i(GET_TICKETS_TAG, "Could not find user!")
             }
         } catch (ex: Exception) {
             AppLogger.i(GET_TICKETS_TAG, SimpleError.FAIL)
@@ -221,14 +254,14 @@ class CustomerLocalDatabaseClientImpl(
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 // Insert the note into database and get its entity
-                val noteEntity = insertNote(note, images)
+                insertNote(note, images)?.let { noteEntity ->
+                    // Add note to customer notes
+                    UserEntity.findByIdAndUpdate(identifier.toJavaUuid()) { userEntity ->
+                        userEntity.notes = SizedCollection(userEntity.notes + noteEntity)
 
-                // Add note to customer notes
-                CustomerEntity.findByIdAndUpdate(identifier.toJavaUuid()) { customerEntity ->
-                    customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
-                }
-
-                AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
+                        AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
+                    } ?: AppLogger.i(ADD_NOTE_TAG, "User not found! $identifier")
+                } ?: AppLogger.i(ADD_NOTE_TAG, "Note entity was null!")
             }
 
             return true
@@ -248,13 +281,13 @@ class CustomerLocalDatabaseClientImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
-                    customerEntity.notes.forEach { noteEntity ->
+                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
+                    userEntity.notes.forEach { noteEntity ->
                         result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
                     }
 
                     AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)
-                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find customer!")
+                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find inventory item!")
             }
         } catch (ex: Exception) {
             AppLogger.i(GET_NOTES_TAG, SimpleError.FAIL)
@@ -264,7 +297,6 @@ class CustomerLocalDatabaseClientImpl(
         return result
     }
 
-    /** Removes a note and its images from the database */
     override fun removeNote(identifier: Uuid): Boolean {
         try {
             transaction {
@@ -275,17 +307,17 @@ class CustomerLocalDatabaseClientImpl(
                 val note = NoteEntity.findById(identifier.toJavaUuid()) ?: return@transaction
 
                 // No clue if this actually works or not??
-                CustomerTable
+                UserTable
                     .join(
-                        CustomerNoteTable, onColumn = CustomerTable.id, otherColumn = CustomerNoteTable.customer,
+                        UserNoteTable, onColumn = UserTable.id, otherColumn = UserNoteTable.user,
                         joinType = JoinType.INNER,
                     )
-                    .select(CustomerNoteTable.note eq note.id)
+                    .select(UserNoteTable.note eq note.id)
                     .limit(1)
-                    .map { CustomerEntity.wrapRow(it) }
+                    .map { UserEntity.wrapRow(it) }
                     .firstOrNull()
-                    ?.let { customerEntity ->
-                        customerEntity.notes = SizedCollection(customerEntity.notes.filter { it != note })
+                    ?.let { userEntity ->
+                        userEntity.notes = SizedCollection(userEntity.notes.filter { it != note })
                     }
 
                 // Delete linked images

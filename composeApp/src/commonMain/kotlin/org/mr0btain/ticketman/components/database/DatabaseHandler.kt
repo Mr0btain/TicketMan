@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.components.utils.toImageBitmap
 import org.mr0btain.ticketman.data.MainData
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.getTime
-import org.mr0btain.ticketman.database.LocalDatabaseClient
+import org.mr0btain.ticketman.database.LocalDatabase
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
@@ -26,7 +26,7 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 abstract class DatabaseHandler<T: MainData>(
     tag: String,
-    private val localDatabaseClient: LocalDatabaseClient<T>,
+    private val localDatabase: LocalDatabase<T>,
     private val serverDatabaseClient: ServerDatabaseClient,
     private val imageDir: String
 ) {
@@ -39,6 +39,7 @@ abstract class DatabaseHandler<T: MainData>(
 
     /** Adds or updates an item depending on weather it exists in the database or not */
     suspend fun addOrUpdate(data: T) {
+        /*
         coroutineScope {
             // Check if customer exists or not, if not then add it
             if (_dataList.value.firstOrNull { it.identifier == data.identifier } != null) {
@@ -67,18 +68,19 @@ abstract class DatabaseHandler<T: MainData>(
             // Set selected customer
             _selectedId.value = data.identifier
         }
+         */
     }
 
     /** Syncs data between server and local databases */
     suspend fun sync() {
-        localDatabaseClient.getAll()?.let { serverDatabaseClient.sync(it) }
+        localDatabase.getAll()?.let { serverDatabaseClient.sync(it) }
     }
 
     /** Gets an item by identifier */
-    fun get(identifier: Uuid): T? = localDatabaseClient.getById(identifier)
+    fun get(identifier: Uuid): T? = localDatabase.getById(identifier)
 
     fun getNotes(identifier: Uuid): List<NoteData> {
-        val databaseResult = localDatabaseClient.getNotes(identifier)
+        val databaseResult = localDatabase.getNotes(identifier)
         val result = mutableListOf<NoteData>()
 
         databaseResult.forEach {
@@ -96,12 +98,14 @@ abstract class DatabaseHandler<T: MainData>(
                 }
             }
 
+            /*
             result.add(
                 NoteData(
                     note = it.key,
                     images = imageData
                 )
             )
+             */
         }
 
         return result
@@ -130,15 +134,15 @@ abstract class DatabaseHandler<T: MainData>(
         }
 
         // Send images to database
-        localDatabaseClient.addImagesToNote(identifier, imageResult)
+        localDatabase.addImagesToNote(identifier, imageResult)
     }
 
     /** Adds an item to the databases */
     suspend fun add(item: T) {
         coroutineScope {
             try {
-                _dataList.value += item
-                localDatabaseClient.add(item)
+                //_dataList.value += item
+                localDatabase.add(item)
                 serverDatabaseClient.send(item)
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -153,8 +157,8 @@ abstract class DatabaseHandler<T: MainData>(
     suspend fun addAll(data: List<T>) {
         coroutineScope {
             try {
-                _dataList.value += data
-                localDatabaseClient.addAll(data)
+                //_dataList.value += data
+                localDatabase.addAll(data)
                 serverDatabaseClient.batchSend(data)
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -169,8 +173,8 @@ abstract class DatabaseHandler<T: MainData>(
     suspend fun remove(identifier: Uuid) {
         coroutineScope {
             try {
-                _dataList.value = dataList.value.filter { it.identifier != identifier }
-                localDatabaseClient.remove(identifier)
+                //_dataList.value = dataList.value.filter { it.identifier != identifier }
+                localDatabase.remove(identifier)
                 serverDatabaseClient.remove(identifier)
             } catch (ex: Exception) {
                 ex.printStackTrace()

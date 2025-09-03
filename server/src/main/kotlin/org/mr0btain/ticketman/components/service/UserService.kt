@@ -4,8 +4,7 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.database.LocalDatabaseClient
-import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.UserLocalDatabaseImpl
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import kotlin.uuid.ExperimentalUuidApi
@@ -13,7 +12,7 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 class UserService(
-    private val database: UserLocalDatabaseClientImpl,
+    private val database: UserLocalDatabaseImpl,
     private val jwtService: JwtService,
     private val tokenDatabase: TokenDatabase
 ) {

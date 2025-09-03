@@ -51,7 +51,7 @@ import ticketman.composeapp.generated.resources.plus
 fun EditUpdateDialog(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    seedData: TicketUpdate = TicketUpdate(),
+    seedData: TicketUpdate,
     label: String = "",
     onConfirm: (TicketUpdate) -> Unit,
     onDismissRequest: () -> Unit,
@@ -60,7 +60,7 @@ fun EditUpdateDialog(
     var author by remember { mutableStateOf(seedData.note.author) }
     var text by remember { mutableStateOf(seedData.note.message) }
     val time = remember { if (seedData.note.time != Long.MAX_VALUE) seedData.note.time else getTime() }
-    val photos = remember { seedData.images.toMutableStateList() }
+    //val photos = remember { seedData.images.toMutableStateList() }
 
     // File dialog for adding an image
     val launcher = rememberFilePickerLauncher(
@@ -69,11 +69,13 @@ fun EditUpdateDialog(
         file?.let { image ->
             scope.launch {
                 try {
+                    /*
                     photos.add(
                         image
                             .toImageBitmap()
                             .encodeToBase64()
                     )
+                     */
                 } catch (ex: Exception) {
                     AppLogger.i("EDIT_UPDATE_DIALOG", ex.toString())
                 }
@@ -152,6 +154,7 @@ fun EditUpdateDialog(
                     }
                 }
 
+                /*
                 if (photos.isNotEmpty()) {
                     ImagePager(
                         modifier = Modifier
@@ -161,6 +164,7 @@ fun EditUpdateDialog(
                         imageMaxHeight = 150.dp
                     )
                 }
+                 */
 
                 Spacer(Modifier.padding(4.dp))
 
@@ -188,6 +192,7 @@ fun EditUpdateDialog(
                             val authorName = author.split(" ")
                                 .joinToString(" ") { name -> name.lowercase().replaceFirstChar { it.uppercase() } }
 
+                            /*
                             // Call onConfirm
                             onConfirm(
                                 TicketUpdate(
@@ -196,6 +201,7 @@ fun EditUpdateDialog(
                                     images = photos
                                 )
                             )
+                             */
 
                             // Dismiss
                             onDismissRequest()

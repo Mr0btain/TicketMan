@@ -10,6 +10,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
@@ -57,11 +58,11 @@ fun App() {
         // Main scope to use with coroutines
         val mainScope = rememberCoroutineScope()
 
-        // Generate some mock data and add it to the database in memory
-        //mainViewModel.dataHandler.generateMockDbData()
+        // Generate some mock data and add it to the database
+        //mainViewModel.fillDatabaseWithTestData()
 
         // Current employee info
-        val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
+        //val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
 
         // Should we show login popup or not
         val shouldShowLogin = mainViewModel.showLogin.collectAsState()
@@ -121,7 +122,7 @@ fun App() {
                             snackBarState = snackBarHostState
                         )
                     },
-                    topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
+                    topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
                     coroutineScope = mainScope,
                     destinations = navDestinations
                 )
@@ -144,7 +145,7 @@ fun App() {
                                 snackBarState = snackBarHostState
                             )
                         },
-                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
+                        topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
                         coroutineScope = mainScope,
                         destinations = navDestinations
                     )

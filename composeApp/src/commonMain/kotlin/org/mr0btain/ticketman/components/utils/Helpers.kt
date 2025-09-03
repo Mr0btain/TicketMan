@@ -6,8 +6,8 @@ import org.mr0btain.ticketman.data.Ticket
 // TODO: Need a better way to determine if its a new ticket or not
 fun Ticket.isNewTicket(): Boolean {
     return when {
-        customerId.isEmpty() -> false
-        updates.isNotEmpty() -> false
+        //customerId.isEmpty() -> false
+        //updates.isNotEmpty() -> false
         device != Device("", "") -> false
         else -> true
     }

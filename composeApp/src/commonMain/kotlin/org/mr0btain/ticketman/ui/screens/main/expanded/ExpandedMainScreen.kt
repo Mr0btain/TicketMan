@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -20,6 +21,7 @@ import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.getTime
 import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
@@ -95,7 +97,7 @@ fun ExpandedMainScreen(
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
-    val images by remember { mutableStateOf<List<String>>(emptyList()) }
+    val images by remember { mutableStateOf<List<StoredImage>>(emptyList()) }
 
     // For customer adding or editing
     if (showCustomerDialog) {
@@ -132,7 +134,7 @@ fun ExpandedMainScreen(
                     showCustomerDialog = false
                 }
             },
-            onAddNewTicket = { customerId ->
+            onAddNewTicket = {
                 coroutineScope.launch {
                     // Set is for new customer so ticket dialog knows wht to do with it
                     isTicketForNewCustomer = true
@@ -145,7 +147,6 @@ fun ExpandedMainScreen(
             },
             isDarkMode = isDarkMode,
             seedData = customerSeedData,
-            ticketList = customerTicketList,
             scrollBarsOnRight = scrollBarsOnRight
         )
     }
@@ -172,7 +173,7 @@ fun ExpandedMainScreen(
                             } else {
                                 // Else add it to the database
                                 data?.let { ticketInfo ->
-                                    viewModel.dataHandler.ticketDataHandler.addOrUpdate(ticketInfo)
+                                    // viewModel.dataHandler.ticketDataHandler.addOrUpdate(ticketInfo)
                                 }
                             }
                         }
@@ -191,13 +192,11 @@ fun ExpandedMainScreen(
             },
             isDarkMode = isDarkMode,
             seedData = ticketSeedData,
-            customerData = customerData.value,
-            users = userList.value,
             scrollBarsOnRight = scrollBarsOnRight,
             onAddNewCustomer = { name ->
                 coroutineScope.launch {
                     // Add seeded data if there is any
-                    customerSeedData = Customer(name = name, time = getTime())
+                    customerSeedData = CustomerData(Customer(name = name, time = getTime()))
 
                     // Trigger dialog
                     showCustomerDialog = true
@@ -215,7 +214,7 @@ fun ExpandedMainScreen(
                     when (reason) {
                         DialogDismissReason.CONTINUE -> {
                             data?.let { inventoryItem ->
-                                viewModel.dataHandler.inventoryDataHandler.addOrUpdate(inventoryItem)
+                                //viewModel.dataHandler.inventoryDataHandler.addOrUpdate(inventoryItem)
                             }
                         }
 
@@ -225,7 +224,7 @@ fun ExpandedMainScreen(
                     }
 
                     // Reset seed data
-                    inventorySeedData = Inventory()
+                    inventorySeedData = InventoryData()
 
                     // Close dialog
                     showInventoryDialog = false
@@ -246,27 +245,33 @@ fun ExpandedMainScreen(
                         // Delete item
                         when (itemToDeleteType) {
                             MainItemType.CUSTOMER -> {
+                                /*
                                 // Remove customer
                                 viewModel.dataHandler.customerDataHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.dataHandler.customerDataHandler.clearSelectedId()
+                                 */
                             }
 
                             MainItemType.TICKET -> {
+                                /*
                                 // Remove ticket
                                 viewModel.dataHandler.ticketDataHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.dataHandler.ticketDataHandler.clearSelectedId()
+                                 */
                             }
                             MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
                             MainItemType.INVENTORY -> {
+                                /*
                                 // Remove item
                                 viewModel.dataHandler.inventoryDataHandler.remove(itemToDelete)
 
                                 // Reset selected
                                 viewModel.dataHandler.inventoryDataHandler.clearSelectedId()
+                                 */
                             }
                             MainItemType.NONE -> { /* Do nothing */ }
                         }

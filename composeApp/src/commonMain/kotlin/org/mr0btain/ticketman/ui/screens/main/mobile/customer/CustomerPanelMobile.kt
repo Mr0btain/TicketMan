@@ -30,6 +30,7 @@ fun CustomerPanelMobile(
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     isDarkMode: Boolean
 ) {
+    /*
     // Hopefully this saves on calculations and updates properly
     val sortedCustomerInfo = remember(customerList) { customerList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
 
@@ -70,5 +71,6 @@ fun CustomerPanelMobile(
             onCustomerSelectionChange(id)
         }
     )
+     */
 
 }

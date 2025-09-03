@@ -1,14 +1,8 @@
 package org.mr0btain.ticketman.components.database.local
 
-import androidx.compose.ui.graphics.ImageBitmap
-import io.github.vinceglb.filekit.PlatformFile
 import org.mr0btain.ticketman.components.data.note.NoteData
-import org.mr0btain.ticketman.components.utils.saveImageToDatabase
-import org.mr0btain.ticketman.components.utils.toImageBitmap
 import org.mr0btain.ticketman.data.MainData
-import org.mr0btain.ticketman.database.LocalDatabaseClient
-import kotlin.collections.component1
-import kotlin.collections.component2
+import org.mr0btain.ticketman.database.LocalDatabase
 import kotlin.collections.forEach
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -19,58 +13,27 @@ import kotlin.uuid.Uuid
  */
 @OptIn(ExperimentalUuidApi::class)
 abstract class ClientLocalDatabase<T: MainData>(
-    protected val localDatabaseClient: LocalDatabaseClient<T>
+    protected val localDatabase: LocalDatabase<T>
 ) {
-    fun getAll() = localDatabaseClient.getAll()
+    fun getAll() = localDatabase.getAll()
 
     /** Gets a customer by its identifier */
-    fun getById(identifier: Uuid) = localDatabaseClient.getById(identifier)
+    fun getById(identifier: Uuid) = localDatabase.getById(identifier)
 
-    fun add(item: T) = localDatabaseClient.add(item)
+    fun add(item: T) = localDatabase.add(item)
 
-    fun remove(identifier: Uuid) = localDatabaseClient.remove(identifier)
+    fun remove(identifier: Uuid) = localDatabase.remove(identifier)
 
-    fun getNotes(identifier: Uuid): List<NoteData> {
-        val databaseResult = localDatabaseClient.getNotes(identifier)
-        val result = mutableListOf<NoteData>()
+    fun getNotes(identifier: Uuid): List<NoteData> =
+        localDatabase.getNotes(identifier)
+            .map { NoteData(it.key, it.value) }
 
-        databaseResult.forEach { (note, storedImages) ->
-            val imageData = mutableListOf<ImageBitmap>()
-
-            storedImages.forEach { storedImage ->
-                val file = PlatformFile(storedImage.path)
-
-                if (file.file.exists()) {
-                    imageData.add(
-                        file.file
-                            .readBytes()
-                            .toImageBitmap()
-                    )
-                }
-            }
-
-            result.add(
-                NoteData(
-                    note = note,
-                    images = imageData
-                )
-            )
-        }
-
-        return result
-    }
-
-    suspend fun addNotes(identifier: Uuid, notes: List<NoteData>) {
+    fun addNotes(identifier: Uuid, notes: List<NoteData>) {
         // Add to database
         notes.forEach { (note, images) ->
-            // Store images first
-            val storedImages = images.map { imageBitmap ->
-                saveImageToDatabase(identifier, imageBitmap)
-            }
-
-            localDatabaseClient.addNote(identifier, note, storedImages)
+            localDatabase.addNote(identifier, note, images)
         }
     }
 
-    fun removeNote(identifier: Uuid) = localDatabaseClient.removeNote(identifier)
+    fun removeNote(identifier: Uuid) = localDatabase.removeNote(identifier)
 }

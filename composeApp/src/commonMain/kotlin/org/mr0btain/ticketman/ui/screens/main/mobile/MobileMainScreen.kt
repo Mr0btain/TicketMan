@@ -45,6 +45,7 @@ fun MobileMainScreen(
     isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
+    /*
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
@@ -459,4 +460,5 @@ fun MobileMainScreen(
             }
         }
     }
+     */
 }

@@ -33,6 +33,7 @@ fun CustomerInfoPaneMobile(
     onEditClick: () -> Unit,
     onTicketClick: (String) -> Unit
 ) {
+    /*
     // Sizes for icons and text
     val labelSize = 12.sp
     val textSize = 16.sp
@@ -214,4 +215,5 @@ fun CustomerInfoPaneMobile(
             scrollBarsOnRight = scrollBarsOnRight
         )
     }
+     */
 }

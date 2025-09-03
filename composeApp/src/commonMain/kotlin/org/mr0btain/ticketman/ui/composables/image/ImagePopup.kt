@@ -7,18 +7,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.components.utils.decodeBase64ToImageBitmap
+import org.mr0btain.ticketman.data.image.StoredImage
 
 @Composable
 fun ImagePopup(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     isDarkMode: Boolean,
-    images: List<String>
+    images: List<StoredImage>
 ) {
     Dialog(
         onDismissRequest = onDismiss

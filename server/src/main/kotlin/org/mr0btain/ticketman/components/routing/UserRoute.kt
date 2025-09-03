@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.data.hashPassword
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.UserLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.UserLocalDatabaseImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
@@ -29,7 +29,7 @@ import kotlin.uuid.Uuid
 // TODO: Not sure if we should let this handle filtering restricted data, or the database itself.
 // TODO: Handle encryption in the rest of these routes
 fun Route.userRoute(
-    database: UserLocalDatabaseClientImpl,
+    database: UserLocalDatabaseImpl,
     encryptionService: EncryptionService
 ) {
     // Sync between client and server

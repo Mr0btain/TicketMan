@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.database.local
 
 import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.database.InventoryLocalDatabaseClientImpl
+import org.mr0btain.ticketman.database.InventoryLocalDatabaseImpl
 import kotlin.uuid.ExperimentalUuidApi
 
 /**
@@ -11,7 +11,7 @@ import kotlin.uuid.ExperimentalUuidApi
 @OptIn(ExperimentalUuidApi::class)
 class InventoryLocalDatabase(
     shouldLog: Boolean = false,
-    private val localDatabase: InventoryLocalDatabaseClientImpl = InventoryLocalDatabaseClientImpl(shouldLog)
-): ClientLocalDatabase<Inventory>(localDatabase) {
+    localDatabaseImpl: InventoryLocalDatabaseImpl = InventoryLocalDatabaseImpl(shouldLog = shouldLog)
+): ClientLocalDatabase<Inventory>(localDatabaseImpl) {
 
 }
