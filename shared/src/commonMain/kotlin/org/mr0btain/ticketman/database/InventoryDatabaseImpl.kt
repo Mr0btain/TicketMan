@@ -7,39 +7,33 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
-import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
-import org.mr0btain.ticketman.database.tables.customer.CustomerTable
-import org.mr0btain.ticketman.database.tables.customer.toCustomer
 import org.mr0btain.ticketman.database.tables.image.toImage
+import org.mr0btain.ticketman.database.tables.inventory.InventoryEntity
+import org.mr0btain.ticketman.database.tables.inventory.InventoryNoteTable
+import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
+import org.mr0btain.ticketman.database.tables.inventory.toInventoryItem
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.note.toNote
-import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
-import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
+import kotlin.collections.plus
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 @OptIn(ExperimentalUuidApi::class)
-class CustomerLocalDatabaseImpl(
-    tag: String = "CustomerLocalDatabase",
+class InventoryDatabaseImpl(
     private val shouldLog: Boolean = false
-) : LocalDatabase<Customer>(
-    tag = tag,
+) : Database<Inventory>(
+    tag = "InventoryLocalDatabase",
     shouldLog = shouldLog
 ) {
-    private val GET_TICKETS_TAG = "$tag:GetTickets"
-    private val ADD_TICKET_TAG = "$tag:AddTicket"
-
     /** Gets all items from database */
-    override fun getAll(): List<Customer>? {
-        var result = listOf<Customer>()
+    override fun all(): List<Inventory>? {
+        var result = listOf<Inventory>()
 
         try {
             // Go into database and convert data to customer data item
@@ -47,7 +41,7 @@ class CustomerLocalDatabaseImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerEntity.all().map { item -> item.toCustomer()}
+                result = InventoryEntity.all().map { item -> item.toInventoryItem() }
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -61,15 +55,15 @@ class CustomerLocalDatabaseImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: Uuid): Customer? {
-        var result: Customer? = null
+    override fun getById(identifier: Uuid): Inventory? {
+        var result: Inventory? = null
 
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = CustomerEntity.findById(identifier.toJavaUuid())?.toCustomer()
+                result = InventoryEntity.findById(identifier.toJavaUuid())?.toInventoryItem()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -82,8 +76,17 @@ class CustomerLocalDatabaseImpl(
         return result
     }
 
+    override fun getPagedItems(
+        offset: Long,
+        pageSize: Int
+    ): List<Inventory> {
+        TODO("Not yet implemented")
+    }
+
+    override fun count(): Long = InventoryEntity.count()
+
     /** Adds all items to the database */
-    override fun addAll(data: List<Customer>): Boolean {
+    override fun addAll(data: List<Inventory>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -94,10 +97,12 @@ class CustomerLocalDatabaseImpl(
                     val identifier = item.identifier.toJavaUuid()
 
                     // Insert into database
-                    CustomerEntity.new(identifier) {
+                    InventoryEntity.new(identifier) {
                         name = item.name
-                        address = item.address
-                        contactInfo = item.contactInfo
+                        description = item.description
+                        stock = item.stock
+                        cost = item.cost
+                        price = item.price
                         time = item.time
                     }
                 }
@@ -120,7 +125,7 @@ class CustomerLocalDatabaseImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerEntity.findById(identifier.toJavaUuid())?.delete()
+                InventoryEntity.findById(identifier.toJavaUuid())?.delete()
 
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
@@ -134,20 +139,21 @@ class CustomerLocalDatabaseImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: Customer): Boolean {
+    override fun add(data: Inventory): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                // Convert kotlin uuid to java for database
                 val identifier = data.identifier.toJavaUuid()
 
                 // Insert into database
-                CustomerEntity.new(identifier) {
+                InventoryEntity.new(identifier) {
                     name = data.name
-                    address = data.address
-                    contactInfo = data.contactInfo
+                    description = data.description
+                    stock = data.stock
+                    cost = data.cost
+                    price = data.price
                     time = data.time
                 }
 
@@ -155,26 +161,28 @@ class CustomerLocalDatabaseImpl(
             }
 
             return true
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (ex: Exception) {
             AppLogger.i(ADD_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
             return false
         }
     }
 
     /** Updates an item in the database */
-    override fun update(data: Customer): Boolean {
+    override fun update(data: Inventory): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerEntity
+                InventoryEntity
                     .findById(data.identifier.toJavaUuid())
                     ?.apply {
                         name = data.name
-                        address = data.address
-                        contactInfo = data.contactInfo
+                        description = data.description
+                        stock = data.stock
+                        cost = data.cost
+                        price = data.price
                         time = data.time
                     }
 
@@ -189,55 +197,6 @@ class CustomerLocalDatabaseImpl(
         }
     }
 
-    /** Adds a ticket to a customer, assuming that ticket and customer already exist in the database */
-    fun addTicket(customerId: Uuid, ticketId: Uuid) {
-        try {
-            transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                // Get ticket entity
-                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
-                    // Get customer entity
-                    CustomerEntity.findById(customerId.toJavaUuid())?.let { customerEntity ->
-                        // Insert ticket into customer links
-                        customerEntity.tickets = SizedCollection(customerEntity.tickets + ticketEntity)
-                    }
-                }
-            }
-        } catch (ex: Exception) {
-            AppLogger.i(ADD_TICKET_TAG, SimpleError.FAIL)
-            ex.printStackTrace()
-        }
-    }
-
-    /** Gets all tickets for a customer */
-    fun getTickets(identifier: Uuid): List<Ticket> {
-        val tickets = mutableListOf<Ticket>()
-
-        try {
-            transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
-                    tickets.addAll(
-                        customerEntity.tickets
-                            .map { ticketEntity -> ticketEntity.toTicket() }
-                    )
-
-                    AppLogger.m(GET_TICKETS_TAG, SimpleError.SUCCESS)
-                } ?: AppLogger.i(GET_TICKETS_TAG, "Could not find customer!")
-            }
-        } catch (ex: Exception) {
-            AppLogger.i(GET_TICKETS_TAG, SimpleError.FAIL)
-            ex.printStackTrace()
-        }
-
-        return tickets
-    }
-
-    /** Adds a note to an item and linking it to that item */
     override fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean {
         try {
             transaction {
@@ -246,12 +205,12 @@ class CustomerLocalDatabaseImpl(
 
                 // Insert the note into database and get its entity
                 insertNote(note, images)?.let { noteEntity ->
-                    // Add note to customer notes
-                    CustomerEntity.findByIdAndUpdate(identifier.toJavaUuid()) { customerEntity ->
-                        customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
+                    // Add note to notes
+                    InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
+                        inventoryEntity.notes = SizedCollection(inventoryEntity.notes + noteEntity)
 
                         AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
-                    } ?: AppLogger.i(ADD_NOTE_TAG, "Customer not found! $identifier")
+                    } ?: AppLogger.i(ADD_NOTE_TAG, "Inventory not found! $identifier")
                 } ?: AppLogger.i(ADD_NOTE_TAG, "Note entity was null!")
             }
 
@@ -264,7 +223,7 @@ class CustomerLocalDatabaseImpl(
         return false
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>> {
+    override fun notes(identifier: Uuid): Map<Note, List<StoredImage>> {
         val result = mutableMapOf<Note, List<StoredImage>>()
 
         try {
@@ -272,13 +231,13 @@ class CustomerLocalDatabaseImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
-                    customerEntity.notes.forEach { noteEntity ->
+                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                    inventoryEntity.notes.forEach { noteEntity ->
                         result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
                     }
 
                     AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)
-                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find customer!")
+                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find inventory item!")
             }
         } catch (ex: Exception) {
             AppLogger.i(GET_NOTES_TAG, SimpleError.FAIL)
@@ -288,7 +247,6 @@ class CustomerLocalDatabaseImpl(
         return result
     }
 
-    /** Removes a note and its images from the database */
     override fun removeNote(identifier: Uuid): Boolean {
         try {
             transaction {
@@ -299,17 +257,17 @@ class CustomerLocalDatabaseImpl(
                 val note = NoteEntity.findById(identifier.toJavaUuid()) ?: return@transaction
 
                 // No clue if this actually works or not??
-                CustomerTable
+                InventoryTable
                     .join(
-                        CustomerNoteTable, onColumn = CustomerTable.id, otherColumn = CustomerNoteTable.customer,
+                        InventoryNoteTable, onColumn = InventoryTable.id, otherColumn = InventoryNoteTable.inventory,
                         joinType = JoinType.INNER,
                     )
-                    .select(CustomerNoteTable.note eq note.id)
+                    .select(InventoryNoteTable.note eq note.id)
                     .limit(1)
-                    .map { CustomerEntity.wrapRow(it) }
+                    .map { InventoryEntity.wrapRow(it) }
                     .firstOrNull()
-                    ?.let { customerEntity ->
-                        customerEntity.notes = SizedCollection(customerEntity.notes.filter { it != note })
+                    ?.let { inventoryEntity ->
+                        inventoryEntity.notes = SizedCollection(inventoryEntity.notes.filter { it != note })
                     }
 
                 // Delete linked images

@@ -6,13 +6,13 @@ import io.ktor.server.http.content.*
 import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.mr0btain.ticketman.components.database.ServerDatabase
+import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.UserService
 
 fun Application.configureRouting(
     userService: UserService,
-    serverDatabase: ServerDatabase,
+    localDatabase: LocalDatabase,
     encryptionService: EncryptionService
 ) {
     install(StatusPages) {
@@ -36,29 +36,29 @@ fun Application.configureRouting(
 
         route("/api/user") {
             userRoute(
-                database = serverDatabase.userDatabase,
+                database = localDatabase.userDatabase,
                 encryptionService = encryptionService
             )
         }
 
         route("/api/data/customer") {
             customerRoute(
-                database = serverDatabase.customerDatabase,
-                userDatabase = serverDatabase.userDatabase,
+                database = localDatabase.customerDatabase,
+                userDatabase = localDatabase.userDatabase,
                 encryptionService = encryptionService
                 )
         }
 
         route("/api/data/ticket") {
             ticketRoute(
-                database = serverDatabase.ticketDatabase,
+                database = localDatabase.ticketDatabase,
                 encryptionService = encryptionService
             )
         }
 
         route("/api/data/inventory") {
             inventoryRoute(
-                database = serverDatabase.inventoryDatabase,
+                database = localDatabase.inventoryDatabase,
                 encryptionService = encryptionService
             )
         }

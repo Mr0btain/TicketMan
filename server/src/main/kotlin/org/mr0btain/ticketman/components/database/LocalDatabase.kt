@@ -1,8 +1,12 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.database.LocalDatabaseHandler
+import org.mr0btain.ticketman.database.CustomerDatabaseImpl
+import org.mr0btain.ticketman.database.InventoryDatabaseImpl
+import org.mr0btain.ticketman.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
@@ -19,14 +23,25 @@ import org.mr0btain.ticketman.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 
-class ServerDatabase(
+class LocalDatabase (
     appDir: String,
     shouldLog: Boolean = true
-): LocalDatabaseHandler(appDir, shouldLog) {
-    val tokenDatabase = TokenDatabase(shouldLog)
-
+) {
     private val TAG = "ServerDatabase"
     private val INIT_TAG = "$TAG:Init"
+
+    // Connect to the local database. Might not need this as a value
+    private val db = Database.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+
+    //Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
+    // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")
+    //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
+
+    val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
+    val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
+    val tokenDatabase = TokenDatabase(shouldLog)
+    val inventoryDatabase = InventoryDatabaseImpl(shouldLog = shouldLog)
+    val userDatabase = UserDatabaseImpl(shouldLog = shouldLog)
 
     /**
      * Creates tables if they don't exist essentially. Idk if we even need this if we could just straight call creat everytime. ohh well.

@@ -17,12 +17,13 @@ import kotlin.uuid.toJavaUuid
 
 @Suppress("PropertyName")
 @OptIn(ExperimentalUuidApi::class)
-abstract class LocalDatabase<T: MainData>(
+abstract class Database<T: MainData>(
     tag: String,
     private val shouldLog: Boolean
 ) {
     protected val GET_ALL_TAG = "$tag:GetAll"
     protected val GET_BY_ID_TAG = "$tag:GetById"
+    protected val GET_PAGED_ITEMS = "$tag:GetPagedItems"
     protected val ADD_ALL_TAG = "$tag:AddAll"
     protected val REMOVE_TAG = "$tag:Remove"
     protected val ADD_TAG = "$tag:Add"
@@ -34,10 +35,14 @@ abstract class LocalDatabase<T: MainData>(
     protected val GET_NOTES_TAG = "$tag:GetNotes"
 
     /** Gets all items from database */
-    abstract fun getAll(): List<T>?
+    abstract fun all(): List<T>?
 
     /** Gets an item by its identifier */
     abstract fun getById(identifier: Uuid): T?
+
+    abstract fun getPagedItems(offset: Long, pageSize: Int): List<T>
+
+    abstract fun count(): Long
 
     /** Adds all items to the database */
     abstract fun addAll(data: List<T>): Boolean
@@ -86,7 +91,7 @@ abstract class LocalDatabase<T: MainData>(
     abstract fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean
 
     /** Returns a list of pairs of note and their respective images as bytearrays to be converted to a usable image */
-    abstract fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>
+    abstract fun notes(identifier: Uuid): Map<Note, List<StoredImage>>
 
     /** Removes a note and its images from the database */
     abstract fun removeNote(identifier: Uuid): Boolean

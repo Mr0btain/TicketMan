@@ -11,6 +11,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
@@ -38,7 +40,7 @@ import kotlin.uuid.Uuid
 // TODO: Maybe make this expect actual of some sort for different platforms or screen sizes
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, FlowPreview::class)
 @Composable
 fun ExpandedMainScreen(
     viewModel: MainViewModel,
@@ -71,7 +73,7 @@ fun ExpandedMainScreen(
     val customerTicketList = remember { mutableStateListOf<Uuid>() }
 
     // For ticket panel
-    //val ticketList = viewModel.dataHandler.ticketDataHandler.dataList.collectAsState()
+    val ticketList = viewModel.ticketList.collectAsState()
     val selectedTicket = viewModel.selectedTicketData.collectAsState()
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
@@ -299,6 +301,16 @@ fun ExpandedMainScreen(
         )
     }
 
+    LaunchedEffect(ticketLazyListState) {
+        snapshotFlow { ticketLazyListState.firstVisibleItemIndex }
+            .debounce(300) // Wait 300ms after scroll stops
+            .collect { index ->
+                println("Scrolled: $index")
+                println("Count: ${ticketList.value.size}")
+                viewModel.ticketPagerUpdate(index)
+            }
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize()
@@ -472,11 +484,9 @@ fun ExpandedMainScreen(
 
                     // Ticket Panel
                     1 -> {
-                        val ticketList = remember { viewModel.getTickets() ?: emptyList() }
-
-                        TicketPanel(
+                       TicketPanel(
                             isDarkMode = isDarkMode,
-                            ticketList = ticketList,
+                            ticketList = ticketList.value,
                             currentUser = currentUser.value,
                             scrollBarsOnRight = scrollBarsOnRight,
                             selectedTicket = selectedTicket.value,
@@ -492,7 +502,7 @@ fun ExpandedMainScreen(
                             onEditTicket = {
                                 coroutineScope.launch {
                                     // Check if the ticket is an actual ticket and not a blank
-                                    if (ticketList.firstOrNull { it.identifier == selectedTicket.value.ticket.identifier } != null) {
+                                    if (ticketList.value.firstOrNull { it.identifier == selectedTicket.value.ticket.identifier } != null) {
                                         // Get seed data
                                         ticketSeedData = selectedTicket.value
 
@@ -512,7 +522,7 @@ fun ExpandedMainScreen(
                             onDeleteTicket = { id ->
                                 coroutineScope.launch {
                                     // Make sure item exists
-                                    if (ticketList.firstOrNull { it.identifier == id } != null) {
+                                    if (ticketList.value.firstOrNull { it.identifier == id } != null) {
                                         // Set values
                                         itemToDelete = id
                                         itemToDeleteType = MainItemType.TICKET

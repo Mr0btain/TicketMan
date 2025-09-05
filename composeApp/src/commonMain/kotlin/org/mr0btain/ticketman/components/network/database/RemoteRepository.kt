@@ -16,7 +16,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @Suppress("PropertyName")
-abstract class ServerDatabaseClient(
+abstract class RemoteRepository(
     tag: String,
     private val client: HttpClient,
     private val encryptionHandler: ClientEncryptionHandler

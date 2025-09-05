@@ -10,7 +10,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.database.TicketLocalDatabaseImpl
+import org.mr0btain.ticketman.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
@@ -18,7 +18,7 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 fun Route.ticketRoute(
-    database: TicketLocalDatabaseImpl,
+    database: TicketDatabaseImpl,
     encryptionService: EncryptionService
 ) {
     // Sync between client and server
@@ -30,7 +30,7 @@ fun Route.ticketRoute(
                 encryptionService.decryptData(identifier, encryptedData)?.let {
                     Json.decodeFromString<SyncRequest>(it)
                 }?.let { syncRequest ->
-                    database.getAll()?.let { data ->
+                    database.all()?.let { data ->
                         // Filter items by ones the client does not contain
                         val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }
 
@@ -55,7 +55,7 @@ fun Route.ticketRoute(
     // Get all
     authenticate("restricted") {
         get("/all") {
-            database.getAll()?.let { data ->
+            database.all()?.let { data ->
                 val string = Json.encodeToString(data)
                 println(string)
                 call.handleEncryption(encryptionService, string)?.let { message ->

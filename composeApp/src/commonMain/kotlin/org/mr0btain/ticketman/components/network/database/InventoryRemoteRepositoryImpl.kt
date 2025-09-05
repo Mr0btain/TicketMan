@@ -7,8 +7,8 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.MainData
-import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
@@ -16,21 +16,21 @@ import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
-class UserServerDatabaseClientImpl(
-    private val client: HttpClient,
+class InventoryRemoteRepositoryImpl(
+    val client: HttpClient,
     private val encryptionHandler: ClientEncryptionHandler
-) : ServerDatabaseClient(
-    tag = "UserDatabaseClient",
+) : RemoteRepository(
+    tag = "InventoryRemoteRepositoryImpl",
     client = client,
     encryptionHandler = encryptionHandler
 ) {
     override var serverUrl = ""
 
     override fun changeUrl(url: String) {
-        serverUrl = "$url/api/data/user"
+        serverUrl = "$url/api/data/inventory"
     }
 
-    override suspend fun sync(data: List<MainData>): List<User> {
+    override suspend fun sync(data: List<MainData>): List<Inventory> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 
@@ -53,7 +53,7 @@ class UserServerDatabaseClientImpl(
 
                             if (requested.isNotEmpty()) batchSend(requested)
 
-                            return syncResponse.data.filterIsInstance<User>()
+                            return syncResponse.data.filterIsInstance<Inventory>()
                         }
                     }
             } else return getAll()
@@ -62,14 +62,14 @@ class UserServerDatabaseClientImpl(
         return listOf()
     }
 
-    override suspend fun getAll(): List<User> {
+    override suspend fun getAll(): List<Inventory> {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
             }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
-                ?.onSuccess { value ->
-                    encryptionHandler.decryptData(value)?.let { decrypted ->
-                        return Json.decodeFromString<List<User>>(decrypted)
+                ?.onSuccess { encryptedMessage ->
+                    encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
+                        return Json.decodeFromString<List<Inventory>>(decrypted)
                     }
                 }
         }

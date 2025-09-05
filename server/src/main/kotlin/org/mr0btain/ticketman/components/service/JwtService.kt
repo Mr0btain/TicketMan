@@ -7,7 +7,7 @@ import io.ktor.server.application.Application
 import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.UserLocalDatabaseImpl
+import org.mr0btain.ticketman.database.UserDatabaseImpl
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
@@ -19,7 +19,7 @@ import kotlin.uuid.Uuid
 
 class JwtService(
     private val application: Application,
-    private val userDatabase: UserLocalDatabaseImpl
+    private val userDatabase: UserDatabaseImpl
 ) {
     private val secret = getConfigProperty("jwt.secret")
     private val issuer = getConfigProperty("jwt.issuer")

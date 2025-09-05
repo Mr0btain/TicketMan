@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainData
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
@@ -16,21 +16,21 @@ import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
-class TicketServerDatabaseClientImpl(
+class UserRemoteRepositoryImpl(
     private val client: HttpClient,
     private val encryptionHandler: ClientEncryptionHandler
-) : ServerDatabaseClient(
-    tag = "TicketDatabaseClient",
+) : RemoteRepository(
+    tag = "UserRemoteRepositoryImpl",
     client = client,
     encryptionHandler = encryptionHandler
 ) {
     override var serverUrl = ""
 
     override fun changeUrl(url: String) {
-        serverUrl = "$url/api/data/ticket"
+        serverUrl = "$url/api/data/user"
     }
 
-    override suspend fun sync(data: List<MainData>): List<Ticket> {
+    override suspend fun sync(data: List<MainData>): List<User> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 
@@ -53,7 +53,7 @@ class TicketServerDatabaseClientImpl(
 
                             if (requested.isNotEmpty()) batchSend(requested)
 
-                            return syncResponse.data.filterIsInstance<Ticket>()
+                            return syncResponse.data.filterIsInstance<User>()
                         }
                     }
             } else return getAll()
@@ -62,14 +62,14 @@ class TicketServerDatabaseClientImpl(
         return listOf()
     }
 
-    override suspend fun getAll(): List<Ticket> {
+    override suspend fun getAll(): List<User> {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
             }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
-                ?.onSuccess { encryptedMessage ->
-                    encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<Ticket>>(decrypted)
+                ?.onSuccess { value ->
+                    encryptionHandler.decryptData(value)?.let { decrypted ->
+                        return Json.decodeFromString<List<User>>(decrypted)
                     }
                 }
         }

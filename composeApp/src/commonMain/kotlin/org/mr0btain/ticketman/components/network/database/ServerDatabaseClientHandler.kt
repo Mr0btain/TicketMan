@@ -19,10 +19,10 @@ class ServerDatabaseClientHandler(
 
     // Clients used to interact with server. Only real difference is the types and server urls
     // Could possibly combine this into one client somehow. just supplying the url for each call?
-    val customerClient = CustomerServerDatabaseClientImpl(httpClient, encryptionHandler)
-    val ticketClient = TicketServerDatabaseClientImpl(httpClient, encryptionHandler)
-    val inventoryClient = InventoryServerDatabaseClientImpl(httpClient, encryptionHandler)
-    val userClient = UserServerDatabaseClientImpl(httpClient, encryptionHandler)
+    val customerClient = CustomerRemoteRepositoryImpl(httpClient, encryptionHandler)
+    val ticketClient = TicketRemoteRepositoryImpl(httpClient, encryptionHandler)
+    val inventoryClient = InventoryRemoteRepositoryImpl(httpClient, encryptionHandler)
+    val userClient = UserRemoteRepositoryImpl(httpClient, encryptionHandler)
 
     // For updating the server url
     fun changeServerUrl(url: String) {

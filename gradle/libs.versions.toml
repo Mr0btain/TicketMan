@@ -32,6 +32,9 @@ sqlitejdbc = "3.44.1.0"
 openpdf = "2.0.5"
 okio = "3.15.0"
 kotlinx-io = "0.8.0"
+lazy-pagination-compose = "1.7.1"
+paging_version = "3.4.0-alpha03"
+paging_runtime = "3.3.6"
 
 
 [libraries]
@@ -112,6 +115,13 @@ openpdf = { module = "io.github.librepdf:openpdf", version.ref = "openpdf" }
 #okio = { module = "com.squareup.okio:okio", version.ref = "okio" }
 kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 
+# For pagination
+#pagingRuntime = { module = "androidx.paging:paging-runtime", version.ref = "paging_runtime" }
+paginCommon = { module = "androidx.paging:paging-common", version.ref = "paging_version" }
+pagingCompose = { module = "androidx.paging:paging-compose", version.ref = "paging_version" }
+
+lazyPaginationCompose = { module = "io.github.ahmad-hamwi:lazy-pagination-compose", version.ref = "lazy-pagination-compose" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -124,6 +134,10 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 serialize = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [bundles]
+paging = [
+    "paginCommon",
+    "pagingCompose"
+]
 fileKit = [
     "filekit-core",
     "filekit-dialogs",

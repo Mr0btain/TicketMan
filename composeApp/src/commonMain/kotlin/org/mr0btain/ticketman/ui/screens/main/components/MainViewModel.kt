@@ -16,10 +16,10 @@ import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
-import org.mr0btain.ticketman.components.database.local.CustomerLocalDatabase
-import org.mr0btain.ticketman.components.database.local.InventoryLocalDatabase
-import org.mr0btain.ticketman.components.database.local.TicketLocalDatabase
-import org.mr0btain.ticketman.components.database.local.UserLocalDatabase
+import org.mr0btain.ticketman.database.CustomerDatabaseImpl
+import org.mr0btain.ticketman.database.InventoryDatabaseImpl
+import org.mr0btain.ticketman.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.generateMockCustomer
 import org.mr0btain.ticketman.generateMockUser
 import org.mr0btain.ticketman.generateRandomInventoryItem
@@ -39,18 +39,16 @@ import kotlin.uuid.Uuid
 class MainViewModel(
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
-    companion object {
-        private const val TAG = "MainViewModel"
-        private const val INIT_TAG = "$TAG:Init"
-        private const val INIT_SYNC_TAG = "$TAG:Init_Sync"
-    }
+    private val TAG = "MainViewModel"
+    private val INIT_TAG = "$TAG:Init"
+    private val INIT_SYNC_TAG = "$TAG:Init_Sync"
 
     val shouldLog = false
 
-    private val customerLocalDatabase = CustomerLocalDatabase(shouldLog)
-    private val ticketLocalDatabase = TicketLocalDatabase(shouldLog)
-    private val inventoryLocalDatabase = InventoryLocalDatabase(shouldLog)
-    private val userLocalDatabase = UserLocalDatabase(shouldLog)
+    private val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
+    private val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
+    private val inventoryDatabase = InventoryDatabaseImpl(shouldLog = shouldLog)
+    private val userDatabase = UserDatabaseImpl(shouldLog = shouldLog)
     private val settingsDatabase = SettingsDatabase(shouldLog)
 
     // TODO: Add a way to check if we have network connection, and once we do have it run a check and sync
@@ -68,69 +66,42 @@ class MainViewModel(
                 _scrollBarsOnBottom.value = result.scrollBarsOnBottom
                 _autoSyncDatabase.value = result.autoSync
             } ?: AppLogger.i(INIT_TAG, SimpleError.FAIL)
-
-            // Populate data lists from local
-            //dataHandler.populate()
-
-            /*
-            if (dataHandler.loginCheck()) {
-                if (dataHandler.syncData())
-                    AppLogger.m(INIT_SYNC_TAG, SimpleError.SUCCESS)
-                else
-                    AppLogger.i(INIT_SYNC_TAG, SimpleError.FAIL)
-            } else AppLogger.i(INIT_SYNC_TAG, "No Connection or Not Logged in")
-             */
         }
     }
-
-    /** Main data handler where most of the functions and data is held*/
-    //val dataHandler = DataHandler(appDir, viewModelScope)
 
     private val _selectedCustomerData: MutableStateFlow<CustomerData> = MutableStateFlow(CustomerData())
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
 
     fun updateSelectedCustomer(identifier: Uuid) {
         viewModelScope.launch {
-            customerLocalDatabase.getById(identifier)?.let { customer ->
-                val notes = customerLocalDatabase.getNotes(identifier)
-                val tickets = customerLocalDatabase.getTickets(identifier)
+            customerDatabase.getById(identifier)?.let { customer ->
+                val notes = customerDatabase.notes(identifier)
+                val tickets = customerDatabase.getTickets(identifier)
 
-                _selectedCustomerData.value = CustomerData(customer, notes,tickets)
+                //_selectedCustomerData.value = CustomerData(customer, notes, tickets)
             }
         }
     }
 
-    fun getCustomers() = customerLocalDatabase.getAll()
+    fun getCustomers() = customerDatabase.all()
 
     private val _selectedTicketData: MutableStateFlow<TicketData> = MutableStateFlow(TicketData())
     val selectedTicketData = _selectedTicketData.asStateFlow()
 
     fun updateSelectedTicket(identifier: Uuid) {
         viewModelScope.launch {
-            ticketLocalDatabase.getById(identifier)?.let { ticket ->
-                val notes = ticketLocalDatabase.getNotes(identifier)
 
-                _selectedTicketData.value = TicketData(ticket, notes)
-            }
         }
     }
-
-    fun getTickets() = ticketLocalDatabase.getAll()
 
     private val _selectedInventoryData: MutableStateFlow<InventoryData> = MutableStateFlow(InventoryData())
     val selectedInventoryData = _selectedInventoryData.asStateFlow()
 
     fun updateSelectedInventory(identifier: Uuid) {
         viewModelScope.launch {
-            inventoryLocalDatabase.getById(identifier)?.let { inventory ->
-                val notes = inventoryLocalDatabase.getNotes(identifier)
 
-                _selectedInventoryData.value = InventoryData(inventory, notes)
-            }
         }
     }
-
-    fun getInventory() = inventoryLocalDatabase.getAll()
 
     private val _selectedUserData: MutableStateFlow<UserData> = MutableStateFlow(UserData())
     val selectedUserData = _selectedUserData.asStateFlow()
@@ -226,10 +197,12 @@ class MainViewModel(
             val (ticket, notes) = generateRandomTicket()
 
             // Add ticket to database
-            ticketLocalDatabase.add(ticket)
+            ticketDatabase.add(ticket)
 
             // Add notes
-            ticketLocalDatabase.addNotes(ticket.identifier, notes.map { NoteData(it) })
+            notes.forEach { note ->
+                ticketDatabase.addNote(ticket.identifier, note, emptyList())
+            }
 
             // Insert id into list
             ticketIdentifiers.add(ticket.identifier)
@@ -240,14 +213,16 @@ class MainViewModel(
             val (customer, notes) = generateMockCustomer()
 
             // Add customer
-            customerLocalDatabase.add(customer)
+            customerDatabase.add(customer)
 
             // Add notes
-            customerLocalDatabase.addNotes(customer.identifier, notes.map { NoteData(it) })
+            notes.forEach { note ->
+                customerDatabase.addNote(customer.identifier, note, emptyList())
+            }
 
             // Add random tickets
             (0..Random.nextInt(1, 6)).forEach { _ ->
-                customerLocalDatabase.addTicket(customer.identifier, ticketIdentifiers.random())
+                customerDatabase.addTicket(customer.identifier, ticketIdentifiers.random())
             }
         }
 
@@ -256,9 +231,11 @@ class MainViewModel(
 
             println(inventory)
 
-            inventoryLocalDatabase.add(inventory)
+            inventoryDatabase.add(inventory)
 
-            inventoryLocalDatabase.addNotes(inventory.identifier, notes.map { NoteData(it) })
+            notes.forEach { note ->
+                inventoryDatabase.addNote(inventory.identifier, note, emptyList())
+            }
         }
 
         (0..userNum).forEach { _ ->
@@ -266,14 +243,16 @@ class MainViewModel(
             val (user, notes) = generateMockUser()
 
             // Add user to database
-            userLocalDatabase.add(user)
+            userDatabase.add(user)
 
             //Add notes
-            userLocalDatabase.addNotes(user.identifier, notes.map { NoteData(it) })
+            notes.forEach { note ->
+                userDatabase.addNote(user.identifier, note, emptyList())
+            }
 
             // Add random tickets
             (0..Random.nextInt(4, 12)).forEach { _ ->
-                userLocalDatabase.addTicket(user.identifier, ticketIdentifiers.random())
+                userDatabase.addTicket(user.identifier, ticketIdentifiers.random())
             }
         }
     }

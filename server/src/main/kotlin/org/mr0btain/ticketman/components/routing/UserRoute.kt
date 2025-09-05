@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.data.hashPassword
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.UserLocalDatabaseImpl
+import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
@@ -29,7 +29,7 @@ import kotlin.uuid.Uuid
 // TODO: Not sure if we should let this handle filtering restricted data, or the database itself.
 // TODO: Handle encryption in the rest of these routes
 fun Route.userRoute(
-    database: UserLocalDatabaseImpl,
+    database: UserDatabaseImpl,
     encryptionService: EncryptionService
 ) {
     // Sync between client and server
@@ -41,7 +41,7 @@ fun Route.userRoute(
                 encryptionService.decryptData(identifier, encryptedData)?.let {
                     Json.decodeFromString<SyncRequest>(it)
                 }?.let { syncRequest ->
-                    database.getAll()?.let { data ->
+                    database.all()?.let { data ->
                         val user = data.firstOrNull { it.identifier == identifier }
 
                         if (user != null) {
@@ -89,14 +89,14 @@ fun Route.userRoute(
 
     // TODO: Not sure if this is the right way to go about this
     get("/isnewdatabase") {
-        if (database.getAll()?.isEmpty() ?: true) call.respond(BooleanResponse(true))
+        if (database.all()?.isEmpty() ?: true) call.respond(BooleanResponse(true))
         else call.respond(BooleanResponse(false))
     }
 
     post("/register/first") {
         val identifier = Uuid.random()
 
-        if (database.getAll()?.isEmpty() ?: true) {
+        if (database.all()?.isEmpty() ?: true) {
             val userRequest = call.receive<UserRequest>()
 
             // TODO: Figure this out
@@ -115,7 +115,7 @@ fun Route.userRoute(
 
 
             val user = userRequest.toModel(identifier)
-            val userExists = database.getAll()?.map { it.username }?.contains(user.username)
+            val userExists = database.all()?.map { it.username }?.contains(user.username)
 
             if (userExists != null && !userExists) {
                 if (database.add(user)) call.respond(HttpStatusCode.Created, user.toResponse())

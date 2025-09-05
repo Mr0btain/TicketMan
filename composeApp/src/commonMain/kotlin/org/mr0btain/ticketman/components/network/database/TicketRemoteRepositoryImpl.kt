@@ -7,8 +7,8 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.MainData
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
@@ -16,21 +16,21 @@ import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
-class CustomerServerDatabaseClientImpl(
-    val client: HttpClient,
+class TicketRemoteRepositoryImpl(
+    private val client: HttpClient,
     private val encryptionHandler: ClientEncryptionHandler
-) : ServerDatabaseClient(
-    tag = "CustomerDatabaseClient",
+) : RemoteRepository(
+    tag = "TicketRemoteRepositoryImpl",
     client = client,
     encryptionHandler = encryptionHandler
 ) {
     override var serverUrl = ""
 
     override fun changeUrl(url: String) {
-        serverUrl = "$url/api/data/customer"
+        serverUrl = "$url/api/data/ticket"
     }
 
-    override suspend fun sync(data: List<MainData>): List<Customer> {
+    override suspend fun sync(data: List<MainData>): List<Ticket> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 
@@ -49,12 +49,11 @@ class CustomerServerDatabaseClientImpl(
                     ?.onSuccess { encryptedMessage ->
                         encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
                             val syncResponse = Json.decodeFromString<SyncResponse>(decrypted)
-
                             val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
 
                             if (requested.isNotEmpty()) batchSend(requested)
 
-                            return syncResponse.data.filterIsInstance<Customer>()
+                            return syncResponse.data.filterIsInstance<Ticket>()
                         }
                     }
             } else return getAll()
@@ -63,14 +62,14 @@ class CustomerServerDatabaseClientImpl(
         return listOf()
     }
 
-    override suspend fun getAll(): List<Customer> {
+    override suspend fun getAll(): List<Ticket> {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(GET_ALL_TAG) {
                 client.get("${serverUrl}/all")
             }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
                 ?.onSuccess { encryptedMessage ->
                     encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<Customer>>(decrypted)
+                        return Json.decodeFromString<List<Ticket>>(decrypted)
                     }
                 }
         }

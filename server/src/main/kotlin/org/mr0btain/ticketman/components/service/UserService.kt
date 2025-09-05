@@ -4,7 +4,7 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.database.UserLocalDatabaseImpl
+import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import kotlin.uuid.ExperimentalUuidApi
@@ -12,12 +12,12 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 class UserService(
-    private val database: UserLocalDatabaseImpl,
+    private val database: UserDatabaseImpl,
     private val jwtService: JwtService,
     private val tokenDatabase: TokenDatabase
 ) {
     fun authenticate(loginRequest: LoginRequest): AuthResponse? {
-        val foundUser = database.getAll()?.firstOrNull { it.username == loginRequest.username }
+        val foundUser = database.all()?.firstOrNull { it.username == loginRequest.username }
 
         // Check if user was found and process request
         return if (foundUser != null && foundUser.password == loginRequest.password) {
@@ -43,7 +43,7 @@ class UserService(
     }
 
     fun authenticateUser(loginRequest: LoginRequest): User? {
-        return database.getAll()?.firstOrNull { it.username == loginRequest.username }
+        return database.all()?.firstOrNull { it.username == loginRequest.username }
     }
 
     fun refreshToken(token: String): String? {

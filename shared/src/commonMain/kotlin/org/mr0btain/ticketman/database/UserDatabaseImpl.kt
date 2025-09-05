@@ -8,33 +8,38 @@ import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.image.toImage
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
-import org.mr0btain.ticketman.database.tables.ticket.TicketNoteTable
-import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
+import org.mr0btain.ticketman.database.tables.user.UserEntity
+import org.mr0btain.ticketman.database.tables.user.UserNoteTable
+import org.mr0btain.ticketman.database.tables.user.UserTable
+import org.mr0btain.ticketman.database.tables.user.toUser
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.collections.plus
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 
 @OptIn(ExperimentalUuidApi::class)
-class TicketLocalDatabaseImpl(
+class UserDatabaseImpl(
+    tag: String = "UserLocalDatabase",
     private val shouldLog: Boolean = false
-) : LocalDatabase<Ticket>(
-    tag = "TicketLocalDatabase",
+) : Database<User>(
+    tag = tag,
     shouldLog = shouldLog
 ) {
+    private val GET_TICKETS_TAG = "$tag:GetTickets"
+    private val ADD_TICKET_TAG = "$tag:AddTicket"
+
     /** Gets all items from database */
-    override fun getAll(): List<Ticket>? {
-        var result = listOf<Ticket>()
+    override fun all(): List<User>? {
+        var result = listOf<User>()
 
         try {
             // Go into database and convert data to customer data item
@@ -42,7 +47,7 @@ class TicketLocalDatabaseImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketEntity.all().map { item -> item.toTicket() }
+                result = UserEntity.all().map { item -> item.toUser() }
 
                 AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
             }
@@ -56,15 +61,15 @@ class TicketLocalDatabaseImpl(
     }
 
     /** Gets an item by its identifier */
-    override fun getById(identifier: Uuid): Ticket? {
-        var result: Ticket? = null
+    override fun getById(identifier: Uuid): User? {
+        var result: User? = null
 
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                result = TicketEntity.findById(identifier.toJavaUuid())?.toTicket()
+                result = UserEntity.findById(identifier.toJavaUuid())?.toUser()
 
                 AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
             }
@@ -77,8 +82,17 @@ class TicketLocalDatabaseImpl(
         return result
     }
 
+    override fun getPagedItems(
+        offset: Long,
+        pageSize: Int
+    ): List<User> {
+        TODO("Not yet implemented")
+    }
+
+    override fun count(): Long = UserEntity.count()
+
     /** Adds all items to the database */
-    override fun addAll(data: List<Ticket>): Boolean {
+    override fun addAll(data: List<User>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -89,10 +103,12 @@ class TicketLocalDatabaseImpl(
                     val identifier = item.identifier.toJavaUuid()
 
                     // Insert into database
-                    TicketEntity.new(identifier) {
-                        device = item.device
-                        status = item.status
-                        priority = item.priority
+                    UserEntity.new(identifier) {
+                        username = item.username
+                        password = item.password
+                        name = item.name
+                        contactInfo = item.contactInfo
+                        access = item.accessLevel
                         time = item.time
                     }
                 }
@@ -115,7 +131,7 @@ class TicketLocalDatabaseImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketEntity.findById(identifier.toJavaUuid())?.delete()
+                UserEntity.findById(identifier.toJavaUuid())?.delete()
 
                 AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
             }
@@ -129,7 +145,7 @@ class TicketLocalDatabaseImpl(
     }
 
     /** Adds an item to the database */
-    override fun add(data: Ticket): Boolean {
+    override fun add(data: User): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
@@ -139,10 +155,12 @@ class TicketLocalDatabaseImpl(
                 val identifier = data.identifier.toJavaUuid()
 
                 // Insert into database
-                TicketEntity.new(identifier) {
-                    device = data.device
-                    status = data.status
-                    priority = data.priority
+                UserEntity.new(identifier) {
+                    username = data.username
+                    password = data.password
+                    name = data.name
+                    contactInfo = data.contactInfo
+                    access = data.accessLevel
                     time = data.time
                 }
 
@@ -158,18 +176,21 @@ class TicketLocalDatabaseImpl(
     }
 
     /** Updates an item in the database */
-    override fun update(data: Ticket): Boolean {
+    override fun update(data: User): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketEntity
-                    .findByIdAndUpdate(data.identifier.toJavaUuid()) { item ->
-                        item.device = data.device
-                        item.status = data.status
-                        item.priority = data.priority
-                        item.time = data.time
+                UserEntity
+                    .findById(data.identifier.toJavaUuid())
+                    ?.apply {
+                        username = data.username
+                        password = data.password
+                        name = data.name
+                        contactInfo = data.contactInfo
+                        access = data.accessLevel
+                        time = data.time
                     }
 
                 AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
@@ -183,6 +204,55 @@ class TicketLocalDatabaseImpl(
         }
     }
 
+    /** Adds a ticket to a user, assuming that ticket and user already exist in the database */
+    fun addTicket(userId: Uuid, ticketId: Uuid) {
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                // Get ticket entity
+                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
+                    // Get user entity
+                    UserEntity.findById(userId.toJavaUuid())?.let { userEntity ->
+                        // Insert ticket into user links
+                        userEntity.tickets = SizedCollection(userEntity.tickets + ticketEntity)
+                    }
+                }
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(ADD_TICKET_TAG, "Couldn't add ticket to user!")
+            ex.printStackTrace()
+        }
+    }
+
+    /** Gets all tickets for a user */
+    fun getTickets(identifier: Uuid): List<Ticket> {
+        val tickets = mutableListOf<Ticket>()
+
+        try {
+            transaction {
+                // If we should log, setup logger
+                if (shouldLog) addLogger(StdOutSqlLogger)
+
+                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
+                    tickets.addAll(
+                        userEntity.tickets
+                            .map { ticketEntity -> ticketEntity.toTicket() }
+                    )
+
+                    AppLogger.m(GET_TICKETS_TAG, SimpleError.SUCCESS)
+                } ?: AppLogger.i(GET_TICKETS_TAG, "Could not find user!")
+            }
+        } catch (ex: Exception) {
+            AppLogger.i(GET_TICKETS_TAG, SimpleError.FAIL)
+            ex.printStackTrace()
+        }
+
+        return tickets
+    }
+
+    /** Adds a note to an item and linking it to that item */
     override fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean {
         try {
             transaction {
@@ -192,11 +262,11 @@ class TicketLocalDatabaseImpl(
                 // Insert the note into database and get its entity
                 insertNote(note, images)?.let { noteEntity ->
                     // Add note to customer notes
-                    TicketEntity.findByIdAndUpdate(identifier.toJavaUuid()) { ticketEntity ->
-                        ticketEntity.notes = SizedCollection(ticketEntity.notes + noteEntity)
+                    UserEntity.findByIdAndUpdate(identifier.toJavaUuid()) { userEntity ->
+                        userEntity.notes = SizedCollection(userEntity.notes + noteEntity)
 
                         AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
-                    } ?: AppLogger.i(ADD_NOTE_TAG, "Ticket not found! $identifier")
+                    } ?: AppLogger.i(ADD_NOTE_TAG, "User not found! $identifier")
                 } ?: AppLogger.i(ADD_NOTE_TAG, "Note entity was null!")
             }
 
@@ -209,7 +279,7 @@ class TicketLocalDatabaseImpl(
         return false
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>> {
+    override fun notes(identifier: Uuid): Map<Note, List<StoredImage>> {
         val result = mutableMapOf<Note, List<StoredImage>>()
 
         try {
@@ -217,8 +287,8 @@ class TicketLocalDatabaseImpl(
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
-                TicketEntity.findById(identifier.toJavaUuid())?.let { ticketEntity ->
-                    ticketEntity.notes.forEach { noteEntity ->
+                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
+                    userEntity.notes.forEach { noteEntity ->
                         result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
                     }
 
@@ -243,17 +313,17 @@ class TicketLocalDatabaseImpl(
                 val note = NoteEntity.findById(identifier.toJavaUuid()) ?: return@transaction
 
                 // No clue if this actually works or not??
-                TicketTable
+                UserTable
                     .join(
-                        TicketNoteTable, onColumn = TicketTable.id, otherColumn = TicketNoteTable.ticket,
+                        UserNoteTable, onColumn = UserTable.id, otherColumn = UserNoteTable.user,
                         joinType = JoinType.INNER,
                     )
-                    .select(TicketNoteTable.note eq note.id)
+                    .select(UserNoteTable.note eq note.id)
                     .limit(1)
-                    .map { TicketEntity.wrapRow(it) }
+                    .map { UserEntity.wrapRow(it) }
                     .firstOrNull()
-                    ?.let { ticketEntity ->
-                        ticketEntity.notes = SizedCollection(ticketEntity.notes.filter { it != note })
+                    ?.let { userEntity ->
+                        userEntity.notes = SizedCollection(userEntity.notes.filter { it != note })
                     }
 
                 // Delete linked images
