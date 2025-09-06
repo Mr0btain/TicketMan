@@ -23,7 +23,7 @@ abstract class Database<T: MainData>(
 ) {
     protected val GET_ALL_TAG = "$tag:GetAll"
     protected val GET_BY_ID_TAG = "$tag:GetById"
-    protected val GET_PAGED_ITEMS = "$tag:GetPagedItems"
+    protected val GET_PAGED_ITEMS_TAG = "$tag:GetPagedItems"
     protected val ADD_ALL_TAG = "$tag:AddAll"
     protected val REMOVE_TAG = "$tag:Remove"
     protected val ADD_TAG = "$tag:Add"

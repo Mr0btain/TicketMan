@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.data.shared
+package org.mr0btain.ticketman.data.time
 
 import java.text.SimpleDateFormat
 import java.util.Calendar

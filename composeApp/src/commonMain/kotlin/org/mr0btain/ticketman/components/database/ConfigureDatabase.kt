@@ -6,7 +6,6 @@ import io.github.vinceglb.filekit.path
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.database.LocalDatabaseHandler.Companion.TAG
 import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
@@ -58,6 +57,6 @@ fun initDatabase() {
         AppLogger.m("ClientDatabase: Initialize", SimpleError.SUCCESS)
     } catch (ex: Exception) {
         ex.printStackTrace()
-        AppLogger.i("$TAG: Initialize", SimpleError.SUCCESS)
+        AppLogger.i(" Initialize", SimpleError.SUCCESS)
     }
 }

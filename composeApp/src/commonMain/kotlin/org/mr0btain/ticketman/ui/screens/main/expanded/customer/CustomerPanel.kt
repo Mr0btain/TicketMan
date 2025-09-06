@@ -10,12 +10,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastFirst
+import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.toStringName
 import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
@@ -29,7 +28,7 @@ fun CustomerPanel(
     modifier: Modifier = Modifier,
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
-    customerList: List<Customer>,
+    pagingItems: LazyPagingItems<Customer>,
     selectedCustomer: CustomerData,
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
@@ -41,13 +40,13 @@ fun CustomerPanel(
     isDarkMode: Boolean
 ) {
     // Hopefully this saves on calculations and updates properly
-    val sortedCustomerInfo = remember(customerList) { customerList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
+    //val sortedCustomerInfo = remember(customerList) { customerList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
 
     // For search input
     var searchInput by remember { mutableStateOf("") }
 
     // Search list
-    val searchItems = remember(customerList) { customerList.map { it } }
+    val searchItems = emptyList<Customer>() //remember(customerList) { customerList.map { it } }
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectUpdateFromClick by remember { mutableStateOf(false) }
@@ -113,7 +112,7 @@ fun CustomerPanel(
             ) {
                 CustomerListPane(
                     modifier = Modifier,
-                    customerInfo = sortedCustomerInfo,
+                    customerInfo = pagingItems,
                     lazyListState = customerLazyListState,
                     selectedCustomerId = selectedCustomer.customer?.identifier,
                     scope = coroutineScope,
@@ -142,6 +141,7 @@ fun CustomerPanel(
 
     // On list update or search scroll to selected item
     LaunchedEffect(selectedCustomer) {
+        /*
         if (!isSelectUpdateFromClick) {
             // Get index of visible items
             val visibleItemIndex = customerLazyListState.layoutInfo.visibleItemsInfo.map { it.index }
@@ -158,5 +158,6 @@ fun CustomerPanel(
             }
 
         } else isSelectUpdateFromClick = false
+         */
     }
 }

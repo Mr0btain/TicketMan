@@ -22,7 +22,7 @@ import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.formatTime
+import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus

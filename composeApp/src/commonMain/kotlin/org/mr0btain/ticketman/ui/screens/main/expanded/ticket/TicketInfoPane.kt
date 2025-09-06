@@ -16,7 +16,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.shared.formatTime
+import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock

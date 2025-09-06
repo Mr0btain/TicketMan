@@ -20,6 +20,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.Inventory
@@ -35,7 +36,7 @@ import kotlin.uuid.Uuid
 fun InventoryPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    inventoryList: List<Inventory>,
+    inventoryList: LazyPagingItems<Inventory>,
     selectedInventory: InventoryData,
     scrollBarsOnRight: Boolean,
     onSelectedInventoryChange: (Uuid) -> Unit,
@@ -65,9 +66,10 @@ fun InventoryPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Search box
+                // TODO: Fix this
                 InventorySearch(
                     modifier = Modifier.padding(start = 8.dp),
-                    items = inventoryList,
+                    items = emptyList(),
                     input = searchInput,
                     onInputChange = { searchInput = it },
                     onClick = {
@@ -112,7 +114,7 @@ fun InventoryPanel(
                 InventoryListPane(
                     isDarkMode = isDarkMode,
                     selected = selectedInventory.inventory.identifier,
-                    items = inventoryList,
+                    pagingItems = inventoryList,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onClick = {
                         // Set is update from click
@@ -125,10 +127,11 @@ fun InventoryPanel(
                     coroutineScope = coroutineScope
                 )
 
+                // TODO: FIX
                 InventoryInfoPane(
                     isDarkMode = isDarkMode,
                     scrollBarsOnRight = scrollBarsOnRight,
-                    inventoryItem = inventoryList.firstOrNull { it.identifier == selectedInventory } ?: Inventory(),
+                    inventoryItem = Inventory(), //inventoryList.firstOrNull { it.identifier == selectedInventory } ?: Inventory(),
                     onEditClick = { onEditInventory() }
                 )
             }
@@ -137,7 +140,9 @@ fun InventoryPanel(
 
     // --------------------------------- Launched effect for selected ticket ---------------------------------------------------
 
+    //TODO: FIX
     LaunchedEffect(selectedInventory) {
+        /*
         if (!isSelectedUpdateFromClick) {
             // Get index of our item
             val index = inventoryList.indexOf(selectedInventory.inventory)
@@ -155,5 +160,6 @@ fun InventoryPanel(
                 }
             }
         } else isSelectedUpdateFromClick = false
+         */
     }
 }

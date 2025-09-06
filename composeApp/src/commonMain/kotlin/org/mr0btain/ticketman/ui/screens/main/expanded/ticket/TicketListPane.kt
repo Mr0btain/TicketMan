@@ -17,10 +17,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
-import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
@@ -35,7 +35,7 @@ import kotlin.uuid.Uuid
 fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    ticket: List<Ticket> = listOf(),
+    pagingItems: LazyPagingItems<Ticket>,
     scrollBarsOnRight: Boolean,
     selectedId: Uuid,
     onClick: (Uuid) -> Unit,
@@ -106,26 +106,26 @@ fun TicketListPane(
                 state = state,
                 scope = coroutineScope,
                 scrollBarOnRight = scrollBarsOnRight,
-                isVisible = ticket.isNotEmpty()
+                isVisible = pagingItems.itemCount > 0
             ) {
-                itemsIndexed(ticket) { index, item ->
-                    TicketTableItem(
-                        color = if (!isDarkMode) {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                        } else {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                        },
-                        selected = selectedId == item.identifier,
-                        ticket = item,
-                        numberWidth = numberColumnWidth,
-                        priorityWidth = priorityColumnWidth,
-                        noteWidth = noteColumnWidth,
-                        statusWidth = statusColumnWidth,
-                        isDarkMode = isDarkMode,
-                        onClick = { onClick(item.identifier) }
-                    )
-
-                    Spacer(Modifier.padding(2.dp))
+                items(pagingItems.itemCount) { index ->
+                    pagingItems[index]?.let { ticket ->
+                        TicketTableItem(
+                            color = if (!isDarkMode) {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                            } else {
+                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                            },
+                            selected = selectedId == ticket.identifier,
+                            ticket = ticket,
+                            numberWidth = numberColumnWidth,
+                            priorityWidth = priorityColumnWidth,
+                            noteWidth = noteColumnWidth,
+                            statusWidth = statusColumnWidth,
+                            isDarkMode = isDarkMode,
+                            onClick = { onClick(ticket.identifier) }
+                        )
+                    }
                 }
             }
         }

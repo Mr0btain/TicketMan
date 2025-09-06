@@ -46,7 +46,8 @@ fun createDatabaseHttpClient(
 
                     if (authResponse != null) {
                         AppLogger.m("$TAG:RefreshTokens", "SUCCESS")
-                        BearerTokens(authResponse.accessToken ?: "", authResponse.refreshToken)
+                        BearerTokens("", "")
+                        //BearerTokens(authResponse.accessToken ?: "", authResponse.refreshToken)
                     } else {
                         AppLogger.i("$TAG:RefreshTokens", "FAIL")
                         BearerTokens("", "")

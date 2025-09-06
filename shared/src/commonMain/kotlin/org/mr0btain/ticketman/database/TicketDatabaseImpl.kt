@@ -20,7 +20,6 @@ import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.collections.plus
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -79,6 +78,7 @@ class TicketDatabaseImpl(
 
     override fun getPagedItems(offset: Long, pageSize: Int): List<Ticket> {
         val result = mutableListOf<Ticket>()
+
         try {
             transaction {
                 // If we should log, setup logger
@@ -86,16 +86,16 @@ class TicketDatabaseImpl(
 
                 result.addAll(
                     TicketEntity.all()
-                        .orderBy(TicketTable.time to SortOrder.ASC) // or ASC
+                        .orderBy(TicketTable.time to SortOrder.DESC) // or ASC
                         .offset(offset)
                         .limit(pageSize)
                         .map { it.toTicket() }
                 )
             }
 
-            AppLogger.m(GET_PAGED_ITEMS, SimpleError.SUCCESS)
+            AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleError.SUCCESS)
         } catch (ex: Exception) {
-            AppLogger.i(GET_PAGED_ITEMS, SimpleError.FAIL)
+            AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleError.FAIL)
             ex.printStackTrace()
         }
 

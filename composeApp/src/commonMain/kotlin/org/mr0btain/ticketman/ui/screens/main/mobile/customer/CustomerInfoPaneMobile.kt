@@ -1,26 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.main.mobile.customer
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.shared.formatTime
-import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
-import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
-import org.mr0btain.ticketman.ui.screens.main.components.SmallTicketList
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.edit
-import ticketman.composeapp.generated.resources.user
 
 
 @Composable

@@ -7,24 +7,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
-import org.mr0btain.ticketman.data.shared.getTime
+import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -54,13 +51,14 @@ fun ExpandedMainScreen(
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
     // User stuff
-    //val userList = viewModel.dataHandler.userDataHandler.dataList.collectAsState()
+    val userPagedItems = viewModel.userListFlow.collectAsLazyPagingItems()
     val currentUser = viewModel.selectedUserData.collectAsState()
 
     // For customer panel
-    //val customerData = viewModel.dataHandler.customerDataHandler.dataList.collectAsState()
+    val customerPagedItems = viewModel.customerListFlow.collectAsLazyPagingItems()
     val selectedCustomer = viewModel.selectedCustomerData.collectAsState()
     val customerLazyListState = rememberLazyListState()
+
 
     // For customer dialog
     var customerSeedData: CustomerData by remember { mutableStateOf(CustomerData()) }
@@ -73,7 +71,7 @@ fun ExpandedMainScreen(
     val customerTicketList = remember { mutableStateListOf<Uuid>() }
 
     // For ticket panel
-    val ticketList = viewModel.ticketList.collectAsState()
+    val ticketPagedItems =  viewModel.ticketListFlow.collectAsLazyPagingItems()
     val selectedTicket = viewModel.selectedTicketData.collectAsState()
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
@@ -83,7 +81,7 @@ fun ExpandedMainScreen(
     var ticketSeedData by remember { mutableStateOf(TicketData()) }
 
     // For Inventory panel
-    //val inventoryList = viewModel.dataHandler.inventoryDataHandler.dataList.collectAsState()
+    val inventoryPagedItems = viewModel.inventoryListFlow.collectAsLazyPagingItems()
     val inventoryLazyListState = rememberLazyListState()
     val selectedInventory = viewModel.selectedInventoryData.collectAsState()
 
@@ -301,16 +299,6 @@ fun ExpandedMainScreen(
         )
     }
 
-    LaunchedEffect(ticketLazyListState) {
-        snapshotFlow { ticketLazyListState.firstVisibleItemIndex }
-            .debounce(300) // Wait 300ms after scroll stops
-            .collect { index ->
-                println("Scrolled: $index")
-                println("Count: ${ticketList.value.size}")
-                viewModel.ticketPagerUpdate(index)
-            }
-    }
-
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxSize()
@@ -418,8 +406,6 @@ fun ExpandedMainScreen(
 
                 when (tabIndex.value) {
                     0 -> {
-                        val customerList = remember { viewModel.getCustomers() ?: emptyList() }
-
                         CustomerPanel(
                             isDarkMode = isDarkMode,
                             onAddCustomer = { name ->
@@ -432,6 +418,7 @@ fun ExpandedMainScreen(
                                 }
                             },
                             onEditCustomer = {
+                                /*
                                 coroutineScope.launch {
                                     if (customerList.firstOrNull { it.identifier == selectedCustomer.value.customer.identifier } != null) {
                                         // Set seed data
@@ -444,9 +431,11 @@ fun ExpandedMainScreen(
                                         snackBarState.showSnackbar("Error getting customer data!")
                                     }
                                 }
+                                 */
                             },
                             onCustomerSelectionChange = { id -> viewModel.updateSelectedCustomer(id) },
                             onDeleteCustomer = { id ->
+                                /*
                                 coroutineScope.launch {
                                     // TODO: Maybe add name of customer to this as well?
                                     // TODO: Add ability to delete tickets for customer as well
@@ -461,6 +450,7 @@ fun ExpandedMainScreen(
                                         showConfirmDeleteDialog = true
                                     }
                                 }
+                                 */
                             },
                             onTicketClick = { identifier ->
                                 coroutineScope.launch {
@@ -474,7 +464,7 @@ fun ExpandedMainScreen(
                                 }
                             },
                             selectedCustomer = selectedCustomer.value,
-                            customerList = customerList,
+                            pagingItems = customerPagedItems,
                             customerLazyListState = customerLazyListState,
                             coroutineScope = coroutineScope,
                             scrollBarsOnRight = scrollBarsOnRight,
@@ -486,7 +476,7 @@ fun ExpandedMainScreen(
                     1 -> {
                        TicketPanel(
                             isDarkMode = isDarkMode,
-                            ticketList = ticketList.value,
+                            pagingItems = ticketPagedItems,
                             currentUser = currentUser.value,
                             scrollBarsOnRight = scrollBarsOnRight,
                             selectedTicket = selectedTicket.value,
@@ -502,7 +492,8 @@ fun ExpandedMainScreen(
                             onEditTicket = {
                                 coroutineScope.launch {
                                     // Check if the ticket is an actual ticket and not a blank
-                                    if (ticketList.value.firstOrNull { it.identifier == selectedTicket.value.ticket.identifier } != null) {
+                                    /*
+                                    if (ticketList.firstOrNull { it.identifier == selectedTicket.value.ticket.identifier } != null) {
                                         // Get seed data
                                         ticketSeedData = selectedTicket.value
 
@@ -515,6 +506,7 @@ fun ExpandedMainScreen(
                                         )
                                         snackBarState.showSnackbar("Error getting ticket info!")
                                     }
+                                     */
                                 }
                             },
                             onSelectedTicketChange = { id -> viewModel.updateSelectedTicket(id) },
@@ -522,7 +514,8 @@ fun ExpandedMainScreen(
                             onDeleteTicket = { id ->
                                 coroutineScope.launch {
                                     // Make sure item exists
-                                    if (ticketList.value.firstOrNull { it.identifier == id } != null) {
+                                    /*
+                                    if (ticketList.firstOrNull { it.identifier == id } != null) {
                                         // Set values
                                         itemToDelete = id
                                         itemToDeleteType = MainItemType.TICKET
@@ -531,6 +524,7 @@ fun ExpandedMainScreen(
                                         // Trigger the dialog
                                         showConfirmDeleteDialog = true
                                     }
+                                     */
                                 }
                             },
                             selectedPanel = selectedTicketPanel,
@@ -544,11 +538,9 @@ fun ExpandedMainScreen(
 
                     // Inventory panel
                     2 -> {
-                        val inventoryList = remember { viewModel.getInventory() ?: emptyList() }
-
                         InventoryPanel(
                             isDarkMode = isDarkMode,
-                            inventoryList = inventoryList,
+                            inventoryList = inventoryPagedItems,
                             selectedInventory = selectedInventory.value,
                             onSelectedInventoryChange = { id -> viewModel.updateSelectedTicket(id) },
                             onAddInventory = {
@@ -562,6 +554,7 @@ fun ExpandedMainScreen(
                             },
                             onEditInventory = {
                                 coroutineScope.launch {
+                                    /*
                                     if (inventoryList.firstOrNull { it.identifier == selectedInventory.value.inventory.identifier } != null) {
                                         // Set seed data
                                         inventorySeedData = selectedInventory.value
@@ -572,11 +565,13 @@ fun ExpandedMainScreen(
                                         AppLogger.m("ExpandedMainScreen:onEditInventoryItem", "Error getting inventory item, data was null!")
                                         snackBarState.showSnackbar("Error getting inventory item!")
                                     }
+                                     */
                                 }
                             },
                             onDeleteInventory = {
                                 coroutineScope.launch {
                                     // Check if its valid
+                                    /*
                                     if (inventoryList.firstOrNull { it.identifier == selectedInventory.value.inventory.identifier } != null) {
                                         // Set values
                                         itemToDelete = selectedInventory.value.inventory.identifier
@@ -586,6 +581,7 @@ fun ExpandedMainScreen(
                                         // Trigger the dialog
                                         showConfirmDeleteDialog = true
                                     }
+                                     */
                                 }
                             },
                             coroutineScope = coroutineScope,

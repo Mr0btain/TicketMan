@@ -1,38 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.main.mobile
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentWidth
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Tab
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.shared.DialogDismissReason
-import org.mr0btain.ticketman.data.shared.MainItemType
-import org.mr0btain.ticketman.data.shared.getTime
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
-import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryDialog
-import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
-import org.mr0btain.ticketman.ui.screens.main.mobile.customer.CustomerPanelMobile
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

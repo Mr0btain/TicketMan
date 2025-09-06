@@ -19,7 +19,7 @@ import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.SubItemType
-import org.mr0btain.ticketman.data.shared.getTime
+import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog

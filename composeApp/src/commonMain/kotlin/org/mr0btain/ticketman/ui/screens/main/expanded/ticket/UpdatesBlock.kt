@@ -9,9 +9,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.data.shared.formatTime
+import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.ticket.TicketUpdate
-import org.mr0btain.ticketman.ui.composables.image.ImagePager
 
 @Composable
 fun UpdatesBlock(

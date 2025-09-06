@@ -3,6 +3,9 @@ package org.mr0btain.ticketman.ui.screens.main.components
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.cachedIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -12,18 +15,19 @@ import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
-import org.mr0btain.ticketman.error.SimpleError
-import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
+import org.mr0btain.ticketman.components.pagination.CustomPagingSource
 import org.mr0btain.ticketman.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.database.UserDatabaseImpl
+import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.generateMockCustomer
 import org.mr0btain.ticketman.generateMockUser
 import org.mr0btain.ticketman.generateRandomInventoryItem
 import org.mr0btain.ticketman.generateRandomTicket
+import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -44,14 +48,8 @@ class MainViewModel(
     private val INIT_SYNC_TAG = "$TAG:Init_Sync"
 
     val shouldLog = false
+    val pagingConfig = PagingConfig(pageSize = 40, maxSize = 400)
 
-    private val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
-    private val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
-    private val inventoryDatabase = InventoryDatabaseImpl(shouldLog = shouldLog)
-    private val userDatabase = UserDatabaseImpl(shouldLog = shouldLog)
-    private val settingsDatabase = SettingsDatabase(shouldLog)
-
-    // TODO: Add a way to check if we have network connection, and once we do have it run a check and sync
     fun init() {
         viewModelScope.launch {
             initDatabase()
@@ -69,39 +67,73 @@ class MainViewModel(
         }
     }
 
+    /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
+
+    private val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
+
+    private val customerPager = Pager(pagingConfig) { CustomPagingSource(customerDatabase) }
+    val customerListFlow = customerPager.flow.cachedIn(viewModelScope)
+
     private val _selectedCustomerData: MutableStateFlow<CustomerData> = MutableStateFlow(CustomerData())
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
 
     fun updateSelectedCustomer(identifier: Uuid) {
         viewModelScope.launch {
             customerDatabase.getById(identifier)?.let { customer ->
-                val notes = customerDatabase.notes(identifier)
+                val notes = customerDatabase.notes(identifier).map { NoteData(it.key, it.value) }
                 val tickets = customerDatabase.getTickets(identifier)
 
-                //_selectedCustomerData.value = CustomerData(customer, notes, tickets)
+                _selectedCustomerData.value = CustomerData(customer, notes, tickets)
             }
         }
     }
 
-    fun getCustomers() = customerDatabase.all()
+    /** ----------------------------------------------TICKET------------------------------------------------------------------- */
+
+    private val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
+
+    private val ticketPager = Pager(pagingConfig) { CustomPagingSource(ticketDatabase) }
+    val ticketListFlow = ticketPager.flow.cachedIn(viewModelScope)
 
     private val _selectedTicketData: MutableStateFlow<TicketData> = MutableStateFlow(TicketData())
     val selectedTicketData = _selectedTicketData.asStateFlow()
 
     fun updateSelectedTicket(identifier: Uuid) {
         viewModelScope.launch {
+            ticketDatabase.getById(identifier)?.let { ticket ->
+                val notes = ticketDatabase.notes(identifier).map { NoteData(it.key, it.value) }
 
+                _selectedTicketData.value = TicketData(ticket, notes)
+            }
         }
     }
+
+    /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
+
+    private val inventoryDatabase = InventoryDatabaseImpl(shouldLog = shouldLog)
+
+    private val inventoryPager = Pager(pagingConfig) { CustomPagingSource(inventoryDatabase) }
+    val inventoryListFlow = inventoryPager.flow.cachedIn(viewModelScope)
 
     private val _selectedInventoryData: MutableStateFlow<InventoryData> = MutableStateFlow(InventoryData())
     val selectedInventoryData = _selectedInventoryData.asStateFlow()
 
     fun updateSelectedInventory(identifier: Uuid) {
         viewModelScope.launch {
+            inventoryDatabase.getById(identifier)?.let { inventory ->
+                val notes = inventoryDatabase.notes(identifier).map { NoteData(it.key, it.value) }
 
+                _selectedInventoryData.value = InventoryData(inventory, notes)
+            }
         }
     }
+
+    /** ----------------------------------------------USER------------------------------------------------------------------- */
+
+    private val userDatabase = UserDatabaseImpl(shouldLog = shouldLog)
+
+    private val userPager = Pager(pagingConfig) { CustomPagingSource(userDatabase) }
+    val userListFlow = userPager.flow.cachedIn(viewModelScope)
 
     private val _selectedUserData: MutableStateFlow<UserData> = MutableStateFlow(UserData())
     val selectedUserData = _selectedUserData.asStateFlow()
@@ -109,6 +141,8 @@ class MainViewModel(
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
     val selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
+
+    /** ----------------------------------------------UI------------------------------------------------------------------- */
 
     // To update the main tab index
     fun changeMainTabIndex(update: Int) {
@@ -123,8 +157,9 @@ class MainViewModel(
         _showLogin.value = value
     }
 
-    /** Settings section */
-    // ----------------------------------------------------------------------------------------------------------------------
+    /** ----------------------------------------------SETTINGS------------------------------------------------------------------- */
+
+    private val settingsDatabase = SettingsDatabase(shouldLog)
 
     private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val darkMode = _darkMode.asStateFlow()
@@ -185,10 +220,12 @@ class MainViewModel(
         )
     }
 
+    /** ----------------------------------------------TESTING------------------------------------------------------------------- */
+
     fun fillDatabaseWithTestData() {
         val ticketIdentifiers = mutableListOf<Uuid>()
         val ticketNum = 1000
-        val customerNum = 200
+        val customerNum = 400
         val inventoryNum = 100
         val userNum = 25
 

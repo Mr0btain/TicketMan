@@ -17,6 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.getPlatform
@@ -31,7 +32,7 @@ import kotlin.uuid.Uuid
 fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    items: List<Inventory>,
+    pagingItems: LazyPagingItems<Inventory>,
     scrollBarsOnRight: Boolean,
     selected: Uuid,
     onClick: (Uuid) -> Unit,
@@ -112,52 +113,52 @@ fun InventoryListPane(
                     state = state,
                     scope = coroutineScope,
                     scrollBarOnRight = scrollBarsOnRight,
-                    isVisible = items.isNotEmpty()
+                    isVisible = pagingItems.itemCount > 0
                 ) {
-                    itemsIndexed(items) { index, item ->
-                        InventoryTableItem(
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            selected = selected == item.identifier,
-                            inventoryItem = item,
-                            nameColumnWidth = nameColumnWidth,
-                            stockColumnWidth = stockColumnWidth,
-                            descriptionColumnWidth = descriptionColumnWidth,
-                            costColumnWidth = costColumnWidth,
-                            priceColumnWidth = priceColumnWidth,
-                            isDarkMode = isDarkMode,
-                            onClick = { onClick(item.identifier) }
-                        )
-
-                        Spacer(Modifier.padding(2.dp))
+                    items(pagingItems.itemCount) { index ->
+                        pagingItems[index]?.let { inventory ->
+                            InventoryTableItem(
+                                color = if (!isDarkMode) {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                                } else {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                },
+                                selected = selected == inventory.identifier,
+                                inventoryItem = inventory,
+                                nameColumnWidth = nameColumnWidth,
+                                stockColumnWidth = stockColumnWidth,
+                                descriptionColumnWidth = descriptionColumnWidth,
+                                costColumnWidth = costColumnWidth,
+                                priceColumnWidth = priceColumnWidth,
+                                isDarkMode = isDarkMode,
+                                onClick = { onClick(inventory.identifier) }
+                            )
+                        }
                     }
                 }
             } else {
                 LazyColumn(
                     state = state
                 ) {
-                    itemsIndexed(items) { index, item ->
-                        InventoryTableItem(
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            selected = selected == item.identifier,
-                            inventoryItem = item,
-                            nameColumnWidth = nameColumnWidth,
-                            stockColumnWidth = stockColumnWidth,
-                            descriptionColumnWidth = descriptionColumnWidth,
-                            costColumnWidth = costColumnWidth,
-                            priceColumnWidth = priceColumnWidth,
-                            isDarkMode = isDarkMode,
-                            onClick = { onClick(item.identifier) }
-                        )
-
-                        Spacer(Modifier.padding(2.dp))
+                    items(pagingItems.itemCount) { index ->
+                        pagingItems[index]?.let { inventory ->
+                            InventoryTableItem(
+                                color = if (!isDarkMode) {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                                } else {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                },
+                                selected = selected == inventory.identifier,
+                                inventoryItem = inventory,
+                                nameColumnWidth = nameColumnWidth,
+                                stockColumnWidth = stockColumnWidth,
+                                descriptionColumnWidth = descriptionColumnWidth,
+                                costColumnWidth = costColumnWidth,
+                                priceColumnWidth = priceColumnWidth,
+                                isDarkMode = isDarkMode,
+                                onClick = { onClick(inventory.identifier) }
+                            )
+                        }
                     }
                 }
             }

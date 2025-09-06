@@ -15,6 +15,8 @@ import org.mr0btain.ticketman.data.MainData
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+// TODO: Eventually set up a way to designate if the client is Host or remote and adapt this to something more akin to it
+
 @Suppress("PropertyName")
 abstract class RemoteRepository(
     tag: String,

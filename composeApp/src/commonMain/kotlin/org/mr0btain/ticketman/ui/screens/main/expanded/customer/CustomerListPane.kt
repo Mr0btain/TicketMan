@@ -16,6 +16,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.itemKey
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.getPlatform
@@ -29,7 +31,7 @@ import kotlin.uuid.Uuid
 @Composable
 fun CustomerListPane(
     modifier: Modifier = Modifier,
-    customerInfo: List<Customer>,
+    customerInfo: LazyPagingItems<Customer>,
     onClick: (Uuid) -> Unit,
     selectedCustomerId: Uuid?,
     lazyListState: LazyListState,
@@ -93,24 +95,24 @@ fun CustomerListPane(
                     state = lazyListState,
                     scope = scope,
                     scrollBarOnRight = scrollBarsOnRight,
-                    isVisible = customerInfo.isNotEmpty()
+                    isVisible = customerInfo.itemCount != 0
                 ) {
-                    itemsIndexed(customerInfo) { index, info ->
-                        CustomerTableItem(
-                            customer = info,
-                            selected = info.identifier == selectedCustomerId,
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            nameWidth = nameColumnWidth,
-                            addressWidth = addressColumnWidth,
-                            contactWidth = contactColumnWidth,
-                            onClick = onClick
-                        )
-
-                        Spacer(Modifier.padding(2.dp))
+                    items(customerInfo.itemCount) { index ->
+                        customerInfo[index]?.let { customer ->
+                            CustomerTableItem(
+                                customer = customer,
+                                selected = customer.identifier == selectedCustomerId,
+                                color = if (!isDarkMode) {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                                } else {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                },
+                                nameWidth = nameColumnWidth,
+                                addressWidth = addressColumnWidth,
+                                contactWidth = contactColumnWidth,
+                                onClick = onClick
+                            )
+                        }
                     }
                 }
             } else {
@@ -119,22 +121,22 @@ fun CustomerListPane(
                         .width(700.dp),
                     state = lazyListState
                 ) {
-                    itemsIndexed(customerInfo) { index, info ->
-                        CustomerTableItem(
-                            customer = info,
-                            selected = info.identifier == selectedCustomerId,
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            nameWidth = nameColumnWidth,
-                            addressWidth = addressColumnWidth,
-                            contactWidth = contactColumnWidth,
-                            onClick = onClick
-                        )
-
-                        Spacer(Modifier.padding(2.dp))
+                    items(customerInfo.itemCount) { index ->
+                        customerInfo[index]?.let { customer ->
+                            CustomerTableItem(
+                                customer = customer,
+                                selected = customer.identifier == selectedCustomerId,
+                                color = if (!isDarkMode) {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                                } else {
+                                    if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                                },
+                                nameWidth = nameColumnWidth,
+                                addressWidth = addressColumnWidth,
+                                contactWidth = contactColumnWidth,
+                                onClick = onClick
+                            )
+                        }
                     }
                 }
             }

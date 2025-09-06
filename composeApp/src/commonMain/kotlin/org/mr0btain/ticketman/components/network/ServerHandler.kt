@@ -12,14 +12,12 @@ import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.components.database.DataHandler
 
 /**
  * Handles the interaction and states of server clients
  */
 class ServerHandler(
     engine: HttpClientEngine,
-    private val dataHandler: DataHandler
 ) {
     private val TAG = "ServerHandler"
 
@@ -45,37 +43,43 @@ class ServerHandler(
     /**
      * Gets stored username from database
      */
-    suspend fun getUsername() = dataHandler.getStoredUsername()
+    suspend fun getUsername(): String {
+        // dataHandler.getStoredUsername()
+        return ""
+    }
 
     /**
      * Gets stored password from database
      */
-    suspend fun getPassword() = dataHandler.getStoredPassword()
+    suspend fun getPassword(): String {
+        // dataHandler.getStoredPassword()
+        return ""
+    }
 
     /**
      * Gets stored access token from database
      */
-    suspend fun getAccessToken() = dataHandler.getStoredAccessToken()
+    suspend fun getAccessToken() = "" // dataHandler.getStoredAccessToken()
 
     /**
      * Gets both stored tokens from database
      */
-    suspend fun getRefreshToken() = dataHandler.getStoredRefreshToken()
+    suspend fun getRefreshToken() = "" // dataHandler.getStoredRefreshToken()
 
     /**
      * Gets both stored tokens from database
      */
-    suspend fun setUser(user: User) = dataHandler.userDataHandler.setCurrent(user)
+    suspend fun setUser(user: User) =  "" //dataHandler.userDataHandler.setCurrent(user)
 
     /**
      * Refreshes tokens for authentication
      */
-    suspend fun refreshTokens() = dataHandler.refreshTokens()
+    suspend fun refreshTokens() = "" //dataHandler.refreshTokens()
 
     /**
      * Updates stored tokens in database
      */
-    suspend fun updateAuthTokens(access: String, refresh: String) = dataHandler.updateStoredAuthTokens(access, refresh)
+    suspend fun updateAuthTokens(access: String, refresh: String) = "" //dataHandler.updateStoredAuthTokens(access, refresh)
 
     /**
      * Checks connection with server using stored url

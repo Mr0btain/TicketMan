@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.ui.screens.main.expanded.ticket
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -10,12 +9,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.ui.composables.TicketSearch
 import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
@@ -34,7 +33,7 @@ fun TicketPanel(
     onSelectedPanelChange: (Int) -> Unit,
     scrollBarsOnRight: Boolean,
     selectedTicket: TicketData,
-    ticketList: List<Ticket>,
+    pagingItems: LazyPagingItems<Ticket>,
     currentUser: UserData,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
@@ -44,20 +43,14 @@ fun TicketPanel(
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
-    // Sorted tickets by which tab were on
-    val sortedTickets = remember(selectedPanel, ticketList, currentUser) {
-        if (selectedPanel == 0) {
-            ticketList.sortedBy { it.identifier }.reversed() //.filter { it.assignedUser == currentUserId }.reversed()
-        } else {
-            ticketList.sortedBy { it.identifier }.reversed()
-        }
-    }
-
     // For search input
     var searchInput by remember { mutableStateOf("") }
 
     // Search items
-    val searchItems = remember(selectedPanel) { sortedTickets.map { it.identifier } }
+    //TODO: FIx
+    val searchItems = remember(selectedPanel) {
+        emptyList<Uuid>() //sortedTickets.map { it.identifier }
+    }
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
@@ -170,7 +163,7 @@ fun TicketPanel(
                 // All tickets tab.
                 TicketListPane(
                     isDarkMode = isDarkMode,
-                    ticket = sortedTickets,
+                    pagingItems = pagingItems,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onClick = { ticket ->
                         // Update from click
@@ -205,10 +198,12 @@ fun TicketPanel(
 
     // --------------------------------- Launched effect for selected ticket ---------------------------------------------------
 
+    // TODO: FIX
     // TODO: Maybe make this also switch to the right tab as well
     // On certain list update scroll to selected item
     // This will only really happen if we add a new ticket
     LaunchedEffect(selectedTicket.ticket.identifier, selectedPanel) {
+        /*
         if (!isSelectedUpdateFromClick) {
             // Check to see if were even on the list were selecting the ticket for, this comes up if
             // were on mytickets tab, and we add a new ticket that isn't assigned to our employee
@@ -231,5 +226,6 @@ fun TicketPanel(
                 }
             }
         } else isSelectedUpdateFromClick = false
+         */
     }
 }

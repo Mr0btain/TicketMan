@@ -99,7 +99,7 @@ kotlin {
             implementation(libs.bundles.fileKit)
 
             // Pagination
-            //implementation(libs.bundles.paging)
+            implementation(libs.bundles.paging)
 
         }
 

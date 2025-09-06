@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.data
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.data.shared.getTime
+import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType

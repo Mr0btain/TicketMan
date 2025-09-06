@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
@@ -82,11 +83,27 @@ open class CustomerDatabaseImpl(
         return result
     }
 
-    override fun getPagedItems(
-        offset: Long,
-        pageSize: Int
-    ): List<Customer> {
-        TODO("Not yet implemented")
+    override fun getPagedItems(offset: Long, pageSize: Int): List<Customer> {
+        val result = mutableListOf<Customer>()
+
+        try {
+            transaction {
+                result.addAll(
+                    CustomerEntity
+                        .all()
+                        .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.time to SortOrder.DESC)
+                        .offset(offset)
+                        .limit(pageSize)
+                        .map { it.toCustomer() }
+                )
+            }
+
+            AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleError.SUCCESS)
+        } catch (ex: Exception) {
+            AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleError.FAIL)
+        }
+
+        return result
     }
 
     override fun count(): Long = CustomerEntity.count()

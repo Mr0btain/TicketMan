@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -19,9 +18,8 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.shared.formatTime
+import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.ticket.TicketUpdate
-import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 

@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.core.JoinType
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
@@ -12,6 +13,7 @@ import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.toImage
+import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
@@ -82,11 +84,27 @@ class UserDatabaseImpl(
         return result
     }
 
-    override fun getPagedItems(
-        offset: Long,
-        pageSize: Int
-    ): List<User> {
-        TODO("Not yet implemented")
+    override fun getPagedItems(offset: Long, pageSize: Int): List<User> {
+        val result = mutableListOf<User>()
+
+        try {
+            transaction {
+                result.addAll(
+                    UserEntity
+                        .all()
+                        .orderBy(UserTable.name to SortOrder.ASC, InventoryTable.time to SortOrder.ASC)
+                        .offset(offset)
+                        .limit(pageSize)
+                        .map { it.toUser() }
+                )
+            }
+
+            AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleError.SUCCESS)
+        } catch (ex: Exception) {
+            AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleError.FAIL)
+        }
+
+        return result
     }
 
     override fun count(): Long = UserEntity.count()
