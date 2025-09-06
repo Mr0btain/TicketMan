@@ -20,7 +20,6 @@ import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.time.getTime
-import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
@@ -61,14 +60,8 @@ fun ExpandedMainScreen(
 
 
     // For customer dialog
-    var customerSeedData: CustomerData by remember { mutableStateOf(CustomerData()) }
     var showCustomerDialog by remember { mutableStateOf(false) }
     var isTicketForNewCustomer by remember { mutableStateOf(false) }
-
-    // We need this outside of the customer dialog so we can modify this from other dialogs
-    // and handle different scenarios
-    val tempTicketHolder = remember { mutableStateListOf<Ticket>() }
-    val customerTicketList = remember { mutableStateListOf<Uuid>() }
 
     // For ticket panel
     val ticketPagedItems =  viewModel.ticketListFlow.collectAsLazyPagingItems()
@@ -78,7 +71,6 @@ fun ExpandedMainScreen(
 
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
-    var ticketSeedData by remember { mutableStateOf(TicketData()) }
 
     // For Inventory panel
     val inventoryPagedItems = viewModel.inventoryListFlow.collectAsLazyPagingItems()
@@ -87,13 +79,9 @@ fun ExpandedMainScreen(
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
-    var inventorySeedData by remember { mutableStateOf(InventoryData()) }
 
     // For confirm delete dialog
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
-    var itemToDelete by remember { mutableStateOf(Uuid.random()) }
-    var itemToDeleteType by remember { mutableStateOf(MainItemType.NONE) }
-    var confirmDeleteDialogText by remember { mutableStateOf("") }
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
@@ -101,108 +89,35 @@ fun ExpandedMainScreen(
 
     // For customer adding or editing
     if (showCustomerDialog) {
-        CustomerDialog(
-            onDismiss = { data, reason ->
-                coroutineScope.launch {
-                    // Check if we should update or add
-                    when (reason) {
-                        DialogDismissReason.CONTINUE -> {
-                            // Add or update customer
-                            data?.let { customerData ->
-                                //viewModel.dataHandler.customerDataHandler.addOrUpdate(customerData)
-
-                                // Check for new tickets and add
-                                tempTicketHolder.forEach { ticket ->
-                                    //if (customerData.tickets.contains(ticket.identifier)) viewModel.dataHandler.ticketDataHandler.addOrUpdate(ticket)
-                                }
-                            }
-                        }
-
-                        else -> {
-                            // Do nothing
-                        }
-                    }
-
-                    // Reset starter data
-                    customerSeedData = CustomerData()
-
-                    // Reset customer ticket stuff
-                    tempTicketHolder.clear()
-                    customerTicketList.clear()
-
-                    // Hide dialog
-                    showCustomerDialog = false
-                }
-            },
-            onAddNewTicket = {
-                coroutineScope.launch {
-                    // Set is for new customer so ticket dialog knows wht to do with it
-                    isTicketForNewCustomer = true
-
-                    ticketSeedData = TicketData()
-
-                    // Pop up the dialog
-                    showTicketDialog = true
-                }
-            },
-            isDarkMode = isDarkMode,
-            seedData = customerSeedData,
-            scrollBarsOnRight = scrollBarsOnRight
-        )
+        selectedCustomer.value?.let { customerData ->
+            CustomerDialog(
+                onDismiss = { showCustomerDialog = false },
+                onContinue = { result ->
+                    // Check for a change, if so we need to update the data
+                    if (result != customerData) viewModel.addOrUpdateCustomer(result)
+                },
+                isDarkMode = isDarkMode,
+                seedData = customerData,
+                scrollBarsOnRight = scrollBarsOnRight
+            )
+        }
     }
 
     // For ticket adding or editing
     if (showTicketDialog) {
-        TicketDialog(
-            onDismiss = { data, reason ->
-                coroutineScope.launch {
-                    // Check if it's an actual add else data will be null
-                    when (reason) {
-                        DialogDismissReason.CONTINUE -> {
-                            // Check if this is for a new customer as we don't need to add them unless we fully finish adding
-                            // customer itself
-                            if (isTicketForNewCustomer) {
-                                // Add to temp holder list before we finalize customer
-                                tempTicketHolder.add(data!!)
+        selectedTicket.value?.let { ticketData ->
+            TicketDialog(
+                onDismiss = { showTicketDialog = false },
+                isDarkMode = isDarkMode,
+                seedData = ticketData,
+                scrollBarsOnRight = scrollBarsOnRight,
+                onContinue = { result ->
+                    // Check if its changed, if so update it
+                    if (selectedTicket.value != result) viewModel.addOrUpdateTicket(result)
+                },
+            )
+        }
 
-                                // Add to customer ticket list
-                                customerTicketList.add(data.identifier)
-
-                                // Reset check
-                                isTicketForNewCustomer = false
-                            } else {
-                                // Else add it to the database
-                                data?.let { ticketInfo ->
-                                    // viewModel.dataHandler.ticketDataHandler.addOrUpdate(ticketInfo)
-                                }
-                            }
-                        }
-
-                        DialogDismissReason.CANCEL -> {
-                            // Do nothing
-                        }
-                    }
-
-                    // Reset seed data
-                    ticketSeedData = TicketData()
-
-                    // Close dialog
-                    showTicketDialog = false
-                }
-            },
-            isDarkMode = isDarkMode,
-            seedData = ticketSeedData,
-            scrollBarsOnRight = scrollBarsOnRight,
-            onAddNewCustomer = { name ->
-                coroutineScope.launch {
-                    // Add seeded data if there is any
-                    customerSeedData = CustomerData(Customer(name = name, time = getTime()))
-
-                    // Trigger dialog
-                    showCustomerDialog = true
-                }
-            }
-        )
     }
 
     // For inventory adding or editing
@@ -391,7 +306,7 @@ fun ExpandedMainScreen(
 
                         // TODO: Make this only work if not logged in or hide if logged in
                         Button(
-                            onClick = { viewModel.updateShowLogin(true) }
+                            onClick = { viewModel.changeShowLogin(true) }
                         ) {
                             Text("Log In")
                         }
@@ -426,7 +341,7 @@ fun ExpandedMainScreen(
                                     showCustomerDialog = true
                                 }
                             },
-                            onCustomerSelectionChange = { id -> viewModel.updateSelectedCustomer(id) },
+                            onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomer(id) },
                             onDeleteCustomer = { id ->
                                 coroutineScope.launch {
                                     // Set values
@@ -440,7 +355,7 @@ fun ExpandedMainScreen(
                             },
                             onTicketClick = { identifier ->
                                 coroutineScope.launch {
-                                    viewModel.updateSelectedTicket(identifier)
+                                    viewModel.changeSelectedTicket(identifier)
 
                                     viewModel.selectedTicketData.value?.let { ticketData ->
                                         // Get seed data
@@ -488,7 +403,7 @@ fun ExpandedMainScreen(
                                     }
                                 }
                             },
-                            onSelectedTicketChange = { id -> viewModel.updateSelectedTicket(id) },
+                            onSelectedTicketChange = { id -> viewModel.changeSelectedTicket(id) },
                             onSelectedPanelChange = { selectedTicketPanel = it },
                             onDeleteTicket = { id ->
                                 coroutineScope.launch {
@@ -516,7 +431,7 @@ fun ExpandedMainScreen(
                             isDarkMode = isDarkMode,
                             inventoryList = inventoryPagedItems,
                             selectedInventory = selectedInventory.value,
-                            onSelectedInventoryChange = { id -> viewModel.updateSelectedInventory(id) },
+                            onSelectedInventoryChange = { id -> viewModel.changeSelectedInventory(id) },
                             onAddInventory = {
                                 coroutineScope.launch {
                                     // Set seed data

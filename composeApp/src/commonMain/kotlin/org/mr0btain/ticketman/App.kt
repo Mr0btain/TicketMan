@@ -10,7 +10,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
@@ -104,7 +103,7 @@ fun App() {
                 LoginPopup(
                     modifier = Modifier.padding(24.dp),
                     viewModel = mainViewModel,
-                    onDismiss = { mainViewModel.updateShowLogin(!shouldShowLogin.value) },
+                    onDismiss = { mainViewModel.changeShowLogin(!shouldShowLogin.value) },
                     coroutineScope = mainScope
                 )
             }

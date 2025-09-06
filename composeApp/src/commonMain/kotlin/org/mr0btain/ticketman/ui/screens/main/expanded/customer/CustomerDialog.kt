@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -16,12 +15,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.operations.DataType
+import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.shared.*
+import org.mr0btain.ticketman.data.ticket.toNameString
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
@@ -33,20 +35,19 @@ import ticketman.composeapp.generated.resources.edit_2
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
 import kotlin.math.ceil
+import kotlin.math.min
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-// TODO: Add checks to make sure its not blank
 // TODO: Add ability to assign already existing tickets to customer.
 // TODO: Add ability to edit note
-// TODO: Find better way to remove items based off more than just an index?
 @OptIn(ExperimentalUuidApi::class)
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
     seedData: CustomerData,
-    onDismiss: (CustomerData?, DialogDismissReason) -> Unit,
-    onAddNewTicket: () -> Unit,
+    onDismiss: () -> Unit,
+    onContinue: (CustomerData) -> Unit,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
@@ -68,8 +69,10 @@ fun CustomerDialog(
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
-    var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
-    var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
+    var dataType by remember { mutableStateOf(DataType.NONE) }
+
+    // Might be a better way of doing this, for now just send it like this
+    var itemToDelete by remember { mutableStateOf<Any?>(null) }
 
     // For adding note dialog
     var showAddNoteDialog by remember { mutableStateOf(false) }
@@ -80,6 +83,7 @@ fun CustomerDialog(
     var showAddBasicSubItemDialog by remember { mutableStateOf(false) }
 
     // Add Note dialog
+    // TODO: Redo this to modern notedata with images and such
     if (showAddNoteDialog) {
         NoteDialog(
             isDarkMode = isDarkMode,
@@ -100,6 +104,7 @@ fun CustomerDialog(
     }
 
     // Add basic item dialog
+    // TODO: Redo this
     if (showAddBasicSubItemDialog) {
         AddBasicSubItemDialog(
             isDarkMode = isDarkMode,
@@ -127,59 +132,47 @@ fun CustomerDialog(
     }
 
     // Delete item dialog
-    if (showConfirmDeleteScreen) {
+    if (showConfirmDeleteScreen && dataType != DataType.NONE) {
         ConfirmDeleteDialog(
-            itemName = when (itemForDelete) {
-                SubItemType.TICKET -> itemForDelete.toString()
-                SubItemType.EMAIL -> email[itemUpForDeleteIndex]
-                SubItemType.PHONE -> phone[itemUpForDeleteIndex]
-                SubItemType.NOTE -> notes[itemUpForDeleteIndex].note.author + "'s Note"
-                else -> ""
-            },
-            isDarkMode = isDarkMode,
-            mainItemType = MainItemType.CUSTOMER,
-            onDismissRequest = { confirm ->
-                if (confirm && itemForDelete != SubItemType.NONE) {
-                    when (itemForDelete) {
-                        SubItemType.TICKET -> {
-                            // Remove item from list
-                            tickets.removeAt(itemUpForDeleteIndex)
+            dataType = dataType,
+            onContinue = {
+                when (dataType) {
+                    DataType.TICKET -> {
+                        (itemToDelete as? Uuid)?.let { identifier ->
+                            tickets.removeIf { it.ticket.identifier == identifier }
                         }
-
-                        SubItemType.EMAIL -> {
-                            // Remove item from list
-                            email.removeAt(itemUpForDeleteIndex)
-                        }
-
-                        SubItemType.PHONE -> {
-                            // Remove item from list
-                            phone.removeAt(itemUpForDeleteIndex)
-                        }
-
-                        SubItemType.NOTE -> {
-                            // Remove item from list
-                            notes.removeAt(itemUpForDeleteIndex)
-                        }
-
-                        // For everything else do nothing
-                        else -> {}
                     }
+
+                    DataType.EMAIL -> {
+                        (itemToDelete as? String)?.let { item ->
+                            email.removeIf { it == item }
+                        }
+                    }
+
+                    DataType.PHONE -> {
+                        (itemToDelete as? String)?.let { item ->
+                            phone.removeIf { it == item }
+                        }
+                    }
+
+                    DataType.NOTE -> {
+                        (itemToDelete as? Uuid)?.let { identifier ->
+                            notes.removeIf { it.note.identifier == identifier }
+                        }
+                    }
+
+                    else -> {}
                 }
-
-                // Reset items for delete and set index to insane value
-                itemUpForDeleteIndex = 10000
-                itemForDelete = SubItemType.NONE
-
-                showConfirmDeleteScreen = false
             },
+            onDismiss = {
+                dataType = DataType.NONE
+                showConfirmDeleteScreen = false
+            }
         )
     }
 
     Dialog(
-        onDismissRequest = {
-            // Call dismiss as we haven't confirmed anything
-            onDismiss(null, DialogDismissReason.CANCEL)
-        }
+        onDismissRequest = { onDismiss() }
     ) {
         Surface(
             modifier = modifier
@@ -323,8 +316,13 @@ fun CustomerDialog(
                         items = email,
                         onEditClick = {},
                         onDeleteClick = { item ->
-                            itemForDelete = SubItemType.EMAIL
-                            itemUpForDeleteIndex = item
+                            // Set data type so we know what were looking to delete
+                            dataType = DataType.EMAIL
+
+                            // Set item data so we know which item to delete
+                            itemToDelete = item
+
+                            // Popup dialog
                             showConfirmDeleteScreen = true
                         }
                     )
@@ -365,8 +363,13 @@ fun CustomerDialog(
                         items = phone,
                         onEditClick = {},
                         onDeleteClick = { item ->
-                            itemForDelete = SubItemType.PHONE
-                            itemUpForDeleteIndex = item
+                            // Set data type so we know what were looking to delete
+                            dataType = DataType.PHONE
+
+                            // Set item data so we know which item to delete
+                            itemToDelete = item
+
+                            // Popup dialog
                             showConfirmDeleteScreen = true
                         }
                     )
@@ -384,7 +387,9 @@ fun CustomerDialog(
 
                         IconButton(
                             modifier = Modifier.size(26.dp),
-                            onClick = { onAddNewTicket() }
+                            onClick = {
+                                // TODO
+                            }
                         ) {
                             Icon(
                                 modifier = Modifier
@@ -400,13 +405,20 @@ fun CustomerDialog(
 
                     // ------------------------- Ticket list -------------------------------
                     CustomerDialogTicketList(
-                        items = emptyList(),
+                        tickets = tickets,
                         onDeleteClick = { item ->
-                            itemForDelete = SubItemType.TICKET
-                            itemUpForDeleteIndex = item
+                            // Set data type so we know what were looking to delete
+                            dataType = DataType.TICKET
+
+                            // Set item data so we know which item to delete
+                            itemToDelete = item
+
+                            // Popup dialog
                             showConfirmDeleteScreen = true
                         },
-                        onTicketClick = {}
+                        onTicketClick = {
+                            // TODO
+                        }
                     )
 
                     Spacer(Modifier.padding(4.dp))
@@ -458,10 +470,9 @@ fun CustomerDialog(
                 // -------------------------------------------- Confirm Cancel buttons ----------------------------------------------------
                 ConfirmOrCancelButtonRow(
                     modifier = Modifier.fillMaxWidth(),
-                    onCancelClick = { onDismiss(null, DialogDismissReason.CANCEL) },
+                    onCancelClick = { onDismiss() },
                     onConfirmClick = {
-                        // Call dismiss with continue
-                        onDismiss(
+                        onContinue(
                             CustomerData(
                                 customer = Customer(
                                     identifier = seedData.customer.identifier,
@@ -480,8 +491,7 @@ fun CustomerDialog(
                                 ),
                                 tickets = tickets,
                                 notes = notes
-                            ),
-                            DialogDismissReason.CONTINUE
+                            )
                         )
                     }
                 )
@@ -498,8 +508,8 @@ fun CustomerDialog(
 private fun CustomerDialogEmailList(
     modifier: Modifier = Modifier,
     items: List<String>,
-    onEditClick: (Int) -> Unit,
-    onDeleteClick: (Int) -> Unit
+    onEditClick: (String) -> Unit,
+    onDeleteClick: (String) -> Unit
 ) {
     Column(
         modifier = modifier
@@ -507,8 +517,8 @@ private fun CustomerDialogEmailList(
         items.forEachIndexed { index, email ->
             CustomChip(
                 label = items[index],
-                onEditClick =  { onEditClick(index) },
-                onDeleteClick =  { onDeleteClick(index) }
+                onEditClick =  { onEditClick(email) },
+                onDeleteClick =  { onDeleteClick(email) }
             )
 
             Spacer(Modifier.padding(2.dp))
@@ -520,18 +530,15 @@ private fun CustomerDialogEmailList(
 private fun CustomerDialogPhoneList(
     modifier: Modifier = Modifier,
     items: List<String>,
-    onEditClick: (Int) -> Unit,
-    onDeleteClick: (Int) -> Unit
+    onEditClick: (String) -> Unit,
+    onDeleteClick: (String) -> Unit
 ) {
-    val padding = 4.dp
-    var row = 1
-
     Column {
-        for (i in 1..ceil(items.size.toFloat() / 3f).toInt()) {
-            val index = i * row
+        for (i in 0..(items.size / 3) + 1) {
+            val startIndex = i * 3
 
             // CHeck if there is even items in this row
-            if (items.getOrElse(index - 1) { "" }.isNotEmpty()) {
+            if (items.size > startIndex) {
                 Row(
                     modifier = modifier
                         .fillMaxWidth()
@@ -539,56 +546,37 @@ private fun CustomerDialogPhoneList(
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CustomChip(
-                        label = items[index - 1],
-                        onEditClick = { onEditClick(index - 1) },
-                        onDeleteClick = { onDeleteClick(index - 1) }
-                    )
-
-                    Spacer(Modifier.padding(padding))
-
-                    if (items.getOrElse(index) { "" }.isNotEmpty()) {
+                    items.subList(startIndex, min(startIndex + 3, items.size)).forEach { phoneNumber ->
                         CustomChip(
-                            label = items[index],
-                            onEditClick = { onEditClick(index) },
-                            onDeleteClick = { onDeleteClick(index) }
+                            label = phoneNumber,
+                            onEditClick = { onEditClick(phoneNumber) },
+                            onDeleteClick = { onDeleteClick(phoneNumber) }
                         )
-                    }
 
-                    Spacer(Modifier.padding(padding))
-
-                    if (items.getOrElse(index + 1) { "" }.isNotEmpty()) {
-                        CustomChip(
-                            label = items[index + 1],
-                            onEditClick = { onEditClick(index + 1) },
-                            onDeleteClick = { onDeleteClick(index + 1) }
-                        )
+                        Spacer(Modifier.padding(4.dp))
                     }
                 }
             }
-
-            row++
         }
     }
 }
 
 // TODO: Convert to lazy row
+// TODO: Add Note section
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun CustomerDialogTicketList(
     modifier: Modifier = Modifier,
-    items: List<String>,
-    onTicketClick: (Int) -> Unit,
-    onDeleteClick: (Int) -> Unit
+    tickets: List<TicketData>,
+    onTicketClick: (Uuid) -> Unit,
+    onDeleteClick: (Uuid) -> Unit
 ) {
-    val padding = 4.dp
-    var row = 1
-
     Column {
-        for (i in 1..ceil(items.size.toFloat() / 5f).toInt()) {
-            val index = i * row
+        for (i in 0..(tickets.size / 5) + 1) {
+            val rowStartIndex = i * 5
 
-            // CHeck if there is even items in this row
-            if (items.getOrElse(index - 1) { "" }.isNotEmpty()) {
+            // Make sure this is a sane row
+            if (tickets.size > i * 5 && tickets.subList(i, min(i + 5, tickets.size)).isNotEmpty()) {
                 Row(
                     modifier = modifier
                         .fillMaxWidth()
@@ -596,55 +584,19 @@ private fun CustomerDialogTicketList(
                     horizontalArrangement = Arrangement.Start,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    CustomInputChip(
-                        label = items[index - 1],
-                        onClick = { onTicketClick(index - 1) },
-                        onDeleteClick = { onDeleteClick(index - 1) }
-                    )
+                    (rowStartIndex..rowStartIndex + 5).forEach { index ->
+                        tickets.getOrNull(index)?.let { ticket ->
+                            CustomInputChip(
+                                label = ticket.ticket.device.toNameString(),
+                                onClick = { onTicketClick(ticket.ticket.identifier) },
+                                onDeleteClick = { onDeleteClick(ticket.ticket.identifier) }
+                            )
 
-                    Spacer(Modifier.padding(padding))
-
-                    if (items.getOrElse(index) { "" }.isNotEmpty()) {
-                        CustomInputChip(
-                            label = items[index],
-                            onClick = { onTicketClick(index) },
-                            onDeleteClick = { onDeleteClick(index) }
-                        )
-                    }
-
-                    Spacer(Modifier.padding(padding))
-
-                    if (items.getOrElse(index + 1) { "" }.isNotEmpty()) {
-                        CustomInputChip(
-                            label = items[index + 1],
-                            onClick = { onTicketClick(index + 1) },
-                            onDeleteClick = { onDeleteClick(index + 1) }
-                        )
-                    }
-
-                    Spacer(Modifier.padding(padding))
-
-                    if (items.getOrElse(index + 2) { "" }.isNotEmpty()) {
-                        CustomInputChip(
-                            label = items[index + 2],
-                            onClick = { onTicketClick(index + 2) },
-                            onDeleteClick = { onDeleteClick(index + 2) }
-                        )
-                    }
-
-                    Spacer(Modifier.padding(padding))
-
-                    if (items.getOrElse(index + 3, { "" }).isNotEmpty()) {
-                        CustomInputChip(
-                            label = items[index + 3],
-                            onClick = { onTicketClick(index + 3) },
-                            onDeleteClick = { onDeleteClick(index + 3) }
-                        )
+                            Spacer(Modifier.padding(4.dp))
+                        }
                     }
                 }
             }
-
-            row++
         }
     }
 }

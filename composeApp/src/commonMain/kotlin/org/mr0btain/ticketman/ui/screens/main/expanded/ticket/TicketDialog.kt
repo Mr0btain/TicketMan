@@ -16,16 +16,11 @@ import org.mr0btain.ticketman.components.utils.isNewTicket
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
-import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.ui.composables.CustomerSearch
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
-import org.mr0btain.ticketman.ui.composables.UserSearch
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
@@ -41,19 +36,17 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
-    onAddNewCustomer: (PersonName) -> Unit,
-    onDismiss: (Ticket?, DialogDismissReason) -> Unit,
+    onContinue: (TicketData) -> Unit,
+    onDismiss: () -> Unit,
     seedData: TicketData,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
 ) {
-    //val userIds = remember(users) { users.map { it.identifier } }
-
     // seed data
-    //var customerId by remember(seedData) { mutableStateOf(seedData.customerId) }
+    var customerId by remember(seedData) { mutableStateOf<Customer?>(null) }
 
     // Assigned employee
-    //var assignedUser by remember(seedData) { mutableStateOf(seedData.assignedUser) }
+    var assignedUser by remember(seedData) { mutableStateOf<User?>(null) }
 
     // Device
     var deviceManufacturer by remember(seedData) { mutableStateOf(seedData.ticket.device.manufacturer) }
@@ -71,9 +64,8 @@ fun TicketDialog(
     var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
     var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
 
-    // For editing or adding updates dialog
-    var showEditUpdateDialog by remember { mutableStateOf(false) }
-    var noteSeed by remember { mutableStateOf(Note()) }
+    // For editing or adding notes dialog
+    var showEditNoteDialog by remember { mutableStateOf(false) }
 
     // For customer search bar
     var customerSearchBarInput by remember { mutableStateOf("") }
@@ -82,7 +74,7 @@ fun TicketDialog(
     var userSearchBarInput by remember { mutableStateOf("")  }
 
     // Edit or add update dialog
-    if (showEditUpdateDialog) {
+    if (showEditNoteDialog) {
         /*
         EditUpdateDialog(
             isDarkMode = isDarkMode,
@@ -102,7 +94,7 @@ fun TicketDialog(
     // Delete item dialog
     if (showConfirmDeleteScreen) {
         ConfirmDeleteDialog(
-            itemName = when (itemForDelete) {
+            label = when (itemForDelete) {
                 SubItemType.UPDATE -> notes[itemUpForDeleteIndex].note.author + "'s Update"
                 else -> ""
             },
@@ -121,20 +113,13 @@ fun TicketDialog(
                     }
                 }
 
-                // Reset items for delete and set index to insane value
-                itemUpForDeleteIndex = 10000
-                itemForDelete = SubItemType.NONE
-
                 showConfirmDeleteScreen = false
             },
         )
     }
 
     Dialog(
-        onDismissRequest = {
-            // Call dismiss as we haven't confirmed anything
-            onDismiss(null, DialogDismissReason.CANCEL)
-        }
+        onDismissRequest = { onDismiss() }
     ) {
         Surface(
             modifier = modifier
@@ -296,8 +281,7 @@ fun TicketDialog(
                         IconButton(
                             modifier = Modifier.size(26.dp),
                             onClick = {
-                                noteSeed = Note()
-                                showEditUpdateDialog = true
+                                showEditNoteDialog = true
                             }
                         ) {
                             Icon(
@@ -328,18 +312,19 @@ fun TicketDialog(
                 // -------------------------------------------- Confirm Cancel buttons ----------------------------------------------------
                 ConfirmOrCancelButtonRow(
                     modifier = Modifier.fillMaxWidth(),
-                    onCancelClick = { onDismiss(null, DialogDismissReason.CANCEL) },
+                    onCancelClick = { onDismiss() },
                     onConfirmClick = {
-                        // Call dismiss with data
-                        onDismiss(
-                            Ticket(
-                                identifier = seedData.ticket.identifier,
-                                device = Device(deviceManufacturer, deviceModel),
-                                status = status,
-                                priority = priority,
-                                time = seedData.ticket.time
-                            ),
-                            DialogDismissReason.CONTINUE
+                        onContinue(
+                            TicketData(
+                                ticket = Ticket(
+                                    identifier = seedData.ticket.identifier,
+                                    device = Device(deviceManufacturer, deviceModel),
+                                    status = status,
+                                    priority = priority,
+                                    time = seedData.ticket.time
+                                ),
+                                notes = notes
+                            )
                         )
                     }
                 )

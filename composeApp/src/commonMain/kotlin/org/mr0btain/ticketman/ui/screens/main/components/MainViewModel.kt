@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
@@ -67,6 +68,15 @@ class MainViewModel(
         }
     }
 
+    /** ----------------------------------------------OPERATIONS------------------------------------------------------------------- */
+
+    private val _dataType: MutableStateFlow<DataType> = MutableStateFlow(DataType.NONE)
+    val dataType = _dataType.asStateFlow()
+
+    fun changeDataType(type: DataType) {
+        _dataType.value = type
+    }
+
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
     private val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
@@ -77,7 +87,7 @@ class MainViewModel(
     private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
 
-    fun updateSelectedCustomer(identifier: Uuid) {
+    fun changeSelectedCustomer(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
                 customerDatabase.getById(identifier)?.let { customer ->
@@ -95,6 +105,89 @@ class MainViewModel(
         }
     }
 
+    /** Updates a Customer and its data in the database */
+    fun addOrUpdateCustomer(customerData: CustomerData) {
+        val existingCustomer = customerDatabase.getById(customerData.customer.identifier)?.also { customer ->
+            // Update customer if its changed
+            if (customerData.customer != customer) customerDatabase.update(customerData.customer)
+
+            // Existing notes for comparison
+            val existingNotes = customerDatabase.notes(customerData.customer.identifier).map { NoteData(it.key, it.value) }
+
+            // Check if the note exists already and update if it needs to or add new
+            customerData.notes.forEach { noteData ->
+                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                    if (noteData != existingNote) {
+                        // TODO: Update note. Function not yet implemented
+                    }
+                } ?: customerDatabase.addNote(customerData.customer.identifier, noteData.note, noteData.images)
+            }
+
+            // Existing tickets for comparison
+            val existingTickets = customerDatabase.getTickets(customerData.customer.identifier)
+
+            // Add tickets if they're new or update if they've changed
+            customerData.tickets.forEach { ticketData ->
+                // See if it exists
+                val ticket = existingTickets.firstOrNull { it.identifier == ticketData.ticket.identifier }?.also { existingTicket ->
+                    // check if ticket has changed, if so update it
+                    if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
+
+                    // Existing notes for comparison
+                    val existingTicketNotes = ticketDatabase.notes(existingTicket.identifier).map { NoteData(it.key, it.value) }
+
+                    // Check ticket notes if they exist and have changed, if so update else add
+                    ticketData.notes.forEach { noteData ->
+                        existingTicketNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                            if (noteData != existingNote) {
+                                // TODO Update note, not yet implemented
+                            }
+                        } ?: ticketDatabase.addNote(existingTicket.identifier, noteData.note, noteData.images)
+                    }
+                }
+
+                // Check if it was null, then we need to add a whole new ticket
+                if (ticket == null) {
+                    // Add to ticket database
+                    ticketDatabase.add(ticketData.ticket)
+
+                    // Add notes to ticket
+                    ticketData.notes.forEach { (note, images) ->
+                        ticketDatabase.addNote(ticketData.ticket.identifier, note, images)
+                    }
+
+                    // Link to customer
+                    customerDatabase.addTicket(customerData.customer.identifier, ticketData.ticket.identifier)
+                }
+            }
+        }
+
+        // If the customer doesn't exist, then add new
+        if (existingCustomer == null) {
+            // Add customer
+            customerDatabase.add(customerData.customer)
+
+            // Add notes
+            customerData.notes.forEach { (note, images) ->
+                customerDatabase.addNote(customerData.customer.identifier, note, images)
+            }
+
+            // Add tickets
+            customerData.tickets.forEach { (ticket, notes) ->
+                // Add ticket
+                ticketDatabase.add(ticket)
+
+                // Add notes
+                notes.forEach { (note, images) ->
+                    ticketDatabase.addNote(ticket.identifier, note, images)
+                }
+
+                // link to customer
+                customerDatabase.addTicket(customerData.customer.identifier, ticket.identifier)
+            }
+        }
+    }
+
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
 
     private val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
@@ -105,7 +198,7 @@ class MainViewModel(
     private val _selectedTicketData: MutableStateFlow<TicketData?> = MutableStateFlow(null)
     val selectedTicketData = _selectedTicketData.asStateFlow()
 
-    fun updateSelectedTicket(identifier: Uuid) {
+    fun changeSelectedTicket(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedTicketData.value?.ticket?.identifier != identifier)
             ticketDatabase.getById(identifier)?.let { ticket ->
@@ -114,6 +207,10 @@ class MainViewModel(
                 _selectedTicketData.value = TicketData(ticket, notes)
             }
         }
+    }
+
+    fun addOrUpdateTicket(ticketData: TicketData) {
+        // TODO
     }
 
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
@@ -126,7 +223,7 @@ class MainViewModel(
     private val _selectedInventoryData: MutableStateFlow<InventoryData?> = MutableStateFlow(null)
     val selectedInventoryData = _selectedInventoryData.asStateFlow()
 
-    fun updateSelectedInventory(identifier: Uuid) {
+    fun changeSelectedInventory(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedInventoryData.value?.inventory?.identifier != identifier) {
                 inventoryDatabase.getById(identifier)?.let { inventory ->
@@ -136,6 +233,10 @@ class MainViewModel(
                 }
             }
         }
+    }
+
+    fun addOrUpdateInventory(inventoryData: InventoryData) {
+        // TODO
     }
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */
@@ -163,7 +264,7 @@ class MainViewModel(
     val showLogin = _showLogin.asStateFlow()
 
     /** Update whether we should show the login popup or not*/
-    fun updateShowLogin(value: Boolean) {
+    fun changeShowLogin(value: Boolean) {
         _showLogin.value = value
     }
 
