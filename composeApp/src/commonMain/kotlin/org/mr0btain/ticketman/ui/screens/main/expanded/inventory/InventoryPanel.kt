@@ -37,7 +37,7 @@ fun InventoryPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     inventoryList: LazyPagingItems<Inventory>,
-    selectedInventory: InventoryData,
+    selectedInventory: InventoryData?,
     scrollBarsOnRight: Boolean,
     onSelectedInventoryChange: (Uuid) -> Unit,
     onAddInventory: () -> Unit,
@@ -113,7 +113,7 @@ fun InventoryPanel(
                 // List of all the inventory items
                 InventoryListPane(
                     isDarkMode = isDarkMode,
-                    selected = selectedInventory.inventory.identifier,
+                    selected = selectedInventory?.inventory?.identifier,
                     pagingItems = inventoryList,
                     scrollBarsOnRight = scrollBarsOnRight,
                     onClick = {
@@ -127,11 +127,10 @@ fun InventoryPanel(
                     coroutineScope = coroutineScope
                 )
 
-                // TODO: FIX
                 InventoryInfoPane(
                     isDarkMode = isDarkMode,
                     scrollBarsOnRight = scrollBarsOnRight,
-                    inventoryItem = Inventory(), //inventoryList.firstOrNull { it.identifier == selectedInventory } ?: Inventory(),
+                    inventoryData = selectedInventory,
                     onEditClick = { onEditInventory() }
                 )
             }

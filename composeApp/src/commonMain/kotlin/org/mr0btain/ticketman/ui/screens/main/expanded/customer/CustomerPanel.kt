@@ -29,7 +29,7 @@ fun CustomerPanel(
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
     pagingItems: LazyPagingItems<Customer>,
-    selectedCustomer: CustomerData,
+    selectedCustomer: CustomerData?,
     onAddCustomer: (PersonName) -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (Uuid) -> Unit,
@@ -74,7 +74,7 @@ fun CustomerPanel(
                         onCustomerSelectionChange(it)
 
                         // Set search input
-                        selectedCustomer.customer?.let { customer ->
+                        selectedCustomer?.customer?.let { customer ->
                             searchInput = customer.name.toStringName()
                         }
                               },
@@ -95,7 +95,7 @@ fun CustomerPanel(
                         },
                         onDeleteClick = {
                             // Trigger delete ticket dialog/ confirm
-                            selectedCustomer.customer?.let { customer ->
+                            selectedCustomer?.customer?.let { customer ->
                                 onDeleteCustomer(customer.identifier)
                             }
                         }
@@ -114,7 +114,7 @@ fun CustomerPanel(
                     modifier = Modifier,
                     customerInfo = pagingItems,
                     lazyListState = customerLazyListState,
-                    selectedCustomerId = selectedCustomer.customer?.identifier,
+                    selectedCustomerId = selectedCustomer?.customer?.identifier,
                     scope = coroutineScope,
                     scrollBarsOnRight = scrollBarsOnRight,
                     isDarkMode = isDarkMode,

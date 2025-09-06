@@ -13,7 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.data.Inventory
+import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
@@ -26,11 +26,11 @@ import ticketman.composeapp.generated.resources.package_icon
 fun InventoryInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    inventoryItem: Inventory,
+    inventoryData: InventoryData?,
     scrollBarsOnRight: Boolean,
     onEditClick: () -> Unit
 ) {
-    val date = formatTime(inventoryItem.time)
+    val date = formatTime(inventoryData?.inventory?.time ?: Long.MAX_VALUE)
 
     // Main Body
     Surface(
@@ -63,7 +63,7 @@ fun InventoryInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = inventoryItem.name,
+                        text = inventoryData?.inventory?.name ?: "",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -117,47 +117,49 @@ fun InventoryInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        // Description
-                        Column(
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = "Description:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
+                        inventoryData?.let { (inventory, _) ->
+                            // Description
+                            Column(
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    text = "Description:",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+
+                                Spacer(Modifier.padding(4.dp))
+
+                                Text(
+                                    text = inventory.description,
+                                    fontSize = 16.sp
+                                )
+                            }
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // Cost
+                            SimpleTextItem(
+                                label = "Cost",
+                                text = inventory.cost
                             )
 
                             Spacer(Modifier.padding(4.dp))
 
-                            Text(
-                                text = inventoryItem.description,
-                                fontSize = 16.sp
+                            // Price
+                            SimpleTextItem(
+                                label = "Price",
+                                text = inventory.price
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // Date created
+                            SimpleTextItem(
+                                label = "Created",
+                                text = if (inventory.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
                             )
                         }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Cost
-                        SimpleTextItem(
-                            label = "Cost",
-                            text = inventoryItem.cost
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Price
-                        SimpleTextItem(
-                            label = "Price",
-                            text = inventoryItem.price
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Date created
-                        SimpleTextItem(
-                            label = "Created",
-                            text = if (inventoryItem.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
-                        )
                     }
                 }
 
@@ -176,7 +178,7 @@ fun InventoryInfoPane(
                             .padding(20.dp),
                         scrollBarOnRight = scrollBarsOnRight,
                         backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        isVisible = false //inventoryItem.notes.isNotEmpty()
+                        isVisible = inventoryData?.notes?.isNotEmpty() ?: false
                     ) {
                         Text(
                             text = "Notes",

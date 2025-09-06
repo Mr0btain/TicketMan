@@ -19,14 +19,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.ticket.toNameString
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.theme.extendedDark
@@ -278,7 +279,8 @@ fun TableTicketIdItem(
             fontFamily = textStyle.fontFamily,
             textAlign = textStyle.textAlign,
             color = textStyle.color,
-            maxLines = 3,
+            softWrap = false,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
@@ -303,7 +305,7 @@ fun TableCardTextItem(
 @Composable
 fun SmallTicketList(
     modifier: Modifier = Modifier,
-    tickets: List<Ticket>,
+    ticketData: List<TicketData>?,
     scrollBarsOnRight: Boolean,
     isDarkMode: Boolean,
     onClick: (Uuid) -> Unit
@@ -323,7 +325,8 @@ fun SmallTicketList(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(8.dp)
+                    .padding(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
                     modifier = Modifier.size(20.dp),
@@ -342,88 +345,70 @@ fun SmallTicketList(
 
             HorizontalDivider()
 
-            PlatformColumnScrollable(
-                modifier = Modifier.padding(4.dp),
-                scrollBarOnRight = scrollBarsOnRight,
-                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                isVisible = tickets.isNotEmpty()
-            ) {
-                tickets.reversed().forEach { ticket ->
-                    Surface(
-                        modifier = Modifier
-                            .padding(8.dp)
-                            .clickable(
-                                onClick = { onClick(ticket.identifier) }
-                            ),
-                        shape = RoundedCornerShape(10.dp),
-                        shadowElevation = 4.dp,
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp)
+            ticketData?.let {
+                PlatformColumnScrollable(
+                    modifier = Modifier.padding(4.dp),
+                    scrollBarOnRight = scrollBarsOnRight,
+                    backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                    isVisible = ticketData.isNotEmpty()
+                ) {
+                    ticketData.reversed().forEach { data ->
+                        Surface(
+                            modifier = Modifier
+                                .padding(8.dp)
+                                .clickable(
+                                    onClick = { onClick(data.ticket.identifier) }
+                                ),
+                            shape = RoundedCornerShape(10.dp),
+                            shadowElevation = 4.dp,
                         ) {
-                            Row(
-                                modifier = modifier
-                                    .fillMaxWidth()
-                                    .padding(4.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text(
-                                    text = ticket.identifier.toString(),
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-
-                                TableStatusItem(
-                                    status = ticket.status,
-                                    darkMode = isDarkMode
-                                )
-                            }
-
-                            HorizontalDivider()
-
-                            // Device details
-                            Row(
-                                modifier = Modifier.padding(4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = ticket.device.manufacturer,
-                                    fontSize = 14.sp
-                                )
-
-                                Spacer(Modifier.padding(2.dp))
-
-                                Text(
-                                    text = ticket.device.model,
-                                    fontSize = 14.sp
-                                )
-                            }
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            // Notes section
                             Column(
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier.padding(16.dp)
                             ) {
-                                /*
-                                ticket.updates.take(3).forEach { update ->
-                                    Row(
-                                        modifier = Modifier.padding(4.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = update.note.author + ": ",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
+                                Row(
+                                    modifier = modifier
+                                        .fillMaxWidth()
+                                        .padding(4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                ) {
+                                    Text(
+                                        text = data.ticket.device.toNameString(),
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
 
-                                        Text(
-                                            text = update.note.text,
-                                            fontSize = 14.sp
-                                        )
+                                    TableStatusItem(
+                                        status = data.ticket.status,
+                                        darkMode = isDarkMode
+                                    )
+                                }
+
+                                Spacer(Modifier.padding(4.dp))
+
+                                // Notes section
+                                Column(
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    // We only want a tidbit of notes test from this data, we can get the
+                                    // images and such when we click on it for more info
+                                    data.notes.take(3).forEach { (note, _) ->
+                                        Row(
+                                            modifier = Modifier.padding(4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = note.author + ": ",
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+
+                                            Text(
+                                                text = note.message,
+                                                fontSize = 14.sp
+                                            )
+                                        }
                                     }
                                 }
-                                 */
                             }
                         }
                     }

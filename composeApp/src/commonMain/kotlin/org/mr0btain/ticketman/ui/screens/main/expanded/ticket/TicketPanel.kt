@@ -32,7 +32,7 @@ fun TicketPanel(
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
     scrollBarsOnRight: Boolean,
-    selectedTicket: TicketData,
+    selectedTicket: TicketData?,
     pagingItems: LazyPagingItems<Ticket>,
     currentUser: UserData,
     onAddNewTicket: () -> Unit,
@@ -146,7 +146,9 @@ fun TicketPanel(
                         },
                         onDeleteClick = {
                             // Trigger delete ticket dialog/ confirm
-                            onDeleteTicket(selectedTicket.ticket.identifier)
+                            selectedTicket?.let { ticketData ->
+                                onDeleteTicket(ticketData.ticket.identifier)
+                            }
                         }
                     )
 
@@ -172,7 +174,7 @@ fun TicketPanel(
                         // Update selected ticket
                         onSelectedTicketChange(ticket)
                     },
-                    selectedId = selectedTicket.ticket.identifier,
+                    selectedId = selectedTicket?.ticket?.identifier,
                     state = ticketListState,
                     coroutineScope = coroutineScope
                 )
@@ -189,8 +191,7 @@ fun TicketPanel(
                         // Call edit ticket
                         onEditTicket()
                     },
-                    onImageClick = { },
-                    ticketUpdates = emptyList()
+                    onImageClick = { }
                 )
             }
         }
@@ -202,7 +203,7 @@ fun TicketPanel(
     // TODO: Maybe make this also switch to the right tab as well
     // On certain list update scroll to selected item
     // This will only really happen if we add a new ticket
-    LaunchedEffect(selectedTicket.ticket.identifier, selectedPanel) {
+    LaunchedEffect(selectedTicket?.ticket?.identifier, selectedPanel) {
         /*
         if (!isSelectedUpdateFromClick) {
             // Check to see if were even on the list were selecting the ticket for, this comes up if

@@ -418,49 +418,37 @@ fun ExpandedMainScreen(
                                 }
                             },
                             onEditCustomer = {
-                                /*
-                                coroutineScope.launch {
-                                    if (customerList.firstOrNull { it.identifier == selectedCustomer.value.customer.identifier } != null) {
-                                        // Set seed data
-                                        customerSeedData = selectedCustomer.value
+                                selectedCustomer.value?.let { customerData ->
+                                    // Set seed data
+                                    customerSeedData = customerData
 
-                                        // Trigger dialog
-                                        showCustomerDialog = true
-                                    } else {
-                                        AppLogger.m("ExpandedMainScreen:onEditCustomer", "Error getting customer data. value was null!")
-                                        snackBarState.showSnackbar("Error getting customer data!")
-                                    }
+                                    // Trigger dialog
+                                    showCustomerDialog = true
                                 }
-                                 */
                             },
                             onCustomerSelectionChange = { id -> viewModel.updateSelectedCustomer(id) },
                             onDeleteCustomer = { id ->
-                                /*
                                 coroutineScope.launch {
-                                    // TODO: Maybe add name of customer to this as well?
-                                    // TODO: Add ability to delete tickets for customer as well
-                                    // Check if item exists
-                                    if (customerList.firstOrNull { it.identifier == id } != null) {
-                                        // Set values
+                                    // Set values
                                         itemToDelete = id
                                         itemToDeleteType = MainItemType.CUSTOMER
                                         confirmDeleteDialogText = "Customer: $id"
 
                                         // Trigger the dialog
                                         showConfirmDeleteDialog = true
-                                    }
                                 }
-                                 */
                             },
                             onTicketClick = { identifier ->
                                 coroutineScope.launch {
                                     viewModel.updateSelectedTicket(identifier)
 
-                                    // Get seed data
-                                    ticketSeedData = viewModel.selectedTicketData.value
+                                    viewModel.selectedTicketData.value?.let { ticketData ->
+                                        // Get seed data
+                                        ticketSeedData = ticketData
 
-                                    // Pop up ticket dialog
-                                    showTicketDialog = true
+                                        // Pop up ticket dialog
+                                        showTicketDialog = true
+                                    }
                                 }
                             },
                             selectedCustomer = selectedCustomer.value,
@@ -491,40 +479,26 @@ fun ExpandedMainScreen(
                             },
                             onEditTicket = {
                                 coroutineScope.launch {
-                                    // Check if the ticket is an actual ticket and not a blank
-                                    /*
-                                    if (ticketList.firstOrNull { it.identifier == selectedTicket.value.ticket.identifier } != null) {
+                                    selectedTicket.value?.let { ticketData ->
                                         // Get seed data
-                                        ticketSeedData = selectedTicket.value
+                                        ticketSeedData = ticketData
 
                                         // Trigger dialog if we have an actual item selected
                                         showTicketDialog = true
-                                    } else {
-                                        AppLogger.m(
-                                            "ExpandedMainScreen:onEditTicket",
-                                            "Error getting ticket info, data was null!"
-                                        )
-                                        snackBarState.showSnackbar("Error getting ticket info!")
                                     }
-                                     */
                                 }
                             },
                             onSelectedTicketChange = { id -> viewModel.updateSelectedTicket(id) },
                             onSelectedPanelChange = { selectedTicketPanel = it },
                             onDeleteTicket = { id ->
                                 coroutineScope.launch {
-                                    // Make sure item exists
-                                    /*
-                                    if (ticketList.firstOrNull { it.identifier == id } != null) {
-                                        // Set values
-                                        itemToDelete = id
-                                        itemToDeleteType = MainItemType.TICKET
-                                        confirmDeleteDialogText = "Ticket: $id"
+                                    // Set values
+                                    itemToDelete = id
+                                    itemToDeleteType = MainItemType.TICKET
+                                    confirmDeleteDialogText = "Ticket: $id"
 
-                                        // Trigger the dialog
-                                        showConfirmDeleteDialog = true
-                                    }
-                                     */
+                                    // Trigger the dialog
+                                    showConfirmDeleteDialog = true
                                 }
                             },
                             selectedPanel = selectedTicketPanel,
@@ -542,7 +516,7 @@ fun ExpandedMainScreen(
                             isDarkMode = isDarkMode,
                             inventoryList = inventoryPagedItems,
                             selectedInventory = selectedInventory.value,
-                            onSelectedInventoryChange = { id -> viewModel.updateSelectedTicket(id) },
+                            onSelectedInventoryChange = { id -> viewModel.updateSelectedInventory(id) },
                             onAddInventory = {
                                 coroutineScope.launch {
                                     // Set seed data
@@ -554,34 +528,25 @@ fun ExpandedMainScreen(
                             },
                             onEditInventory = {
                                 coroutineScope.launch {
-                                    /*
-                                    if (inventoryList.firstOrNull { it.identifier == selectedInventory.value.inventory.identifier } != null) {
+                                    selectedInventory.value?.let { inventoryData ->
                                         // Set seed data
-                                        inventorySeedData = selectedInventory.value
+                                        inventorySeedData = inventoryData
 
                                         // Popup dialog
                                         showInventoryDialog = true
-                                    } else {
-                                        AppLogger.m("ExpandedMainScreen:onEditInventoryItem", "Error getting inventory item, data was null!")
-                                        snackBarState.showSnackbar("Error getting inventory item!")
                                     }
-                                     */
                                 }
                             },
                             onDeleteInventory = {
                                 coroutineScope.launch {
-                                    // Check if its valid
-                                    /*
-                                    if (inventoryList.firstOrNull { it.identifier == selectedInventory.value.inventory.identifier } != null) {
-                                        // Set values
-                                        itemToDelete = selectedInventory.value.inventory.identifier
+                                    selectedInventory.value?.let { inventoryData ->
+                                        itemToDelete = inventoryData.inventory.identifier
                                         itemToDeleteType = MainItemType.INVENTORY
-                                        confirmDeleteDialogText = selectedInventory.value.inventory.name
+                                        confirmDeleteDialogText = inventoryData.inventory.name
 
                                         // Trigger the dialog
                                         showConfirmDeleteDialog = true
                                     }
-                                     */
                                 }
                             },
                             coroutineScope = coroutineScope,

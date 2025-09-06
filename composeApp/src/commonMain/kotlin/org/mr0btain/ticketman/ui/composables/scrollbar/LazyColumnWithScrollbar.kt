@@ -11,6 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -28,9 +29,10 @@ import kotlinx.coroutines.CoroutineScope
  */
 
 @Composable
-fun PlatformLazyColumnScrollable(
+fun LazyColumnWithScrollbar(
     modifier: Modifier = Modifier,
     state: LazyListState = rememberLazyListState(),
+    verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(3.dp),
     scrollBarOnRight: Boolean = ScrollBarDefaults.scrollBarOnRight,
     thickness: Dp = ScrollBarDefaults.size,
     enabled: Boolean = true,
@@ -53,6 +55,7 @@ fun PlatformLazyColumnScrollable(
                     LazyColumn(
                         state = state,
                         content = content,
+                        verticalArrangement = verticalArrangement
                     )
                 }
 
@@ -86,7 +89,8 @@ fun PlatformLazyColumnScrollable(
                 ) {
                     LazyColumn(
                         state = state,
-                        content = content
+                        content = content,
+                        verticalArrangement = verticalArrangement
                     )
                 }
             }

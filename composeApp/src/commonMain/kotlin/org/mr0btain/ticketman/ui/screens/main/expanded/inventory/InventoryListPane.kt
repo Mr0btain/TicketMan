@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -21,7 +20,7 @@ import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
+import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnWithScrollbar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import kotlin.uuid.ExperimentalUuidApi
@@ -34,7 +33,7 @@ fun InventoryListPane(
     modifier: Modifier = Modifier,
     pagingItems: LazyPagingItems<Inventory>,
     scrollBarsOnRight: Boolean,
-    selected: Uuid,
+    selected: Uuid?,
     onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
@@ -106,7 +105,7 @@ fun InventoryListPane(
             HorizontalDivider(modifier = Modifier.width(690.dp))
 
             if (getPlatform().name.contains("Java")) {
-                PlatformLazyColumnScrollable(
+                LazyColumnWithScrollbar(
                     modifier = Modifier
                         .width(720.dp)
                         .padding(start = 4.dp),

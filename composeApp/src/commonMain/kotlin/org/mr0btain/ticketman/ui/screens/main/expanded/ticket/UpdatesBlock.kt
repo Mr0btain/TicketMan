@@ -9,13 +9,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.data.time.formatTime
-import org.mr0btain.ticketman.data.ticket.TicketUpdate
+import kotlin.uuid.ExperimentalUuidApi
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun UpdatesBlock(
     label: String = "Updates",
-    updates: List<TicketUpdate>,
+    noteData: List<NoteData>,
     onImageClick: (List<String>) -> Unit,
     labelSize: TextUnit = 12.sp,
     textSize: TextUnit = 16.sp
@@ -37,7 +39,7 @@ fun UpdatesBlock(
             Spacer(Modifier.padding(2.dp))
         }
 
-        updates.sortedByDescending { it.identifier }.forEach { update ->
+        noteData.sortedByDescending { it.note.time }.forEach { update ->
             Column {
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,

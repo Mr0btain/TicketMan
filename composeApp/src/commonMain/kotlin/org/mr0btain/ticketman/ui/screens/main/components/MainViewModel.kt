@@ -74,16 +74,23 @@ class MainViewModel(
     private val customerPager = Pager(pagingConfig) { CustomPagingSource(customerDatabase) }
     val customerListFlow = customerPager.flow.cachedIn(viewModelScope)
 
-    private val _selectedCustomerData: MutableStateFlow<CustomerData> = MutableStateFlow(CustomerData())
+    private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
 
     fun updateSelectedCustomer(identifier: Uuid) {
         viewModelScope.launch {
-            customerDatabase.getById(identifier)?.let { customer ->
-                val notes = customerDatabase.notes(identifier).map { NoteData(it.key, it.value) }
-                val tickets = customerDatabase.getTickets(identifier)
+            if (selectedCustomerData.value?.customer?.identifier != identifier) {
+                customerDatabase.getById(identifier)?.let { customer ->
+                    val notes = customerDatabase.notes(identifier).map { NoteData(it.key, it.value) }
+                    val tickets = customerDatabase.getTickets(identifier).map { ticket ->
+                        TicketData(
+                            ticket = ticket,
+                            notes = ticketDatabase.notes(ticket.identifier).map { NoteData(it.key, it.value) }
+                        )
+                    }
 
-                _selectedCustomerData.value = CustomerData(customer, notes, tickets)
+                    _selectedCustomerData.value = CustomerData(customer, notes, tickets)
+                }
             }
         }
     }
@@ -95,11 +102,12 @@ class MainViewModel(
     private val ticketPager = Pager(pagingConfig) { CustomPagingSource(ticketDatabase) }
     val ticketListFlow = ticketPager.flow.cachedIn(viewModelScope)
 
-    private val _selectedTicketData: MutableStateFlow<TicketData> = MutableStateFlow(TicketData())
+    private val _selectedTicketData: MutableStateFlow<TicketData?> = MutableStateFlow(null)
     val selectedTicketData = _selectedTicketData.asStateFlow()
 
     fun updateSelectedTicket(identifier: Uuid) {
         viewModelScope.launch {
+            if (selectedTicketData.value?.ticket?.identifier != identifier)
             ticketDatabase.getById(identifier)?.let { ticket ->
                 val notes = ticketDatabase.notes(identifier).map { NoteData(it.key, it.value) }
 
@@ -115,15 +123,17 @@ class MainViewModel(
     private val inventoryPager = Pager(pagingConfig) { CustomPagingSource(inventoryDatabase) }
     val inventoryListFlow = inventoryPager.flow.cachedIn(viewModelScope)
 
-    private val _selectedInventoryData: MutableStateFlow<InventoryData> = MutableStateFlow(InventoryData())
+    private val _selectedInventoryData: MutableStateFlow<InventoryData?> = MutableStateFlow(null)
     val selectedInventoryData = _selectedInventoryData.asStateFlow()
 
     fun updateSelectedInventory(identifier: Uuid) {
         viewModelScope.launch {
-            inventoryDatabase.getById(identifier)?.let { inventory ->
-                val notes = inventoryDatabase.notes(identifier).map { NoteData(it.key, it.value) }
+            if (selectedInventoryData.value?.inventory?.identifier != identifier) {
+                inventoryDatabase.getById(identifier)?.let { inventory ->
+                    val notes = inventoryDatabase.notes(identifier).map { NoteData(it.key, it.value) }
 
-                _selectedInventoryData.value = InventoryData(inventory, notes)
+                    _selectedInventoryData.value = InventoryData(inventory, notes)
+                }
             }
         }
     }

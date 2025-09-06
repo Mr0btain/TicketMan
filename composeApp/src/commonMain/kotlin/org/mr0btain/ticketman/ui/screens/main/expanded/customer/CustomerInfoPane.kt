@@ -27,7 +27,7 @@ fun CustomerInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean,
-    selectedCustomer: CustomerData,
+    selectedCustomer: CustomerData?,
     onEditClick: () -> Unit,
     onTicketClick: (Uuid) -> Unit
 ) {
@@ -67,7 +67,7 @@ fun CustomerInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = selectedCustomer.customer?.let { customer ->
+                        text = selectedCustomer?.customer?.let { customer ->
                             customer.name.firstName + " " + customer.name.lastName
                         } ?: "",
                         fontSize = 26.sp,
@@ -99,112 +99,133 @@ fun CustomerInfoPane(
                 Surface(
                     modifier = Modifier
                         .padding(8.dp)
+                        .width(340.dp)
                         .fillMaxHeight(),
                     shape = RoundedCornerShape(10.dp),
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    selectedCustomer.customer?.let { customer ->
-                        PlatformColumnScrollable(
+                    Column(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalAlignment = Alignment.Start
+                    ) {
+                        // Main Title
+                        Row(
                             modifier = Modifier
-                                .background(MaterialTheme.colorScheme.secondaryContainer)
-                                .width(300.dp)
-                                .padding(20.dp),
-                            scrollBarOnRight = scrollBarsOnRight,
-                            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                            isVisible = true
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
+                            Icon(
+                                modifier = Modifier.size(20.dp),
+                                painter = painterResource(Res.drawable.info),
+                                contentDescription = "Info"
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
                             Text(
                                 text = "Info",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
+                        }
 
-                            HorizontalDivider()
+                        HorizontalDivider()
 
-                            // ----------- Date section ---------------
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Start
+                        selectedCustomer?.let { (customer, notes, _) ->
+                            PlatformColumnScrollable(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                                    .padding(20.dp),
+                                scrollBarOnRight = scrollBarsOnRight,
+                                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                                isVisible = true
                             ) {
-                                // Label
-                                Text(
-                                    text = "Customer Since",
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = labelSize
-                                )
-
-                                Spacer(Modifier.padding(4.dp))
-
-                                // Check if we have a sensible date to display, then show it
-                                if (customer.time != Long.MAX_VALUE) {
-                                    // Time formated
-                                    val time = formatTime(customer.time)
-
-                                    Text(
-                                        modifier = Modifier,
-                                        text = "${time.month}/${time.day}/${time.year}",
-                                        fontSize = textSize
-                                    )
-                                }
-                            }
-
-                            // ----------- Address ---------------
-                            Column(
-                                horizontalAlignment = Alignment.Start,
-                                verticalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                // Label
-                                Text(
-                                    modifier = Modifier
-                                        .padding(2.dp),
-                                    text = "Address",
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = labelSize
-                                )
-
-                                Column(
-                                    verticalArrangement = Arrangement.SpaceAround,
-                                    horizontalAlignment = Alignment.Start
+                                // ----------- Date section ---------------
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Start
                                 ) {
-                                    // Street
+                                    // Label
                                     Text(
-                                        modifier = Modifier,
-                                        text = customer.address.street,
-                                        fontSize = textSize
+                                        text = "Customer Since",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = labelSize
                                     )
 
-                                    // City and state
-                                    Text(
-                                        modifier = Modifier,
-                                        text = customer.address.city + " " + customer.address.state,
-                                        fontSize = textSize
-                                    )
+                                    Spacer(Modifier.padding(4.dp))
 
-                                    // Zip
-                                    Text(
-                                        modifier = Modifier,
-                                        text = customer.address.zip,
-                                        fontSize = textSize
-                                    )
+                                    // Check if we have a sensible date to display, then show it
+                                    if (customer.time != Long.MAX_VALUE) {
+                                        // Time formated
+                                        val time = formatTime(customer.time)
+
+                                        Text(
+                                            modifier = Modifier,
+                                            text = "${time.month}/${time.day}/${time.year}",
+                                            fontSize = textSize
+                                        )
+                                    }
                                 }
+
+                                // ----------- Address ---------------
+                                Column(
+                                    horizontalAlignment = Alignment.Start,
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    // Label
+                                    Text(
+                                        modifier = Modifier
+                                            .padding(2.dp),
+                                        text = "Address",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = labelSize
+                                    )
+
+                                    Column(
+                                        verticalArrangement = Arrangement.SpaceAround,
+                                        horizontalAlignment = Alignment.Start
+                                    ) {
+                                        // Street
+                                        Text(
+                                            modifier = Modifier,
+                                            text = customer.address.street,
+                                            fontSize = textSize
+                                        )
+
+                                        // City and state
+                                        Text(
+                                            modifier = Modifier,
+                                            text = customer.address.city + " " + customer.address.state,
+                                            fontSize = textSize
+                                        )
+
+                                        // Zip
+                                        Text(
+                                            modifier = Modifier,
+                                            text = customer.address.zip,
+                                            fontSize = textSize
+                                        )
+                                    }
+                                }
+
+                                // ------------ Contacts section ---------------
+                                ContactsBlock(
+                                    customer = customer,
+                                    labelSize = labelSize,
+                                    textSize = textSize,
+                                    iconSize = iconSize
+                                )
+
+                                // ------------ Notes section ---------------
+                                NewNotesBlock(
+                                    noteData = notes,
+                                    onImageClick = {},
+                                    labelSize = labelSize,
+                                    textSize = textSize
+                                )
                             }
-
-                            // ------------ Contacts section ---------------
-                            ContactsBlock(
-                                customer = customer,
-                                labelSize = labelSize,
-                                textSize = textSize,
-                                iconSize = iconSize
-                            )
-
-                            // ------------ Notes section ---------------
-                            NewNotesBlock(
-                                noteData = selectedCustomer.notes,
-                                onImageClick = {},
-                                labelSize = labelSize,
-                                textSize = textSize
-                            )
                         }
                     }
                 }
@@ -212,7 +233,7 @@ fun CustomerInfoPane(
                 // --------------------------------- Second Pane: Ticket List -----------------------------------
                 SmallTicketList(
                     modifier = Modifier.fillMaxHeight(),
-                    tickets = selectedCustomer.tickets,
+                    ticketData = selectedCustomer?.tickets,
                     isDarkMode = isDarkMode,
                     onClick = { ticketId -> onTicketClick(ticketId) },
                     scrollBarsOnRight = scrollBarsOnRight

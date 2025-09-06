@@ -11,3 +11,5 @@ data class Device(
     val manufacturer: String,
     val model: String
 )
+
+fun Device.toNameString(): String = "$manufacturer $model"

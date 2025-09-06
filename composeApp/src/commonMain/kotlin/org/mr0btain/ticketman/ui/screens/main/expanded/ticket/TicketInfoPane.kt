@@ -17,7 +17,6 @@ import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.time.formatTime
-import org.mr0btain.ticketman.data.ticket.TicketUpdate
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
@@ -36,12 +35,11 @@ fun TicketInfoPane(
     customer: Customer,
     scrollBarsOnRight: Boolean,
     assignedUserName: PersonName,
-    ticketData: TicketData,
+    ticketData: TicketData?,
     onEditClick: () -> Unit,
-    onImageClick: (List<String>) -> Unit,
-    ticketUpdates: List<TicketUpdate>
+    onImageClick: (List<String>) -> Unit
 ) {
-    val date = formatTime(ticketData.ticket.time)
+    val date = formatTime(ticketData?.ticket?.time ?: Long.MAX_VALUE)
 
     // Main Body
     Surface(
@@ -71,13 +69,16 @@ fun TicketInfoPane(
 
                     Spacer(Modifier.padding(4.dp))
 
-                    Text(
-                        modifier = Modifier
-                            .padding(4.dp),
-                        text = "Details for: ${ticketData.ticket.identifier}",
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    ticketData?.let { (ticket, _) ->
+                        Text(
+                            modifier = Modifier
+                                .padding(4.dp),
+                            text = "Details for: ${ticket.identifier.toString().split("-").first()}",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -127,67 +128,69 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        // Customer name
-                        SimpleTextItem(
-                            label = "Customer",
-                            text = customer.name.firstName + " " + customer.name.lastName
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Device manufacturer
-                        SimpleTextItem(
-                            label = "Manufacturer",
-                            text = ticketData.ticket.device.manufacturer
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Device model
-                        SimpleTextItem(
-                            label = "Model",
-                            text = ticketData.ticket.device.model
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Date created
-                        SimpleTextItem(
-                            label = "Created",
-                            text = if (ticketData.ticket.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Assigned User
-                        Column {
-                            Text(
-                                text = "Assigned User:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
+                        ticketData?.let {
+                            // Customer name
+                            SimpleTextItem(
+                                label = "Customer",
+                                text = customer.name.firstName + " " + customer.name.lastName
                             )
 
                             Spacer(Modifier.padding(4.dp))
 
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.Center,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
+                            // Device manufacturer
+                            SimpleTextItem(
+                                label = "Manufacturer",
+                                text = ticketData.ticket.device.manufacturer
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // Device model
+                            SimpleTextItem(
+                                label = "Model",
+                                text = ticketData.ticket.device.model
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // Date created
+                            SimpleTextItem(
+                                label = "Created",
+                                text = if (ticketData.ticket.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // Assigned User
+                            Column {
                                 Text(
-                                    text = assignedUserName.firstName + " " + assignedUserName.lastName,
-                                    fontSize = 18.sp
+                                    text = "Assigned User:",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
                                 )
+
+                                Spacer(Modifier.padding(4.dp))
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = assignedUserName.firstName + " " + assignedUserName.lastName,
+                                        fontSize = 18.sp
+                                    )
+                                }
                             }
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // Contacts for customer block
+                            ContactsBlock(
+                                customer = customer,
+                                labelSize = 16.sp
+                            )
                         }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Contacts for customer block
-                        ContactsBlock(
-                            customer = customer,
-                            labelSize = 16.sp
-                        )
                     }
                 }
 
@@ -200,72 +203,74 @@ fun TicketInfoPane(
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    PlatformColumnScrollable(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(20.dp),
-                        scrollBarOnRight = scrollBarsOnRight,
-                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        isVisible = ticketUpdates.isNotEmpty()
-                    ) {
-                        Text(
-                            text = "Updates",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-
-                        HorizontalDivider()
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    ticketData?.let {
+                        PlatformColumnScrollable(
+                            modifier = Modifier
+                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                                .padding(20.dp),
+                            scrollBarOnRight = scrollBarsOnRight,
+                            backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                            isVisible = ticketData.notes.isNotEmpty()
                         ) {
                             Text(
-                                text = "Status:",
-                                fontSize = 16.sp,
+                                text = "Updates",
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
 
+                            HorizontalDivider()
+
+                            Spacer(Modifier.padding(8.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Status:",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+
+                                Spacer(Modifier.padding(4.dp))
+
+                                TableStatusItem(
+                                    status = ticketData.ticket.status,
+                                    darkMode = isDarkMode
+                                )
+                            }
+
                             Spacer(Modifier.padding(4.dp))
 
-                            TableStatusItem(
-                                status = ticketData.ticket.status,
-                                darkMode = isDarkMode
-                            )
-                        }
+                            // Priority
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Priority:",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
 
-                        Spacer(Modifier.padding(4.dp))
+                                Spacer(Modifier.padding(4.dp))
 
-                        // Priority
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Priority:",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                                TablePriorityItem(
+                                    priority = ticketData.ticket.priority,
+                                    darkMode = isDarkMode
+                                )
+                            }
 
                             Spacer(Modifier.padding(4.dp))
 
-                            TablePriorityItem(
-                                priority = ticketData.ticket.priority,
-                                darkMode = isDarkMode
+                            UpdatesBlock(
+                                noteData = ticketData.notes,
+                                labelSize = 16.sp,
+                                onImageClick = onImageClick
                             )
                         }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        UpdatesBlock(
-                            updates = ticketUpdates,
-                            labelSize = 16.sp,
-                            onImageClick = onImageClick
-                        )
                     }
                 }
             }

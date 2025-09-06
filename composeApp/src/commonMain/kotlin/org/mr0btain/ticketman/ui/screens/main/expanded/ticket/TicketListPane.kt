@@ -4,7 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -20,7 +19,9 @@ import androidx.compose.ui.unit.sp
 import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
+import org.mr0btain.ticketman.data.ticket.toNameString
+import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnWithScrollbar
+import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
@@ -37,7 +38,7 @@ fun TicketListPane(
     modifier: Modifier = Modifier,
     pagingItems: LazyPagingItems<Ticket>,
     scrollBarsOnRight: Boolean,
-    selectedId: Uuid,
+    selectedId: Uuid?,
     onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
@@ -99,7 +100,7 @@ fun TicketListPane(
 
             HorizontalDivider(modifier = Modifier.width(710.dp))
 
-            PlatformLazyColumnScrollable(
+            LazyColumnWithScrollbar(
                 modifier = Modifier
                     .width(740.dp)
                     .padding(start = 4.dp),
@@ -222,13 +223,7 @@ private fun TicketTableItem(
                     .padding(start = 4.dp)
                     .width(noteWidth + sizeAdjust.dp)
             ) {
-                /*
-                if (ticket.updates.isNotEmpty()) {
-                    TableCardTextItem(
-                        ticket.updates.last().note.author + " : " + ticket.updates.last().note.text
-                    )
-                }
-                 */
+                TableCardTextItem(ticket.device.toNameString())
             }
 
             TableDivider()

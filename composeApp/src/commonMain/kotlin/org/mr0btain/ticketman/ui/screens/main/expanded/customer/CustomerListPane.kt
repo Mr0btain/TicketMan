@@ -5,7 +5,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -17,11 +16,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.paging.compose.LazyPagingItems
-import androidx.paging.compose.itemKey
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumnScrollable
+import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnWithScrollbar
 import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
 import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import kotlin.uuid.ExperimentalUuidApi
@@ -89,7 +87,7 @@ fun CustomerListPane(
             HorizontalDivider(modifier = Modifier.width(680.dp))
 
             if (getPlatform().name.contains("Java")) {
-                PlatformLazyColumnScrollable(
+                LazyColumnWithScrollbar(
                     modifier = Modifier
                         .width(700.dp),
                     state = lazyListState,
