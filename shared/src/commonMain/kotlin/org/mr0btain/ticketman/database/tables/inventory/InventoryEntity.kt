@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.Inventory
+import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
@@ -21,6 +22,9 @@ class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
 
     // For notes
     var notes by NoteEntity via InventoryNoteTable
+
+    // For images
+    var images by ImageEntity via InventoryImageTable
 }
 
 @OptIn(ExperimentalUuidApi::class)

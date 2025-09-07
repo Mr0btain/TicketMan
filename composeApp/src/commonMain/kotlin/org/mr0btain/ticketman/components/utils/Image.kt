@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.data.time.tolong
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.image_directory
@@ -42,14 +42,14 @@ suspend fun saveImageToDatabaseFolder(
 
         StoredImage(id, file.path, getTime())
     } catch (ex: Exception) {
-        AppLogger.i("SaveImage", SimpleError.FAIL)
+        AppLogger.i("SaveImage", SimpleResult.FAIL)
         ex.printStackTrace()
         null
     }
 }
 
 /**
- * Saves an image to disk
+ * Saves an image to disk. We use databasedir from FileKit and save it in the folder path, identifier as the file name
  * @param imageData Image data to write to database folder
  */
 @OptIn(ExperimentalUuidApi::class)
@@ -73,7 +73,7 @@ suspend fun saveImageToDatabaseFolder(
         // Return result
         StoredImage(imageData.identifier, file.path, getTime())
     } catch (ex: Exception) {
-        AppLogger.i("SaveImage", SimpleError.FAIL)
+        AppLogger.i("SaveImage", SimpleResult.FAIL)
         ex.printStackTrace()
         null
     }
@@ -120,7 +120,7 @@ expect fun ByteArray.toImageBitmap(): ImageBitmap
 expect fun ImageBitmap.toByteArray(): ByteArray
 
 @OptIn(ExperimentalUuidApi::class)
-suspend fun getImages(storedImages: List<StoredImage>): List<ImageData> {
+suspend fun pullImagesFromDisk(storedImages: List<StoredImage>): List<ImageData> {
     val result = mutableListOf<ImageData>()
 
     storedImages.forEach { storedImage ->

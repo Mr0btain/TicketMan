@@ -1,9 +1,5 @@
 package org.mr0btain.ticketman.components.logging
 
-import org.mr0btain.ticketman.error.SimpleError
-import java.util.logging.Level
-import java.util.logging.Logger
-
 /*
 actual object AppLogger {
     private val logger: Logger = Logger.getLogger(AppLogger::class.java.name)

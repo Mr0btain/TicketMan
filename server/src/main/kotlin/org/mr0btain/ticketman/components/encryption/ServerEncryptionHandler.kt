@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.encryption
 
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import java.security.*
 import java.security.interfaces.XECPrivateKey
@@ -56,7 +56,7 @@ open class ServerEncryptionHandler() {
             SecretKeySpec(hash.copyOf(32), "ChaCha20")
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(DERIVE_SHARED_KEY_TAG, SimpleError.FAIL)
+            AppLogger.i(DERIVE_SHARED_KEY_TAG, SimpleResult.FAIL)
             null
         }
     }
@@ -70,7 +70,7 @@ open class ServerEncryptionHandler() {
             keyAgreement.generateSecret()
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(DERIVE_SHARED_SECRET_TAG, SimpleError.FAIL)
+            AppLogger.i(DERIVE_SHARED_SECRET_TAG, SimpleResult.FAIL)
             null
         }
 
@@ -98,7 +98,7 @@ open class ServerEncryptionHandler() {
             EncryptedData(ciphertext, nonce, sigBytes)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(ENCRYPT_DATA_TAG, SimpleError.FAIL)
+            AppLogger.i(ENCRYPT_DATA_TAG, SimpleResult.FAIL)
             null
         }
     }
@@ -116,12 +116,12 @@ open class ServerEncryptionHandler() {
 
             val result = sig.verify(encryptedData.signature)
 
-            if (!result) AppLogger.i(VERIFY_SIGNATURE_TAG, SimpleError.FAIL)
+            if (!result) AppLogger.i(VERIFY_SIGNATURE_TAG, SimpleResult.FAIL)
 
             result
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(VERIFY_SIGNATURE_TAG, SimpleError.FAIL)
+            AppLogger.i(VERIFY_SIGNATURE_TAG, SimpleResult.FAIL)
             false
         }
     }
@@ -143,7 +143,7 @@ open class ServerEncryptionHandler() {
             String(plaintext, Charsets.UTF_8)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(DECRYPT_DATA_TAG, SimpleError.FAIL)
+            AppLogger.i(DECRYPT_DATA_TAG, SimpleResult.FAIL)
             null
         }
     }
@@ -176,7 +176,7 @@ open class ServerEncryptionHandler() {
             String(plaintext, Charsets.UTF_8)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(DECRYPT_DATA_TAG, SimpleError.FAIL)
+            AppLogger.i(DECRYPT_DATA_TAG, SimpleResult.FAIL)
             null
         }
     }

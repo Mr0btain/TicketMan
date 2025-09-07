@@ -1,7 +1,5 @@
 package org.mr0btain.ticketman.components.logging
 
-import org.mr0btain.ticketman.error.SimpleError
-
 // TODO: Setup method to store these
 /*
 /**

@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
@@ -19,7 +20,10 @@ import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.clipboard
 import ticketman.composeapp.generated.resources.edit
+import ticketman.composeapp.generated.resources.file_text
+import ticketman.composeapp.generated.resources.info
 import ticketman.composeapp.generated.resources.package_icon
 
 @Composable
@@ -103,15 +107,31 @@ fun InventoryInfoPane(
                     Column(
                         modifier = Modifier
                             .width(300.dp)
-                            .padding(20.dp)
-                            .verticalScroll(rememberScrollState())
+                            .padding(8.dp)
+                            .verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.Start
                     ) {
                         // Header
-                        Text(
-                            text = "Details",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(20.dp),
+                                painter = painterResource(Res.drawable.file_text),
+                                contentDescription = "Info"
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            Text(
+                                text = "Details",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
 
                         HorizontalDivider()
 
@@ -172,27 +192,49 @@ fun InventoryInfoPane(
                     shadowElevation = 4.dp,
                     color = MaterialTheme.colorScheme.secondaryContainer
                 ) {
-                    PlatformColumnScrollable(
-                        modifier = Modifier
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
-                            .padding(20.dp),
-                        scrollBarOnRight = scrollBarsOnRight,
-                        backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                        isVisible = inventoryData?.notes?.isNotEmpty() ?: false
+                    Column(
+                        modifier = Modifier.padding(8.dp),
+                        horizontalAlignment = Alignment.Start
                     ) {
-                        Text(
-                            text = "Notes",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                modifier = Modifier.size(20.dp),
+                                painter = painterResource(Res.drawable.clipboard),
+                                contentDescription = "Notes"
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            Text(
+                                text = "Notes",
+                                fontSize = 22.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
 
                         HorizontalDivider()
 
-                        Spacer(Modifier.padding(8.dp))
-
-                        NotesBlock(
-                            notes = emptyList()
-                        )
+                        inventoryData?.let { (_, notes) ->
+                            PlatformColumnScrollable(
+                                modifier = Modifier
+                                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                                    .padding(20.dp),
+                                scrollBarOnRight = scrollBarsOnRight,
+                                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
+                                isVisible = inventoryData?.notes?.isNotEmpty() ?: false
+                            ) {
+                                NotesBlock(
+                                    noteData = notes,
+                                    onImageClick = {},
+                                    maxImageSize = DpSize(150.dp, 75.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

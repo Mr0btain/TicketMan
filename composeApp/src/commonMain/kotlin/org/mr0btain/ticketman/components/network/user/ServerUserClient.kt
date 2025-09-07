@@ -9,10 +9,9 @@ import org.mr0btain.ticketman.components.network.ServerHandler
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
@@ -70,7 +69,7 @@ class ServerUserClient(
         if (response != null) {
             handleHttpResponse<KeyResponse>(REFRESH_KEYS_TAG, response)
                 .onSuccess { encryptionHandler.deriveSharedKey(it) }
-        } else AppLogger.i(REFRESH_KEYS_TAG, SimpleError.FAIL)
+        } else AppLogger.i(REFRESH_KEYS_TAG, SimpleResult.FAIL)
     }
 
     /**
@@ -78,7 +77,7 @@ class ServerUserClient(
      */
     fun changeServerUrl(url: String) {
         serverUrl = url
-        AppLogger.m(CHANGE_SERVER_TAG, SimpleError.SUCCESS)
+        AppLogger.m(CHANGE_SERVER_TAG, SimpleResult.SUCCESS)
     }
 
     /**
@@ -145,7 +144,7 @@ class ServerUserClient(
                         println("Response: ${response.status}")
                         AppLogger.m(CHECK_KEYS_TAG, "Bad Keys Refreshing..")
                         refreshCryptoKeys()
-                    } else AppLogger.m(CHECK_KEYS_TAG, SimpleError.SUCCESS)
+                    } else AppLogger.m(CHECK_KEYS_TAG, SimpleResult.SUCCESS)
                 }
             } else {
                 AppLogger.m(CHECK_KEYS_TAG, "No Encryption keys. Refreshing")
@@ -153,7 +152,7 @@ class ServerUserClient(
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(CHECK_KEYS_TAG, SimpleError.FAIL)
+            AppLogger.i(CHECK_KEYS_TAG, SimpleResult.FAIL)
         }
     }
 

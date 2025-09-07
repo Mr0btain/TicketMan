@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.settings
 
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -18,8 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.mr0btain.ticketman.error.SimpleError
-import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup

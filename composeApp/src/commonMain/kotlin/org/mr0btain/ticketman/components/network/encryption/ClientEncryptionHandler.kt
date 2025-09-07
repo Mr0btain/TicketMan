@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.network.encryption
 
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.KeyResponse
 import java.security.*
@@ -67,10 +67,10 @@ class ClientEncryptionHandler() {
             val hash = MessageDigest.getInstance("SHA-256").digest(sharedSecret)
             symmetricKey = SecretKeySpec(hash.copyOf(32), "ChaCha20")
 
-            AppLogger.m(DERIVE_SHARED_KEY_TAG, SimpleError.SUCCESS)
+            AppLogger.m(DERIVE_SHARED_KEY_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(DERIVE_SHARED_KEY_TAG, SimpleError.FAIL)
+            AppLogger.i(DERIVE_SHARED_KEY_TAG, SimpleResult.FAIL)
         }
     }
 
@@ -97,12 +97,12 @@ class ClientEncryptionHandler() {
             signature.update(ciphertext)
             val sigBytes = signature.sign()
 
-            AppLogger.m(ENCRYPT_TAG, SimpleError.SUCCESS)
+            AppLogger.m(ENCRYPT_TAG, SimpleResult.SUCCESS)
 
             EncryptedData(ciphertext, nonce, sigBytes)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(ENCRYPT_TAG, SimpleError.FAIL)
+            AppLogger.i(ENCRYPT_TAG, SimpleResult.FAIL)
             null
         }
     }
@@ -126,12 +126,12 @@ class ClientEncryptionHandler() {
             cipher.init(Cipher.DECRYPT_MODE, symmetricKey, IvParameterSpec(encryptedData.nonce))
             val plaintext = cipher.doFinal(encryptedData.cipherText)
 
-            AppLogger.m(DECRYPT_TAG, SimpleError.SUCCESS)
+            AppLogger.m(DECRYPT_TAG, SimpleResult.SUCCESS)
 
             String(plaintext, Charsets.UTF_8) // Return the original plaintext string
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(DECRYPT_TAG, SimpleError.FAIL)
+            AppLogger.i(DECRYPT_TAG, SimpleResult.FAIL)
             null
         }
 

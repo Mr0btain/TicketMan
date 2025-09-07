@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.components.service
 import org.mr0btain.ticketman.components.encryption.PeerKeyData
 import org.mr0btain.ticketman.components.encryption.ServerEncryptionHandler
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.KeyResponse
 import kotlin.uuid.ExperimentalUuidApi
@@ -40,7 +40,7 @@ class EncryptionService() {
         keyStorage[oldId]?.let { peerKeyData ->
             keyStorage.remove(oldId)
             keyStorage[newId] = peerKeyData
-            AppLogger.m(UPDATE_KEY_IDENTIFIER, SimpleError.SUCCESS)
+            AppLogger.m(UPDATE_KEY_IDENTIFIER, SimpleResult.SUCCESS)
         } ?: AppLogger.i(UPDATE_KEY_IDENTIFIER, "Identifier Not Found")
     }
 

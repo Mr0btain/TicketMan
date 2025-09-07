@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.HttpClient
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
@@ -29,6 +29,6 @@ class ServerDatabaseClientHandler(
         customerClient.changeUrl(url)
         ticketClient.changeUrl(url)
         inventoryClient.changeUrl(url)
-        AppLogger.m(CHANGE_SERVER_URL_TAG, SimpleError.SUCCESS)
+        AppLogger.m(CHANGE_SERVER_URL_TAG, SimpleResult.SUCCESS)
     }
 }

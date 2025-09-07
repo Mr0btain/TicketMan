@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -87,7 +87,7 @@ abstract class Database<T: MainData>(
                 entity
             }
         } catch (ex: Exception) {
-            AppLogger.i(INSERT_NOTE_TAG, SimpleError.FAIL)
+            AppLogger.i(INSERT_NOTE_TAG, SimpleResult.FAIL)
             null
         }
     }
@@ -119,9 +119,9 @@ abstract class Database<T: MainData>(
                 }
             }
 
-            AppLogger.m(UPDATE_NOTE_TAG, SimpleError.SUCCESS)
+            AppLogger.m(UPDATE_NOTE_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            AppLogger.i(INSERT_NOTE_TAG, SimpleError.FAIL)
+            AppLogger.i(INSERT_NOTE_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
     }
@@ -135,12 +135,12 @@ abstract class Database<T: MainData>(
                 }
             }
 
-            AppLogger.m(INSERT_IMAGE_TAG, SimpleError.SUCCESS)
+            AppLogger.m(INSERT_IMAGE_TAG, SimpleResult.SUCCESS)
 
             entity
 
         } catch (ex: Exception) {
-            AppLogger.i(INSERT_IMAGE_TAG, SimpleError.FAIL)
+            AppLogger.i(INSERT_IMAGE_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
             null
         }
@@ -153,11 +153,11 @@ abstract class Database<T: MainData>(
                     imageEntity.path = storedImage.path
                     imageEntity.time = storedImage.time
 
-                    AppLogger.m(UPDATE_IMAGE_TAG, SimpleError.SUCCESS)
+                    AppLogger.m(UPDATE_IMAGE_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(UPDATE_IMAGE_TAG, "Image not found!")
             }
         } catch (ex: Exception) {
-            AppLogger.i(UPDATE_IMAGE_TAG, SimpleError.FAIL)
+            AppLogger.i(UPDATE_IMAGE_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
     }
@@ -169,12 +169,12 @@ abstract class Database<T: MainData>(
                     NoteEntity.findByIdAndUpdate(noteId.toJavaUuid()) { noteEntity ->
                         noteEntity.images = SizedCollection(noteEntity.images.filter { it.id != imageEntity.id })
 
-                        AppLogger.m(REMOVE_IMAGE_TAG, SimpleError.SUCCESS)
+                        AppLogger.m(REMOVE_IMAGE_TAG, SimpleResult.SUCCESS)
                     } ?: AppLogger.i(REMOVE_IMAGE_TAG, "Note not found!")
                 } ?: AppLogger.i(REMOVE_IMAGE_TAG, "Image not found!")
             }
         } catch (ex: Exception) {
-            AppLogger.i(REMOVE_IMAGE_TAG, SimpleError.FAIL)
+            AppLogger.i(REMOVE_IMAGE_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
     }
@@ -198,11 +198,11 @@ abstract class Database<T: MainData>(
 
                     noteEntity.images = SizedCollection(noteEntity.images + imageCollection)
 
-                    AppLogger.m(ADD_IMAGE_TO_NOTE_TAG, SimpleError.SUCCESS)
+                    AppLogger.m(ADD_IMAGE_TO_NOTE_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(ADD_IMAGE_TO_NOTE_TAG, "Note not found!")
             }
         } catch (ex: Exception) {
-            AppLogger.i(REMOVE_NOTE_TAG, SimpleError.FAIL)
+            AppLogger.i(REMOVE_NOTE_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
     }

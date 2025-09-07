@@ -1,9 +1,6 @@
 package org.mr0btain.ticketman.database.tables.inventory
 
-import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.UUIDTable
-import org.jetbrains.exposed.v1.json.json
-import org.mr0btain.ticketman.data.shared.Note
 
 object InventoryTable : UUIDTable("inventory") {
     val name = text("name")

@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.logging
 
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -31,7 +31,7 @@ actual object AppLogger {
         logger.info("[$tag] $message")
     }
 
-    actual fun i(tag: String, message: SimpleError) {
+    actual fun i(tag: String, message: SimpleResult) {
         logger.info("[$tag] ${message.name}")
     }
 
@@ -39,7 +39,7 @@ actual object AppLogger {
         println("[$tag] $message")
     }
 
-    actual fun m(tag: String, message: SimpleError) {
+    actual fun m(tag: String, message: SimpleResult) {
         //logger.log(Level.ALL, "[$tag] $message")
         println("[$tag] ${message.name}")
     }

@@ -13,23 +13,14 @@ import androidx.compose.material3.IconButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.exists
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.image.ImageData
-import org.mr0btain.ticketman.components.utils.getImages
-import org.mr0btain.ticketman.components.utils.toImageBitmap
-import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.error.SimpleError
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_left
 import ticketman.composeapp.generated.resources.chevron_right
@@ -45,6 +36,8 @@ fun ImagePager(
     imageMaxHeight: Dp
 ) {
     val pagerState = rememberPagerState(pageCount = { imageData.size })
+    // If there's only one image there's no reason to show buttons
+    val shouldShowButtons = imageData.size > 1
 
     Row(
         modifier = modifier,
@@ -52,17 +45,19 @@ fun ImagePager(
         horizontalArrangement = Arrangement.Center
     ) {
         // Previous image button
-        IconButton(
-            onClick = {
-                coroutineScope.launch {
-                    if (pagerState.currentPage > 0) pagerState.animateScrollToPage(pagerState.currentPage - 1)
+        if (shouldShowButtons) {
+            IconButton(
+                onClick = {
+                    coroutineScope.launch {
+                        if (pagerState.currentPage > 0) pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                    }
                 }
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.chevron_left),
+                    contentDescription = "Last Photo"
+                )
             }
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.chevron_left),
-                contentDescription = "Last Photo"
-            )
         }
 
         HorizontalPager(
@@ -105,18 +100,20 @@ fun ImagePager(
             }
         }
 
-        // Next image button
-        IconButton(
-            onClick = {
-                coroutineScope.launch {
-                    if (pagerState.currentPage + 1 <= imageData.size) pagerState.animateScrollToPage(pagerState.currentPage + 1)
+        if (shouldShowButtons) {
+            // Next image button
+            IconButton(
+                onClick = {
+                    coroutineScope.launch {
+                        if (pagerState.currentPage + 1 <= imageData.size) pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                    }
                 }
+            ) {
+                Icon(
+                    painter = painterResource(Res.drawable.chevron_right),
+                    contentDescription = "Last Photo"
+                )
             }
-        ) {
-            Icon(
-                painter = painterResource(Res.drawable.chevron_right),
-                contentDescription = "Last Photo"
-            )
         }
     }
 }

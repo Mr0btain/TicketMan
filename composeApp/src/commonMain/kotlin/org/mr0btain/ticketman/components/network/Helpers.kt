@@ -5,7 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
 
@@ -31,7 +31,7 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
         null
     } catch (ex: Exception) {
         ex.printStackTrace()
-        AppLogger.i(tag, SimpleError.FAIL)
+        AppLogger.i(tag, SimpleResult.FAIL)
         null
     }
 }
@@ -42,7 +42,7 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
 suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): Result<T, NetworkError> {
     return when (response.status.value) {
         in 200..299 -> {
-            AppLogger.m(tag, SimpleError.SUCCESS)
+            AppLogger.m(tag, SimpleResult.SUCCESS)
             Result.Success(response.body<T>())
         }
 
@@ -80,7 +80,7 @@ suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpRes
 
 fun handleHttpResponse(tag: String, response: HttpResponse) {
     when (response.status.value) {
-        in 200..299 -> AppLogger.m(tag, SimpleError.SUCCESS)
+        in 200..299 -> AppLogger.m(tag, SimpleResult.SUCCESS)
         401 -> AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)
         409 -> AppLogger.i(tag, NetworkError.CONFLICT.name)
         408 -> AppLogger.i(tag, NetworkError.REQUEST_TIMEOUT.name)

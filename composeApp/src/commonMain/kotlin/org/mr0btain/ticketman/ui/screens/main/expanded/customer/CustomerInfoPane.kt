@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
-import org.mr0btain.ticketman.ui.screens.main.components.NewNotesBlock
+import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import org.mr0btain.ticketman.ui.screens.main.components.SmallTicketList
 import ticketman.composeapp.generated.resources.*
 import kotlin.uuid.ExperimentalUuidApi
@@ -220,7 +220,7 @@ fun CustomerInfoPane(
                                 )
 
                                 // ------------ Notes section ---------------
-                                NewNotesBlock(
+                                NotesBlock(
                                     label = "Notes",
                                     noteData = notes,
                                     onImageClick = {},

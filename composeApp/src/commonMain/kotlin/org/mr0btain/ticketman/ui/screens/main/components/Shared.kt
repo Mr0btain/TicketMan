@@ -535,63 +535,6 @@ fun TableDivider() {
 
 @Composable
 fun NotesBlock(
-    label: String = "Notes",
-    notes: List<NoteData>,
-    labelSize: TextUnit = 12.sp,
-    textSize: TextUnit = 16.sp
-) {
-    Column(
-        horizontalAlignment = Alignment.Start,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        // Label
-        if (label.isNotBlank()) {
-            Text(
-                modifier = Modifier
-                    .padding(2.dp),
-                text = label,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = labelSize
-            )
-
-            Spacer(Modifier.padding(2.dp))
-        }
-
-        notes.forEach { noteData ->
-            noteData.note.let { note ->
-                Column {
-                    // Actual text of the note
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = note.author + ": ",
-                            fontSize = textSize,
-                            fontWeight = FontWeight.SemiBold
-                        )
-
-                        Text(
-                            text = formatTime(note.time).toString(),
-                            fontSize = (textSize.value - 4).sp,
-                            maxLines = 1
-                        )
-                    }
-
-                    // Text
-                    Text(
-                        modifier = Modifier,
-                        text = note.message,
-                        fontSize = textSize
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun NewNotesBlock(
     modifier: Modifier = Modifier,
     label: String = "",
     noteData: List<NoteData>,

@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketNoteTable
 import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -43,11 +43,11 @@ class TicketDatabaseImpl(
 
                 result = TicketEntity.all().map { item -> item.toTicket() }
 
-                AppLogger.m(GET_ALL_TAG, SimpleError.SUCCESS)
+                AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(ADD_ALL_TAG, SimpleError.FAIL)
+            AppLogger.i(ADD_ALL_TAG, SimpleResult.FAIL)
             return null
         }
 
@@ -65,17 +65,22 @@ class TicketDatabaseImpl(
 
                 result = TicketEntity.findById(identifier.toJavaUuid())?.toTicket()
 
-                AppLogger.m(GET_BY_ID_TAG, SimpleError.SUCCESS)
+                AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
             }
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(GET_BY_ID_TAG, SimpleError.FAIL)
+            AppLogger.i(GET_BY_ID_TAG, SimpleResult.FAIL)
             return null
         }
 
         return result
     }
 
+    /**
+     * Gets a list of items limited by the page size at the designated offset
+     * @param offset The starting offset to get items
+     * @param pageSize The amount of items to fetch
+     */
     override fun getPagedItems(offset: Long, pageSize: Int): List<Ticket> {
         val result = mutableListOf<Ticket>()
 
@@ -93,15 +98,16 @@ class TicketDatabaseImpl(
                 )
             }
 
-            AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleError.SUCCESS)
+            AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleError.FAIL)
+            AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
 
         return result
     }
 
+    /** Gets the total count of items in the database */
     override fun count(): Long {
         var result = 0L
 
@@ -132,13 +138,13 @@ class TicketDatabaseImpl(
                     }
                 }
 
-                AppLogger.m(ADD_ALL_TAG, SimpleError.SUCCESS)
+                AppLogger.m(ADD_ALL_TAG, SimpleResult.SUCCESS)
             }
 
             return true
         } catch (e: Exception) {
             e.printStackTrace()
-            AppLogger.i(ADD_ALL_TAG, SimpleError.FAIL)
+            AppLogger.i(ADD_ALL_TAG, SimpleResult.FAIL)
             return false
         }
     }
@@ -152,13 +158,13 @@ class TicketDatabaseImpl(
 
                 TicketEntity.findById(identifier.toJavaUuid())?.delete()
 
-                AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
+                AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
             }
 
             return true
         } catch (e: Exception) {
             e.printStackTrace()
-            AppLogger.m(REMOVE_TAG, SimpleError.FAIL)
+            AppLogger.m(REMOVE_TAG, SimpleResult.FAIL)
             return false
         }
     }
@@ -181,13 +187,13 @@ class TicketDatabaseImpl(
                     time = data.time
                 }
 
-                AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
+                AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
             }
 
             return true
         } catch (e: Exception) {
             e.printStackTrace()
-            AppLogger.i(ADD_TAG, SimpleError.FAIL)
+            AppLogger.i(ADD_TAG, SimpleResult.FAIL)
             return false
         }
     }
@@ -207,13 +213,13 @@ class TicketDatabaseImpl(
                         item.time = data.time
                     }
 
-                AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
+                AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
             }
 
             return true
         } catch (e: Exception) {
             e.printStackTrace()
-            AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
+            AppLogger.i(UPDATE_TAG, SimpleResult.FAIL)
             return false
         }
     }
@@ -230,14 +236,14 @@ class TicketDatabaseImpl(
                     TicketEntity.findByIdAndUpdate(identifier.toJavaUuid()) { ticketEntity ->
                         ticketEntity.notes = SizedCollection(ticketEntity.notes + noteEntity)
 
-                        AppLogger.m(ADD_NOTE_TAG, SimpleError.SUCCESS)
+                        AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
                     } ?: AppLogger.i(ADD_NOTE_TAG, "Ticket not found! $identifier")
                 } ?: AppLogger.i(ADD_NOTE_TAG, "Note entity was null!")
             }
 
             return true
         } catch (ex: Exception) {
-            AppLogger.i(ADD_NOTE_TAG, SimpleError.FAIL)
+            AppLogger.i(ADD_NOTE_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
 
@@ -257,11 +263,11 @@ class TicketDatabaseImpl(
                         result[noteEntity.toNote()] = noteEntity.images.map { it.toStoredImage() }
                     }
 
-                    AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)
+                    AppLogger.m(GET_NOTES_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_NOTES_TAG, "Could not find inventory item!")
             }
         } catch (ex: Exception) {
-            AppLogger.i(GET_NOTES_TAG, SimpleError.FAIL)
+            AppLogger.i(GET_NOTES_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
 
@@ -298,11 +304,11 @@ class TicketDatabaseImpl(
                 note.delete()
             }
 
-            AppLogger.m(REMOVE_NOTE_TAG, SimpleError.SUCCESS)
+            AppLogger.m(REMOVE_NOTE_TAG, SimpleResult.SUCCESS)
 
             return true
         } catch (ex: Exception) {
-            AppLogger.m(REMOVE_NOTE_TAG, SimpleError.FAIL)
+            AppLogger.m(REMOVE_NOTE_TAG, SimpleResult.FAIL)
             ex.printStackTrace()
         }
 

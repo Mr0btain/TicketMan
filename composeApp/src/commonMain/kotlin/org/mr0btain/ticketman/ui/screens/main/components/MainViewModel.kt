@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.settings.UserSettings
@@ -19,12 +20,13 @@ import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.CustomPagingSource
 import org.mr0btain.ticketman.components.utils.flushImagesToDisk
-import org.mr0btain.ticketman.components.utils.getImages
+import org.mr0btain.ticketman.components.utils.pullImagesFromDisk
+import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.database.UserDatabaseImpl
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.generateMockCustomer
 import org.mr0btain.ticketman.generateMockUser
 import org.mr0btain.ticketman.generateRandomInventoryItem
@@ -49,9 +51,6 @@ class MainViewModel(
     private val INIT_TAG = "$TAG:Init"
     private val INIT_SYNC_TAG = "$TAG:Init_Sync"
 
-    val shouldLog = false
-    val pagingConfig = PagingConfig(pageSize = 40, maxSize = 400)
-
     fun init() {
         viewModelScope.launch {
             initDatabase()
@@ -65,15 +64,25 @@ class MainViewModel(
                 _scrollBarsOnRight.value = result.scrollBarsOnRight
                 _scrollBarsOnBottom.value = result.scrollBarsOnBottom
                 _autoSyncDatabase.value = result.autoSync
-            } ?: AppLogger.i(INIT_TAG, SimpleError.FAIL)
+            } ?: AppLogger.i(INIT_TAG, SimpleResult.FAIL)
         }
     }
 
     /** ----------------------------------------------OPERATIONS------------------------------------------------------------------- */
 
+    // Whether we should log exposed transactions or not
+    val shouldLog = false
+    // Max size of cache
+    val maxCacheSize = 20
+    // Paging config for pagers
+    val pagingConfig = PagingConfig(pageSize = 40, maxSize = 400)
 
+    // Caches for storing some recently used items
+    //val imageCache = LruCache<Uuid, ImageData>(maxCacheSize)
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
+
+    val customerCache = LruCache<Uuid, CustomerData>(maxCacheSize, "CustomerCache")
 
     private val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
 
@@ -83,19 +92,38 @@ class MainViewModel(
     private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
 
+    /** Sets the selected customer and inserts the data into the cache */
+    private suspend fun setSelectedCustomer(customerData: CustomerData) {
+        // Set selected
+        _selectedCustomerData.value = customerData
+        
+        // Add to cache
+        customerCache.put(customerData.customer.identifier, customerData)
+        
+    }
+
     fun changeSelectedCustomer(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
-                customerDatabase.getById(identifier)?.let { customer ->
-                    val notes = customerDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
-                    val tickets = customerDatabase.getTickets(identifier).map { ticket ->
-                        TicketData(
-                            ticket = ticket,
-                            notes = ticketDatabase.getNotes(ticket.identifier).map { NoteData(it.key, getImages(it.value)) }
-                        )
-                    }
+                // Check if it exists in cache
+                val cached = customerCache.get(identifier)?.also { customerData -> 
+                    _selectedCustomerData.value = customerData
+                }
+                
+                // If not pull from database and add to cache
+                if (cached == null) {
+                    customerDatabase.getById(identifier)?.let { customer ->
+                        val notes = customerDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                        val tickets = customerDatabase.getTickets(identifier).map { ticket ->
+                            TicketData(
+                                ticket = ticket,
+                                notes = ticketDatabase.getNotes(ticket.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                            )
+                        }
 
-                    _selectedCustomerData.value = CustomerData(customer, notes, tickets)
+                        // Update selected
+                        setSelectedCustomer(CustomerData(customer, notes, tickets))
+                    }
                 }
             }
         }
@@ -112,7 +140,7 @@ class MainViewModel(
 
                 // Existing notes for comparison
                 val existingNotes = customerDatabase.getNotes(customerData.customer.identifier).map {
-                    NoteData(it.key, getImages(it.value))
+                    NoteData(it.key, pullImagesFromDisk(it.value))
                 }
 
                 // Check if the note exists already and update if it needs to or add new
@@ -135,7 +163,7 @@ class MainViewModel(
                         if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
 
                         // Existing notes for comparison
-                        val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier).map { NoteData(it.key, getImages(it.value)) }
+                        val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
                         // Check ticket notes if they exist and have changed, if so update else add
                         ticketData.notes.forEach { noteData ->
@@ -189,11 +217,13 @@ class MainViewModel(
             }
 
             // update selected
-            _selectedCustomerData.value = customerData
+            setSelectedCustomer(customerData)
         }
     }
 
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
+
+    val ticketCache = LruCache<Uuid, TicketData>(maxCacheSize, "TicketCache")
 
     private val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
 
@@ -202,14 +232,30 @@ class MainViewModel(
 
     private val _selectedTicketData: MutableStateFlow<TicketData?> = MutableStateFlow(null)
     val selectedTicketData = _selectedTicketData.asStateFlow()
+    
+    /** Sets selected ticket and adds it to the cache */
+    private suspend fun setSelectedTicket(ticketData: TicketData) {
+        // Set selected ticket
+        _selectedTicketData.value = ticketData
+        
+        // Add to cache
+        ticketCache.put(ticketData.ticket.identifier, ticketData)
+    }
 
     fun changeSelectedTicket(identifier: Uuid) {
         viewModelScope.launch {
-            if (selectedTicketData.value?.ticket?.identifier != identifier)
-            ticketDatabase.getById(identifier)?.let { ticket ->
-                val notes = ticketDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
+            if (selectedTicketData.value?.ticket?.identifier != identifier) {
+                val cachedTicket = ticketCache.get(identifier)?.also { ticketData ->
+                    _selectedTicketData.value = ticketData
+                }
+                
+                if (cachedTicket == null) {
+                    ticketDatabase.getById(identifier)?.let { ticket ->
+                        val notes = ticketDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
-                _selectedTicketData.value = TicketData(ticket, notes)
+                        setSelectedTicket(TicketData(ticket, notes))
+                    }
+                }
             }
         }
     }
@@ -223,7 +269,7 @@ class MainViewModel(
                 if (ticketData.ticket != ticket) ticketDatabase.update(ticketData.ticket)
 
                 // Existing notes for comparison
-                val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier).map { NoteData(it.key, getImages(it.value)) }
+                val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
                 // Check if the note exists already and update if it needs to or add new
                 ticketData.notes.forEach { noteData ->
@@ -247,11 +293,13 @@ class MainViewModel(
             }
 
             // update selected
-            _selectedTicketData.value = ticketData
+            setSelectedTicket(ticketData)
         }
     }
 
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
+
+    val inventoryCache = LruCache<Uuid, InventoryData>(maxCacheSize, "InventoryCache")
 
     private val inventoryDatabase = InventoryDatabaseImpl(shouldLog = shouldLog)
 
@@ -260,14 +308,35 @@ class MainViewModel(
 
     private val _selectedInventoryData: MutableStateFlow<InventoryData?> = MutableStateFlow(null)
     val selectedInventoryData = _selectedInventoryData.asStateFlow()
+    
+    /** Sets selected inventory and adds it to the cache */
+    private suspend fun setSelectedInventory(inventoryData: InventoryData) {
+        // Set selected inventory
+        _selectedInventoryData.value = inventoryData
+        
+        // Add to cache
+        inventoryCache.put(inventoryData.inventory.identifier, inventoryData)
+    }
 
     fun changeSelectedInventory(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedInventoryData.value?.inventory?.identifier != identifier) {
-                inventoryDatabase.getById(identifier)?.let { inventory ->
-                    val notes = inventoryDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
+                val cachedInventory = inventoryCache.get(identifier)?.also { inventoryData -> 
+                    _selectedInventoryData.value = inventoryData
+                }
+                
+                if (cachedInventory == null) {
+                    inventoryDatabase.getById(identifier)?.let { inventory ->
+                        val notes = inventoryDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
-                    _selectedInventoryData.value = InventoryData(inventory, notes)
+                        val images = pullImagesFromDisk(inventoryDatabase.getImages(identifier))
+
+                        _selectedInventoryData.value = InventoryData(
+                            inventory = inventory,
+                            notes = notes,
+                            images = images
+                        )
+                    }
                 }
             }
         }
@@ -282,7 +351,7 @@ class MainViewModel(
                 if (inventoryData.inventory != inventory) inventoryDatabase.update(inventoryData.inventory)
 
                 // Existing notes for comparison
-                val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier).map { NoteData(it.key, getImages(it.value)) }
+                val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
                 // Check if the note exists already and update if it needs to or add new
                 inventoryData.notes.forEach { noteData ->
@@ -305,11 +374,14 @@ class MainViewModel(
                 }
             }
 
-            _selectedInventoryData.value = inventoryData
+            // Set selected
+            setSelectedInventory(inventoryData)
         }
     }
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */
+
+    val userCache = LruCache<Uuid, UserData>(maxCacheSize, "UserCache")
 
     private val userDatabase = UserDatabaseImpl(shouldLog = shouldLog)
 
@@ -318,14 +390,29 @@ class MainViewModel(
 
     private val _selectedUserData: MutableStateFlow<UserData?> = MutableStateFlow(null)
     val selectedUserData = _selectedUserData.asStateFlow()
+    
+    /** Sets selected user and adds it to the cache */
+    private suspend fun setSelectedUser(userData: UserData) {
+        // Set selected
+        _selectedUserData.value = userData
+        
+        // Add to cache
+        userCache.put(userData.user.identifier, userData)
+    }
 
     fun changeSelectedUser(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedUserData.value?.user?.identifier != identifier) {
-                userDatabase.getById(identifier)?.let { user ->
-                    val notes = userDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
+                val cachedUser = userCache.get(identifier)?.also { userData -> 
+                    _selectedUserData.value = userData
+                }
+                
+                if (cachedUser == null) {
+                    userDatabase.getById(identifier)?.let { user ->
+                        val notes = userDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
-                    _selectedUserData.value = UserData(user, notes)
+                        _selectedUserData.value = UserData(user, notes)
+                    }
                 }
             }
         }
@@ -340,7 +427,7 @@ class MainViewModel(
                 if (userData.user != user) userDatabase.update(userData.user)
 
                 // Existing notes for comparison
-                val existingNotes = userDatabase.getNotes(userData.user.identifier).map { NoteData(it.key, getImages(it.value)) }
+                val existingNotes = userDatabase.getNotes(userData.user.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
                 // Check if the note exists already and update if it needs to or add new
                 userData.notes.forEach { noteData ->
@@ -363,7 +450,8 @@ class MainViewModel(
                 }
             }
 
-            _selectedUserData.value = userData
+            // Set selected
+            setSelectedUser(userData)
         }
     }
 

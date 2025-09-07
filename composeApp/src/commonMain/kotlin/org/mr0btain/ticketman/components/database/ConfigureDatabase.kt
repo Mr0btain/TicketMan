@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.database.tables.image.ImageTable
+import org.mr0btain.ticketman.database.tables.inventory.InventoryImageTable
 import org.mr0btain.ticketman.database.tables.inventory.InventoryNoteTable
 import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.database.tables.note.NoteImageTable
@@ -19,7 +20,7 @@ import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.database.tables.user.UserTable
 import org.mr0btain.ticketman.database.tables.user.UserTicketTable
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 
@@ -44,6 +45,7 @@ fun initDatabase() {
                 TicketNoteTable,
                 InventoryTable,
                 InventoryNoteTable,
+                InventoryImageTable,
                 UserTable,
                 UserNoteTable,
                 UserTicketTable,
@@ -54,9 +56,9 @@ fun initDatabase() {
             )
         }
 
-        AppLogger.m("ClientDatabase: Initialize", SimpleError.SUCCESS)
+        AppLogger.m("ClientDatabase: Initialize", SimpleResult.SUCCESS)
     } catch (ex: Exception) {
         ex.printStackTrace()
-        AppLogger.i(" Initialize", SimpleError.SUCCESS)
+        AppLogger.i(" Initialize", SimpleResult.SUCCESS)
     }
 }

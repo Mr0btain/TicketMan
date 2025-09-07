@@ -32,7 +32,7 @@ import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
-import org.mr0btain.ticketman.ui.screens.main.components.NewNotesBlock
+import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
 import ticketman.composeapp.generated.resources.plus
@@ -468,7 +468,7 @@ fun CustomerDialog(
 
                     Spacer(Modifier.padding(4.dp))
 
-                    NewNotesBlock(
+                    NotesBlock(
                         noteData = notes,
                         onImageClick = {
                             // TODO: Not yet implemented

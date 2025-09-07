@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
@@ -95,12 +95,12 @@ class ServerHandler(
 
         return if (result) {
             // Log success
-            AppLogger.m("$TAG:CheckNewServerConnection", SimpleError.SUCCESS)
+            AppLogger.m("$TAG:CheckNewServerConnection", SimpleResult.SUCCESS)
 
             // Return success
             true
         } else {
-            AppLogger.m("$TAG:CheckNewServerConnection", SimpleError.FAIL)
+            AppLogger.m("$TAG:CheckNewServerConnection", SimpleResult.FAIL)
             false
         }
     }

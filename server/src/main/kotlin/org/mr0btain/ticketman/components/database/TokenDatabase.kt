@@ -6,7 +6,7 @@ import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.TokenTable.identifier
 import org.mr0btain.ticketman.components.database.TokenTable.token
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 @Suppress("PrivatePropertyName")
@@ -32,13 +32,13 @@ class TokenDatabase(
                         identifier = item[TokenTable.identifier],
                         token = item[token]
                     )
-                } ?: AppLogger.i(FIND_BY_ID_TAG, SimpleError.FAIL)
+                } ?: AppLogger.i(FIND_BY_ID_TAG, SimpleResult.FAIL)
             }
 
-            AppLogger.m(FIND_BY_ID_TAG, SimpleError.SUCCESS)
+            AppLogger.m(FIND_BY_ID_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(FIND_BY_ID_TAG, SimpleError.FAIL)
+            AppLogger.i(FIND_BY_ID_TAG, SimpleResult.FAIL)
         }
 
         return found
@@ -57,13 +57,13 @@ class TokenDatabase(
                         identifier = item[identifier],
                         token = item[token]
                     )
-                } ?: AppLogger.i(FIND_BY_TOKEN_TAG, SimpleError.FAIL)
+                } ?: AppLogger.i(FIND_BY_TOKEN_TAG, SimpleResult.FAIL)
             }
 
-            AppLogger.m(FIND_BY_TOKEN_TAG, SimpleError.SUCCESS)
+            AppLogger.m(FIND_BY_TOKEN_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(FIND_BY_TOKEN_TAG, SimpleError.FAIL)
+            AppLogger.i(FIND_BY_TOKEN_TAG, SimpleResult.FAIL)
         }
 
         return found
@@ -81,10 +81,10 @@ class TokenDatabase(
                 }
             }
 
-            AppLogger.m(ADD_TAG, SimpleError.SUCCESS)
+            AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(ADD_TAG, SimpleError.FAIL)
+            AppLogger.i(ADD_TAG, SimpleResult.FAIL)
             return false
         }
 
@@ -103,10 +103,10 @@ class TokenDatabase(
                 }
             }
 
-            AppLogger.m(UPDATE_TAG, SimpleError.SUCCESS)
+            AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(UPDATE_TAG, SimpleError.FAIL)
+            AppLogger.i(UPDATE_TAG, SimpleResult.FAIL)
             return false
         }
 
@@ -122,10 +122,10 @@ class TokenDatabase(
                 TokenTable.deleteWhere { this.identifier eq identifier }
             }
 
-            AppLogger.m(REMOVE_TAG, SimpleError.SUCCESS)
+            AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
             ex.printStackTrace()
-            AppLogger.i(REMOVE_TAG, SimpleError.FAIL)
+            AppLogger.i(REMOVE_TAG, SimpleResult.FAIL)
             return false
         }
 

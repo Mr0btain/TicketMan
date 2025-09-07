@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.database.tables.image.ImageTable
+import org.mr0btain.ticketman.database.tables.inventory.InventoryImageTable
 import org.mr0btain.ticketman.database.tables.inventory.InventoryNoteTable
 import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.database.tables.note.NoteImageTable
@@ -20,7 +21,7 @@ import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.database.tables.user.UserTable
 import org.mr0btain.ticketman.database.tables.user.UserTicketTable
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 class LocalDatabase (
@@ -59,6 +60,7 @@ class LocalDatabase (
                     TicketNoteTable,
                     InventoryTable,
                     InventoryNoteTable,
+                    InventoryImageTable,
                     UserTable,
                     UserNoteTable,
                     UserTicketTable,
@@ -69,7 +71,7 @@ class LocalDatabase (
                 )
             }
 
-            AppLogger.m(INIT_TAG, SimpleError.SUCCESS)
+            AppLogger.m(INIT_TAG, SimpleResult.SUCCESS)
         }
     }
 }
