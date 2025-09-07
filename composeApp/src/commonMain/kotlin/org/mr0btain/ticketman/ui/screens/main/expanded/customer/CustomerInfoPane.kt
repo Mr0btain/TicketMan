@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
@@ -220,10 +221,11 @@ fun CustomerInfoPane(
 
                                 // ------------ Notes section ---------------
                                 NewNotesBlock(
+                                    label = "Notes",
                                     noteData = notes,
                                     onImageClick = {},
-                                    labelSize = labelSize,
-                                    textSize = textSize
+                                    textSize = textSize,
+                                    maxImageSize = DpSize(150.dp, 75.dp)
                                 )
                             }
                         }

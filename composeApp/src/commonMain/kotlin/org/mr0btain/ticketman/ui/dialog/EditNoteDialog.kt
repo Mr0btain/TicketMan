@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -32,47 +34,52 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.dialogs.compose.util.toImageBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.image.ImageData
+import org.mr0btain.ticketman.components.data.image.newImageData
+import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.time.getTime
-import org.mr0btain.ticketman.data.ticket.TicketUpdate
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.ui.composables.image.ImagePager
+import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Composable
-fun EditUpdateDialog(
+fun EditNoteDialog(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    seedData: TicketUpdate,
+    noteData: NoteData,
     label: String = "",
-    onConfirm: (TicketUpdate) -> Unit,
+    onConfirm: (NoteData) -> Unit,
     onDismissRequest: () -> Unit,
     scope: CoroutineScope = rememberCoroutineScope()
 ) {
-    var author by remember { mutableStateOf(seedData.note.author) }
-    var text by remember { mutableStateOf(seedData.note.message) }
-    val time = remember { if (seedData.note.time != Long.MAX_VALUE) seedData.note.time else getTime() }
-    //val photos = remember { seedData.images.toMutableStateList() }
+    var author by remember { mutableStateOf(noteData.note.author) }
+    var message by remember { mutableStateOf(noteData.note.message) }
+    val time = remember { if (noteData.note.time != Long.MAX_VALUE) noteData.note.time else getTime() }
+    val photos = remember { noteData.images.toMutableStateList() }
 
     // File dialog for adding an image
     val launcher = rememberFilePickerLauncher(
         type = FileKitType.Image
     ) { file ->
-        file?.let { image ->
+        file?.let { file ->
             scope.launch {
-                try {
-                    /*
-                    photos.add(
-                        image
-                            .toImageBitmap()
-                            .encodeToBase64()
+                // Add to list
+                photos.add(
+                    newImageData(
+                        noteData.note.identifier,
+                        file.toImageBitmap()
                     )
-                     */
-                } catch (ex: Exception) {
-                    AppLogger.i("EDIT_UPDATE_DIALOG", ex.toString())
-                }
+                )
             }
         }
     }
@@ -92,7 +99,7 @@ fun EditUpdateDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (seedData.note.time != Long.MAX_VALUE) "Edit $label" else "Add $label",
+                    text = if (noteData.note.time != Long.MAX_VALUE) "Edit $label" else "Add $label",
                     fontSize = 20.sp
                 )
 
@@ -113,8 +120,8 @@ fun EditUpdateDialog(
 
                 OutlinedTextField(
                     label = { Text("Text") },
-                    value = text,
-                    onValueChange = { text = it },
+                    value = message,
+                    onValueChange = { message = it },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next
@@ -148,17 +155,20 @@ fun EditUpdateDialog(
                     }
                 }
 
-                /*
+
                 if (photos.isNotEmpty()) {
                     ImagePager(
                         modifier = Modifier
                             .height(150.dp),
                         imageData = photos,
                         imageMaxWidth = 200.dp,
-                        imageMaxHeight = 150.dp
+                        imageMaxHeight = 150.dp,
+                        onImageClick = {
+                            // TODO: Not yet implemented
+                        },
+                        coroutineScope = scope
                     )
                 }
-                 */
 
                 Spacer(Modifier.padding(4.dp))
 
@@ -182,28 +192,25 @@ fun EditUpdateDialog(
 
                     Button(
                         onClick = {
-                            // Prettify author name
-                            val authorName = author.split(" ")
-                                .joinToString(" ") { name -> name.lowercase().replaceFirstChar { it.uppercase() } }
-
-                            /*
-                            // Call onConfirm
                             onConfirm(
-                                TicketUpdate(
-                                    identifier = seedData.identifier,
-                                    note = Note(authorName, text.replaceFirstChar { it.uppercase() }, time),
+                                NoteData(
+                                    note = Note(
+                                        identifier = noteData.note.identifier,
+                                        author = author,
+                                        message = message,
+                                        time = time
+                                    ),
                                     images = photos
                                 )
                             )
-                             */
 
                             // Dismiss
                             onDismissRequest()
                         },
                         shape = RoundedCornerShape(8.dp),
-                        enabled = author.isNotBlank() && text.isNotBlank()
+                        enabled = author.isNotBlank() && message.isNotBlank()
                     ) {
-                        Text(if (seedData.note.time != Long.MAX_VALUE) "Confirm" else "Add")
+                        Text(if (noteData.note.time != Long.MAX_VALUE) "Confirm" else "Add")
                     }
                 }
             }

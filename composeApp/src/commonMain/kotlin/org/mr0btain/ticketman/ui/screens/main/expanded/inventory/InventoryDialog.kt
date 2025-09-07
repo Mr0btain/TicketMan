@@ -74,6 +74,7 @@ fun InventoryDialog(
 
     // Delete item dialog
     if (showConfirmDeleteScreen) {
+        /*
         ConfirmDeleteDialog(
             label = when (itemForDelete) {
                 SubItemType.NOTE -> notes[itemUpForDeleteIndex].author + "'s Update"
@@ -101,6 +102,7 @@ fun InventoryDialog(
                 showConfirmDeleteScreen = false
             },
         )
+         */
     }
 
     Dialog(

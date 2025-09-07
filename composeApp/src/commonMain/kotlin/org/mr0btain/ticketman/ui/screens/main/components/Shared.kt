@@ -14,6 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -22,12 +23,8 @@ import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.time.formatTime
-import org.mr0btain.ticketman.data.ticket.TicketPriority
-import org.mr0btain.ticketman.data.ticket.TicketPriorityType
-import org.mr0btain.ticketman.data.ticket.TicketStatus
-import org.mr0btain.ticketman.data.ticket.TicketStatusType
-import org.mr0btain.ticketman.data.ticket.toNameString
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.theme.extendedDark
@@ -561,7 +558,7 @@ fun NotesBlock(
         }
 
         notes.forEach { noteData ->
-            noteData.note?.let { note ->
+            noteData.note.let { note ->
                 Column {
                     // Actual text of the note
                     Row(
@@ -595,13 +592,16 @@ fun NotesBlock(
 
 @Composable
 fun NewNotesBlock(
-    label: String = "Notes",
+    modifier: Modifier = Modifier,
+    label: String = "",
     noteData: List<NoteData>,
     onImageClick: () -> Unit,
     labelSize: TextUnit = 12.sp,
-    textSize: TextUnit = 16.sp
+    textSize: TextUnit = 16.sp,
+    maxImageSize: DpSize = DpSize(300.dp, 200.dp)
 ) {
     Column(
+        modifier = modifier,
         horizontalAlignment = Alignment.Start,
         verticalArrangement = Arrangement.SpaceBetween
     ) {
@@ -648,20 +648,18 @@ fun NewNotesBlock(
                     )
 
                     if (data.images.isNotEmpty()) {
-                        Spacer(Modifier.padding(2.dp))
+                        Spacer(Modifier.padding(4.dp))
 
                         ImagePager(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
+                            modifier = Modifier.fillMaxWidth(),
                             imageData = data.images,
                             onImageClick = { onImageClick() },
-                            imageMaxWidth = 300.dp,
-                            imageMaxHeight = 200.dp
+                            imageMaxWidth = maxImageSize.width,
+                            imageMaxHeight = maxImageSize.height
                         )
-                    }
 
-                    Spacer(Modifier.padding(2.dp))
+                        Spacer(Modifier.padding(4.dp))
+                    }
                 }
             }
         }

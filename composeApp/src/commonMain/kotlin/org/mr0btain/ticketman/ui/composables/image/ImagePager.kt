@@ -10,12 +10,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Card
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -28,10 +23,13 @@ import io.github.vinceglb.filekit.exists
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.image.ImageData
+import org.mr0btain.ticketman.components.utils.getImages
 import org.mr0btain.ticketman.components.utils.toImageBitmap
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.error.SimpleError
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_left
 import ticketman.composeapp.generated.resources.chevron_right
@@ -40,29 +38,13 @@ import kotlin.math.absoluteValue
 @Composable
 fun ImagePager(
     modifier: Modifier = Modifier,
-    imageData: List<StoredImage>,
+    imageData: List<ImageData>,
     onImageClick: () -> Unit,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     imageMaxWidth: Dp,
     imageMaxHeight: Dp
 ) {
     val pagerState = rememberPagerState(pageCount = { imageData.size })
-    val images = remember(imageData) { mutableStateListOf<ImageBitmap>() }
-
-    LaunchedEffect(imageData) {
-        try {
-            imageData.forEach { storedImage ->
-                val file = PlatformFile(storedImage.path)
-
-                if (file.exists()) {
-                    images.add(file.file.readBytes().toImageBitmap())
-                }
-            }
-        } catch (ex: Exception) {
-            AppLogger.i("ImagePager", SimpleError.FAIL)
-            ex.printStackTrace()
-        }
-    }
 
     Row(
         modifier = modifier,
@@ -112,11 +94,11 @@ fun ImagePager(
                     }
             ) {
                 // Actual image
-                if (images.size >= page) {
+                if (imageData.size >= page) {
                     Image(
                         modifier = Modifier
                             .clickable(onClick = { onImageClick() }),
-                        bitmap = images[page],
+                        bitmap = imageData[page].image,
                         contentDescription = "",
                     )
                 }

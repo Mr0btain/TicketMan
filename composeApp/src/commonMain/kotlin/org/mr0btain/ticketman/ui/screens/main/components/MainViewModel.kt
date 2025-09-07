@@ -9,17 +9,17 @@ import androidx.paging.cachedIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.jetbrains.exposed.v1.core.not
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.note.NoteData
-import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.CustomPagingSource
+import org.mr0btain.ticketman.components.utils.flushImagesToDisk
+import org.mr0btain.ticketman.components.utils.getImages
 import org.mr0btain.ticketman.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.database.TicketDatabaseImpl
@@ -87,11 +87,11 @@ class MainViewModel(
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
                 customerDatabase.getById(identifier)?.let { customer ->
-                    val notes = customerDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
+                    val notes = customerDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
                     val tickets = customerDatabase.getTickets(identifier).map { ticket ->
                         TicketData(
                             ticket = ticket,
-                            notes = ticketDatabase.getNotes(ticket.identifier).map { NoteData(it.key, it.value) }
+                            notes = ticketDatabase.getNotes(ticket.identifier).map { NoteData(it.key, getImages(it.value)) }
                         )
                     }
 
@@ -105,88 +105,92 @@ class MainViewModel(
 
     /** Updates a Customer and its data in the database */
     fun addOrUpdateCustomer(customerData: CustomerData) {
-        val existingCustomer = customerDatabase.getById(customerData.customer.identifier)?.also { customer ->
-            // Update if its changed
-            if (customerData.customer != customer) customerDatabase.update(customerData.customer)
+        viewModelScope.launch {
+            val existingCustomer = customerDatabase.getById(customerData.customer.identifier)?.also { customer ->
+                // Update if its changed
+                if (customerData.customer != customer) customerDatabase.update(customerData.customer)
 
-            // Existing notes for comparison
-            val existingNotes = customerDatabase.getNotes(customerData.customer.identifier).map { NoteData(it.key, it.value) }
-
-            // Check if the note exists already and update if it needs to or add new
-            customerData.notes.forEach { noteData ->
-                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                    if (noteData != existingNote) {
-                        customerDatabase.updateNote(noteData.note, noteData.images)
-                    }
-                } ?: customerDatabase.addNote(customerData.customer.identifier, noteData.note, noteData.images)
-            }
-
-            // Existing tickets for comparison
-            val existingTickets = customerDatabase.getTickets(customerData.customer.identifier)
-
-            // Add tickets if they're new or update if they've changed
-            customerData.tickets.forEach { ticketData ->
-                // See if it exists
-                val ticket = existingTickets.firstOrNull { it.identifier == ticketData.ticket.identifier }?.also { existingTicket ->
-                    // check if ticket has changed, if so update it
-                    if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
-
-                    // Existing notes for comparison
-                    val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier).map { NoteData(it.key, it.value) }
-
-                    // Check ticket notes if they exist and have changed, if so update else add
-                    ticketData.notes.forEach { noteData ->
-                        existingTicketNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                            if (noteData != existingNote) {
-                                ticketDatabase.updateNote(noteData.note, noteData.images)
-                            }
-                        } ?: ticketDatabase.addNote(existingTicket.identifier, noteData.note, noteData.images)
-                    }
+                // Existing notes for comparison
+                val existingNotes = customerDatabase.getNotes(customerData.customer.identifier).map {
+                    NoteData(it.key, getImages(it.value))
                 }
 
-                // Check if it was null, then we need to add a whole new ticket
-                if (ticket == null) {
-                    // Add to ticket database
-                    ticketDatabase.add(ticketData.ticket)
+                // Check if the note exists already and update if it needs to or add new
+                customerData.notes.forEach { noteData ->
+                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                        if (noteData != existingNote) {
+                            customerDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                        }
+                    } ?: customerDatabase.addNote(customerData.customer.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                }
 
-                    // Add notes to ticket
-                    ticketData.notes.forEach { (note, images) ->
-                        ticketDatabase.addNote(ticketData.ticket.identifier, note, images)
+                // Existing tickets for comparison
+                val existingTickets = customerDatabase.getTickets(customerData.customer.identifier)
+
+                // Add tickets if they're new or update if they've changed
+                customerData.tickets.forEach { ticketData ->
+                    // See if it exists
+                    val ticket = existingTickets.firstOrNull { it.identifier == ticketData.ticket.identifier }?.also { existingTicket ->
+                        // check if ticket has changed, if so update it
+                        if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
+
+                        // Existing notes for comparison
+                        val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier).map { NoteData(it.key, getImages(it.value)) }
+
+                        // Check ticket notes if they exist and have changed, if so update else add
+                        ticketData.notes.forEach { noteData ->
+                            existingTicketNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                                if (noteData != existingNote) {
+                                    ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                }
+                            } ?: ticketDatabase.addNote(existingTicket.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                        }
                     }
 
-                    // Link to customer
-                    customerDatabase.addTicket(customerData.customer.identifier, ticketData.ticket.identifier)
+                    // Check if it was null, then we need to add a whole new ticket
+                    if (ticket == null) {
+                        // Add to ticket database
+                        ticketDatabase.add(ticketData.ticket)
+
+                        // Add notes to ticket
+                        ticketData.notes.forEach { (note, images) ->
+                            ticketDatabase.addNote(ticketData.ticket.identifier, note, flushImagesToDisk(images))
+                        }
+
+                        // Link to customer
+                        customerDatabase.addTicket(customerData.customer.identifier, ticketData.ticket.identifier)
+                    }
                 }
             }
-        }
 
-        // If it doesn't exist, then add new
-        if (existingCustomer == null) {
-            // Add item
-            customerDatabase.add(customerData.customer)
-
-            // Add notes
-            customerData.notes.forEach { (note, images) ->
-                customerDatabase.addNote(customerData.customer.identifier, note, images)
-            }
-
-            // Add tickets
-            customerData.tickets.forEach { (ticket, notes) ->
-                // Add ticket
-                ticketDatabase.add(ticket)
+            // If it doesn't exist, then add new
+            if (existingCustomer == null) {
+                // Add item
+                customerDatabase.add(customerData.customer)
 
                 // Add notes
-                notes.forEach { (note, images) ->
-                    ticketDatabase.addNote(ticket.identifier, note, images)
+                customerData.notes.forEach { (note, images) ->
+                    customerDatabase.addNote(customerData.customer.identifier, note, flushImagesToDisk(images))
                 }
 
-                // link to customer
-                customerDatabase.addTicket(customerData.customer.identifier, ticket.identifier)
-            }
-        }
+                // Add tickets
+                customerData.tickets.forEach { (ticket, notes) ->
+                    // Add ticket
+                    ticketDatabase.add(ticket)
 
-        // update selected
-        _selectedCustomerData.value = customerData
+                    // Add notes
+                    notes.forEach { (note, images) ->
+                        ticketDatabase.addNote(ticket.identifier, note, flushImagesToDisk(images))
+                    }
+
+                    // link to customer
+                    customerDatabase.addTicket(customerData.customer.identifier, ticket.identifier)
+                }
+            }
+
+            // update selected
+            _selectedCustomerData.value = customerData
+        }
     }
 
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
@@ -203,7 +207,7 @@ class MainViewModel(
         viewModelScope.launch {
             if (selectedTicketData.value?.ticket?.identifier != identifier)
             ticketDatabase.getById(identifier)?.let { ticket ->
-                val notes = ticketDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
+                val notes = ticketDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
 
                 _selectedTicketData.value = TicketData(ticket, notes)
             }
@@ -213,36 +217,38 @@ class MainViewModel(
     fun resetSelectedTicket() { _selectedTicketData.value = null }
 
     fun addOrUpdateTicket(ticketData: TicketData) {
-        val existingTicket = ticketDatabase.getById(ticketData.ticket.identifier)?.also { ticket ->
-            // Update if its changed
-            if (ticketData.ticket != ticket) ticketDatabase.update(ticketData.ticket)
+        viewModelScope.launch {
+            val existingTicket = ticketDatabase.getById(ticketData.ticket.identifier)?.also { ticket ->
+                // Update if its changed
+                if (ticketData.ticket != ticket) ticketDatabase.update(ticketData.ticket)
 
-            // Existing notes for comparison
-            val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier).map { NoteData(it.key, it.value) }
+                // Existing notes for comparison
+                val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier).map { NoteData(it.key, getImages(it.value)) }
 
-            // Check if the note exists already and update if it needs to or add new
-            ticketData.notes.forEach { noteData ->
-                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                    if (noteData != existingNote) {
-                        ticketDatabase.updateNote(noteData.note, noteData.images)
-                    }
-                } ?: ticketDatabase.addNote(ticketData.ticket.identifier, noteData.note, noteData.images)
+                // Check if the note exists already and update if it needs to or add new
+                ticketData.notes.forEach { noteData ->
+                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                        if (noteData != existingNote) {
+                            ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                        }
+                    } ?: ticketDatabase.addNote(ticketData.ticket.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                }
             }
-        }
 
-        // If it doesn't exist, then add new
-        if (existingTicket == null) {
-            // Add item
-            ticketDatabase.add(ticketData.ticket)
+            // If it doesn't exist, then add new
+            if (existingTicket == null) {
+                // Add item
+                ticketDatabase.add(ticketData.ticket)
 
-            // Add notes
-            ticketData.notes.forEach { (note, images) ->
-                ticketDatabase.addNote(ticketData.ticket.identifier, note, images)
+                // Add notes
+                ticketData.notes.forEach { (note, images) ->
+                    ticketDatabase.addNote(ticketData.ticket.identifier, note, flushImagesToDisk(images))
+                }
             }
-        }
 
-        // update selected
-        _selectedTicketData.value = ticketData
+            // update selected
+            _selectedTicketData.value = ticketData
+        }
     }
 
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
@@ -259,7 +265,7 @@ class MainViewModel(
         viewModelScope.launch {
             if (selectedInventoryData.value?.inventory?.identifier != identifier) {
                 inventoryDatabase.getById(identifier)?.let { inventory ->
-                    val notes = inventoryDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
+                    val notes = inventoryDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
 
                     _selectedInventoryData.value = InventoryData(inventory, notes)
                 }
@@ -270,35 +276,37 @@ class MainViewModel(
     fun resetSelectedInventory() { _selectedInventoryData.value = null }
 
     fun addOrUpdateInventory(inventoryData: InventoryData) {
-        val existingInventory = inventoryDatabase.getById(inventoryData.inventory.identifier)?.also { inventory ->
-            // Update if its changed
-            if (inventoryData.inventory != inventory) inventoryDatabase.update(inventoryData.inventory)
+        viewModelScope.launch {
+            val existingInventory = inventoryDatabase.getById(inventoryData.inventory.identifier)?.also { inventory ->
+                // Update if its changed
+                if (inventoryData.inventory != inventory) inventoryDatabase.update(inventoryData.inventory)
 
-            // Existing notes for comparison
-            val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier).map { NoteData(it.key, it.value) }
+                // Existing notes for comparison
+                val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier).map { NoteData(it.key, getImages(it.value)) }
 
-            // Check if the note exists already and update if it needs to or add new
-            inventoryData.notes.forEach { noteData ->
-                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                    if (noteData != existingNote) {
-                        inventoryDatabase.updateNote(noteData.note, noteData.images)
-                    }
-                } ?: inventoryDatabase.addNote(inventoryData.inventory.identifier, noteData.note, noteData.images)
+                // Check if the note exists already and update if it needs to or add new
+                inventoryData.notes.forEach { noteData ->
+                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                        if (noteData != existingNote) {
+                            inventoryDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                        }
+                    } ?: inventoryDatabase.addNote(inventoryData.inventory.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                }
             }
-        }
 
-        // If it doesn't exist, then add new
-        if (existingInventory == null) {
-            // Add item
-            inventoryDatabase.add(inventoryData.inventory)
+            // If it doesn't exist, then add new
+            if (existingInventory == null) {
+                // Add item
+                inventoryDatabase.add(inventoryData.inventory)
 
-            // Add notes
-            inventoryData.notes.forEach { (note, images) ->
-                inventoryDatabase.addNote(inventoryData.inventory.identifier, note, images)
+                // Add notes
+                inventoryData.notes.forEach { (note, images) ->
+                    inventoryDatabase.addNote(inventoryData.inventory.identifier, note, flushImagesToDisk(images))
+                }
             }
-        }
 
-        _selectedInventoryData.value = inventoryData
+            _selectedInventoryData.value = inventoryData
+        }
     }
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */
@@ -315,7 +323,7 @@ class MainViewModel(
         viewModelScope.launch {
             if (selectedUserData.value?.user?.identifier != identifier) {
                 userDatabase.getById(identifier)?.let { user ->
-                    val notes = userDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
+                    val notes = userDatabase.getNotes(identifier).map { NoteData(it.key, getImages(it.value)) }
 
                     _selectedUserData.value = UserData(user, notes)
                 }
@@ -326,35 +334,37 @@ class MainViewModel(
     fun resetSelectedUser() { _selectedUserData.value = null }
 
     fun addOrUpdateUser(userData: UserData) {
-        val existingUser = userDatabase.getById(userData.user.identifier)?.also { user ->
-            // Update if its changed
-            if (userData.user != user) userDatabase.update(userData.user)
+        viewModelScope.launch {
+            val existingUser = userDatabase.getById(userData.user.identifier)?.also { user ->
+                // Update if its changed
+                if (userData.user != user) userDatabase.update(userData.user)
 
-            // Existing notes for comparison
-            val existingNotes = userDatabase.getNotes(userData.user.identifier).map { NoteData(it.key, it.value) }
+                // Existing notes for comparison
+                val existingNotes = userDatabase.getNotes(userData.user.identifier).map { NoteData(it.key, getImages(it.value)) }
 
-            // Check if the note exists already and update if it needs to or add new
-            userData.notes.forEach { noteData ->
-                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                    if (noteData != existingNote) {
-                        userDatabase.updateNote(noteData.note, noteData.images)
-                    }
-                } ?: userDatabase.addNote(userData.user.identifier, noteData.note, noteData.images)
+                // Check if the note exists already and update if it needs to or add new
+                userData.notes.forEach { noteData ->
+                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                        if (noteData != existingNote) {
+                            userDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                        }
+                    } ?: userDatabase.addNote(userData.user.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                }
             }
-        }
 
-        // If it doesn't exist, then add new
-        if (existingUser == null) {
-            // Add item
-            userDatabase.add(userData.user)
+            // If it doesn't exist, then add new
+            if (existingUser == null) {
+                // Add item
+                userDatabase.add(userData.user)
 
-            // Add notes
-            userData.notes.forEach { (note, images) ->
-                userDatabase.addNote(userData.user.identifier, note, images)
+                // Add notes
+                userData.notes.forEach { (note, images) ->
+                    userDatabase.addNote(userData.user.identifier, note, flushImagesToDisk(images))
+                }
             }
-        }
 
-        _selectedUserData.value = userData
+            _selectedUserData.value = userData
+        }
     }
 
     /** ----------------------------------------------UI------------------------------------------------------------------- */

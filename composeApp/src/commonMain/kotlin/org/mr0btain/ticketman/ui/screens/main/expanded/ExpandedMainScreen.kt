@@ -13,16 +13,11 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.shared.DialogDismissReason
 import org.mr0btain.ticketman.data.shared.MainItemType
-import org.mr0btain.ticketman.data.time.getTime
-import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
-import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerPanel
@@ -31,7 +26,6 @@ import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryPanel
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 // TODO: Maybe make this expect actual of some sort for different platforms or screen sizes
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
@@ -85,7 +79,7 @@ fun ExpandedMainScreen(
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
-    val images by remember { mutableStateOf<List<StoredImage>>(emptyList()) }
+    val images by remember { mutableStateOf<List<ImageData>>(emptyList()) }
 
     // For customer adding or editing
     if (showCustomerDialog) {
@@ -127,13 +121,17 @@ fun ExpandedMainScreen(
                 seedData = inventoryData,
                 onDismiss = { showInventoryDialog = false },
                 isDarkMode = isDarkMode,
-                scrollBarsOnRight = scrollBarsOnRight
+                scrollBarsOnRight = scrollBarsOnRight,
+                onContinue = {
+                    // TODO: Note yet implemented
+                }
             )
         }
     }
 
     // For confirming deleting an item
     if (showConfirmDeleteDialog) {
+        /*
         SimpleConfirmDeleteDialog(
             itemName = confirmDeleteDialogText,
             onDismissRequest = { confirmed ->
@@ -185,6 +183,7 @@ fun ExpandedMainScreen(
             },
             isDarkMode = isDarkMode
         )
+         */
     }
 
     // For image viewing
@@ -308,7 +307,7 @@ fun ExpandedMainScreen(
                             onAddCustomer = { name ->
                                 coroutineScope.launch {
                                     // Set seed data
-                                    customerSeedData = CustomerData(customer = Customer(name = name, time = getTime()))
+                                    //viewModel.changeSelectedCustomer(CustomerData())
 
                                     // Trigger dialog
                                     showCustomerDialog = true
@@ -316,9 +315,6 @@ fun ExpandedMainScreen(
                             },
                             onEditCustomer = {
                                 selectedCustomer.value?.let { customerData ->
-                                    // Set seed data
-                                    customerSeedData = customerData
-
                                     // Trigger dialog
                                     showCustomerDialog = true
                                 }
@@ -326,6 +322,7 @@ fun ExpandedMainScreen(
                             onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomer(id) },
                             onDeleteCustomer = { id ->
                                 coroutineScope.launch {
+                                    /*
                                     // Set values
                                         itemToDelete = id
                                         itemToDeleteType = MainItemType.CUSTOMER
@@ -333,19 +330,14 @@ fun ExpandedMainScreen(
 
                                         // Trigger the dialog
                                         showConfirmDeleteDialog = true
+                                     */
                                 }
                             },
                             onTicketClick = { identifier ->
                                 coroutineScope.launch {
                                     viewModel.changeSelectedTicket(identifier)
 
-                                    viewModel.selectedTicketData.value?.let { ticketData ->
-                                        // Get seed data
-                                        ticketSeedData = ticketData
-
-                                        // Pop up ticket dialog
-                                        showTicketDialog = true
-                                    }
+                                    showTicketDialog = true
                                 }
                             },
                             selectedCustomer = selectedCustomer.value,
@@ -368,7 +360,7 @@ fun ExpandedMainScreen(
                             onAddNewTicket = {
                                 coroutineScope.launch {
                                     // Set up seed data
-                                    ticketSeedData = TicketData()
+                                    //ticketSeedData = TicketData()
 
                                     // Show the dialog
                                     showTicketDialog = true
@@ -378,7 +370,7 @@ fun ExpandedMainScreen(
                                 coroutineScope.launch {
                                     selectedTicket.value?.let { ticketData ->
                                         // Get seed data
-                                        ticketSeedData = ticketData
+                                        //ticketSeedData = ticketData
 
                                         // Trigger dialog if we have an actual item selected
                                         showTicketDialog = true
@@ -389,6 +381,7 @@ fun ExpandedMainScreen(
                             onSelectedPanelChange = { selectedTicketPanel = it },
                             onDeleteTicket = { id ->
                                 coroutineScope.launch {
+                                    /*
                                     // Set values
                                     itemToDelete = id
                                     itemToDeleteType = MainItemType.TICKET
@@ -396,6 +389,7 @@ fun ExpandedMainScreen(
 
                                     // Trigger the dialog
                                     showConfirmDeleteDialog = true
+                                     */
                                 }
                             },
                             selectedPanel = selectedTicketPanel,
@@ -417,7 +411,7 @@ fun ExpandedMainScreen(
                             onAddInventory = {
                                 coroutineScope.launch {
                                     // Set seed data
-                                    inventorySeedData = InventoryData()
+                                    //inventorySeedData = InventoryData()
 
                                     // Popup dialog
                                     showInventoryDialog = true
@@ -427,7 +421,7 @@ fun ExpandedMainScreen(
                                 coroutineScope.launch {
                                     selectedInventory.value?.let { inventoryData ->
                                         // Set seed data
-                                        inventorySeedData = inventoryData
+                                        //inventorySeedData = inventoryData
 
                                         // Popup dialog
                                         showInventoryDialog = true
@@ -437,12 +431,14 @@ fun ExpandedMainScreen(
                             onDeleteInventory = {
                                 coroutineScope.launch {
                                     selectedInventory.value?.let { inventoryData ->
+                                       /*
                                         itemToDelete = inventoryData.inventory.identifier
                                         itemToDeleteType = MainItemType.INVENTORY
                                         confirmDeleteDialogText = inventoryData.inventory.name
 
                                         // Trigger the dialog
                                         showConfirmDeleteDialog = true
+                                        */
                                     }
                                 }
                             },

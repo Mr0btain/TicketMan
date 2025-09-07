@@ -34,7 +34,7 @@ fun TicketPanel(
     scrollBarsOnRight: Boolean,
     selectedTicket: TicketData?,
     pagingItems: LazyPagingItems<Ticket>,
-    currentUser: UserData,
+    currentUser: UserData?,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (Uuid) -> Unit,

@@ -13,12 +13,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
@@ -27,14 +29,14 @@ import org.mr0btain.ticketman.data.ticket.toNameString
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.dialog.NoteDialog
+import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
+import org.mr0btain.ticketman.ui.screens.main.components.NewNotesBlock
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
-import kotlin.math.ceil
 import kotlin.math.min
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -49,7 +51,8 @@ fun CustomerDialog(
     onDismiss: () -> Unit,
     onContinue: (CustomerData) -> Unit,
     isDarkMode: Boolean,
-    scrollBarsOnRight: Boolean
+    scrollBarsOnRight: Boolean,
+    scope: CoroutineScope = rememberCoroutineScope()
 ) {
     // Name
     var firstName by remember(seedData) { mutableStateOf(seedData.customer.name.firstName) }
@@ -69,15 +72,16 @@ fun CustomerDialog(
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
-    // TODO: Could combine this with adding an item, and have one when statement and delete
+
+    // TODO: Could combine this with adding an item, and have one when statement
     var dataType by remember { mutableStateOf(DataType.NONE) }
 
     // Might be a better way of doing this, for now just send it like this
     var itemToDelete by remember { mutableStateOf<Any?>(null) }
 
     // For adding note dialog
-    var showAddNoteDialog by remember { mutableStateOf(false) }
-    var noteSeedData by remember { mutableStateOf(Note()) }
+    var showNoteDialog by remember { mutableStateOf(false) }
+    var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
 
     // For adding a basic sub item
     var itemToAdd by remember { mutableStateOf(SubItemType.NONE) }
@@ -85,23 +89,32 @@ fun CustomerDialog(
 
     // Add Note dialog
     // TODO: Redo this to modern notedata with images and such
-    if (showAddNoteDialog) {
-        NoteDialog(
-            isDarkMode = isDarkMode,
-            seedData = noteSeedData,
-            label = "Note",
-            onConfirm = { item ->
-                // Add to out list
-                //notes.add(item)
-            },
-            onDismissRequest = {
-                // Reset seed data
-                noteSeedData = Note()
+    if (showNoteDialog) {
+        noteSeedData?.let { seedData ->
+            EditNoteDialog(
+                noteData = seedData,
+                onConfirm = { result ->
+                    scope.launch {
+                        val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
 
-                // Close dialog
-                showAddNoteDialog = false
-            }
-        )
+                        // Check if note exists, if so remove old data
+                        if (foundNote != null) notes.remove(foundNote)
+
+                        // Insert new note
+                        notes.add(result)
+
+                        noteSeedData = null
+
+                        showNoteDialog = false
+                    }
+                },
+                onDismissRequest = {
+                    noteSeedData = null
+                    showNoteDialog = false
+                                   },
+                isDarkMode = isDarkMode
+            )
+        }
     }
 
     // Add basic item dialog
@@ -438,7 +451,10 @@ fun CustomerDialog(
 
                         IconButton(
                             modifier = Modifier.size(26.dp),
-                            onClick = { showAddNoteDialog = true }
+                            onClick = {
+                                noteSeedData = NoteData()
+                                showNoteDialog = true
+                            }
                         ) {
                             Icon(
                                 modifier = Modifier
@@ -451,6 +467,13 @@ fun CustomerDialog(
                     }
 
                     Spacer(Modifier.padding(4.dp))
+
+                    NewNotesBlock(
+                        noteData = notes,
+                        onImageClick = {
+                            // TODO: Not yet implemented
+                        }
+                    )
 
                     /*
                     CustomerDialogNoteList(
@@ -494,6 +517,8 @@ fun CustomerDialog(
                                 notes = notes
                             )
                         )
+
+                        onDismiss()
                     }
                 )
             }
@@ -572,32 +597,17 @@ private fun CustomerDialogTicketList(
     onTicketClick: (Uuid) -> Unit,
     onDeleteClick: (Uuid) -> Unit
 ) {
-    Column {
-        for (i in 0..(tickets.size / 5) + 1) {
-            val rowStartIndex = i * 5
+    Column(
+        modifier = modifier
+    ) {
+        tickets.forEach { (ticket, notes) ->
+            CustomInputChip(
+                label = ticket.device.toNameString(),
+                onClick = { onTicketClick(ticket.identifier) },
+                onDeleteClick = { onDeleteClick(ticket.identifier) }
+            )
 
-            // Make sure this is a sane row
-            if (tickets.size > i * 5 && tickets.subList(i, min(i + 5, tickets.size)).isNotEmpty()) {
-                Row(
-                    modifier = modifier
-                        .fillMaxWidth()
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    (rowStartIndex..rowStartIndex + 5).forEach { index ->
-                        tickets.getOrNull(index)?.let { ticket ->
-                            CustomInputChip(
-                                label = ticket.ticket.device.toNameString(),
-                                onClick = { onTicketClick(ticket.ticket.identifier) },
-                                onDeleteClick = { onDeleteClick(ticket.ticket.identifier) }
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-                        }
-                    }
-                }
-            }
+            Spacer(Modifier.padding(4.dp))
         }
     }
 }

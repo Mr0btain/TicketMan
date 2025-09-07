@@ -55,6 +55,10 @@ fun formatTime(millis: Long): Time {
     }
 }
 
+fun Time.tolong(): Long {
+    return parseDateToLong(this)
+}
+
 fun parseDateToLong(time: Time): Long {
     val format = SimpleDateFormat("yyyy-MM-dd HH:mm:ss a", Locale.getDefault())
 

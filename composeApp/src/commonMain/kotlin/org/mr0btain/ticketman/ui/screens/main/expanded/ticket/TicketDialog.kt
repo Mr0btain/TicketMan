@@ -93,6 +93,7 @@ fun TicketDialog(
 
     // Delete item dialog
     if (showConfirmDeleteScreen) {
+        /*
         ConfirmDeleteDialog(
             label = when (itemForDelete) {
                 SubItemType.UPDATE -> notes[itemUpForDeleteIndex].note.author + "'s Update"
@@ -116,6 +117,7 @@ fun TicketDialog(
                 showConfirmDeleteScreen = false
             },
         )
+         */
     }
 
     Dialog(
