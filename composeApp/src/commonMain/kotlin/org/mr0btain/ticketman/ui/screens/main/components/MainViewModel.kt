@@ -9,6 +9,7 @@ import androidx.paging.cachedIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.jetbrains.exposed.v1.core.not
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.note.NoteData
@@ -70,12 +71,7 @@ class MainViewModel(
 
     /** ----------------------------------------------OPERATIONS------------------------------------------------------------------- */
 
-    private val _dataType: MutableStateFlow<DataType> = MutableStateFlow(DataType.NONE)
-    val dataType = _dataType.asStateFlow()
 
-    fun changeDataType(type: DataType) {
-        _dataType.value = type
-    }
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
@@ -91,11 +87,11 @@ class MainViewModel(
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
                 customerDatabase.getById(identifier)?.let { customer ->
-                    val notes = customerDatabase.notes(identifier).map { NoteData(it.key, it.value) }
+                    val notes = customerDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
                     val tickets = customerDatabase.getTickets(identifier).map { ticket ->
                         TicketData(
                             ticket = ticket,
-                            notes = ticketDatabase.notes(ticket.identifier).map { NoteData(it.key, it.value) }
+                            notes = ticketDatabase.getNotes(ticket.identifier).map { NoteData(it.key, it.value) }
                         )
                     }
 
@@ -105,20 +101,22 @@ class MainViewModel(
         }
     }
 
+    fun resetSelectedCustomer() { _selectedCustomerData.value = null }
+
     /** Updates a Customer and its data in the database */
     fun addOrUpdateCustomer(customerData: CustomerData) {
         val existingCustomer = customerDatabase.getById(customerData.customer.identifier)?.also { customer ->
-            // Update customer if its changed
+            // Update if its changed
             if (customerData.customer != customer) customerDatabase.update(customerData.customer)
 
             // Existing notes for comparison
-            val existingNotes = customerDatabase.notes(customerData.customer.identifier).map { NoteData(it.key, it.value) }
+            val existingNotes = customerDatabase.getNotes(customerData.customer.identifier).map { NoteData(it.key, it.value) }
 
             // Check if the note exists already and update if it needs to or add new
             customerData.notes.forEach { noteData ->
                 existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
                     if (noteData != existingNote) {
-                        // TODO: Update note. Function not yet implemented
+                        customerDatabase.updateNote(noteData.note, noteData.images)
                     }
                 } ?: customerDatabase.addNote(customerData.customer.identifier, noteData.note, noteData.images)
             }
@@ -134,13 +132,13 @@ class MainViewModel(
                     if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
 
                     // Existing notes for comparison
-                    val existingTicketNotes = ticketDatabase.notes(existingTicket.identifier).map { NoteData(it.key, it.value) }
+                    val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier).map { NoteData(it.key, it.value) }
 
                     // Check ticket notes if they exist and have changed, if so update else add
                     ticketData.notes.forEach { noteData ->
                         existingTicketNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
                             if (noteData != existingNote) {
-                                // TODO Update note, not yet implemented
+                                ticketDatabase.updateNote(noteData.note, noteData.images)
                             }
                         } ?: ticketDatabase.addNote(existingTicket.identifier, noteData.note, noteData.images)
                     }
@@ -162,9 +160,9 @@ class MainViewModel(
             }
         }
 
-        // If the customer doesn't exist, then add new
+        // If it doesn't exist, then add new
         if (existingCustomer == null) {
-            // Add customer
+            // Add item
             customerDatabase.add(customerData.customer)
 
             // Add notes
@@ -186,6 +184,9 @@ class MainViewModel(
                 customerDatabase.addTicket(customerData.customer.identifier, ticket.identifier)
             }
         }
+
+        // update selected
+        _selectedCustomerData.value = customerData
     }
 
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
@@ -202,15 +203,46 @@ class MainViewModel(
         viewModelScope.launch {
             if (selectedTicketData.value?.ticket?.identifier != identifier)
             ticketDatabase.getById(identifier)?.let { ticket ->
-                val notes = ticketDatabase.notes(identifier).map { NoteData(it.key, it.value) }
+                val notes = ticketDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
 
                 _selectedTicketData.value = TicketData(ticket, notes)
             }
         }
     }
 
+    fun resetSelectedTicket() { _selectedTicketData.value = null }
+
     fun addOrUpdateTicket(ticketData: TicketData) {
-        // TODO
+        val existingTicket = ticketDatabase.getById(ticketData.ticket.identifier)?.also { ticket ->
+            // Update if its changed
+            if (ticketData.ticket != ticket) ticketDatabase.update(ticketData.ticket)
+
+            // Existing notes for comparison
+            val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier).map { NoteData(it.key, it.value) }
+
+            // Check if the note exists already and update if it needs to or add new
+            ticketData.notes.forEach { noteData ->
+                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                    if (noteData != existingNote) {
+                        ticketDatabase.updateNote(noteData.note, noteData.images)
+                    }
+                } ?: ticketDatabase.addNote(ticketData.ticket.identifier, noteData.note, noteData.images)
+            }
+        }
+
+        // If it doesn't exist, then add new
+        if (existingTicket == null) {
+            // Add item
+            ticketDatabase.add(ticketData.ticket)
+
+            // Add notes
+            ticketData.notes.forEach { (note, images) ->
+                ticketDatabase.addNote(ticketData.ticket.identifier, note, images)
+            }
+        }
+
+        // update selected
+        _selectedTicketData.value = ticketData
     }
 
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
@@ -227,7 +259,7 @@ class MainViewModel(
         viewModelScope.launch {
             if (selectedInventoryData.value?.inventory?.identifier != identifier) {
                 inventoryDatabase.getById(identifier)?.let { inventory ->
-                    val notes = inventoryDatabase.notes(identifier).map { NoteData(it.key, it.value) }
+                    val notes = inventoryDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
 
                     _selectedInventoryData.value = InventoryData(inventory, notes)
                 }
@@ -235,8 +267,38 @@ class MainViewModel(
         }
     }
 
+    fun resetSelectedInventory() { _selectedInventoryData.value = null }
+
     fun addOrUpdateInventory(inventoryData: InventoryData) {
-        // TODO
+        val existingInventory = inventoryDatabase.getById(inventoryData.inventory.identifier)?.also { inventory ->
+            // Update if its changed
+            if (inventoryData.inventory != inventory) inventoryDatabase.update(inventoryData.inventory)
+
+            // Existing notes for comparison
+            val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier).map { NoteData(it.key, it.value) }
+
+            // Check if the note exists already and update if it needs to or add new
+            inventoryData.notes.forEach { noteData ->
+                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                    if (noteData != existingNote) {
+                        inventoryDatabase.updateNote(noteData.note, noteData.images)
+                    }
+                } ?: inventoryDatabase.addNote(inventoryData.inventory.identifier, noteData.note, noteData.images)
+            }
+        }
+
+        // If it doesn't exist, then add new
+        if (existingInventory == null) {
+            // Add item
+            inventoryDatabase.add(inventoryData.inventory)
+
+            // Add notes
+            inventoryData.notes.forEach { (note, images) ->
+                inventoryDatabase.addNote(inventoryData.inventory.identifier, note, images)
+            }
+        }
+
+        _selectedInventoryData.value = inventoryData
     }
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */
@@ -246,14 +308,60 @@ class MainViewModel(
     private val userPager = Pager(pagingConfig) { CustomPagingSource(userDatabase) }
     val userListFlow = userPager.flow.cachedIn(viewModelScope)
 
-    private val _selectedUserData: MutableStateFlow<UserData> = MutableStateFlow(UserData())
+    private val _selectedUserData: MutableStateFlow<UserData?> = MutableStateFlow(null)
     val selectedUserData = _selectedUserData.asStateFlow()
+
+    fun changeSelectedUser(identifier: Uuid) {
+        viewModelScope.launch {
+            if (selectedUserData.value?.user?.identifier != identifier) {
+                userDatabase.getById(identifier)?.let { user ->
+                    val notes = userDatabase.getNotes(identifier).map { NoteData(it.key, it.value) }
+
+                    _selectedUserData.value = UserData(user, notes)
+                }
+            }
+        }
+    }
+
+    fun resetSelectedUser() { _selectedUserData.value = null }
+
+    fun addOrUpdateUser(userData: UserData) {
+        val existingUser = userDatabase.getById(userData.user.identifier)?.also { user ->
+            // Update if its changed
+            if (userData.user != user) userDatabase.update(userData.user)
+
+            // Existing notes for comparison
+            val existingNotes = userDatabase.getNotes(userData.user.identifier).map { NoteData(it.key, it.value) }
+
+            // Check if the note exists already and update if it needs to or add new
+            userData.notes.forEach { noteData ->
+                existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
+                    if (noteData != existingNote) {
+                        userDatabase.updateNote(noteData.note, noteData.images)
+                    }
+                } ?: userDatabase.addNote(userData.user.identifier, noteData.note, noteData.images)
+            }
+        }
+
+        // If it doesn't exist, then add new
+        if (existingUser == null) {
+            // Add item
+            userDatabase.add(userData.user)
+
+            // Add notes
+            userData.notes.forEach { (note, images) ->
+                userDatabase.addNote(userData.user.identifier, note, images)
+            }
+        }
+
+        _selectedUserData.value = userData
+    }
+
+    /** ----------------------------------------------UI------------------------------------------------------------------- */
 
     // Selected main tab index
     private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
     val selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
-
-    /** ----------------------------------------------UI------------------------------------------------------------------- */
 
     // To update the main tab index
     fun changeMainTabIndex(update: Int) {

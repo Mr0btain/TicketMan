@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.toCustomer
-import org.mr0btain.ticketman.database.tables.image.toImage
+import org.mr0btain.ticketman.database.tables.image.toStoredImage
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
@@ -264,14 +264,14 @@ open class CustomerDatabaseImpl(
     }
 
     /** Adds a note to an item and linking it to that item */
-    override fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean {
+    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 // Insert the note into database and get its entity
-                insertNote(note, images)?.let { noteEntity ->
+                insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to customer notes
                     CustomerEntity.findByIdAndUpdate(identifier.toJavaUuid()) { customerEntity ->
                         customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
@@ -290,7 +290,7 @@ open class CustomerDatabaseImpl(
         return false
     }
 
-    override fun notes(identifier: Uuid): Map<Note, List<StoredImage>> {
+    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>> {
         val result = mutableMapOf<Note, List<StoredImage>>()
 
         try {
@@ -300,7 +300,7 @@ open class CustomerDatabaseImpl(
 
                 CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
                     customerEntity.notes.forEach { noteEntity ->
-                        result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
+                        result[noteEntity.toNote()] = noteEntity.images.map { it.toStoredImage() }
                     }
 
                     AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)

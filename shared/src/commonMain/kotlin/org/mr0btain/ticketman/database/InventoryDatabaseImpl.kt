@@ -11,7 +11,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.database.tables.image.toImage
+import org.mr0btain.ticketman.database.tables.image.toStoredImage
 import org.mr0btain.ticketman.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.database.tables.inventory.InventoryNoteTable
 import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
@@ -213,14 +213,14 @@ class InventoryDatabaseImpl(
         }
     }
 
-    override fun addNote(identifier: Uuid, note: Note, images: List<StoredImage>): Boolean {
+    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>): Boolean {
         try {
             transaction {
                 // If we should log, setup logger
                 if (shouldLog) addLogger(StdOutSqlLogger)
 
                 // Insert the note into database and get its entity
-                insertNote(note, images)?.let { noteEntity ->
+                insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to notes
                     InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
                         inventoryEntity.notes = SizedCollection(inventoryEntity.notes + noteEntity)
@@ -239,7 +239,7 @@ class InventoryDatabaseImpl(
         return false
     }
 
-    override fun notes(identifier: Uuid): Map<Note, List<StoredImage>> {
+    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>> {
         val result = mutableMapOf<Note, List<StoredImage>>()
 
         try {
@@ -249,7 +249,7 @@ class InventoryDatabaseImpl(
 
                 InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
                     inventoryEntity.notes.forEach { noteEntity ->
-                        result[noteEntity.toNote()] = noteEntity.images.map { it.toImage() }
+                        result[noteEntity.toNote()] = noteEntity.images.map { it.toStoredImage() }
                     }
 
                     AppLogger.m(GET_NOTES_TAG, SimpleError.SUCCESS)

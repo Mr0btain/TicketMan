@@ -35,7 +35,8 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
-    onDismiss: (InventoryData?, DialogDismissReason) -> Unit,
+    onDismiss: () -> Unit,
+    onContinue: (InventoryData) -> Unit,
     seedData: InventoryData,
     isDarkMode: Boolean,
     scrollBarsOnRight: Boolean
@@ -104,10 +105,7 @@ fun InventoryDialog(
 
     Dialog(
         properties = DialogProperties(),
-        onDismissRequest = {
-            // Call dismiss as we haven't confirmed anything
-            onDismiss(null, DialogDismissReason.CANCEL)
-        }
+        onDismissRequest = { onDismiss() }
     ) {
         Surface(
             modifier = modifier
@@ -237,10 +235,9 @@ fun InventoryDialog(
 
                 ConfirmOrCancelButtonRow(
                     modifier = Modifier.fillMaxWidth(),
-                    onCancelClick = { onDismiss(null, DialogDismissReason.CANCEL) },
+                    onCancelClick = { onDismiss() },
                     onConfirmClick = {
-                        // Call dismiss with data
-                        onDismiss(
+                        onContinue(
                             InventoryData(
                                 inventory = Inventory(
                                     identifier = seedData.inventory.identifier,
@@ -251,8 +248,7 @@ fun InventoryDialog(
                                     cost = cost.text.toString(),
                                     time = if (seedData.inventory.time != Long.MAX_VALUE) seedData.inventory.time else getTime()
                                 )
-                            ),
-                            DialogDismissReason.CONTINUE
+                            )
                         )
                     }
                 )

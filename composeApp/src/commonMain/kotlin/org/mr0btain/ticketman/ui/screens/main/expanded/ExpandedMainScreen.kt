@@ -122,32 +122,14 @@ fun ExpandedMainScreen(
 
     // For inventory adding or editing
     if (showInventoryDialog) {
-        InventoryDialog(
-            seedData = inventorySeedData,
-            onDismiss = { data, reason ->
-                coroutineScope.launch {
-                    when (reason) {
-                        DialogDismissReason.CONTINUE -> {
-                            data?.let { inventoryItem ->
-                                //viewModel.dataHandler.inventoryDataHandler.addOrUpdate(inventoryItem)
-                            }
-                        }
-
-                        else -> {
-                            // Do nothing
-                        }
-                    }
-
-                    // Reset seed data
-                    inventorySeedData = InventoryData()
-
-                    // Close dialog
-                    showInventoryDialog = false
-                }
-            },
-            isDarkMode = isDarkMode,
-            scrollBarsOnRight = scrollBarsOnRight
-        )
+        selectedInventory.value?.let { inventoryData ->
+            InventoryDialog(
+                seedData = inventoryData,
+                onDismiss = { showInventoryDialog = false },
+                isDarkMode = isDarkMode,
+                scrollBarsOnRight = scrollBarsOnRight
+            )
+        }
     }
 
     // For confirming deleting an item

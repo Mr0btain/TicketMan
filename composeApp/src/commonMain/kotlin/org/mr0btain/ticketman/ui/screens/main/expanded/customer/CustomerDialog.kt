@@ -69,6 +69,7 @@ fun CustomerDialog(
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
+    // TODO: Could combine this with adding an item, and have one when statement and delete
     var dataType by remember { mutableStateOf(DataType.NONE) }
 
     // Might be a better way of doing this, for now just send it like this
