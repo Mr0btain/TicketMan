@@ -109,8 +109,6 @@ class MainViewModel(
     }
 
     fun changeSelectedCustomer(identifier: Uuid) {
-        customerDatabase.getPagedItems()
-
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
                 // Check if it exists in cache
