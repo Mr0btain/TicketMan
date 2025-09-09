@@ -176,6 +176,7 @@ class MainViewModel(
                         // check if ticket has changed, if so update it
                         if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
 
+                        // TODO
                         // Existing notes for comparison
                         val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
