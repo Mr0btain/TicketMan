@@ -18,7 +18,7 @@ data class Ticket @OptIn(ExperimentalUuidApi::class) constructor(
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Long.MAX_VALUE),
     val priority: TicketPriority = TicketPriority(TicketPriorityType.LOW, Long.MAX_VALUE),
     val time: Long = Long.MAX_VALUE
-): MainData
+): MainItem, SubItem
 
 fun randomTicketStatus(): TicketStatus {
     val values = TicketStatusType.entries.toTypedArray()

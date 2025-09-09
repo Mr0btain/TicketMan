@@ -9,10 +9,10 @@ import androidx.paging.cachedIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.customer.CustomerData
-import org.mr0btain.ticketman.components.data.image.ImageData
+import org.mr0btain.ticketman.components.data.customer.*
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
@@ -21,7 +21,12 @@ import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.CustomPagingSource
 import org.mr0btain.ticketman.components.utils.flushImagesToDisk
 import org.mr0btain.ticketman.components.utils.pullImagesFromDisk
+import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.cache.LruCache
+import org.mr0btain.ticketman.data.customer.Address
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.database.TicketDatabaseImpl
@@ -50,6 +55,7 @@ class MainViewModel(
     private val TAG = "MainViewModel"
     private val INIT_TAG = "$TAG:Init"
     private val INIT_SYNC_TAG = "$TAG:Init_Sync"
+    private val REMOVE_CUSTOMER_SUB_ITEM_TAG = "$TAG:RemoveCustomerSubItem"
 
     fun init() {
         viewModelScope.launch {
@@ -84,7 +90,7 @@ class MainViewModel(
 
     val customerCache = LruCache<Uuid, CustomerData>(maxCacheSize, "CustomerCache")
 
-    private val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
+    private val customerDatabase = CustomerDatabaseImpl()
 
     private val customerPager = Pager(pagingConfig) { CustomPagingSource(customerDatabase) }
     val customerListFlow = customerPager.flow.cachedIn(viewModelScope)
@@ -103,6 +109,8 @@ class MainViewModel(
     }
 
     fun changeSelectedCustomer(identifier: Uuid) {
+        customerDatabase.getPagedItems()
+
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
                 // Check if it exists in cache
@@ -127,6 +135,14 @@ class MainViewModel(
                 }
             }
         }
+    }
+
+    fun setupNewCustomer(name: PersonName = PersonName()) {
+        _selectedCustomerData.value = CustomerData(
+            customer = Customer(
+                name = name
+            )
+        )
     }
 
     fun resetSelectedCustomer() { _selectedCustomerData.value = null }
@@ -221,6 +237,83 @@ class MainViewModel(
         }
     }
 
+    fun removeCustomer(identifier: Uuid) {
+        // TODO
+    }
+
+    // TODO: Setup database clearing or removal is these items. Will need dedicated functions.
+    /**
+     *  Removes an item from a customer. NOTE: This DOES NOT delete the item if it is a main item.
+     *  it simply removes the link from the customer. Item is removed from SELECTED Customer. So
+     *  make sure you set it as selected first.
+     *  @param subItemType The type of the item to remove
+     *  @param subItem The actual item.
+     */
+    fun removeCustomerSubItem(subItemType: DataType, subItem: Any?) {
+        viewModelScope.launch {
+            _selectedCustomerData.value?.let { customerData ->
+                // Check what were removing from the customer
+                when (subItemType) {
+                    DataType.TICKET -> {
+                        (subItem as? Ticket)?.let { ticket ->
+                            setSelectedCustomer(
+                                customerData.removeTicket(ticket.identifier)
+                            )
+
+                            customerDatabase.removeTicket(customerData.customer.identifier, ticket.identifier)
+
+                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
+                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as ticket, but item was NOT a Ticket!")
+                    }
+
+                    DataType.EMAIL -> {
+                        (subItem as? String)?.let { email ->
+                            setSelectedCustomer(
+                                customerData.removeEmail(email)
+                            )
+
+                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
+                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as email, but was NOT a string!")
+                    }
+
+                    DataType.PHONE -> {
+                        (subItem as? String)?.let { phone ->
+                            setSelectedCustomer(
+                                customerData.removePhoneNumber(phone)
+                            )
+
+                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
+                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as phone, but was NOT a string!")
+                    }
+
+                    DataType.NOTE -> {
+                        (subItem as? Note)?.let { note ->
+                            setSelectedCustomer(
+                                customerData.removeNote(note.identifier)
+                            )
+
+                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
+                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as Note, but item was NOT a Note!")
+                    }
+
+                    DataType.ADDRESS -> {
+                        (subItem as? Address)?.let {
+                            setSelectedCustomer(
+                                customerData.clearAddress()
+                            )
+
+                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
+                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as Address, but item was NOT Address!")
+                    }
+
+                    else -> {
+                        AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "Not a valid SubItem DataType or not set!")
+                    }
+                }
+            } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "No customer selected!")
+        }
+    }
+
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
 
     val ticketCache = LruCache<Uuid, TicketData>(maxCacheSize, "TicketCache")
@@ -258,6 +351,10 @@ class MainViewModel(
                 }
             }
         }
+    }
+
+    fun setupNewTicket() {
+        _selectedTicketData.value = TicketData()
     }
 
     fun resetSelectedTicket() { _selectedTicketData.value = null }
@@ -342,6 +439,10 @@ class MainViewModel(
         }
     }
 
+    fun setupNewInventory() {
+        _selectedInventoryData.value = InventoryData()
+    }
+
     fun resetSelectedInventory() { _selectedInventoryData.value = null }
 
     fun addOrUpdateInventory(inventoryData: InventoryData) {
@@ -416,6 +517,10 @@ class MainViewModel(
                 }
             }
         }
+    }
+
+    fun setupNewUser() {
+        _selectedUserData.value = UserData()
     }
 
     fun resetSelectedUser() { _selectedUserData.value = null }

@@ -13,11 +13,16 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.components.utils.getNameForDataType
+import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
+import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerPanel
@@ -75,6 +80,8 @@ fun ExpandedMainScreen(
     var showInventoryDialog by remember { mutableStateOf(false) }
 
     // For confirm delete dialog
+    var dataType by remember { mutableStateOf(DataType.NONE) }
+    var subDataType by remember { mutableStateOf(DataType.NONE) }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
 
     // For image viewing
@@ -131,59 +138,42 @@ fun ExpandedMainScreen(
 
     // For confirming deleting an item
     if (showConfirmDeleteDialog) {
-        /*
-        SimpleConfirmDeleteDialog(
-            itemName = confirmDeleteDialogText,
-            onDismissRequest = { confirmed ->
-                coroutineScope.launch {
-                    if (confirmed) {
-                        // Delete item
-                        when (itemToDeleteType) {
-                            MainItemType.CUSTOMER -> {
-                                /*
-                                // Remove customer
-                                viewModel.dataHandler.customerDataHandler.remove(itemToDelete)
+        ConfirmDeleteDialog(
+            dataType = dataType,
+            onContinue = {
+                when (dataType) {
+                    DataType.CUSTOMER -> {
+                        when (subDataType) {
+                            DataType.TICKET -> {
 
-                                // Reset selected
-                                viewModel.dataHandler.customerDataHandler.clearSelectedId()
-                                 */
                             }
-
-                            MainItemType.TICKET -> {
-                                /*
-                                // Remove ticket
-                                viewModel.dataHandler.ticketDataHandler.remove(itemToDelete)
-
-                                // Reset selected
-                                viewModel.dataHandler.ticketDataHandler.clearSelectedId()
-                                 */
+                            DataType.EMAIL -> TODO()
+                            DataType.PHONE -> TODO()
+                            DataType.NOTE -> TODO()
+                            DataType.ADDRESS -> TODO()
+                            else -> {
+                                // Do nothing
                             }
-                            MainItemType.EMPLOYEE -> { /* We cant remove employees here */ }
-                            MainItemType.INVENTORY -> {
-                                /*
-                                // Remove item
-                                viewModel.dataHandler.inventoryDataHandler.remove(itemToDelete)
-
-                                // Reset selected
-                                viewModel.dataHandler.inventoryDataHandler.clearSelectedId()
-                                 */
-                            }
-                            MainItemType.NONE -> { /* Do nothing */ }
                         }
                     }
-
-                    // Reset values
-                    itemToDelete = Uuid.random()
-                    itemToDeleteType = MainItemType.NONE
-                    confirmDeleteDialogText = ""
-
-                    // Close the dialog
-                    showConfirmDeleteDialog = false
+                    DataType.TICKET -> TODO()
+                    DataType.INVENTORY -> TODO()
+                    DataType.USER -> TODO()
+                    else -> {
+                        // Do Nothing
+                    }
                 }
             },
-            isDarkMode = isDarkMode
+            onDismiss = {
+                // Reset data types
+                dataType = DataType.NONE
+                subDataType = DataType.NONE
+
+                // Hide dialog
+                showConfirmDeleteDialog = false
+                        },
+            name = getNameForDataType(dataType, subDataType)
         )
-         */
     }
 
     // For image viewing
@@ -307,17 +297,15 @@ fun ExpandedMainScreen(
                             onAddCustomer = { name ->
                                 coroutineScope.launch {
                                     // Set seed data
-                                    //viewModel.changeSelectedCustomer(CustomerData())
+                                    viewModel.setupNewCustomer(name)
 
                                     // Trigger dialog
                                     showCustomerDialog = true
                                 }
                             },
                             onEditCustomer = {
-                                selectedCustomer.value?.let { customerData ->
-                                    // Trigger dialog
+                                if (selectedCustomer.value != null)
                                     showCustomerDialog = true
-                                }
                             },
                             onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomer(id) },
                             onDeleteCustomer = { id ->
@@ -360,7 +348,7 @@ fun ExpandedMainScreen(
                             onAddNewTicket = {
                                 coroutineScope.launch {
                                     // Set up seed data
-                                    //ticketSeedData = TicketData()
+                                    viewModel.setupNewTicket()
 
                                     // Show the dialog
                                     showTicketDialog = true
@@ -368,13 +356,8 @@ fun ExpandedMainScreen(
                             },
                             onEditTicket = {
                                 coroutineScope.launch {
-                                    selectedTicket.value?.let { ticketData ->
-                                        // Get seed data
-                                        //ticketSeedData = ticketData
-
-                                        // Trigger dialog if we have an actual item selected
+                                    if (selectedTicket.value != null)
                                         showTicketDialog = true
-                                    }
                                 }
                             },
                             onSelectedTicketChange = { id -> viewModel.changeSelectedTicket(id) },
@@ -410,8 +393,7 @@ fun ExpandedMainScreen(
                             onSelectedInventoryChange = { id -> viewModel.changeSelectedInventory(id) },
                             onAddInventory = {
                                 coroutineScope.launch {
-                                    // Set seed data
-                                    //inventorySeedData = InventoryData()
+                                    viewModel.setupNewInventory()
 
                                     // Popup dialog
                                     showInventoryDialog = true
@@ -419,13 +401,8 @@ fun ExpandedMainScreen(
                             },
                             onEditInventory = {
                                 coroutineScope.launch {
-                                    selectedInventory.value?.let { inventoryData ->
-                                        // Set seed data
-                                        //inventorySeedData = inventoryData
-
-                                        // Popup dialog
+                                    if (selectedInventory.value != null)
                                         showInventoryDialog = true
-                                    }
                                 }
                             },
                             onDeleteInventory = {

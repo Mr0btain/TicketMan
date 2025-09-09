@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.data.image
 
 import androidx.compose.ui.graphics.ImageBitmap
+import org.mr0btain.ticketman.data.SubItem
 import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.time.getTime
@@ -14,7 +15,7 @@ data class ImageData @OptIn(ExperimentalUuidApi::class) constructor(
     val time: Time,
     val tags: List<String> = emptyList(),
     val description: String = ""
-)
+): SubItem
 
 @OptIn(ExperimentalUuidApi::class)
 fun newImageData(parentId: Uuid, image: ImageBitmap): ImageData {

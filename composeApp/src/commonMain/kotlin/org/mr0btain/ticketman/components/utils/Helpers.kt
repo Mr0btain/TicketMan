@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.utils
 
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.Ticket
 
@@ -29,4 +30,8 @@ fun formatIntToMoney(input: Int): String {
     }
 
     return builder.toString()
+}
+
+fun getNameForDataType(dataType: DataType, subDataType: DataType): String {
+    return "${dataType.stringName}'s ${subDataType.stringName}"
 }

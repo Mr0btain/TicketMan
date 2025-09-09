@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.data.MainData
+import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.request.SyncRequest
@@ -30,7 +30,7 @@ class InventoryRemoteRepositoryImpl(
         serverUrl = "$url/api/data/inventory"
     }
 
-    override suspend fun sync(data: List<MainData>): List<Inventory> {
+    override suspend fun sync(data: List<MainItem>): List<Inventory> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 

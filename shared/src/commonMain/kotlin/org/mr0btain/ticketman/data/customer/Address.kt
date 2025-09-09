@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.customer
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.SubItem
 
 @Serializable
 data class Address(
@@ -8,4 +9,4 @@ data class Address(
     val city: String = "",
     val state: String = "",
     val zip: String = ""
-)
+): SubItem

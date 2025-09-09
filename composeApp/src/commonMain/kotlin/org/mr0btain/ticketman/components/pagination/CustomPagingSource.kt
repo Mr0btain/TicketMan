@@ -2,10 +2,10 @@ package org.mr0btain.ticketman.components.pagination
 
 import androidx.paging.PagingSource
 import androidx.paging.PagingState
-import org.mr0btain.ticketman.data.MainData
+import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.database.Database
 
-class CustomPagingSource<T: MainData>(
+class CustomPagingSource<T: MainItem>(
     private val repository: Database<T>,
     private val pageSize: Int = 40
 ) : PagingSource<Long, T>() {

@@ -1,132 +1,97 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.SortOrder
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
-import org.jetbrains.exposed.v1.jdbc.addLogger
-import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
-import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.toCustomer
 import org.mr0btain.ticketman.database.tables.image.toStoredImage
-import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.error.*
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
+import kotlin.uuid.toKotlinUuid
 
+/**
+ * Used for all Customer data actions in database
+ */
+@Suppress("PrivatePropertyName")
 @OptIn(ExperimentalUuidApi::class)
-open class CustomerDatabaseImpl(
-    tag: String = "CustomerLocalDatabase",
-    private val shouldLog: Boolean = false
-) : Database<Customer>(
-    tag = tag,
-    shouldLog = shouldLog
-) {
+open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
+    private val REMOVE_TICKET_TAG = "$tag:RemoveTicket"
 
-    /** Gets all items from database */
     override fun all(): List<Customer>? {
-        var result = listOf<Customer>()
+        var result: List<Customer>? = null
 
-        try {
-            // Go into database and convert data to customer data item
+        appLogTryCatch(GET_ALL_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 result = CustomerEntity.all().map { item -> item.toCustomer()}
-
-                AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
             }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(ADD_ALL_TAG, SimpleResult.FAIL)
-            return null
+
+            if (result != null)
+                AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
+            else AppLogger.i(GET_ALL_TAG, SimpleResult.FAIL)
         }
 
         return result
     }
 
-    /** Gets an item by its identifier */
     override fun getById(identifier: Uuid): Customer? {
         var result: Customer? = null
 
-        try {
+        appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                result = CustomerEntity.findById(identifier.toJavaUuid())?.toCustomer()
-
-                AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
+                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                    result = customerEntity.toCustomer()
+                    AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
+                } ?: AppLogger.i(GET_BY_ID_TAG, CustomerError.NOT_FOUND)
             }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_BY_ID_TAG, SimpleResult.FAIL)
-            return null
         }
 
         return result
     }
 
-    /**
-     * Gets a list of items limited by the page size at the designated offset
-     * @param offset The starting offset to get items
-     * @param pageSize The amount of items to fetch
-     */
-    override fun getPagedItems(offset: Long, pageSize: Int): List<Customer> {
-        val result = mutableListOf<Customer>()
+    override fun getPagedItems(offset: Long, pageSize: Int): List<Customer>? {
+        var result: List<Customer>? = null
 
-        try {
+        appLogTryCatch(GET_PAGED_ITEMS_TAG) {
             transaction {
-                result.addAll(
-                    CustomerEntity
-                        .all()
-                        .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.time to SortOrder.DESC)
-                        .offset(offset)
-                        .limit(pageSize)
-                        .map { it.toCustomer() }
-                )
+                result = CustomerEntity
+                    .all()
+                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.time to SortOrder.DESC)
+                    .offset(offset)
+                    .limit(pageSize)
+                    .map { it.toCustomer() }
             }
 
-            AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
+            if (result != null)
+                AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
+            else
+                AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
         }
 
         return result
     }
 
-    /** Gets the total count of items in the database */
     override fun count(): Long = CustomerEntity.count()
 
-    /** Adds all items to the database */
-    override fun addAll(data: List<Customer>): Boolean {
-        try {
+    override fun addAll(data: List<Customer>) {
+        appLogTryCatch(ADD_ALL_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 data.forEach { item ->
-                    // Convert kotlin uuid to java for database
-                    val identifier = item.identifier.toJavaUuid()
-
                     // Insert into database
-                    CustomerEntity.new(identifier) {
+                    CustomerEntity.new(item.identifier.toJavaUuid()) {
                         name = item.name
                         address = item.address
                         contactInfo = item.contactInfo
@@ -136,47 +101,26 @@ open class CustomerDatabaseImpl(
 
                 AppLogger.m(ADD_ALL_TAG, SimpleResult.SUCCESS)
             }
-
-            return true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            AppLogger.i(ADD_ALL_TAG, SimpleResult.FAIL)
-            return false
         }
     }
 
-    /** Removes an item from the database */
-    override fun remove(identifier: Uuid): Boolean {
-        try {
+    override fun remove(identifier: Uuid) {
+        appLogTryCatch(REMOVE_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
+                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                    customerEntity.delete()
 
-                CustomerEntity.findById(identifier.toJavaUuid())?.delete()
-
-                AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
+                    AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
+                } ?: AppLogger.i(REMOVE_TAG, CustomerError.NOT_FOUND)
             }
-
-            return true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            AppLogger.m(REMOVE_TAG, SimpleResult.FAIL)
-            return false
         }
     }
 
-    /** Adds an item to the database */
-    override fun add(data: Customer): Boolean {
-        try {
+    override fun add(data: Customer) {
+        appLogTryCatch(ADD_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                // Convert kotlin uuid to java for database
-                val identifier = data.identifier.toJavaUuid()
-
                 // Insert into database
-                CustomerEntity.new(identifier) {
+                CustomerEntity.new(data.identifier.toJavaUuid()) {
                     name = data.name
                     address = data.address
                     contactInfo = data.contactInfo
@@ -185,22 +129,12 @@ open class CustomerDatabaseImpl(
 
                 AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
             }
-
-            return true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            AppLogger.i(ADD_TAG, SimpleResult.FAIL)
-            return false
         }
     }
 
-    /** Updates an item in the database */
-    override fun update(data: Customer): Boolean {
-        try {
+    override fun update(data: Customer) {
+        appLogTryCatch(UPDATE_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 CustomerEntity
                     .findById(data.identifier.toJavaUuid())
                     ?.apply {
@@ -208,74 +142,16 @@ open class CustomerDatabaseImpl(
                         address = data.address
                         contactInfo = data.contactInfo
                         time = data.time
-                    }
 
-                AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
+                        AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
+                    } ?: AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND)
             }
-
-            return true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            AppLogger.i(UPDATE_TAG, SimpleResult.FAIL)
-            return false
         }
     }
 
-    /** Adds a ticket to a customer, assuming that ticket and customer already exist in the database */
-    fun addTicket(customerId: Uuid, ticketId: Uuid) {
-        try {
+    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>) {
+        appLogTryCatch(ADD_NOTE_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                // Get ticket entity
-                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
-                    // Get customer entity
-                    CustomerEntity.findById(customerId.toJavaUuid())?.let { customerEntity ->
-                        // Insert ticket into customer links
-                        customerEntity.tickets = SizedCollection(customerEntity.tickets + ticketEntity)
-                    }
-                }
-            }
-        } catch (ex: Exception) {
-            AppLogger.i(ADD_TICKET_TAG, SimpleResult.FAIL)
-            ex.printStackTrace()
-        }
-    }
-
-    /** Gets all tickets for a customer */
-    fun getTickets(identifier: Uuid): List<Ticket> {
-        val tickets = mutableListOf<Ticket>()
-
-        try {
-            transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
-                    tickets.addAll(
-                        customerEntity.tickets
-                            .map { ticketEntity -> ticketEntity.toTicket() }
-                    )
-
-                    AppLogger.m(GET_TICKETS_TAG, SimpleResult.SUCCESS)
-                } ?: AppLogger.i(GET_TICKETS_TAG, "Could not find customer!")
-            }
-        } catch (ex: Exception) {
-            AppLogger.i(GET_TICKETS_TAG, SimpleResult.FAIL)
-            ex.printStackTrace()
-        }
-
-        return tickets
-    }
-
-    /** Adds a note to an item and linking it to that item */
-    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>): Boolean {
-        try {
-            transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to customer notes
@@ -283,82 +159,96 @@ open class CustomerDatabaseImpl(
                         customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
 
                         AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
-                    } ?: AppLogger.i(ADD_NOTE_TAG, "Customer not found! $identifier")
-                } ?: AppLogger.i(ADD_NOTE_TAG, "Note entity was null!")
+                    } ?: AppLogger.i(ADD_NOTE_TAG, CustomerError.NOT_FOUND)
+                }
             }
-
-            return true
-        } catch (ex: Exception) {
-            AppLogger.i(ADD_NOTE_TAG, SimpleResult.FAIL)
-            ex.printStackTrace()
         }
-
-        return false
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>> {
-        val result = mutableMapOf<Note, List<StoredImage>>()
+    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>? {
+        var result: Map<Note, List<StoredImage>>? = null
 
-        try {
+        appLogTryCatch(GET_NOTES_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
-                    customerEntity.notes.forEach { noteEntity ->
-                        result[noteEntity.toNote()] = noteEntity.images.map { it.toStoredImage() }
+                    result = customerEntity.notes.associate { noteEntity ->
+                        noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
                     }
-
-                    AppLogger.m(GET_NOTES_TAG, SimpleResult.SUCCESS)
-                } ?: AppLogger.i(GET_NOTES_TAG, "Could not find customer!")
+                } ?: AppLogger.i(GET_NOTES_TAG, CustomerError.NOT_FOUND)
             }
-        } catch (ex: Exception) {
-            AppLogger.i(GET_NOTES_TAG, SimpleResult.FAIL)
-            ex.printStackTrace()
+
+            if (result != null)
+                AppLogger.m(GET_NOTES_TAG, SimpleResult.SUCCESS)
+            else
+                AppLogger.i(GET_NOTES_TAG, SimpleResult.FAIL)
         }
 
         return result
     }
 
-    /** Removes a note and its images from the database */
-    override fun removeNote(identifier: Uuid): Boolean {
-        try {
+    /**
+     * Adds a ticket to a customer, assuming that ticket and customer already exist in the database
+     * @param customerId Identifier of customer to link ticket to
+     * @param ticketId Identifier of ticket to link to customer
+     */
+    fun addTicket(customerId: Uuid, ticketId: Uuid) {
+        appLogTryCatch(ADD_TICKET_TAG) {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
+                // Get ticket entity
+                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
+                    // Get customer entity
+                    CustomerEntity.findById(customerId.toJavaUuid())?.let { customerEntity ->
+                        // Insert ticket into customer links
+                        customerEntity.tickets = SizedCollection(customerEntity.tickets + ticketEntity)
+                    } ?: AppLogger.i(ADD_TICKET_TAG, CustomerError.NOT_FOUND)
+                } ?: AppLogger.i(ADD_TICKET_TAG, TicketError.NOT_FOUND)
+            }
+        }
+    }
 
-                // Find the note if it exists
-                val note = NoteEntity.findById(identifier.toJavaUuid()) ?: return@transaction
-
-                // No clue if this actually works or not??
-                CustomerTable
-                    .join(
-                        CustomerNoteTable, onColumn = CustomerTable.id, otherColumn = CustomerNoteTable.customer,
-                        joinType = JoinType.INNER,
+    /**
+     * Removes a ticket from a customer. NOTE: This DOES NOT delete the ticket itself
+     * @param customerId Identifier of customer to unlink ticket from
+     * @param ticketId Identifier of ticket to unlink from customer
+     */
+    fun removeTicket(customerId: Uuid, ticketId: Uuid) {
+        appLogTryCatch(REMOVE_TICKET_TAG) {
+            transaction {
+                // Get customer entity
+                CustomerEntity.findById(customerId.toJavaUuid())?.let { customerEntity ->
+                    // Remove ticket
+                    customerEntity.tickets = SizedCollection(
+                        customerEntity.tickets
+                            .filter { it.id.value.toKotlinUuid() != ticketId }
                     )
-                    .select(CustomerNoteTable.note eq note.id)
-                    .limit(1)
-                    .map { CustomerEntity.wrapRow(it) }
-                    .firstOrNull()
-                    ?.let { customerEntity ->
-                        customerEntity.notes = SizedCollection(customerEntity.notes.filter { it != note })
-                    }
 
-                // Delete linked images
-                note.images.forEach { it.delete() }
+                    AppLogger.m(REMOVE_TICKET_TAG, SimpleResult.SUCCESS)
+                } ?: AppLogger.i(REMOVE_TICKET_TAG, CustomerError.NOT_FOUND)
+            }
+        }
+    }
 
-                // Delete the note (Exposed will remove NoteImageTable entries automatically)
-                note.delete()
+    /**
+     * Gets all tickets for a customer
+     * @param identifier Identifier of customer to get tickets for
+     */
+    fun getTickets(identifier: Uuid): List<Ticket>? {
+        var tickets: List<Ticket>? = null
+
+        appLogTryCatch(GET_TICKETS_TAG) {
+            transaction {
+                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                    tickets = customerEntity.tickets
+                        .map { ticketEntity -> ticketEntity.toTicket() }
+                } ?: AppLogger.i(GET_TICKETS_TAG, CustomerError.NOT_FOUND)
             }
 
-            AppLogger.m(REMOVE_NOTE_TAG, SimpleResult.SUCCESS)
-
-            return true
-        } catch (ex: Exception) {
-            AppLogger.m(REMOVE_NOTE_TAG, SimpleResult.FAIL)
-            ex.printStackTrace()
+            if (tickets != null)
+                AppLogger.m(GET_TICKETS_TAG, SimpleResult.SUCCESS)
+            else
+                AppLogger.i(GET_TICKETS_TAG, SimpleResult.FAIL)
         }
 
-        return false
+        return tickets
     }
 }

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.data.time
 
+import org.mr0btain.ticketman.data.SubItem
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -13,7 +14,7 @@ data class Time(
     val minute: Int,
     val second: Int,
     val ampm: AMPM
-) {
+): SubItem {
     override fun toString(): String {
         return "${this.month}/${this.day}/${this.year} ${this.hour}:${this.minute}:${this.second} ${this.ampm.name}"
     }

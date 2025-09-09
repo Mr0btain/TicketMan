@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.ui.theme.extendedLight
 fun ConfirmDeleteDialog(
     modifier: Modifier = Modifier,
     dataType: DataType,
+    name: String = "",
     onContinue: () -> Unit,
     onDismiss: () -> Unit,
     isDarkMode: Boolean = false,
@@ -54,7 +55,7 @@ fun ConfirmDeleteDialog(
                     Spacer(Modifier.padding(2.dp))
 
                     Text(
-                        text = "This ${dataType.stringName}",
+                        text = "This ${dataType.stringName}: $name?",
                         fontSize = fontSize,
                         fontWeight = FontWeight.SemiBold
                     )

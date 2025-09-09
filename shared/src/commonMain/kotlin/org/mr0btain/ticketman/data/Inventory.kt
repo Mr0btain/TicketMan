@@ -15,4 +15,4 @@ data class Inventory @OptIn(ExperimentalUuidApi::class) constructor(
     val cost: String = "",
     val price: String = "",
     val time: Long = Long.MAX_VALUE
-): MainData
+): MainItem

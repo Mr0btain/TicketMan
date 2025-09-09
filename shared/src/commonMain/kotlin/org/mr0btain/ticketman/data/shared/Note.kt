@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.shared
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.SubItem
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -10,4 +11,4 @@ data class Note @OptIn(ExperimentalUuidApi::class) constructor(
     val author: String = "",
     val message: String = "",
     val time: Long = Long.MAX_VALUE
-)
+): SubItem

@@ -11,7 +11,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.MainData
+import org.mr0btain.ticketman.data.MainItem
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -34,9 +34,9 @@ abstract class RemoteRepository(
 
     abstract fun changeUrl(url: String)
 
-    abstract suspend fun sync(data: List<MainData>): List<MainData>
+    abstract suspend fun sync(data: List<MainItem>): List<MainItem>
 
-    suspend fun send(data: MainData) {
+    suspend fun send(data: MainItem) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(SEND_TAG) {
                 client.post {
@@ -52,7 +52,7 @@ abstract class RemoteRepository(
         }
     }
 
-    suspend fun batchSend(data: List<MainData>) {
+    suspend fun batchSend(data: List<MainItem>) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(BATCH_SEND_TAG) {
                 client.post {
@@ -68,9 +68,9 @@ abstract class RemoteRepository(
         }
     }
 
-    abstract suspend fun getAll(): List<MainData>
+    abstract suspend fun getAll(): List<MainItem>
 
-    suspend fun update(data: MainData) {
+    suspend fun update(data: MainItem) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(UPDATE_TAG) {
                 client.post {

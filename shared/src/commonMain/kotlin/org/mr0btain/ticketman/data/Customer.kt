@@ -14,4 +14,4 @@ data class Customer @OptIn(ExperimentalUuidApi::class) constructor(
     val address: Address = Address(),
     val contactInfo: ContactInfo = ContactInfo(),
     val time: Long = Long.MAX_VALUE
-): MainData
+): MainItem

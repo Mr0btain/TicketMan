@@ -7,7 +7,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.MainData
+import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
@@ -30,7 +30,7 @@ class UserRemoteRepositoryImpl(
         serverUrl = "$url/api/data/user"
     }
 
-    override suspend fun sync(data: List<MainData>): List<User> {
+    override suspend fun sync(data: List<MainItem>): List<User> {
         if (serverUrl.isNotBlank()) {
             val identifiers = data.map { it.identifier }
 

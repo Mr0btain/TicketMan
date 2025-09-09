@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.invoice
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.SubItem
 
 @Serializable
 data class Charge(
@@ -9,5 +10,5 @@ data class Charge(
     val amount: Int,
     val cost: Int,
     val description: String
-)
+): SubItem
 

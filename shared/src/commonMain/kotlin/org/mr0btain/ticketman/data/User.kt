@@ -17,7 +17,7 @@ data class User @OptIn(ExperimentalUuidApi::class) constructor(
     val contactInfo: ContactInfo = ContactInfo(),
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
     val time: Long = Long.MAX_VALUE
-): MainData
+): MainItem
 
 // TODO: Flesh out
 fun hashPassword(password: String): String {

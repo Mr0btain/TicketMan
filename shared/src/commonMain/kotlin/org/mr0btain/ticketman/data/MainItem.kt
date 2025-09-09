@@ -6,7 +6,7 @@ import kotlin.uuid.Uuid
 
 
 @Serializable
-sealed interface MainData {
+sealed interface MainItem {
     @OptIn(ExperimentalUuidApi::class)
     val identifier: Uuid
 }
