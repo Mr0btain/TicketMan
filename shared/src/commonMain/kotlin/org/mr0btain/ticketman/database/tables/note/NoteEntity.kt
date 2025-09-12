@@ -1,13 +1,11 @@
 package org.mr0btain.ticketman.database.tables.note
 
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.dao.LongEntity
-import org.jetbrains.exposed.v1.dao.LongEntityClass
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
-import java.util.UUID
+import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.toKotlinUuid
 

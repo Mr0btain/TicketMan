@@ -78,8 +78,10 @@ class MainViewModel(
 
     // Whether we should log exposed transactions or not
     val shouldLog = false
+
     // Max size of cache
     val maxCacheSize = 20
+
     // Paging config for pagers
     val pagingConfig = PagingConfig(pageSize = 40, maxSize = 400)
 
@@ -102,30 +104,37 @@ class MainViewModel(
     private suspend fun setSelectedCustomer(customerData: CustomerData) {
         // Set selected
         _selectedCustomerData.value = customerData
-        
+
         // Add to cache
         customerCache.put(customerData.customer.identifier, customerData)
-        
+
     }
 
     fun changeSelectedCustomer(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
                 // Check if it exists in cache
-                val cached = customerCache.get(identifier)?.also { customerData -> 
+                val cached = customerCache.get(identifier)?.also { customerData ->
                     _selectedCustomerData.value = customerData
                 }
-                
+
                 // If not pull from database and add to cache
                 if (cached == null) {
                     customerDatabase.getById(identifier)?.let { customer ->
-                        val notes = customerDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
-                        val tickets = customerDatabase.getTickets(identifier).map { ticket ->
+                        // Get notes
+                        val notes = customerDatabase.getNotes(identifier)
+                            ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                            ?: emptyList()
+
+                        // Get tickets
+                        val tickets = customerDatabase.getTickets(identifier)?.map { ticket ->
                             TicketData(
                                 ticket = ticket,
-                                notes = ticketDatabase.getNotes(ticket.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                                notes = ticketDatabase.getNotes(ticket.identifier)
+                                    ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                                    ?: emptyList()
                             )
-                        }
+                        } ?: emptyList()
 
                         // Update selected
                         setSelectedCustomer(CustomerData(customer, notes, tickets))
@@ -143,7 +152,9 @@ class MainViewModel(
         )
     }
 
-    fun resetSelectedCustomer() { _selectedCustomerData.value = null }
+    fun resetSelectedCustomer() {
+        _selectedCustomerData.value = null
+    }
 
     /** Updates a Customer and its data in the database */
     fun addOrUpdateCustomer(customerData: CustomerData) {
@@ -153,9 +164,9 @@ class MainViewModel(
                 if (customerData.customer != customer) customerDatabase.update(customerData.customer)
 
                 // Existing notes for comparison
-                val existingNotes = customerDatabase.getNotes(customerData.customer.identifier).map {
+                val existingNotes = customerDatabase.getNotes(customerData.customer.identifier)?.map {
                     NoteData(it.key, pullImagesFromDisk(it.value))
-                }
+                } ?: emptyList()
 
                 // Check if the note exists already and update if it needs to or add new
                 customerData.notes.forEach { noteData ->
@@ -163,7 +174,11 @@ class MainViewModel(
                         if (noteData != existingNote) {
                             customerDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
                         }
-                    } ?: customerDatabase.addNote(customerData.customer.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                    } ?: customerDatabase.addNote(
+                        customerData.customer.identifier,
+                        noteData.note,
+                        flushImagesToDisk(noteData.images)
+                    )
                 }
 
                 // Existing tickets for comparison
@@ -172,23 +187,30 @@ class MainViewModel(
                 // Add tickets if they're new or update if they've changed
                 customerData.tickets.forEach { ticketData ->
                     // See if it exists
-                    val ticket = existingTickets.firstOrNull { it.identifier == ticketData.ticket.identifier }?.also { existingTicket ->
-                        // check if ticket has changed, if so update it
-                        if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
+                    val ticket = existingTickets?.firstOrNull { it.identifier == ticketData.ticket.identifier }
+                        ?.also { existingTicket ->
+                            // check if ticket has changed, if so update it
+                            // if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
 
-                        // TODO
-                        // Existing notes for comparison
-                        val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                            // TODO
+                            // Existing notes for comparison
+                            val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier)
+                                ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
 
-                        // Check ticket notes if they exist and have changed, if so update else add
-                        ticketData.notes.forEach { noteData ->
-                            existingTicketNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                                if (noteData != existingNote) {
-                                    ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
-                                }
-                            } ?: ticketDatabase.addNote(existingTicket.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                            // Check ticket notes if they exist and have changed, if so update else add
+                            ticketData.notes.forEach { noteData ->
+                                existingTicketNotes?.firstOrNull { it.note.identifier == noteData.note.identifier }
+                                    ?.let { existingNote ->
+                                        if (noteData != existingNote) {
+                                            ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                        }
+                                    } ?: ticketDatabase.addNote(
+                                    existingTicket.identifier,
+                                    noteData.note,
+                                    flushImagesToDisk(noteData.images)
+                                )
+                            }
                         }
-                    }
 
                     // Check if it was null, then we need to add a whole new ticket
                     if (ticket == null) {
@@ -240,7 +262,6 @@ class MainViewModel(
         // TODO
     }
 
-    // TODO: Setup database clearing or removal is these items. Will need dedicated functions.
     /**
      *  Removes an item from a customer. NOTE: This DOES NOT delete the item if it is a main item.
      *  it simply removes the link from the customer. Item is removed from SELECTED Customer. So
@@ -262,7 +283,10 @@ class MainViewModel(
                             customerDatabase.removeTicket(customerData.customer.identifier, ticket.identifier)
 
                             AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as ticket, but item was NOT a Ticket!")
+                        } ?: AppLogger.i(
+                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
+                            "SubItem type set as ticket, but item was NOT a Ticket!"
+                        )
                     }
 
                     DataType.EMAIL -> {
@@ -272,7 +296,10 @@ class MainViewModel(
                             )
 
                             AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as email, but was NOT a string!")
+                        } ?: AppLogger.i(
+                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
+                            "SubItem type set as email, but was NOT a string!"
+                        )
                     }
 
                     DataType.PHONE -> {
@@ -282,7 +309,10 @@ class MainViewModel(
                             )
 
                             AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as phone, but was NOT a string!")
+                        } ?: AppLogger.i(
+                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
+                            "SubItem type set as phone, but was NOT a string!"
+                        )
                     }
 
                     DataType.NOTE -> {
@@ -292,7 +322,10 @@ class MainViewModel(
                             )
 
                             AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as Note, but item was NOT a Note!")
+                        } ?: AppLogger.i(
+                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
+                            "SubItem type set as Note, but item was NOT a Note!"
+                        )
                     }
 
                     DataType.ADDRESS -> {
@@ -302,7 +335,10 @@ class MainViewModel(
                             )
 
                             AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "SubItem type set as Address, but item was NOT Address!")
+                        } ?: AppLogger.i(
+                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
+                            "SubItem type set as Address, but item was NOT Address!"
+                        )
                     }
 
                     else -> {
@@ -317,19 +353,19 @@ class MainViewModel(
 
     val ticketCache = LruCache<Uuid, TicketData>(maxCacheSize, "TicketCache")
 
-    private val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
+    private val ticketDatabase = TicketDatabaseImpl()
 
     private val ticketPager = Pager(pagingConfig) { CustomPagingSource(ticketDatabase) }
     val ticketListFlow = ticketPager.flow.cachedIn(viewModelScope)
 
     private val _selectedTicketData: MutableStateFlow<TicketData?> = MutableStateFlow(null)
     val selectedTicketData = _selectedTicketData.asStateFlow()
-    
+
     /** Sets selected ticket and adds it to the cache */
     private suspend fun setSelectedTicket(ticketData: TicketData) {
         // Set selected ticket
         _selectedTicketData.value = ticketData
-        
+
         // Add to cache
         ticketCache.put(ticketData.ticket.identifier, ticketData)
     }
@@ -340,10 +376,12 @@ class MainViewModel(
                 val cachedTicket = ticketCache.get(identifier)?.also { ticketData ->
                     _selectedTicketData.value = ticketData
                 }
-                
+
                 if (cachedTicket == null) {
                     ticketDatabase.getById(identifier)?.let { ticket ->
-                        val notes = ticketDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                        val notes = ticketDatabase.getNotes(identifier)
+                            ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                            ?: emptyList()
 
                         setSelectedTicket(TicketData(ticket, notes))
                     }
@@ -356,26 +394,36 @@ class MainViewModel(
         _selectedTicketData.value = TicketData()
     }
 
-    fun resetSelectedTicket() { _selectedTicketData.value = null }
+    fun resetSelectedTicket() {
+        _selectedTicketData.value = null
+    }
 
     fun addOrUpdateTicket(ticketData: TicketData) {
         viewModelScope.launch {
-            val existingTicket = ticketDatabase.getById(ticketData.ticket.identifier)?.also { ticket ->
-                // Update if its changed
-                if (ticketData.ticket != ticket) ticketDatabase.update(ticketData.ticket)
+            val existingTicket = ticketDatabase.getById(ticketData.ticket.identifier)
+                ?.also { ticket ->
+                    // Update if its changed
+                    if (ticketData.ticket != ticket) ticketDatabase.update(ticketData.ticket)
 
-                // Existing notes for comparison
-                val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                    // Existing notes for comparison
+                    val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier)
+                        ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                        ?: emptyList()
 
-                // Check if the note exists already and update if it needs to or add new
-                ticketData.notes.forEach { noteData ->
-                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                        if (noteData != existingNote) {
-                            ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
-                        }
-                    } ?: ticketDatabase.addNote(ticketData.ticket.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                    // Check if the note exists already and update if it needs to or add new
+                    ticketData.notes.forEach { noteData ->
+                        existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
+                            ?.let { existingNote ->
+                                if (noteData != existingNote) {
+                                    ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                }
+                            } ?: ticketDatabase.addNote(
+                            ticketData.ticket.identifier,
+                            noteData.note,
+                            flushImagesToDisk(noteData.images)
+                        )
+                    }
                 }
-            }
 
             // If it doesn't exist, then add new
             if (existingTicket == null) {
@@ -397,19 +445,19 @@ class MainViewModel(
 
     val inventoryCache = LruCache<Uuid, InventoryData>(maxCacheSize, "InventoryCache")
 
-    private val inventoryDatabase = InventoryDatabaseImpl(shouldLog = shouldLog)
+    private val inventoryDatabase = InventoryDatabaseImpl()
 
     private val inventoryPager = Pager(pagingConfig) { CustomPagingSource(inventoryDatabase) }
     val inventoryListFlow = inventoryPager.flow.cachedIn(viewModelScope)
 
     private val _selectedInventoryData: MutableStateFlow<InventoryData?> = MutableStateFlow(null)
     val selectedInventoryData = _selectedInventoryData.asStateFlow()
-    
+
     /** Sets selected inventory and adds it to the cache */
     private suspend fun setSelectedInventory(inventoryData: InventoryData) {
         // Set selected inventory
         _selectedInventoryData.value = inventoryData
-        
+
         // Add to cache
         inventoryCache.put(inventoryData.inventory.identifier, inventoryData)
     }
@@ -417,15 +465,20 @@ class MainViewModel(
     fun changeSelectedInventory(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedInventoryData.value?.inventory?.identifier != identifier) {
-                val cachedInventory = inventoryCache.get(identifier)?.also { inventoryData -> 
+                val cachedInventory = inventoryCache.get(identifier)?.also { inventoryData ->
                     _selectedInventoryData.value = inventoryData
                 }
-                
+
                 if (cachedInventory == null) {
                     inventoryDatabase.getById(identifier)?.let { inventory ->
-                        val notes = inventoryDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                        val notes = inventoryDatabase.getNotes(identifier)
+                            ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                            ?: emptyList()
 
-                        val images = pullImagesFromDisk(inventoryDatabase.getImages(identifier))
+                        val images = pullImagesFromDisk(
+                            storedImages = inventoryDatabase.getImages(identifier)
+                                ?: emptyList()
+                        )
 
                         _selectedInventoryData.value = InventoryData(
                             inventory = inventory,
@@ -442,26 +495,36 @@ class MainViewModel(
         _selectedInventoryData.value = InventoryData()
     }
 
-    fun resetSelectedInventory() { _selectedInventoryData.value = null }
+    fun resetSelectedInventory() {
+        _selectedInventoryData.value = null
+    }
 
     fun addOrUpdateInventory(inventoryData: InventoryData) {
         viewModelScope.launch {
-            val existingInventory = inventoryDatabase.getById(inventoryData.inventory.identifier)?.also { inventory ->
-                // Update if its changed
-                if (inventoryData.inventory != inventory) inventoryDatabase.update(inventoryData.inventory)
+            val existingInventory = inventoryDatabase.getById(inventoryData.inventory.identifier)
+                ?.also { inventory ->
+                    // Update if its changed
+                    if (inventoryData.inventory != inventory) inventoryDatabase.update(inventoryData.inventory)
 
-                // Existing notes for comparison
-                val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                    // Existing notes for comparison
+                    val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier)
+                        ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                        ?: emptyList()
 
-                // Check if the note exists already and update if it needs to or add new
-                inventoryData.notes.forEach { noteData ->
-                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                        if (noteData != existingNote) {
-                            inventoryDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
-                        }
-                    } ?: inventoryDatabase.addNote(inventoryData.inventory.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                    // Check if the note exists already and update if it needs to or add new
+                    inventoryData.notes.forEach { noteData ->
+                        existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
+                            ?.let { existingNote ->
+                                if (noteData != existingNote) {
+                                    inventoryDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                }
+                            } ?: inventoryDatabase.addNote(
+                            inventoryData.inventory.identifier,
+                            noteData.note,
+                            flushImagesToDisk(noteData.images)
+                        )
+                    }
                 }
-            }
 
             // If it doesn't exist, then add new
             if (existingInventory == null) {
@@ -483,19 +546,19 @@ class MainViewModel(
 
     val userCache = LruCache<Uuid, UserData>(maxCacheSize, "UserCache")
 
-    private val userDatabase = UserDatabaseImpl(shouldLog = shouldLog)
+    private val userDatabase = UserDatabaseImpl()
 
     private val userPager = Pager(pagingConfig) { CustomPagingSource(userDatabase) }
     val userListFlow = userPager.flow.cachedIn(viewModelScope)
 
     private val _selectedUserData: MutableStateFlow<UserData?> = MutableStateFlow(null)
     val selectedUserData = _selectedUserData.asStateFlow()
-    
+
     /** Sets selected user and adds it to the cache */
     private suspend fun setSelectedUser(userData: UserData) {
         // Set selected
         _selectedUserData.value = userData
-        
+
         // Add to cache
         userCache.put(userData.user.identifier, userData)
     }
@@ -503,13 +566,15 @@ class MainViewModel(
     fun changeSelectedUser(identifier: Uuid) {
         viewModelScope.launch {
             if (selectedUserData.value?.user?.identifier != identifier) {
-                val cachedUser = userCache.get(identifier)?.also { userData -> 
+                val cachedUser = userCache.get(identifier)?.also { userData ->
                     _selectedUserData.value = userData
                 }
-                
+
                 if (cachedUser == null) {
                     userDatabase.getById(identifier)?.let { user ->
-                        val notes = userDatabase.getNotes(identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                        val notes = userDatabase.getNotes(identifier)
+                            ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                            ?: emptyList()
 
                         _selectedUserData.value = UserData(user, notes)
                     }
@@ -522,26 +587,36 @@ class MainViewModel(
         _selectedUserData.value = UserData()
     }
 
-    fun resetSelectedUser() { _selectedUserData.value = null }
+    fun resetSelectedUser() {
+        _selectedUserData.value = null
+    }
 
     fun addOrUpdateUser(userData: UserData) {
         viewModelScope.launch {
-            val existingUser = userDatabase.getById(userData.user.identifier)?.also { user ->
-                // Update if its changed
-                if (userData.user != user) userDatabase.update(userData.user)
+            val existingUser = userDatabase.getById(userData.user.identifier)
+                ?.also { user ->
+                    // Update if its changed
+                    if (userData.user != user) userDatabase.update(userData.user)
 
-                // Existing notes for comparison
-                val existingNotes = userDatabase.getNotes(userData.user.identifier).map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                    // Existing notes for comparison
+                    val existingNotes = userDatabase.getNotes(userData.user.identifier)
+                        ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                        ?: emptyList()
 
-                // Check if the note exists already and update if it needs to or add new
-                userData.notes.forEach { noteData ->
-                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                        if (noteData != existingNote) {
-                            userDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
-                        }
-                    } ?: userDatabase.addNote(userData.user.identifier, noteData.note, flushImagesToDisk(noteData.images))
+                    // Check if the note exists already and update if it needs to or add new
+                    userData.notes.forEach { noteData ->
+                        existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
+                            ?.let { existingNote ->
+                                if (noteData != existingNote) {
+                                    userDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                }
+                            } ?: userDatabase.addNote(
+                            userData.user.identifier,
+                            noteData.note,
+                            flushImagesToDisk(noteData.images)
+                        )
+                    }
                 }
-            }
 
             // If it doesn't exist, then add new
             if (existingUser == null) {

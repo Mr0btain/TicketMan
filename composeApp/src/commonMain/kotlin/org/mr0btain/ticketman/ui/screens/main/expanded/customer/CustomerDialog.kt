@@ -84,7 +84,7 @@ fun CustomerDialog(
     var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
 
     // For adding a basic sub item
-    var itemToAdd by remember { mutableStateOf(SubItemType.NONE) }
+    var itemToAdd by remember { mutableStateOf(DataType.NONE) }
     var showAddBasicSubItemDialog by remember { mutableStateOf(false) }
 
     // Add Note dialog
@@ -126,11 +126,11 @@ fun CustomerDialog(
             onConfirm = { item ->
                 if (item.isNotBlank()) {
                     when (itemToAdd) {
-                        SubItemType.EMAIL -> {
+                        DataType.EMAIL -> {
                             // Add item to list
                             email.add(item)
                         }
-                        SubItemType.PHONE -> {
+                        DataType.PHONE -> {
                             // Add item to list
                             phone.add(item)
                         }
@@ -140,7 +140,7 @@ fun CustomerDialog(
             },
             onDismissRequest = {
                 showAddBasicSubItemDialog = false
-                itemToAdd = SubItemType.NONE
+                itemToAdd = DataType.NONE
             }
         )
     }
@@ -310,7 +310,7 @@ fun CustomerDialog(
                         IconButton(
                             modifier = Modifier.size(26.dp),
                             onClick = {
-                                itemToAdd = SubItemType.EMAIL
+                                itemToAdd = DataType.EMAIL
                                 showAddBasicSubItemDialog = true
                             }
                         ) {
@@ -357,7 +357,7 @@ fun CustomerDialog(
                         IconButton(
                             modifier = Modifier.size(26.dp),
                             onClick = {
-                                itemToAdd = SubItemType.PHONE
+                                itemToAdd = DataType.PHONE
                                 showAddBasicSubItemDialog = true
                             }
                         ) {

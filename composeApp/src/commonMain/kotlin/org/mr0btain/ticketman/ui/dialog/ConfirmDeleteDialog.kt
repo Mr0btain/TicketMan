@@ -4,7 +4,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -13,7 +12,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 

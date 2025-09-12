@@ -14,7 +14,10 @@ import org.mr0btain.ticketman.database.tables.image.toStoredImage
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
-import org.mr0btain.ticketman.error.*
+import org.mr0btain.ticketman.error.CustomerError
+import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.error.TicketError
+import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -36,7 +39,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
 
         appLogTryCatch(GET_ALL_TAG) {
             transaction {
-                result = CustomerEntity.all().map { item -> item.toCustomer()}
+                result = CustomerEntity.all().map { item -> item.toCustomer() }
             }
 
             if (result != null)

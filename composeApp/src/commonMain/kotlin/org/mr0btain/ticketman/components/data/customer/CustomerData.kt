@@ -1,9 +1,18 @@
 package org.mr0btain.ticketman.components.data.customer
 
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.SubItem
+import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.customer.Address
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.database.CustomerDatabaseImpl
+import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

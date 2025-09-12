@@ -24,8 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.data.shared.SubItemType
-import org.mr0btain.ticketman.data.shared.getLabelTextForType
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 
@@ -34,7 +33,7 @@ import org.mr0btain.ticketman.ui.theme.extendedLight
 fun ConfirmDeleteTwoStepDialog(
     modifier: Modifier = Modifier,
     itemName: String,
-    itemType: SubItemType,
+    itemType: DataType,
     onDismissRequest: (Boolean) -> Unit,
     isDarkMode: Boolean
 ) {
@@ -54,7 +53,7 @@ fun ConfirmDeleteTwoStepDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = getLabelTextForType(itemType),
+                    text = itemType.stringName,
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 30.sp,
                     textAlign = TextAlign.Center

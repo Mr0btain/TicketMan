@@ -14,15 +14,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.data.shared.DialogDismissReason
-import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
@@ -54,7 +51,7 @@ fun InventoryDialog(
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
     var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
-    var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
+    var itemForDelete by remember { mutableStateOf(DataType.NONE) }
 
     // For adding note dialog
     var showAddNoteDialog by remember { mutableStateOf(false) }
@@ -226,7 +223,7 @@ fun InventoryDialog(
                     DialogNoteList(
                         notes = notes,
                         onDeleteClick = { item ->
-                            itemForDelete = SubItemType.NOTE
+                            itemForDelete = DataType.NOTE
                             itemUpForDeleteIndex = item
                             showConfirmDeleteScreen = true
                         }

@@ -13,7 +13,6 @@ import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.database.tables.inventory.toInventoryItem
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.error.InventoryError
-import org.mr0btain.ticketman.error.NoteError
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
@@ -28,7 +27,7 @@ import kotlin.uuid.toKotlinUuid
  */
 @Suppress("PrivatePropertyName")
 @OptIn(ExperimentalUuidApi::class)
-class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<Inventory>(tag) {
+class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<Inventory>(tag) {
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val ADD_IMAGES_TAG = "$tag:AddImages"
     private val REMOVE_IMAGES_TAG = "$tag:RemoveImages"

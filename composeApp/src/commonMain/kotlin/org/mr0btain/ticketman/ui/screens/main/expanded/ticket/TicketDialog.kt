@@ -11,18 +11,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.utils.isNewTicket
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.data.shared.MainItemType
-import org.mr0btain.ticketman.data.shared.SubItemType
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
@@ -62,7 +60,7 @@ fun TicketDialog(
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
     var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
-    var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
+    var itemForDelete by remember { mutableStateOf(DataType.NONE) }
 
     // For editing or adding notes dialog
     var showEditNoteDialog by remember { mutableStateOf(false) }

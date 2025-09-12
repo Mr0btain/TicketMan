@@ -25,7 +25,7 @@ import kotlin.uuid.toKotlinUuid
  */
 @Suppress("PropertyName")
 @OptIn(ExperimentalUuidApi::class)
-abstract class Database<T: MainItem>(protected val tag: String) {
+abstract class Database<T : MainItem>(protected val tag: String) {
     protected val GET_ALL_TAG = "$tag:GetAll"
     protected val GET_BY_ID_TAG = "$tag:GetById"
     protected val GET_PAGED_ITEMS_TAG = "$tag:GetPagedItems"
@@ -161,7 +161,7 @@ abstract class Database<T: MainItem>(protected val tag: String) {
                     storedImages.map { storedImage ->
                         if (existingImageIds.contains(storedImage.identifier))
                             updateImage(storedImage)?.let { updatedImages.add(it) }
-                            else
+                        else
                             insertImage(storedImage)?.let { updatedImages.add(it) }
                     }
 

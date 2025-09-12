@@ -11,7 +11,6 @@ import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
-import org.mr0btain.ticketman.error.NoteError
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch

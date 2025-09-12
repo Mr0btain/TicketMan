@@ -15,11 +15,7 @@ import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.database.tables.user.UserEntity
 import org.mr0btain.ticketman.database.tables.user.UserTable
 import org.mr0btain.ticketman.database.tables.user.toUser
-import org.mr0btain.ticketman.error.NoteError
-import org.mr0btain.ticketman.error.SimpleResult
-import org.mr0btain.ticketman.error.TicketError
-import org.mr0btain.ticketman.error.UserError
-import org.mr0btain.ticketman.error.appLogTryCatch
+import org.mr0btain.ticketman.error.*
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid

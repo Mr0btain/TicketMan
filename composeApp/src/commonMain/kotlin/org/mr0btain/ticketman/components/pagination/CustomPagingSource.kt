@@ -13,7 +13,7 @@ class CustomPagingSource<T: MainItem>(
         val page = params.key ?: 1L
 
         return try {
-            val response = repository.getPagedItems((page - 1) * pageSize, pageSize)
+            val response = repository.getPagedItems((page - 1) * pageSize, pageSize) ?: emptyList()
 
             LoadResult.Page(
                 data = response,

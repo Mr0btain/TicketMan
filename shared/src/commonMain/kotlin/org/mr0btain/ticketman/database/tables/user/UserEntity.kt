@@ -4,8 +4,6 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.User
-import org.mr0btain.ticketman.database.tables.customer.CustomerNoteTable
-import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import java.util.*

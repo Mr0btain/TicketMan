@@ -13,14 +13,9 @@ import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.image.ImageData
-import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.utils.getNameForDataType
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.shared.MainItemType
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel

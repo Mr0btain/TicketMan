@@ -4,10 +4,8 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.shared.toStringName
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
-import org.mr0btain.ticketman.logging.AppLogger
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.toKotlinUuid

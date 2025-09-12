@@ -1,8 +1,6 @@
 package org.mr0btain.ticketman.logging
 
 import org.mr0btain.ticketman.error.ErrorCode
-import org.mr0btain.ticketman.error.SimpleResult
-import org.mr0btain.ticketman.error.TicketError
 
 /**
  * Logger to log any messages or errors

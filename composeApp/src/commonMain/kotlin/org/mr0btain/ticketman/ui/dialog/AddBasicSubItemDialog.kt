@@ -12,8 +12,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.data.shared.SubItemType
-import org.mr0btain.ticketman.data.shared.getLabelTextForType
+import org.mr0btain.ticketman.components.data.operations.DataType
 
 /**
  * Dialog for adding a sub item to a main item like a Ticket or Customer
@@ -28,12 +27,12 @@ import org.mr0btain.ticketman.data.shared.getLabelTextForType
 fun AddBasicSubItemDialog(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    subItemType: SubItemType,
+    subItemType: DataType,
     onConfirm: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
     var input by remember { mutableStateOf("") }
-    val label = getLabelTextForType(subItemType)
+    val label = subItemType.stringName
     var isError by remember { mutableStateOf(false) }
 
     // For basic checks for validity
@@ -65,11 +64,11 @@ fun AddBasicSubItemDialog(
                     value = input,
                     onValueChange = { value ->
                         when (subItemType) {
-                            SubItemType.EMAIL -> {
+                            DataType.EMAIL -> {
                                 emailOptions.forEach { isError = !value.contains(it) }
                                 input = value
                             }
-                            SubItemType.PHONE -> {
+                            DataType.PHONE -> {
                                 isError = if (value.length != 10) {
                                     true
                                 } else if (!value.toList().all { it.isDigit() }) {
