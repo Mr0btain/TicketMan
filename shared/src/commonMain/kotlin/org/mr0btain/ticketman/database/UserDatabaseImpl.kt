@@ -67,7 +67,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
             transaction {
                 result = UserEntity
                     .all()
-                    .orderBy(UserTable.name to SortOrder.ASC, InventoryTable.time to SortOrder.ASC)
+                    .orderBy(UserTable.name to SortOrder.ASC, UserTable.time to SortOrder.ASC)
                     .offset(offset)
                     .limit(pageSize)
                     .map { it.toUser() }

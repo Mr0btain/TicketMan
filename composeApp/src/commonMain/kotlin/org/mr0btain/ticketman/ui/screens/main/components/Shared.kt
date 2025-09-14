@@ -19,6 +19,7 @@ import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
@@ -538,7 +539,8 @@ fun NotesBlock(
     modifier: Modifier = Modifier,
     label: String = "",
     noteData: List<NoteData>,
-    onImageClick: () -> Unit,
+    onImageClick: (List<ImageData>) -> Unit = {},
+    editable: Boolean = false,
     labelSize: TextUnit = 12.sp,
     textSize: TextUnit = 16.sp,
     maxImageSize: DpSize = DpSize(300.dp, 200.dp)
@@ -594,9 +596,10 @@ fun NotesBlock(
                         Spacer(Modifier.padding(4.dp))
 
                         ImagePager(
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier
+                                .fillMaxWidth(),
                             imageData = data.images,
-                            onImageClick = { onImageClick() },
+                            onImageClick = { onImageClick(data.images) },
                             imageMaxWidth = maxImageSize.width,
                             imageMaxHeight = maxImageSize.height
                         )

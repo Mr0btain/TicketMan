@@ -1,12 +1,15 @@
 package org.mr0btain.ticketman.ui.dialog
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
@@ -26,30 +29,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.ImageFormat
+import io.github.vinceglb.filekit.compressImage
 import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
-import io.github.vinceglb.filekit.dialogs.compose.util.toImageBitmap
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.image.newImageData
 import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.utils.toImageBitmap
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 @Composable
@@ -65,7 +70,10 @@ fun EditNoteDialog(
     var author by remember { mutableStateOf(noteData.note.author) }
     var message by remember { mutableStateOf(noteData.note.message) }
     val time = remember { if (noteData.note.time != Long.MAX_VALUE) noteData.note.time else getTime() }
-    val photos = remember { noteData.images.toMutableStateList() }
+    val imageData = remember { noteData.images.toMutableStateList() }
+
+    // For ui loading
+    var isLoading by remember { mutableStateOf(false) }
 
     // File dialog for adding an image
     val launcher = rememberFilePickerLauncher(
@@ -73,13 +81,22 @@ fun EditNoteDialog(
     ) { file ->
         file?.let { file ->
             scope.launch {
-                // Add to list
-                photos.add(
+                isLoading = true
+
+                // Add to list resizing to a max of 1080p
+                imageData.add(
                     newImageData(
                         noteData.note.identifier,
-                        file.toImageBitmap()
+                        FileKit.compressImage(
+                            file = file,
+                            imageFormat = ImageFormat.PNG,
+                            maxWidth = 1920,
+                            maxHeight = 1080
+                        ).toImageBitmap()
                     )
                 )
+
+                isLoading = false
             }
         }
     }
@@ -155,19 +172,34 @@ fun EditNoteDialog(
                     }
                 }
 
+                Box(
+                    modifier = Modifier
+                        .height(150.dp)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center // ensures loader is centered
+                ) {
+                    if (imageData.isNotEmpty()) {
+                        ImagePager(
+                            modifier = Modifier
+                                .graphicsLayer {
+                                    if (isLoading) {
+                                        alpha = 0.5f   // dim
+                                        // you could also apply scale or rotation effects here
+                                    }
+                                }
+                                .blur(if (isLoading) 8.dp else 0.dp), // blur while loading
+                            imageData = imageData,
+                            imageMaxWidth = 200.dp,
+                            imageMaxHeight = 150.dp,
+                            onImageClick = { /* TODO */ },
+                            coroutineScope = scope,
+                            clickEnabled = false
+                        )
+                    }
 
-                if (photos.isNotEmpty()) {
-                    ImagePager(
-                        modifier = Modifier
-                            .height(150.dp),
-                        imageData = photos,
-                        imageMaxWidth = 200.dp,
-                        imageMaxHeight = 150.dp,
-                        onImageClick = {
-                            // TODO: Not yet implemented
-                        },
-                        coroutineScope = scope
-                    )
+                    if (isLoading) {
+                        CircularLoading() // sits centered on top
+                    }
                 }
 
                 Spacer(Modifier.padding(4.dp))
@@ -200,7 +232,7 @@ fun EditNoteDialog(
                                         message = message,
                                         time = time
                                     ),
-                                    images = photos
+                                    images = imageData
                                 )
                             )
 

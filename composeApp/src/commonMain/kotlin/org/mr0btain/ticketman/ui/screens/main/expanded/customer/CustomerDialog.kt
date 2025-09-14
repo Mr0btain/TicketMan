@@ -475,17 +475,6 @@ fun CustomerDialog(
                         }
                     )
 
-                    /*
-                    CustomerDialogNoteList(
-                        notes = notes,
-                        onDeleteClick = { item ->
-                            itemForDelete = SubItemType.NOTE
-                            itemUpForDeleteIndex = item
-                            showConfirmDeleteScreen = true
-                        }
-                    )
-                     */
-
                     Spacer(Modifier.padding(4.dp))
                 }
 
@@ -608,58 +597,6 @@ private fun CustomerDialogTicketList(
             )
 
             Spacer(Modifier.padding(4.dp))
-        }
-    }
-}
-
-@Composable
-private fun CustomerDialogNoteList(
-    modifier: Modifier = Modifier,
-    notes: List<Note>,
-    onDeleteClick: (Int) -> Unit
-) {
-    Column {
-        notes.forEachIndexed { index, item ->
-            Row(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .padding(4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "${item.author}:",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-
-                    Spacer(Modifier.padding(2.dp))
-
-                    Text(
-                        text = item.message,
-                        fontSize = 12.sp
-                    )
-                }
-
-                Spacer(Modifier.padding(2.dp))
-
-                Box(
-                    modifier = Modifier
-                        .size(InputChipDefaults.AvatarSize + 2.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .clickable(
-                            onClick = { onDeleteClick(index) }
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        modifier = Modifier.size(InputChipDefaults.AvatarSize),
-                        painter = painterResource(Res.drawable.x),
-                        contentDescription = "Remove Item",
-                    )
-                }
-            }
         }
     }
 }

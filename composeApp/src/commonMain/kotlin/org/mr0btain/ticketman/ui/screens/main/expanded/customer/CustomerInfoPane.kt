@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
@@ -30,7 +31,8 @@ fun CustomerInfoPane(
     scrollBarsOnRight: Boolean,
     selectedCustomer: CustomerData?,
     onEditClick: () -> Unit,
-    onTicketClick: (Uuid) -> Unit
+    onTicketClick: (Uuid) -> Unit,
+    onImageClick: (List<ImageData>) -> Unit
 ) {
     // Sizes for icons and text
     val labelSize = 12.sp
@@ -223,7 +225,7 @@ fun CustomerInfoPane(
                                 NotesBlock(
                                     label = "Notes",
                                     noteData = notes,
-                                    onImageClick = {},
+                                    onImageClick = onImageClick,
                                     textSize = textSize,
                                     maxImageSize = DpSize(150.dp, 75.dp)
                                 )

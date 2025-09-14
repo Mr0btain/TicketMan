@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.toStringName
@@ -35,6 +36,7 @@ fun CustomerPanel(
     onCustomerSelectionChange: (Uuid) -> Unit,
     onDeleteCustomer: (Uuid) -> Unit,
     onTicketClick: (Uuid) -> Unit,
+    onImageClick: (List<ImageData>) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     isDarkMode: Boolean
@@ -133,7 +135,8 @@ fun CustomerPanel(
                     selectedCustomer = selectedCustomer,
                     onEditClick = { onEditCustomer() },
                     onTicketClick = onTicketClick,
-                    scrollBarsOnRight = scrollBarsOnRight
+                    scrollBarsOnRight = scrollBarsOnRight,
+                    onImageClick = onImageClick
                 )
             }
         }

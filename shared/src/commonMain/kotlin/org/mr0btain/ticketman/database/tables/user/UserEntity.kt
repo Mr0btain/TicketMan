@@ -29,11 +29,11 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
 @OptIn(ExperimentalUuidApi::class)
 fun UserEntity.toUser(): User {
     return User(
-        username = username,
-        password = password,
-        name = name,
-        contactInfo = contactInfo,
-        accessLevel = access,
-        time = time
+        username = this.username,
+        password = this.password,
+        name = this.name,
+        contactInfo = this.contactInfo,
+        accessLevel = this.access,
+        time = this.time
     )
 }

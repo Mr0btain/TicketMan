@@ -81,7 +81,7 @@ fun ExpandedMainScreen(
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
-    val images by remember { mutableStateOf<List<ImageData>>(emptyList()) }
+    var imagePopupList by remember { mutableStateOf<List<ImageData>?>(null) }
 
     // For customer adding or editing
     if (showCustomerDialog) {
@@ -173,11 +173,16 @@ fun ExpandedMainScreen(
 
     // For image viewing
     if (showImagePopup) {
-        ImagePopup(
-            images = images,
-            isDarkMode = isDarkMode,
-            onDismiss = { showImagePopup = false }
-        )
+        imagePopupList?.let { imageData ->
+            ImagePopup(
+                images = imageData,
+                isDarkMode = isDarkMode,
+                onDismiss = {
+                    imagePopupList = null
+                    showImagePopup = false
+                }
+            )
+        }
     }
 
     Column(
@@ -323,6 +328,10 @@ fun ExpandedMainScreen(
                                     showTicketDialog = true
                                 }
                             },
+                            onImageClick = { imageList ->
+                                imagePopupList = imageList
+                                showImagePopup = true
+                            },
                             selectedCustomer = selectedCustomer.value,
                             pagingItems = customerPagedItems,
                             customerLazyListState = customerLazyListState,
@@ -373,8 +382,8 @@ fun ExpandedMainScreen(
                             selectedPanel = selectedTicketPanel,
                             ticketListState = ticketLazyListState,
                             coroutineScope = coroutineScope,
-                            onImageClick = {
-                                // Nothing yet
+                            onImageClick = { images ->
+
                             }
                         )
                     }
