@@ -23,12 +23,13 @@ import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.shared.*
+import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.shared.toStringName
 import org.mr0btain.ticketman.data.ticket.toNameString
 import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
@@ -50,7 +51,6 @@ fun CustomerDialog(
     onDismiss: () -> Unit,
     onContinue: (CustomerData) -> Unit,
     isDarkMode: Boolean,
-    scrollBarsOnRight: Boolean,
     scope: CoroutineScope = rememberCoroutineScope()
 ) {
     // Name
@@ -148,7 +148,7 @@ fun CustomerDialog(
     if (showConfirmDeleteScreen && dataType != DataType.NONE) {
         ConfirmDeleteDialog(
             dataType = dataType,
-            onContinue = {
+            onConfirm = {
                 when (dataType) {
                     DataType.TICKET -> {
                         (itemToDelete as? Uuid)?.let { identifier ->
@@ -177,7 +177,7 @@ fun CustomerDialog(
                     else -> {}
                 }
             },
-            onDismiss = {
+            onCancel = {
                 dataType = DataType.NONE
                 showConfirmDeleteScreen = false
             }
@@ -222,259 +222,262 @@ fun CustomerDialog(
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Content ----------------------------------------------------
-                PlatformColumnScrollable(
-                    modifier = Modifier.height(400.dp),
-                    columnModifier = Modifier.width(500.dp),
-                    scrollBarOnRight = scrollBarsOnRight,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
+                PlatformLazyColumn(
+                    modifier = Modifier
+                        .width(500.dp)
+                        .height(400.dp),
                     isVisible = true
                 ) {
-                    // ------------------------- Name -------------------------------
-                    Text(
-                        text = "Name",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    DialogTextRow(
-                        modifier = Modifier,
-                        firstLabel = "First",
-                        firstValue = firstName,
-                        onFirstValueChange = { firstName = it },
-                        secondLabel = "Last",
-                        secondValue = lastName,
-                        onSecondValueChange = { lastName = it }
-                    )
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    // ------------------------- Address -------------------------------
-                    Text(
-                        text = "Address",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    Column(
-                        verticalArrangement = Arrangement.SpaceBetween,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        DialogTextRow(
-                            modifier = Modifier,
-                            firstLabel = "Street",
-                            firstValue = street,
-                            onFirstValueChange = { street = it },
-                            secondLabel = "City",
-                            secondValue = city,
-                            onSecondValueChange = { city = it }
+                    item {
+                        // ------------------------- Name -------------------------------
+                        Text(
+                            text = "Name",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 18.sp
                         )
+
+                        Spacer(Modifier.padding(4.dp))
 
                         DialogTextRow(
                             modifier = Modifier,
-                            firstLabel = "State",
-                            firstValue = state,
-                            onFirstValueChange = { state = it },
-                            secondLabel = "Zip",
-                            secondValue = zip,
-                            onSecondValueChange = { zip = it }
+                            firstLabel = "First",
+                            firstValue = firstName,
+                            onFirstValueChange = { firstName = it },
+                            secondLabel = "Last",
+                            secondValue = lastName,
+                            onSecondValueChange = { lastName = it }
                         )
-                    }
 
-                    Spacer(Modifier.padding(8.dp))
+                        Spacer(Modifier.padding(8.dp))
 
-                    // ------------------------- ContactInfo -------------------------------
-                    Text(
-                        text = "Contact Info",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                        // ------------------------- Address -------------------------------
                         Text(
-                            text = "Email",
+                            text = "Address",
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                            fontSize = 18.sp
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        IconButton(
-                            modifier = Modifier.size(26.dp),
-                            onClick = {
-                                itemToAdd = DataType.EMAIL
-                                showAddBasicSubItemDialog = true
-                            }
+                        Column(
+                            verticalArrangement = Arrangement.SpaceBetween,
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(20.dp),
-                                painter = painterResource(Res.drawable.plus),
-                                contentDescription = "Add Email Address"
+                            DialogTextRow(
+                                modifier = Modifier,
+                                firstLabel = "Street",
+                                firstValue = street,
+                                onFirstValueChange = { street = it },
+                                secondLabel = "City",
+                                secondValue = city,
+                                onSecondValueChange = { city = it }
+                            )
+
+                            DialogTextRow(
+                                modifier = Modifier,
+                                firstLabel = "State",
+                                firstValue = state,
+                                onFirstValueChange = { state = it },
+                                secondLabel = "Zip",
+                                secondValue = zip,
+                                onSecondValueChange = { zip = it }
                             )
                         }
-                    }
 
-                    // Email list
-                    CustomerDialogEmailList(
-                        modifier = Modifier,
-                        items = email,
-                        onEditClick = {},
-                        onDeleteClick = { item ->
-                            // Set data type so we know what were looking to delete
-                            dataType = DataType.EMAIL
+                        Spacer(Modifier.padding(8.dp))
 
-                            // Set item data so we know which item to delete
-                            itemToDelete = item
-
-                            // Popup dialog
-                            showConfirmDeleteScreen = true
-                        }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+                        // ------------------------- ContactInfo -------------------------------
                         Text(
-                            text = "Phone",
+                            text = "Contact Info",
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                            fontSize = 18.sp
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        IconButton(
-                            modifier = Modifier.size(26.dp),
-                            onClick = {
-                                itemToAdd = DataType.PHONE
-                                showAddBasicSubItemDialog = true
-                            }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(20.dp),
-                                painter = painterResource(Res.drawable.plus),
-                                contentDescription = "Add Phone Number"
+                            Text(
+                                text = "Email",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
                             )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            IconButton(
+                                modifier = Modifier.size(26.dp),
+                                onClick = {
+                                    itemToAdd = DataType.EMAIL
+                                    showAddBasicSubItemDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .size(20.dp),
+                                    painter = painterResource(Res.drawable.plus),
+                                    contentDescription = "Add Email Address"
+                                )
+                            }
                         }
-                    }
 
-                    // Phone List
-                    CustomerDialogPhoneList(
-                        modifier = Modifier,
-                        items = phone,
-                        onEditClick = {},
-                        onDeleteClick = { item ->
-                            // Set data type so we know what were looking to delete
-                            dataType = DataType.PHONE
+                        // Email list
+                        CustomerDialogEmailList(
+                            modifier = Modifier,
+                            items = email,
+                            onEditClick = {},
+                            onDeleteClick = { item ->
+                                // Set data type so we know what were looking to delete
+                                dataType = DataType.EMAIL
 
-                            // Set item data so we know which item to delete
-                            itemToDelete = item
+                                // Set item data so we know which item to delete
+                                itemToDelete = item
 
-                            // Popup dialog
-                            showConfirmDeleteScreen = true
-                        }
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Tickets",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                                // Popup dialog
+                                showConfirmDeleteScreen = true
+                            }
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        IconButton(
-                            modifier = Modifier.size(26.dp),
-                            onClick = {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Phone",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            IconButton(
+                                modifier = Modifier.size(26.dp),
+                                onClick = {
+                                    itemToAdd = DataType.PHONE
+                                    showAddBasicSubItemDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .size(20.dp),
+                                    painter = painterResource(Res.drawable.plus),
+                                    contentDescription = "Add Phone Number"
+                                )
+                            }
+                        }
+
+                        // Phone List
+                        CustomerDialogPhoneList(
+                            modifier = Modifier,
+                            items = phone,
+                            onEditClick = {},
+                            onDeleteClick = { item ->
+                                // Set data type so we know what were looking to delete
+                                dataType = DataType.PHONE
+
+                                // Set item data so we know which item to delete
+                                itemToDelete = item
+
+                                // Popup dialog
+                                showConfirmDeleteScreen = true
+                            }
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Tickets",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            IconButton(
+                                modifier = Modifier.size(26.dp),
+                                onClick = {
+                                    // TODO
+                                }
+                            ) {
+                                Icon(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .size(20.dp),
+                                    painter = painterResource(Res.drawable.plus),
+                                    contentDescription = "Add Ticket"
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Ticket list -------------------------------
+                        CustomerDialogTicketList(
+                            tickets = tickets,
+                            onDeleteClick = { item ->
+                                // Set data type so we know what were looking to delete
+                                dataType = DataType.TICKET
+
+                                // Set item data so we know which item to delete
+                                itemToDelete = item
+
+                                // Popup dialog
+                                showConfirmDeleteScreen = true
+                            },
+                            onTicketClick = {
                                 // TODO
                             }
-                        ) {
-                            Icon(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(20.dp),
-                                painter = painterResource(Res.drawable.plus),
-                                contentDescription = "Add Ticket"
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Ticket list -------------------------------
-                    CustomerDialogTicketList(
-                        tickets = tickets,
-                        onDeleteClick = { item ->
-                            // Set data type so we know what were looking to delete
-                            dataType = DataType.TICKET
-
-                            // Set item data so we know which item to delete
-                            itemToDelete = item
-
-                            // Popup dialog
-                            showConfirmDeleteScreen = true
-                        },
-                        onTicketClick = {
-                            // TODO
-                        }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Notes -------------------------------
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Notes",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        IconButton(
-                            modifier = Modifier.size(26.dp),
-                            onClick = {
-                                noteSeedData = NoteData()
-                                showNoteDialog = true
-                            }
+                        // ------------------------- Notes -------------------------------
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(20.dp),
-                                painter = painterResource(Res.drawable.plus),
-                                contentDescription = "Add new Note"
+                            Text(
+                                text = "Notes",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
                             )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            IconButton(
+                                modifier = Modifier.size(26.dp),
+                                onClick = {
+                                    noteSeedData = NoteData()
+                                    showNoteDialog = true
+                                }
+                            ) {
+                                Icon(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .size(20.dp),
+                                    painter = painterResource(Res.drawable.plus),
+                                    contentDescription = "Add new Note"
+                                )
+                            }
                         }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        NoteBlock(
+                            noteData = notes,
+                            onImageClick = {
+                                // TODO: Not yet implemented
+                            }
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
                     }
 
-                    Spacer(Modifier.padding(4.dp))
-
-                    NoteBlock(
-                        noteData = notes,
-                        onImageClick = {
-                            // TODO: Not yet implemented
-                        }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
                 }
 
                 Spacer(Modifier.padding(8.dp))

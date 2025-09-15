@@ -32,7 +32,6 @@ fun TicketPanel(
     isDarkMode: Boolean,
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
-    scrollBarsOnRight: Boolean,
     selectedTicket: TicketData?,
     pagingItems: LazyPagingItems<Ticket>,
     currentUser: UserData?,
@@ -167,7 +166,6 @@ fun TicketPanel(
                 TicketListPane(
                     isDarkMode = isDarkMode,
                     pagingItems = pagingItems,
-                    scrollBarsOnRight = scrollBarsOnRight,
                     onClick = { ticket ->
                         // Update from click
                         isSelectedUpdateFromClick = true
@@ -187,7 +185,6 @@ fun TicketPanel(
                     assignedUserName = PersonName(), //selectedTicket.assignedUser.name, //(users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser } ?: User()).name,
                     isDarkMode = isDarkMode,
                     ticketData = selectedTicket,
-                    scrollBarsOnRight = scrollBarsOnRight,
                     onEditClick = {
                         // Call edit ticket
                         onEditTicket()

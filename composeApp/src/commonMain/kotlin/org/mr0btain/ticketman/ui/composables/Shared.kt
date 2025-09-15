@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.Note
@@ -27,11 +28,12 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.file_text
 import ticketman.composeapp.generated.resources.mail
 import ticketman.composeapp.generated.resources.phone
 import ticketman.composeapp.generated.resources.x
 
-// This holds things used between all panes
+// This holds things used frequently
 
 @Composable
 fun ConfirmOrCancelButtonRow(
@@ -198,15 +200,15 @@ fun TableStatusItem(
     status: TicketStatus,
     textModifier: Modifier = Modifier,
     textStyle: TextStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
-    darkMode: Boolean
+    isDarkMode: Boolean
 ) {
     Surface(
         modifier = modifier.padding(4.dp),
         shape = RoundedCornerShape(4.dp),
         color = when (status.status) {
-            TicketStatusType.IN_PROGRESS -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+            TicketStatusType.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
             TicketStatusType.ON_HOLD -> MaterialTheme.colorScheme.error
-            TicketStatusType.DONE -> if (darkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
+            TicketStatusType.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
         }
     ) {
         Text(
@@ -411,4 +413,34 @@ fun TableDivider() {
             thickness = 2.dp
         )
     }
+}
+
+@Composable
+fun PaneHeader(
+    text: String,
+    icon: DrawableResource,
+    contentDescription: String = ""
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            modifier = Modifier.size(20.dp),
+            painter = painterResource(icon),
+            contentDescription = contentDescription
+        )
+
+        Spacer(Modifier.padding(4.dp))
+
+        Text(
+            text = text,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.SemiBold
+        )
+    }
+
+    HorizontalDivider()
 }

@@ -38,7 +38,6 @@ fun InventoryPanel(
     isDarkMode: Boolean,
     inventoryList: LazyPagingItems<Inventory>,
     selectedInventory: InventoryData?,
-    scrollBarsOnRight: Boolean,
     onSelectedInventoryChange: (Uuid) -> Unit,
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
@@ -115,7 +114,6 @@ fun InventoryPanel(
                     isDarkMode = isDarkMode,
                     selected = selectedInventory?.inventory?.identifier,
                     pagingItems = inventoryList,
-                    scrollBarsOnRight = scrollBarsOnRight,
                     onClick = {
                         // Set is update from click
                         isSelectedUpdateFromClick = true
@@ -129,7 +127,6 @@ fun InventoryPanel(
 
                 InventoryInfoPane(
                     isDarkMode = isDarkMode,
-                    scrollBarsOnRight = scrollBarsOnRight,
                     inventoryData = selectedInventory,
                     onEditClick = { onEditInventory() }
                 )

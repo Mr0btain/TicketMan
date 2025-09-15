@@ -21,7 +21,7 @@ import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.composables.DialogNoteList
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
@@ -35,8 +35,7 @@ fun InventoryDialog(
     onDismiss: () -> Unit,
     onContinue: (InventoryData) -> Unit,
     seedData: InventoryData,
-    isDarkMode: Boolean,
-    scrollBarsOnRight: Boolean
+    isDarkMode: Boolean
 ) {
     // seed data
     var name by remember(seedData) { mutableStateOf(seedData.inventory.name) }
@@ -140,94 +139,95 @@ fun InventoryDialog(
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Content ----------------------------------------------------
-                PlatformColumnScrollable(
-                    modifier = Modifier.height(400.dp),
-                    columnModifier = Modifier.width(300.dp),
-                    scrollBarOnRight = scrollBarsOnRight,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
+                PlatformLazyColumn(
+                    modifier = Modifier
+                        .height(400.dp)
+                        .width(300.dp),
                     isVisible = notes.isNotEmpty()
                 ) {
-                    // -------------------------- Name ------------------------
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Name") }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Description -------------------------------
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Description") }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Stock -------------------------------
-                    OutlinedTextField(
-                        value = stock,
-                        onValueChange = { change -> stock = change.filter { it.isDigit() } },
-                        label = { Text("Stock") }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Price -------------------------------
-                    MoneyTextField(
-                        modifier = Modifier.width(280.dp),
-                        state = price,
-                        label = "Price"
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Cost -------------------------------
-                    MoneyTextField(
-                        modifier = Modifier.width(280.dp),
-                        state = cost,
-                        label = "Cost"
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Notes -------------------------------
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Notes",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                    item {
+                        // -------------------------- Name ------------------------
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Name") }
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        IconButton(
-                            modifier = Modifier.size(26.dp),
-                            onClick = { showAddNoteDialog = true }
+                        // ------------------------- Description -------------------------------
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Description") }
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Stock -------------------------------
+                        OutlinedTextField(
+                            value = stock,
+                            onValueChange = { change -> stock = change.filter { it.isDigit() } },
+                            label = { Text("Stock") }
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Price -------------------------------
+                        MoneyTextField(
+                            modifier = Modifier.width(280.dp),
+                            state = price,
+                            label = "Price"
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Cost -------------------------------
+                        MoneyTextField(
+                            modifier = Modifier.width(280.dp),
+                            state = cost,
+                            label = "Cost"
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Notes -------------------------------
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(20.dp),
-                                painter = painterResource(Res.drawable.plus),
-                                contentDescription = "Add new Note"
+                            Text(
+                                text = "Notes",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
                             )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            IconButton(
+                                modifier = Modifier.size(26.dp),
+                                onClick = { showAddNoteDialog = true }
+                            ) {
+                                Icon(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .size(20.dp),
+                                    painter = painterResource(Res.drawable.plus),
+                                    contentDescription = "Add new Note"
+                                )
+                            }
                         }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        DialogNoteList(
+                            notes = notes,
+                            onDeleteClick = { item ->
+                                itemForDelete = DataType.NOTE
+                                itemUpForDeleteIndex = item
+                                showConfirmDeleteScreen = true
+                            }
+                        )
                     }
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    DialogNoteList(
-                        notes = notes,
-                        onDeleteClick = { item ->
-                            itemForDelete = DataType.NOTE
-                            itemUpForDeleteIndex = item
-                            showConfirmDeleteScreen = true
-                        }
-                    )
                 }
 
                 Spacer(Modifier.padding(8.dp))

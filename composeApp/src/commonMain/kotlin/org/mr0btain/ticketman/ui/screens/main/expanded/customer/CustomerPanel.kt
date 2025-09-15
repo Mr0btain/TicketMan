@@ -22,24 +22,20 @@ import org.mr0btain.ticketman.ui.composables.search.CustomerSearch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-// TODO: Should really offload some of the calculations on the lists to before we call this screen
-
 @Composable
 fun CustomerPanel(
     modifier: Modifier = Modifier,
-    scrollBarsOnBottom: Boolean,
-    scrollBarsOnRight: Boolean,
+    isDarkMode: Boolean,
     pagingItems: LazyPagingItems<Customer>,
     selectedCustomer: CustomerData?,
-    onAddCustomer: (PersonName) -> Unit,
+    onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (Uuid) -> Unit,
-    onDeleteCustomer: (Uuid) -> Unit,
+    onDeleteCustomer: () -> Unit,
     onTicketClick: (Uuid) -> Unit,
     onImageClick: (List<ImageData>) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
-    coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    isDarkMode: Boolean
+    coroutineScope: CoroutineScope = rememberCoroutineScope()
 ) {
     // Hopefully this saves on calculations and updates properly
     //val sortedCustomerInfo = remember(customerList) { customerList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
@@ -93,14 +89,9 @@ fun CustomerPanel(
                         label = "Customer",
                         onAddClick = {
                             // Trigger new item dialog
-                            onAddCustomer(PersonName())
+                            onAddCustomer()
                         },
-                        onDeleteClick = {
-                            // Trigger delete ticket dialog/ confirm
-                            selectedCustomer?.customer?.let { customer ->
-                                onDeleteCustomer(customer.identifier)
-                            }
-                        }
+                        onDeleteClick = onDeleteCustomer
                     )
 
                     Spacer(Modifier.padding(8.dp))
@@ -114,12 +105,11 @@ fun CustomerPanel(
             ) {
                 CustomerListPane(
                     modifier = Modifier,
+                    isDarkMode = isDarkMode,
                     customerInfo = pagingItems,
                     lazyListState = customerLazyListState,
                     selectedCustomerId = selectedCustomer?.customer?.identifier,
                     scope = coroutineScope,
-                    scrollBarsOnRight = scrollBarsOnRight,
-                    isDarkMode = isDarkMode,
                     onClick = { id ->
                         // Set the isupdatefromclick so we don't jar the scroll in the launched effect
                         isSelectUpdateFromClick = true
@@ -135,7 +125,6 @@ fun CustomerPanel(
                     selectedCustomer = selectedCustomer,
                     onEditClick = { onEditCustomer() },
                     onTicketClick = onTicketClick,
-                    scrollBarsOnRight = scrollBarsOnRight,
                     onImageClick = onImageClick
                 )
             }

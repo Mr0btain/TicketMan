@@ -2,92 +2,81 @@ package org.mr0btain.ticketman.ui.dialog
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.ui.theme.extendedDark
-import org.mr0btain.ticketman.ui.theme.extendedLight
+import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 
 @Composable
 fun ConfirmDeleteDialog(
     modifier: Modifier = Modifier,
     dataType: DataType,
-    name: String = "",
-    onContinue: () -> Unit,
-    onDismiss: () -> Unit,
-    isDarkMode: Boolean = false,
-    fontSize: TextUnit = 18.sp
+    isTwoStep: Boolean = false,
+    onConfirm: () -> Unit,
+    onCancel: () -> Unit
 ) {
+    val confirmCount = remember { mutableIntStateOf(0) }
+
     Dialog(
-        onDismissRequest =  { onDismiss() }
+        onDismissRequest = { onCancel() },
     ) {
         Surface(
             modifier = modifier,
-            shape = RoundedCornerShape(10.dp),
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(10.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .padding(22.dp)
-                    .fillMaxWidth(),
+                Modifier.padding(32.dp),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.padding(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
+                Text(
+                    text = "DELETE",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 30.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(Modifier.padding(4.dp))
+
+                Text(
+                    text = "Are you sure you want to delete this ${dataType.stringName}",
+                    textAlign = TextAlign.Center
+                )
+
+                HorizontalDivider(modifier = Modifier.width(400.dp))
+
+                if (confirmCount.intValue == 0) {
+                    ConfirmOrCancelButtonRow(
+                        onConfirmClick = {
+                            if (isTwoStep) confirmCount.intValue == 1
+                        },
+                        onCancelClick = onCancel
+                    )
+                } else if (confirmCount.intValue == 1) {
                     Text(
-                        text = "Are you sure you want to remove: ",
-                        fontSize = fontSize
+                        text = "ARE YOU REALLY REALLY FOR SURE??!!",
+                        fontSize = 30.sp,
+                        color = MaterialTheme.colorScheme.error,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center
                     )
 
-                    Spacer(Modifier.padding(2.dp))
-
-                    Text(
-                        text = "This ${dataType.stringName}: $name?",
-                        fontSize = fontSize,
-                        fontWeight = FontWeight.SemiBold
+                    ConfirmOrCancelButtonRow(
+                        onConfirmClick = onConfirm,
+                        onCancelClick = onCancel
                     )
-                }
-
-                HorizontalDivider()
-
-                Spacer(Modifier.padding(12.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Button(
-                        onClick = { onDismiss() },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text("Cancel")
-                    }
-
-                    Button(
-                        onClick = { onContinue() },
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
-                        )
-                    ) {
-                        Text("Confirm")
-                    }
                 }
             }
         }

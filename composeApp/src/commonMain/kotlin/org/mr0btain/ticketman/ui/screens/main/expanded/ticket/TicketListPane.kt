@@ -25,7 +25,7 @@ import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.TablePriorityItem
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
 import org.mr0btain.ticketman.ui.composables.TableTicketIdItem
-import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnWithScrollbar
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -37,7 +37,6 @@ fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     pagingItems: LazyPagingItems<Ticket>,
-    scrollBarsOnRight: Boolean,
     selectedId: Uuid?,
     onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
@@ -100,13 +99,12 @@ fun TicketListPane(
 
             HorizontalDivider(modifier = Modifier.width(710.dp))
 
-            LazyColumnWithScrollbar(
+            PlatformLazyColumn(
                 modifier = Modifier
                     .width(740.dp)
                     .padding(start = 4.dp),
                 state = state,
                 scope = coroutineScope,
-                scrollBarOnRight = scrollBarsOnRight,
                 isVisible = pagingItems.itemCount > 0
             ) {
                 items(pagingItems.itemCount) { index ->
@@ -236,7 +234,7 @@ private fun TicketTableItem(
             ) {
                 TableStatusItem(
                     status = ticket.status,
-                    darkMode = isDarkMode,
+                    isDarkMode = isDarkMode,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }

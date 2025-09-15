@@ -17,7 +17,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsSwitchItem
@@ -55,88 +55,89 @@ fun SettingsScreen(
             .fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        PlatformColumnScrollable(
+        PlatformLazyColumn(
             modifier = Modifier.padding(16.dp),
-            backgroundColor = MaterialTheme.colorScheme.background,
             isVisible = true
         ) {
-            SettingsGroup(stringResource(Res.string.settings_first_group)) {
+            item {
+                SettingsGroup(stringResource(Res.string.settings_first_group)) {
 
-            }
+                }
 
-            SettingsGroup(name = stringResource(Res.string.settings_second_group)) {
-                // Server address item
-                SettingsTextItem(
-                    name = "Server Url:",
-                    icon = painterResource(Res.drawable.server),
-                    iconDesc = "Description",
-                    value = serverUrl.value,
-                    onConfirmChange = { url ->
-                        scope.launch {
-                            /*
-                            try {
-                                if ( viewModel.dataHandler.checkNewServerConnection(url)) {
-                                    viewModel.updateServerUrl(url)
-                                    isUrlError = false
-                                    showUrlEditDialog = false
-                                    AppLogger.m(CHECK_URL_TAG, SimpleError.SUCCESS)
-                                } else isUrlError = true
-                            } catch (ex: Exception) {
-                                ex.printStackTrace()
-                                AppLogger.i(CHECK_URL_TAG, SimpleError.FAIL)
-                                isUrlError = true
+                SettingsGroup(name = stringResource(Res.string.settings_second_group)) {
+                    // Server address item
+                    SettingsTextItem(
+                        name = "Server Url:",
+                        icon = painterResource(Res.drawable.server),
+                        iconDesc = "Description",
+                        value = serverUrl.value,
+                        onConfirmChange = { url ->
+                            scope.launch {
+                                /*
+                                try {
+                                    if ( viewModel.dataHandler.checkNewServerConnection(url)) {
+                                        viewModel.updateServerUrl(url)
+                                        isUrlError = false
+                                        showUrlEditDialog = false
+                                        AppLogger.m(CHECK_URL_TAG, SimpleError.SUCCESS)
+                                    } else isUrlError = true
+                                } catch (ex: Exception) {
+                                    ex.printStackTrace()
+                                    AppLogger.i(CHECK_URL_TAG, SimpleError.FAIL)
+                                    isUrlError = true
+                                }
+                                 */
                             }
-                             */
-                        }
-                    },
-                    inputFilter = { text -> text },
-                    keyboardType = KeyboardType.Text,
-                    isError = isUrlError,
-                    showDialog = showUrlEditDialog,
-                    surfaceOnClick = { showUrlEditDialog = true},
-                    dialogDismiss = { showUrlEditDialog = false }
-                )
+                        },
+                        inputFilter = { text -> text },
+                        keyboardType = KeyboardType.Text,
+                        isError = isUrlError,
+                        showDialog = showUrlEditDialog,
+                        surfaceOnClick = { showUrlEditDialog = true},
+                        dialogDismiss = { showUrlEditDialog = false }
+                    )
 
-                // Dark mode switch
-                SettingsSwitchItem(
-                    name = "Server Auto Sync",
-                    icon = painterResource(Res.drawable.download_cloud),
-                    iconDesc = "Auto sync data with server",
-                    state = autoSync.value
-                ) {
-                    viewModel.toggleAutoSync()
-                }
-            }
-
-            SettingsGroup(stringResource(Res.string.settings_third_group)) {
-                // Dark mode switch
-                SettingsSwitchItem(
-                    name = "Dark Mode",
-                    icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
-                    iconDesc = "Should the ui stay in dark mode",
-                    state = darkMode.value
-                ) {
-                    viewModel.toggleDarkMode()
+                    // Dark mode switch
+                    SettingsSwitchItem(
+                        name = "Server Auto Sync",
+                        icon = painterResource(Res.drawable.download_cloud),
+                        iconDesc = "Auto sync data with server",
+                        state = autoSync.value
+                    ) {
+                        viewModel.toggleAutoSync()
+                    }
                 }
 
-                // Scroll bars on bottom
-                SettingsSwitchItem(
-                    name = "Horizontal ScrollBars\non the Bottom",
-                    icon = if (scrollBarsOnBottom.value) painterResource(Res.drawable.arrow_down_circle) else painterResource(Res.drawable.arrow_up_circle),
-                    iconDesc = "Position of horizontal scroll bars",
-                    state = scrollBarsOnBottom.value
-                ) {
-                    viewModel.toggleScrollBarsOnBottom()
-                }
+                SettingsGroup(stringResource(Res.string.settings_third_group)) {
+                    // Dark mode switch
+                    SettingsSwitchItem(
+                        name = "Dark Mode",
+                        icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
+                        iconDesc = "Should the ui stay in dark mode",
+                        state = darkMode.value
+                    ) {
+                        viewModel.toggleDarkMode()
+                    }
 
-                // Scroll bars on right
-                SettingsSwitchItem(
-                    name = "Vertical ScrollBars\non the Right",
-                    icon = if (scrollBarsOnRight.value) painterResource(Res.drawable.arrow_right_circle) else painterResource(Res.drawable.arrow_left_circle),
-                    iconDesc = "Position of vertical scroll bars",
-                    state = scrollBarsOnRight.value
-                ) {
-                    viewModel.toggleScrollBarsOnRight()
+                    // Scroll bars on bottom
+                    SettingsSwitchItem(
+                        name = "Horizontal ScrollBars\non the Bottom",
+                        icon = if (scrollBarsOnBottom.value) painterResource(Res.drawable.arrow_down_circle) else painterResource(Res.drawable.arrow_up_circle),
+                        iconDesc = "Position of horizontal scroll bars",
+                        state = scrollBarsOnBottom.value
+                    ) {
+                        viewModel.toggleScrollBarsOnBottom()
+                    }
+
+                    // Scroll bars on right
+                    SettingsSwitchItem(
+                        name = "Vertical ScrollBars\non the Right",
+                        icon = if (scrollBarsOnRight.value) painterResource(Res.drawable.arrow_right_circle) else painterResource(Res.drawable.arrow_left_circle),
+                        iconDesc = "Position of vertical scroll bars",
+                        state = scrollBarsOnRight.value
+                    ) {
+                        viewModel.toggleScrollBarsOnRight()
+                    }
                 }
             }
         }

@@ -15,7 +15,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.components.utils.getNameForDataType
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -35,8 +34,6 @@ import kotlin.uuid.ExperimentalUuidApi
 fun ExpandedMainScreen(
     viewModel: MainViewModel,
     coroutineScope: CoroutineScope,
-    scrollBarsOnBottom: Boolean,
-    scrollBarsOnRight: Boolean,
     isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
@@ -76,7 +73,6 @@ fun ExpandedMainScreen(
 
     // For confirm delete dialog
     var dataType by remember { mutableStateOf(DataType.NONE) }
-    var subDataType by remember { mutableStateOf(DataType.NONE) }
     var showConfirmDeleteDialog by remember { mutableStateOf(false) }
 
     // For image viewing
@@ -93,8 +89,7 @@ fun ExpandedMainScreen(
                     if (result != customerData) viewModel.addOrUpdateCustomer(result)
                 },
                 isDarkMode = isDarkMode,
-                seedData = customerData,
-                scrollBarsOnRight = scrollBarsOnRight
+                seedData = customerData
             )
         }
     }
@@ -106,7 +101,6 @@ fun ExpandedMainScreen(
                 onDismiss = { showTicketDialog = false },
                 isDarkMode = isDarkMode,
                 seedData = ticketData,
-                scrollBarsOnRight = scrollBarsOnRight,
                 onContinue = { result ->
                     // Check if its changed, if so update it
                     if (selectedTicket.value != result) viewModel.addOrUpdateTicket(result)
@@ -123,7 +117,6 @@ fun ExpandedMainScreen(
                 seedData = inventoryData,
                 onDismiss = { showInventoryDialog = false },
                 isDarkMode = isDarkMode,
-                scrollBarsOnRight = scrollBarsOnRight,
                 onContinue = {
                     // TODO: Note yet implemented
                 }
@@ -135,39 +128,28 @@ fun ExpandedMainScreen(
     if (showConfirmDeleteDialog) {
         ConfirmDeleteDialog(
             dataType = dataType,
-            onContinue = {
-                when (dataType) {
-                    DataType.CUSTOMER -> {
-                        when (subDataType) {
-                            DataType.TICKET -> {
+            onConfirm = {
+                coroutineScope.launch {
+                    when (dataType) {
+                        DataType.CUSTOMER -> {
 
-                            }
-                            DataType.EMAIL -> TODO()
-                            DataType.PHONE -> TODO()
-                            DataType.NOTE -> TODO()
-                            DataType.ADDRESS -> TODO()
-                            else -> {
-                                // Do nothing
-                            }
                         }
-                    }
-                    DataType.TICKET -> TODO()
-                    DataType.INVENTORY -> TODO()
-                    DataType.USER -> TODO()
-                    else -> {
-                        // Do Nothing
+                        DataType.TICKET -> TODO()
+                        DataType.INVENTORY -> TODO()
+                        DataType.USER -> TODO()
+                        else -> {
+                            // Do Nothing
+                        }
                     }
                 }
             },
-            onDismiss = {
+            onCancel = {
                 // Reset data types
                 dataType = DataType.NONE
-                subDataType = DataType.NONE
 
                 // Hide dialog
                 showConfirmDeleteDialog = false
-                        },
-            name = getNameForDataType(dataType, subDataType)
+                        }
         )
     }
 
@@ -184,250 +166,191 @@ fun ExpandedMainScreen(
         }
     }
 
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.fillMaxSize()
+    Surface(
+        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
     ) {
-        Surface(
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
+        Column(
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth()
+            Row(
+                modifier = Modifier.padding(4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Start
             ) {
-                Row(
-                    modifier = Modifier.padding(4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Start
+                Box(
+                    modifier = Modifier.width(390.dp)
                 ) {
-                    Box(
-                        modifier = Modifier.width(390.dp)
-                    ) {
-                        SecondaryTabRow(
-                            selectedTabIndex = tabIndex.value,
-                            modifier = Modifier
-                                .padding(top = 4.dp, start = 4.dp)
-                                .wrapContentWidth(),
-                            containerColor = Color.Transparent
-                        ) {
-                            // Customer Tab
-                            Tab(
-                                selected = tabIndex.value == 0,
-                                onClick = { viewModel.changeMainTabIndex(0) },
-                                modifier = Modifier.wrapContentWidth(),
-                                text = {
-                                    Text(
-                                        text = "Customers",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            )
-
-                            // Ticket Tab
-                            Tab(
-                                selected = tabIndex.value == 1,
-                                onClick = { viewModel.changeMainTabIndex(1) },
-                                modifier = Modifier.wrapContentWidth(),
-                                text = {
-                                    Text(
-                                        text = "Tickets",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            )
-
-                            // Inventory Tab
-                            Tab(
-                                selected = tabIndex.value == 2,
-                                onClick = { viewModel.changeMainTabIndex(2) },
-                                modifier = Modifier.wrapContentWidth(),
-                                text = {
-                                    Text(
-                                        text = "Inventory",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        maxLines = 1,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            )
-                        }
-                    }
-
-                    Row(
+                    SecondaryTabRow(
+                        selectedTabIndex = tabIndex.value,
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(end = 8.dp),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
+                            .padding(top = 4.dp, start = 4.dp)
+                            .wrapContentWidth(),
+                        containerColor = Color.Transparent
                     ) {
-                        // TODO: ---------------------------------------------------------------------------------------
-                        Button(
-                            onClick = {
-                                coroutineScope.launch {
-                                    // Nothing ATM
-                                }
+                        // Customer Tab
+                        Tab(
+                            selected = tabIndex.value == 0,
+                            onClick = { viewModel.changeMainTabIndex(0) },
+                            modifier = Modifier.wrapContentWidth(),
+                            text = {
+                                Text(
+                                    text = "Customers",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.SemiBold
+                                )
                             }
-                        ) {
-                            Text("Sync")
-                        }
+                        )
 
-                        // TODO: Make this only work if not logged in or hide if logged in
-                        Button(
-                            onClick = { viewModel.changeShowLogin(true) }
-                        ) {
-                            Text("Log In")
-                        }
+                        // Ticket Tab
+                        Tab(
+                            selected = tabIndex.value == 1,
+                            onClick = { viewModel.changeMainTabIndex(1) },
+                            modifier = Modifier.wrapContentWidth(),
+                            text = {
+                                Text(
+                                    text = "Tickets",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        )
+
+                        // Inventory Tab
+                        Tab(
+                            selected = tabIndex.value == 2,
+                            onClick = { viewModel.changeMainTabIndex(2) },
+                            modifier = Modifier.wrapContentWidth(),
+                            text = {
+                                Text(
+                                    text = "Inventory",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    maxLines = 1,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        )
                     }
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier,
-                    thickness = DividerDefaults.Thickness,
-                    color = if (isDarkMode) MaterialTheme.colorScheme.surface else DividerDefaults.color
-                )
-
-                when (tabIndex.value) {
-                    0 -> {
-                        CustomerPanel(
-                            isDarkMode = isDarkMode,
-                            onAddCustomer = { name ->
-                                coroutineScope.launch {
-                                    // Set seed data
-                                    viewModel.setupNewCustomer(name)
-
-                                    // Trigger dialog
-                                    showCustomerDialog = true
-                                }
-                            },
-                            onEditCustomer = {
-                                if (selectedCustomer.value != null)
-                                    showCustomerDialog = true
-                            },
-                            onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomer(id) },
-                            onDeleteCustomer = { id ->
-                                coroutineScope.launch {
-                                    /*
-                                    // Set values
-                                        itemToDelete = id
-                                        itemToDeleteType = MainItemType.CUSTOMER
-                                        confirmDeleteDialogText = "Customer: $id"
-
-                                        // Trigger the dialog
-                                        showConfirmDeleteDialog = true
-                                     */
-                                }
-                            },
-                            onTicketClick = { identifier ->
-                                coroutineScope.launch {
-                                    viewModel.changeSelectedTicket(identifier)
-
-                                    showTicketDialog = true
-                                }
-                            },
-                            onImageClick = { imageList ->
-                                imagePopupList = imageList
-                                showImagePopup = true
-                            },
-                            selectedCustomer = selectedCustomer.value,
-                            pagingItems = customerPagedItems,
-                            customerLazyListState = customerLazyListState,
-                            coroutineScope = coroutineScope,
-                            scrollBarsOnRight = scrollBarsOnRight,
-                            scrollBarsOnBottom = scrollBarsOnBottom
-                        )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(end = 8.dp),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // TODO: ---------------------------------------------------------------------------------------
+                    Button(
+                        onClick = {
+                            // TODO
+                        }
+                    ) {
+                        Text("Sync")
                     }
 
-                    // Ticket Panel
-                    1 -> {
-                       TicketPanel(
-                            isDarkMode = isDarkMode,
-                            pagingItems = ticketPagedItems,
-                            currentUser = currentUser.value,
-                            scrollBarsOnRight = scrollBarsOnRight,
-                            selectedTicket = selectedTicket.value,
-                            onAddNewTicket = {
-                                coroutineScope.launch {
-                                    // Set up seed data
-                                    viewModel.setupNewTicket()
-
-                                    // Show the dialog
-                                    showTicketDialog = true
-                                }
-                            },
-                            onEditTicket = {
-                                coroutineScope.launch {
-                                    if (selectedTicket.value != null)
-                                        showTicketDialog = true
-                                }
-                            },
-                            onSelectedTicketChange = { id -> viewModel.changeSelectedTicket(id) },
-                            onSelectedPanelChange = { selectedTicketPanel = it },
-                            onDeleteTicket = { id ->
-                                coroutineScope.launch {
-                                    /*
-                                    // Set values
-                                    itemToDelete = id
-                                    itemToDeleteType = MainItemType.TICKET
-                                    confirmDeleteDialogText = "Ticket: $id"
-
-                                    // Trigger the dialog
-                                    showConfirmDeleteDialog = true
-                                     */
-                                }
-                            },
-                            selectedPanel = selectedTicketPanel,
-                            ticketListState = ticketLazyListState,
-                            coroutineScope = coroutineScope,
-                           onImageClick = { imageList ->
-                               imagePopupList = imageList
-                               showImagePopup = true
-                           }
-                        )
+                    // TODO: Make this only work if not logged in or hide if logged in
+                    Button(
+                        onClick = { viewModel.changeShowLogin(true) }
+                    ) {
+                        Text("Log In")
                     }
+                }
+            }
 
-                    // Inventory panel
-                    2 -> {
-                        InventoryPanel(
-                            isDarkMode = isDarkMode,
-                            inventoryList = inventoryPagedItems,
-                            selectedInventory = selectedInventory.value,
-                            onSelectedInventoryChange = { id -> viewModel.changeSelectedInventory(id) },
-                            onAddInventory = {
-                                coroutineScope.launch {
-                                    viewModel.setupNewInventory()
+            HorizontalDivider(
+                modifier = Modifier,
+                thickness = DividerDefaults.Thickness,
+                color = if (isDarkMode) MaterialTheme.colorScheme.surface else DividerDefaults.color
+            )
 
-                                    // Popup dialog
-                                    showInventoryDialog = true
-                                }
-                            },
-                            onEditInventory = {
-                                coroutineScope.launch {
-                                    if (selectedInventory.value != null)
-                                        showInventoryDialog = true
-                                }
-                            },
-                            onDeleteInventory = {
-                                coroutineScope.launch {
-                                    selectedInventory.value?.let { inventoryData ->
-                                       /*
-                                        itemToDelete = inventoryData.inventory.identifier
-                                        itemToDeleteType = MainItemType.INVENTORY
-                                        confirmDeleteDialogText = inventoryData.inventory.name
+            when (tabIndex.value) {
+                0 -> {
+                    CustomerPanel(
+                        isDarkMode = isDarkMode,
+                        onAddCustomer = {
+                            // Set seed data
+                            viewModel.setupNewCustomer()
 
-                                        // Trigger the dialog
-                                        showConfirmDeleteDialog = true
-                                        */
-                                    }
-                                }
-                            },
-                            coroutineScope = coroutineScope,
-                            inventoryListState = inventoryLazyListState,
-                            scrollBarsOnRight = scrollBarsOnRight
-                        )
-                    }
+                            // Trigger dialog
+                            showCustomerDialog = true
+                        },
+                        onEditCustomer = {
+                            if (selectedCustomer.value != null)
+                                showCustomerDialog = true
+                        },
+                        onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomer(id) },
+                        onDeleteCustomer = {
+                            dataType = DataType.CUSTOMER
+                            showConfirmDeleteDialog = true
+                        },
+                        onTicketClick = { identifier ->
+                            viewModel.changeSelectedTicket(identifier)
+
+                            showTicketDialog = true
+                        },
+                        onImageClick = { imageList ->
+                            imagePopupList = imageList
+                            showImagePopup = true
+                        },
+                        selectedCustomer = selectedCustomer.value,
+                        pagingItems = customerPagedItems,
+                        customerLazyListState = customerLazyListState,
+                        coroutineScope = coroutineScope
+                    )
+                }
+
+                // Ticket Panel
+                1 -> {
+                    TicketPanel(
+                        isDarkMode = isDarkMode,
+                        pagingItems = ticketPagedItems,
+                        currentUser = currentUser.value,
+                        selectedTicket = selectedTicket.value,
+                        onAddNewTicket = {
+                            // Set up seed data
+                            viewModel.setupNewTicket()
+
+                            // Show the dialog
+                            showTicketDialog = true
+                        },
+                        onEditTicket = { if (selectedTicket.value != null) showTicketDialog = true },
+                        onSelectedTicketChange = { id -> viewModel.changeSelectedTicket(id) },
+                        onSelectedPanelChange = { selectedTicketPanel = it },
+                        onDeleteTicket = {
+                            dataType = DataType.TICKET
+                            showConfirmDeleteDialog = true
+                        },
+                        selectedPanel = selectedTicketPanel,
+                        ticketListState = ticketLazyListState,
+                        coroutineScope = coroutineScope,
+                        onImageClick = { imageList ->
+                            imagePopupList = imageList
+                            showImagePopup = true
+                        }
+                    )
+                }
+
+                // Inventory panel
+                2 -> {
+                    InventoryPanel(
+                        isDarkMode = isDarkMode,
+                        inventoryList = inventoryPagedItems,
+                        selectedInventory = selectedInventory.value,
+                        onSelectedInventoryChange = { id -> viewModel.changeSelectedInventory(id) },
+                        onAddInventory = {
+                            viewModel.setupNewInventory()
+                            showInventoryDialog = true
+                        },
+                        onEditInventory = { if (selectedInventory.value != null) showInventoryDialog = true },
+                        onDeleteInventory = {
+                            dataType = DataType.INVENTORY
+                            showConfirmDeleteDialog = true
+                        },
+                        coroutineScope = coroutineScope,
+                        inventoryListState = inventoryLazyListState
+                    )
                 }
             }
         }

@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui.composables.scrollbar
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.ScrollbarStyle
 import androidx.compose.foundation.VerticalScrollbar
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.rememberScrollbarAdapter
@@ -10,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
@@ -42,7 +44,9 @@ actual fun VerticalScrollBar(
     enabled: Boolean
 ) {
     VerticalScrollbar(
-        modifier = Modifier.fillMaxHeight(),
+        modifier = Modifier
+            .background(Color.Transparent)
+            .fillMaxHeight(),
         style = ScrollbarStyle(
             minimalHeight = 48.dp,
             thickness = thickness,
