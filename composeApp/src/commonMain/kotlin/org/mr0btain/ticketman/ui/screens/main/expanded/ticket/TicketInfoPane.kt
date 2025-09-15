@@ -13,15 +13,17 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.time.formatTime
+import org.mr0btain.ticketman.ui.composables.ContactsBlock
+import org.mr0btain.ticketman.ui.composables.SimpleTextItem
+import org.mr0btain.ticketman.ui.composables.TablePriorityItem
+import org.mr0btain.ticketman.ui.composables.TableStatusItem
+import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
-import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
-import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
-import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 import ticketman.composeapp.generated.resources.tag
@@ -37,7 +39,7 @@ fun TicketInfoPane(
     assignedUserName: PersonName,
     ticketData: TicketData?,
     onEditClick: () -> Unit,
-    onImageClick: (List<String>) -> Unit
+    onImageClick: (List<ImageData>) -> Unit
 ) {
     val date = formatTime(ticketData?.ticket?.time ?: Long.MAX_VALUE)
 
@@ -265,9 +267,8 @@ fun TicketInfoPane(
 
                             Spacer(Modifier.padding(4.dp))
 
-                            UpdatesBlock(
+                            NoteBlock(
                                 noteData = ticketData.notes,
-                                labelSize = 16.sp,
                                 onImageClick = onImageClick
                             )
                         }

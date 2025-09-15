@@ -17,8 +17,8 @@ import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.toStringName
-import org.mr0btain.ticketman.ui.composables.CustomerSearch
-import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
+import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
+import org.mr0btain.ticketman.ui.composables.search.CustomerSearch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

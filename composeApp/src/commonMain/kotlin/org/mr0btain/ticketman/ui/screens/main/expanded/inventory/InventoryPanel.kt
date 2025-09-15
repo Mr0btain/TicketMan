@@ -24,8 +24,8 @@ import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.ui.composables.InventorySearch
-import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
+import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
+import org.mr0btain.ticketman.ui.composables.search.InventorySearch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

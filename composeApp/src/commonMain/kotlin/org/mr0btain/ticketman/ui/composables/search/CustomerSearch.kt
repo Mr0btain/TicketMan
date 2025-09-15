@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.composables
+package org.mr0btain.ticketman.ui.composables.search
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.sizeIn
@@ -8,36 +8,41 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.util.fastFirstOrNull
+import org.mr0btain.ticketman.data.Customer
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * SearchBox for searching tickets. Will return an id or a name and a true if they want to add new if it doesn't exist
+ * SearchBox for searching customers. Will return an id or a name and a true if they want to add new if it doesn't exist
  * @param modifier Modifier applied to drop down
- * @param items List of all tickets
+ * @param items List of all customer info
  * @param input The state of the text field
  * @param onInputChange Event called when typing
- * @param onClick Event called when clicking, Uuid passed is identifier for ticket
+ * @param onClick Event called when clicking, uuid passed is identifier for customer
  */
-
-// TODO: Possibly add some extra details into prefix like customer name?
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
 @Composable
-fun TicketSearch(
+fun CustomerSearch(
     modifier: Modifier = Modifier,
-    items: List<Uuid>,
+    items: List<Customer>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Uuid) -> Unit,
+    onClick: (Uuid) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val filteredList = remember(input) { items.filter { it.toString().lowercase().contains(input.lowercase()) } }
+
+    val filteredList = remember(input) { items.filter {
+        (it.name.firstName + it.name.lastName).lowercase()
+            .contains(input.lowercase().replace(" ", ""))
+                || it.identifier.toString().contains(input)
+    }.sortedBy { it.name.firstName + it.name.lastName + it.identifier.toString() } }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
-        modifier = modifier.sizeIn(maxWidth = 300.dp)
+        modifier = modifier.sizeIn(maxWidth = 400.dp)
     ) {
         OutlinedTextField(
             value = input,
@@ -47,15 +52,15 @@ fun TicketSearch(
 
                 // Call on input change
                 onInputChange(it)
-                            },
-            label = { Text("Search Tickets") },
+            },
+            label = { Text("Search Customer") },
             prefix = {
-                // Get matching ticket if there is one
-                val ticket = remember(input) { items.filter { it.toString() == input } }
+                // Get customer if we've matched with one
+                val customer = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
 
-                // Show prefix
-                if (ticket.isNotEmpty()) { Text("Ticket:") }
-                     },
+                // If a match then prefix the name
+                if (customer != null) { Text(text = customer.name.firstName + " " + customer.name.lastName + ": ") }
+            },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
             singleLine = true,
@@ -71,18 +76,19 @@ fun TicketSearch(
             shadowElevation = 4.dp,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            filteredList.forEach { option ->
+            filteredList.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(
-                        text = "Ticket: $option",
+                        text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier.toString(),
                         fontSize = 16.sp
-                    ) },
+                    )
+                           },
                     onClick = {
                         // minimize the drop-down
                         expanded = false
 
                         // Call on click
-                        onClick(option)
+                        onClick(item.identifier)
                     }
                 )
             }

@@ -1,53 +1,49 @@
-package org.mr0btain.ticketman.ui.composables
+package org.mr0btain.ticketman.ui.composables.search
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.sizeIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.data.Inventory
+import androidx.compose.ui.util.fastFirstOrNull
+import org.mr0btain.ticketman.data.User
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
- * SearchBox for searching inventory. Will return an id
+ * SearchBox for searching users. Will return an id or a name and a true if they want to add new if it doesn't exist
  * @param modifier Modifier applied to drop down
- * @param items List of all inventory items
+ * @param items List of all customer info
  * @param input The state of the text field
  * @param onInputChange Event called when typing
- * @param onClick Event called when clicking, identifier is returned for item
+ * @param onClick Event called when clicking, uuid passed is identifier for employee
  */
+
+// TODO: Might be able to combine this with customer search
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
 @Composable
-fun InventorySearch(
+fun UserSearch(
     modifier: Modifier = Modifier,
-    items: List<Inventory>,
+    items: List<User>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Inventory) -> Unit,
+    onClick: (Uuid) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val filteredList = remember(input) { items.filter { "${it.name}${it.identifier}".lowercase().contains(input.lowercase()) } }
+    val filteredList = remember(input) { items.filter {
+        (it.name.firstName + it.name.lastName).lowercase()
+            .contains(input.lowercase().replace(" ", ""))
+                || it.identifier.toString().contains(input)
+    }.sortedBy { it.name.firstName + it.name.lastName + it.identifier.toString() } }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
         onExpandedChange = { expanded = !expanded },
-        modifier = modifier.sizeIn(maxWidth = 300.dp)
+        modifier = modifier.sizeIn(maxWidth = 400.dp)
     ) {
         OutlinedTextField(
             value = input,
@@ -58,7 +54,14 @@ fun InventorySearch(
                 // Call on input change
                 onInputChange(it)
             },
-            label = { Text("Search Inventory") },
+            prefix = {
+                // Get employee if we've matched with one
+                val user = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
+
+                // If a match then prefix the name
+                if (user != null) { Text(text = user.name.firstName + " " + user.name.lastName + ": ") }
+            },
+            label = { Text("Search Users") },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(),
             singleLine = true,
@@ -74,18 +77,19 @@ fun InventorySearch(
             shadowElevation = 4.dp,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            filteredList.forEach { option ->
+            filteredList.forEach { item ->
                 DropdownMenuItem(
                     text = { Text(
-                        text = "${option.name}: ${option.identifier}",
+                        text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier.toString(),
                         fontSize = 16.sp
-                    ) },
+                    )
+                    },
                     onClick = {
                         // minimize the drop-down
                         expanded = false
 
                         // Call on click
-                        onClick(option)
+                        onClick(item.identifier)
                     }
                 )
             }

@@ -21,18 +21,17 @@ import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.shared.*
 import org.mr0btain.ticketman.data.ticket.toNameString
+import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.DialogTextRow
+import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
-import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
-import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
-import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
 import ticketman.composeapp.generated.resources.plus
@@ -468,7 +467,7 @@ fun CustomerDialog(
 
                     Spacer(Modifier.padding(4.dp))
 
-                    NotesBlock(
+                    NoteBlock(
                         noteData = notes,
                         onImageClick = {
                             // TODO: Not yet implemented

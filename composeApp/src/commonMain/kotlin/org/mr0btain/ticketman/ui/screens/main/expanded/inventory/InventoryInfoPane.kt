@@ -16,15 +16,10 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.time.formatTime
+import org.mr0btain.ticketman.ui.composables.SimpleTextItem
+import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
-import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.clipboard
-import ticketman.composeapp.generated.resources.edit
-import ticketman.composeapp.generated.resources.file_text
-import ticketman.composeapp.generated.resources.info
-import ticketman.composeapp.generated.resources.package_icon
+import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun InventoryInfoPane(
@@ -226,13 +221,9 @@ fun InventoryInfoPane(
                                     .padding(20.dp),
                                 scrollBarOnRight = scrollBarsOnRight,
                                 backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                                isVisible = inventoryData?.notes?.isNotEmpty() ?: false
+                                isVisible = inventoryData.notes.isNotEmpty()
                             ) {
-                                NotesBlock(
-                                    noteData = notes,
-                                    onImageClick = {},
-                                    maxImageSize = DpSize(150.dp, 75.dp)
-                                )
+                                NoteBlock(noteData = notes)
                             }
                         }
                     }

@@ -18,11 +18,11 @@ import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.ui.composables.TicketPriorityDropDown
-import org.mr0btain.ticketman.ui.composables.TicketStatusDropDown
+import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.DialogTextRow
+import org.mr0btain.ticketman.ui.composables.ticket.TicketPriorityDropDown
+import org.mr0btain.ticketman.ui.composables.ticket.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
-import org.mr0btain.ticketman.ui.screens.main.components.DialogTextRow
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 import kotlin.uuid.ExperimentalUuidApi

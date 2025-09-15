@@ -18,11 +18,11 @@ import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.time.getTime
+import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.DialogNoteList
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
-import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
-import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 import kotlin.uuid.ExperimentalUuidApi

@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.composables
+package org.mr0btain.ticketman.ui.composables.ticket
 
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape

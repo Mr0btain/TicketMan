@@ -11,13 +11,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.ui.composables.TicketSearch
-import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
+import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
+import org.mr0btain.ticketman.ui.composables.search.TicketSearch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -39,7 +40,7 @@ fun TicketPanel(
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (Uuid) -> Unit,
     onDeleteTicket: (Uuid) -> Unit,
-    onImageClick: (List<String>) -> Unit,
+    onImageClick: (List<ImageData>) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
@@ -191,7 +192,7 @@ fun TicketPanel(
                         // Call edit ticket
                         onEditTicket()
                     },
-                    onImageClick = { }
+                    onImageClick = onImageClick
                 )
             }
         }

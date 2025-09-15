@@ -176,7 +176,6 @@ fun ExpandedMainScreen(
         imagePopupList?.let { imageData ->
             ImagePopup(
                 images = imageData,
-                isDarkMode = isDarkMode,
                 onDismiss = {
                     imagePopupList = null
                     showImagePopup = false
@@ -382,9 +381,10 @@ fun ExpandedMainScreen(
                             selectedPanel = selectedTicketPanel,
                             ticketListState = ticketLazyListState,
                             coroutineScope = coroutineScope,
-                            onImageClick = { images ->
-
-                            }
+                           onImageClick = { imageList ->
+                               imagePopupList = imageList
+                               showImagePopup = true
+                           }
                         )
                     }
 

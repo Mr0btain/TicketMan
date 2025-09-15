@@ -19,9 +19,9 @@ import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.getPlatform
+import org.mr0btain.ticketman.ui.composables.TableCardTextItem
+import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnWithScrollbar
-import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
-import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

@@ -8,18 +8,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.time.formatTime
+import org.mr0btain.ticketman.ui.composables.ContactsBlock
+import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.screens.main.components.ContactsBlock
-import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
-import org.mr0btain.ticketman.ui.screens.main.components.SmallTicketList
-import ticketman.composeapp.generated.resources.*
+import org.mr0btain.ticketman.ui.composables.ticket.SmallTicketList
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.edit
+import ticketman.composeapp.generated.resources.info
+import ticketman.composeapp.generated.resources.user
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -222,12 +224,11 @@ fun CustomerInfoPane(
                                 )
 
                                 // ------------ Notes section ---------------
-                                NotesBlock(
+                                NoteBlock(
                                     label = "Notes",
                                     noteData = notes,
                                     onImageClick = onImageClick,
-                                    textSize = textSize,
-                                    maxImageSize = DpSize(150.dp, 75.dp)
+                                    textSize = textSize
                                 )
                             }
                         }

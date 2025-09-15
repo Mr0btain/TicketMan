@@ -189,8 +189,6 @@ fun EditNoteDialog(
                                 }
                                 .blur(if (isLoading) 8.dp else 0.dp), // blur while loading
                             imageData = imageData,
-                            imageMaxWidth = 200.dp,
-                            imageMaxHeight = 150.dp,
                             onImageClick = { /* TODO */ },
                             coroutineScope = scope,
                             clickEnabled = false
