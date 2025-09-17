@@ -6,9 +6,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +25,7 @@ fun ConfirmDeleteDialog(
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
-    val confirmCount = remember { mutableIntStateOf(0) }
+    var confirmCount by remember { mutableIntStateOf(0) }
 
     Dialog(
         onDismissRequest = { onCancel() },
@@ -50,21 +48,12 @@ fun ConfirmDeleteDialog(
 
                 Spacer(Modifier.padding(4.dp))
 
-                Text(
-                    text = "Are you sure you want to delete this ${dataType.stringName}",
-                    textAlign = TextAlign.Center
-                )
-
-                HorizontalDivider(modifier = Modifier.width(400.dp))
-
-                if (confirmCount.intValue == 0) {
-                    ConfirmOrCancelButtonRow(
-                        onConfirmClick = {
-                            if (isTwoStep) confirmCount.intValue == 1
-                        },
-                        onCancelClick = onCancel
+                if (confirmCount == 0) {
+                    Text(
+                        text = "Are you sure you want to delete this ${dataType.stringName}",
+                        textAlign = TextAlign.Center
                     )
-                } else if (confirmCount.intValue == 1) {
+                } else {
                     Text(
                         text = "ARE YOU REALLY REALLY FOR SURE??!!",
                         fontSize = 30.sp,
@@ -72,12 +61,17 @@ fun ConfirmDeleteDialog(
                         fontWeight = FontWeight.ExtraBold,
                         textAlign = TextAlign.Center
                     )
-
-                    ConfirmOrCancelButtonRow(
-                        onConfirmClick = onConfirm,
-                        onCancelClick = onCancel
-                    )
                 }
+
+                HorizontalDivider(modifier = Modifier.width(400.dp))
+
+                ConfirmOrCancelButtonRow(
+                    onConfirmClick = {
+                        if (isTwoStep && confirmCount == 0) confirmCount = 1
+                        else onConfirm()
+                    },
+                    onCancelClick = onCancel
+                )
             }
         }
     }

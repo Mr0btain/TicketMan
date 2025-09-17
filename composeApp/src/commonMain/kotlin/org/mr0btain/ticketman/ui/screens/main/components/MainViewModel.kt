@@ -94,8 +94,9 @@ class MainViewModel(
 
     private val customerDatabase = CustomerDatabaseImpl()
 
-    private val customerPager = Pager(pagingConfig) { CustomPagingSource(customerDatabase) }
+    private val customerPager = Pager(pagingConfig) { CustomPagingSource(customerDatabase).also { customerPagingSource = it } }
     val customerListFlow = customerPager.flow.cachedIn(viewModelScope)
+    private var customerPagingSource: CustomPagingSource<Customer>? = null
 
     private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
@@ -258,8 +259,18 @@ class MainViewModel(
         }
     }
 
-    fun removeCustomer(identifier: Uuid) {
-        // TODO
+    fun removeSelectedCustomer() {
+        viewModelScope.launch {
+            selectedCustomerData.value?.customer?.identifier?.let { identifier ->
+                customerDatabase.remove(identifier)
+
+                resetSelectedCustomer()
+
+                customerCache.remove(identifier)
+
+                customerPagingSource?.invalidate()
+            }
+        }
     }
 
     /**
@@ -438,6 +449,12 @@ class MainViewModel(
 
             // update selected
             setSelectedTicket(ticketData)
+        }
+    }
+
+    fun removeSelectedTicket() {
+        viewModelScope.launch {
+
         }
     }
 

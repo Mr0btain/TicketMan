@@ -128,20 +128,20 @@ fun ExpandedMainScreen(
     if (showConfirmDeleteDialog) {
         ConfirmDeleteDialog(
             dataType = dataType,
+            isTwoStep = true,
             onConfirm = {
-                coroutineScope.launch {
-                    when (dataType) {
-                        DataType.CUSTOMER -> {
-
-                        }
-                        DataType.TICKET -> TODO()
-                        DataType.INVENTORY -> TODO()
-                        DataType.USER -> TODO()
-                        else -> {
-                            // Do Nothing
-                        }
+                when (dataType) {
+                    DataType.CUSTOMER -> { viewModel.removeSelectedCustomer() }
+                    DataType.TICKET -> TODO()
+                    DataType.INVENTORY -> TODO()
+                    DataType.USER -> TODO()
+                    else -> {
+                        // Do Nothing
                     }
                 }
+
+                dataType = DataType.NONE
+                showConfirmDeleteDialog = false
             },
             onCancel = {
                 // Reset data types
@@ -259,11 +259,7 @@ fun ExpandedMainScreen(
                 }
             }
 
-            HorizontalDivider(
-                modifier = Modifier,
-                thickness = DividerDefaults.Thickness,
-                color = if (isDarkMode) MaterialTheme.colorScheme.surface else DividerDefaults.color
-            )
+            HorizontalDivider()
 
             when (tabIndex.value) {
                 0 -> {
