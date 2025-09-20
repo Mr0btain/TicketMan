@@ -6,6 +6,7 @@ import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
+import org.mr0btain.ticketman.data.uuid.v7toMillis
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -17,7 +18,6 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var name by UserTable.name
     var contactInfo by UserTable.contactInfo
     var access by UserTable.access
-    var time by UserTable.time
 
     // For notes
     var notes by NoteEntity via UserNoteTable
@@ -29,11 +29,12 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
 @OptIn(ExperimentalUuidApi::class)
 fun UserEntity.toUser(): User {
     return User(
+        identifier = id.value,
         username = this.username,
         password = this.password,
         name = this.name,
         contactInfo = this.contactInfo,
         accessLevel = this.access,
-        time = this.time
+        time = id.value.v7toMillis()
     )
 }

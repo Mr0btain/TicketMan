@@ -2,13 +2,15 @@ package org.mr0btain.ticketman.data.image
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.SubItem
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.uuid.UUIDSerializer
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import java.util.*
 
 // TODO: Maybe add more info to this like auth and such
 @Serializable
-data class StoredImage @OptIn(ExperimentalUuidApi::class) constructor(
-    val identifier: Uuid,
+data class StoredImage(
+    @Serializable(UUIDSerializer::class)
+    val identifier: UUID = UUIDv7.randomUUID(),
     val path: String,
     val time: Long
 ): SubItem

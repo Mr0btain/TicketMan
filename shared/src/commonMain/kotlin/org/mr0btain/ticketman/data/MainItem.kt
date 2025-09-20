@@ -1,12 +1,12 @@
 package org.mr0btain.ticketman.data
 
 import kotlinx.serialization.Serializable
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.uuid.UUIDSerializer
+import java.util.*
 
 
 @Serializable
 sealed interface MainItem {
-    @OptIn(ExperimentalUuidApi::class)
-    val identifier: Uuid
+    @Serializable(UUIDSerializer::class)
+    val identifier: UUID
 }

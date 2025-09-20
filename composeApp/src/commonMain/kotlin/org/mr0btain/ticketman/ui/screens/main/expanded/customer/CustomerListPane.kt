@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -18,20 +17,17 @@ import androidx.compose.ui.unit.sp
 import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.*
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerInfo: LazyPagingItems<Customer>,
-    onClick: (Uuid) -> Unit,
-    selectedCustomerId: Uuid?,
+    onClick: (UUID) -> Unit,
+    selectedCustomerId: UUID?,
     lazyListState: LazyListState,
     scope: CoroutineScope,
     isDarkMode: Boolean
@@ -141,11 +137,10 @@ private fun CustomerHeaderBox(
 // TODO: Make onclick go to customer details screen when its done. or a popup?
 // TODO: Make icon reflect if there is a ticket not completed?
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (Uuid) -> Unit,
+    onClick: (UUID) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,

@@ -8,7 +8,6 @@ import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.toStoredImage
-import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.toTicket
@@ -17,12 +16,9 @@ import org.mr0btain.ticketman.database.tables.user.UserTable
 import org.mr0btain.ticketman.database.tables.user.toUser
 import org.mr0btain.ticketman.error.*
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
+import java.util.*
 
 @Suppress("PrivatePropertyName")
-@OptIn(ExperimentalUuidApi::class)
 class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
@@ -45,12 +41,12 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         return result
     }
 
-    override fun getById(identifier: Uuid): User? {
+    override fun getById(identifier: UUID): User? {
         var result: User? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
-                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
+                UserEntity.findById(identifier)?.let { userEntity ->
                     result = userEntity.toUser()
                     AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_BY_ID_TAG, UserError.NOT_FOUND)
@@ -67,7 +63,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
             transaction {
                 result = UserEntity
                     .all()
-                    .orderBy(UserTable.name to SortOrder.ASC, UserTable.time to SortOrder.ASC)
+                    .orderBy(UserTable.name to SortOrder.ASC, UserTable.id to SortOrder.ASC)
                     .offset(offset)
                     .limit(pageSize)
                     .map { it.toUser() }
@@ -89,13 +85,12 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
             transaction {
                 data.forEach { item ->
                     // Insert into database
-                    UserEntity.new(item.identifier.toJavaUuid()) {
+                    UserEntity.new(item.identifier) {
                         username = item.username
                         password = item.password
                         name = item.name
                         contactInfo = item.contactInfo
                         access = item.accessLevel
-                        time = item.time
                     }
                 }
 
@@ -104,10 +99,10 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
     }
 
-    override fun remove(identifier: Uuid) {
+    override fun remove(identifier: UUID) {
         appLogTryCatch(REMOVE_TAG) {
             transaction {
-                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
+                UserEntity.findById(identifier)?.let { userEntity ->
                     userEntity.delete()
                     AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(REMOVE_TAG, UserError.NOT_FOUND)
@@ -121,13 +116,12 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         appLogTryCatch(ADD_TAG) {
             transaction {
                 // Insert into database
-                UserEntity.new(data.identifier.toJavaUuid()) {
+                UserEntity.new(data.identifier) {
                     username = data.username
                     password = data.password
                     name = data.name
                     contactInfo = data.contactInfo
                     access = data.accessLevel
-                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
@@ -139,14 +133,13 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         appLogTryCatch(UPDATE_TAG) {
             transaction {
                 UserEntity
-                    .findById(data.identifier.toJavaUuid())
+                    .findById(data.identifier)
                     ?.apply {
                         username = data.username
                         password = data.password
                         name = data.name
                         contactInfo = data.contactInfo
                         access = data.accessLevel
-                        time = data.time
 
                         AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
                     } ?: AppLogger.i(UPDATE_TAG, NoteError.NOT_FOUND)
@@ -154,13 +147,13 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
     }
 
-    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>) {
+    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(ADD_NOTE_TAG) {
             transaction {
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to customer notes
-                    UserEntity.findByIdAndUpdate(identifier.toJavaUuid()) { userEntity ->
+                    UserEntity.findByIdAndUpdate(identifier) { userEntity ->
                         userEntity.notes = SizedCollection(userEntity.notes + noteEntity)
 
                         AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
@@ -170,12 +163,12 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>? {
+    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
         var result: Map<Note, List<StoredImage>>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
-                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
+                UserEntity.findById(identifier)?.let { userEntity ->
                     result = userEntity.notes.associate { noteEntity ->
                         noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
                     }
@@ -196,13 +189,13 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
      * @param userId Identifier of the user
      * @param ticketId Identifier of the ticket
      */
-    fun addTicket(userId: Uuid, ticketId: Uuid) {
+    fun addTicket(userId: UUID, ticketId: UUID) {
         appLogTryCatch(ADD_TICKET_TAG) {
             transaction {
                 // Get ticket entity
-                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
+                TicketEntity.findById(ticketId)?.let { ticketEntity ->
                     // Get user entity
-                    UserEntity.findById(userId.toJavaUuid())?.let { userEntity ->
+                    UserEntity.findById(userId)?.let { userEntity ->
                         // Insert ticket into user links
                         userEntity.tickets = SizedCollection(userEntity.tickets + ticketEntity)
 
@@ -217,12 +210,12 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
      *  Gets all tickets for a user
      *  @param identifier Identifier of the user
      */
-    fun getTickets(identifier: Uuid): List<Ticket>? {
+    fun getTickets(identifier: UUID): List<Ticket>? {
         var result: List<Ticket>? = null
 
         appLogTryCatch(GET_TICKETS_TAG) {
             transaction {
-                UserEntity.findById(identifier.toJavaUuid())?.let { userEntity ->
+                UserEntity.findById(identifier)?.let { userEntity ->
                     result = userEntity.tickets
                         .map { ticketEntity -> ticketEntity.toTicket() }
                 } ?: AppLogger.i(GET_TICKETS_TAG, UserError.NOT_FOUND)

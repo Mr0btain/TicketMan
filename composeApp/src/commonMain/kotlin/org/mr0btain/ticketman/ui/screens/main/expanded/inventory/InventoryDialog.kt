@@ -25,10 +25,8 @@ import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
-import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Add ability to edit notes?
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,

@@ -1,14 +1,16 @@
 package org.mr0btain.ticketman.data
 
 import kotlinx.serialization.Serializable
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.uuid.UUIDSerializer
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import java.util.*
 
 // TODO: Add images?
 
 @Serializable
-data class Inventory @OptIn(ExperimentalUuidApi::class) constructor(
-    override val identifier: Uuid = Uuid.random(),
+data class Inventory(
+    @Serializable(UUIDSerializer::class)
+    override val identifier: UUID = UUIDv7.randomUUID(),
     val name: String = "",
     val description: String = "",
     val stock: Int = Int.MAX_VALUE,

@@ -15,11 +15,8 @@ import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
+import java.util.*
 
-@OptIn(ExperimentalUuidApi::class)
 class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
     override fun all(): List<Ticket>? {
         var result: List<Ticket>? = null
@@ -38,12 +35,12 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         return result
     }
 
-    override fun getById(identifier: Uuid): Ticket? {
+    override fun getById(identifier: UUID): Ticket? {
         var result: Ticket? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
-                TicketEntity.findById(identifier.toJavaUuid())?.let { ticketEntity ->
+                TicketEntity.findById(identifier)?.let { ticketEntity ->
                     result = ticketEntity.toTicket()
                     AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_BY_ID_TAG, TicketError.NOT_FOUND)
@@ -59,7 +56,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         appLogTryCatch(GET_PAGED_ITEMS_TAG) {
             transaction {
                 result = TicketEntity.all()
-                    .orderBy(TicketTable.time to SortOrder.DESC) // or ASC
+                    .orderBy(TicketTable.id to SortOrder.DESC) // or ASC
                     .offset(offset)
                     .limit(pageSize)
                     .map { it.toTicket() }
@@ -88,15 +85,11 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         appLogTryCatch(ADD_ALL_TAG) {
             transaction {
                 data.forEach { item ->
-                    // Convert kotlin uuid to java for database
-                    val identifier = item.identifier.toJavaUuid()
-
                     // Insert into database
-                    TicketEntity.new(identifier) {
+                    TicketEntity.new(item.identifier) {
                         device = item.device
                         status = item.status
                         priority = item.priority
-                        time = item.time
                     }
                 }
 
@@ -105,10 +98,10 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun remove(identifier: Uuid) {
+    override fun remove(identifier: UUID) {
         appLogTryCatch(REMOVE_TAG) {
             transaction {
-                TicketEntity.findById(identifier.toJavaUuid())?.let { ticketEntity ->
+                TicketEntity.findById(identifier)?.let { ticketEntity ->
                     AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
                     ticketEntity.delete()
                 } ?: AppLogger.i(REMOVE_TAG, TicketError.NOT_FOUND)
@@ -120,11 +113,10 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         appLogTryCatch(ADD_TAG) {
             transaction {
                 // Insert into database
-                TicketEntity.new(data.identifier.toJavaUuid()) {
+                TicketEntity.new(data.identifier) {
                     device = data.device
                     status = data.status
                     priority = data.priority
-                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
@@ -136,11 +128,10 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         appLogTryCatch(UPDATE_TAG) {
             transaction {
                 TicketEntity
-                    .findByIdAndUpdate(data.identifier.toJavaUuid()) { item ->
+                    .findByIdAndUpdate(data.identifier) { item ->
                         item.device = data.device
                         item.status = data.status
                         item.priority = data.priority
-                        item.time = data.time
 
                         AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
                     } ?: AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND)
@@ -148,13 +139,13 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>) {
+    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(ADD_NOTE_TAG) {
             transaction {
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to customer notes
-                    TicketEntity.findByIdAndUpdate(identifier.toJavaUuid()) { ticketEntity ->
+                    TicketEntity.findByIdAndUpdate(identifier) { ticketEntity ->
                         ticketEntity.notes = SizedCollection(ticketEntity.notes + noteEntity)
 
                         AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
@@ -164,12 +155,12 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>? {
+    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
         var result: Map<Note, List<StoredImage>>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
-                TicketEntity.findById(identifier.toJavaUuid())?.let { ticketEntity ->
+                TicketEntity.findById(identifier)?.let { ticketEntity ->
                     result = ticketEntity.notes.associate { noteEntity ->
                         noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
                     }

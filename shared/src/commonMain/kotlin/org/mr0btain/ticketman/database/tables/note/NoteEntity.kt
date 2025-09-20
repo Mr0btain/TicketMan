@@ -5,16 +5,15 @@ import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
+import org.mr0btain.ticketman.data.uuid.v7toMillis
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.toKotlinUuid
 
 class NoteEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     companion object : UUIDEntityClass<NoteEntity>(NoteTable)
 
     var author by NoteTable.author
     var message by NoteTable.message
-    var time by NoteTable.time
 
     // List of images
     var images by ImageEntity via NoteImageTable
@@ -23,9 +22,9 @@ class NoteEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
 @OptIn(ExperimentalUuidApi::class)
 fun NoteEntity.toNote(): Note {
     return Note(
-        identifier = id.value.toKotlinUuid(),
+        identifier = id.value,
         author = author,
         message = message,
-        time = time
+        time = id.value.v7toMillis()
     )
 }

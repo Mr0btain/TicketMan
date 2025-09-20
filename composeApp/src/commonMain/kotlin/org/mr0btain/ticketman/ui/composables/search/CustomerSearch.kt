@@ -10,8 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
 import org.mr0btain.ticketman.data.Customer
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * SearchBox for searching customers. Will return an id or a name and a true if they want to add new if it doesn't exist
@@ -22,14 +21,14 @@ import kotlin.uuid.Uuid
  * @param onClick Event called when clicking, uuid passed is identifier for customer
  */
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerSearch(
     modifier: Modifier = Modifier,
     items: List<Customer>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Uuid) -> Unit
+    onClick: (UUID) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
 

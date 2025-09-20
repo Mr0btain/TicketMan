@@ -7,13 +7,15 @@ import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.uuid.UUIDSerializer
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import java.util.UUID
 import kotlin.random.Random
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 @Serializable
-data class Ticket @OptIn(ExperimentalUuidApi::class) constructor(
-    override val identifier: Uuid = Uuid.random(),
+data class Ticket(
+    @Serializable(UUIDSerializer::class)
+    override val identifier: UUID = UUIDv7.randomUUID(),
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Long.MAX_VALUE),
     val priority: TicketPriority = TicketPriority(TicketPriorityType.LOW, Long.MAX_VALUE),

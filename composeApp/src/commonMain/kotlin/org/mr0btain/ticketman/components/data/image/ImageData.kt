@@ -5,11 +5,11 @@ import org.mr0btain.ticketman.data.SubItem
 import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.time.getTime
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import java.util.*
 
-data class ImageData @OptIn(ExperimentalUuidApi::class) constructor(
-    val identifier: Uuid,
+data class ImageData(
+    val identifier: UUID,
     val path: String,
     val image: ImageBitmap,
     val time: Time,
@@ -17,12 +17,9 @@ data class ImageData @OptIn(ExperimentalUuidApi::class) constructor(
     val description: String = ""
 ): SubItem
 
-@OptIn(ExperimentalUuidApi::class)
-fun newImageData(parentId: Uuid, image: ImageBitmap): ImageData {
-    val id = Uuid.random()
-
+fun newImageData(parentId: UUID, image: ImageBitmap): ImageData {
     return ImageData(
-        identifier = id,
+        identifier = UUIDv7.randomUUID(),
         path = parentId.toString(),
         time = formatTime(getTime()),
         image = image

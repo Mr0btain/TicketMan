@@ -19,13 +19,12 @@ import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.TicketSearch
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 // TODO: Add hours worked/ inventory items to a list of expense and charges
 // TODO: Add invoice and ability to export
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketPanel(
     modifier: Modifier = Modifier,
@@ -37,8 +36,8 @@ fun TicketPanel(
     currentUser: UserData?,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
-    onSelectedTicketChange: (Uuid) -> Unit,
-    onDeleteTicket: (Uuid) -> Unit,
+    onSelectedTicketChange: (UUID) -> Unit,
+    onDeleteTicket: (UUID) -> Unit,
     onImageClick: (List<ImageData>) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
@@ -49,7 +48,7 @@ fun TicketPanel(
     // Search items
     //TODO: FIx
     val searchItems = remember(selectedPanel) {
-        emptyList<Uuid>() //sortedTickets.map { it.identifier }
+        emptyList<UUID>() //sortedTickets.map { it.identifier }
     }
 
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring

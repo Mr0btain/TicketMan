@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.CustomPagingSource
+import org.mr0btain.ticketman.components.pagination.OffsetPager
 import org.mr0btain.ticketman.components.utils.flushImagesToDisk
 import org.mr0btain.ticketman.components.utils.pullImagesFromDisk
 import org.mr0btain.ticketman.data.Customer
@@ -37,9 +38,8 @@ import org.mr0btain.ticketman.generateMockUser
 import org.mr0btain.ticketman.generateRandomInventoryItem
 import org.mr0btain.ticketman.generateRandomTicket
 import org.mr0btain.ticketman.logging.AppLogger
+import java.util.*
 import kotlin.random.Random
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 // TODO: Setup log in button and log in status
 
@@ -48,7 +48,6 @@ import kotlin.uuid.Uuid
  * Used to store data that needs to persist for the lifetime of the app
  */
 
-@OptIn(ExperimentalUuidApi::class)
 class MainViewModel(
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
@@ -85,12 +84,9 @@ class MainViewModel(
     // Paging config for pagers
     val pagingConfig = PagingConfig(pageSize = 40, maxSize = 400)
 
-    // Caches for storing some recently used items
-    //val imageCache = LruCache<Uuid, ImageData>(maxCacheSize)
-
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
-    val customerCache = LruCache<Uuid, CustomerData>(maxCacheSize, "CustomerCache")
+    val customerCache = LruCache<UUID, CustomerData>(maxCacheSize, "CustomerCache")
 
     private val customerDatabase = CustomerDatabaseImpl()
 
@@ -100,6 +96,20 @@ class MainViewModel(
 
     private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
+
+    val testPager = OffsetPager(
+        coroutineScope = viewModelScope,
+        pageLoadLimit = 10,
+        maxCacheSize = 4,
+        pageSize = 20,
+        count = customerDatabase.count(),
+        fetch = { page, pageSize ->
+            customerDatabase.getPagedItems(
+                offset = (page * pageSize).toLong(),
+                pageSize = pageSize
+            ) ?: emptyList()
+        }
+    )
 
     /** Sets the selected customer and inserts the data into the cache */
     private suspend fun setSelectedCustomer(customerData: CustomerData) {
@@ -111,7 +121,7 @@ class MainViewModel(
 
     }
 
-    fun changeSelectedCustomer(identifier: Uuid) {
+    fun changeSelectedCustomer(identifier: UUID) {
         viewModelScope.launch {
             if (selectedCustomerData.value?.customer?.identifier != identifier) {
                 // Check if it exists in cache
@@ -362,7 +372,7 @@ class MainViewModel(
 
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
 
-    val ticketCache = LruCache<Uuid, TicketData>(maxCacheSize, "TicketCache")
+    val ticketCache = LruCache<UUID, TicketData>(maxCacheSize, "TicketCache")
 
     private val ticketDatabase = TicketDatabaseImpl()
 
@@ -381,7 +391,7 @@ class MainViewModel(
         ticketCache.put(ticketData.ticket.identifier, ticketData)
     }
 
-    fun changeSelectedTicket(identifier: Uuid) {
+    fun changeSelectedTicket(identifier: UUID) {
         viewModelScope.launch {
             if (selectedTicketData.value?.ticket?.identifier != identifier) {
                 val cachedTicket = ticketCache.get(identifier)?.also { ticketData ->
@@ -460,7 +470,7 @@ class MainViewModel(
 
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
 
-    val inventoryCache = LruCache<Uuid, InventoryData>(maxCacheSize, "InventoryCache")
+    val inventoryCache = LruCache<UUID, InventoryData>(maxCacheSize, "InventoryCache")
 
     private val inventoryDatabase = InventoryDatabaseImpl()
 
@@ -479,7 +489,7 @@ class MainViewModel(
         inventoryCache.put(inventoryData.inventory.identifier, inventoryData)
     }
 
-    fun changeSelectedInventory(identifier: Uuid) {
+    fun changeSelectedInventory(identifier: UUID) {
         viewModelScope.launch {
             if (selectedInventoryData.value?.inventory?.identifier != identifier) {
                 val cachedInventory = inventoryCache.get(identifier)?.also { inventoryData ->
@@ -561,7 +571,7 @@ class MainViewModel(
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */
 
-    val userCache = LruCache<Uuid, UserData>(maxCacheSize, "UserCache")
+    val userCache = LruCache<UUID, UserData>(maxCacheSize, "UserCache")
 
     private val userDatabase = UserDatabaseImpl()
 
@@ -580,7 +590,7 @@ class MainViewModel(
         userCache.put(userData.user.identifier, userData)
     }
 
-    fun changeSelectedUser(identifier: Uuid) {
+    fun changeSelectedUser(identifier: UUID) {
         viewModelScope.launch {
             if (selectedUserData.value?.user?.identifier != identifier) {
                 val cachedUser = userCache.get(identifier)?.also { userData ->
@@ -736,7 +746,7 @@ class MainViewModel(
     /** ----------------------------------------------TESTING------------------------------------------------------------------- */
 
     fun fillDatabaseWithTestData() {
-        val ticketIdentifiers = mutableListOf<Uuid>()
+        val ticketIdentifiers = mutableListOf<UUID>()
         val ticketNum = 1000
         val customerNum = 400
         val inventoryNum = 100

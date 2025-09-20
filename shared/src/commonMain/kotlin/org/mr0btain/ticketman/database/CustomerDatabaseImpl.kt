@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.Customer
 import org.mr0btain.ticketman.data.Ticket
@@ -19,16 +20,13 @@ import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
-import kotlin.uuid.toKotlinUuid
+import org.mr0btain.ticketman.data.uuid.v7toMillis
+import java.util.*
 
 /**
  * Used for all Customer data actions in database
  */
 @Suppress("PrivatePropertyName")
-@OptIn(ExperimentalUuidApi::class)
 open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
@@ -50,16 +48,47 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         return result
     }
 
-    override fun getById(identifier: Uuid): Customer? {
+    override fun getById(identifier: UUID): Customer? {
         var result: Customer? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                CustomerEntity.findById(identifier)?.let { customerEntity ->
                     result = customerEntity.toCustomer()
                     AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_BY_ID_TAG, CustomerError.NOT_FOUND)
             }
+        }
+
+        return result
+    }
+
+    /** Should be faster than offset */
+    fun getPagedItems(cursor: UUID, pageSize: Int): List<Customer>? {
+        var result: List<Customer>? = null
+
+        appLogTryCatch(GET_PAGED_ITEMS_TAG) {
+            transaction {
+                result = CustomerTable
+                    .selectAll()
+                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.id to SortOrder.DESC)
+                    .where { CustomerTable.id greaterEq cursor }
+                    .limit(pageSize)
+                    .map { resultRow ->
+                        Customer(
+                            identifier = resultRow[CustomerTable.id].value,
+                            name = resultRow[CustomerTable.name],
+                            address = resultRow[CustomerTable.address],
+                            contactInfo = resultRow[CustomerTable.contactInfo],
+                            time = resultRow[CustomerTable.id].value.v7toMillis()
+                        )
+                    }
+            }
+
+            if (result != null)
+                AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
+            else
+                AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
         }
 
         return result
@@ -72,7 +101,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
             transaction {
                 result = CustomerEntity
                     .all()
-                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.time to SortOrder.DESC)
+                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.id to SortOrder.DESC)
                     .offset(offset)
                     .limit(pageSize)
                     .map { it.toCustomer() }
@@ -94,11 +123,10 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
             transaction {
                 data.forEach { item ->
                     // Insert into database
-                    CustomerEntity.new(item.identifier.toJavaUuid()) {
+                    CustomerEntity.new(item.identifier) {
                         name = item.name
                         address = item.address
                         contactInfo = item.contactInfo
-                        time = item.time
                     }
                 }
 
@@ -107,10 +135,10 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun remove(identifier: Uuid) {
+    override fun remove(identifier: UUID) {
         appLogTryCatch(REMOVE_TAG) {
             transaction {
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                CustomerEntity.findById(identifier)?.let { customerEntity ->
                     customerEntity.delete()
 
                     AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
@@ -123,11 +151,10 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         appLogTryCatch(ADD_TAG) {
             transaction {
                 // Insert into database
-                CustomerEntity.new(data.identifier.toJavaUuid()) {
+                CustomerEntity.new(data.identifier) {
                     name = data.name
                     address = data.address
                     contactInfo = data.contactInfo
-                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
@@ -139,12 +166,11 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         appLogTryCatch(UPDATE_TAG) {
             transaction {
                 CustomerEntity
-                    .findById(data.identifier.toJavaUuid())
+                    .findById(data.identifier)
                     ?.apply {
                         name = data.name
                         address = data.address
                         contactInfo = data.contactInfo
-                        time = data.time
 
                         AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
                     } ?: AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND)
@@ -152,13 +178,13 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>) {
+    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(ADD_NOTE_TAG) {
             transaction {
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to customer notes
-                    CustomerEntity.findByIdAndUpdate(identifier.toJavaUuid()) { customerEntity ->
+                    CustomerEntity.findByIdAndUpdate(identifier) { customerEntity ->
                         customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
 
                         AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
@@ -168,12 +194,12 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>? {
+    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
         var result: Map<Note, List<StoredImage>>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                CustomerEntity.findById(identifier)?.let { customerEntity ->
                     result = customerEntity.notes.associate { noteEntity ->
                         noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
                     }
@@ -194,13 +220,13 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      * @param customerId Identifier of customer to link ticket to
      * @param ticketId Identifier of ticket to link to customer
      */
-    fun addTicket(customerId: Uuid, ticketId: Uuid) {
+    fun addTicket(customerId: UUID, ticketId: UUID) {
         appLogTryCatch(ADD_TICKET_TAG) {
             transaction {
                 // Get ticket entity
-                TicketEntity.findById(ticketId.toJavaUuid())?.let { ticketEntity ->
+                TicketEntity.findById(ticketId)?.let { ticketEntity ->
                     // Get customer entity
-                    CustomerEntity.findById(customerId.toJavaUuid())?.let { customerEntity ->
+                    CustomerEntity.findById(customerId)?.let { customerEntity ->
                         // Insert ticket into customer links
                         customerEntity.tickets = SizedCollection(customerEntity.tickets + ticketEntity)
                     } ?: AppLogger.i(ADD_TICKET_TAG, CustomerError.NOT_FOUND)
@@ -214,15 +240,15 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      * @param customerId Identifier of customer to unlink ticket from
      * @param ticketId Identifier of ticket to unlink from customer
      */
-    fun removeTicket(customerId: Uuid, ticketId: Uuid) {
+    fun removeTicket(customerId: UUID, ticketId: UUID) {
         appLogTryCatch(REMOVE_TICKET_TAG) {
             transaction {
                 // Get customer entity
-                CustomerEntity.findById(customerId.toJavaUuid())?.let { customerEntity ->
+                CustomerEntity.findById(customerId)?.let { customerEntity ->
                     // Remove ticket
                     customerEntity.tickets = SizedCollection(
                         customerEntity.tickets
-                            .filter { it.id.value.toKotlinUuid() != ticketId }
+                            .filter { it.id.value != ticketId }
                     )
 
                     AppLogger.m(REMOVE_TICKET_TAG, SimpleResult.SUCCESS)
@@ -235,12 +261,12 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      * Gets all tickets for a customer
      * @param identifier Identifier of customer to get tickets for
      */
-    fun getTickets(identifier: Uuid): List<Ticket>? {
+    fun getTickets(identifier: UUID): List<Ticket>? {
         var tickets: List<Ticket>? = null
 
         appLogTryCatch(GET_TICKETS_TAG) {
             transaction {
-                CustomerEntity.findById(identifier.toJavaUuid())?.let { customerEntity ->
+                CustomerEntity.findById(identifier)?.let { customerEntity ->
                     tickets = customerEntity.tickets
                         .map { ticketEntity -> ticketEntity.toTicket() }
                 } ?: AppLogger.i(GET_TICKETS_TAG, CustomerError.NOT_FOUND)

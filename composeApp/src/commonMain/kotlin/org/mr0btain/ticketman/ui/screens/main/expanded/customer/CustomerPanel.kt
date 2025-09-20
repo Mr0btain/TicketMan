@@ -1,11 +1,9 @@
-@file:OptIn(ExperimentalUuidApi::class)
-
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -15,12 +13,10 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.shared.toStringName
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.CustomerSearch
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.*
 
 @Composable
 fun CustomerPanel(
@@ -30,9 +26,9 @@ fun CustomerPanel(
     selectedCustomer: CustomerData?,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
-    onCustomerSelectionChange: (Uuid) -> Unit,
+    onCustomerSelectionChange: (UUID) -> Unit,
     onDeleteCustomer: () -> Unit,
-    onTicketClick: (Uuid) -> Unit,
+    onTicketClick: (UUID) -> Unit,
     onImageClick: (List<ImageData>) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope()

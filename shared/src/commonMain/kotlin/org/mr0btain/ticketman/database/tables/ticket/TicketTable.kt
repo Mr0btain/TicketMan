@@ -11,5 +11,4 @@ object TicketTable: UUIDTable("tickets") {
     val device = json<Device>("device", Json { ignoreUnknownKeys = true })
     val status = json<TicketStatus>("status", Json { ignoreUnknownKeys = true })
     val priority = json<TicketPriority>("priority", Json { ignoreUnknownKeys = true })
-    val time = long("time")
 }

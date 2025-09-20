@@ -26,19 +26,18 @@ import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.InventorySearch
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 // TODO: Setup setting reorder on stock hitting a certain amount. Like a popup on login or when it happens?
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     inventoryList: LazyPagingItems<Inventory>,
     selectedInventory: InventoryData?,
-    onSelectedInventoryChange: (Uuid) -> Unit,
+    onSelectedInventoryChange: (UUID) -> Unit,
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
     onDeleteInventory: () -> Unit,

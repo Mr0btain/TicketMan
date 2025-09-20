@@ -8,8 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * SearchBox for searching tickets. Will return an id or a name and a true if they want to add new if it doesn't exist
@@ -22,14 +21,14 @@ import kotlin.uuid.Uuid
 
 // TODO: Possibly add some extra details into prefix like customer name?
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketSearch(
     modifier: Modifier = Modifier,
-    items: List<Uuid>,
+    items: List<UUID>,
     input: String,
     onInputChange: (String) -> Unit,
-    onClick: (Uuid) -> Unit,
+    onClick: (UUID) -> Unit,
 ) {
     var expanded by remember { mutableStateOf(false) }
     val filteredList = remember(input) { items.filter { it.toString().lowercase().contains(input.lowercase()) } }

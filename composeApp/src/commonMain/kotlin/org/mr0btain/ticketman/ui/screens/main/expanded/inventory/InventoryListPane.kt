@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,21 +18,18 @@ import androidx.compose.ui.unit.sp
 import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.getPlatform
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.*
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     pagingItems: LazyPagingItems<Inventory>,
-    selected: Uuid?,
-    onClick: (Uuid) -> Unit,
+    selected: UUID?,
+    onClick: (UUID) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {

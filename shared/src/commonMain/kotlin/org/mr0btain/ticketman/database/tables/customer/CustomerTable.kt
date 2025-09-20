@@ -12,5 +12,4 @@ object CustomerTable : UUIDTable("customer") {
     val name = json<PersonName>("person_name", Json { ignoreUnknownKeys = true })
     val address = json<Address>("address", Json { ignoreUnknownKeys = true })
     val contactInfo = json<ContactInfo>("contact", Json { ignoreUnknownKeys = true })
-    val time = long("time")
 }

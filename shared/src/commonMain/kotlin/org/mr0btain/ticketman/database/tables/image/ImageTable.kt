@@ -4,5 +4,4 @@ import org.jetbrains.exposed.v1.core.dao.id.UUIDTable
 
 object ImageTable : UUIDTable() {
     val path = varchar("path", 512)
-    val time = long("time")
 }

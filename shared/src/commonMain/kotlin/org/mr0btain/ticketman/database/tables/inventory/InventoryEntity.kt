@@ -6,9 +6,9 @@ import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
+import org.mr0btain.ticketman.data.uuid.v7toMillis
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.toKotlinUuid
 
 class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     companion object : UUIDEntityClass<InventoryEntity>(InventoryTable)
@@ -18,7 +18,6 @@ class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var stock by InventoryTable.stock
     var cost by InventoryTable.cost
     var price by InventoryTable.price
-    var time by InventoryTable.time
 
     // For notes
     var notes by NoteEntity via InventoryNoteTable
@@ -30,12 +29,12 @@ class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
 @OptIn(ExperimentalUuidApi::class)
 fun InventoryEntity.toInventoryItem(): Inventory {
     return Inventory(
-        identifier = id.value.toKotlinUuid(),
+        identifier = id.value,
         name = name,
         description = description,
         stock = stock,
         cost = cost,
         price = price,
-        time = time
+        time = id.value.v7toMillis()
     )
 }

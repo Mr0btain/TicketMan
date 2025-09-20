@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -19,22 +18,16 @@ import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.composables.ticket.SmallTicketList
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.edit
-import ticketman.composeapp.generated.resources.info
-import ticketman.composeapp.generated.resources.tag
-import ticketman.composeapp.generated.resources.user
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import ticketman.composeapp.generated.resources.*
+import java.util.*
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun CustomerInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     selectedCustomer: CustomerData?,
     onEditClick: () -> Unit,
-    onTicketClick: (Uuid) -> Unit,
+    onTicketClick: (UUID) -> Unit,
     onImageClick: (List<ImageData>) -> Unit
 ) {
     // Sizes for icons and text

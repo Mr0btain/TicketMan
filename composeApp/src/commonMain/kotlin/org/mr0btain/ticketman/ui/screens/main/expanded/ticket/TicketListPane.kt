@@ -26,19 +26,17 @@ import org.mr0btain.ticketman.ui.composables.TablePriorityItem
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
 import org.mr0btain.ticketman.ui.composables.TableTicketIdItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 // TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     pagingItems: LazyPagingItems<Ticket>,
-    selectedId: Uuid?,
-    onClick: (Uuid) -> Unit,
+    selectedId: UUID?,
+    onClick: (UUID) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
@@ -155,7 +153,6 @@ private fun TicketHeaderBox(
     }
 }
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun TicketTableItem(
     modifier: Modifier = Modifier,

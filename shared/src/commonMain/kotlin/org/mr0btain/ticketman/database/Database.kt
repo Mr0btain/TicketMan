@@ -12,10 +12,7 @@ import org.mr0btain.ticketman.error.NoteError
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
-import kotlin.uuid.toKotlinUuid
+import java.util.*
 
 // TODO: Add a way to remove images from disk as well
 
@@ -24,7 +21,6 @@ import kotlin.uuid.toKotlinUuid
  * @param tag Tag used for logging. Example: TAG:AddAll will be printed in console
  */
 @Suppress("PropertyName")
-@OptIn(ExperimentalUuidApi::class)
 abstract class Database<T : MainItem>(protected val tag: String) {
     protected val GET_ALL_TAG = "$tag:GetAll"
     protected val GET_BY_ID_TAG = "$tag:GetById"
@@ -50,11 +46,11 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * Gets an item by its identifier
      * @param identifier The identifier of the item to retrieve
      */
-    abstract fun getById(identifier: Uuid): T?
+    abstract fun getById(identifier: UUID): T?
 
     /**
      * Gets a list of items limited by the page size at the designated offset
-     * @param offset The starting offset to get items
+     * @param offset The starting offset to get items from
      * @param pageSize The amount of items to fetch
      */
     abstract fun getPagedItems(offset: Long, pageSize: Int): List<T>?
@@ -72,7 +68,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * Removes an item from the database
      * @param identifier Identifier of item to remove
      */
-    abstract fun remove(identifier: Uuid)
+    abstract fun remove(identifier: UUID)
 
     /**
      * Adds an item to the database
@@ -95,7 +91,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
         return appLogTryCatch<NoteEntity?>(INSERT_NOTE_TAG) {
             transaction {
                 // Add new note to database
-                val entity = NoteEntity.new(note.identifier.toJavaUuid()) {
+                val entity = NoteEntity.new(note.identifier) {
                     author = note.author
                     message = note.message
                     time = note.time
@@ -128,13 +124,13 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * @param note Note to insert and link to item
      * @param storedImages Images to insert and link to note
      */
-    abstract fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>)
+    abstract fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>)
 
     /**
      * Returns a list of notes and their respective images
      * @param identifier Identifier of item to get notes for
      */
-    abstract fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>?
+    abstract fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>?
 
     /**
      * Updates a note with this data. Essentially replaces the note with the ID with the data passed
@@ -146,13 +142,13 @@ abstract class Database<T : MainItem>(protected val tag: String) {
         appLogTryCatch(UPDATE_NOTE_TAG) {
             transaction {
                 // Add new note to database
-                NoteEntity.findByIdAndUpdate(note.identifier.toJavaUuid()) { noteEntity ->
+                NoteEntity.findByIdAndUpdate(note.identifier) { noteEntity ->
                     noteEntity.author = note.author
                     noteEntity.message = note.message
                     noteEntity.time = note.time
 
                     val existingImageIds = noteEntity.images
-                        .map { it.id.value.toKotlinUuid() }
+                        .map { it.id.value }
                         .toMutableList()
 
 
@@ -184,7 +180,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     fun insertImage(storedImage: StoredImage): ImageEntity? {
         return appLogTryCatch<ImageEntity?>(INSERT_IMAGE_TAG) {
             val entity = transaction {
-                ImageEntity.new(storedImage.identifier.toJavaUuid()) {
+                ImageEntity.new(storedImage.identifier) {
                     path = storedImage.path
                     time = storedImage.time
                 }
@@ -203,7 +199,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     fun updateImage(storedImage: StoredImage): ImageEntity? {
         appLogTryCatch<ImageEntity?>(UPDATE_IMAGE_TAG) {
             transaction {
-                val entity = ImageEntity.findByIdAndUpdate(storedImage.identifier.toJavaUuid()) { imageEntity ->
+                val entity = ImageEntity.findByIdAndUpdate(storedImage.identifier) { imageEntity ->
                     imageEntity.path = storedImage.path
                     imageEntity.time = storedImage.time
                 }
@@ -224,10 +220,10 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * Removes an image from ImageTable.
      * @param identifier Identifier of image to remove
      */
-    fun removeImage(identifier: Uuid) {
+    fun removeImage(identifier: UUID) {
         appLogTryCatch(REMOVE_IMAGE_TAG) {
             transaction {
-                ImageEntity.findById(identifier.toJavaUuid())?.let { imageEntity ->
+                ImageEntity.findById(identifier)?.let { imageEntity ->
                     imageEntity.delete()
 
                     AppLogger.m(REMOVE_IMAGE_TAG, SimpleResult.SUCCESS)
@@ -240,10 +236,10 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * Removes a note from the NoteTab;e and its images from the ImageTable
      * @param identifier Identifier of the Note to remove
      */
-    fun removeNote(identifier: Uuid) {
+    fun removeNote(identifier: UUID) {
         appLogTryCatch(REMOVE_NOTE_TAG) {
             transaction {
-                NoteEntity.findById(identifier.toJavaUuid())?.let { noteEntity ->
+                NoteEntity.findById(identifier)?.let { noteEntity ->
                     noteEntity.images.forEach { imageEntity ->
                         imageEntity.delete()
                     }
@@ -261,10 +257,10 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * @param identifier Identifier of note to link images to
      * @param images List of images to add
      */
-    fun addImagesToNote(identifier: Uuid, images: List<StoredImage>) {
+    fun addImagesToNote(identifier: UUID, images: List<StoredImage>) {
         appLogTryCatch(ADD_IMAGE_TO_NOTE_TAG) {
             transaction {
-                NoteEntity.findById(identifier.toJavaUuid())?.let { noteEntity ->
+                NoteEntity.findById(identifier)?.let { noteEntity ->
                     val imageCollection = images.map { image ->
                         ImageEntity.new {
                             path = image.path

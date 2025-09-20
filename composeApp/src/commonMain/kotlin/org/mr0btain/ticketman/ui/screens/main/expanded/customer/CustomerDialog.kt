@@ -37,13 +37,11 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit_2
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
+import java.util.*
 import kotlin.math.min
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 // TODO: Add ability to assign already existing tickets to customer.
 // TODO: Add ability to edit note
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
@@ -151,7 +149,7 @@ fun CustomerDialog(
             onConfirm = {
                 when (dataType) {
                     DataType.TICKET -> {
-                        (itemToDelete as? Uuid)?.let { identifier ->
+                        (itemToDelete as? UUID)?.let { identifier ->
                             tickets.removeIf { it.ticket.identifier == identifier }
                         }
                     }
@@ -169,7 +167,7 @@ fun CustomerDialog(
                     }
 
                     DataType.NOTE -> {
-                        (itemToDelete as? Uuid)?.let { identifier ->
+                        (itemToDelete as? UUID)?.let { identifier ->
                             notes.removeIf { it.note.identifier == identifier }
                         }
                     }
@@ -580,13 +578,12 @@ private fun CustomerDialogPhoneList(
 
 // TODO: Convert to lazy row
 // TODO: Add Note section
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun CustomerDialogTicketList(
     modifier: Modifier = Modifier,
     tickets: List<TicketData>,
-    onTicketClick: (Uuid) -> Unit,
-    onDeleteClick: (Uuid) -> Unit
+    onTicketClick: (UUID) -> Unit,
+    onDeleteClick: (UUID) -> Unit
 ) {
     Column(
         modifier = modifier

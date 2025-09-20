@@ -16,17 +16,13 @@ import org.mr0btain.ticketman.error.InventoryError
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
-import kotlin.uuid.toKotlinUuid
+import java.util.*
 
 
 /**
  * Used for all Inventory data actions in database
  */
 @Suppress("PrivatePropertyName")
-@OptIn(ExperimentalUuidApi::class)
 class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<Inventory>(tag) {
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val ADD_IMAGES_TAG = "$tag:AddImages"
@@ -50,12 +46,12 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         return result
     }
 
-    override fun getById(identifier: Uuid): Inventory? {
+    override fun getById(identifier: UUID): Inventory? {
         var result: Inventory? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
                     result = inventoryEntity.toInventoryItem()
                     AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_BY_ID_TAG, InventoryError.NOT_FOUND)
@@ -72,7 +68,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
             transaction {
                 result = InventoryEntity
                     .all()
-                    .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.time to SortOrder.DESC)
+                    .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.id to SortOrder.DESC)
                     .offset(offset)
                     .limit(pageSize)
                     .map { it.toInventoryItem() }
@@ -94,13 +90,12 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
             transaction {
                 data.forEach { item ->
                     // Insert into database
-                    InventoryEntity.new(item.identifier.toJavaUuid()) {
+                    InventoryEntity.new(item.identifier) {
                         name = item.name
                         description = item.description
                         stock = item.stock
                         cost = item.cost
                         price = item.price
-                        time = item.time
                     }
                 }
             }
@@ -109,10 +104,10 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun remove(identifier: Uuid) {
+    override fun remove(identifier: UUID) {
         appLogTryCatch(REMOVE_TAG) {
             transaction {
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
                     inventoryEntity.delete()
 
                     AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
@@ -124,13 +119,12 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
     override fun add(data: Inventory) {
         appLogTryCatch(ADD_TAG) {
             transaction {
-                InventoryEntity.new(data.identifier.toJavaUuid()) {
+                InventoryEntity.new(data.identifier) {
                     name = data.name
                     description = data.description
                     stock = data.stock
                     cost = data.cost
                     price = data.price
-                    time = data.time
                 }
 
                 AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
@@ -142,14 +136,13 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         appLogTryCatch(UPDATE_TAG) {
             transaction {
                 InventoryEntity
-                    .findById(data.identifier.toJavaUuid())
+                    .findById(data.identifier)
                     ?.apply {
                         name = data.name
                         description = data.description
                         stock = data.stock
                         cost = data.cost
                         price = data.price
-                        time = data.time
 
                         AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
                     } ?: AppLogger.i(UPDATE_TAG, InventoryError.NOT_FOUND)
@@ -157,13 +150,13 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>) {
+    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(ADD_NOTE_TAG) {
             transaction {
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to notes
-                    InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
+                    InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                         inventoryEntity.notes = SizedCollection(inventoryEntity.notes + noteEntity)
 
                         AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
@@ -173,12 +166,12 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>? {
+    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
         var result: Map<Note, List<StoredImage>>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
                     result = inventoryEntity.notes.associate { noteEntity ->
                         noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
                     }
@@ -198,14 +191,14 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
      * Gets images for an inventory item
      * @param identifier The identifier of the parent inventory item
      */
-    fun getImages(identifier: Uuid): List<StoredImage>? {
+    fun getImages(identifier: UUID): List<StoredImage>? {
         // Result list
         var result: List<StoredImage>? = null
 
         appLogTryCatch(GET_IMAGES_TAG) {
             transaction {
                 // Find inventory item
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
                     // Add found images to result, converting them to stored image
                     result = inventoryEntity.images.map { it.toStoredImage() }
                 } ?: AppLogger.i(GET_IMAGES_TAG, InventoryError.NOT_FOUND)
@@ -225,16 +218,15 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
      * @param identifier The identifier of the inventory item
      * @param images List of images to add
      */
-    fun addImages(identifier: Uuid, images: List<StoredImage>) {
+    fun addImages(identifier: UUID, images: List<StoredImage>) {
         appLogTryCatch(ADD_IMAGES_TAG) {
             transaction {
                 // Find inventory item
-                InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
+                InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                     // Add images to table
                     val imageEntities = images.map { storedImage ->
-                        ImageEntity.new(storedImage.identifier.toJavaUuid()) {
+                        ImageEntity.new(storedImage.identifier) {
                             path = storedImage.path
-                            time = storedImage.time
                         }
                     }
 
@@ -251,13 +243,14 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
      * @param identifier The identifier of inventory item
      * @param images List of images to remove
      */
-    fun removeImages(identifier: Uuid, images: List<StoredImage>) {
+    fun removeImages(identifier: UUID, images: List<StoredImage>) {
         appLogTryCatch(REMOVE_IMAGES_TAG) {
+            val imageIds = images.map { it.identifier }
             transaction {
                 // Find inventory item
-                InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
+                InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                     inventoryEntity.images.forEach { imageEntity ->
-                        if (imageEntity.id.value.toKotlinUuid() == identifier) imageEntity.delete()
+                        if (imageIds.contains(imageEntity.id.value)) imageEntity.delete()
                     }
 
                     AppLogger.m(REMOVE_IMAGES_TAG, SimpleResult.SUCCESS)

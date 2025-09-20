@@ -12,9 +12,9 @@ import androidx.compose.ui.unit.dp
 import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.operations.DataType
+import org.mr0btain.ticketman.components.pagination.handleOffsetPager
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -49,6 +49,8 @@ fun ExpandedMainScreen(
     val selectedCustomer = viewModel.selectedCustomerData.collectAsState()
     val customerLazyListState = rememberLazyListState()
 
+    // Handle the pager state and list state
+    handleOffsetPager(viewModel.testPager, customerLazyListState)
 
     // For customer dialog
     var showCustomerDialog by remember { mutableStateOf(false) }
