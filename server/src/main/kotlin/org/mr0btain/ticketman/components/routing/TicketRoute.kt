@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalUuidApi::class)
-
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
@@ -14,8 +12,7 @@ import org.mr0btain.ticketman.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 fun Route.ticketRoute(
     database: TicketDatabaseImpl,
@@ -89,8 +86,8 @@ fun Route.ticketRoute(
                     identifier = identifier,
                     data = call.receive<EncryptedData>()
                 )?.let { message ->
-                    if (database.update(Json.decodeFromString<Ticket>(message)))
-                        call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
+                    database.update(Json.decodeFromString<Ticket>(message))
+                    call.respond(HttpStatusCode.Accepted)
                 }?: call.respond(HttpStatusCode.InternalServerError)
             }?: call.respond(HttpStatusCode.NotFound)
         }
@@ -100,8 +97,8 @@ fun Route.ticketRoute(
     authenticate {
         post("/add/all") {
             call.handleDecryption<List<Ticket>>(encryptionService)?.let { result ->
-                if (database.addAll(result)) call.respond(HttpStatusCode.Accepted)
-                else call.respond(HttpStatusCode.NotFound)
+                database.addAll(result)
+                call.respond(HttpStatusCode.Accepted)
             }
         }
     }
@@ -116,8 +113,8 @@ fun Route.ticketRoute(
                 return@delete
             }
 
-            if (database.remove(Uuid.parse(identifier))) call.respond(HttpStatusCode.Accepted)
-            else call.respond(HttpStatusCode.BadRequest)
+            database.remove(UUID.fromString(identifier))
+            call.respond(HttpStatusCode.Accepted)
         }
     }
 }

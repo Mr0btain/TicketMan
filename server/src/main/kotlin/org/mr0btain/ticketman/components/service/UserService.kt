@@ -7,10 +7,8 @@ import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
-@OptIn(ExperimentalUuidApi::class)
 class UserService(
     private val database: UserDatabaseImpl,
     private val jwtService: JwtService,
@@ -51,7 +49,7 @@ class UserService(
         val refreshToken = tokenDatabase.findByToken(token)
 
         return if (decodedRefreshToken != null && refreshToken != null) {
-            val foundUser = database.getById(Uuid.parse(refreshToken.identifier))
+            val foundUser = database.getById(UUID.fromString(refreshToken.identifier))
             val idFromRefreshToken = decodedRefreshToken.getClaim("identifier").asString()
 
             if (foundUser != null && idFromRefreshToken == foundUser.identifier.toString())

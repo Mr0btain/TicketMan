@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.uuid
 
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.descriptors.PrimitiveKind
 import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
@@ -20,3 +21,6 @@ object UUIDSerializer: KSerializer<UUID> {
         return UUID.fromString(decoder.decodeString())
     }
 }
+
+object UUIDListSerializer : KSerializer<List<UUID>> by ListSerializer(UUIDSerializer)
+

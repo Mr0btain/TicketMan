@@ -25,8 +25,7 @@ import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 class LocalDatabase (
-    appDir: String,
-    shouldLog: Boolean = true
+    appDir: String
 ) {
     private val TAG = "ServerDatabase"
     private val INIT_TAG = "$TAG:Init"
@@ -38,11 +37,11 @@ class LocalDatabase (
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")
     //Database.connect("jdbc:sqlite:file:test?mode=memory&cache=shared", "org.sqlite.JDBC")
 
-    val customerDatabase = CustomerDatabaseImpl(shouldLog = shouldLog)
-    val ticketDatabase = TicketDatabaseImpl(shouldLog = shouldLog)
-    val tokenDatabase = TokenDatabase(shouldLog)
-    val inventoryDatabase = InventoryDatabaseImpl(shouldLog = shouldLog)
-    val userDatabase = UserDatabaseImpl(shouldLog = shouldLog)
+    val customerDatabase = CustomerDatabaseImpl()
+    val ticketDatabase = TicketDatabaseImpl()
+    val tokenDatabase = TokenDatabase()
+    val inventoryDatabase = InventoryDatabaseImpl()
+    val userDatabase = UserDatabaseImpl()
 
     /**
      * Creates tables if they don't exist essentially. Idk if we even need this if we could just straight call creat everytime. ohh well.

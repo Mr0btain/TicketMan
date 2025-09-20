@@ -8,14 +8,13 @@ import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.database.UserDatabaseImpl
+import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaInstant
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 class JwtService(
     private val application: Application,
@@ -69,10 +68,9 @@ class JwtService(
      * Verify credentials along with access level to verify if its legit and allowed
      */
 
-    @OptIn(ExperimentalUuidApi::class)
     fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
         val id = extractId(credential)
-        val foundUser = id?.let { userDatabase.getById(Uuid.parse(it)) }
+        val foundUser = id?.let { userDatabase.getById(UUID.fromString(it)) }
 
         return foundUser?.let {
             if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {
