@@ -9,7 +9,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
@@ -32,7 +31,7 @@ fun TicketPanel(
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
     selectedTicket: TicketData?,
-    pagingItems: LazyPagingItems<Ticket>,
+    ticketList: List<Ticket>,
     currentUser: UserData?,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
@@ -164,7 +163,7 @@ fun TicketPanel(
                 // All tickets tab.
                 TicketListPane(
                     isDarkMode = isDarkMode,
-                    pagingItems = pagingItems,
+                    ticketList = ticketList,
                     onClick = { ticket ->
                         // Update from click
                         isSelectedUpdateFromClick = true

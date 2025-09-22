@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalUuidApi::class)
-
 package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
@@ -18,13 +16,12 @@ import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.randomTicketPriority
 import org.mr0btain.ticketman.data.randomTicketStatus
 import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.io.File
 import java.io.FileOutputStream
 import java.security.SecureRandom
 import java.text.DecimalFormat
 import kotlin.random.Random
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 /**
  * Generates a random customer for testing
@@ -34,7 +31,7 @@ fun generateMockCustomer(): Pair<Customer, List<Note>> {
 
     // Generate some mock customer data
     val customerData = Customer(
-        identifier = Uuid.random(),
+        identifier = UUIDv7.randomUUID(),
         name = generateRandomName(),
         address = generateRandomAddress(),
         contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
@@ -81,7 +78,7 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
 
     return Pair(
         Inventory(
-            identifier = Uuid.random(),
+            identifier = UUIDv7.randomUUID(),
             name = itemNames.random(),
             description = descriptions.random(),
             stock = Random.nextInt(1, 500),
@@ -108,7 +105,7 @@ fun generateMockUser(): Pair<User, List<Note>> {
 
     return Pair(
         User(
-            identifier = Uuid.random(),
+            identifier = UUIDv7.randomUUID(),
             username = "${name.firstName}_${name.lastName}",
             password = name.lastName,
             name = name,
@@ -199,7 +196,6 @@ private fun generateRandomName(): PersonName {
 /**
  * Generates a random ticket for testing
  */
-@OptIn(ExperimentalUuidApi::class)
 fun generateRandomTicket(): Pair<Ticket, List<Note>> {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
@@ -243,13 +239,13 @@ fun generateRandomTicket(): Pair<Ticket, List<Note>> {
         val message = noteMessages.random()
 
         notes.add(
-            Note(Uuid.random(), author, message)
+            Note(UUIDv7.randomUUID(), author, message)
         )
     }
 
     return Pair(
         Ticket(
-            identifier = Uuid.random(),
+            identifier = UUIDv7.randomUUID(),
             device = Device(manufacturer, model),
             status = randomTicketStatus(),
             priority = randomTicketPriority(),
@@ -285,7 +281,7 @@ private fun generateCustomerNote(): Note {
     val author = "${firstNames.random()} ${lastNames.random()}"
     val message = customerNotes.random()
 
-    return Note(Uuid.random(), author, message, getTime())
+    return Note(UUIDv7.randomUUID(), author, message, getTime())
 }
 
 /**
@@ -311,7 +307,7 @@ fun generateEmployeeNote(): Note {
         "has a positive attitude and motivates others in the workplace."
     )
 
-    return Note(Uuid.random(), authors.random(), noteTopics.random(), getTime())
+    return Note(UUIDv7.randomUUID(), authors.random(), noteTopics.random(), getTime())
 }
 
 /**
@@ -331,7 +327,7 @@ fun generateRandomInventoryNotes(count: Int): List<Note> {
         val quantity = Random.nextInt(1, 100)
 
         val text = "Found $quantity $component(s) in $location - Status: $condition."
-        Note(Uuid.random(), author, text)
+        Note(UUIDv7.randomUUID(), author, text)
     }
 }
 

@@ -116,7 +116,16 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         return result
     }
 
-    override fun count(): Long = CustomerEntity.count()
+    override fun count(): Long {
+        var count = 0L
+
+        appLogTryCatch(COUNT_TAG) {
+            transaction {
+                count = CustomerEntity.count()
+            }
+        }
+         return count
+    }
 
     override fun addAll(data: List<Customer>) {
         appLogTryCatch(ADD_ALL_TAG) {

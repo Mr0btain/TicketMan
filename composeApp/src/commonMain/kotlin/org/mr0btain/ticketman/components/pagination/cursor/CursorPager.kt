@@ -1,12 +1,8 @@
-package org.mr0btain.ticketman.components.pagination
+package org.mr0btain.ticketman.components.pagination.cursor
 
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import kotlinx.coroutines.CoroutineScope
@@ -19,10 +15,10 @@ class CursorPagerState<Key, T>(
     coroutineScope: CoroutineScope,
     private val pageLoadLimit: Int,
     maxCacheSize: Int,
-    private val fetch: suspend (before: Key?, after: Key?) -> PageResult<Key, T>
+    private val fetch: suspend (before: Key?, after: Key?) -> CursorPageResult<Key, T>
 ) {
     /** Cache for holding pages that may be requested again, this helps save on hits to a database. */
-    private val cache = LruCache<Key, PageResult<Key, T>>(maxCacheSize, "PagerCache")
+    private val cache = LruCache<Key, CursorPageResult<Key, T>>(maxCacheSize, "PagerCache")
 
     // Mutable state list of pages, we can manage this nicely
     private val deque = mutableStateListOf<List<T>>()
@@ -132,33 +128,4 @@ class CursorPagerState<Key, T>(
             isRefreshing = false
         }
     }
-}
-
-data class PageResult<Key, T>(
-    val items: List<T>,
-    val prevCursor: Key?,
-    val nextCursor: Key?
-)
-
-@Composable
-fun <Key, T> rememberCursorPagerState(
-    coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    pageLoadLimit: Int = 10,
-    maxCacheSize: Int = 10,
-    fetch: suspend (before: Key?, after: Key?) -> PageResult<Key, T>
-): CursorPagerState<Key, T> {
-    val state = remember {
-        CursorPagerState(
-            coroutineScope = coroutineScope,
-            pageLoadLimit = pageLoadLimit,
-            maxCacheSize = maxCacheSize,
-            fetch = fetch
-        )
-    }
-
-    LaunchedEffect(Unit) {
-        state.refresh()
-    }
-
-    return state
 }

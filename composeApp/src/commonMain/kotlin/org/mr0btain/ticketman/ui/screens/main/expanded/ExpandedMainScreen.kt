@@ -9,12 +9,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.paging.compose.collectAsLazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.components.pagination.handleOffsetPager
+import org.mr0btain.ticketman.components.pagination.offset.handleOffsetPager
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -41,34 +40,41 @@ fun ExpandedMainScreen(
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
     // User stuff
-    val userPagedItems = viewModel.userListFlow.collectAsLazyPagingItems()
+    val userPagedItems = viewModel.userPager?.items?.collectAsState()
+
     val currentUser = viewModel.selectedUserData.collectAsState()
 
     // For customer panel
-    val customerPagedItems = viewModel.customerListFlow.collectAsLazyPagingItems()
+    val customerPagedItems = viewModel.customerPager?.items?.collectAsState()
     val selectedCustomer = viewModel.selectedCustomerData.collectAsState()
     val customerLazyListState = rememberLazyListState()
 
-    // Handle the pager state and list state
-    handleOffsetPager(viewModel.testPager, customerLazyListState)
+    // Handle the customer pager
+    handleOffsetPager(viewModel.customerPager, customerLazyListState)
 
     // For customer dialog
     var showCustomerDialog by remember { mutableStateOf(false) }
     var isTicketForNewCustomer by remember { mutableStateOf(false) }
 
     // For ticket panel
-    val ticketPagedItems =  viewModel.ticketListFlow.collectAsLazyPagingItems()
+    val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val selectedTicket = viewModel.selectedTicketData.collectAsState()
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
+
+    // Handle ticket pager
+    handleOffsetPager(viewModel.ticketPager, ticketLazyListState)
 
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
 
     // For Inventory panel
-    val inventoryPagedItems = viewModel.inventoryListFlow.collectAsLazyPagingItems()
+    val inventoryPagedItems = viewModel.inventoryPager?.items?.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
     val selectedInventory = viewModel.selectedInventoryData.collectAsState()
+
+    // Handle inventory pager
+    handleOffsetPager(viewModel.inventoryPager, inventoryLazyListState)
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
@@ -293,7 +299,7 @@ fun ExpandedMainScreen(
                             showImagePopup = true
                         },
                         selectedCustomer = selectedCustomer.value,
-                        pagingItems = customerPagedItems,
+                        customerList = customerPagedItems?.value ?: emptyList(),
                         customerLazyListState = customerLazyListState,
                         coroutineScope = coroutineScope
                     )
@@ -303,7 +309,7 @@ fun ExpandedMainScreen(
                 1 -> {
                     TicketPanel(
                         isDarkMode = isDarkMode,
-                        pagingItems = ticketPagedItems,
+                        ticketList = ticketPagedItems?.value ?: emptyList(),
                         currentUser = currentUser.value,
                         selectedTicket = selectedTicket.value,
                         onAddNewTicket = {
@@ -334,7 +340,7 @@ fun ExpandedMainScreen(
                 2 -> {
                     InventoryPanel(
                         isDarkMode = isDarkMode,
-                        inventoryList = inventoryPagedItems,
+                        inventoryList = inventoryPagedItems?.value ?: emptyList(),
                         selectedInventory = selectedInventory.value,
                         onSelectedInventoryChange = { id -> viewModel.changeSelectedInventory(id) },
                         onAddInventory = {

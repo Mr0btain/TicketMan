@@ -38,6 +38,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     protected val INSERT_IMAGE_TAG = "$tag:AddImage"
     protected val UPDATE_IMAGE_TAG = "$tag:UpdateImage"
     protected val REMOVE_IMAGE_TAG = "$tag:RemoveImage"
+    protected val COUNT_TAG = "$tag:Count"
 
     /** Gets all items */
     abstract fun all(): List<T>?
@@ -94,7 +95,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                 val entity = NoteEntity.new(note.identifier) {
                     author = note.author
                     message = note.message
-                    time = note.time
                 }
 
                 if (storedImages.isNotEmpty()) {
@@ -102,7 +102,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                     val imageCollection = storedImages.map { image ->
                         ImageEntity.new {
                             path = image.path
-                            time = image.time
                         }
                     }
 
@@ -145,7 +144,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                 NoteEntity.findByIdAndUpdate(note.identifier) { noteEntity ->
                     noteEntity.author = note.author
                     noteEntity.message = note.message
-                    noteEntity.time = note.time
 
                     val existingImageIds = noteEntity.images
                         .map { it.id.value }
@@ -182,7 +180,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
             val entity = transaction {
                 ImageEntity.new(storedImage.identifier) {
                     path = storedImage.path
-                    time = storedImage.time
                 }
             }
 
@@ -201,7 +198,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
             transaction {
                 val entity = ImageEntity.findByIdAndUpdate(storedImage.identifier) { imageEntity ->
                     imageEntity.path = storedImage.path
-                    imageEntity.time = storedImage.time
                 }
 
                 if (entity != null)
@@ -264,7 +260,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                     val imageCollection = images.map { image ->
                         ImageEntity.new {
                             path = image.path
-                            time = image.time
                         }
                     }
 

@@ -72,13 +72,15 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
     }
 
     override fun count(): Long {
-        var result = 0L
+        var count = 0L
 
-        transaction {
-            result = TicketEntity.count()
+        appLogTryCatch(COUNT_TAG) {
+            transaction {
+                count = TicketEntity.count()
+            }
         }
 
-        return result
+        return count
     }
 
     override fun addAll(data: List<Ticket>) {

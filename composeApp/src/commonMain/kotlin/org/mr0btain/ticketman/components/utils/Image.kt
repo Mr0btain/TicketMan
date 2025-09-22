@@ -7,26 +7,25 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.data.time.getTime
 import org.mr0btain.ticketman.data.time.tolong
+import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.image_directory
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * Saves an image to disk
  * @param identifier The identifier of the item this belongs to. This will be the folder its saved in. Just for some little organization
  * @param imageBitmap The image to be saved
  */
-@OptIn(ExperimentalUuidApi::class)
 suspend fun saveImageToDatabaseFolder(
-    identifier: Uuid,
+    identifier: UUID,
     imageBitmap: ImageBitmap
 ): StoredImage? {
     return try {
         // Generate an id
-        val id = Uuid.random()
+        val id = UUIDv7.randomUUID()
         val file = FileKit.databasesDir / identifier.toString() / id.toString()
 
         // Write data to disk
@@ -44,7 +43,6 @@ suspend fun saveImageToDatabaseFolder(
  * Saves an image to disk. We use databasedir from FileKit and save it in the folder path, identifier as the file name
  * @param imageData Image data to write to database folder
  */
-@OptIn(ExperimentalUuidApi::class)
 suspend fun saveImageToDatabaseFolder(
     imageData: ImageData
 ): StoredImage? {
@@ -71,7 +69,6 @@ suspend fun saveImageToDatabaseFolder(
     }
 }
 
-@OptIn(ExperimentalUuidApi::class)
 suspend fun flushImageIfNotInDatabase(imageData: ImageData): StoredImage? {
     return try {
         val file = FileKit.databasesDir / Res.string.image_directory.toString() / imageData.path
@@ -90,7 +87,6 @@ suspend fun flushImageIfNotInDatabase(imageData: ImageData): StoredImage? {
     }
 }
 
-@OptIn(ExperimentalUuidApi::class)
 suspend fun flushImagesToDisk(imageList: List<ImageData>): List<StoredImage> {
     val result = mutableListOf<StoredImage>()
 
@@ -111,7 +107,6 @@ expect fun ImageBitmap.encodeToBase64(): String
 expect fun ByteArray.toImageBitmap(): ImageBitmap
 expect fun ImageBitmap.toByteArray(): ByteArray
 
-@OptIn(ExperimentalUuidApi::class)
 suspend fun pullImagesFromDisk(storedImages: List<StoredImage>): List<ImageData> {
     val result = mutableListOf<ImageData>()
 

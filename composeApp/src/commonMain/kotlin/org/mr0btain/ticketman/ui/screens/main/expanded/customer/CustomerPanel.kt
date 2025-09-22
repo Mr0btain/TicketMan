@@ -8,7 +8,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.image.ImageData
@@ -22,7 +21,7 @@ import java.util.*
 fun CustomerPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    pagingItems: LazyPagingItems<Customer>,
+    customerList: List<Customer>,
     selectedCustomer: CustomerData?,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
@@ -33,9 +32,6 @@ fun CustomerPanel(
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope()
 ) {
-    // Hopefully this saves on calculations and updates properly
-    //val sortedCustomerInfo = remember(customerList) { customerList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
-
     // For search input
     var searchInput by remember { mutableStateOf("") }
 
@@ -102,7 +98,7 @@ fun CustomerPanel(
                 CustomerListPane(
                     modifier = Modifier,
                     isDarkMode = isDarkMode,
-                    customerInfo = pagingItems,
+                    customerList = customerList,
                     lazyListState = customerLazyListState,
                     selectedCustomerId = selectedCustomer?.customer?.identifier,
                     scope = coroutineScope,

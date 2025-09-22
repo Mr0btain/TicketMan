@@ -78,7 +78,16 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         return result
     }
 
-    override fun count(): Long = UserEntity.count()
+    override fun count(): Long {
+        var count = 0L
+
+        appLogTryCatch(COUNT_TAG) {
+            transaction {
+                count = UserEntity.count()
+            }
+        }
+        return count
+    }
 
     override fun addAll(data: List<User>) {
         appLogTryCatch(ADD_ALL_TAG) {

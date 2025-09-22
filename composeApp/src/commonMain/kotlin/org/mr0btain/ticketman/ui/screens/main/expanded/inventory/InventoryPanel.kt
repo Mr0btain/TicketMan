@@ -20,7 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.Inventory
@@ -35,7 +34,7 @@ import java.util.UUID
 fun InventoryPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    inventoryList: LazyPagingItems<Inventory>,
+    inventoryList: List<Inventory>,
     selectedInventory: InventoryData?,
     onSelectedInventoryChange: (UUID) -> Unit,
     onAddInventory: () -> Unit,
@@ -112,7 +111,7 @@ fun InventoryPanel(
                 InventoryListPane(
                     isDarkMode = isDarkMode,
                     selected = selectedInventory?.inventory?.identifier,
-                    pagingItems = inventoryList,
+                    inventoryList = inventoryList,
                     onClick = {
                         // Set is update from click
                         isSelectedUpdateFromClick = true

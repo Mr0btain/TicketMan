@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -16,7 +17,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Ticket
 import org.mr0btain.ticketman.data.ticket.toNameString
@@ -34,7 +34,7 @@ import java.util.UUID
 fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    pagingItems: LazyPagingItems<Ticket>,
+    ticketList: List<Ticket>,
     selectedId: UUID?,
     onClick: (UUID) -> Unit,
     state: LazyListState = rememberLazyListState(),
@@ -103,26 +103,27 @@ fun TicketListPane(
                     .padding(start = 4.dp),
                 state = state,
                 scope = coroutineScope,
-                isVisible = pagingItems.itemCount > 0
+                isVisible = ticketList.isNotEmpty()
             ) {
-                items(pagingItems.itemCount) { index ->
-                    pagingItems[index]?.let { ticket ->
-                        TicketTableItem(
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            selected = selectedId == ticket.identifier,
-                            ticket = ticket,
-                            numberWidth = numberColumnWidth,
-                            priorityWidth = priorityColumnWidth,
-                            noteWidth = noteColumnWidth,
-                            statusWidth = statusColumnWidth,
-                            isDarkMode = isDarkMode,
-                            onClick = { onClick(ticket.identifier) }
-                        )
-                    }
+                itemsIndexed(
+                    items = ticketList,
+                    key = { _, ticket -> ticket.identifier }
+                ) { index, ticket ->
+                    TicketTableItem(
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        selected = selectedId == ticket.identifier,
+                        ticket = ticket,
+                        numberWidth = numberColumnWidth,
+                        priorityWidth = priorityColumnWidth,
+                        noteWidth = noteColumnWidth,
+                        statusWidth = statusColumnWidth,
+                        isDarkMode = isDarkMode,
+                        onClick = { onClick(ticket.identifier) }
+                    )
                 }
             }
         }

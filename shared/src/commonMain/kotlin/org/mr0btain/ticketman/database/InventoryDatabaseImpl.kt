@@ -83,7 +83,16 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         return result
     }
 
-    override fun count(): Long = InventoryEntity.count()
+    override fun count(): Long {
+        var count = 0L
+
+        appLogTryCatch(COUNT_TAG) {
+            transaction {
+                count = InventoryEntity.count()
+            }
+        }
+        return count
+    }
 
     override fun addAll(data: List<Inventory>) {
         appLogTryCatch(ADD_ALL_TAG) {

@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -15,7 +16,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
@@ -27,7 +27,7 @@ import java.util.*
 fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    pagingItems: LazyPagingItems<Inventory>,
+    inventoryList: List<Inventory>,
     selected: UUID?,
     onClick: (UUID) -> Unit,
     state: LazyListState = rememberLazyListState(),
@@ -105,27 +105,28 @@ fun InventoryListPane(
                     .padding(start = 4.dp),
                 state = state,
                 scope = coroutineScope,
-                isVisible = pagingItems.itemCount > 0
+                isVisible = inventoryList.isNotEmpty()
             ) {
-                items(pagingItems.itemCount) { index ->
-                    pagingItems[index]?.let { inventory ->
-                        InventoryTableItem(
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            selected = selected == inventory.identifier,
-                            inventoryItem = inventory,
-                            nameColumnWidth = nameColumnWidth,
-                            stockColumnWidth = stockColumnWidth,
-                            descriptionColumnWidth = descriptionColumnWidth,
-                            costColumnWidth = costColumnWidth,
-                            priceColumnWidth = priceColumnWidth,
-                            isDarkMode = isDarkMode,
-                            onClick = { onClick(inventory.identifier) }
-                        )
-                    }
+                itemsIndexed(
+                    items = inventoryList,
+                    key = { _, inventory -> inventory.identifier }
+                ) { index, inventory ->
+                    InventoryTableItem(
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        selected = selected == inventory.identifier,
+                        inventoryItem = inventory,
+                        nameColumnWidth = nameColumnWidth,
+                        stockColumnWidth = stockColumnWidth,
+                        descriptionColumnWidth = descriptionColumnWidth,
+                        costColumnWidth = costColumnWidth,
+                        priceColumnWidth = priceColumnWidth,
+                        isDarkMode = isDarkMode,
+                        onClick = { onClick(inventory.identifier) }
+                    )
                 }
             }
         }

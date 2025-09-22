@@ -3,9 +3,7 @@ package org.mr0btain.ticketman.ui.screens.main.components
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.Pager
 import androidx.paging.PagingConfig
-import androidx.paging.cachedIn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -18,12 +16,13 @@ import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
-import org.mr0btain.ticketman.components.pagination.CustomPagingSource
-import org.mr0btain.ticketman.components.pagination.OffsetPager
+import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.utils.flushImagesToDisk
 import org.mr0btain.ticketman.components.utils.pullImagesFromDisk
 import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.User
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.shared.Note
@@ -48,6 +47,7 @@ import kotlin.random.Random
  * Used to store data that needs to persist for the lifetime of the app
  */
 
+@Suppress("PrivatePropertyName")
 class MainViewModel(
     val snackBarHost: SnackbarHostState
 ) : ViewModel() {
@@ -55,11 +55,17 @@ class MainViewModel(
     private val INIT_TAG = "$TAG:Init"
     private val INIT_SYNC_TAG = "$TAG:Init_Sync"
     private val REMOVE_CUSTOMER_SUB_ITEM_TAG = "$TAG:RemoveCustomerSubItem"
+    private val CUSTOMER_PAGER_TAG = "CustomerPager"
+    private val TICKET_PAGER_TAG = "TicketPager"
+    private val INVENTORY_PAGER_TAG = "InventoryPagerTag"
+    private val USER_PAGER_TAG = "UserPagerTag"
 
     fun init() {
         viewModelScope.launch {
+            // Initialize databases
             initDatabase()
 
+            // Initialize settings
             settingsDatabase.initialize()
 
             // Pull saved settings
@@ -70,6 +76,51 @@ class MainViewModel(
                 _scrollBarsOnBottom.value = result.scrollBarsOnBottom
                 _autoSyncDatabase.value = result.autoSync
             } ?: AppLogger.i(INIT_TAG, SimpleResult.FAIL)
+
+            // Initialize pagers
+            customerPager = OffsetPager(
+                tag = CUSTOMER_PAGER_TAG,
+                coroutineScope = viewModelScope,
+                fetch = { page, pageSize ->
+                    customerDatabase.getPagedItems(
+                        offset = (page * pageSize).toLong(),
+                        pageSize = pageSize
+                    ) ?: emptyList()
+                }
+            )
+
+            ticketPager = OffsetPager(
+                tag = TICKET_PAGER_TAG,
+                coroutineScope = viewModelScope,
+                fetch = { page, pageSize ->
+                    ticketDatabase.getPagedItems(
+                        offset = (page * pageSize).toLong(),
+                        pageSize = pageSize
+                    ) ?: emptyList()
+                }
+            )
+
+            inventoryPager = OffsetPager(
+                tag = INVENTORY_PAGER_TAG,
+                coroutineScope = viewModelScope,
+                fetch = { page, pageSize ->
+                    inventoryDatabase.getPagedItems(
+                        offset = (page * pageSize).toLong(),
+                        pageSize = pageSize
+                    ) ?: emptyList()
+                }
+            )
+
+            userPager = OffsetPager(
+                tag = USER_PAGER_TAG,
+                coroutineScope = viewModelScope,
+                fetch = { page, pageSize ->
+                    userDatabase.getPagedItems(
+                        offset = (page * pageSize).toLong(),
+                        pageSize = pageSize
+                    ) ?: emptyList()
+                }
+            )
         }
     }
 
@@ -90,26 +141,12 @@ class MainViewModel(
 
     private val customerDatabase = CustomerDatabaseImpl()
 
-    private val customerPager = Pager(pagingConfig) { CustomPagingSource(customerDatabase).also { customerPagingSource = it } }
-    val customerListFlow = customerPager.flow.cachedIn(viewModelScope)
-    private var customerPagingSource: CustomPagingSource<Customer>? = null
+    var customerPager: OffsetPager<Customer>? = null
 
     private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
 
-    val testPager = OffsetPager(
-        coroutineScope = viewModelScope,
-        pageLoadLimit = 10,
-        maxCacheSize = 4,
-        pageSize = 20,
-        count = customerDatabase.count(),
-        fetch = { page, pageSize ->
-            customerDatabase.getPagedItems(
-                offset = (page * pageSize).toLong(),
-                pageSize = pageSize
-            ) ?: emptyList()
-        }
-    )
+
 
     /** Sets the selected customer and inserts the data into the cache */
     private suspend fun setSelectedCustomer(customerData: CustomerData) {
@@ -277,8 +314,6 @@ class MainViewModel(
                 resetSelectedCustomer()
 
                 customerCache.remove(identifier)
-
-                customerPagingSource?.invalidate()
             }
         }
     }
@@ -376,8 +411,7 @@ class MainViewModel(
 
     private val ticketDatabase = TicketDatabaseImpl()
 
-    private val ticketPager = Pager(pagingConfig) { CustomPagingSource(ticketDatabase) }
-    val ticketListFlow = ticketPager.flow.cachedIn(viewModelScope)
+    var ticketPager: OffsetPager<Ticket>? = null
 
     private val _selectedTicketData: MutableStateFlow<TicketData?> = MutableStateFlow(null)
     val selectedTicketData = _selectedTicketData.asStateFlow()
@@ -474,8 +508,7 @@ class MainViewModel(
 
     private val inventoryDatabase = InventoryDatabaseImpl()
 
-    private val inventoryPager = Pager(pagingConfig) { CustomPagingSource(inventoryDatabase) }
-    val inventoryListFlow = inventoryPager.flow.cachedIn(viewModelScope)
+    var inventoryPager: OffsetPager<Inventory>? = null
 
     private val _selectedInventoryData: MutableStateFlow<InventoryData?> = MutableStateFlow(null)
     val selectedInventoryData = _selectedInventoryData.asStateFlow()
@@ -575,8 +608,7 @@ class MainViewModel(
 
     private val userDatabase = UserDatabaseImpl()
 
-    private val userPager = Pager(pagingConfig) { CustomPagingSource(userDatabase) }
-    val userListFlow = userPager.flow.cachedIn(viewModelScope)
+    var userPager: OffsetPager<User>? = null
 
     private val _selectedUserData: MutableStateFlow<UserData?> = MutableStateFlow(null)
     val selectedUserData = _selectedUserData.asStateFlow()
