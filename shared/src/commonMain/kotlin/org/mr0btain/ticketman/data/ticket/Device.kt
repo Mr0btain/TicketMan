@@ -11,6 +11,19 @@ import org.mr0btain.ticketman.data.SubItem
 data class Device(
     val manufacturer: String,
     val model: String
-): SubItem
+): SubItem {
+    override fun toString(): String {
+        return "$manufacturer $model"
+    }
 
-fun Device.toNameString(): String = "$manufacturer $model"
+    companion object {
+        fun fromString(device: String): Device {
+            val result = device.split(" ").map { it.trim() }
+
+            return Device(
+                manufacturer = result.getOrElse(0, {""}),
+                model = result.getOrElse(1, {""})
+            )
+        }
+    }
+}

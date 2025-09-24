@@ -3,15 +3,13 @@ package org.mr0btain.ticketman.database
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.Inventory
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
-import org.mr0btain.ticketman.database.tables.image.toStoredImage
 import org.mr0btain.ticketman.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
-import org.mr0btain.ticketman.database.tables.inventory.toInventoryItem
-import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.error.InventoryError
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.appLogTryCatch
@@ -34,7 +32,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         appLogTryCatch(GET_ALL_TAG) {
             // Go into database and convert data to customer data item
             transaction {
-                result = InventoryEntity.all().map { item -> item.toInventoryItem() }
+                result = InventoryEntity.all().map { item -> item.toInventory() }
             }
 
             if (result != null)
@@ -52,7 +50,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
                 InventoryEntity.findById(identifier)?.let { inventoryEntity ->
-                    result = inventoryEntity.toInventoryItem()
+                    result = inventoryEntity.toInventory()
                     AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_BY_ID_TAG, InventoryError.NOT_FOUND)
             }
@@ -71,7 +69,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                     .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.id to SortOrder.DESC)
                     .offset(offset)
                     .limit(pageSize)
-                    .map { it.toInventoryItem() }
+                    .map { it.toInventory() }
             }
 
             if (result != null)
@@ -123,6 +121,10 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                 } ?: AppLogger.i(REMOVE_TAG, InventoryError.NOT_FOUND)
             }
         }
+    }
+
+    override fun search(query: String, limit: Int): List<SearchResult>? {
+        TODO("Not yet implemented")
     }
 
     override fun add(data: Inventory) {

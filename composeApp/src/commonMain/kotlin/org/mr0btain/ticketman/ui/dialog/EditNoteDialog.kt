@@ -1,32 +1,10 @@
 package org.mr0btain.ticketman.ui.dialog
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.pager.PagerState
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -45,11 +23,11 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.image.newImageData
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.utils.toImageBitmap
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.time.getTime
+import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
 import ticketman.composeapp.generated.resources.Res
@@ -69,7 +47,6 @@ fun EditNoteDialog(
 ) {
     var author by remember { mutableStateOf(noteData.note.author) }
     var message by remember { mutableStateOf(noteData.note.message) }
-    val time = remember { if (noteData.note.time != Long.MAX_VALUE) noteData.note.time else getTime() }
     val imageData = remember { noteData.images.toMutableStateList() }
 
     // For ui loading
@@ -85,9 +62,9 @@ fun EditNoteDialog(
 
                 // Add to list resizing to a max of 1080p
                 imageData.add(
-                    newImageData(
-                        noteData.note.identifier,
-                        FileKit.compressImage(
+                    ImageData(
+                        path = noteData.note.identifier.toString(),
+                        image = FileKit.compressImage(
                             file = file,
                             imageFormat = ImageFormat.PNG,
                             maxWidth = 1920,
@@ -116,7 +93,7 @@ fun EditNoteDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = if (noteData.note.time != Long.MAX_VALUE) "Edit $label" else "Add $label",
+                    text = label,
                     fontSize = 20.sp
                 )
 
@@ -203,46 +180,24 @@ fun EditNoteDialog(
                 Spacer(Modifier.padding(4.dp))
 
                 // Cancel and Confirm buton row
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = { onDismissRequest() },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text("Cancel")
-                    }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    Button(
-                        onClick = {
-                            onConfirm(
-                                NoteData(
-                                    note = Note(
-                                        identifier = noteData.note.identifier,
-                                        author = author,
-                                        message = message,
-                                        time = time
-                                    ),
-                                    images = imageData
-                                )
+                ConfirmOrCancelButtonRow(
+                    onCancelClick = onDismissRequest,
+                    onConfirmClick =  {
+                        onConfirm(
+                            NoteData(
+                                note = Note(
+                                    identifier = noteData.note.identifier,
+                                    author = author,
+                                    message = message
+                                ),
+                                images = imageData
                             )
+                        )
 
-                            // Dismiss
-                            onDismissRequest()
-                        },
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = author.isNotBlank() && message.isNotBlank()
-                    ) {
-                        Text(if (noteData.note.time != Long.MAX_VALUE) "Confirm" else "Add")
+                        // Dismiss
+                        onDismissRequest()
                     }
-                }
+                )
             }
         }
     }

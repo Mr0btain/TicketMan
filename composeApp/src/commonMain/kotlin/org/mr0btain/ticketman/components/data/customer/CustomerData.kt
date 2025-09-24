@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.data.customer
 
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
-import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.customer.Address
 import java.util.*
 

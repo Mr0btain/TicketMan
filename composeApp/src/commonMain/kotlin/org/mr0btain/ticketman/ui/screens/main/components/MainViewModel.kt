@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.ui.screens.main.components
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.paging.PagingConfig
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -19,10 +19,10 @@ import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.utils.flushImagesToDisk
 import org.mr0btain.ticketman.components.utils.pullImagesFromDisk
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.shared.Note
@@ -131,9 +131,6 @@ class MainViewModel(
 
     // Max size of cache
     val maxCacheSize = 20
-
-    // Paging config for pagers
-    val pagingConfig = PagingConfig(pageSize = 40, maxSize = 400)
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
@@ -317,6 +314,11 @@ class MainViewModel(
             }
         }
     }
+
+    suspend fun searchCustomers(query: String) = coroutineScope {
+        customerDatabase.search(query, 20) ?: emptyList()
+    }
+
 
     /**
      *  Removes an item from a customer. NOTE: This DOES NOT delete the item if it is a main item.

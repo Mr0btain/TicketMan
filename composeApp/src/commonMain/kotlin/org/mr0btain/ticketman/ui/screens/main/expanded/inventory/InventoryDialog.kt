@@ -15,9 +15,9 @@ import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.data.Inventory
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.time.getTime
+import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.composables.DialogNoteList
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
@@ -242,8 +242,7 @@ fun InventoryDialog(
                                     description = description,
                                     stock = stock.toIntOrNull() ?: 0,
                                     price = price.text.toString(),
-                                    cost = cost.text.toString(),
-                                    time = if (seedData.inventory.time != Long.MAX_VALUE) seedData.inventory.time else getTime()
+                                    cost = cost.text.toString()
                                 )
                             )
                         )

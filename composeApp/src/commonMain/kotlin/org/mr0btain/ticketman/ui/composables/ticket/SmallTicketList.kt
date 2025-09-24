@@ -13,7 +13,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.ticket.TicketData
-import org.mr0btain.ticketman.data.ticket.toNameString
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import java.util.*
@@ -46,7 +45,7 @@ fun SmallTicketList(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = data.ticket.device.toNameString(),
+                            text = data.ticket.device.toString(),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )

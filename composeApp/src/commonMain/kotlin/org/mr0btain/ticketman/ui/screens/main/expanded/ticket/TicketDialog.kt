@@ -14,9 +14,9 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.utils.isNewTicket
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
@@ -316,8 +316,7 @@ fun TicketDialog(
                                     identifier = seedData.ticket.identifier,
                                     device = Device(deviceManufacturer, deviceModel),
                                     status = status,
-                                    priority = priority,
-                                    time = seedData.ticket.time
+                                    priority = priority
                                 ),
                                 notes = notes
                             )

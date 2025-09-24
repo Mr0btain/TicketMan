@@ -3,15 +3,11 @@ package org.mr0btain.ticketman.ui.screens.main.mobile.customer
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.shared.PersonName
 
 @Composable

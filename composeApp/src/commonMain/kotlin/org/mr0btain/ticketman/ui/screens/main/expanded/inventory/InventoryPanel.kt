@@ -22,7 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
-import org.mr0btain.ticketman.data.Inventory
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.InventorySearch
 import java.util.UUID

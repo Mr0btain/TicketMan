@@ -1,6 +1,7 @@
-package org.mr0btain.ticketman.data
+package org.mr0btain.ticketman.data.user
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.PersonName
@@ -17,8 +18,7 @@ data class User(
     val password: String = "",
     val name: PersonName = PersonName(),
     val contactInfo: ContactInfo = ContactInfo(),
-    val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
-    val time: Long = Long.MAX_VALUE
+    val accessLevel: AccessLevel = AccessLevel.RESTRICTED
 ): MainItem
 
 // TODO: Flesh out

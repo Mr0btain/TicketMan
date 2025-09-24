@@ -11,13 +11,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.note.NoteData
-import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 
 // TODO: Setup editable option
@@ -49,7 +47,7 @@ fun NoteBlock(
             Spacer(Modifier.padding(2.dp))
         }
 
-        noteData.sortedByDescending { it.note.time }.forEach { data ->
+        noteData.sortedByDescending { it.note.time().toLong() }.forEach { data ->
             data.note.let { note ->
                 Column {
                     Row(
@@ -65,7 +63,7 @@ fun NoteBlock(
 
                         // Time
                         Text(
-                            text = formatTime(note.time).toString(),
+                            text = note.time().toString(),
                             fontSize = (textSize.value - 4).sp,
                             maxLines = 1
                         )

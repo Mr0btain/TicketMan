@@ -9,7 +9,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
-import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.user.User
 import java.util.UUID
 
 /**

@@ -11,10 +11,10 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.image.ImageData
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.shared.toStringName
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
-import org.mr0btain.ticketman.ui.composables.search.CustomerSearch
+import org.mr0btain.ticketman.ui.composables.search.CustomerSearchBar
 import java.util.*
 
 @Composable
@@ -26,6 +26,7 @@ fun CustomerPanel(
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (UUID) -> Unit,
+    onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteCustomer: () -> Unit,
     onTicketClick: (UUID) -> Unit,
     onImageClick: (List<ImageData>) -> Unit,
@@ -54,6 +55,7 @@ fun CustomerPanel(
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                /*
                 // Search box
                 CustomerSearch(
                     modifier = Modifier.padding(start = 8.dp),
@@ -69,6 +71,13 @@ fun CustomerPanel(
                         }
                               },
                     onInputChange = { searchInput = it }
+                )
+                 */
+
+                CustomerSearchBar(
+                    modifier = Modifier.padding(start = 8.dp),
+                    onClick =  { onCustomerSelectionChange(it) },
+                    onQuery = onSearchQuery
                 )
 
                 // Button for adding or deleting a customer

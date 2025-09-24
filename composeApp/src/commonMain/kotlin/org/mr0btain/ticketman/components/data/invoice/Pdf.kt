@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.data.invoice
 
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.ticket.Ticket
 
 expect fun makeTicketInvoicePdf(
     filePath: String,

@@ -6,10 +6,10 @@ import org.mr0btain.ticketman.components.network.database.createDatabaseHttpClie
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 

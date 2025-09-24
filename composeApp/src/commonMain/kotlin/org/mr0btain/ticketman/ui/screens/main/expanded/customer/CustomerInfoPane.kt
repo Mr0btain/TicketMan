@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.image.ImageData
-import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.ui.composables.ContactsBlock
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -134,16 +133,12 @@ fun CustomerInfoPane(
                                         Spacer(Modifier.padding(4.dp))
 
                                         // Check if we have a sensible date to display, then show it
-                                        if (customer.time != Long.MAX_VALUE) {
-                                            // Time formated
-                                            val time = formatTime(customer.time)
 
-                                            Text(
-                                                modifier = Modifier,
-                                                text = "${time.month}/${time.day}/${time.year}",
-                                                fontSize = textSize
-                                            )
-                                        }
+                                        Text(
+                                            modifier = Modifier,
+                                            text = customer.time().date(),
+                                            fontSize = textSize
+                                        )
                                     }
 
                                     // ----------- Address ---------------

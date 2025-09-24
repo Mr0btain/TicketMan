@@ -18,15 +18,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.ticket.toNameString
-import org.mr0btain.ticketman.ui.composables.TableCardTextItem
-import org.mr0btain.ticketman.ui.composables.TableDivider
-import org.mr0btain.ticketman.ui.composables.TablePriorityItem
-import org.mr0btain.ticketman.ui.composables.TableStatusItem
-import org.mr0btain.ticketman.ui.composables.TableTicketIdItem
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.ui.composables.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import java.util.UUID
+import java.util.*
 
 // TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
 
@@ -219,7 +214,7 @@ private fun TicketTableItem(
                     .padding(start = 4.dp)
                     .width(noteWidth + sizeAdjust.dp)
             ) {
-                TableCardTextItem(ticket.device.toNameString())
+                TableCardTextItem(ticket.device.toString())
             }
 
             TableDivider()

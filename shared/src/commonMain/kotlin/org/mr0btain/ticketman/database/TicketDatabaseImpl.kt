@@ -3,14 +3,12 @@ package org.mr0btain.ticketman.database
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.database.tables.image.toStoredImage
-import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketTable
-import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
@@ -109,6 +107,10 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                 } ?: AppLogger.i(REMOVE_TAG, TicketError.NOT_FOUND)
             }
         }
+    }
+
+    override fun search(query: String, limit: Int): List<SearchResult>? {
+        TODO("Not yet implemented")
     }
 
     override fun add(data: Ticket) {

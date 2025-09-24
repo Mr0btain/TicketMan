@@ -1,26 +1,24 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
-import org.mr0btain.ticketman.database.tables.customer.toCustomer
-import org.mr0btain.ticketman.database.tables.image.toStoredImage
-import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
-import org.mr0btain.ticketman.database.tables.ticket.toTicket
 import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.data.uuid.v7toMillis
 import java.util.*
 
 /**
@@ -77,10 +75,12 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     .map { resultRow ->
                         Customer(
                             identifier = resultRow[CustomerTable.id].value,
-                            name = resultRow[CustomerTable.name],
+                            name = PersonName.fromString(resultRow[CustomerTable.name]),
                             address = resultRow[CustomerTable.address],
-                            contactInfo = resultRow[CustomerTable.contactInfo],
-                            time = resultRow[CustomerTable.id].value.v7toMillis()
+                            contactInfo = ContactInfo(
+                                email = listOf(resultRow[CustomerTable.email]),
+                                phone = resultRow[CustomerTable.phone]
+                            )
                         )
                     }
             }
@@ -133,9 +133,10 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 data.forEach { item ->
                     // Insert into database
                     CustomerEntity.new(item.identifier) {
-                        name = item.name
+                        name = item.name.toString()
                         address = item.address
-                        contactInfo = item.contactInfo
+                        email = item.contactInfo.email.first()
+                        phone = item.contactInfo.phone
                     }
                 }
 
@@ -156,14 +157,49 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
+    override fun search(query: String, limit: Int): List<SearchResult>? {
+        var result: List<SearchResult>? = null
+
+        try {
+            transaction {
+                val pattern = "$query%"
+
+                result = CustomerEntity
+                    .find {
+                        (CustomerTable.name.lowerCase() like pattern) or
+                                (CustomerTable.id.castTo(VarCharColumnType()) like pattern) or
+                                (CustomerTable.email.lowerCase() like pattern)
+                    }
+                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.email to SortOrder.ASC, CustomerTable.id to SortOrder.ASC)
+                    .limit(limit)
+                    .map { customerEntity ->
+                        SearchResult(
+                            identifier = customerEntity.id.value,
+                            text = when {
+                                customerEntity.name.startsWith(query, true) -> customerEntity.name
+                                customerEntity.email.startsWith(query, true) -> customerEntity.email
+                                customerEntity.id.value.toString().startsWith(query, true) -> customerEntity.id.value.toString()
+                                else -> customerEntity.name
+                            }
+                        )
+                    }
+            }
+        } catch (ex: Exception) {
+            ex.printStackTrace()
+        }
+
+        return result
+    }
+
     override fun add(data: Customer) {
         appLogTryCatch(ADD_TAG) {
             transaction {
                 // Insert into database
                 CustomerEntity.new(data.identifier) {
-                    name = data.name
+                    name = data.name.toString()
                     address = data.address
-                    contactInfo = data.contactInfo
+                    email = data.contactInfo.email.first()
+                    phone = data.contactInfo.phone
                 }
 
                 AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
@@ -177,9 +213,10 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 CustomerEntity
                     .findById(data.identifier)
                     ?.apply {
-                        name = data.name
+                        name = data.name.toString()
                         address = data.address
-                        contactInfo = data.contactInfo
+                        email = data.contactInfo.email.first()
+                        phone = data.contactInfo.phone
 
                         AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
                     } ?: AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND)

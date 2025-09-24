@@ -16,6 +16,7 @@ package org.mr0btain.ticketman.data.uuid
  *   0. You just DO WHAT THE FUCK YOU WANT TO.
  */
 
+import org.mr0btain.ticketman.data.time.Time
 import java.security.SecureRandom
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicInteger
@@ -123,4 +124,9 @@ object UUIDv7 {
             // If either CAS fails, retry with fresh reads
         }
     }
+
+    /**
+     * If this UUID was generated with UUIDv7 then we can extract the time from it.
+     */
+    fun getTime(uuid: UUID): Time = Time.fromLong((uuid.mostSignificantBits ushr 16) and 0x0000FFFFFFFFFFFFL)
 }

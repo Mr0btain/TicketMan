@@ -14,7 +14,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
-import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -28,8 +27,6 @@ fun InventoryInfoPane(
     inventoryData: InventoryData?,
     onEditClick: () -> Unit
 ) {
-    val date = formatTime(inventoryData?.inventory?.time ?: Long.MAX_VALUE)
-
     // Main Body
     Surface(
         modifier = modifier
@@ -156,7 +153,7 @@ fun InventoryInfoPane(
                             // Date created
                             SimpleTextItem(
                                 label = "Created",
-                                text = if (inventory.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                                text = inventory.time().date()
                             )
                         }
                     }

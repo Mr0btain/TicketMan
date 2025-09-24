@@ -15,7 +15,8 @@ import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
- * Custom offset pager. We needed more control over the pager state so we have a custom implementation
+ * Custom offset pager. We needed more control over the pager state so we can handle jumping to items that may
+ * be pretty far down the list. It's easier to handle when we have full control over the pager itself
  * @param coroutineScope Coroutine scope for suspend functions
  * @param config OffsetPagerConfig that defines the parameters of the pager
  * @param fetch Function used to fetch the items

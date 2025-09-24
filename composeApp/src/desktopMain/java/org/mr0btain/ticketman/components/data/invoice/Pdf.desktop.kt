@@ -9,9 +9,9 @@ import com.lowagie.text.Phrase
 import com.lowagie.text.Table
 import com.lowagie.text.pdf.BaseFont
 import com.lowagie.text.pdf.PdfWriter
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.components.utils.formatIntToMoney
-import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.customer.Customer
 import java.awt.Color
 import java.io.FileOutputStream
 

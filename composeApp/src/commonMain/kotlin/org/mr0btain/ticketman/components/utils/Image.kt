@@ -4,9 +4,6 @@ import androidx.compose.ui.graphics.ImageBitmap
 import io.github.vinceglb.filekit.*
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.data.time.formatTime
-import org.mr0btain.ticketman.data.time.getTime
-import org.mr0btain.ticketman.data.time.tolong
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
@@ -31,7 +28,7 @@ suspend fun saveImageToDatabaseFolder(
         // Write data to disk
         file.write(imageBitmap.toByteArray())
 
-        StoredImage(id, file.path, getTime())
+        StoredImage(identifier = id, path = file.path)
     } catch (ex: Exception) {
         AppLogger.i("SaveImage", SimpleResult.FAIL)
         ex.printStackTrace()
@@ -61,7 +58,7 @@ suspend fun saveImageToDatabaseFolder(
         file.write(imageData.image.toByteArray())
 
         // Return result
-        StoredImage(imageData.identifier, file.path, getTime())
+        StoredImage(imageData.identifier, file.path)
     } catch (ex: Exception) {
         AppLogger.i("SaveImage", SimpleResult.FAIL)
         ex.printStackTrace()
@@ -76,8 +73,7 @@ suspend fun flushImageIfNotInDatabase(imageData: ImageData): StoredImage? {
         if (file.exists()) {
             StoredImage(
                 identifier = imageData.identifier,
-                path = imageData.path,
-                time = imageData.time.tolong()
+                path = imageData.path
             )
         } else {
             saveImageToDatabaseFolder(imageData)
@@ -119,7 +115,6 @@ suspend fun pullImagesFromDisk(storedImages: List<StoredImage>): List<ImageData>
                     ImageData(
                         identifier = storedImage.identifier,
                         image = file.readBytes().toImageBitmap(),
-                        time = formatTime(storedImage.time),
                         path = file.path
                     )
                 )

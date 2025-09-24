@@ -20,12 +20,10 @@ import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
-import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.shared.toStringName
-import org.mr0btain.ticketman.data.ticket.toNameString
 import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -203,9 +201,9 @@ fun CustomerDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = if (seedData.customer.name.toStringName().isEmpty()) {
+                        text = if (seedData.customer.name.toString().isEmpty()) {
                             "Add Customer"
-                        } else "Edit Customer: ${seedData.customer.name.toStringName()}",
+                        } else "Edit Customer: ${seedData.customer.name.toString()}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp,
                         maxLines = 1
@@ -499,8 +497,7 @@ fun CustomerDialog(
                                         state.lowercase().replaceFirstChar { it.uppercase() },
                                         zip
                                     ),
-                                    contactInfo = ContactInfo(email, phone),
-                                    time = seedData.customer.time
+                                    contactInfo = ContactInfo(email, phone)
                                 ),
                                 tickets = tickets,
                                 notes = notes
@@ -590,7 +587,7 @@ private fun CustomerDialogTicketList(
     ) {
         tickets.forEach { (ticket, notes) ->
             CustomInputChip(
-                label = ticket.device.toNameString(),
+                label = ticket.device.toString(),
                 onClick = { onTicketClick(ticket.identifier) },
                 onDeleteClick = { onDeleteClick(ticket.identifier) }
             )

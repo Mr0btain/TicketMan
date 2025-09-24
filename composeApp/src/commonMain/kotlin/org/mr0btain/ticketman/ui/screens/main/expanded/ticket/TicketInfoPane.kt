@@ -15,9 +15,8 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
-import org.mr0btain.ticketman.data.Customer
+import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.time.formatTime
 import org.mr0btain.ticketman.ui.composables.ContactsBlock
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
@@ -43,8 +42,6 @@ fun TicketInfoPane(
     onEditClick: () -> Unit,
     onImageClick: (List<ImageData>) -> Unit
 ) {
-    val date = formatTime(ticketData?.ticket?.time ?: Long.MAX_VALUE)
-
     // Main Body
     Surface(
         modifier = modifier
@@ -161,7 +158,7 @@ fun TicketInfoPane(
                                     // Date created
                                     SimpleTextItem(
                                         label = "Created",
-                                        text = if (ticketData.ticket.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                                        text = ticketData.ticket.time().date()
                                     )
 
                                     Spacer(Modifier.padding(4.dp))

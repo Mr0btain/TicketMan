@@ -8,35 +8,53 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.util.fastFirstOrNull
-import org.mr0btain.ticketman.data.Customer
-import java.util.UUID
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.*
+import org.mr0btain.ticketman.data.search.SearchResult
+import java.util.*
 
 /**
  * SearchBox for searching customers. Will return an id or a name and a true if they want to add new if it doesn't exist
  * @param modifier Modifier applied to drop down
- * @param items List of all customer info
- * @param input The state of the text field
- * @param onInputChange Event called when typing
  * @param onClick Event called when clicking, uuid passed is identifier for customer
+ * @param onQuery The function to run to get the results of a search
  */
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerSearch(
+fun CustomerSearchBar(
     modifier: Modifier = Modifier,
-    items: List<Customer>,
-    input: String,
-    onInputChange: (String) -> Unit,
-    onClick: (UUID) -> Unit
+    onClick: (UUID) -> Unit,
+    onQuery: suspend (String) -> List<SearchResult>
 ) {
+    var query by remember { mutableStateOf("") }
+    var suggestions by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
-    val filteredList = remember(input) { items.filter {
-        (it.name.firstName + it.name.lastName).lowercase()
-            .contains(input.lowercase().replace(" ", ""))
-                || it.identifier.toString().contains(input)
-    }.sortedBy { it.name.firstName + it.name.lastName + it.identifier.toString() } }
+    LaunchedEffect(Unit) {
+        snapshotFlow { query }
+            .debounce(400)
+            .filter { it.isNotBlank() }
+            .distinctUntilChanged()
+            .flatMapLatest { text ->
+                flow {
+                    isLoading = true
+
+                    val results = onQuery(text)
+
+                    emit(results)
+                }
+            }
+            .collect { results ->
+                suggestions = results
+
+                expanded = results.isNotEmpty()
+
+                isLoading = false
+            }
+    }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
@@ -44,23 +62,24 @@ fun CustomerSearch(
         modifier = modifier.sizeIn(maxWidth = 400.dp)
     ) {
         OutlinedTextField(
-            value = input,
-            onValueChange = {
-                // Check if were expanded on typing, because we should be
-                if (!expanded) expanded = true
-
-                // Call on input change
-                onInputChange(it)
-            },
+            value = query,
+            onValueChange = { query = it },
             label = { Text("Search Customer") },
             prefix = {
+                /*
                 // Get customer if we've matched with one
                 val customer = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
 
                 // If a match then prefix the name
                 if (customer != null) { Text(text = customer.name.firstName + " " + customer.name.lastName + ": ") }
+                 */
             },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            trailingIcon = {
+                if (isLoading)
+                    CircularProgressIndicator()
+                else
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                           },
             colors = OutlinedTextFieldDefaults.colors(),
             singleLine = true,
             modifier = Modifier
@@ -75,19 +94,18 @@ fun CustomerSearch(
             shadowElevation = 4.dp,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            filteredList.forEach { item ->
+            suggestions.forEach { ranked ->
                 DropdownMenuItem(
-                    text = { Text(
-                        text = item.name.firstName + " " + item.name.lastName + ": " + item.identifier.toString(),
-                        fontSize = 16.sp
-                    )
-                           },
+                    text = {
+                        Text(
+                            text = highlightMatch(ranked.text, query),
+                            fontSize = 16.sp
+                        )
+                    },
                     onClick = {
-                        // minimize the drop-down
+                        query = ranked.text
+                        onClick(ranked.identifier)
                         expanded = false
-
-                        // Call on click
-                        onClick(item.identifier)
                     }
                 )
             }

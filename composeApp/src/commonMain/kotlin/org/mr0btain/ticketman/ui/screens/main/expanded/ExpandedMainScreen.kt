@@ -285,6 +285,7 @@ fun ExpandedMainScreen(
                                 showCustomerDialog = true
                         },
                         onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomer(id) },
+                        onSearchQuery = { query -> viewModel.searchCustomers(query) },
                         onDeleteCustomer = {
                             dataType = DataType.CUSTOMER
                             showConfirmDeleteDialog = true

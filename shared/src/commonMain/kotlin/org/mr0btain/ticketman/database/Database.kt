@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
@@ -40,8 +41,54 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     protected val REMOVE_IMAGE_TAG = "$tag:RemoveImage"
     protected val COUNT_TAG = "$tag:Count"
 
+    /**
+     * Adds an item to the database
+     * @param data Item to add
+     */
+    abstract fun add(data: T)
+
+    /**
+     * Adds all items
+     * @param data Items to add
+     */
+    abstract fun addAll(data: List<T>)
+
+    /**
+     * Adds a list of images to the ImageTable and links them a note
+     * @param identifier Identifier of note to link images to
+     * @param images List of images to add
+     */
+    fun addImagesToNote(identifier: UUID, images: List<StoredImage>) {
+        appLogTryCatch(ADD_IMAGE_TO_NOTE_TAG) {
+            transaction {
+                NoteEntity.findById(identifier)?.let { noteEntity ->
+                    val imageCollection = images.map { image ->
+                        ImageEntity.new {
+                            path = image.path
+                        }
+                    }
+
+                    noteEntity.images = SizedCollection(noteEntity.images + imageCollection)
+
+                    AppLogger.m(ADD_IMAGE_TO_NOTE_TAG, SimpleResult.SUCCESS)
+                } ?: AppLogger.i(ADD_IMAGE_TO_NOTE_TAG, NoteError.NOT_FOUND)
+            }
+        }
+    }
+
+    /**
+     * Adds a note to an item and linking it to that item
+     * @param identifier Identifier of item to link note to
+     * @param note Note to insert and link to item
+     * @param storedImages Images to insert and link to note
+     */
+    abstract fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>)
+
     /** Gets all items */
     abstract fun all(): List<T>?
+
+    /** Returns the total number of items */
+    abstract fun count(): Long
 
     /**
      * Gets an item by its identifier
@@ -56,32 +103,11 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     abstract fun getPagedItems(offset: Long, pageSize: Int): List<T>?
 
-    /** Returns the total number of items */
-    abstract fun count(): Long
-
     /**
-     * Adds all items
-     * @param data Items to add
+     * Returns a list of notes and their respective images
+     * @param identifier Identifier of item to get notes for
      */
-    abstract fun addAll(data: List<T>)
-
-    /**
-     * Removes an item from the database
-     * @param identifier Identifier of item to remove
-     */
-    abstract fun remove(identifier: UUID)
-
-    /**
-     * Adds an item to the database
-     * @param data Item to add
-     */
-    abstract fun add(data: T)
-
-    /**
-     * Updates an item in the database
-     * @param data Item to update
-     */
-    abstract fun update(data: T)
+    abstract fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>?
 
     /**
      * Adds a note to the database
@@ -118,18 +144,29 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     }
 
     /**
-     * Adds a note to an item and linking it to that item
-     * @param identifier Identifier of item to link note to
-     * @param note Note to insert and link to item
-     * @param storedImages Images to insert and link to note
+     * Inserts and image into the ImageTable
+     * @param storedImage Image to insert
      */
-    abstract fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>)
+    fun insertImage(storedImage: StoredImage): ImageEntity? {
+        return appLogTryCatch<ImageEntity?>(INSERT_IMAGE_TAG) {
+            val entity = transaction {
+                ImageEntity.new(storedImage.identifier) {
+                    path = storedImage.path
+                }
+            }
+
+            AppLogger.m(INSERT_IMAGE_TAG, SimpleResult.SUCCESS)
+
+            entity
+        }
+    }
 
     /**
-     * Returns a list of notes and their respective images
-     * @param identifier Identifier of item to get notes for
+     * Updates an item in the database
+     * @param data Item to update
      */
-    abstract fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>?
+    abstract fun update(data: T)
+
 
     /**
      * Updates a note with this data. Essentially replaces the note with the ID with the data passed
@@ -168,24 +205,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                     AppLogger.m(UPDATE_NOTE_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(UPDATE_NOTE_TAG, NoteError.NOT_FOUND)
             }
-        }
-    }
-
-    /**
-     * Inserts and image into the ImageTable
-     * @param storedImage Image to insert
-     */
-    fun insertImage(storedImage: StoredImage): ImageEntity? {
-        return appLogTryCatch<ImageEntity?>(INSERT_IMAGE_TAG) {
-            val entity = transaction {
-                ImageEntity.new(storedImage.identifier) {
-                    path = storedImage.path
-                }
-            }
-
-            AppLogger.m(INSERT_IMAGE_TAG, SimpleResult.SUCCESS)
-
-            entity
         }
     }
 
@@ -249,25 +268,15 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     }
 
     /**
-     * Adds a list of images to the ImageTable and links them a note
-     * @param identifier Identifier of note to link images to
-     * @param images List of images to add
+     * Removes an item from the database
+     * @param identifier Identifier of item to remove
      */
-    fun addImagesToNote(identifier: UUID, images: List<StoredImage>) {
-        appLogTryCatch(ADD_IMAGE_TO_NOTE_TAG) {
-            transaction {
-                NoteEntity.findById(identifier)?.let { noteEntity ->
-                    val imageCollection = images.map { image ->
-                        ImageEntity.new {
-                            path = image.path
-                        }
-                    }
+    abstract fun remove(identifier: UUID)
 
-                    noteEntity.images = SizedCollection(noteEntity.images + imageCollection)
-
-                    AppLogger.m(ADD_IMAGE_TO_NOTE_TAG, SimpleResult.SUCCESS)
-                } ?: AppLogger.i(ADD_IMAGE_TO_NOTE_TAG, NoteError.NOT_FOUND)
-            }
-        }
-    }
+    /**
+     * Search the database. Returns a list of matches
+     * @param query The search criteria
+     * @param limit The limit of results to return
+     */
+    abstract fun search(query: String, limit: Int = 20): List<SearchResult>?
 }

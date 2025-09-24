@@ -7,9 +7,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.EncryptionService
-import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.data.hashPassword
+import org.mr0btain.ticketman.data.user.hashPassword
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.database.UserDatabaseImpl

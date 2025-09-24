@@ -2,8 +2,8 @@ package org.mr0btain.ticketman.ui.screens.main.mobile.customer
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.ticket.Ticket
 
 
 @Composable
