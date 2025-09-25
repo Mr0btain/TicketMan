@@ -21,7 +21,7 @@ import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.database.tables.user.UserTable
 import org.mr0btain.ticketman.database.tables.user.UserTicketTable
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 class LocalDatabase (

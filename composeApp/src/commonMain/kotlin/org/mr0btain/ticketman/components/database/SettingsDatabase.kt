@@ -8,7 +8,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.data.settings.UserSettings
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 @Suppress("PrivatePropertyName")
@@ -62,8 +62,7 @@ class SettingsDatabase(
                 }
             }
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(INITIALIZE_TAG, SimpleResult.FAIL)
+            AppLogger.e(INITIALIZE_TAG, SimpleResult.FAIL, ex)
         }
 
         if (initialized) {
@@ -99,8 +98,7 @@ class SettingsDatabase(
             AppLogger.m(GET_SETTINGS_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_SETTINGS_TAG, SimpleResult.FAIL)
+            AppLogger.e(GET_SETTINGS_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -125,8 +123,7 @@ class SettingsDatabase(
             AppLogger.m(SAVE_SETTINGS_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SAVE_SETTINGS_TAG, SimpleResult.FAIL)
+            AppLogger.e(SAVE_SETTINGS_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -151,8 +148,7 @@ class SettingsDatabase(
             AppLogger.m(GET_USERNAME_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_USERNAME_TAG, SimpleResult.FAIL)
+            AppLogger.e(GET_USERNAME_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -174,8 +170,7 @@ class SettingsDatabase(
             AppLogger.m(SET_USERNAME_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_USERNAME_TAG, SimpleResult.FAIL)
+            AppLogger.e(SET_USERNAME_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -200,8 +195,7 @@ class SettingsDatabase(
             AppLogger.m(GET_PASSWORD_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_PASSWORD_TAG, SimpleResult.FAIL)
+            AppLogger.e(GET_PASSWORD_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -223,8 +217,7 @@ class SettingsDatabase(
             AppLogger.m(SET_PASSWORD_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_PASSWORD_TAG, SimpleResult.FAIL)
+            AppLogger.e(SET_PASSWORD_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -249,8 +242,7 @@ class SettingsDatabase(
             AppLogger.m(GET_ACCESS_TOKEN_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_ACCESS_TOKEN_TAG, SimpleResult.FAIL)
+            AppLogger.e(GET_ACCESS_TOKEN_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -272,8 +264,7 @@ class SettingsDatabase(
             AppLogger.m(SET_ACCESS_TOKEN_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_ACCESS_TOKEN_TAG, SimpleResult.FAIL)
+            AppLogger.e(SET_ACCESS_TOKEN_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -298,8 +289,7 @@ class SettingsDatabase(
             AppLogger.m(GET_REFRESH_TOKEN_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_REFRESH_TOKEN_TAG, SimpleResult.FAIL)
+            AppLogger.e(GET_REFRESH_TOKEN_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -321,8 +311,7 @@ class SettingsDatabase(
             AppLogger.m(SET_REFRESH_TOKEN_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_REFRESH_TOKEN_TAG, SimpleResult.FAIL)
+            AppLogger.e(SET_REFRESH_TOKEN_TAG, SimpleResult.FAIL, ex)
             false
         }
     }

@@ -5,7 +5,7 @@ import io.github.vinceglb.filekit.*
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.uuid.UUIDv7
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.image_directory
@@ -30,8 +30,7 @@ suspend fun saveImageToDatabaseFolder(
 
         StoredImage(identifier = id, path = file.path)
     } catch (ex: Exception) {
-        AppLogger.i("SaveImage", SimpleResult.FAIL)
-        ex.printStackTrace()
+        AppLogger.e("SaveImage", SimpleResult.FAIL, ex)
         null
     }
 }
@@ -60,8 +59,7 @@ suspend fun saveImageToDatabaseFolder(
         // Return result
         StoredImage(imageData.identifier, file.path)
     } catch (ex: Exception) {
-        AppLogger.i("SaveImage", SimpleResult.FAIL)
-        ex.printStackTrace()
+        AppLogger.e("SaveImage", SimpleResult.FAIL, ex)
         null
     }
 }
@@ -79,6 +77,7 @@ suspend fun flushImageIfNotInDatabase(imageData: ImageData): StoredImage? {
             saveImageToDatabaseFolder(imageData)
         }
     } catch (ex: Exception) {
+        AppLogger.e("FlushImageIfNotInDatabase", SimpleResult.FAIL, ex)
         null
     }
 }
@@ -120,8 +119,7 @@ suspend fun pullImagesFromDisk(storedImages: List<StoredImage>): List<ImageData>
                 )
             }
         } catch (ex: Exception) {
-            AppLogger.i("GetImages", "Failed to get image: ${storedImage.identifier}")
-            ex.printStackTrace()
+            AppLogger.e("GetImages", "Failed to get image: ${storedImage.identifier}", ex)
         }
     }
 

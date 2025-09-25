@@ -11,7 +11,7 @@ import org.mr0btain.ticketman.data.shared.PersonName
 object UserTable : UUIDTable("user") {
     val username = text("username")
     val password = text("password")
-    val name = json<PersonName>("name", Json { ignoreUnknownKeys = true })
+    val name = text("name")
     val contactInfo = json<ContactInfo>("contact", Json { ignoreUnknownKeys = true })
     val access = json<AccessLevel>("access", Json { ignoreUnknownKeys = true })
 }

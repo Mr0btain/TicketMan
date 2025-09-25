@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.encryption
 
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import java.security.*
 import java.security.interfaces.XECPrivateKey
@@ -55,8 +55,7 @@ open class ServerEncryptionHandler() {
 
             SecretKeySpec(hash.copyOf(32), "ChaCha20")
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(DERIVE_SHARED_KEY_TAG, SimpleResult.FAIL)
+            AppLogger.e(DERIVE_SHARED_KEY_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -69,17 +68,13 @@ open class ServerEncryptionHandler() {
 
             keyAgreement.generateSecret()
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(DERIVE_SHARED_SECRET_TAG, SimpleResult.FAIL)
+            AppLogger.e(DERIVE_SHARED_SECRET_TAG, SimpleResult.FAIL, ex)
             null
         }
 
     }
 
-    fun encryptAndSignData(
-        data: String,
-        peerPublicKey: XECPublicKey
-    ): EncryptedData? {
+    fun encryptAndSignData(data: String, peerPublicKey: XECPublicKey): EncryptedData? {
         return try {
             val symmetricKey = deriveSharedKey(peerPublicKey)
 
@@ -97,8 +92,7 @@ open class ServerEncryptionHandler() {
 
             EncryptedData(ciphertext, nonce, sigBytes)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(ENCRYPT_DATA_TAG, SimpleResult.FAIL)
+            AppLogger.e(ENCRYPT_DATA_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -120,8 +114,7 @@ open class ServerEncryptionHandler() {
 
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(VERIFY_SIGNATURE_TAG, SimpleResult.FAIL)
+            AppLogger.e(VERIFY_SIGNATURE_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -142,8 +135,7 @@ open class ServerEncryptionHandler() {
 
             String(plaintext, Charsets.UTF_8)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(DECRYPT_DATA_TAG, SimpleResult.FAIL)
+            AppLogger.e(DECRYPT_DATA_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -175,8 +167,7 @@ open class ServerEncryptionHandler() {
 
             String(plaintext, Charsets.UTF_8)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(DECRYPT_DATA_TAG, SimpleResult.FAIL)
+            AppLogger.e(DECRYPT_DATA_TAG, SimpleResult.FAIL, ex)
             null
         }
     }

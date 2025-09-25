@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.error.ImageError
 import org.mr0btain.ticketman.error.NoteError
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
 import java.util.*
@@ -40,6 +40,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     protected val UPDATE_IMAGE_TAG = "$tag:UpdateImage"
     protected val REMOVE_IMAGE_TAG = "$tag:RemoveImage"
     protected val COUNT_TAG = "$tag:Count"
+    protected val SEARCH_TAG = "$tag:Search"
 
     /**
      * Adds an item to the database
@@ -60,6 +61,8 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     fun addImagesToNote(identifier: UUID, images: List<StoredImage>) {
         appLogTryCatch(ADD_IMAGE_TO_NOTE_TAG) {
+            var result = false
+
             transaction {
                 NoteEntity.findById(identifier)?.let { noteEntity ->
                     val imageCollection = images.map { image ->
@@ -70,9 +73,11 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
                     noteEntity.images = SizedCollection(noteEntity.images + imageCollection)
 
-                    AppLogger.m(ADD_IMAGE_TO_NOTE_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.i(ADD_IMAGE_TO_NOTE_TAG, NoteError.NOT_FOUND)
             }
+
+            result
         }
     }
 
@@ -134,11 +139,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                     entity.images = SizedCollection(imageCollection)
                 }
 
-                AppLogger.m(INSERT_NOTE_TAG, SimpleResult.SUCCESS)
-
-                entity
-
-
+                Pair(entity, true)
             }
         }
     }
@@ -155,9 +156,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                 }
             }
 
-            AppLogger.m(INSERT_IMAGE_TAG, SimpleResult.SUCCESS)
-
-            entity
+            Pair(entity, true)
         }
     }
 
@@ -176,6 +175,8 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     fun updateNote(note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(UPDATE_NOTE_TAG) {
+            var result = false
+
             transaction {
                 // Add new note to database
                 NoteEntity.findByIdAndUpdate(note.identifier) { noteEntity ->
@@ -202,9 +203,11 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
                     noteEntity.images = SizedCollection(updatedImages)
 
-                    AppLogger.m(UPDATE_NOTE_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.i(UPDATE_NOTE_TAG, NoteError.NOT_FOUND)
             }
+
+            result
         }
     }
 
@@ -213,22 +216,15 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * @param storedImage Image to update
      */
     fun updateImage(storedImage: StoredImage): ImageEntity? {
-        appLogTryCatch<ImageEntity?>(UPDATE_IMAGE_TAG) {
+        return appLogTryCatch<ImageEntity?>(UPDATE_IMAGE_TAG) {
             transaction {
                 val entity = ImageEntity.findByIdAndUpdate(storedImage.identifier) { imageEntity ->
                     imageEntity.path = storedImage.path
                 }
 
-                if (entity != null)
-                    AppLogger.m(UPDATE_IMAGE_TAG, SimpleResult.SUCCESS)
-                else
-                    AppLogger.i(UPDATE_IMAGE_TAG, ImageError.NOT_FOUND)
-
-                entity
+                Pair(entity, entity != null)
             }
         }
-
-        return null
     }
 
     /**
@@ -237,13 +233,17 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     fun removeImage(identifier: UUID) {
         appLogTryCatch(REMOVE_IMAGE_TAG) {
+            var result = false
+
             transaction {
                 ImageEntity.findById(identifier)?.let { imageEntity ->
                     imageEntity.delete()
 
-                    AppLogger.m(REMOVE_IMAGE_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.i(REMOVE_IMAGE_TAG, ImageError.NOT_FOUND)
             }
+
+            result
         }
     }
 
@@ -253,6 +253,8 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     fun removeNote(identifier: UUID) {
         appLogTryCatch(REMOVE_NOTE_TAG) {
+            var result = false
+
             transaction {
                 NoteEntity.findById(identifier)?.let { noteEntity ->
                     noteEntity.images.forEach { imageEntity ->
@@ -261,9 +263,11 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
                     noteEntity.delete()
 
-                    AppLogger.m(REMOVE_NOTE_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.i(REMOVE_NOTE_TAG, SimpleResult.FAIL)
             }
+
+            result
         }
     }
 

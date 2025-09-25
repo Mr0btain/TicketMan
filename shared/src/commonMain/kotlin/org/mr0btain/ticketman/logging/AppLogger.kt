@@ -6,8 +6,11 @@ import org.mr0btain.ticketman.error.ErrorCode
  * Logger to log any messages or errors
  */
 expect object AppLogger {
+    var LOG_LEVEL: LogLevel
+
     /** Exceptions, thrown when something bad has happened */
     fun e(tag: String, message: String, throwable: Throwable? = null)
+    fun e(tag: String, message: ErrorCode, throwable: Throwable? = null)
 
     /** Debug messages */
     fun d(tag: String, message: String)

@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.database.tables.user.UserTable
 import org.mr0btain.ticketman.database.tables.user.UserTicketTable
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 
@@ -58,7 +58,6 @@ fun initDatabase() {
 
         AppLogger.m("ClientDatabase: Initialize", SimpleResult.SUCCESS)
     } catch (ex: Exception) {
-        ex.printStackTrace()
-        AppLogger.i(" Initialize", SimpleResult.SUCCESS)
+        AppLogger.e(" Initialize", SimpleResult.SUCCESS, ex)
     }
 }

@@ -65,15 +65,6 @@ fun CustomerSearchBar(
             value = query,
             onValueChange = { query = it },
             label = { Text("Search Customer") },
-            prefix = {
-                /*
-                // Get customer if we've matched with one
-                val customer = remember(input) { items.fastFirstOrNull { it.identifier.toString() == input } }
-
-                // If a match then prefix the name
-                if (customer != null) { Text(text = customer.name.firstName + " " + customer.name.lastName + ": ") }
-                 */
-            },
             trailingIcon = {
                 if (isLoading)
                     CircularProgressIndicator()

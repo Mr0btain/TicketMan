@@ -1,15 +1,16 @@
 package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.VarCharColumnType
+import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketTable
-import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
@@ -24,10 +25,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                 result = TicketEntity.all().map { item -> item.toTicket() }
             }
 
-            if (result != null)
-                AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_ALL_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
@@ -40,8 +38,9 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
             transaction {
                 TicketEntity.findById(identifier)?.let { ticketEntity ->
                     result = ticketEntity.toTicket()
-                    AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_BY_ID_TAG, TicketError.NOT_FOUND)
+
+                result != null
             }
         }
 
@@ -60,10 +59,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                     .map { it.toTicket() }
             }
 
-            if (result != null)
-                AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
@@ -75,6 +71,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         appLogTryCatch(COUNT_TAG) {
             transaction {
                 count = TicketEntity.count()
+                true
             }
         }
 
@@ -93,24 +90,45 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                     }
                 }
 
-                AppLogger.m(ADD_ALL_TAG, SimpleResult.SUCCESS)
+                true
             }
         }
     }
 
     override fun remove(identifier: UUID) {
         appLogTryCatch(REMOVE_TAG) {
+            var result = false
+
             transaction {
                 TicketEntity.findById(identifier)?.let { ticketEntity ->
-                    AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
                     ticketEntity.delete()
+                    result = true
                 } ?: AppLogger.i(REMOVE_TAG, TicketError.NOT_FOUND)
             }
+
+            result
         }
     }
 
     override fun search(query: String, limit: Int): List<SearchResult>? {
-        TODO("Not yet implemented")
+        return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
+            transaction {
+                val pattern = "$query%"
+
+                Pair(TicketEntity
+                    .find { (TicketTable.id.castTo(VarCharColumnType()) like pattern) }
+                    .orderBy(TicketTable.id to SortOrder.DESC)
+                    .limit(limit)
+                    .map { ticketEntity ->
+                        SearchResult(
+                            identifier = ticketEntity.id.value,
+                            text = ticketEntity.id.value.toString()
+                        )
+                    },
+                    true
+                    )
+            }
+        }
     }
 
     override fun add(data: Ticket) {
@@ -123,13 +141,15 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                     priority = data.priority
                 }
 
-                AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
+                true
             }
         }
     }
 
     override fun update(data: Ticket) {
         appLogTryCatch(UPDATE_TAG) {
+            var result = false
+
             transaction {
                 TicketEntity
                     .findByIdAndUpdate(data.identifier) { item ->
@@ -137,14 +157,18 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                         item.status = data.status
                         item.priority = data.priority
 
-                        AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
+                        result = true
                     } ?: AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND)
             }
+
+            result
         }
     }
 
     override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(ADD_NOTE_TAG) {
+            var result = false
+
             transaction {
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
@@ -152,10 +176,12 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                     TicketEntity.findByIdAndUpdate(identifier) { ticketEntity ->
                         ticketEntity.notes = SizedCollection(ticketEntity.notes + noteEntity)
 
-                        AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
+                        result = true
                     } ?: AppLogger.i(ADD_NOTE_TAG, TicketError.NOT_FOUND)
                 }
             }
+
+            result
         }
     }
 
@@ -171,10 +197,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                 } ?: AppLogger.i(GET_NOTES_TAG, TicketError.NOT_FOUND)
             }
 
-            if (result != null)
-                AppLogger.m(GET_NOTES_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_NOTES_TAG, TicketError.NOT_FOUND)
+            result != null
         }
 
         return result

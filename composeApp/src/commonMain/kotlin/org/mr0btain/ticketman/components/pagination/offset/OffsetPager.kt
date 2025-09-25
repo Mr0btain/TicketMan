@@ -11,7 +11,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.data.cache.LruCache
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
@@ -53,10 +53,6 @@ class OffsetPager<Value>(
 
     /** Whether we are refreshing or not */
     var isRefreshing by mutableStateOf(false)
-        private set
-
-    /** Whether an error has occurred or not */
-    var error by mutableStateOf<Throwable?>(null)
         private set
 
     // The max number of pages
@@ -151,8 +147,6 @@ class OffsetPager<Value>(
     ) {
         isLoading = true
 
-        error = null
-
         try {
             // Check if we had the item in cache, if not fetch it and insert into cache
             val result = cache.get(page)
@@ -188,15 +182,11 @@ class OffsetPager<Value>(
                     trimDeque(append = false, prepend = true)
                 }
             }
-        } catch (t: Throwable) {
-            error = t
-
+        } catch (ex: Exception) {
             if (append)
-                AppLogger.i(LOAD_NEXT_TAG, SimpleResult.FAIL)
+                AppLogger.e(LOAD_NEXT_TAG, SimpleResult.FAIL, ex)
             else
-                AppLogger.i(LOAD_PREVIOUS_TAG, SimpleResult.FAIL)
-
-            t.printStackTrace()
+                AppLogger.e(LOAD_PREVIOUS_TAG, SimpleResult.FAIL,ex)
         } finally {
             isLoading = false
 

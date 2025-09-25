@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.database.tables.user
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
+import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
@@ -26,11 +27,11 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     fun toUser(): User {
         return User(
             identifier = id.value,
-            username = this.username,
-            password = this.password,
-            name = this.name,
-            contactInfo = this.contactInfo,
-            accessLevel = this.access
+            username = username,
+            password = password,
+            name = PersonName.fromString(name),
+            contactInfo = contactInfo,
+            accessLevel = access
         )
     }
 }

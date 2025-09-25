@@ -15,7 +15,6 @@ import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.error.CustomerError
-import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
@@ -38,9 +37,8 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 result = CustomerEntity.all().map { item -> item.toCustomer() }
             }
 
-            if (result != null)
-                AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
-            else AppLogger.i(GET_ALL_TAG, SimpleResult.FAIL)
+            // Return boolean
+            result != null
         }
 
         return result
@@ -53,42 +51,10 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
             transaction {
                 CustomerEntity.findById(identifier)?.let { customerEntity ->
                     result = customerEntity.toCustomer()
-                    AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
                 } ?: AppLogger.i(GET_BY_ID_TAG, CustomerError.NOT_FOUND)
+
+                result != null
             }
-        }
-
-        return result
-    }
-
-    /** Should be faster than offset */
-    fun getPagedItems(cursor: UUID, pageSize: Int): List<Customer>? {
-        var result: List<Customer>? = null
-
-        appLogTryCatch(GET_PAGED_ITEMS_TAG) {
-            transaction {
-                result = CustomerTable
-                    .selectAll()
-                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.id to SortOrder.DESC)
-                    .where { CustomerTable.id greaterEq cursor }
-                    .limit(pageSize)
-                    .map { resultRow ->
-                        Customer(
-                            identifier = resultRow[CustomerTable.id].value,
-                            name = PersonName.fromString(resultRow[CustomerTable.name]),
-                            address = resultRow[CustomerTable.address],
-                            contactInfo = ContactInfo(
-                                email = listOf(resultRow[CustomerTable.email]),
-                                phone = resultRow[CustomerTable.phone]
-                            )
-                        )
-                    }
-            }
-
-            if (result != null)
-                AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
         }
 
         return result
@@ -107,10 +73,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     .map { it.toCustomer() }
             }
 
-            if (result != null)
-                AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
@@ -122,6 +85,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         appLogTryCatch(COUNT_TAG) {
             transaction {
                 count = CustomerEntity.count()
+                true
             }
         }
          return count
@@ -140,55 +104,55 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     }
                 }
 
-                AppLogger.m(ADD_ALL_TAG, SimpleResult.SUCCESS)
+                true
             }
         }
     }
 
     override fun remove(identifier: UUID) {
         appLogTryCatch(REMOVE_TAG) {
+            var result = false
+
             transaction {
                 CustomerEntity.findById(identifier)?.let { customerEntity ->
                     customerEntity.delete()
-
-                    AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
-                } ?: AppLogger.i(REMOVE_TAG, CustomerError.NOT_FOUND)
+                    result = true
+                } ?: AppLogger.m(REMOVE_TAG, CustomerError.NOT_FOUND)
             }
+
+            result
         }
     }
 
     override fun search(query: String, limit: Int): List<SearchResult>? {
-        var result: List<SearchResult>? = null
-
-        try {
+        return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
             transaction {
                 val pattern = "$query%"
 
-                result = CustomerEntity
-                    .find {
-                        (CustomerTable.name.lowerCase() like pattern) or
-                                (CustomerTable.id.castTo(VarCharColumnType()) like pattern) or
-                                (CustomerTable.email.lowerCase() like pattern)
-                    }
-                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.email to SortOrder.ASC, CustomerTable.id to SortOrder.ASC)
-                    .limit(limit)
-                    .map { customerEntity ->
-                        SearchResult(
-                            identifier = customerEntity.id.value,
-                            text = when {
-                                customerEntity.name.startsWith(query, true) -> customerEntity.name
-                                customerEntity.email.startsWith(query, true) -> customerEntity.email
-                                customerEntity.id.value.toString().startsWith(query, true) -> customerEntity.id.value.toString()
-                                else -> customerEntity.name
-                            }
-                        )
-                    }
+                Pair(
+                    CustomerEntity
+                        .find {
+                            (CustomerTable.name.lowerCase() like pattern) or
+                                    (CustomerTable.id.castTo(VarCharColumnType()) like pattern) or
+                                    (CustomerTable.email.lowerCase() like pattern)
+                        }
+                        .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.email to SortOrder.ASC, CustomerTable.id to SortOrder.ASC)
+                        .limit(limit)
+                        .map { customerEntity ->
+                            SearchResult(
+                                identifier = customerEntity.id.value,
+                                text = when {
+                                    customerEntity.name.startsWith(query, true) -> customerEntity.name
+                                    customerEntity.email.startsWith(query, true) -> customerEntity.email
+                                    customerEntity.id.value.toString().startsWith(query, true) -> customerEntity.id.value.toString()
+                                    else -> customerEntity.name
+                                }
+                            )
+                        },
+                    true
+                )
             }
-        } catch (ex: Exception) {
-            ex.printStackTrace()
         }
-
-        return result
     }
 
     override fun add(data: Customer) {
@@ -202,7 +166,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     phone = data.contactInfo.phone
                 }
 
-                AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
+                true
             }
         }
     }
@@ -210,6 +174,8 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     override fun update(data: Customer) {
         appLogTryCatch(UPDATE_TAG) {
             transaction {
+                var result = false
+
                 CustomerEntity
                     .findById(data.identifier)
                     ?.apply {
@@ -218,25 +184,30 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                         email = data.contactInfo.email.first()
                         phone = data.contactInfo.phone
 
-                        AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
+                        result = true
                     } ?: AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND)
+
+                result
             }
         }
     }
 
     override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(ADD_NOTE_TAG) {
+            var result = false
+
             transaction {
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to customer notes
                     CustomerEntity.findByIdAndUpdate(identifier) { customerEntity ->
                         customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
-
-                        AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
+                        result = true
                     } ?: AppLogger.i(ADD_NOTE_TAG, CustomerError.NOT_FOUND)
                 }
             }
+
+            result
         }
     }
 
@@ -252,10 +223,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 } ?: AppLogger.i(GET_NOTES_TAG, CustomerError.NOT_FOUND)
             }
 
-            if (result != null)
-                AppLogger.m(GET_NOTES_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_NOTES_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
@@ -268,6 +236,8 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      */
     fun addTicket(customerId: UUID, ticketId: UUID) {
         appLogTryCatch(ADD_TICKET_TAG) {
+            var result = false
+
             transaction {
                 // Get ticket entity
                 TicketEntity.findById(ticketId)?.let { ticketEntity ->
@@ -275,9 +245,13 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     CustomerEntity.findById(customerId)?.let { customerEntity ->
                         // Insert ticket into customer links
                         customerEntity.tickets = SizedCollection(customerEntity.tickets + ticketEntity)
+
+                        result = true
                     } ?: AppLogger.i(ADD_TICKET_TAG, CustomerError.NOT_FOUND)
                 } ?: AppLogger.i(ADD_TICKET_TAG, TicketError.NOT_FOUND)
             }
+
+            result
         }
     }
 
@@ -288,6 +262,8 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      */
     fun removeTicket(customerId: UUID, ticketId: UUID) {
         appLogTryCatch(REMOVE_TICKET_TAG) {
+            var result = false
+
             transaction {
                 // Get customer entity
                 CustomerEntity.findById(customerId)?.let { customerEntity ->
@@ -297,9 +273,11 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                             .filter { it.id.value != ticketId }
                     )
 
-                    AppLogger.m(REMOVE_TICKET_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.i(REMOVE_TICKET_TAG, CustomerError.NOT_FOUND)
             }
+
+            result
         }
     }
 
@@ -318,10 +296,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 } ?: AppLogger.i(GET_TICKETS_TAG, CustomerError.NOT_FOUND)
             }
 
-            if (tickets != null)
-                AppLogger.m(GET_TICKETS_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_TICKETS_TAG, SimpleResult.FAIL)
+            tickets != null
         }
 
         return tickets
