@@ -25,7 +25,7 @@ import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
 fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
-    startDestination: String = Screen.Main.route,
+    initialDestination: Destination = Destination.MAIN,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
     snackBarState: SnackbarHostState
@@ -37,9 +37,9 @@ fun NavigationHost(
     NavHost(
         modifier = modifier,
         navController = navHostController,
-        startDestination = startDestination
+        startDestination = initialDestination.route
     ) {
-        composable(Screen.Admin.route) {
+        composable(Destination.ADMIN.route) {
             AdminScreen(
                 viewModel = mainViewModel,
                 isDarkMode = darkMode.value,
@@ -47,7 +47,7 @@ fun NavigationHost(
             )
         }
 
-        composable(Screen.Dashboard.route) {
+        composable(Destination.DASHBOARD.route) {
             DashboardScreen(
                 viewModel = mainViewModel,
                 snackBarState = snackBarState
@@ -55,7 +55,7 @@ fun NavigationHost(
         }
 
         // TEMPORARY
-        composable(Screen.Login.route) {
+        composable(Destination.LOGIN.route) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -80,7 +80,7 @@ fun NavigationHost(
             }
         }
 
-        composable(Screen.Main.route) {
+        composable(Destination.MAIN.route) {
             MainScreen(
                 viewModel = mainViewModel,
                 coroutineScope = coroutineScope,
@@ -91,7 +91,7 @@ fun NavigationHost(
             )
         }
 
-        composable(Screen.Settings.route) {
+        composable(Destination.SETTINGS.route) {
             SettingsScreen(
                 viewModel = mainViewModel,
                 scope = coroutineScope

@@ -16,9 +16,9 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
+import org.mr0btain.ticketman.ui.screens.navigation.Destination
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationItem
-import org.mr0btain.ticketman.ui.screens.navigation.Screen
 import org.mr0btain.ticketman.ui.screens.navigation.SideAppNav
 import org.mr0btain.ticketman.ui.theme.AppTheme
 import ticketman.composeapp.generated.resources.Res
@@ -62,31 +62,33 @@ fun App() {
         // Should we show login popup or not
         val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
-        val navDestinations = listOf(
+        val initialDestination = Destination.MAIN
+
+        val navDestination = listOf(
             NavigationItem(
                 title = "Admin",
                 icon = painterResource(Res.drawable.archive),
-                route = Screen.Admin.route
+                destination = Destination.ADMIN
             ),
             NavigationItem(
                 title = "Dashboard",
                 icon = painterResource(Res.drawable.monitor),
-                route = Screen.Dashboard.route
+                destination = Destination.DASHBOARD
             ),
             NavigationItem(
                 title = "Login",
                 icon = painterResource(Res.drawable.user),
-                route = Screen.Login.route
+                destination = Destination.LOGIN
             ),
             NavigationItem(
                 title = "Main",
                 icon = painterResource(Res.drawable.home),
-                route = Screen.Main.route
+                destination = Destination.MAIN
             ),
             NavigationItem(
                 title = "Settings",
                 icon = painterResource(Res.drawable.settings),
-                route = Screen.Settings.route
+                destination = Destination.SETTINGS
             )
         )
 
@@ -114,12 +116,14 @@ fun App() {
                             navHostController = navigator,
                             coroutineScope = mainScope,
                             mainViewModel = mainViewModel,
-                            snackBarState = snackBarHostState
+                            snackBarState = snackBarHostState,
+                            initialDestination = initialDestination
                         )
                     },
                     topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
                     coroutineScope = mainScope,
-                    destinations = navDestinations
+                    destinations = navDestination,
+                    initialDestination = initialDestination
                 )
             } else {
                 // Calculating screen size if were on mobile. This should only update when the screen is rotated.
@@ -137,19 +141,21 @@ fun App() {
                                 navHostController = navigator,
                                 coroutineScope = mainScope,
                                 mainViewModel = mainViewModel,
-                                snackBarState = snackBarHostState
+                                snackBarState = snackBarHostState,
+                                initialDestination = initialDestination
                             )
                         },
                         topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
                         coroutineScope = mainScope,
-                        destinations = navDestinations
+                        destinations = navDestination,
+                        initialDestination = initialDestination
                     )
                 } else {
                     // Phone screen
                     BottomNavigationDrawer(
                         navController = navigator,
                         coroutineScope = mainScope,
-                        destinations = navDestinations,
+                        destinations = navDestination,
                         content = { paddingValues ->
                             NavigationHost(
                                 modifier = Modifier.padding(paddingValues),
