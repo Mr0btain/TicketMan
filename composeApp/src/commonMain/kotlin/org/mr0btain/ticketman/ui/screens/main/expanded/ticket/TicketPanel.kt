@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.data.customer.Customer
@@ -38,20 +37,11 @@ fun TicketPanel(
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (UUID) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
-    onDeleteTicket: (UUID) -> Unit,
-    onImageClick: (List<ImageData>) -> Unit,
+    onDeleteTicket: () -> Unit,
+    onImageClick: (UUID) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
-    // For search input
-    var searchInput by remember { mutableStateOf("") }
-
-    // Search items
-    //TODO: FIx
-    val searchItems = remember(selectedPanel) {
-        emptyList<UUID>() //sortedTickets.map { it.identifier }
-    }
-
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
 
@@ -131,16 +121,8 @@ fun TicketPanel(
                 ) {
                     AddOrDeleteButtonRow(
                         label = "Ticket",
-                        onAddClick = {
-                            // Trigger new item dialog
-                            onAddNewTicket()
-                        },
-                        onDeleteClick = {
-                            // Trigger delete ticket dialog/ confirm
-                            selectedTicket?.let { ticketData ->
-                                onDeleteTicket(ticketData.ticket.identifier)
-                            }
-                        }
+                        onAddClick = onAddNewTicket,
+                        onDeleteClick = onDeleteTicket
                     )
 
                     Spacer(Modifier.padding(8.dp))

@@ -4,13 +4,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.utils.isNewTicket
@@ -18,12 +22,13 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.composables.ticket.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.ticket.TicketStatusDropDown
+import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 import kotlin.uuid.ExperimentalUuidApi
@@ -38,7 +43,8 @@ fun TicketDialog(
     onContinue: (TicketData) -> Unit,
     onDismiss: () -> Unit,
     seedData: TicketData,
-    isDarkMode: Boolean
+    isDarkMode: Boolean,
+    scope: CoroutineScope = rememberCoroutineScope()
 ) {
     // seed data
     var customerId by remember(seedData) { mutableStateOf<Customer?>(null) }
@@ -59,11 +65,11 @@ fun TicketDialog(
 
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
-    var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
     var itemForDelete by remember { mutableStateOf(DataType.NONE) }
 
     // For editing or adding notes dialog
-    var showEditNoteDialog by remember { mutableStateOf(false) }
+    var showNoteDialog by remember { mutableStateOf(false) }
+    var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
 
     // For customer search bar
     var customerSearchBarInput by remember { mutableStateOf("") }
@@ -72,22 +78,29 @@ fun TicketDialog(
     var userSearchBarInput by remember { mutableStateOf("")  }
 
     // Edit or add update dialog
-    if (showEditNoteDialog) {
-        /*
-        EditUpdateDialog(
-            isDarkMode = isDarkMode,
-            seedData = noteSeed,
-            onConfirm = { update ->
-                // Remove old if exists
-                notes.removeIf { it.identifier == update.identifier }
+    EditNoteDialog(
+        seedData = noteSeedData,
+        onConfirm = { result ->
+            scope.launch {
+                val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
 
-                // Add edited or new to list
-                notes.add(update)
-            },
-            onDismissRequest = { showEditUpdateDialog = false }
-        )
-         */
-    }
+                // Check if note exists, if so remove old data
+                if (foundNote != null) notes.remove(foundNote)
+
+                // Insert new note
+                notes.add(result)
+
+                noteSeedData = null
+
+                showNoteDialog = false
+            }
+        },
+        isVisible = showNoteDialog,
+        onDismissRequest = {
+            noteSeedData = null
+            showNoteDialog = false
+        }
+    )
 
     // Delete item dialog
     if (showConfirmDeleteScreen) {
@@ -265,40 +278,16 @@ fun TicketDialog(
                         )
 
                         Spacer(Modifier.padding(4.dp))
+
                         // ------------------------- Updates -------------------------------
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Updates",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            IconButton(
-                                modifier = Modifier.size(26.dp),
-                                onClick = {
-                                    showEditNoteDialog = true
-                                }
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(20.dp),
-                                    painter = painterResource(Res.drawable.plus),
-                                    contentDescription = "Add new Update"
-                                )
-                            }
-                        }
-
-                        Spacer(Modifier.padding(4.dp))
-
                         NoteBlock(
+                            label = "Updates",
                             noteData = notes,
-                            editable = true
+                            editable = true,
+                            onEditClick = { id ->
+                                noteSeedData = notes.find { it.note.identifier == id }
+                                showNoteDialog = true
+                            }
                         )
                     }
                 }
@@ -306,7 +295,7 @@ fun TicketDialog(
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Confirm Cancel buttons ----------------------------------------------------
-                ConfirmOrCancelButtonRow(
+                ConfirmCancelButtons(
                     modifier = Modifier.fillMaxWidth(),
                     onCancelClick = { onDismiss() },
                     onConfirmClick = {

@@ -28,7 +28,6 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.file_text
 import ticketman.composeapp.generated.resources.mail
 import ticketman.composeapp.generated.resources.phone
 import ticketman.composeapp.generated.resources.x
@@ -36,7 +35,7 @@ import ticketman.composeapp.generated.resources.x
 // This holds things used frequently
 
 @Composable
-fun ConfirmOrCancelButtonRow(
+fun ConfirmCancelButtons(
     modifier: Modifier = Modifier,
     onCancelClick: () -> Unit,
     onConfirmClick: () -> Unit

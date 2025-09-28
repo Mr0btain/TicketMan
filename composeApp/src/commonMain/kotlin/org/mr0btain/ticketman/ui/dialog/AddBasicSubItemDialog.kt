@@ -28,94 +28,97 @@ fun AddBasicSubItemDialog(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     subItemType: DataType,
+    isVisible: Boolean,
     onConfirm: (String) -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var input by remember { mutableStateOf("") }
-    val label = subItemType.stringName
-    var isError by remember { mutableStateOf(false) }
+    if (isVisible) {
+        var input by remember { mutableStateOf("") }
+        val label = subItemType.stringName
+        var isError by remember { mutableStateOf(false) }
 
-    // For basic checks for validity
-    val emailOptions = listOf("@", ".")
+        // For basic checks for validity
+        val emailOptions = listOf("@", ".")
 
-    Dialog(
-        onDismissRequest = { onDismissRequest() },
-    ) {
-        Surface(
-            modifier = modifier,
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp,
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+        Dialog(
+            onDismissRequest = { onDismissRequest() },
         ) {
-            Column(
-                modifier = Modifier.padding(32.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            Surface(
+                modifier = modifier,
+                shape = RoundedCornerShape(10.dp),
+                shadowElevation = 4.dp,
+                color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
             ) {
-                Text(
-                    text = "Add new $label",
-                    fontSize = 20.sp
-                )
-
-                Spacer(Modifier.padding(4.dp))
-
-                OutlinedTextField(
-                    label = { Text(label) },
-                    value = input,
-                    onValueChange = { value ->
-                        when (subItemType) {
-                            DataType.EMAIL -> {
-                                emailOptions.forEach { isError = !value.contains(it) }
-                                input = value
-                            }
-                            DataType.PHONE -> {
-                                isError = if (value.length != 10) {
-                                    true
-                                } else if (!value.toList().all { it.isDigit() }) {
-                                    true
-                                } else false
-
-                                input = value
-                            }
-                            else -> { input = value }
-                        }
-                                    },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions.Default.copy(
-                        keyboardType = KeyboardType.Text,
-                        imeAction = ImeAction.Next
-                    ),
-                    isError = isError
-                )
-
-                Spacer(Modifier.padding(4.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Button(
-                        onClick = { onDismissRequest() },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.error,
-                            contentColor = MaterialTheme.colorScheme.onError
-                        )
-                    ) {
-                        Text("Cancel")
-                    }
+                    Text(
+                        text = "Add new $label",
+                        fontSize = 20.sp
+                    )
 
-                    Spacer(Modifier.padding(8.dp))
+                    Spacer(Modifier.padding(4.dp))
 
-                    Button(
-                        onClick = {
-                            onConfirm(input)
-                            onDismissRequest()
+                    OutlinedTextField(
+                        label = { Text(label) },
+                        value = input,
+                        onValueChange = { value ->
+                            when (subItemType) {
+                                DataType.EMAIL -> {
+                                    emailOptions.forEach { isError = !value.contains(it) }
+                                    input = value
+                                }
+                                DataType.PHONE -> {
+                                    isError = if (value.length != 10) {
+                                        true
+                                    } else if (!value.toList().all { it.isDigit() }) {
+                                        true
+                                    } else false
+
+                                    input = value
+                                }
+                                else -> { input = value }
+                            }
                         },
-                        shape = RoundedCornerShape(8.dp),
-                        enabled = !isError && input.isNotBlank()
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions.Default.copy(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Next
+                        ),
+                        isError = isError
+                    )
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    Row(
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("Confirm")
+                        Button(
+                            onClick = { onDismissRequest() },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            )
+                        ) {
+                            Text("Cancel")
+                        }
+
+                        Spacer(Modifier.padding(8.dp))
+
+                        Button(
+                            onClick = {
+                                onConfirm(input)
+                                onDismissRequest()
+                            },
+                            shape = RoundedCornerShape(8.dp),
+                            enabled = !isError && input.isNotBlank()
+                        ) {
+                            Text("Confirm")
+                        }
                     }
                 }
             }

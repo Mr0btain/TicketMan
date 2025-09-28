@@ -27,7 +27,7 @@ fun CustomerInfoPane(
     selectedCustomer: CustomerData?,
     onEditClick: () -> Unit,
     onTicketClick: (UUID) -> Unit,
-    onImageClick: (List<ImageData>) -> Unit
+    onImageClick: (UUID) -> Unit
 ) {
     // Sizes for icons and text
     val labelSize = 12.sp

@@ -1,10 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.ticket
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -17,18 +14,11 @@ import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.ui.composables.ContactsBlock
-import org.mr0btain.ticketman.ui.composables.PaneHeader
-import org.mr0btain.ticketman.ui.composables.SimpleTextItem
-import org.mr0btain.ticketman.ui.composables.TablePriorityItem
-import org.mr0btain.ticketman.ui.composables.TableStatusItem
+import org.mr0btain.ticketman.ui.composables.*
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.clipboard
-import ticketman.composeapp.generated.resources.edit
-import ticketman.composeapp.generated.resources.info
-import ticketman.composeapp.generated.resources.tag
+import ticketman.composeapp.generated.resources.*
+import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
@@ -40,7 +30,7 @@ fun TicketInfoPane(
     assignedUserName: PersonName,
     ticketData: TicketData?,
     onEditClick: () -> Unit,
-    onImageClick: (List<ImageData>) -> Unit
+    onImageClick: (UUID) -> Unit
 ) {
     // Main Body
     Surface(

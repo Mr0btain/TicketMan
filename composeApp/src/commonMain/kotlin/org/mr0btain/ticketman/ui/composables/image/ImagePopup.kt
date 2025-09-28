@@ -11,15 +11,18 @@ import org.mr0btain.ticketman.ui.dialog.FullScreenDialog
 fun ImagePopup(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
-    images: List<ImageData>
+    isVisible: Boolean,
+    images: List<ImageData>?
 ) {
-    FullScreenDialog(
-        modifier = modifier,
-        onDismiss = onDismiss
-    ) {
-        ImagePager(
-            imageData = images,
-            clickEnabled = false
-        )
+    if (isVisible && images != null) {
+        FullScreenDialog(
+            modifier = modifier,
+            onDismiss = onDismiss
+        ) {
+            ImagePager(
+                imageData = images,
+                clickEnabled = false
+            )
+        }
     }
 }

@@ -13,8 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.time.Time
-import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import kotlin.uuid.ExperimentalUuidApi
 
 @OptIn(ExperimentalUuidApi::class)
@@ -77,7 +76,7 @@ fun NoteDialog(
                 Spacer(Modifier.padding(4.dp))
 
                 // Cancel and Confirm buton row
-                ConfirmOrCancelButtonRow(
+                ConfirmCancelButtons(
                     onCancelClick = onDismissRequest,
                     onConfirmClick = {
                         // Prettify author name

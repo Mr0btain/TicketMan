@@ -17,8 +17,7 @@ import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.time.Time
-import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogNoteList
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
@@ -100,13 +99,10 @@ fun InventoryDialog(
     }
 
     Dialog(
-        properties = DialogProperties(),
         onDismissRequest = { onDismiss() }
     ) {
         Surface(
-            modifier = modifier
-                .height(600.dp)
-                .width(400.dp),
+            modifier = modifier,
             shape = RoundedCornerShape(10.dp),
             shadowElevation = 4.dp,
             color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
@@ -117,7 +113,6 @@ fun InventoryDialog(
             ) {
                 // -------------------------------------------- Header ----------------------------------------------------
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
@@ -129,18 +124,13 @@ fun InventoryDialog(
                     )
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(4.dp),
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else DividerDefaults.color
-                )
+                HorizontalDivider()
 
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Content ----------------------------------------------------
                 PlatformLazyColumn(
-                    modifier = Modifier
-                        .height(400.dp)
-                        .width(300.dp),
+                    modifier = Modifier.height(400.dp),
                     isVisible = notes.isNotEmpty()
                 ) {
                     item {
@@ -230,8 +220,7 @@ fun InventoryDialog(
 
                 Spacer(Modifier.padding(8.dp))
 
-                ConfirmOrCancelButtonRow(
-                    modifier = Modifier.fillMaxWidth(),
+                ConfirmCancelButtons(
                     onCancelClick = { onDismiss() },
                     onConfirmClick = {
                         onContinue(

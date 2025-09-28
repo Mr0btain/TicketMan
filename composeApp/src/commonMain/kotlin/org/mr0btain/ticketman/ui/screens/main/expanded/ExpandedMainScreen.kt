@@ -27,6 +27,7 @@ import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Maybe make this expect actual of some sort for different platforms or screen sizes
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
+// TODO: Maybe move allot of these states and their seed values to viewmodel and move dialogs to App.kt if we use them in many screens
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, FlowPreview::class)
 @Composable
@@ -88,19 +89,27 @@ fun ExpandedMainScreen(
     var imagePopupList by remember { mutableStateOf<List<ImageData>?>(null) }
 
     // For customer adding or editing
-    if (showCustomerDialog) {
-        selectedCustomer.value?.let { customerData ->
-            CustomerDialog(
-                onDismiss = { showCustomerDialog = false },
-                onContinue = { result ->
-                    // Check for a change, if so we need to update the data
-                    if (result != customerData) viewModel.addOrUpdateCustomer(result)
-                },
-                isDarkMode = isDarkMode,
-                seedData = customerData
-            )
-        }
-    }
+    // Doing image click like this we won't be able to open newly added images that were added within this dialog.
+    // Which im fine with but it may change later
+    CustomerDialog(
+        seedData = selectedCustomer.value,
+        isVisible = showCustomerDialog,
+        onImageClick = { id ->
+            selectedCustomer.value
+                ?.notes
+                ?.find { it.note.identifier == id }
+                ?.let { (_, images) ->
+                    imagePopupList = images
+                    showImagePopup = true
+                }
+        },
+        onDismiss = { showCustomerDialog = false },
+        onContinue = { result ->
+            // Check for a change, if so we need to update the data
+            if (result != selectedCustomer.value) viewModel.addOrUpdateCustomer(result)
+        },
+        isDarkMode = isDarkMode
+    )
 
     // For ticket adding or editing
     if (showTicketDialog) {
@@ -134,46 +143,42 @@ fun ExpandedMainScreen(
     }
 
     // For confirming deleting an item
-    if (showConfirmDeleteDialog) {
-        ConfirmDeleteDialog(
-            dataType = dataType,
-            isTwoStep = true,
-            onConfirm = {
-                when (dataType) {
-                    DataType.CUSTOMER -> { viewModel.removeSelectedCustomer() }
-                    DataType.TICKET -> TODO()
-                    DataType.INVENTORY -> TODO()
-                    DataType.USER -> TODO()
-                    else -> {
-                        // Do Nothing
-                    }
+    ConfirmDeleteDialog(
+        dataType = dataType,
+        isTwoStep = true,
+        isVisible = showConfirmDeleteDialog,
+        onConfirm = {
+            when (dataType) {
+                DataType.CUSTOMER -> { viewModel.removeSelectedCustomer() }
+                DataType.TICKET -> TODO()
+                DataType.INVENTORY -> TODO()
+                DataType.USER -> TODO()
+                else -> {
+                    // Do Nothing
                 }
+            }
 
-                dataType = DataType.NONE
-                showConfirmDeleteDialog = false
-            },
-            onCancel = {
-                // Reset data types
-                dataType = DataType.NONE
+            dataType = DataType.NONE
+            showConfirmDeleteDialog = false
+        },
+        onCancel = {
+            // Reset data types
+            dataType = DataType.NONE
 
-                // Hide dialog
-                showConfirmDeleteDialog = false
-                        }
-        )
-    }
+            // Hide dialog
+            showConfirmDeleteDialog = false
+        }
+    )
 
     // For image viewing
-    if (showImagePopup) {
-        imagePopupList?.let { imageData ->
-            ImagePopup(
-                images = imageData,
-                onDismiss = {
-                    imagePopupList = null
-                    showImagePopup = false
-                }
-            )
+    ImagePopup(
+        images = imagePopupList,
+        isVisible = showImagePopup,
+        onDismiss = {
+            imagePopupList = null
+            showImagePopup = false
         }
-    }
+    )
 
     Surface(
         color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
@@ -296,9 +301,14 @@ fun ExpandedMainScreen(
 
                             showTicketDialog = true
                         },
-                        onImageClick = { imageList ->
-                            imagePopupList = imageList
-                            showImagePopup = true
+                        onImageClick = { id ->
+                            selectedCustomer.value
+                                ?.notes
+                                ?.find { it.note.identifier == id }
+                                ?.let { (_, images) ->
+                                    imagePopupList = images
+                                    showImagePopup = true
+                                }
                         },
                         selectedCustomer = selectedCustomer.value,
                         customerList = customerPagedItems?.value ?: emptyList(),
@@ -332,9 +342,15 @@ fun ExpandedMainScreen(
                         selectedPanel = selectedTicketPanel,
                         ticketListState = ticketLazyListState,
                         coroutineScope = coroutineScope,
-                        onImageClick = { imageList ->
-                            imagePopupList = imageList
-                            showImagePopup = true
+                        onImageClick = { id ->
+                            selectedTicket.value
+                                ?.notes
+                                ?.find { it.note.identifier == id }
+                                ?.let { (_, images) ->
+                                    imagePopupList = images
+                                    showImagePopup = true
+                                }
+
                         }
                     )
                 }

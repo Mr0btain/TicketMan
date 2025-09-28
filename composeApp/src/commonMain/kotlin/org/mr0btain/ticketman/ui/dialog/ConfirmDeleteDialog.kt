@@ -15,63 +15,66 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 
 @Composable
 fun ConfirmDeleteDialog(
     modifier: Modifier = Modifier,
     dataType: DataType,
     isTwoStep: Boolean = false,
+    isVisible: Boolean,
     onConfirm: () -> Unit,
     onCancel: () -> Unit
 ) {
-    var confirmCount by remember { mutableIntStateOf(0) }
+    if (isVisible) {
+        var confirmCount by remember { mutableIntStateOf(0) }
 
-    Dialog(
-        onDismissRequest = { onCancel() },
-    ) {
-        Surface(
-            modifier = modifier,
-            shape = RoundedCornerShape(10.dp)
+        Dialog(
+            onDismissRequest = { onCancel() },
         ) {
-            Column(
-                Modifier.padding(32.dp),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            Surface(
+                modifier = modifier,
+                shape = RoundedCornerShape(10.dp)
             ) {
-                Text(
-                    text = "DELETE",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 30.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(Modifier.padding(4.dp))
-
-                if (confirmCount == 0) {
+                Column(
+                    Modifier.padding(32.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
                     Text(
-                        text = "Are you sure you want to delete this ${dataType.stringName}",
+                        text = "DELETE",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 30.sp,
                         textAlign = TextAlign.Center
                     )
-                } else {
-                    Text(
-                        text = "ARE YOU REALLY REALLY FOR SURE??!!",
-                        fontSize = 30.sp,
-                        color = MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.ExtraBold,
-                        textAlign = TextAlign.Center
+
+                    Spacer(Modifier.padding(4.dp))
+
+                    if (confirmCount == 0) {
+                        Text(
+                            text = "Are you sure you want to delete this ${dataType.stringName}",
+                            textAlign = TextAlign.Center
+                        )
+                    } else {
+                        Text(
+                            text = "ARE YOU REALLY REALLY FOR SURE??!!",
+                            fontSize = 30.sp,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.ExtraBold,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    HorizontalDivider(modifier = Modifier.width(400.dp))
+
+                    ConfirmCancelButtons(
+                        onConfirmClick = {
+                            if (isTwoStep && confirmCount == 0) confirmCount = 1
+                            else onConfirm()
+                        },
+                        onCancelClick = onCancel
                     )
                 }
-
-                HorizontalDivider(modifier = Modifier.width(400.dp))
-
-                ConfirmOrCancelButtonRow(
-                    onConfirmClick = {
-                        if (isTwoStep && confirmCount == 0) confirmCount = 1
-                        else onConfirm()
-                    },
-                    onCancelClick = onCancel
-                )
             }
         }
     }

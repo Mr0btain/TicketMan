@@ -18,9 +18,8 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
+import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 
 /**
  * Text edit dialog
@@ -78,7 +77,7 @@ fun TextEditDialog(
 
                     Spacer(Modifier.padding(12.dp))
 
-                    ConfirmOrCancelButtonRow(
+                    ConfirmCancelButtons(
                         onConfirmClick = {
                             val result = onConfirm(textFieldValueState.text)
 

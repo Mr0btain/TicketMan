@@ -10,11 +10,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.customer.CustomerData
-import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
-import org.mr0btain.ticketman.ui.composables.search.SearchBar
+import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
 import java.util.*
 
 @Composable
@@ -29,16 +27,10 @@ fun CustomerPanel(
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteCustomer: () -> Unit,
     onTicketClick: (UUID) -> Unit,
-    onImageClick: (List<ImageData>) -> Unit,
+    onImageClick: (UUID) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope()
 ) {
-    // For search input
-    var searchInput by remember { mutableStateOf("") }
-
-    // Search list
-    val searchItems = emptyList<Customer>() //remember(customerList) { customerList.map { it } }
-
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectUpdateFromClick by remember { mutableStateOf(false) }
 
@@ -49,56 +41,13 @@ fun CustomerPanel(
             horizontalAlignment = Alignment.Start,
             modifier = Modifier.fillMaxSize()
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                /*
-                // Search box
-                CustomerSearch(
-                    modifier = Modifier.padding(start = 8.dp),
-                    items = searchItems,
-                    input = searchInput,
-                    onClick = {
-                        // Call selection change
-                        onCustomerSelectionChange(it)
-
-                        // Set search input
-                        selectedCustomer?.customer?.let { customer ->
-                            searchInput = customer.name.toStringName()
-                        }
-                              },
-                    onInputChange = { searchInput = it }
-                )
-                 */
-
-                SearchBar(
-                    modifier = Modifier.padding(start = 8.dp),
-                    label = "Search Customer",
-                    onClick =  { onCustomerSelectionChange(it) },
-                    onQuery = onSearchQuery
-                )
-
-                // Button for adding or deleting a customer
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AddOrDeleteButtonRow(
-                        label = "Customer",
-                        onAddClick = {
-                            // Trigger new item dialog
-                            onAddCustomer()
-                        },
-                        onDeleteClick = onDeleteCustomer
-                    )
-
-                    Spacer(Modifier.padding(8.dp))
-                }
-            }
+            PanelTopBar(
+                label = "Customer",
+                onSearchClick = { onCustomerSelectionChange(it) },
+                onSearchQuery = onSearchQuery,
+                onAddClick = onAddCustomer,
+                onDeleteClick = onDeleteCustomer
+            )
 
             Spacer(Modifier.padding(4.dp))
 

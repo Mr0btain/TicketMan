@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.SearchBar
+import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
 import java.util.*
 
 // TODO: Setup setting reorder on stock hitting a certain amount. Like a popup on login or when it happens?
@@ -33,9 +34,6 @@ fun InventoryPanel(
     coroutineScope: CoroutineScope,
     inventoryListState: LazyListState
 ) {
-    // For search input
-    var searchInput by remember { mutableStateOf("") }
-
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectedUpdateFromClick by remember { mutableStateOf(false) }
 
@@ -47,41 +45,13 @@ fun InventoryPanel(
             modifier = Modifier.fillMaxSize()
         ) {
             // --------------------------------- Header ---------------------------------------------------
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Search box
-                SearchBar(
-                    modifier = Modifier.padding(start = 8.dp),
-                    label = "Search Inventory",
-                    onClick =  { onSelectedInventoryChange(it) },
-                    onQuery = onSearchQuery
-                )
-
-                Spacer(Modifier.padding(8.dp))
-
-                // Buttons for adding a removing items
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AddOrDeleteButtonRow(
-                        onAddClick = {
-                            // Trigger new item dialog
-                            onAddInventory()
-                        },
-                        onDeleteClick = {
-                            // Trigger delete item dialog/ confirm
-                            onDeleteInventory()
-                        }
-                    )
-
-                    Spacer(Modifier.padding(8.dp))
-                }
-            }
+            PanelTopBar(
+                label = "Inventory",
+                onSearchClick = { onSelectedInventoryChange(it) },
+                onSearchQuery = onSearchQuery,
+                onAddClick = onAddInventory,
+                onDeleteClick = onDeleteInventory
+            )
 
             Spacer(Modifier.padding(4.dp))
 
