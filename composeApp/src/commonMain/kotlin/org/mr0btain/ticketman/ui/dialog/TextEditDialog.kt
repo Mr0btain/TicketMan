@@ -11,16 +11,16 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import org.mr0btain.ticketman.ui.composables.ConfirmOrCancelButtonRow
 
 /**
  * Text edit dialog
@@ -28,16 +28,15 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun TextEditDialog(
-    name: String,
+    label: String,
     value: String,
-    onConfirm: (String) -> Unit,
-    isError: Boolean,
-    inputFilter: (String) -> String,
-    keyboardType: KeyboardType,
-    buttonText: String,
-    placeholderText: String = ""
+    visible: Boolean,
+    onConfirm: (String) -> Boolean,
+    onCancel: () -> Unit,
+    keyboardType: KeyboardType
 ) {
     val focusRequester = remember { FocusRequester() }
+    var isError by remember { mutableStateOf(false) }
 
     var textFieldValueState by remember {
         mutableStateOf(
@@ -48,56 +47,52 @@ fun TextEditDialog(
         )
     }
 
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 4.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .wrapContentSize()
-                .padding(32.dp),
-            horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+    if (visible) {
+        Dialog(
+            onDismissRequest = onCancel
         ) {
-            Text(
-                text = name,
-                fontSize = 24.sp
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                modifier = Modifier.focusRequester(focusRequester),
-                singleLine = true,
-                value = textFieldValueState,
-                shape = RoundedCornerShape(8.dp),
-                onValueChange = {
-                    // Filter input
-                    val filteredText = inputFilter(it.text)
-
-                    textFieldValueState = it.copy(text = filteredText)
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = keyboardType,
-                    imeAction = ImeAction.Next
-                ),
-                placeholder = { Text(placeholderText) },
-                isError = isError
-            )
-
-            Spacer(Modifier.padding(12.dp))
-
-            Button(
-                onClick = {
-                    // save and dismiss the dialog
-                    onConfirm(textFieldValueState.text)
-                    // disable / enable the button
-                }
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 4.dp
             ) {
-                Text(buttonText)
+                Column(
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .padding(32.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+                ) {
+                    OutlinedTextField(
+                        modifier = Modifier.focusRequester(focusRequester),
+                        label = { Text(label) },
+                        singleLine = true,
+                        value = textFieldValueState,
+                        shape = RoundedCornerShape(8.dp),
+                        onValueChange = { textFieldValueState = it },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = keyboardType,
+                            imeAction = ImeAction.Next
+                        ),
+                        isError = isError
+                    )
+
+                    Spacer(Modifier.padding(12.dp))
+
+                    ConfirmOrCancelButtonRow(
+                        onConfirmClick = {
+                            val result = onConfirm(textFieldValueState.text)
+
+                            if (result) {
+                                isError = false
+                                onCancel()
+                            } else isError = true
+                        },
+                        onCancelClick = onCancel
+                    )
+                }
             }
         }
-    }
 
-    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+    }
 }

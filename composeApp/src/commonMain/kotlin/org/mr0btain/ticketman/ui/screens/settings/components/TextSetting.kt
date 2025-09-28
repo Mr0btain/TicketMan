@@ -6,48 +6,46 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.painter.Painter
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.ui.dialog.TextEditDialog
 
+/**
+ * An editable text setting item. Maybe later i may change this to instead of using a dialog popup,
+ * we just use a TextField and an icon button to make it editable? or something like that
+ */
+
+// TODO: Get rid if text dialog and make a cleaner way of doing this
 
 @Composable
-fun SettingsTextItem(
-    icon: Painter,
-    iconDesc: String,
-    name: String,
-    value: String,
-    onConfirmChange: (String) -> Unit,
-    isError: Boolean,
-    inputFilter: (String) -> String, // input filter for the preference
-    keyboardType: KeyboardType,
-    showDialog: Boolean,
-    surfaceOnClick: () -> Unit,
-    dialogDismiss: () -> Unit
+fun TextSetting(
+    settingItem: SettingItem<String>,
+    textStyle: TextStyle = MaterialTheme.typography.bodyMedium
 ) {
-    if (showDialog) {
-        Dialog(onDismissRequest = { dialogDismiss() }) {
-            TextEditDialog(
-                name = name,
-                value = value,
-                onConfirm = onConfirmChange,
-                inputFilter = inputFilter,
-                keyboardType = keyboardType,
-                buttonText = "Next",
-                isError = isError
-            )
-        }
-    }
+    var state by remember { mutableStateOf("") }
+    var showDialog by remember { mutableStateOf(false) }
+
+    TextEditDialog(
+        label = settingItem.label,
+        value = state,
+        visible = showDialog,
+        onConfirm = { text ->
+            val result = settingItem.onClick?.let { it(text) } ?: false
+            if (result) state = text
+            result
+                    },
+        onCancel = { showDialog = false },
+        keyboardType = KeyboardType.Text,
+    )
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp),
-        onClick = surfaceOnClick,
+        onClick = { showDialog = true },
         shape = RoundedCornerShape(32.dp)
     ) {
         Column(
@@ -60,27 +58,24 @@ fun SettingsTextItem(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        icon,
-                        contentDescription = iconDesc,
+                        settingItem.icon,
+                        contentDescription = settingItem.description,
                         modifier = Modifier.size(24.dp)
                     )
 
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Text(
-                        text = name,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Start,
+                        text = settingItem.label,
+                        style = textStyle
                     )
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
-                    text = value,
-                    style = MaterialTheme.typography.bodyLarge,
-                    textAlign = TextAlign.Start,
-                    fontSize = 20.sp
+                    text = settingItem.initialState,
+                    style = textStyle
                 )
 
                 Spacer(modifier = Modifier.width(16.dp))

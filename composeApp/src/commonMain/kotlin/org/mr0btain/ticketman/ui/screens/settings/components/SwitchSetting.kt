@@ -1,33 +1,31 @@
 package org.mr0btain.ticketman.ui.screens.settings.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 
 
 @Composable
-fun SettingsSwitchItem(
-    icon: Painter,
-    iconDesc: String,
-    name: String,
-    state: Boolean,
-    onClick: () -> Unit
+fun SwitchSetting(
+    settingItem: SettingItem<Boolean>,
+    textStyle: TextStyle = MaterialTheme.typography.bodyMedium
 ) {
+    var state by remember { mutableStateOf(settingItem.initialState) }
+
     Surface(
         color = Color.Transparent,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        onClick = onClick
+            .padding(16.dp)
     ) {
         Column(
             modifier = Modifier.padding(start = 12.dp, end = 12.dp)
@@ -41,18 +39,17 @@ fun SettingsSwitchItem(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        icon,
-                        contentDescription = iconDesc,
+                        settingItem.icon,
+                        contentDescription = settingItem.description,
                         modifier = Modifier.size(24.dp)
                     )
 
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = name,
+                        text = settingItem.label,
                         modifier = Modifier.padding(16.dp),
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Start
+                        style = textStyle
                     )
                 }
 
@@ -60,7 +57,11 @@ fun SettingsSwitchItem(
 
                 Switch(
                     checked = state,
-                    onCheckedChange = { onClick() }
+                    onCheckedChange = { value ->
+                        state = value
+                        settingItem.onClick?.let { it(value) }
+                    },
+                    enabled = settingItem.enabled
                 )
             }
 
