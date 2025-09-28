@@ -112,6 +112,7 @@ fun ExpandedMainScreen(
                 onContinue = { result ->
                     // Check if its changed, if so update it
                     if (selectedTicket.value != result) viewModel.addOrUpdateTicket(result)
+                    showTicketDialog = false
                 },
             )
         }
@@ -323,6 +324,7 @@ fun ExpandedMainScreen(
                         onEditTicket = { if (selectedTicket.value != null) showTicketDialog = true },
                         onSelectedTicketChange = { id -> viewModel.changeSelectedTicket(id) },
                         onSelectedPanelChange = { selectedTicketPanel = it },
+                        onSearchQuery = { viewModel.searchTickets(it) },
                         onDeleteTicket = {
                             dataType = DataType.TICKET
                             showConfirmDeleteDialog = true
@@ -344,6 +346,7 @@ fun ExpandedMainScreen(
                         inventoryList = inventoryPagedItems?.value ?: emptyList(),
                         selectedInventory = selectedInventory.value,
                         onSelectedInventoryChange = { id -> viewModel.changeSelectedInventory(id) },
+                        onSearchQuery = { viewModel.searchInventory(it) },
                         onAddInventory = {
                             viewModel.setupNewInventory()
                             showInventoryDialog = true

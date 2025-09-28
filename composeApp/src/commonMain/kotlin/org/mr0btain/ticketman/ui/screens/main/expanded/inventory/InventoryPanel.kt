@@ -1,31 +1,20 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Surface
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
-import org.mr0btain.ticketman.ui.composables.search.InventorySearch
-import java.util.UUID
+import org.mr0btain.ticketman.ui.composables.search.SearchBar
+import java.util.*
 
 // TODO: Setup setting reorder on stock hitting a certain amount. Like a popup on login or when it happens?
 
@@ -37,6 +26,7 @@ fun InventoryPanel(
     inventoryList: List<Inventory>,
     selectedInventory: InventoryData?,
     onSelectedInventoryChange: (UUID) -> Unit,
+    onSearchQuery: suspend (String) -> List<SearchResult>,
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
     onDeleteInventory: () -> Unit,
@@ -63,19 +53,11 @@ fun InventoryPanel(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Search box
-                // TODO: Fix this
-                InventorySearch(
+                SearchBar(
                     modifier = Modifier.padding(start = 8.dp),
-                    items = emptyList(),
-                    input = searchInput,
-                    onInputChange = { searchInput = it },
-                    onClick = {
-                        // Set search input in out text box
-                        searchInput = "${it.name}: ${it.identifier}"
-
-                        // Call selected item change
-                        onSelectedInventoryChange(it.identifier)
-                    }
+                    label = "Search Inventory",
+                    onClick =  { onSelectedInventoryChange(it) },
+                    onQuery = onSearchQuery
                 )
 
                 Spacer(Modifier.padding(8.dp))

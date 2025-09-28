@@ -498,6 +498,11 @@ class MainViewModel(
         }
     }
 
+    suspend fun searchTickets(query: String) = coroutineScope {
+        ticketDatabase.search(query, 20) ?: emptyList()
+    }
+
+    // TODO:
     fun removeSelectedTicket() {
         viewModelScope.launch {
 
@@ -542,10 +547,12 @@ class MainViewModel(
                                 ?: emptyList()
                         )
 
-                        _selectedInventoryData.value = InventoryData(
-                            inventory = inventory,
-                            notes = notes,
-                            images = images
+                        setSelectedInventory(
+                            InventoryData(
+                                inventory = inventory,
+                                notes = notes,
+                                images = images
+                            )
                         )
                     }
                 }
@@ -602,6 +609,10 @@ class MainViewModel(
             // Set selected
             setSelectedInventory(inventoryData)
         }
+    }
+
+    suspend fun searchInventory(query: String) = coroutineScope {
+        inventoryDatabase.search(query, 20) ?: emptyList()
     }
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */
@@ -693,6 +704,10 @@ class MainViewModel(
             // Set selected
             setSelectedUser(userData)
         }
+    }
+
+    suspend fun searchUsers(query: String) = coroutineScope {
+        userDatabase.search(query, 20) ?: emptyList()
     }
 
     /** ----------------------------------------------UI------------------------------------------------------------------- */

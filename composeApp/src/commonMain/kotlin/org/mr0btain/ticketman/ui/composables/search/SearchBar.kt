@@ -23,8 +23,9 @@ import java.util.*
 
 @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun CustomerSearchBar(
+fun SearchBar(
     modifier: Modifier = Modifier,
+    label: String,
     onClick: (UUID) -> Unit,
     onQuery: suspend (String) -> List<SearchResult>
 ) {
@@ -64,7 +65,7 @@ fun CustomerSearchBar(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            label = { Text("Search Customer") },
+            label = { Text(label) },
             trailingIcon = {
                 if (isLoading)
                     CircularProgressIndicator()

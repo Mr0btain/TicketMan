@@ -14,7 +14,7 @@ import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
-import org.mr0btain.ticketman.ui.composables.search.CustomerSearchBar
+import org.mr0btain.ticketman.ui.composables.search.SearchBar
 import java.util.*
 
 @Composable
@@ -74,8 +74,9 @@ fun CustomerPanel(
                 )
                  */
 
-                CustomerSearchBar(
+                SearchBar(
                     modifier = Modifier.padding(start = 8.dp),
+                    label = "Search Customer",
                     onClick =  { onCustomerSelectionChange(it) },
                     onQuery = onSearchQuery
                 )

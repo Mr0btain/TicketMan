@@ -14,11 +14,12 @@ import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
-import org.mr0btain.ticketman.ui.composables.search.TicketSearch
-import java.util.UUID
+import org.mr0btain.ticketman.ui.composables.search.SearchBar
+import java.util.*
 
 // TODO: Add hours worked/ inventory items to a list of expense and charges
 // TODO: Add invoice and ability to export
@@ -36,6 +37,7 @@ fun TicketPanel(
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (UUID) -> Unit,
+    onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteTicket: (UUID) -> Unit,
     onImageClick: (List<ImageData>) -> Unit,
     coroutineScope: CoroutineScope,
@@ -66,21 +68,12 @@ fun TicketPanel(
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                //Spacer(Modifier.width(135.dp))
-
                 // Search box
-                TicketSearch(
+                SearchBar(
                     modifier = Modifier.padding(start = 8.dp),
-                    items = searchItems,
-                    input = searchInput,
-                    onInputChange = { searchInput = it },
-                    onClick = {
-                        // Set search input in out text box
-                        searchInput = it.toString()
-
-                        // Call selected ticket change
-                        onSelectedTicketChange(it)
-                    }
+                    label = "Search Tickets",
+                    onClick = { onSelectedTicketChange(it) },
+                    onQuery = onSearchQuery
                 )
 
                 Spacer(Modifier.padding(8.dp))
