@@ -125,7 +125,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
     override fun search(query: String, limit: Int): List<SearchResult>? {
         return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
             transaction {
-                val pattern = "$query%"
+                val pattern = "${query.lowercase()}%"
 
                 Pair(
                     UserEntity

@@ -113,7 +113,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
     override fun search(query: String, limit: Int): List<SearchResult>? {
         return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
             transaction {
-                val pattern = "$query%"
+                val pattern = "${query.lowercase()}%"
 
                 Pair(TicketEntity
                     .find { (TicketTable.id.castTo(VarCharColumnType()) like pattern) }

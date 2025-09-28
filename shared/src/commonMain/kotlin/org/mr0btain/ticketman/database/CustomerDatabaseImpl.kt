@@ -127,7 +127,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     override fun search(query: String, limit: Int): List<SearchResult>? {
         return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
             transaction {
-                val pattern = "$query%"
+                val pattern = "${query.lowercase()}%"
 
                 Pair(
                     CustomerEntity
