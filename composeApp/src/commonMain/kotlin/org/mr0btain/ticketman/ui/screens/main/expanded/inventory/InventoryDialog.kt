@@ -14,32 +14,25 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
-import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.data.shared.DialogDismissReason
-import org.mr0btain.ticketman.data.shared.MainItemType
+import org.mr0btain.ticketman.components.data.operations.DataType
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.SubItemType
-import org.mr0btain.ticketman.data.time.getTime
+import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
+import org.mr0btain.ticketman.ui.composables.DialogNoteList
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
-import org.mr0btain.ticketman.ui.screens.main.components.ConfirmOrCancelButtonRow
-import org.mr0btain.ticketman.ui.screens.main.components.DialogNoteList
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
-import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Add ability to edit notes?
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     onContinue: (InventoryData) -> Unit,
     seedData: InventoryData,
-    isDarkMode: Boolean,
-    scrollBarsOnRight: Boolean
+    isDarkMode: Boolean
 ) {
     // seed data
     var name by remember(seedData) { mutableStateOf(seedData.inventory.name) }
@@ -54,7 +47,7 @@ fun InventoryDialog(
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
     var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
-    var itemForDelete by remember { mutableStateOf(SubItemType.NONE) }
+    var itemForDelete by remember { mutableStateOf(DataType.NONE) }
 
     // For adding note dialog
     var showAddNoteDialog by remember { mutableStateOf(false) }
@@ -106,13 +99,10 @@ fun InventoryDialog(
     }
 
     Dialog(
-        properties = DialogProperties(),
         onDismissRequest = { onDismiss() }
     ) {
         Surface(
-            modifier = modifier
-                .height(600.dp)
-                .width(400.dp),
+            modifier = modifier,
             shape = RoundedCornerShape(10.dp),
             shadowElevation = 4.dp,
             color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
@@ -123,7 +113,6 @@ fun InventoryDialog(
             ) {
                 // -------------------------------------------- Header ----------------------------------------------------
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
@@ -135,108 +124,103 @@ fun InventoryDialog(
                     )
                 }
 
-                HorizontalDivider(
-                    modifier = Modifier.padding(4.dp),
-                    color = if (isDarkMode) MaterialTheme.colorScheme.onSurface else DividerDefaults.color
-                )
+                HorizontalDivider()
 
                 Spacer(Modifier.padding(8.dp))
 
                 // -------------------------------------------- Content ----------------------------------------------------
-                PlatformColumnScrollable(
+                PlatformLazyColumn(
                     modifier = Modifier.height(400.dp),
-                    columnModifier = Modifier.width(300.dp),
-                    scrollBarOnRight = scrollBarsOnRight,
-                    backgroundColor = MaterialTheme.colorScheme.surface,
                     isVisible = notes.isNotEmpty()
                 ) {
-                    // -------------------------- Name ------------------------
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Name") }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Description -------------------------------
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Description") }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Stock -------------------------------
-                    OutlinedTextField(
-                        value = stock,
-                        onValueChange = { change -> stock = change.filter { it.isDigit() } },
-                        label = { Text("Stock") }
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Price -------------------------------
-                    MoneyTextField(
-                        modifier = Modifier.width(280.dp),
-                        state = price,
-                        label = "Price"
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Cost -------------------------------
-                    MoneyTextField(
-                        modifier = Modifier.width(280.dp),
-                        state = cost,
-                        label = "Cost"
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    // ------------------------- Notes -------------------------------
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Notes",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
+                    item {
+                        // -------------------------- Name ------------------------
+                        OutlinedTextField(
+                            value = name,
+                            onValueChange = { name = it },
+                            label = { Text("Name") }
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
-                        IconButton(
-                            modifier = Modifier.size(26.dp),
-                            onClick = { showAddNoteDialog = true }
+                        // ------------------------- Description -------------------------------
+                        OutlinedTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = { Text("Description") }
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Stock -------------------------------
+                        OutlinedTextField(
+                            value = stock,
+                            onValueChange = { change -> stock = change.filter { it.isDigit() } },
+                            label = { Text("Stock") }
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Price -------------------------------
+                        MoneyTextField(
+                            modifier = Modifier.width(280.dp),
+                            state = price,
+                            label = "Price"
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Cost -------------------------------
+                        MoneyTextField(
+                            modifier = Modifier.width(280.dp),
+                            state = cost,
+                            label = "Cost"
+                        )
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        // ------------------------- Notes -------------------------------
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                modifier = Modifier
-                                    .padding(4.dp)
-                                    .size(20.dp),
-                                painter = painterResource(Res.drawable.plus),
-                                contentDescription = "Add new Note"
+                            Text(
+                                text = "Notes",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
                             )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            IconButton(
+                                modifier = Modifier.size(26.dp),
+                                onClick = { showAddNoteDialog = true }
+                            ) {
+                                Icon(
+                                    modifier = Modifier
+                                        .padding(4.dp)
+                                        .size(20.dp),
+                                    painter = painterResource(Res.drawable.plus),
+                                    contentDescription = "Add new Note"
+                                )
+                            }
                         }
+
+                        Spacer(Modifier.padding(4.dp))
+
+                        DialogNoteList(
+                            notes = notes,
+                            onDeleteClick = { item ->
+                                itemForDelete = DataType.NOTE
+                                itemUpForDeleteIndex = item
+                                showConfirmDeleteScreen = true
+                            }
+                        )
                     }
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    DialogNoteList(
-                        notes = notes,
-                        onDeleteClick = { item ->
-                            itemForDelete = SubItemType.NOTE
-                            itemUpForDeleteIndex = item
-                            showConfirmDeleteScreen = true
-                        }
-                    )
                 }
 
                 Spacer(Modifier.padding(8.dp))
 
-                ConfirmOrCancelButtonRow(
-                    modifier = Modifier.fillMaxWidth(),
+                ConfirmCancelButtons(
                     onCancelClick = { onDismiss() },
                     onConfirmClick = {
                         onContinue(
@@ -247,8 +231,7 @@ fun InventoryDialog(
                                     description = description,
                                     stock = stock.toIntOrNull() ?: 0,
                                     price = price.text.toString(),
-                                    cost = cost.text.toString(),
-                                    time = if (seedData.inventory.time != Long.MAX_VALUE) seedData.inventory.time else getTime()
+                                    cost = cost.text.toString()
                                 )
                             )
                         )

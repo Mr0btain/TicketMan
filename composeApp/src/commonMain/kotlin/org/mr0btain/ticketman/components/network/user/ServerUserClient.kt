@@ -10,8 +10,9 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.encryption.EncryptedData
+import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
@@ -151,8 +152,7 @@ class ServerUserClient(
                 refreshCryptoKeys()
             }
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(CHECK_KEYS_TAG, SimpleResult.FAIL)
+            AppLogger.e(CHECK_KEYS_TAG, SimpleResult.FAIL, ex)
         }
     }
 
@@ -201,7 +201,7 @@ class ServerUserClient(
                     serverHandler.updateAuthTokens(accessToken.token, token)
 
                     // We don't use UUID here so just slap whatever. Maybe make another data class for this??
-                    return Result.Success(AuthResponse(Uuid.random(), accessToken.token, token))
+                    return Result.Success(AuthResponse(UUIDv7.randomUUID(), accessToken.token, token))
                 }
         }
 
@@ -233,9 +233,7 @@ class ServerUserClient(
                 userHttpClient.get("$url/")
             }
 
-            if (response != null && response.status == HttpStatusCode.OK) {
-                true
-            } else false
+            response != null && response.status == HttpStatusCode.OK
         } else false
     }
 }

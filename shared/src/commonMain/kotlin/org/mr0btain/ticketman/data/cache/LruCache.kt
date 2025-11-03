@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.data.cache
 
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import java.util.LinkedHashMap
 
@@ -18,7 +18,7 @@ import java.util.LinkedHashMap
  */
 class LruCache<Key, Value>(
     private val maxSize: Int,
-    private val tag: String = "LruCache"
+    tag: String = "LruCache"
 ): Cache(tag) {
     /**
      * Internal LinkedHashMap with `accessOrder = true` to maintain access order (LRU behavior).
@@ -43,7 +43,7 @@ class LruCache<Key, Value>(
      */
     suspend fun get(key: Key): Value? = mutex.withLock {
         cache[key]?.also {
-            AppLogger.m(GET_TAG, SimpleResult.SUCCESS)
+            AppLogger.m("$GET_TAG $key", SimpleResult.SUCCESS)
         }
     }
 
@@ -76,5 +76,13 @@ class LruCache<Key, Value>(
     suspend fun clear() = mutex.withLock {
         cache.clear()
         AppLogger.m(CLEAR_TAG, SimpleResult.SUCCESS)
+    }
+
+    /**
+     * Returns true if the cache contains [key].
+     * Access is synchronized with [mutex] for thread safety.
+     */
+    suspend fun contains(key: Key): Boolean = mutex.withLock {
+        cache.containsKey(key)
     }
 }

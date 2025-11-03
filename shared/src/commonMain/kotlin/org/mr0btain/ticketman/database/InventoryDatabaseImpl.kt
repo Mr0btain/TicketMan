@@ -1,34 +1,26 @@
 package org.mr0btain.ticketman.database
 
-import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.Inventory
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
-import org.mr0btain.ticketman.database.tables.image.toStoredImage
 import org.mr0btain.ticketman.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
-import org.mr0btain.ticketman.database.tables.inventory.toInventoryItem
-import org.mr0btain.ticketman.database.tables.note.toNote
 import org.mr0btain.ticketman.error.InventoryError
-import org.mr0btain.ticketman.error.NoteError
-import org.mr0btain.ticketman.error.SimpleResult
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
-import kotlin.uuid.toKotlinUuid
+import java.util.*
 
 
 /**
  * Used for all Inventory data actions in database
  */
 @Suppress("PrivatePropertyName")
-@OptIn(ExperimentalUuidApi::class)
-class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<Inventory>(tag) {
+class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<Inventory>(tag) {
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val ADD_IMAGES_TAG = "$tag:AddImages"
     private val REMOVE_IMAGES_TAG = "$tag:RemoveImages"
@@ -39,28 +31,26 @@ class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<
         appLogTryCatch(GET_ALL_TAG) {
             // Go into database and convert data to customer data item
             transaction {
-                result = InventoryEntity.all().map { item -> item.toInventoryItem() }
+                result = InventoryEntity.all().map { item -> item.toInventory() }
             }
 
-            if (result != null)
-                AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_ALL_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
     }
 
-    override fun getById(identifier: Uuid): Inventory? {
+    override fun getById(identifier: UUID): Inventory? {
         var result: Inventory? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
-                    result = inventoryEntity.toInventoryItem()
-                    AppLogger.m(GET_BY_ID_TAG, SimpleResult.SUCCESS)
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
+                    result = inventoryEntity.toInventory()
                 } ?: AppLogger.i(GET_BY_ID_TAG, InventoryError.NOT_FOUND)
             }
+
+            result != null
         }
 
         return result
@@ -73,51 +63,91 @@ class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<
             transaction {
                 result = InventoryEntity
                     .all()
-                    .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.time to SortOrder.DESC)
+                    .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.id to SortOrder.DESC)
                     .offset(offset)
                     .limit(pageSize)
-                    .map { it.toInventoryItem() }
+                    .map { it.toInventory() }
             }
 
-            if (result != null)
-                AppLogger.m(GET_PAGED_ITEMS_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_PAGED_ITEMS_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
     }
 
-    override fun count(): Long = InventoryEntity.count()
+    override fun count(): Long {
+        var count = 0L
+
+        appLogTryCatch(COUNT_TAG) {
+            transaction {
+                count = InventoryEntity.count()
+            }
+
+            true
+        }
+        return count
+    }
 
     override fun addAll(data: List<Inventory>) {
         appLogTryCatch(ADD_ALL_TAG) {
             transaction {
                 data.forEach { item ->
                     // Insert into database
-                    InventoryEntity.new(item.identifier.toJavaUuid()) {
+                    InventoryEntity.new(item.identifier) {
                         name = item.name
                         description = item.description
                         stock = item.stock
                         cost = item.cost
                         price = item.price
-                        time = item.time
                     }
                 }
             }
 
-            AppLogger.m(ADD_ALL_TAG, SimpleResult.SUCCESS)
+            true
         }
     }
 
-    override fun remove(identifier: Uuid) {
+    override fun remove(identifier: UUID) {
         appLogTryCatch(REMOVE_TAG) {
+            var result = false
+
             transaction {
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
                     inventoryEntity.delete()
 
-                    AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.i(REMOVE_TAG, InventoryError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    override fun search(query: String, limit: Int): List<SearchResult>? {
+        return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
+            transaction {
+                val pattern = "${query.lowercase()}%"
+
+                Pair(
+                    InventoryEntity
+                        .find {
+                            (InventoryTable.name.lowerCase() like pattern) or
+                                    (InventoryTable.id.castTo(VarCharColumnType()) like pattern)
+                        }
+                        .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.id to SortOrder.ASC)
+                        .limit(limit)
+                        .map { inventoryEntity ->
+                            SearchResult(
+                                identifier = inventoryEntity.id.value,
+                                text = when {
+                                    inventoryEntity.name.startsWith(query, true) -> inventoryEntity.name
+                                    inventoryEntity.id.value.toString().startsWith(query, true) -> inventoryEntity.id.value.toString()
+                                    else -> inventoryEntity.name
+                                }
+                            )
+                        },
+                    true
+                )
             }
         }
     }
@@ -125,71 +155,74 @@ class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<
     override fun add(data: Inventory) {
         appLogTryCatch(ADD_TAG) {
             transaction {
-                InventoryEntity.new(data.identifier.toJavaUuid()) {
+                InventoryEntity.new(data.identifier) {
                     name = data.name
                     description = data.description
                     stock = data.stock
                     cost = data.cost
                     price = data.price
-                    time = data.time
                 }
 
-                AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
+                true
             }
         }
     }
 
     override fun update(data: Inventory) {
         appLogTryCatch(UPDATE_TAG) {
+            var result = false
+
             transaction {
                 InventoryEntity
-                    .findById(data.identifier.toJavaUuid())
+                    .findById(data.identifier)
                     ?.apply {
                         name = data.name
                         description = data.description
                         stock = data.stock
                         cost = data.cost
                         price = data.price
-                        time = data.time
 
-                        AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
+                        result = true
                     } ?: AppLogger.i(UPDATE_TAG, InventoryError.NOT_FOUND)
             }
+
+            result
         }
     }
 
-    override fun addNote(identifier: Uuid, note: Note, storedImages: List<StoredImage>) {
+    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
         appLogTryCatch(ADD_NOTE_TAG) {
+            var result = false
+
             transaction {
                 // Insert the note into database and get its entity
                 insertNote(note, storedImages)?.let { noteEntity ->
                     // Add note to notes
-                    InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
+                    InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                         inventoryEntity.notes = SizedCollection(inventoryEntity.notes + noteEntity)
 
-                        AppLogger.m(ADD_NOTE_TAG, SimpleResult.SUCCESS)
+                        result = true
                     } ?: AppLogger.i(ADD_NOTE_TAG, InventoryError.NOT_FOUND)
                 }
             }
+
+            result
         }
     }
 
-    override fun getNotes(identifier: Uuid): Map<Note, List<StoredImage>>? {
+    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
         var result: Map<Note, List<StoredImage>>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
                     result = inventoryEntity.notes.associate { noteEntity ->
                         noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
                     }
                 } ?: AppLogger.i(GET_NOTES_TAG, InventoryError.NOT_FOUND)
             }
 
-            if (result != null)
-                AppLogger.m(GET_NOTES_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_NOTES_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
@@ -199,23 +232,20 @@ class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<
      * Gets images for an inventory item
      * @param identifier The identifier of the parent inventory item
      */
-    fun getImages(identifier: Uuid): List<StoredImage>? {
+    fun getImages(identifier: UUID): List<StoredImage>? {
         // Result list
         var result: List<StoredImage>? = null
 
         appLogTryCatch(GET_IMAGES_TAG) {
             transaction {
                 // Find inventory item
-                InventoryEntity.findById(identifier.toJavaUuid())?.let { inventoryEntity ->
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
                     // Add found images to result, converting them to stored image
                     result = inventoryEntity.images.map { it.toStoredImage() }
                 } ?: AppLogger.i(GET_IMAGES_TAG, InventoryError.NOT_FOUND)
             }
 
-            if (result != null)
-                AppLogger.m(GET_IMAGES_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.i(GET_IMAGES_TAG, SimpleResult.FAIL)
+            result != null
         }
 
         return result
@@ -226,25 +256,28 @@ class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<
      * @param identifier The identifier of the inventory item
      * @param images List of images to add
      */
-    fun addImages(identifier: Uuid, images: List<StoredImage>) {
+    fun addImages(identifier: UUID, images: List<StoredImage>) {
         appLogTryCatch(ADD_IMAGES_TAG) {
+            var result = false
+
             transaction {
                 // Find inventory item
-                InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
+                InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                     // Add images to table
                     val imageEntities = images.map { storedImage ->
-                        ImageEntity.new(storedImage.identifier.toJavaUuid()) {
+                        ImageEntity.new(storedImage.identifier) {
                             path = storedImage.path
-                            time = storedImage.time
                         }
                     }
 
                     // Add them to inventory
                     inventoryEntity.images = SizedCollection(inventoryEntity.images + imageEntities)
 
-                    AppLogger.m(ADD_IMAGES_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.m(ADD_IMAGES_TAG, InventoryError.NOT_FOUND)
             }
+
+            result
         }
     }
 
@@ -252,18 +285,23 @@ class InventoryDatabaseImpl(tag : String = "InventoryLocalDatabase") : Database<
      * @param identifier The identifier of inventory item
      * @param images List of images to remove
      */
-    fun removeImages(identifier: Uuid, images: List<StoredImage>) {
+    fun removeImages(identifier: UUID, images: List<StoredImage>) {
         appLogTryCatch(REMOVE_IMAGES_TAG) {
+            var result = false
+            val imageIds = images.map { it.identifier }
+
             transaction {
                 // Find inventory item
-                InventoryEntity.findByIdAndUpdate(identifier.toJavaUuid()) { inventoryEntity ->
+                InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                     inventoryEntity.images.forEach { imageEntity ->
-                        if (imageEntity.id.value.toKotlinUuid() == identifier) imageEntity.delete()
+                        if (imageIds.contains(imageEntity.id.value)) imageEntity.delete()
                     }
 
-                    AppLogger.m(REMOVE_IMAGES_TAG, SimpleResult.SUCCESS)
+                    result = true
                 } ?: AppLogger.m(REMOVE_IMAGES_TAG, InventoryError.NOT_FOUND)
             }
+
+            result
         }
     }
 }

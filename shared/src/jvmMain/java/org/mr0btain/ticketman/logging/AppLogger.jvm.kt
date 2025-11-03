@@ -1,27 +1,29 @@
 package org.mr0btain.ticketman.logging
 
 import org.mr0btain.ticketman.error.ErrorCode
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import java.util.logging.Level
 import java.util.logging.Logger
 
 actual object AppLogger {
     private val logger: Logger = Logger.getLogger(AppLogger::class.java.name)
+    actual var LOG_LEVEL: LogLevel = LogLevel.NORMAL
 
     init {
-        logger.level = Level.FINE
+        logger.level = when (LOG_LEVEL) {
+            LogLevel.NONE -> Level.OFF
+            LogLevel.NORMAL -> Level.FINEST
+            LogLevel.HIGH -> Level.INFO
+            LogLevel.SEVERE -> Level.SEVERE
+        }
     }
 
-    actual fun e(
-        tag: String,
-        message: String,
-        throwable: Throwable?
-    ) {
-        if (throwable != null) {
-            logger.log(Level.SEVERE, "ERROR: [$tag] $message", throwable)
-        } else {
-            logger.severe("ERROR: [$tag] $message")
-        }
+    actual fun e(tag: String, message: String, throwable: Throwable?) {
+        logger.log(Level.SEVERE, "ERROR: [$tag] $message", throwable)
+    }
+
+    actual fun e(tag: String, message: ErrorCode, throwable: Throwable?) {
+        logger.log(Level.SEVERE, "ERROR: [$tag] ${message.message}", throwable)
     }
 
     actual fun d(tag: String, message: String) {

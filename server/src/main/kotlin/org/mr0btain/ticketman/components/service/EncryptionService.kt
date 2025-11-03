@@ -3,11 +3,11 @@ package org.mr0btain.ticketman.components.service
 import org.mr0btain.ticketman.components.encryption.PeerKeyData
 import org.mr0btain.ticketman.components.encryption.ServerEncryptionHandler
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.KeyResponse
+import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
 
 /**
  * Service used to handle encryption and decryption of data sent to and from server
@@ -18,14 +18,14 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 class EncryptionService() {
     private val handler = ServerEncryptionHandler()
-    private val keyStorage = mutableMapOf<Uuid, PeerKeyData>()
+    private val keyStorage = mutableMapOf<UUID, PeerKeyData>()
 
     private val TAG = "EncryptionService"
     private val REGISTER_KEYS_TAG = "$TAG:RegisterKey"
     private val UPDATE_KEY_IDENTIFIER = "$TAG:UpdateKeyIdentifier"
 
     /** Inserts a key into storage */
-    fun registerKey(identifier: Uuid, peerKeyData: PeerKeyData) {
+    fun registerKey(identifier: UUID, peerKeyData: PeerKeyData) {
         if (keyStorage.containsKey(identifier)) {
             keyStorage.replace(identifier, peerKeyData)
             AppLogger.m(REGISTER_KEYS_TAG, "Key Found, Updating Identifier")
@@ -36,7 +36,7 @@ class EncryptionService() {
     }
 
     /** Updates the id for a key in key storage */
-    fun updateKeyIdentifier(oldId: Uuid, newId: Uuid) {
+    fun updateKeyIdentifier(oldId: UUID, newId: UUID) {
         keyStorage[oldId]?.let { peerKeyData ->
             keyStorage.remove(oldId)
             keyStorage[newId] = peerKeyData
@@ -45,7 +45,7 @@ class EncryptionService() {
     }
 
     /** Encrypt data to a specific client */
-    fun encryptData(identifier: Uuid, data: String): EncryptedData? {
+    fun encryptData(identifier: UUID, data: String): EncryptedData? {
         return keyStorage[identifier]?.let { peerKey ->
             handler.encryptAndSignData(data, peerKey.publicKey)
         }
@@ -59,9 +59,9 @@ class EncryptionService() {
     }
 
     /** Finds an identifier for the encrypted data if one exists */
-    fun findClientIdentifier(data: EncryptedData): Uuid? {
+    fun findClientIdentifier(data: EncryptedData): UUID? {
         // Try and find a match and update identifier if we do find one
-        var identifier: Uuid? = null
+        var identifier: UUID? = null
 
         keyStorage.forEach { key ->
             if (handler.verifySignature(data, key.value.signingKey)) {
@@ -74,14 +74,14 @@ class EncryptionService() {
     }
 
     /** Decrypt data from a client */
-    fun decryptData(identifier: Uuid, data: EncryptedData): String? {
+    fun decryptData(identifier: UUID, data: EncryptedData): String? {
         val storedKeys = keyStorage[identifier]
 
         return if (storedKeys != null) {
             handler.verifyAndDecryptData(data, storedKeys.publicKey, storedKeys.signingKey)
         } else {
             // Try and find a match and update identifier if we do find one
-            var oldIdentifier: Uuid? = null
+            var oldIdentifier: UUID? = null
 
             keyStorage.forEach { key ->
                 if (handler.verifySignature(data, key.value.signingKey)) {

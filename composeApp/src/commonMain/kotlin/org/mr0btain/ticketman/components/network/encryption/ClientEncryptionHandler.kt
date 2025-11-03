@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.network.encryption
 
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.KeyResponse
 import java.security.*
@@ -69,8 +69,7 @@ class ClientEncryptionHandler() {
 
             AppLogger.m(DERIVE_SHARED_KEY_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(DERIVE_SHARED_KEY_TAG, SimpleResult.FAIL)
+            AppLogger.e(DERIVE_SHARED_KEY_TAG, SimpleResult.FAIL, ex)
         }
     }
 
@@ -101,8 +100,7 @@ class ClientEncryptionHandler() {
 
             EncryptedData(ciphertext, nonce, sigBytes)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(ENCRYPT_TAG, SimpleResult.FAIL)
+            AppLogger.e(ENCRYPT_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -130,8 +128,7 @@ class ClientEncryptionHandler() {
 
             String(plaintext, Charsets.UTF_8) // Return the original plaintext string
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(DECRYPT_TAG, SimpleResult.FAIL)
+            AppLogger.e(DECRYPT_TAG, SimpleResult.FAIL, ex)
             null
         }
 

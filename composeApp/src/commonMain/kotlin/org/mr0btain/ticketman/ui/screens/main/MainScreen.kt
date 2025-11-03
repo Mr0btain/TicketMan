@@ -33,8 +33,6 @@ fun MainScreen(
         ExpandedMainScreen(
             viewModel = viewModel,
             coroutineScope = coroutineScope,
-            scrollBarsOnBottom = scrollBarsOnBottom,
-            scrollBarsOnRight = scrollBarsOnRight,
             isDarkMode = isDarkMode,
             snackBarState = snackBarState
         )
@@ -47,8 +45,6 @@ fun MainScreen(
             ExpandedMainScreen(
                 viewModel = viewModel,
                 coroutineScope = coroutineScope,
-                scrollBarsOnBottom = scrollBarsOnBottom,
-                scrollBarsOnRight = scrollBarsOnRight,
                 isDarkMode = isDarkMode,
                 snackBarState = snackBarState
             )

@@ -9,8 +9,8 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
 
 object CustomerTable : UUIDTable("customer") {
-    val name = json<PersonName>("person_name", Json { ignoreUnknownKeys = true })
+    val name = text("name")
+    val phone = array<String>("phone")
+    val email = text("email")
     val address = json<Address>("address", Json { ignoreUnknownKeys = true })
-    val contactInfo = json<ContactInfo>("contact", Json { ignoreUnknownKeys = true })
-    val time = long("time")
 }

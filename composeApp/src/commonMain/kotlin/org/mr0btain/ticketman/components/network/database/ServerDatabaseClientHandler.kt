@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.HttpClient
 import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**

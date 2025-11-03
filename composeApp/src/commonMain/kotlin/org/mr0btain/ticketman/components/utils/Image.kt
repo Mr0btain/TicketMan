@@ -1,49 +1,36 @@
 package org.mr0btain.ticketman.components.utils
 
 import androidx.compose.ui.graphics.ImageBitmap
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.PlatformFile
-import io.github.vinceglb.filekit.createDirectories
-import io.github.vinceglb.filekit.databasesDir
-import io.github.vinceglb.filekit.div
-import io.github.vinceglb.filekit.exists
-import io.github.vinceglb.filekit.path
-import io.github.vinceglb.filekit.readBytes
-import io.github.vinceglb.filekit.write
+import io.github.vinceglb.filekit.*
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.data.time.formatTime
-import org.mr0btain.ticketman.data.time.getTime
-import org.mr0btain.ticketman.data.time.tolong
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.image_directory
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import java.util.UUID
 
 /**
  * Saves an image to disk
  * @param identifier The identifier of the item this belongs to. This will be the folder its saved in. Just for some little organization
  * @param imageBitmap The image to be saved
  */
-@OptIn(ExperimentalUuidApi::class)
 suspend fun saveImageToDatabaseFolder(
-    identifier: Uuid,
+    identifier: UUID,
     imageBitmap: ImageBitmap
 ): StoredImage? {
     return try {
         // Generate an id
-        val id = Uuid.random()
+        val id = UUIDv7.randomUUID()
         val file = FileKit.databasesDir / identifier.toString() / id.toString()
 
         // Write data to disk
         file.write(imageBitmap.toByteArray())
 
-        StoredImage(id, file.path, getTime())
+        StoredImage(identifier = id, path = file.path)
     } catch (ex: Exception) {
-        AppLogger.i("SaveImage", SimpleResult.FAIL)
-        ex.printStackTrace()
+        AppLogger.e("SaveImage", SimpleResult.FAIL, ex)
         null
     }
 }
@@ -52,7 +39,6 @@ suspend fun saveImageToDatabaseFolder(
  * Saves an image to disk. We use databasedir from FileKit and save it in the folder path, identifier as the file name
  * @param imageData Image data to write to database folder
  */
-@OptIn(ExperimentalUuidApi::class)
 suspend fun saveImageToDatabaseFolder(
     imageData: ImageData
 ): StoredImage? {
@@ -71,15 +57,13 @@ suspend fun saveImageToDatabaseFolder(
         file.write(imageData.image.toByteArray())
 
         // Return result
-        StoredImage(imageData.identifier, file.path, getTime())
+        StoredImage(imageData.identifier, file.path)
     } catch (ex: Exception) {
-        AppLogger.i("SaveImage", SimpleResult.FAIL)
-        ex.printStackTrace()
+        AppLogger.e("SaveImage", SimpleResult.FAIL, ex)
         null
     }
 }
 
-@OptIn(ExperimentalUuidApi::class)
 suspend fun flushImageIfNotInDatabase(imageData: ImageData): StoredImage? {
     return try {
         val file = FileKit.databasesDir / Res.string.image_directory.toString() / imageData.path
@@ -87,18 +71,17 @@ suspend fun flushImageIfNotInDatabase(imageData: ImageData): StoredImage? {
         if (file.exists()) {
             StoredImage(
                 identifier = imageData.identifier,
-                path = imageData.path,
-                time = imageData.time.tolong()
+                path = imageData.path
             )
         } else {
             saveImageToDatabaseFolder(imageData)
         }
     } catch (ex: Exception) {
+        AppLogger.e("FlushImageIfNotInDatabase", SimpleResult.FAIL, ex)
         null
     }
 }
 
-@OptIn(ExperimentalUuidApi::class)
 suspend fun flushImagesToDisk(imageList: List<ImageData>): List<StoredImage> {
     val result = mutableListOf<StoredImage>()
 
@@ -119,7 +102,6 @@ expect fun ImageBitmap.encodeToBase64(): String
 expect fun ByteArray.toImageBitmap(): ImageBitmap
 expect fun ImageBitmap.toByteArray(): ByteArray
 
-@OptIn(ExperimentalUuidApi::class)
 suspend fun pullImagesFromDisk(storedImages: List<StoredImage>): List<ImageData> {
     val result = mutableListOf<ImageData>()
 
@@ -132,16 +114,16 @@ suspend fun pullImagesFromDisk(storedImages: List<StoredImage>): List<ImageData>
                     ImageData(
                         identifier = storedImage.identifier,
                         image = file.readBytes().toImageBitmap(),
-                        time = formatTime(storedImage.time),
                         path = file.path
                     )
                 )
             }
         } catch (ex: Exception) {
-            AppLogger.i("GetImages", "Failed to get image: ${storedImage.identifier}")
-            ex.printStackTrace()
+            AppLogger.e("GetImages", "Failed to get image: ${storedImage.identifier}", ex)
         }
     }
 
     return result
 }
+
+

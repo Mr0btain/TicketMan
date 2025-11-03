@@ -1,53 +1,36 @@
-@file:OptIn(ExperimentalUuidApi::class)
-
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.customer.CustomerData
-import org.mr0btain.ticketman.data.Customer
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.shared.toStringName
-import org.mr0btain.ticketman.ui.composables.CustomerSearch
-import org.mr0btain.ticketman.ui.screens.main.components.AddOrDeleteButtonRow
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-
-// TODO: Should really offload some of the calculations on the lists to before we call this screen
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
+import java.util.*
 
 @Composable
 fun CustomerPanel(
     modifier: Modifier = Modifier,
-    scrollBarsOnBottom: Boolean,
-    scrollBarsOnRight: Boolean,
-    pagingItems: LazyPagingItems<Customer>,
+    isDarkMode: Boolean,
+    customerList: List<Customer>,
     selectedCustomer: CustomerData?,
-    onAddCustomer: (PersonName) -> Unit,
+    onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
-    onCustomerSelectionChange: (Uuid) -> Unit,
-    onDeleteCustomer: (Uuid) -> Unit,
-    onTicketClick: (Uuid) -> Unit,
+    onCustomerSelectionChange: (UUID) -> Unit,
+    onSearchQuery: suspend (String) -> List<SearchResult>,
+    onDeleteCustomer: () -> Unit,
+    onTicketClick: (UUID) -> Unit,
+    onImageClick: (UUID) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
-    coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    isDarkMode: Boolean
+    coroutineScope: CoroutineScope = rememberCoroutineScope()
 ) {
-    // Hopefully this saves on calculations and updates properly
-    //val sortedCustomerInfo = remember(customerList) { customerList.map { it }.sortedBy { it.name.firstName + it.name.lastName } }
-
-    // For search input
-    var searchInput by remember { mutableStateOf("") }
-
-    // Search list
-    val searchItems = emptyList<Customer>() //remember(customerList) { customerList.map { it } }
-
     // To check if this is an update from clicking on an item, which we wouldn't want to scroll to it as that would be jarring
     var isSelectUpdateFromClick by remember { mutableStateOf(false) }
 
@@ -58,52 +41,13 @@ fun CustomerPanel(
             horizontalAlignment = Alignment.Start,
             modifier = Modifier.fillMaxSize()
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth(),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Search box
-                CustomerSearch(
-                    modifier = Modifier.padding(start = 8.dp),
-                    items = searchItems,
-                    input = searchInput,
-                    onClick = {
-                        // Call selection change
-                        onCustomerSelectionChange(it)
-
-                        // Set search input
-                        selectedCustomer?.customer?.let { customer ->
-                            searchInput = customer.name.toStringName()
-                        }
-                              },
-                    onInputChange = { searchInput = it }
-                )
-
-                // Button for adding or deleting a customer
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AddOrDeleteButtonRow(
-                        label = "Customer",
-                        onAddClick = {
-                            // Trigger new item dialog
-                            onAddCustomer(PersonName())
-                        },
-                        onDeleteClick = {
-                            // Trigger delete ticket dialog/ confirm
-                            selectedCustomer?.customer?.let { customer ->
-                                onDeleteCustomer(customer.identifier)
-                            }
-                        }
-                    )
-
-                    Spacer(Modifier.padding(8.dp))
-                }
-            }
+            PanelTopBar(
+                label = "Customer",
+                onSearchClick = { onCustomerSelectionChange(it) },
+                onSearchQuery = onSearchQuery,
+                onAddClick = onAddCustomer,
+                onDeleteClick = onDeleteCustomer
+            )
 
             Spacer(Modifier.padding(4.dp))
 
@@ -112,12 +56,11 @@ fun CustomerPanel(
             ) {
                 CustomerListPane(
                     modifier = Modifier,
-                    customerInfo = pagingItems,
+                    isDarkMode = isDarkMode,
+                    customerList = customerList,
                     lazyListState = customerLazyListState,
                     selectedCustomerId = selectedCustomer?.customer?.identifier,
                     scope = coroutineScope,
-                    scrollBarsOnRight = scrollBarsOnRight,
-                    isDarkMode = isDarkMode,
                     onClick = { id ->
                         // Set the isupdatefromclick so we don't jar the scroll in the launched effect
                         isSelectUpdateFromClick = true
@@ -133,7 +76,7 @@ fun CustomerPanel(
                     selectedCustomer = selectedCustomer,
                     onEditClick = { onEditCustomer() },
                     onTicketClick = onTicketClick,
-                    scrollBarsOnRight = scrollBarsOnRight
+                    onImageClick = onImageClick
                 )
             }
         }

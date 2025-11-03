@@ -3,12 +3,10 @@ package org.mr0btain.ticketman.database.tables.inventory
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
-import org.mr0btain.ticketman.data.Inventory
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import java.util.*
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.toKotlinUuid
 
 class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     companion object : UUIDEntityClass<InventoryEntity>(InventoryTable)
@@ -18,24 +16,21 @@ class InventoryEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var stock by InventoryTable.stock
     var cost by InventoryTable.cost
     var price by InventoryTable.price
-    var time by InventoryTable.time
 
     // For notes
     var notes by NoteEntity via InventoryNoteTable
 
     // For images
     var images by ImageEntity via InventoryImageTable
-}
 
-@OptIn(ExperimentalUuidApi::class)
-fun InventoryEntity.toInventoryItem(): Inventory {
-    return Inventory(
-        identifier = id.value.toKotlinUuid(),
-        name = name,
-        description = description,
-        stock = stock,
-        cost = cost,
-        price = price,
-        time = time
-    )
+    fun toInventory(): Inventory {
+        return Inventory(
+            identifier = id.value,
+            name = name,
+            description = description,
+            stock = stock,
+            cost = cost,
+            price = price
+        )
+    }
 }

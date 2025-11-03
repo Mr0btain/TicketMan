@@ -5,7 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
 
@@ -22,16 +22,13 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
     return try {
         block()
     } catch (ex: UnresolvedAddressException) {
-        ex.printStackTrace()
-        AppLogger.i(tag, NetworkError.NO_INTERNET.name)
+        AppLogger.e(tag, NetworkError.NO_INTERNET.name, ex)
         null
     } catch (ex: SerializationException) {
-        ex.printStackTrace()
-        AppLogger.i(tag, NetworkError.SERIALIZATION.name)
+        AppLogger.e(tag, NetworkError.SERIALIZATION.name, ex)
         null
     } catch (ex: Exception) {
-        ex.printStackTrace()
-        AppLogger.i(tag, SimpleResult.FAIL)
+        AppLogger.e(tag, SimpleResult.FAIL.message, ex)
         null
     }
 }

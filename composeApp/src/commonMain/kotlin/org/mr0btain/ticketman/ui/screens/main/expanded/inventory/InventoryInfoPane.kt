@@ -10,32 +10,23 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
-import org.mr0btain.ticketman.data.time.formatTime
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
-import org.mr0btain.ticketman.ui.screens.main.components.NotesBlock
-import org.mr0btain.ticketman.ui.screens.main.components.SimpleTextItem
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.clipboard
-import ticketman.composeapp.generated.resources.edit
-import ticketman.composeapp.generated.resources.file_text
-import ticketman.composeapp.generated.resources.info
-import ticketman.composeapp.generated.resources.package_icon
+import org.mr0btain.ticketman.ui.composables.PaneHeader
+import org.mr0btain.ticketman.ui.composables.SimpleTextItem
+import org.mr0btain.ticketman.ui.composables.note.NoteBlock
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
+import ticketman.composeapp.generated.resources.*
 
 @Composable
 fun InventoryInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     inventoryData: InventoryData?,
-    scrollBarsOnRight: Boolean,
     onEditClick: () -> Unit
 ) {
-    val date = formatTime(inventoryData?.inventory?.time ?: Long.MAX_VALUE)
-
     // Main Body
     Surface(
         modifier = modifier
@@ -112,35 +103,20 @@ fun InventoryInfoPane(
                         horizontalAlignment = Alignment.Start
                     ) {
                         // Header
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(20.dp),
-                                painter = painterResource(Res.drawable.file_text),
-                                contentDescription = "Info"
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            Text(
-                                text = "Details",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        HorizontalDivider()
+                        PaneHeader(
+                            text = "Details",
+                            icon = Res.drawable.file_text,
+                            contentDescription = "Details"
+                        )
 
                         Spacer(Modifier.padding(4.dp))
 
                         inventoryData?.let { (inventory, _) ->
                             // Description
                             Column(
-                                modifier = Modifier.fillMaxWidth()
+                                modifier = Modifier
+                                    .padding(4.dp)
+                                    .fillMaxWidth()
                             ) {
                                 Text(
                                     text = "Description:",
@@ -177,7 +153,7 @@ fun InventoryInfoPane(
                             // Date created
                             SimpleTextItem(
                                 label = "Created",
-                                text = if (inventory.time != Long.MAX_VALUE) "${date.month}/${date.day}/${date.year}" else ""
+                                text = inventory.time().date()
                             )
                         }
                     }
@@ -196,43 +172,20 @@ fun InventoryInfoPane(
                         modifier = Modifier.padding(8.dp),
                         horizontalAlignment = Alignment.Start
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                modifier = Modifier.size(20.dp),
-                                painter = painterResource(Res.drawable.clipboard),
-                                contentDescription = "Notes"
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            Text(
-                                text = "Notes",
-                                fontSize = 22.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-
-                        HorizontalDivider()
+                        // Header
+                        PaneHeader(
+                            text = "Notes",
+                            icon = Res.drawable.clipboard
+                        )
 
                         inventoryData?.let { (_, notes) ->
-                            PlatformColumnScrollable(
-                                modifier = Modifier
-                                    .background(MaterialTheme.colorScheme.secondaryContainer)
-                                    .padding(20.dp),
-                                scrollBarOnRight = scrollBarsOnRight,
-                                backgroundColor = MaterialTheme.colorScheme.secondaryContainer,
-                                isVisible = inventoryData?.notes?.isNotEmpty() ?: false
+                            PlatformLazyColumn(
+                                modifier = Modifier.padding(4.dp),
+                                isVisible = inventoryData.notes.isNotEmpty()
                             ) {
-                                NotesBlock(
-                                    noteData = notes,
-                                    onImageClick = {},
-                                    maxImageSize = DpSize(150.dp, 75.dp)
-                                )
+                                item {
+                                    NoteBlock(noteData = notes)
+                                }
                             }
                         }
                     }

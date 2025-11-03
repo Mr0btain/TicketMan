@@ -8,5 +8,4 @@ object InventoryTable : UUIDTable("inventory") {
     val stock = integer("stock")
     val cost = varchar("cost", 100)
     val price = varchar("price", 100)
-    val time = long("time")
 }

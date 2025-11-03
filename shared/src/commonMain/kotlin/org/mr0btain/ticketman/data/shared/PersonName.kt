@@ -7,8 +7,20 @@ import org.mr0btain.ticketman.data.SubItem
 data class PersonName(
     val firstName: String = "",
     val lastName: String = ""
-): SubItem
+): SubItem {
+    override fun toString(): String {
+        return "$firstName $lastName"
+    }
 
-fun PersonName.toStringName(): String {
-    return "$firstName $lastName"
+    companion object {
+        fun fromString(name: String): PersonName {
+            val split = name.split(" ")
+                .filter { it.isNotBlank() }
+
+            val first = split.getOrNull(0) ?: ""
+            val last = split.getOrNull(1) ?: ""
+
+            return PersonName(first, last)
+        }
+    }
 }

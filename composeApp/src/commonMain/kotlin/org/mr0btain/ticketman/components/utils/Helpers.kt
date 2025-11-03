@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.utils
 
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.Ticket
+import org.mr0btain.ticketman.data.ticket.Ticket
 
 // TODO: Need a better way to determine if its a new ticket or not
 fun Ticket.isNewTicket(): Boolean {

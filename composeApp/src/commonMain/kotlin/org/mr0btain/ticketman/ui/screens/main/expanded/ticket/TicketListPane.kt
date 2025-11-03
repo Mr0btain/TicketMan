@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -16,30 +17,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.Ticket
-import org.mr0btain.ticketman.data.ticket.toNameString
-import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnWithScrollbar
-import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
-import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
-import org.mr0btain.ticketman.ui.screens.main.components.TablePriorityItem
-import org.mr0btain.ticketman.ui.screens.main.components.TableStatusItem
-import org.mr0btain.ticketman.ui.screens.main.components.TableTicketIdItem
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.ui.composables.*
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
+import java.util.*
 
 // TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    pagingItems: LazyPagingItems<Ticket>,
-    scrollBarsOnRight: Boolean,
-    selectedId: Uuid?,
-    onClick: (Uuid) -> Unit,
+    ticketList: List<Ticket>,
+    selectedId: UUID?,
+    onClick: (UUID) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
@@ -100,33 +92,33 @@ fun TicketListPane(
 
             HorizontalDivider(modifier = Modifier.width(710.dp))
 
-            LazyColumnWithScrollbar(
+            PlatformLazyColumn(
                 modifier = Modifier
                     .width(740.dp)
                     .padding(start = 4.dp),
                 state = state,
                 scope = coroutineScope,
-                scrollBarOnRight = scrollBarsOnRight,
-                isVisible = pagingItems.itemCount > 0
+                isVisible = ticketList.isNotEmpty()
             ) {
-                items(pagingItems.itemCount) { index ->
-                    pagingItems[index]?.let { ticket ->
-                        TicketTableItem(
-                            color = if (!isDarkMode) {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                            } else {
-                                if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                            },
-                            selected = selectedId == ticket.identifier,
-                            ticket = ticket,
-                            numberWidth = numberColumnWidth,
-                            priorityWidth = priorityColumnWidth,
-                            noteWidth = noteColumnWidth,
-                            statusWidth = statusColumnWidth,
-                            isDarkMode = isDarkMode,
-                            onClick = { onClick(ticket.identifier) }
-                        )
-                    }
+                itemsIndexed(
+                    items = ticketList,
+                    key = { _, ticket -> ticket.identifier }
+                ) { index, ticket ->
+                    TicketTableItem(
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        selected = selectedId == ticket.identifier,
+                        ticket = ticket,
+                        numberWidth = numberColumnWidth,
+                        priorityWidth = priorityColumnWidth,
+                        noteWidth = noteColumnWidth,
+                        statusWidth = statusColumnWidth,
+                        isDarkMode = isDarkMode,
+                        onClick = { onClick(ticket.identifier) }
+                    )
                 }
             }
         }
@@ -157,7 +149,6 @@ private fun TicketHeaderBox(
     }
 }
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 private fun TicketTableItem(
     modifier: Modifier = Modifier,
@@ -223,7 +214,7 @@ private fun TicketTableItem(
                     .padding(start = 4.dp)
                     .width(noteWidth + sizeAdjust.dp)
             ) {
-                TableCardTextItem(ticket.device.toNameString())
+                TableCardTextItem(ticket.device.toString())
             }
 
             TableDivider()
@@ -236,7 +227,7 @@ private fun TicketTableItem(
             ) {
                 TableStatusItem(
                     status = ticket.status,
-                    darkMode = isDarkMode,
+                    isDarkMode = isDarkMode,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }

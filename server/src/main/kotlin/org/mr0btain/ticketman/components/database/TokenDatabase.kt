@@ -6,13 +6,11 @@ import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.TokenTable.identifier
 import org.mr0btain.ticketman.components.database.TokenTable.token
-import org.mr0btain.ticketman.error.SimpleResult
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 @Suppress("PrivatePropertyName")
-class TokenDatabase(
-    private val shouldLog: Boolean
-) {
+class TokenDatabase() {
     private val TAG = "TokenDatabase"
     private val FIND_BY_ID_TAG = "$TAG:FindById"
     private val FIND_BY_TOKEN_TAG = "$TAG:FindByToken"
@@ -25,8 +23,6 @@ class TokenDatabase(
 
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
                 TokenTable.selectAll().where { TokenTable.identifier eq identifier }.firstOrNull()?.let { item ->
                     found = RefreshToken(
                         identifier = item[TokenTable.identifier],
@@ -37,8 +33,7 @@ class TokenDatabase(
 
             AppLogger.m(FIND_BY_ID_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(FIND_BY_ID_TAG, SimpleResult.FAIL)
+            AppLogger.e(FIND_BY_ID_TAG, SimpleResult.FAIL, ex)
         }
 
         return found
@@ -49,9 +44,6 @@ class TokenDatabase(
 
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 TokenTable.selectAll().where { token eq refreshToken }.firstOrNull()?.let { item ->
                     found = RefreshToken(
                         identifier = item[identifier],
@@ -62,8 +54,7 @@ class TokenDatabase(
 
             AppLogger.m(FIND_BY_TOKEN_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(FIND_BY_TOKEN_TAG, SimpleResult.FAIL)
+            AppLogger.e(FIND_BY_TOKEN_TAG, SimpleResult.FAIL, ex)
         }
 
         return found
@@ -72,9 +63,6 @@ class TokenDatabase(
     fun add(refreshToken: RefreshToken): Boolean {
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 TokenTable.insert { item ->
                     item[identifier] = refreshToken.identifier.toString()
                     item[token] = refreshToken.token
@@ -83,8 +71,7 @@ class TokenDatabase(
 
             AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(ADD_TAG, SimpleResult.FAIL)
+            AppLogger.e(ADD_TAG, SimpleResult.FAIL, ex)
             return false
         }
 
@@ -94,9 +81,6 @@ class TokenDatabase(
     fun update(refreshToken: RefreshToken): Boolean {
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 TokenTable.update(where = { identifier eq refreshToken.identifier.toString()  }) { item ->
                     item[identifier] = refreshToken.identifier.toString()
                     item[token] = refreshToken.token
@@ -105,8 +89,7 @@ class TokenDatabase(
 
             AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(UPDATE_TAG, SimpleResult.FAIL)
+            AppLogger.e(UPDATE_TAG, SimpleResult.FAIL, ex)
             return false
         }
 
@@ -116,16 +99,12 @@ class TokenDatabase(
     fun remove(identifier: String): Boolean {
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                TokenTable.deleteWhere { this.identifier eq identifier }
+               TokenTable.deleteWhere { this.identifier eq identifier }
             }
 
             AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(REMOVE_TAG, SimpleResult.FAIL)
+            AppLogger.e(REMOVE_TAG, SimpleResult.FAIL, ex)
             return false
         }
 

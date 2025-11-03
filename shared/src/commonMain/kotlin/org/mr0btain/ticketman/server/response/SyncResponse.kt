@@ -2,11 +2,12 @@ package org.mr0btain.ticketman.server.response
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.MainItem
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.uuid.UUIDListSerializer
+import java.util.UUID
 
 @Serializable
-data class SyncResponse @OptIn(ExperimentalUuidApi::class) constructor(
+data class SyncResponse(
     val data: List<MainItem>,
-    val requested: List<Uuid>
+    @Serializable(UUIDListSerializer::class)
+    val requested: List<UUID>
 )

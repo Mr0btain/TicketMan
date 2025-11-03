@@ -3,8 +3,8 @@ package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -16,25 +16,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.paging.compose.LazyPagingItems
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.data.Inventory
-import org.mr0btain.ticketman.getPlatform
-import org.mr0btain.ticketman.ui.composables.scrollbar.LazyColumnWithScrollbar
-import org.mr0btain.ticketman.ui.screens.main.components.TableCardTextItem
-import org.mr0btain.ticketman.ui.screens.main.components.TableDivider
-import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.ui.composables.TableCardTextItem
+import org.mr0btain.ticketman.ui.composables.TableDivider
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
+import java.util.*
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun InventoryListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
-    pagingItems: LazyPagingItems<Inventory>,
-    scrollBarsOnRight: Boolean,
-    selected: Uuid?,
-    onClick: (Uuid) -> Unit,
+    inventoryList: List<Inventory>,
+    selected: UUID?,
+    onClick: (UUID) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
@@ -104,61 +99,34 @@ fun InventoryListPane(
 
             HorizontalDivider(modifier = Modifier.width(690.dp))
 
-            if (getPlatform().name.contains("Java")) {
-                LazyColumnWithScrollbar(
-                    modifier = Modifier
-                        .width(720.dp)
-                        .padding(start = 4.dp),
-                    state = state,
-                    scope = coroutineScope,
-                    scrollBarOnRight = scrollBarsOnRight,
-                    isVisible = pagingItems.itemCount > 0
-                ) {
-                    items(pagingItems.itemCount) { index ->
-                        pagingItems[index]?.let { inventory ->
-                            InventoryTableItem(
-                                color = if (!isDarkMode) {
-                                    if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                                } else {
-                                    if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                                },
-                                selected = selected == inventory.identifier,
-                                inventoryItem = inventory,
-                                nameColumnWidth = nameColumnWidth,
-                                stockColumnWidth = stockColumnWidth,
-                                descriptionColumnWidth = descriptionColumnWidth,
-                                costColumnWidth = costColumnWidth,
-                                priceColumnWidth = priceColumnWidth,
-                                isDarkMode = isDarkMode,
-                                onClick = { onClick(inventory.identifier) }
-                            )
-                        }
-                    }
-                }
-            } else {
-                LazyColumn(
-                    state = state
-                ) {
-                    items(pagingItems.itemCount) { index ->
-                        pagingItems[index]?.let { inventory ->
-                            InventoryTableItem(
-                                color = if (!isDarkMode) {
-                                    if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                                } else {
-                                    if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                                },
-                                selected = selected == inventory.identifier,
-                                inventoryItem = inventory,
-                                nameColumnWidth = nameColumnWidth,
-                                stockColumnWidth = stockColumnWidth,
-                                descriptionColumnWidth = descriptionColumnWidth,
-                                costColumnWidth = costColumnWidth,
-                                priceColumnWidth = priceColumnWidth,
-                                isDarkMode = isDarkMode,
-                                onClick = { onClick(inventory.identifier) }
-                            )
-                        }
-                    }
+            PlatformLazyColumn(
+                modifier = Modifier
+                    .width(720.dp)
+                    .padding(start = 4.dp),
+                state = state,
+                scope = coroutineScope,
+                isVisible = inventoryList.isNotEmpty()
+            ) {
+                itemsIndexed(
+                    items = inventoryList,
+                    key = { _, inventory -> inventory.identifier }
+                ) { index, inventory ->
+                    InventoryTableItem(
+                        color = if (!isDarkMode) {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
+                        } else {
+                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
+                        },
+                        selected = selected == inventory.identifier,
+                        inventoryItem = inventory,
+                        nameColumnWidth = nameColumnWidth,
+                        stockColumnWidth = stockColumnWidth,
+                        descriptionColumnWidth = descriptionColumnWidth,
+                        costColumnWidth = costColumnWidth,
+                        priceColumnWidth = priceColumnWidth,
+                        isDarkMode = isDarkMode,
+                        onClick = { onClick(inventory.identifier) }
+                    )
                 }
             }
         }
