@@ -3,34 +3,38 @@ package org.mr0btain.ticketman.components.network
 import io.ktor.client.engine.*
 import org.mr0btain.ticketman.components.network.database.ServerDatabaseClientHandler
 import org.mr0btain.ticketman.components.network.database.createDatabaseHttpClient
+import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.ui.screens.main.components.viewmodel.DataHandler
 
 /**
  * Handles the interaction and states of server clients
  */
 class ServerHandler(
     engine: HttpClientEngine,
-    private val mainViewModel: DataHandler
 ) {
     private val TAG = "ServerHandler"
 
-    val userClient = ServerUserClient(createUserHttpClient(engine), this)
-    val databaseClient = ServerDatabaseClientHandler(createDatabaseHttpClient(engine, this))
+    val encryptionHandler = ClientEncryptionHandler()
+    val userClient = ServerUserClient(createUserHttpClient(engine), this, encryptionHandler)
+    val databaseClient = ServerDatabaseClientHandler(createDatabaseHttpClient(engine, this), encryptionHandler)
     
     /**
      * Sets url to the server in all clients
      */
-    fun setUrl(url: String) {
+    suspend fun setUrl(url: String) {
         if (url.isNotBlank()) {
             userClient.changeServerUrl(url)
             databaseClient.changeServerUrl(url)
+
+            // Run a server check so we can update keys and such
+            checkServerConnection()
         } else {
             AppLogger.m("$TAG:SetUrl", "FAIL: Url is empty")
         }
@@ -39,40 +43,43 @@ class ServerHandler(
     /**
      * Gets stored username from database
      */
-    suspend fun getUsername() = mainViewModel.getStoredUsername()
+    suspend fun getUsername(): String {
+        // dataHandler.getStoredUsername()
+        return ""
+    }
 
     /**
      * Gets stored password from database
      */
-    suspend fun getPassword() = mainViewModel.getStoredPassword()
+    suspend fun getPassword(): String {
+        // dataHandler.getStoredPassword()
+        return ""
+    }
 
     /**
      * Gets stored access token from database
      */
-    suspend fun getAccessToken() = mainViewModel.getStoredAccessToken()
+    suspend fun getAccessToken() = "" // dataHandler.getStoredAccessToken()
 
     /**
      * Gets both stored tokens from database
      */
-    suspend fun getRefreshToken() = mainViewModel.getStoredRefreshToken()
+    suspend fun getRefreshToken() = "" // dataHandler.getStoredRefreshToken()
+
+    /**
+     * Gets both stored tokens from database
+     */
+    suspend fun setUser(user: User) =  "" //dataHandler.userDataHandler.setCurrent(user)
 
     /**
      * Refreshes tokens for authentication
      */
-    suspend fun refreshTokens() = mainViewModel.refreshTokens()
+    suspend fun refreshTokens() = "" //dataHandler.refreshTokens()
 
     /**
      * Updates stored tokens in database
      */
-    suspend fun updateAuthTokens(access: String, refresh: String) = mainViewModel.updateStoredAuthTokens(access, refresh)
-
-    /**
-     * Updates urls clients use
-     */
-    fun updateServerUrl(url: String) {
-        userClient.changeServerUrl(url)
-        databaseClient.changeServerUrl(url)
-    }
+    suspend fun updateAuthTokens(access: String, refresh: String) = "" //dataHandler.updateStoredAuthTokens(access, refresh)
 
     /**
      * Checks connection with server using stored url
@@ -88,12 +95,12 @@ class ServerHandler(
 
         return if (result) {
             // Log success
-            AppLogger.m("$TAG:CheckNewServerConnection", SimpleError.SUCCESS)
+            AppLogger.m("$TAG:CheckNewServerConnection", SimpleResult.SUCCESS)
 
             // Return success
             true
         } else {
-            AppLogger.m("$TAG:CheckNewServerConnection", SimpleError.FAIL)
+            AppLogger.m("$TAG:CheckNewServerConnection", SimpleResult.FAIL)
             false
         }
     }
@@ -106,39 +113,20 @@ class ServerHandler(
     /**
      * Sync customers with server database and returns the values local database doesn't have
      */
-    suspend fun syncCustomers(currentCustomerList: List<CustomerData>): List<CustomerData> {
-        // Handle if our database is empty then no reason to sync just pull
-        return if (currentCustomerList.isEmpty()) {
-            databaseClient.customerClient.getAll()
-        } else {
-            // Else go through with sync
-            databaseClient.customerClient.sync(currentCustomerList)
-        }
-    }
+    suspend fun syncCustomers(currentCustomerList: List<Customer>): List<Customer> = databaseClient.customerClient.sync(currentCustomerList)
 
     /**
      * Sync inventory with server database and returns the values local database doesn't have
      */
-    suspend fun syncTickets(currentTickets: List<TicketInfo>): List<TicketInfo> {
-        // Handle if our database is empty then no reason to sync just pull
-        return if (currentTickets.isEmpty()) {
-            databaseClient.ticketClient.getAll()
-        } else {
-            // Else go through with sync
-            databaseClient.ticketClient.sync(currentTickets)
-        }
-    }
+    suspend fun syncTickets(currentTickets: List<Ticket>): List<Ticket> = databaseClient.ticketClient.sync(currentTickets)
 
     /**
      * Sync inventory with server database and returns the values local database doesn't have
      */
-    suspend fun syncInventory(currentInventory: List<InventoryItem>): List<InventoryItem> {
-        // Handle if our database is empty then no reason to sync just pull
-        return if (currentInventory.isEmpty()) {
-            databaseClient.inventoryClient.getAll()
-        } else {
-            // Else go through with sync
-            databaseClient.inventoryClient.sync(currentInventory)
-        }
-    }
+    suspend fun syncInventory(currentInventory: List<Inventory>): List<Inventory> = databaseClient.inventoryClient.sync(currentInventory)
+
+    /**
+     * Sync inventory with server database and returns the values local database doesn't have
+     */
+    suspend fun syncUsers(currentUsers: List<User>): List<User> = databaseClient.userClient.sync(currentUsers)
 }

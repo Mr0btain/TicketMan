@@ -36,14 +36,15 @@ fun SideAppNav(
     coroutineScope: CoroutineScope,
     navHostController: NavHostController,
     topAppText: String,
-    destinations: List<NavigationItem>
+    destinations: List<NavigationItem>,
+    initialDestination: Destination
 ) {
     val iconSize = 48.dp
     val iconInnerPadding = 8.dp
     val iconOuterPadding = 4.dp
 
     // Selected tab/ screen
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(initialDestination.index) }
 
     // Sidebar visibility
     var isSideBarVisible by remember { mutableStateOf(true) }
@@ -113,14 +114,14 @@ fun SideAppNav(
                                         modifier = Modifier.width(iconSize + 4.dp),
                                         selectedTabIndex = selectedTab
                                     ) {
-                                        destinations.forEachIndexed { index, item ->
+                                        destinations.sortedBy { it.destination.index }.forEach { navigationItem ->
                                             Tab(
                                                 modifier = Modifier.wrapContentSize(),
-                                                selected = selectedTab == index,
+                                                selected = selectedTab == navigationItem.destination.index,
                                                 onClick = {
                                                     coroutineScope.launch {
-                                                        navHostController.navigate(item.route)
-                                                        selectedTab = index
+                                                        navHostController.navigate(navigationItem.destination.route)
+                                                        selectedTab = navigationItem.destination.index
                                                     }
                                                 },
                                                 icon = {
@@ -128,8 +129,8 @@ fun SideAppNav(
                                                         modifier = Modifier
                                                             .size(iconSize)
                                                             .padding(iconInnerPadding),
-                                                        painter = item.icon,
-                                                        contentDescription = item.title
+                                                        painter = navigationItem.icon,
+                                                        contentDescription = navigationItem.title
                                                     )
                                                 }
                                             )

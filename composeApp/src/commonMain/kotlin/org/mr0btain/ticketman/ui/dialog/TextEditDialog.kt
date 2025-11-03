@@ -1,37 +1,25 @@
 package org.mr0btain.ticketman.ui.dialog
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.Button
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.State
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.jetbrains.compose.resources.painterResource
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.arrow_right
-import ticketman.composeapp.generated.resources.x
+import androidx.compose.ui.window.Dialog
+import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 
 /**
  * Text edit dialog
@@ -39,102 +27,71 @@ import ticketman.composeapp.generated.resources.x
 
 @Composable
 fun TextEditDialog(
-    name: String,
-    storedValue: State<String>,
-    onSave: (String) -> Unit,
-    onCheck: (String) -> Boolean,
-    inputFilter: (String) -> String,
-    keyboardType: KeyboardType,
-    buttonText: String,
-    placeholderText: String = "",
-    onDismiss: () -> Unit // internal method to dismiss dialog from within
+    label: String,
+    value: String,
+    visible: Boolean,
+    onConfirm: (String) -> Boolean,
+    onCancel: () -> Unit,
+    keyboardType: KeyboardType
 ) {
-    // storage for input
-    var currentInput by remember {
-        mutableStateOf(TextFieldValue(storedValue.value))
+    val focusRequester = remember { FocusRequester() }
+    var isError by remember { mutableStateOf(false) }
+
+    var textFieldValueState by remember {
+        mutableStateOf(
+            TextFieldValue(
+                text =value,
+                selection = TextRange(value.length)
+            )
+        )
     }
 
-    // if the input is valid - run the method for current value
-    var isValid by remember {
-        mutableStateOf(onCheck(storedValue.value))
-    }
-
-    Surface(
-        color = MaterialTheme.colorScheme.secondaryContainer,
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 4.dp
-    ) {
-        Column(
-            modifier = Modifier
-                .wrapContentHeight()
-                .fillMaxWidth()
-                .padding(32.dp)
+    if (visible) {
+        Dialog(
+            onDismissRequest = onCancel
         ) {
-            Text(
-                text = name,
-                fontSize = 24.sp
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            OutlinedTextField(
-                singleLine = true,
-                value = currentInput,
-                shape = RoundedCornerShape(8.dp),
-                trailingIcon = {
-                    IconButton(
-                        modifier = Modifier.padding(4.dp),
-                        onClick = {
-                            // Check if input is valid
-                            if (isValid) {
-                                // save and dismiss the dialog
-                                onSave(currentInput.text)
-                                onDismiss()
-                            } else {
-                                // If we just want to clear then clear the text
-                                currentInput = TextFieldValue("")
-                            }
-                        },
-                        enabled = currentInput.text.isNotEmpty()
-                    ) {
-                        Icon(
-                            painter = if (isValid) painterResource(Res.drawable.arrow_right) else painterResource(Res.drawable.x),
-                            contentDescription = "Clear Contents"
-                        )
-                    }
-                },
-                onValueChange = {
-                    // Filter input
-                    val filteredText = inputFilter(it.text)
-
-                    // Check if its valid
-                    isValid = onCheck(filteredText)
-
-                    // Set filtered value
-                    currentInput = it.copy(text = filteredText)
-                },
-                keyboardOptions = KeyboardOptions(
-                    keyboardType = keyboardType,
-                    imeAction = ImeAction.Next
-                ),
-                placeholder = { Text(placeholderText) }
-            )
-
-            Row {
-                Spacer(modifier = Modifier.weight(1f))
-
-                Button(
-                    onClick = {
-                        // save and dismiss the dialog
-                        onSave(currentInput.text)
-                        onDismiss()
-                        // disable / enable the button
-                    },
-                    enabled = isValid
+            Surface(
+                color = MaterialTheme.colorScheme.secondaryContainer,
+                shape = RoundedCornerShape(16.dp),
+                shadowElevation = 4.dp
+            ) {
+                Column(
+                    modifier = Modifier
+                        .wrapContentSize()
+                        .padding(32.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
                 ) {
-                    Text(buttonText)
+                    OutlinedTextField(
+                        modifier = Modifier.focusRequester(focusRequester),
+                        label = { Text(label) },
+                        singleLine = true,
+                        value = textFieldValueState,
+                        shape = RoundedCornerShape(8.dp),
+                        onValueChange = { textFieldValueState = it },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = keyboardType,
+                            imeAction = ImeAction.Next
+                        ),
+                        isError = isError
+                    )
+
+                    Spacer(Modifier.padding(12.dp))
+
+                    ConfirmCancelButtons(
+                        onConfirmClick = {
+                            val result = onConfirm(textFieldValueState.text)
+
+                            if (result) {
+                                isError = false
+                                onCancel()
+                            } else isError = true
+                        },
+                        onCancelClick = onCancel
+                    )
                 }
             }
         }
+
+        LaunchedEffect(Unit) { focusRequester.requestFocus() }
     }
 }

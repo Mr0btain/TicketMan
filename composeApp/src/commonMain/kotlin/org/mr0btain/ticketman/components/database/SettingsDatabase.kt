@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.components.database
 
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
 import org.jetbrains.exposed.v1.jdbc.addLogger
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -8,8 +7,8 @@ import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import org.mr0btain.ticketman.components.data.components.settings.UserSettings
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.components.data.settings.UserSettings
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 @Suppress("PrivatePropertyName")
@@ -63,8 +62,7 @@ class SettingsDatabase(
                 }
             }
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(INITIALIZE_TAG, SimpleError.FAIL)
+            AppLogger.e(INITIALIZE_TAG, SimpleResult.FAIL, ex)
         }
 
         if (initialized) {
@@ -97,11 +95,10 @@ class SettingsDatabase(
                     }.firstOrNull()
             }
 
-            AppLogger.m(GET_SETTINGS_TAG, SimpleError.SUCCESS)
+            AppLogger.m(GET_SETTINGS_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_SETTINGS_TAG, SimpleError.FAIL)
+            AppLogger.e(GET_SETTINGS_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -123,11 +120,10 @@ class SettingsDatabase(
                 }
             }
 
-            AppLogger.m(SAVE_SETTINGS_TAG, SimpleError.SUCCESS)
+            AppLogger.m(SAVE_SETTINGS_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SAVE_SETTINGS_TAG, SimpleError.FAIL)
+            AppLogger.e(SAVE_SETTINGS_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -149,11 +145,10 @@ class SettingsDatabase(
                     ?.get(SettingsTable.userName)
             }
 
-            AppLogger.m(GET_USERNAME_TAG, SimpleError.SUCCESS)
+            AppLogger.m(GET_USERNAME_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_USERNAME_TAG, SimpleError.FAIL)
+            AppLogger.e(GET_USERNAME_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -172,11 +167,10 @@ class SettingsDatabase(
                     }
             }
 
-            AppLogger.m(SET_USERNAME_TAG, SimpleError.SUCCESS)
+            AppLogger.m(SET_USERNAME_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_USERNAME_TAG, SimpleError.FAIL)
+            AppLogger.e(SET_USERNAME_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -198,11 +192,10 @@ class SettingsDatabase(
                     ?.get(SettingsTable.password)
             }
 
-            AppLogger.m(GET_PASSWORD_TAG, SimpleError.SUCCESS)
+            AppLogger.m(GET_PASSWORD_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_PASSWORD_TAG, SimpleError.FAIL)
+            AppLogger.e(GET_PASSWORD_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -221,11 +214,10 @@ class SettingsDatabase(
                     }
             }
 
-            AppLogger.m(SET_PASSWORD_TAG, SimpleError.SUCCESS)
+            AppLogger.m(SET_PASSWORD_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_PASSWORD_TAG, SimpleError.FAIL)
+            AppLogger.e(SET_PASSWORD_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -247,11 +239,10 @@ class SettingsDatabase(
                     ?.get(SettingsTable.accessToken)
             }
 
-            AppLogger.m(GET_ACCESS_TOKEN_TAG, SimpleError.SUCCESS)
+            AppLogger.m(GET_ACCESS_TOKEN_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_ACCESS_TOKEN_TAG, SimpleError.FAIL)
+            AppLogger.e(GET_ACCESS_TOKEN_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -270,11 +261,10 @@ class SettingsDatabase(
                     }
             }
 
-            AppLogger.m(SET_ACCESS_TOKEN_TAG, SimpleError.SUCCESS)
+            AppLogger.m(SET_ACCESS_TOKEN_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_ACCESS_TOKEN_TAG, SimpleError.FAIL)
+            AppLogger.e(SET_ACCESS_TOKEN_TAG, SimpleResult.FAIL, ex)
             false
         }
     }
@@ -296,11 +286,10 @@ class SettingsDatabase(
                     ?.get(SettingsTable.refreshToken)
             }
 
-            AppLogger.m(GET_REFRESH_TOKEN_TAG, SimpleError.SUCCESS)
+            AppLogger.m(GET_REFRESH_TOKEN_TAG, SimpleResult.SUCCESS)
             result
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(GET_REFRESH_TOKEN_TAG, SimpleError.FAIL)
+            AppLogger.e(GET_REFRESH_TOKEN_TAG, SimpleResult.FAIL, ex)
             null
         }
     }
@@ -319,11 +308,10 @@ class SettingsDatabase(
                     }
             }
 
-            AppLogger.m(SET_REFRESH_TOKEN_TAG, SimpleError.SUCCESS)
+            AppLogger.m(SET_REFRESH_TOKEN_TAG, SimpleResult.SUCCESS)
             true
         } catch (ex: Exception) {
-            ex.printStackTrace()
-            AppLogger.i(SET_REFRESH_TOKEN_TAG, SimpleError.FAIL)
+            AppLogger.e(SET_REFRESH_TOKEN_TAG, SimpleResult.FAIL, ex)
             false
         }
     }

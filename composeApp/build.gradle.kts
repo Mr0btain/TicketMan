@@ -93,7 +93,11 @@ kotlin {
             // ktor http stuff
             implementation(libs.bundles.ktorClient)
 
+            // Exposed database stuff
             implementation(libs.bundles.exposed)
+
+            // FileKit for file operations
+            implementation(libs.bundles.fileKit)
 
         }
 

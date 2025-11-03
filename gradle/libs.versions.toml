@@ -1,7 +1,7 @@
 [versions]
 agp = "8.10.1"
 android-compileSdk = "35"
-android-minSdk = "24"
+android-minSdk = "30"
 android-targetSdk = "35"
 androidx-activity = "1.10.1"
 androidx-appcompat = "1.7.1"
@@ -23,13 +23,12 @@ ktor = "3.2.0"
 logback = "1.5.18"
 koin = "4.0.4"
 material3WindowSizeClassMultiplatform = "0.5.0"
-datastore = "1.1.7"
-datastorePref = "1.1.7"
 filekit = "0.10.0-beta04"
 kotlinxSerializationJson = "1.8.1"
 exposed = "1.0.0-beta-2"
 sqlitejdbc = "3.44.1.0"
 openpdf = "2.0.5"
+kotlinx-io = "0.8.0"
 
 
 [libraries]
@@ -78,10 +77,6 @@ koin-composeVM = { module = "io.insert-koin:koin-compose-viewmodel", version.ref
 # Window size class
 window-size-multiplatform = { module = "dev.chrisbanes.material3:material3-window-size-class-multiplatform", version.ref = "material3WindowSizeClassMultiplatform" }
 
-# Datastore
-datastore = { module = "androidx.datastore:datastore", version.ref = "datastore" }
-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastorePref" }
-
 # Filekt a multiplatform file picker and saver
 filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }
@@ -106,6 +101,9 @@ postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres-ver
 # Pdf
 openpdf = { module = "io.github.librepdf:openpdf", version.ref = "openpdf" }
 
+# File Stuff
+kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
+
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
@@ -118,6 +116,11 @@ kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref =
 serialize = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
 
 [bundles]
+fileKit = [
+    "filekit-core",
+    "filekit-dialogs",
+    "filekit-dialogs-compose"
+]
 ktorServer = [
     "logback",
     "ktor-serverCore",

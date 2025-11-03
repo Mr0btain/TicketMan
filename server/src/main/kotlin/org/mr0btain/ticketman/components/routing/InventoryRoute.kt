@@ -1,34 +1,50 @@
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
-import io.ktor.serialization.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.database.InventoryLocalDatabaseClientImpl
+import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.service.EncryptionService
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.database.InventoryDatabaseImpl
+import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
+import java.util.UUID
 
-fun Route.inventoryRoute(database: InventoryLocalDatabaseClientImpl) {
+fun Route.inventoryRoute(
+    database: InventoryDatabaseImpl,
+    encryptionService: EncryptionService
+) {
     // Sync between client and server
     authenticate {
         post("/sync") {
-            val request = call.receive<SyncRequest>()
+            call.getIdentifierFromToken()?.let { identifier ->
+                val encryptedData = call.receive<EncryptedData>()
 
-            database.getAll()?.let { data ->
-                // Filter items by ones the client does not contain
-                val responseData = data.filter { !request.clientData.contains(it.identifier) }
+                encryptionService.decryptData(identifier, encryptedData)?.let {
+                    Json.decodeFromString<SyncRequest>(it)
+                }?.let { syncRequest ->
+                    database.all()?.let { data ->
+                        // Filter items by ones the client does not contain
+                        val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }
 
-                // Map all the ids in the local database
-                val dataIdentifiers = data.map { it.identifier }
+                        // Map all the ids in the local database
+                        val dataIdentifiers = data.map { it.identifier }
 
-                // Filter response data so we can send back a response to request those that are not in our database
-                val requested = request.clientData.filter { !dataIdentifiers.contains(it) }
+                        // Filter response data so we can send back a response to request those that are not in our database
+                        val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
 
-                // Send response
-                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
+                        encryptionService.encryptData(
+                            identifier = identifier,
+                            data = Json.encodeToString(SyncResponse(responseData, requested))
+                        )?.let { response ->
+                            call.respond(HttpStatusCode.OK, response)
+                        } ?: call.respond(HttpStatusCode.InternalServerError)
+                    } ?: call.respond(HttpStatusCode.NotFound)
+                }?: call.respond(HttpStatusCode.InternalServerError)
             } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
@@ -36,8 +52,11 @@ fun Route.inventoryRoute(database: InventoryLocalDatabaseClientImpl) {
     // Get all
     authenticate("restricted") {
         get("/all") {
-            database.getAll()?.let { data ->
-                call.respond(HttpStatusCode.Accepted, data)
+            database.all()?.let { data ->
+                val string = Json.encodeToString(data)
+                call.handleEncryption(encryptionService, string)?.let { message ->
+                    call.respond(HttpStatusCode.Accepted, message)
+                } ?: call.respond(HttpStatusCode.InternalServerError)
             } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
@@ -45,52 +64,45 @@ fun Route.inventoryRoute(database: InventoryLocalDatabaseClientImpl) {
     // Adding new
     authenticate {
         post("/add") {
-            try {
-                val item = call.receive<InventoryItem>()
+            call.getIdentifierFromToken()?.let { identifier ->
+                encryptionService.decryptData(
+                    identifier = identifier,
+                    data = call.receive<EncryptedData>()
+                )?.let { message ->
+                    database.add(Json.decodeFromString<Inventory>(message))
 
-                database.add(item)
-
-                call.respond(HttpStatusCode.Accepted)
-            } catch (ex: IllegalStateException) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
-            } catch (ex: JsonConvertException) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
-            }
+                    call.respond(HttpStatusCode.Accepted)
+                }?: call.respond(HttpStatusCode.InternalServerError)
+            }?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
-    // Update Customer
+    // Update
     authenticate {
         post("/update") {
-            try {
-                val data = call.receive<InventoryItem>()
-
-                if (database.update(data)) call.respond(HttpStatusCode.Accepted) else call.respond(HttpStatusCode.BadRequest)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
-            }
+            call.getIdentifierFromToken()?.let { identifier ->
+                encryptionService.decryptData(
+                    identifier = identifier,
+                    data = call.receive<EncryptedData>()
+                )?.let { message ->
+                    database.update(Json.decodeFromString<Inventory>(message))
+                    call.respond(HttpStatusCode.Accepted)
+                }?: call.respond(HttpStatusCode.InternalServerError)
+            }?: call.respond(HttpStatusCode.NotFound)
         }
     }
 
-    // Bulk add customers mostly for syncing
+    // Bulk add mostly for syncing
     authenticate {
         post("/add/all") {
-            try {
-                val data = call.receive<List<InventoryItem>>()
-
-                if (database.addAll(data)) call.respond(HttpStatusCode.Accepted)
-                else call.respond(HttpStatusCode.NotFound)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
+            call.handleDecryption<List<Inventory>>(encryptionService)?.let { result ->
+                database.addAll(result)
+                call.respond(HttpStatusCode.Accepted)
             }
         }
     }
 
-    // Remove customer
+    // Remove
     authenticate {
         delete("/remove/{identifier}") {
             val identifier = call.parameters["identifier"]
@@ -100,8 +112,8 @@ fun Route.inventoryRoute(database: InventoryLocalDatabaseClientImpl) {
                 return@delete
             }
 
-            if (database.remove(identifier)) call.respond(HttpStatusCode.Accepted)
-            else call.respond(HttpStatusCode.BadRequest)
+            database.remove(UUID.fromString(identifier))
+            call.respond(HttpStatusCode.Accepted)
         }
     }
 }

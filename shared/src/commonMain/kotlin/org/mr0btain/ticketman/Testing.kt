@@ -2,86 +2,50 @@ package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.CustomerData
-import org.mr0btain.ticketman.data.customer.CustomerInfo
+import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.data.InventoryItem
-import org.mr0btain.ticketman.data.shared.AMPM
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.shared.Time
-import org.mr0btain.ticketman.data.shared.getTime
-import org.mr0btain.ticketman.data.shared.parseDateToLong
+import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.data.ticket.Device
-import org.mr0btain.ticketman.data.TicketInfo
-import org.mr0btain.ticketman.data.randomTicketPriority
-import org.mr0btain.ticketman.data.randomTicketStatus
-import org.mr0btain.ticketman.data.User
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.randomTicketPriority
+import org.mr0btain.ticketman.data.ticket.randomTicketStatus
+import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import java.io.File
+import java.io.FileOutputStream
+import java.security.SecureRandom
 import java.text.DecimalFormat
-import java.util.UUID
 import kotlin.random.Random
-import kotlin.uuid.ExperimentalUuidApi
 
 /**
- * A bunch of half-assed clobbered together functions that spit out random test data. Its beautiful chaos
+ * Generates a random customer for testing
  */
-fun generateMockData(num: Int): Triple<List<CustomerData>, List<TicketInfo>, List<User>> {
+fun generateMockCustomer(): Pair<Customer, List<Note>> {
+    val name = generateRandomName()
+
     // Generate some mock customer data
-    val customerData = generateMockCustomerData(num)
-    val users = generateMockUserData(6).toMutableList()
+    val customerData = Customer(
+        name = generateRandomName(),
+        address = generateRandomAddress(),
+        contactInfo = generateRandomContactInfo(name.firstName, name.lastName)
+    )
+    val notes = mutableListOf<Note>()
 
-    var currentTicketId = Random.nextInt(0, 9999)
-
-    // Hold the new data
-    val newCustomerData = mutableListOf<CustomerData>()
-    val newTicketData = mutableListOf<TicketInfo>()
-
-    customerData.forEach { item ->
-        val tickets = mutableListOf<TicketInfo>()
-        val ticketIds = mutableListOf<String>()
-
-        // Generate tickets
-        (0 .. Random.nextInt(1, 10)).forEach { i ->
-            tickets.add(generateRandomTicket(item.identifier, currentTicketId.toString()))
-
-            currentTicketId++
-        }
-
-        // Make a list of ticket ids
-        tickets.forEach { tick ->
-            ticketIds.add(tick.identifier)
-        }
-
-        // Update the customer data
-        newCustomerData.add(item.copy(tickets = ticketIds))
-
-        // Add the tickets to the result
-        newTicketData.addAll(tickets)
+    // Generate notes
+    (0..Random.nextInt(0, 4)).forEach { _ ->
+        notes.add(generateCustomerNote())
     }
 
-    newTicketData.forEachIndexed { index, ticket ->
-        // Get random employee
-        val userId = Random.nextInt(0, 6)
-        val user = users[userId]
-
-        // Set ticket data assigned employee
-        newTicketData[index] = ticket.copy(
-            assignedUser = user.identifier
-        )
-
-        // add ticket to employee
-        users[userId] = user.copy(tickets = user.tickets + ticket.identifier)
-    }
-
-    println("Generated Customer list: ${customerData.count()}")
-    println("Generated ticket list: ${newTicketData.count()}")
-    println("Generated user list: ${users.count()}")
-
-
-    return Triple(newCustomerData, newTicketData, users)
+    return Pair(customerData, notes)
 }
 
-fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
+/**
+ * Generates a random inventory for testing
+ */
+fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
     val itemNames = listOf(
         "iPhone 11 Screen", "Galaxy S10 Screen", "Charging Port", "Battery Pack", "IC Chip A12",
         "Logic Board Connector", "Touch Controller", "Screen Adhesive", "Camera Module", "Speaker Assembly",
@@ -97,151 +61,71 @@ fun generateRandomInventoryItems(count: Int): List<InventoryItem> {
 
     val formatter = DecimalFormat("#.00")
     val now = getFakeTime()
+    val costVal = Random.nextDouble(0.5, 50.0)
+    val priceVal = costVal * Random.nextDouble(1.2, 2.5)
+    val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
+    val notes = mutableListOf<Note>()
 
-    return List(count) {
-        val name = itemNames.random()
-        val description = descriptions.random()
-        val stock = Random.nextInt(1, 500)
-        val costVal = Random.nextDouble(0.5, 50.0)
-        val priceVal = costVal * Random.nextDouble(1.2, 2.5)
-        val identifier = Random.nextInt(100000, 999999).toString()
-        val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
+    // Generate notes
+    (0..Random.nextInt(0, 12)).forEach { _ ->
+        notes.add(generateCustomerNote())
+    }
 
-        InventoryItem(
-            identifier = identifier,
-            name = name,
-            description = description,
-            stock = stock,
+    return Pair(
+        Inventory(
+            name = itemNames.random(),
+            description = descriptions.random(),
+            stock = Random.nextInt(1, 500),
             cost = "$${formatter.format(costVal)}",
-            price = "$${formatter.format(priceVal)}",
-            notes = generateRandomInventoryNotes(Random.nextInt(0, 4)),
-            time = now - timeOffset
-        )
-    }
-}
-
-fun generateMockCustomerData(num: Int): List<CustomerData> {
-    val data = mutableListOf<CustomerData>()
-    val ids = mutableListOf<String>()
-
-    (0..num).forEach { i ->
-        var id = Random.nextInt(0, 9999).toString()
-
-        while (ids.contains(id)) {
-            id = Random.nextInt(0, 9999).toString()
-        }
-
-        ids.add(id)
-
-        val name = generateRandomName()
-        val notes = mutableListOf<Note>()
-
-        // Generate notes
-        (0..Random.nextInt(0, 4)).forEach { _ ->
-            notes.add(generateCustomerNote())
-        }
-
-        data.add(
-            CustomerData(
-                identifier = id,
-                info = CustomerInfo(
-                    identifier = id,
-                    name = name,
-                    address = generateRandomAddress(),
-                    contactInfo = generateRandomContactInfo(name.firstName, name.lastName),
-                    time = getFakeTime()
-                ),
-                notes = notes
-            )
-        )
-    }
-
-    return data
-}
-
-// Function to generate random employee data
-fun generateMockUserData(num: Int): List<User> {
-    val users = mutableListOf<User>()
-
-    for (i in 0..num) {
-        // Random AccessLevel
-        val accessLevel = AccessLevel.entries.random()
-
-        val name = generateRandomName()
-
-        // Random Notes
-        val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
-
-        // Random ContactInfo (emails and phone numbers)
-        val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
-        val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
-        val contactInfo = ContactInfo(email, phone)
-
-        // Create and return User object
-        users.add(
-            User(
-                identifier = UUID.randomUUID().toString(),
-                username = "${name.firstName}_${name.lastName}",
-                password = name.lastName,
-                name = name,
-                notes = notes,
-                contactInfo = contactInfo,
-                tickets = listOf(),
-                accessLevel = accessLevel,
-                time = getFakeTime()
-            )
-        )
-    }
-
-    if (!users.map { it.accessLevel }.contains(AccessLevel.ADMIN)) {
-        // Random AccessLevel
-        val accessLevel = AccessLevel.ADMIN
-
-        // Random identifier
-        val identifier = Random.nextInt(0, 9999)
-
-        val name = generateRandomName()
-
-        // Random Notes
-        val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
-
-        // Random ContactInfo (emails and phone numbers)
-        val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
-        val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
-        val contactInfo = ContactInfo(email, phone)
-
-        users.add(
-            User(
-                identifier = UUID.randomUUID().toString(),
-                username = "${name.firstName}_${name.lastName}",
-                password = name.lastName,
-                name = name,
-                notes = notes,
-                contactInfo = contactInfo,
-                tickets = listOf(),
-                accessLevel = accessLevel,
-                time = getFakeTime()
-            )
-        )
-    }
-
-    return users
-}
-
-private fun getFakeTime(): Long {
-    return parseDateToLong(
-        Time(
-            year = Random.nextInt(2000, 2025),
-            month = Random.nextInt(1, 12),
-            day = Random.nextInt(1, 21),
-            hour = Random.nextInt(1, 12),
-            minute = Random.nextInt(0, 59),
-            second = Random.nextInt(0, 59),
-            ampm = AMPM.entries.random()
-        )
+            price = "$${formatter.format(priceVal)}"
+        ),
+        notes
     )
 }
 
+/**
+ * Generates a random user for testing
+ */
+fun generateMockUser(): Pair<User, List<Note>> {
+    val accessLevel = AccessLevel.entries.random()
+    val name = generateRandomName()
+    val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
+
+    // Random ContactInfo (emails and phone numbers)
+    val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
+    val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
+    val contactInfo = ContactInfo(email, phone)
+
+    return Pair(
+        User(
+            username = "${name.firstName}_${name.lastName}",
+            password = name.lastName,
+            name = name,
+            contactInfo = contactInfo,
+            accessLevel = accessLevel
+        ),
+        notes
+    )
+}
+
+/**
+ * Generates a fake time for testing
+ */
+private fun getFakeTime(): Long {
+    return Time(
+        year = Random.nextInt(2000, 2025),
+        month = Random.nextInt(1, 12),
+        day = Random.nextInt(1, 21),
+        hour = Random.nextInt(1, 12),
+        minute = Random.nextInt(0, 59),
+        second = Random.nextInt(0, 59),
+        ampm = Time.AMPM.entries.random()
+    ).toLong()
+}
+
+/**
+ * Generates a random address for testing
+ */
 private fun generateRandomAddress(): Address {
     val streets = listOf(
         "Main", "Oak Ave", "Maple", "Pine", "Elm", "Cedar", "Willow", "Dad", "Mom", "Peach", "Apple",
@@ -271,6 +155,9 @@ private fun generateRandomAddress(): Address {
     )
 }
 
+/**
+ * Generates a random name for testing
+ */
 private fun generateRandomName(): PersonName {
     val firstNames = listOf(
         "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
@@ -295,8 +182,10 @@ private fun generateRandomName(): PersonName {
     return PersonName(firstNames.random(), lastNames.random())
 }
 
-@OptIn(ExperimentalUuidApi::class)
-fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
+/**
+ * Generates a random ticket for testing
+ */
+fun generateRandomTicket(): Pair<Ticket, List<Note>> {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
         "Samsung" to listOf("Galaxy S21", "Galaxy Tab S8", "Galaxy Note 20", "Galaxy Book3"),
@@ -332,24 +221,30 @@ fun generateRandomTicket(customerId: String, ticketId: String): TicketInfo {
     val model = manufacturersAndModels[manufacturer]!!.random()
 
     // Generate random notes
-    val notes = List(Random.nextInt(1, 4)) {
+    val notes = mutableListOf<Note>()
+
+    for (i in 0..Random.nextInt(1, 4)) {
         val author = "${firstNames.random()} ${lastNames.random()}"
         val message = noteMessages.random()
-        Note(author, message, getTime())
+
+        notes.add(
+            Note(UUIDv7.randomUUID(), author, message)
+        )
     }
 
-    return TicketInfo(
-        identifier = ticketId.toString(),
-        customerId = customerId,
-        assignedUser = "",
-        device = Device(manufacturer, model),
-        status = randomTicketStatus(),
-        priority = randomTicketPriority(),
-        updates = notes,
-        time = getFakeTime()
+    return Pair(
+        Ticket(
+            device = Device(manufacturer, model),
+            status = randomTicketStatus(),
+            priority = randomTicketPriority()
+        ),
+        notes
     )
 }
 
+/**
+ * Generates a random customer note for testing
+ */
 private fun generateCustomerNote(): Note {
     val firstNames = listOf("James", "Emily", "Michael", "Sarah", "David", "Laura", "Chris", "Amanda", "Daniel", "Jessica")
     val lastNames = listOf("Smith", "Johnson", "Williams", "Brown", "Jones", "Garcia", "Miller", "Davis")
@@ -373,10 +268,12 @@ private fun generateCustomerNote(): Note {
     val author = "${firstNames.random()} ${lastNames.random()}"
     val message = customerNotes.random()
 
-    return Note(author, message, getTime())
+    return Note(author = author, message = message)
 }
 
-// Function to generate a random employee note
+/**
+ * Generates a random employee note for testing
+ */
 fun generateEmployeeNote(): Note {
     // List of potential authors for the note
     val authors = listOf("Manager", "HR", "Supervisor", "Team Lead", "Peer", "Self")
@@ -397,9 +294,12 @@ fun generateEmployeeNote(): Note {
         "has a positive attitude and motivates others in the workplace."
     )
 
-    return Note(authors.random(), noteTopics.random(), getTime())
+    return Note(author = authors.random(), message = noteTopics.random(),)
 }
 
+/**
+ * Generates random inventory notes for testing
+ */
 fun generateRandomInventoryNotes(count: Int): List<Note> {
     val authors = listOf("Alice", "Bob", "Charlie", "Dana", "Eli", "Frank")
     val components = listOf("resistor", "capacitor", "transistor", "diode", "IC", "inductor")
@@ -414,10 +314,13 @@ fun generateRandomInventoryNotes(count: Int): List<Note> {
         val quantity = Random.nextInt(1, 100)
 
         val text = "Found $quantity $component(s) in $location - Status: $condition."
-        Note(author, text)
+        Note(author =  author, message = text)
     }
 }
 
+/**
+ * Generates a random contact info for testing
+ */
 private fun generateRandomContactInfo(firstName: String? = null, lastName: String? = null): ContactInfo {
     val domains = listOf("gmail.com", "yahoo.com", "outlook.com", "icloud.com", "protonmail.com")
 
@@ -438,6 +341,9 @@ private fun generateRandomContactInfo(firstName: String? = null, lastName: Strin
     return ContactInfo(listOf(email), phone)
 }
 
+/**
+ * Generates a random phone number for testing
+ */
 private fun generateRandomPhoneNumber(): String {
     // Random US-style phone number (XXX-XXX-XXXX)
     return buildString {
@@ -446,5 +352,31 @@ private fun generateRandomPhoneNumber(): String {
         append(Random.nextInt(100, 999))  // Prefix
         append("-")
         append(Random.nextInt(1000, 9999)) // Line number
+    }
+}
+
+/**
+ * Generates a random file for testing
+ */
+fun generateRandomFile(path: String, sizeInBytes: Long) {
+    val bufferSize = 1024 * 1024 // 1 MB buffer
+    val buffer = ByteArray(bufferSize)
+    val random = SecureRandom()
+    val file = File(path)
+
+    FileOutputStream(file).use { output ->
+        var bytesWritten: Long = 0
+        while (bytesWritten < sizeInBytes) {
+            val remaining = sizeInBytes - bytesWritten
+            val toWrite = if (remaining < bufferSize) remaining.toInt() else bufferSize
+
+            random.nextBytes(buffer)
+            output.write(buffer, 0, toWrite)
+            bytesWritten += toWrite
+
+            // Optional: Print progress
+            val percent = (bytesWritten * 100) / sizeInBytes
+            println("Generated $bytesWritten / $sizeInBytes bytes ($percent%)")
+        }
     }
 }

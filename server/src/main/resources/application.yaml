@@ -11,6 +11,10 @@ jwt:
     issuer: "http://localhost"
     realm: "TicketMan Server"
     secret: "$SECRET:ojSNROVNOnwerowNEOIFOIonwerowNEOIFOIonwerowNEOIFOIo"
+
+env:
+    name: "$NAME:Server"
+    dataPath: "$DATA_PATH:"
 # postgres:
 #  url: "jdbc:postgresql://localhost/default"
 #  user: username

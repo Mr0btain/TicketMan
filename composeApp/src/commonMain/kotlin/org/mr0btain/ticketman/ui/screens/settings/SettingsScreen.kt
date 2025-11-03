@@ -1,21 +1,33 @@
 package org.mr0btain.ticketman.ui.screens.settings
 
-import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformColumnScrollable
+import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.logging.SimpleResult
+import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
-import org.mr0btain.ticketman.ui.screens.settings.components.SettingsSwitchItem
-import org.mr0btain.ticketman.ui.screens.settings.components.SettingsTextItem
+import org.mr0btain.ticketman.ui.screens.settings.components.SwitchSetting
+import org.mr0btain.ticketman.ui.screens.settings.components.TextSetting
 import ticketman.composeapp.generated.resources.*
 
 // TODO: Add option for smooth scroll to item on selection or immediate
@@ -26,82 +38,107 @@ import ticketman.composeapp.generated.resources.*
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
+    scope: CoroutineScope
 ) {
+    val TAG = "SettingsScreen"
+    val CHECK_URL_TAG = "$TAG:CheckUrl"
+
     val autoSync = viewModel.autoSyncDatabase.collectAsState(false)
     val darkMode = viewModel.darkMode.collectAsState(false)
-    val scrollBarsOnBottom = viewModel.scrollBarsOnBottom.collectAsState()
-    val scrollBarsOnRight = viewModel.scrollBarsOnRight.collectAsState()
+
+    // Server Url Stuff
+    val serverUrl = viewModel.serverAddress.collectAsState()
+    var showUrlEditDialog by remember { mutableStateOf(false) }
+
+    val textStyle = MaterialTheme.typography.bodyMedium
+    val childTextStyle = MaterialTheme.typography.bodySmall
+
+    val settingsGroups = listOf(
+        SettingItemGroup(
+            label = stringResource(Res.string.settings_first_group),
+            textStyle = textStyle,
+            childTextStyle = childTextStyle,
+            items = listOf()
+        ),
+        SettingItemGroup(
+            label = stringResource(Res.string.settings_second_group),
+            textStyle = textStyle,
+            childTextStyle = childTextStyle,
+            items = listOf(
+                SettingItem(
+                    icon = painterResource(Res.drawable.server),
+                    description = "Url used to connect to the server",
+                    label = "Server Url",
+                    enabled = true,
+                    initialState = viewModel.serverAddress.value,
+                    onClick = { url ->
+                        try {
+                            viewModel.updateServerUrl(url as? String ?: "")
+
+                            true
+                            /*
+                            if ( viewModel.dataHandler.checkNewServerConnection(url)) {
+                                viewModel.updateServerUrl(url)
+                                isUrlError = false
+                                showUrlEditDialog = false
+                                AppLogger.m(CHECK_URL_TAG, SimpleError.SUCCESS)
+                            } else isUrlError = true
+                             */
+                        } catch (ex: Exception) {
+                            AppLogger.e(CHECK_URL_TAG, SimpleResult.FAIL, ex)
+                            false
+                        }
+                    },
+                    type = SettingType.TEXT
+                ),
+                SettingItem(
+                    icon = painterResource(Res.drawable.download_cloud),
+                    description = "Auto sync with server",
+                    label = "Server Auto Sync",
+                    enabled = true,
+                    initialState = viewModel.autoSyncDatabase.value,
+                    onClick = {
+                        viewModel.toggleAutoSync()
+                        true
+                              },
+                    type = SettingType.SWITCH
+                )
+            )
+        ),
+        SettingItemGroup(
+            label = stringResource(Res.string.settings_third_group),
+            textStyle = textStyle,
+            childTextStyle = childTextStyle,
+            items = listOf(
+                SettingItem(
+                    icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
+                    description = "UI dark mode or light mode",
+                    label = "Dark Mode",
+                    enabled = true,
+                    initialState = darkMode.value,
+                    onClick = {
+                        viewModel.toggleDarkMode()
+                        true
+                    },
+                    type = SettingType.SWITCH
+                )
+            )
+        )
+    )
 
     Surface(
         modifier = modifier
             .padding(8.dp)
-            .fillMaxWidth(),
-        color = if (darkMode.value) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
+            .fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        PlatformColumnScrollable(
+        PlatformLazyColumn(
             modifier = Modifier.padding(16.dp),
-            backgroundColor = MaterialTheme.colorScheme.background,
             isVisible = true
         ) {
-            SettingsGroup(stringResource(Res.string.settings_first_group)) {
-
-            }
-
-            SettingsGroup(name = stringResource(Res.string.settings_second_group)) {
-                // Server address item
-                SettingsTextItem(
-                    name = "Server Address:",
-                    icon = painterResource(Res.drawable.server),
-                    iconDesc = "Description",
-                    state = viewModel.serverAddress.collectAsState(""),
-                    onSave = { url -> viewModel.updateServerAddress(url) },
-                    inputFilter = { text -> text },
-                    onCheck = { text -> viewModel.checkWebAddress(text) },
-                    keyboardType = KeyboardType.Text
-                )
-
-                // Dark mode switch
-                SettingsSwitchItem(
-                    name = "Auto Sync With Server",
-                    icon = painterResource(Res.drawable.download_cloud),
-                    iconDesc = "Auto sync data with server",
-                    state = autoSync.value
-                ) {
-                    viewModel.toggleAutoSync()
-                }
-            }
-
-            SettingsGroup(stringResource(Res.string.settings_third_group)) {
-                // Dark mode switch
-                SettingsSwitchItem(
-                    name = "Dark Mode",
-                    icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
-                    iconDesc = "Should the ui stay in dark mode",
-                    state = darkMode.value
-                ) {
-                    viewModel.toggleDarkMode()
-                }
-
-                // Scroll bars on bottom
-                SettingsSwitchItem(
-                    name = "Horizontal ScrollBars on the Bottom",
-                    icon = if (scrollBarsOnBottom.value) painterResource(Res.drawable.arrow_down_circle) else painterResource(Res.drawable.arrow_up_circle),
-                    iconDesc = "Position of horizontal scroll bars",
-                    state = scrollBarsOnBottom.value
-                ) {
-                    viewModel.toggleScrollBarsOnBottom()
-                }
-
-                // Scroll bars on right
-                SettingsSwitchItem(
-                    name = "Vertical ScrollBars on the Right",
-                    icon = if (scrollBarsOnRight.value) painterResource(Res.drawable.arrow_right_circle) else painterResource(Res.drawable.arrow_left_circle),
-                    iconDesc = "Position of vertical scroll bars",
-                    state = scrollBarsOnRight.value
-                ) {
-                    viewModel.toggleScrollBarsOnRight()
-                }
+            items(settingsGroups) { group ->
+                SettingsGroup(settingItemGroup = group)
             }
         }
     }

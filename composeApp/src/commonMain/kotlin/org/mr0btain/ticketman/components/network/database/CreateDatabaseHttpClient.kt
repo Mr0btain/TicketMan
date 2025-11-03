@@ -44,9 +44,10 @@ fun createDatabaseHttpClient(
                     // Refresh tokens and return them as the 'BearerTokens' instance
                     val authResponse = serverHandler.refreshTokens()
 
-                    if (authResponse != null) {
+                    if (authResponse.isNotBlank()) {
                         AppLogger.m("$TAG:RefreshTokens", "SUCCESS")
-                        BearerTokens(authResponse.accessToken, authResponse.refreshToken)
+                        BearerTokens("", "")
+                        //BearerTokens(authResponse.accessToken ?: "", authResponse.refreshToken)
                     } else {
                         AppLogger.i("$TAG:RefreshTokens", "FAIL")
                         BearerTokens("", "")

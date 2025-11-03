@@ -12,6 +12,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -39,9 +40,11 @@ fun LoginPopup(
     // We only ever want this to run once
     // Check connection to the server using stored value, if its good no need to reenter it
     LaunchedEffect(effect) {
+        /*
         if (viewModel.dataHandler.checkServerConnection()) {
             state = LoginDialogState.Login
         }
+         */
     }
 
     LoginDialog(
@@ -50,11 +53,12 @@ fun LoginPopup(
         labelState = labelState,
         error = error,
         onLoginConfirm = { user, pass ->
-            coroutineScope.launch {
-                // Set state to loading
-                labelState = "Loading"
-                state = LoginDialogState.Loading
+            // Set state to loading
+            labelState = "Loading"
+            state = LoginDialogState.Loading
 
+            coroutineScope.launch {
+                /*
                 // Try to log in to server
                 val result = viewModel.dataHandler.loginToServer(user, pass)
 
@@ -66,15 +70,17 @@ fun LoginPopup(
                     labelState = "Login"
                     state = LoginDialogState.Login
                 }
+                 */
             }
         },
         onAddressConfirm = { address ->
-            coroutineScope.launch {
-                // Trigger loading screen
-                labelState = "Loading"
-                state = LoginDialogState.Loading
+            // Trigger loading screen
+            labelState = "Loading"
+            state = LoginDialogState.Loading
 
+            coroutineScope.launch {
                 // Try to hit server
+                /*
                 val result = viewModel.dataHandler.checkNewServerConnection(address)
 
                 // Handle result
@@ -87,6 +93,7 @@ fun LoginPopup(
                     labelState = "Server Address"
                     state = LoginDialogState.Address
                 }
+                 */
             }
         },
         onDismiss = onDismiss
@@ -108,7 +115,7 @@ private fun LoginDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.7f))
+        properties = DialogProperties()
     ) {
         Surface(
             modifier = modifier,

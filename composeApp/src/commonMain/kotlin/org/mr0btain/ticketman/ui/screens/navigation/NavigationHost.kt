@@ -15,6 +15,7 @@ import androidx.navigation.compose.composable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
+import org.mr0btain.ticketman.ui.screens.dashboard.DashboardScreen
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -24,7 +25,7 @@ import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
 fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
-    startDestination: String = Screen.Main.route,
+    initialDestination: Destination = Destination.MAIN,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
     snackBarState: SnackbarHostState
@@ -36,24 +37,25 @@ fun NavigationHost(
     NavHost(
         modifier = modifier,
         navController = navHostController,
-        startDestination = startDestination
+        startDestination = initialDestination.route
     ) {
-        composable(Screen.Main.route) {
-            MainScreen(
+        composable(Destination.ADMIN.route) {
+            AdminScreen(
                 viewModel = mainViewModel,
-                coroutineScope = coroutineScope,
                 isDarkMode = darkMode.value,
-                snackBarState = snackBarState,
-                scrollBarsOnRight = scrollBarsOnRight.value,
-                scrollBarsOnBottom = scrollBarsOnBottom.value
+                snackBarState = snackBarState
             )
         }
 
-        composable(Screen.Settings.route) {
-            SettingsScreen(viewModel = mainViewModel)
+        composable(Destination.DASHBOARD.route) {
+            DashboardScreen(
+                viewModel = mainViewModel,
+                snackBarState = snackBarState
+            )
         }
 
-        composable(Screen.Login.route) {
+        // TEMPORARY
+        composable(Destination.LOGIN.route) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
@@ -63,8 +65,8 @@ fun NavigationHost(
                     onConfirm = { user, pass ->
                         if (user.isNotEmpty() && pass.isNotEmpty()) {
                             coroutineScope.launch {
-                                mainViewModel.dataHandler.updateStoredUsername(user)
-                                mainViewModel.dataHandler.updateStoredPassword(pass)
+                                //mainViewModel.dataHandler.updateStoredUsername(user)
+                                //mainViewModel.dataHandler.updateStoredPassword(pass)
                             }
                         }
 
@@ -78,11 +80,21 @@ fun NavigationHost(
             }
         }
 
-        composable(Screen.Admin.route) {
-            AdminScreen(
+        composable(Destination.MAIN.route) {
+            MainScreen(
                 viewModel = mainViewModel,
+                coroutineScope = coroutineScope,
                 isDarkMode = darkMode.value,
-                snackBarState = snackBarState
+                snackBarState = snackBarState,
+                scrollBarsOnRight = scrollBarsOnRight.value,
+                scrollBarsOnBottom = scrollBarsOnBottom.value
+            )
+        }
+
+        composable(Destination.SETTINGS.route) {
+            SettingsScreen(
+                viewModel = mainViewModel,
+                scope = coroutineScope
             )
         }
     }

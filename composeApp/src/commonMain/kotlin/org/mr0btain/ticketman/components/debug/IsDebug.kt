@@ -5,4 +5,6 @@ interface BuildConfig {
 }
 
 @Suppress("EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING")
-expect class BuildConfigImpl() : BuildConfig
+expect class BuildConfigImpl() : BuildConfig {
+    override fun isDebug(): Boolean
+}

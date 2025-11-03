@@ -16,28 +16,32 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
+import org.mr0btain.ticketman.ui.screens.navigation.Destination
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationItem
-import org.mr0btain.ticketman.ui.screens.navigation.Screen
 import org.mr0btain.ticketman.ui.screens.navigation.SideAppNav
 import org.mr0btain.ticketman.ui.theme.AppTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.home
+import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
 import ticketman.composeapp.generated.resources.user
 
 // TODO: Work on UI for mobile size screens
 // TODO: Make option to import database data from file?
-// TODO: Add remote database stuff
+
 // TODO: Administration screen
+// TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
+
+// TODO: Make dedicated screens for adding tickets and such and just have nav handle it
+// TODO: Should also add dedicated screens for working on tickets or changing them.
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun App() {
     KoinContext {
-        // TODO: Maybe combine these? don't really need both of them
-        // View Models
+        // View Model
         val mainViewModel = koinViewModel<MainViewModel>()
 
         // For snack bar messages
@@ -49,58 +53,61 @@ fun App() {
         // Main scope to use with coroutines
         val mainScope = rememberCoroutineScope()
 
-        // Generate some mock data and add it to the database in memory
-        //mainViewModel.generateMockDbData()
+        // Generate some mock data and add it to the database
+        //mainViewModel.fillDatabaseWithTestData()
 
         // Current employee info
-        val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
+        //val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
 
         // Should we show login popup or not
         val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
-        val navDestinations = listOf(
-            NavigationItem(
-                title = "Home",
-                icon = painterResource(Res.drawable.home),
-                route = Screen.Main.route
-            ),
-            NavigationItem(
-                title = "Settings",
-                icon = painterResource(Res.drawable.settings),
-                route = Screen.Settings.route
-            ),
+        val initialDestination = Destination.MAIN
+
+        val navDestination = listOf(
             NavigationItem(
                 title = "Admin",
                 icon = painterResource(Res.drawable.archive),
-                route = Screen.Admin.route
+                destination = Destination.ADMIN
+            ),
+            NavigationItem(
+                title = "Dashboard",
+                icon = painterResource(Res.drawable.monitor),
+                destination = Destination.DASHBOARD
             ),
             NavigationItem(
                 title = "Login",
                 icon = painterResource(Res.drawable.user),
-                route = Screen.Login.route
+                destination = Destination.LOGIN
+            ),
+            NavigationItem(
+                title = "Main",
+                icon = painterResource(Res.drawable.home),
+                destination = Destination.MAIN
+            ),
+            NavigationItem(
+                title = "Settings",
+                icon = painterResource(Res.drawable.settings),
+                destination = Destination.SETTINGS
             )
         )
-
-        // TODO: I don't think using window size class is the best way to go for differentiating between desktop and mobile as it
-        // causes us to end up hitting the database everytime screen size class changes in desktop. We should move the window size
-        // class state down the tree to avoid it recomposing the entire app when we resize the screen on desktop
 
         AppTheme(
             darkTheme = mainViewModel.darkMode.collectAsState(false).value
         ) {
-            println("Platform: ${mainViewModel.platform}")
+            println("Platform: ${getPlatform().name}")
 
             if (shouldShowLogin.value) {
                 LoginPopup(
                     modifier = Modifier.padding(24.dp),
                     viewModel = mainViewModel,
-                    onDismiss = { mainViewModel.updateShowLogin(!shouldShowLogin.value) },
+                    onDismiss = { mainViewModel.changeShowLogin(!shouldShowLogin.value) },
                     coroutineScope = mainScope
                 )
             }
 
-            // Check if were on desktop
-            if (mainViewModel.platform.contains("Java")) {
+            // Check if were on desktop, if so we can avoid using window size class entirely.
+            if (getPlatform().name.contains("Java")) {
                 SideAppNav(
                     navHostController = navigator,
                     content = { paddingValues ->
@@ -109,12 +116,14 @@ fun App() {
                             navHostController = navigator,
                             coroutineScope = mainScope,
                             mainViewModel = mainViewModel,
-                            snackBarState = snackBarHostState
+                            snackBarState = snackBarHostState,
+                            initialDestination = initialDestination
                         )
                     },
-                    topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
+                    topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
                     coroutineScope = mainScope,
-                    destinations = navDestinations
+                    destinations = navDestination,
+                    initialDestination = initialDestination
                 )
             } else {
                 // Calculating screen size if were on mobile. This should only update when the screen is rotated.
@@ -132,20 +141,21 @@ fun App() {
                                 navHostController = navigator,
                                 coroutineScope = mainScope,
                                 mainViewModel = mainViewModel,
-                                snackBarState = snackBarHostState
+                                snackBarState = snackBarHostState,
+                                initialDestination = initialDestination
                             )
                         },
-                        topAppText = "Welcome: ${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}",
+                        topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
                         coroutineScope = mainScope,
-                        destinations = navDestinations
+                        destinations = navDestination,
+                        initialDestination = initialDestination
                     )
                 } else {
                     // Phone screen
-                    // TODO: Test on actual phone screen
                     BottomNavigationDrawer(
                         navController = navigator,
                         coroutineScope = mainScope,
-                        destinations = navDestinations,
+                        destinations = navDestination,
                         content = { paddingValues ->
                             NavigationHost(
                                 modifier = Modifier.padding(paddingValues),

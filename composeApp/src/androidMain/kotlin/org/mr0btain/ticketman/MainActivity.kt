@@ -7,7 +7,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import org.mr0btain.ticketman.components.data.datastore.ContextUtils
 import org.mr0btain.ticketman.components.injection.initKoin
 
 class MainActivity : ComponentActivity() {
@@ -19,7 +18,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        ContextUtils.setContext(context = this)
+        //ContextUtils.setContext(context = this)
         appContext = applicationContext
         initKoin()
 

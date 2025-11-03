@@ -1,12 +1,16 @@
 package org.mr0btain.ticketman.data.ticket
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.SubItem
+import org.mr0btain.ticketman.data.time.Time
+import org.mr0btain.ticketman.data.time.TimeSerializer
 
 @Serializable
 data class TicketPriority(
     val priority: TicketPriorityType,
-    val time: Long = Long.MAX_VALUE
-)
+    @Serializable(TimeSerializer::class)
+    val time: Time = Time.getTime()
+): SubItem
 
 @Serializable
 enum class TicketPriorityType {

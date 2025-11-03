@@ -5,7 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.util.network.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.error.SimpleError
+import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
 
@@ -22,24 +22,24 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
     return try {
         block()
     } catch (ex: UnresolvedAddressException) {
-        ex.printStackTrace()
-        AppLogger.i(tag, NetworkError.NO_INTERNET.name)
+        AppLogger.e(tag, NetworkError.NO_INTERNET.name, ex)
         null
     } catch (ex: SerializationException) {
-        ex.printStackTrace()
-        AppLogger.i(tag, NetworkError.SERIALIZATION.name)
+        AppLogger.e(tag, NetworkError.SERIALIZATION.name, ex)
         null
     } catch (ex: Exception) {
-        ex.printStackTrace()
-        AppLogger.i(tag, SimpleError.FAIL)
+        AppLogger.e(tag, SimpleResult.FAIL.message, ex)
         null
     }
 }
 
+/**
+ * Handles the http response form server logging the result whether it be a fail or success
+ */
 suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): Result<T, NetworkError> {
     return when (response.status.value) {
         in 200..299 -> {
-            AppLogger.m(tag, SimpleError.SUCCESS)
+            AppLogger.m(tag, SimpleResult.SUCCESS)
             Result.Success(response.body<T>())
         }
 
@@ -77,12 +77,12 @@ suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpRes
 
 fun handleHttpResponse(tag: String, response: HttpResponse) {
     when (response.status.value) {
-        in 200..299 -> AppLogger.m(tag, SimpleError.SUCCESS)
-        401 -> AppLogger.m(tag, NetworkError.UNAUTHORIZED.name)
-        409 -> AppLogger.m(tag, NetworkError.CONFLICT.name)
-        408 -> AppLogger.m(tag, NetworkError.REQUEST_TIMEOUT.name)
-        413 -> AppLogger.m(tag, NetworkError.PAYLOAD_TOO_LARGE.name)
-        in 500..599 -> AppLogger.m(tag, NetworkError.SERVER_ERROR.name)
-        else -> AppLogger.m(tag, NetworkError.UNKNOWN.name)
+        in 200..299 -> AppLogger.m(tag, SimpleResult.SUCCESS)
+        401 -> AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)
+        409 -> AppLogger.i(tag, NetworkError.CONFLICT.name)
+        408 -> AppLogger.i(tag, NetworkError.REQUEST_TIMEOUT.name)
+        413 -> AppLogger.i(tag, NetworkError.PAYLOAD_TOO_LARGE.name)
+        in 500..599 -> AppLogger.i(tag, NetworkError.SERVER_ERROR.name)
+        else -> AppLogger.i(tag, NetworkError.UNKNOWN.name)
     }
 }

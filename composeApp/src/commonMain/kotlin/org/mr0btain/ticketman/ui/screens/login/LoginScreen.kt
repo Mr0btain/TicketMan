@@ -85,7 +85,7 @@ fun LoginScreen(
             Button(
                 onClick = {
                     viewModel.viewModelScope.launch {
-                        viewModel.dataHandler.syncData()
+                        //iewModel.dataHandler.syncData()
                     }
                 }
             ) {

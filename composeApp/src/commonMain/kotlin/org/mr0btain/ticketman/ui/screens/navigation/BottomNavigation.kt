@@ -33,7 +33,7 @@ fun BottomNavigationDrawer(
                         onClick = {
                             coroutineScope.launch {
                                 selectedNavigationIndex.intValue = index
-                                navController.navigate(item.route)
+                                navController.navigate(item.destination.route)
                             }
                         },
                         icon = {

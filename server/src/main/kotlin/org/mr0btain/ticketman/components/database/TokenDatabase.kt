@@ -2,35 +2,38 @@ package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.v1.core.StdOutSqlLogger
-import org.jetbrains.exposed.v1.jdbc.addLogger
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
-import org.jetbrains.exposed.v1.jdbc.insert
-import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.TokenTable.identifier
 import org.mr0btain.ticketman.components.database.TokenTable.token
-import java.util.UUID
+import org.mr0btain.ticketman.logging.SimpleResult
+import org.mr0btain.ticketman.logging.AppLogger
 
-class TokenDatabase(
-    private val shouldLog: Boolean
-) {
+@Suppress("PrivatePropertyName")
+class TokenDatabase() {
+    private val TAG = "TokenDatabase"
+    private val FIND_BY_ID_TAG = "$TAG:FindById"
+    private val FIND_BY_TOKEN_TAG = "$TAG:FindByToken"
+    private val ADD_TAG = "$TAG:Add"
+    private val UPDATE_TAG = "$TAG:Update"
+    private val REMOVE_TAG = "$TAG:Remove"
+
     fun findById(identifier: String): RefreshToken? {
         var found: RefreshToken? = null
 
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
                 TokenTable.selectAll().where { TokenTable.identifier eq identifier }.firstOrNull()?.let { item ->
                     found = RefreshToken(
                         identifier = item[TokenTable.identifier],
                         token = item[token]
                     )
-                }
+                } ?: AppLogger.i(FIND_BY_ID_TAG, SimpleResult.FAIL)
             }
+
+            AppLogger.m(FIND_BY_ID_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            AppLogger.e(FIND_BY_ID_TAG, SimpleResult.FAIL, ex)
         }
 
         return found
@@ -41,18 +44,17 @@ class TokenDatabase(
 
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 TokenTable.selectAll().where { token eq refreshToken }.firstOrNull()?.let { item ->
                     found = RefreshToken(
                         identifier = item[identifier],
                         token = item[token]
                     )
-                }
+                } ?: AppLogger.i(FIND_BY_TOKEN_TAG, SimpleResult.FAIL)
             }
+
+            AppLogger.m(FIND_BY_TOKEN_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            AppLogger.e(FIND_BY_TOKEN_TAG, SimpleResult.FAIL, ex)
         }
 
         return found
@@ -61,16 +63,15 @@ class TokenDatabase(
     fun add(refreshToken: RefreshToken): Boolean {
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 TokenTable.insert { item ->
                     item[identifier] = refreshToken.identifier.toString()
                     item[token] = refreshToken.token
                 }
             }
+
+            AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            AppLogger.e(ADD_TAG, SimpleResult.FAIL, ex)
             return false
         }
 
@@ -80,16 +81,15 @@ class TokenDatabase(
     fun update(refreshToken: RefreshToken): Boolean {
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
                 TokenTable.update(where = { identifier eq refreshToken.identifier.toString()  }) { item ->
                     item[identifier] = refreshToken.identifier.toString()
                     item[token] = refreshToken.token
                 }
             }
+
+            AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            AppLogger.e(UPDATE_TAG, SimpleResult.FAIL, ex)
             return false
         }
 
@@ -99,13 +99,12 @@ class TokenDatabase(
     fun remove(identifier: String): Boolean {
         try {
             transaction {
-                // If we should log, setup logger
-                if (shouldLog) addLogger(StdOutSqlLogger)
-
-                TokenTable.deleteWhere { this.identifier eq identifier }
+               TokenTable.deleteWhere { this.identifier eq identifier }
             }
+
+            AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            ex.printStackTrace()
+            AppLogger.e(REMOVE_TAG, SimpleResult.FAIL, ex)
             return false
         }
 
