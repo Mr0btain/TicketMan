@@ -12,6 +12,7 @@ keep it secure.
 - [ ] Serverless/Client Side is server implementation
 - [x] Local Database
 - [ ] Image Storage
+- Image Storage somewhat defined
 
 ### Desktop
 
