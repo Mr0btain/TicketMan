@@ -32,10 +32,8 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Make option to import database data from file?
 
 // TODO: Administration screen
+// TODO: Kiosk/POS Screen
 // TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
-
-// TODO: Make dedicated screens for adding tickets and such and just have nav handle it
-// TODO: Should also add dedicated screens for working on tickets or changing them.
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
