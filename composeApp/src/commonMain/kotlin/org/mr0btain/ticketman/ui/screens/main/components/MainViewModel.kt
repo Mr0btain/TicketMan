@@ -17,7 +17,7 @@ import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
-import org.mr0btain.ticketman.components.utils.flushImagesToDisk
+import org.mr0btain.ticketman.components.utils.writeImagesToDisk
 import org.mr0btain.ticketman.components.utils.pullImagesFromDisk
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -217,12 +217,12 @@ class MainViewModel(
                 customerData.notes.forEach { noteData ->
                     existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
                         if (noteData != existingNote) {
-                            customerDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                            customerDatabase.updateNote(noteData.note, writeImagesToDisk(noteData.images))
                         }
                     } ?: customerDatabase.addNote(
                         customerData.customer.identifier,
                         noteData.note,
-                        flushImagesToDisk(noteData.images)
+                        writeImagesToDisk(noteData.images)
                     )
                 }
 
@@ -247,12 +247,12 @@ class MainViewModel(
                                 existingTicketNotes?.firstOrNull { it.note.identifier == noteData.note.identifier }
                                     ?.let { existingNote ->
                                         if (noteData != existingNote) {
-                                            ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                            ticketDatabase.updateNote(noteData.note, writeImagesToDisk(noteData.images))
                                         }
                                     } ?: ticketDatabase.addNote(
                                     existingTicket.identifier,
                                     noteData.note,
-                                    flushImagesToDisk(noteData.images)
+                                    writeImagesToDisk(noteData.images)
                                 )
                             }
                         }
@@ -264,7 +264,7 @@ class MainViewModel(
 
                         // Add notes to ticket
                         ticketData.notes.forEach { (note, images) ->
-                            ticketDatabase.addNote(ticketData.ticket.identifier, note, flushImagesToDisk(images))
+                            ticketDatabase.addNote(ticketData.ticket.identifier, note, writeImagesToDisk(images))
                         }
 
                         // Link to customer
@@ -280,7 +280,7 @@ class MainViewModel(
 
                 // Add notes
                 customerData.notes.forEach { (note, images) ->
-                    customerDatabase.addNote(customerData.customer.identifier, note, flushImagesToDisk(images))
+                    customerDatabase.addNote(customerData.customer.identifier, note, writeImagesToDisk(images))
                 }
 
                 // Add tickets
@@ -290,7 +290,7 @@ class MainViewModel(
 
                     // Add notes
                     notes.forEach { (note, images) ->
-                        ticketDatabase.addNote(ticket.identifier, note, flushImagesToDisk(images))
+                        ticketDatabase.addNote(ticket.identifier, note, writeImagesToDisk(images))
                     }
 
                     // link to customer
@@ -472,12 +472,12 @@ class MainViewModel(
                         existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
                             ?.let { existingNote ->
                                 if (noteData != existingNote) {
-                                    ticketDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                    ticketDatabase.updateNote(noteData.note, writeImagesToDisk(noteData.images))
                                 }
                             } ?: ticketDatabase.addNote(
                             ticketData.ticket.identifier,
                             noteData.note,
-                            flushImagesToDisk(noteData.images)
+                            writeImagesToDisk(noteData.images)
                         )
                     }
                 }
@@ -489,7 +489,7 @@ class MainViewModel(
 
                 // Add notes
                 ticketData.notes.forEach { (note, images) ->
-                    ticketDatabase.addNote(ticketData.ticket.identifier, note, flushImagesToDisk(images))
+                    ticketDatabase.addNote(ticketData.ticket.identifier, note, writeImagesToDisk(images))
                 }
             }
 
@@ -585,12 +585,12 @@ class MainViewModel(
                         existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
                             ?.let { existingNote ->
                                 if (noteData != existingNote) {
-                                    inventoryDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                    inventoryDatabase.updateNote(noteData.note, writeImagesToDisk(noteData.images))
                                 }
                             } ?: inventoryDatabase.addNote(
                             inventoryData.inventory.identifier,
                             noteData.note,
-                            flushImagesToDisk(noteData.images)
+                            writeImagesToDisk(noteData.images)
                         )
                     }
                 }
@@ -602,7 +602,7 @@ class MainViewModel(
 
                 // Add notes
                 inventoryData.notes.forEach { (note, images) ->
-                    inventoryDatabase.addNote(inventoryData.inventory.identifier, note, flushImagesToDisk(images))
+                    inventoryDatabase.addNote(inventoryData.inventory.identifier, note, writeImagesToDisk(images))
                 }
             }
 
@@ -680,12 +680,12 @@ class MainViewModel(
                         existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
                             ?.let { existingNote ->
                                 if (noteData != existingNote) {
-                                    userDatabase.updateNote(noteData.note, flushImagesToDisk(noteData.images))
+                                    userDatabase.updateNote(noteData.note, writeImagesToDisk(noteData.images))
                                 }
                             } ?: userDatabase.addNote(
                             userData.user.identifier,
                             noteData.note,
-                            flushImagesToDisk(noteData.images)
+                            writeImagesToDisk(noteData.images)
                         )
                     }
                 }
@@ -697,7 +697,7 @@ class MainViewModel(
 
                 // Add notes
                 userData.notes.forEach { (note, images) ->
-                    userDatabase.addNote(userData.user.identifier, note, flushImagesToDisk(images))
+                    userDatabase.addNote(userData.user.identifier, note, writeImagesToDisk(images))
                 }
             }
 
