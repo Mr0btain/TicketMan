@@ -6,6 +6,8 @@ import org.mr0btain.ticketman.data.SubItem
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
+// TODO: Maybe redo this so it only holds like meta data about the image.
+//  Have the actual image and thumbnail separate and get them as needed
 data class ImageData(
     override val identifier: UUID = UUIDv7.randomUUID(),
     val path: String,
