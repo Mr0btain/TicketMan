@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.data.customer
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.MainItem
+import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.uuid.UUIDSerializer
 import org.mr0btain.ticketman.data.uuid.UUIDv7
@@ -14,4 +15,7 @@ data class Customer(
     val name: PersonName = PersonName(),
     val address: Address = Address(),
     val contactInfo: ContactInfo = ContactInfo()
-): MainItem
+): MainItem {
+    fun toIdentity(): Identity =
+        Identity(identifier, name.toString())
+}

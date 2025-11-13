@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.*
+import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
@@ -129,8 +130,14 @@ class MainViewModel(
     // Whether we should log exposed transactions or not
     val shouldLog = false
 
+    // TODO: We could add an option to change this. I also think image cache should have a different value and
+    // possibly have a better way of dealing with relevant and irrelevant photos. Maybe a cleanup function
     // Max size of cache
     val maxCacheSize = 20
+
+    /** ----------------------------------------------IMAGE------------------------------------------------------------------- */
+
+    val imageCache = LruCache<UUID, ImageData>(maxCacheSize, "ImageCache")
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
@@ -154,6 +161,10 @@ class MainViewModel(
         customerCache.put(customerData.customer.identifier, customerData)
 
     }
+
+    suspend fun findCustomer(identifier: UUID): Customer? =
+        customerCache.get(identifier)?.customer
+            ?: customerDatabase.getById(identifier)
 
     fun changeSelectedCustomer(identifier: UUID) {
         viewModelScope.launch {

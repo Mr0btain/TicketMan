@@ -25,11 +25,13 @@ import java.util.*
 @Composable
 fun SearchBar(
     modifier: Modifier = Modifier,
-    label: String,
-    onClick: (UUID) -> Unit,
-    onQuery: suspend (String) -> List<SearchResult>
+    label: String = "",
+    initialText: String = "",
+    onClick: (SearchResult) -> Unit,
+    onQuery: suspend (String) -> List<SearchResult>,
+    enabled: Boolean = true
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialText) }
     var suggestions by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
@@ -59,12 +61,12 @@ fun SearchBar(
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { if (enabled) expanded = !expanded },
         modifier = modifier.sizeIn(maxWidth = 400.dp)
     ) {
         OutlinedTextField(
             value = query,
-            onValueChange = { query = it },
+            onValueChange = { if (enabled) query = it },
             label = { Text(label) },
             trailingIcon = {
                 if (isLoading)
@@ -96,7 +98,7 @@ fun SearchBar(
                     },
                     onClick = {
                         query = ranked.text
-                        onClick(ranked.identifier)
+                        onClick(ranked)
                         expanded = false
                     }
                 )

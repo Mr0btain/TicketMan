@@ -13,6 +13,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.operations.DataType
+import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.pagination.offset.handleOffsetPager
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
@@ -42,6 +44,8 @@ fun ExpandedMainScreen(
 
     // User stuff
     val userPagedItems = viewModel.userPager?.items?.collectAsState()
+    val selectedUser = viewModel.selectedUserData.collectAsState()
+    val userLazyListState = rememberLazyListState()
 
     val currentUser = viewModel.selectedUserData.collectAsState()
 
@@ -60,6 +64,7 @@ fun ExpandedMainScreen(
     // For ticket panel
     val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val selectedTicket = viewModel.selectedTicketData.collectAsState()
+    val ticketSeed = remember { TicketSeed() }
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
 
@@ -113,19 +118,47 @@ fun ExpandedMainScreen(
 
     // For ticket adding or editing
     if (showTicketDialog) {
-        selectedTicket.value?.let { ticketData ->
-            TicketDialog(
-                onDismiss = { showTicketDialog = false },
-                isDarkMode = isDarkMode,
-                seedData = ticketData,
-                onContinue = { result ->
-                    // Check if its changed, if so update it
-                    if (selectedTicket.value != result) viewModel.addOrUpdateTicket(result)
-                    showTicketDialog = false
-                },
-            )
-        }
+        TicketDialog(
+            onDismiss = {
+                // Clear seed
+                ticketSeed.clear()
 
+                // Hide dialog
+                showTicketDialog = false
+            },
+            seed = ticketSeed,
+            onContinue = {
+                if (ticketSeed.isDirty) {
+                    ticketSeed.getChangedFields().forEach { change ->
+                        when (change) {
+                            DataType.CUSTOMER -> {
+                                // TODO
+                            }
+
+                            DataType.TICKET -> {
+                                // Check if ticket is not null, then add or update it
+                                if (ticketSeed.ticket != null) {
+                                    viewModel.addOrUpdateTicket(
+                                        TicketData(
+                                            ticketSeed.ticket!!,
+                                            ticketSeed.notes
+                                        )
+                                    )
+                                }
+                            }
+                            DataType.USER -> TODO()
+                            DataType.NOTE -> TODO()
+
+                            else -> {
+                                // Something is really wrong if we hit this
+                            }
+                        }
+                    }
+                }
+            },
+            onCustomerSearchQuery = { query -> viewModel.searchCustomers(query) },
+            onUserSearchQuery = { query -> viewModel.searchUsers(query) }
+        )
     }
 
     // For inventory adding or editing
