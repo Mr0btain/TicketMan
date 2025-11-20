@@ -172,7 +172,7 @@ fun TicketDialog(
                         // TODO: Maybe make this a regular text field then add and editable button
                         SearchBar(
                             modifier = Modifier.padding(start = 8.dp),
-                            initialText = customer?.name ?: "",
+                            initialText = customer.toString(),
                             onClick = { result -> customer = result.identity() },
                             onQuery = onCustomerSearchQuery,
                             enabled = isCustomerSearchEnabled
@@ -193,7 +193,7 @@ fun TicketDialog(
                         // TODO: Maybe make this a regular text field then add and editable button
                         SearchBar(
                             modifier = Modifier.padding(start = 8.dp),
-                            initialText = user?.name ?: "",
+                            initialText = user.toString(),
                             onClick = { result -> user = result.identity() },
                             onQuery = onUserSearchQuery,
                             enabled = isUserSearchEnabled

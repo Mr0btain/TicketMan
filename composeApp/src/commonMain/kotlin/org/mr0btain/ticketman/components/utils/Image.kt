@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.components.utils
 
 import androidx.compose.ui.graphics.ImageBitmap
 import io.github.vinceglb.filekit.*
-import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.logging.SimpleResult
@@ -11,97 +10,83 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.image_directory
 import java.util.UUID
 
-// TODO: Setup thumbnails and such. Really need to get a solid foundation for image stuff. Maybe a Class or Object to handle operations?
-
-/**
- * Saves an image to disk. We use databasedir from FileKit and save it in the folder path, identifier as the file name
- * @param imageData Image data to write to database folder
- */
-suspend fun saveImageToDatabaseFolder(
-    imageData: ImageData
-): StoredImage? {
-    return try {
-        // Set parent directory
-        val parentDirectory = FileKit.databasesDir / "images" / imageData.path
-
-        // Create directories
-        parentDirectory.createDirectories()
-
-        // Set and create actual file
-        val file = PlatformFile(parentDirectory, "${imageData.identifier}")
-        file.file.createNewFile()
-
-        // Write data to disk
-        file.write(imageData.image.toByteArray())
-
-        // Return result
-        StoredImage(imageData.identifier, file.path)
-    } catch (ex: Exception) {
-        AppLogger.e("SaveImage", SimpleResult.FAIL, ex)
-        null
-    }
-}
-
-suspend fun storeImageIfNotInDatabase(imageData: ImageData): StoredImage? {
-    return try {
-        val file = FileKit.databasesDir / Res.string.image_directory.toString() / imageData.path
-
-        if (file.exists()) {
-            StoredImage(
-                identifier = imageData.identifier,
-                path = imageData.path
-            )
-        } else {
-            saveImageToDatabaseFolder(imageData)
-        }
-    } catch (ex: Exception) {
-        AppLogger.e("FlushImageIfNotInDatabase", SimpleResult.FAIL, ex)
-        null
-    }
-}
-
-suspend fun writeImagesToDisk(imageList: List<ImageData>): List<StoredImage> {
-    val result = mutableListOf<StoredImage>()
-
-    imageList.forEach { imageData ->
-        storeImageIfNotInDatabase(imageData)?.let { storedImage ->
-            result.add(storedImage)
-        }
-    }
-
-    return result
-}
-
-expect fun decodeBase64ToImageBitmap(base64: String): ImageBitmap?
-
-expect fun ImageBitmap.encodeToBase64(): String
-
 expect fun ByteArray.toImageBitmap(): ImageBitmap
 
 expect fun ImageBitmap.toByteArray(): ByteArray
 
-suspend fun pullImagesFromDisk(storedImages: List<StoredImage>): List<ImageData> {
-    val result = mutableListOf<ImageData>()
+object ImageUtils {
+    val TAG: String = "ImageHandler"
 
-    storedImages.forEach { storedImage ->
-        try {
-            val file = PlatformFile(storedImage.path)
+    suspend fun getImage(image: StoredImage): ImageBitmap? {
+        return try {
+            val file = PlatformFile("${image.directory}/${image.identifier}")
 
             if (file.exists()) {
-                result.add(
-                    ImageData(
-                        identifier = storedImage.identifier,
-                        image = file.readBytes().toImageBitmap(),
-                        path = file.path
-                    )
-                )
+                file.readBytes().toImageBitmap()
+            } else {
+                AppLogger.e("$TAG:GetImage", "File does not exist!")
+                null
             }
         } catch (ex: Exception) {
-            AppLogger.e("GetImages", "Failed to get image: ${storedImage.identifier}", ex)
+            AppLogger.e("$TAG:GetImage", SimpleResult.FAIL, ex)
+            null
         }
     }
 
-    return result
+    suspend fun getThumbnail(image: StoredImage): ImageBitmap? {
+        return try {
+            val file = PlatformFile("${image.directory}/${image.identifier}.thumb")
+
+            if (file.exists()) {
+                file.readBytes().toImageBitmap()
+            } else {
+                AppLogger.e("$TAG:GetThumbnail", "File does not exist!")
+                null
+            }
+        } catch (ex: Exception) {
+            AppLogger.e("$TAG:GetThumbnail", SimpleResult.FAIL, ex)
+            null
+        }
+    }
+
+    // TODO: Have this generate a thumbnail as well
+    /**
+     * This will save an image and a generated thumbnail to storage in the database/images/directory folder.
+     * This DOES NOT add the relevant data to the database. Simply stores the image itself
+     */
+    suspend fun saveImage(
+        identifier: UUID,
+        directory: String,
+        image: ImageBitmap
+    ): Boolean {
+        return try {
+            // Set parent directory
+            val parentDirectory = FileKit.databasesDir / "images" / directory
+
+            // Create directories
+            parentDirectory.createDirectories()
+
+            // Set and create actual file
+            val file = PlatformFile(parentDirectory, "$identifier")
+
+            // Check if file exists already, if so remove it.
+            // TODO: Not sure if we can just erase the bytes or replace them instead of doing this?
+            if (file.exists()) file.delete()
+
+            // Create new file
+            file.file.createNewFile()
+
+            // Write data to disk
+            file.write(image.toByteArray())
+
+            // Return success
+            true
+        } catch (ex: Exception) {
+            // Else we've failed somehow, log and return failure
+            AppLogger.e("$TAG:SaveImage", SimpleResult.FAIL, ex)
+            false
+        }
+    }
 }
 
 

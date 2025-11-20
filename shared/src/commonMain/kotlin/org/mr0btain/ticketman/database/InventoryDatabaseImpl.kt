@@ -266,7 +266,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                     // Add images to table
                     val imageEntities = images.map { storedImage ->
                         ImageEntity.new(storedImage.identifier) {
-                            path = storedImage.path
+                            directory = storedImage.directory
                         }
                     }
 

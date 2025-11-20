@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.coroutineScope
@@ -8,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.*
-import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
@@ -18,26 +18,25 @@ import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
-import org.mr0btain.ticketman.components.utils.writeImagesToDisk
-import org.mr0btain.ticketman.components.utils.pullImagesFromDisk
-import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.components.utils.ImageUtils
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.customer.Address
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.database.UserDatabaseImpl
-import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.generateMockCustomer
 import org.mr0btain.ticketman.generateMockUser
 import org.mr0btain.ticketman.generateRandomInventoryItem
 import org.mr0btain.ticketman.generateRandomTicket
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.logging.SimpleResult
 import java.util.*
 import kotlin.random.Random
 
@@ -137,7 +136,9 @@ class MainViewModel(
 
     /** ----------------------------------------------IMAGE------------------------------------------------------------------- */
 
-    val imageCache = LruCache<UUID, ImageData>(maxCacheSize, "ImageCache")
+    val thumbnailCache = LruCache<UUID, ImageBitmap>(maxCacheSize, "ThumbnailCache")
+
+    val imageCache = LruCache<UUID, ImageBitmap>(maxCacheSize, "ImageCache")
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
@@ -179,7 +180,7 @@ class MainViewModel(
                     customerDatabase.getById(identifier)?.let { customer ->
                         // Get notes
                         val notes = customerDatabase.getNotes(identifier)
-                            ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                            ?.map { NoteData(it.key, it.value) }
                             ?: emptyList()
 
                         // Get tickets
@@ -187,7 +188,7 @@ class MainViewModel(
                             TicketData(
                                 ticket = ticket,
                                 notes = ticketDatabase.getNotes(ticket.identifier)
-                                    ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                                    ?.map { NoteData(it.key, it.value) }
                                     ?: emptyList()
                             )
                         } ?: emptyList()
@@ -221,19 +222,19 @@ class MainViewModel(
 
                 // Existing notes for comparison
                 val existingNotes = customerDatabase.getNotes(customerData.customer.identifier)?.map {
-                    NoteData(it.key, pullImagesFromDisk(it.value))
+                    NoteData(it.key, it.value)
                 } ?: emptyList()
 
                 // Check if the note exists already and update if it needs to or add new
                 customerData.notes.forEach { noteData ->
                     existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
                         if (noteData != existingNote) {
-                            customerDatabase.updateNote(noteData.note, writeImagesToDisk(noteData.images))
+                            customerDatabase.updateNote(noteData.note, noteData.images)
                         }
                     } ?: customerDatabase.addNote(
                         customerData.customer.identifier,
                         noteData.note,
-                        writeImagesToDisk(noteData.images)
+                        noteData.images
                     )
                 }
 
@@ -251,7 +252,7 @@ class MainViewModel(
                             // TODO
                             // Existing notes for comparison
                             val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier)
-                                ?.map { NoteData(it.key, pullImagesFromDisk(it.value)) }
+                                ?.map { NoteData(it.key, it.value) }
 
                             // Check ticket notes if they exist and have changed, if so update else add
                             ticketData.notes.forEach { noteData ->

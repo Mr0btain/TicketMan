@@ -67,7 +67,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                 NoteEntity.findById(identifier)?.let { noteEntity ->
                     val imageCollection = images.map { image ->
                         ImageEntity.new {
-                            path = image.path
+                            directory = image.directory
                         }
                     }
 
@@ -132,7 +132,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                     // Add images and keep a list of them to add to note image table
                     val imageCollection = storedImages.map { image ->
                         ImageEntity.new {
-                            path = image.path
+                            directory = image.directory
                         }
                     }
 
@@ -152,7 +152,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
         return appLogTryCatch<ImageEntity?>(INSERT_IMAGE_TAG) {
             val entity = transaction {
                 ImageEntity.new(storedImage.identifier) {
-                    path = storedImage.path
+                    directory = storedImage.directory
                 }
             }
 
@@ -219,7 +219,9 @@ abstract class Database<T : MainItem>(protected val tag: String) {
         return appLogTryCatch<ImageEntity?>(UPDATE_IMAGE_TAG) {
             transaction {
                 val entity = ImageEntity.findByIdAndUpdate(storedImage.identifier) { imageEntity ->
-                    imageEntity.path = storedImage.path
+                    imageEntity.description = storedImage.description
+                    imageEntity.directory = storedImage.directory
+                    imageEntity.tags = storedImage.tags
                 }
 
                 Pair(entity, entity != null)

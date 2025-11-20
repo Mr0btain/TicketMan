@@ -4,7 +4,6 @@ import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.SubItem
 import org.mr0btain.ticketman.data.time.Time
-import org.mr0btain.ticketman.data.time.TimeSerializer
 import org.mr0btain.ticketman.data.uuid.UUIDSerializer
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
@@ -14,5 +13,8 @@ import java.util.*
 data class StoredImage(
     @Serializable(UUIDSerializer::class)
     override val identifier: UUID = UUIDv7.randomUUID(),
-    val path: String
+    val description: String,
+    val directory: String,
+    val tags: List<String>,
+    val lastModified: Long = 0
 ): MainItem, SubItem

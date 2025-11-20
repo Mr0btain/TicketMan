@@ -65,7 +65,7 @@ fun EditNoteDialog(
                         // Add to list resizing to a max of 1080p
                         imageData.add(
                             ImageData(
-                                path = noteData.note.identifier.toString(),
+                                directory = noteData.note.identifier.toString(),
                                 image = FileKit.compressImage(
                                     file = file,
                                     imageFormat = ImageFormat.PNG,

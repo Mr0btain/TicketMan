@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.data.time
 
+import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.SubItem
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -10,6 +11,9 @@ import java.util.Locale
  * Time data class for holding the time in a usable way.
  * This might be more complicated way of doing it, but I think makes it simpler to use
  */
+// TODO: Setup way to work with 24 hour time
+
+@Serializable
 data class Time(
     val year: Int,
     val month: Int,

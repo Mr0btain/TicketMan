@@ -40,7 +40,7 @@ fun PanelTopBar(
         SearchBar(
             modifier = Modifier.padding(start = 8.dp),
             label = "Search $label",
-            onClick =  { onSearchClick(it) },
+            onClick =  { onSearchClick(it.identifier) },
             onQuery = onSearchQuery
         )
 

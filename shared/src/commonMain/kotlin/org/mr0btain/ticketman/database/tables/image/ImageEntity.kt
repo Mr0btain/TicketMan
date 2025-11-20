@@ -4,17 +4,24 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.time.Time
 import java.util.*
 
 class ImageEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     companion object : UUIDEntityClass<ImageEntity>(ImageTable)
 
-    var path by ImageTable.path
+    var description by ImageTable.description
+    var directory by ImageTable.directory
+    var tags by ImageTable.tags
+    var time by ImageTable.time
 
     fun toStoredImage(): StoredImage {
         return StoredImage(
             identifier = id.value,
-            path = path
+            description = description,
+            directory = directory,
+            tags = tags,
+            time = Time.fromLong(time)
         )
     }
 }
