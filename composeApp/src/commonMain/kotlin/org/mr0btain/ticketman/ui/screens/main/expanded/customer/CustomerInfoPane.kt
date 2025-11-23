@@ -11,7 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerData
-import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.ui.composables.ContactsBlock
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock

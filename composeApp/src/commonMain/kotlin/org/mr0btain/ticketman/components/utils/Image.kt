@@ -3,11 +3,8 @@ package org.mr0btain.ticketman.components.utils
 import androidx.compose.ui.graphics.ImageBitmap
 import io.github.vinceglb.filekit.*
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.image_directory
 import java.util.UUID
 
 expect fun ByteArray.toImageBitmap(): ImageBitmap
@@ -86,6 +83,20 @@ object ImageUtils {
             AppLogger.e("$TAG:SaveImage", SimpleResult.FAIL, ex)
             false
         }
+    }
+
+    suspend fun saveImages(
+        directory: String,
+        images: List<Pair<UUID, ImageBitmap>>
+    ): Boolean {
+        var result = true
+
+        images.forEach { (id, bitmap) ->
+            if (!saveImage(id, directory, bitmap))
+                result = false
+        }
+
+        return result
     }
 }
 

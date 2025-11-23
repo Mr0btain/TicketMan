@@ -1,0 +1,14 @@
+package org.mr0btain.ticketman.components.data.operations
+
+enum class ChangedField {
+    NOTE,
+    TICKET,
+    NAME,
+    DESCRIPTION,
+    STOCK,
+    PRICE,
+    COST,
+    IMAGE,
+    CUSTOMER,
+    USER
+}

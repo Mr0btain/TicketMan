@@ -11,11 +11,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import org.mr0btain.ticketman.components.data.image.ImageData
+import org.mr0btain.ticketman.components.data.inventory.InventorySeed
+import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.pagination.offset.handleOffsetPager
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -27,7 +30,6 @@ import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
 import kotlin.uuid.ExperimentalUuidApi
 
-// TODO: Maybe make this expect actual of some sort for different platforms or screen sizes
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
 // TODO: Maybe move allot of these states and their seed values to viewmodel and move dialogs to App.kt if we use them in many screens
 
@@ -50,8 +52,8 @@ fun ExpandedMainScreen(
     val currentUser = viewModel.selectedUserData.collectAsState()
 
     // For customer panel
-    val customerPagedItems = viewModel.customerPager?.items?.collectAsState()
     val selectedCustomer = viewModel.selectedCustomerData.collectAsState()
+    val customerPagedItems = viewModel.customerPager?.items?.collectAsState()
     val customerLazyListState = rememberLazyListState()
 
     // Handle the customer pager
@@ -62,9 +64,9 @@ fun ExpandedMainScreen(
     var isTicketForNewCustomer by remember { mutableStateOf(false) }
 
     // For ticket panel
-    val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val selectedTicket = viewModel.selectedTicketData.collectAsState()
     val ticketSeed = remember { TicketSeed() }
+    val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
 
@@ -75,9 +77,10 @@ fun ExpandedMainScreen(
     var showTicketDialog by remember { mutableStateOf(false) }
 
     // For Inventory panel
+    val selectedInventory = viewModel.selectedInventoryData.collectAsState()
+    val inventorySeed = remember { InventorySeed() }
     val inventoryPagedItems = viewModel.inventoryPager?.items?.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
-    val selectedInventory = viewModel.selectedInventoryData.collectAsState()
 
     // Handle inventory pager
     handleOffsetPager(viewModel.inventoryPager, inventoryLazyListState)
@@ -91,7 +94,7 @@ fun ExpandedMainScreen(
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
-    var imagePopupList by remember { mutableStateOf<List<ImageData>?>(null) }
+    var imagePopupList by remember { mutableStateOf<List<StoredImage>?>(null) }
 
     // For customer adding or editing
     // Doing image click like this we won't be able to open newly added images that were added within this dialog.
@@ -128,32 +131,33 @@ fun ExpandedMainScreen(
             },
             seed = ticketSeed,
             onContinue = {
-                if (ticketSeed.isDirty) {
-                    ticketSeed.getChangedFields().forEach { change ->
-                        when (change) {
-                            DataType.CUSTOMER -> {
-                                // TODO
-                            }
-
-                            DataType.TICKET -> {
-                                // Check if ticket is not null, then add or update it
-                                if (ticketSeed.ticket != null) {
-                                    viewModel.addOrUpdateTicket(
-                                        TicketData(
-                                            ticketSeed.ticket!!,
-                                            ticketSeed.notes
+                // TODO: Not sure if we should do this here or not.
+                try {
+                    // Check if there's been a change
+                    if (ticketSeed.isDirty) {
+                        // Update changes
+                        ticketSeed.getChangedFields().forEach { change ->
+                            when (change) {
+                                ChangedField.TICKET -> {
+                                    // Check if ticket is not null, then add or update it
+                                    if (ticketSeed.ticket != null) {
+                                        viewModel.addOrUpdateTicket(
+                                            TicketData(
+                                                ticketSeed.ticket!!,
+                                                ticketSeed.notes
+                                            )
                                         )
-                                    )
+                                    }
                                 }
-                            }
-                            DataType.USER -> TODO()
-                            DataType.NOTE -> TODO()
 
-                            else -> {
-                                // Something is really wrong if we hit this
+                                else -> {
+                                    // Something is really wrong if we hit this
+                                }
                             }
                         }
                     }
+                } catch (ex: Exception) {
+                    ex.printStackTrace()
                 }
             },
             onCustomerSearchQuery = { query -> viewModel.searchCustomers(query) },
