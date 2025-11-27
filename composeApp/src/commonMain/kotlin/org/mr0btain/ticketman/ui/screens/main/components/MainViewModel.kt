@@ -10,10 +10,12 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.*
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
@@ -427,6 +429,8 @@ class MainViewModel(
 
     var ticketPager: OffsetPager<Ticket>? = null
 
+    val ticketSeed: TicketSeed = TicketSeed()
+
     private val _selectedTicketData: MutableStateFlow<TicketData?> = MutableStateFlow(null)
     val selectedTicketData = _selectedTicketData.asStateFlow()
 
@@ -528,6 +532,8 @@ class MainViewModel(
     private val inventoryDatabase = InventoryDatabaseImpl()
 
     var inventoryPager: OffsetPager<Inventory>? = null
+
+    val inventorySeed: InventorySeed = InventorySeed()
 
     private val _selectedInventoryData: MutableStateFlow<InventoryData?> = MutableStateFlow(null)
     val selectedInventoryData = _selectedInventoryData.asStateFlow()

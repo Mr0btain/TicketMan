@@ -94,9 +94,8 @@ class InventorySeed: DataSeed() {
         changedFields.clear()  // Reset the changed fields
     }
 
-    override fun toString(): String {
-        return "InventorySeed(name=$_name,description=$_description,stock=$_stock,cost=$_cost,price=$_price, notes=$_notes)"
-    }
+    override fun toString(): String =
+        "InventorySeed(name=$_name,description=$_description,stock=$_stock,cost=$_cost,price=$_price, notes=$_notes)"
 
     private data class State(
         val name: String = "",

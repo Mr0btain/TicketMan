@@ -65,7 +65,7 @@ fun ExpandedMainScreen(
 
     // For ticket panel
     val selectedTicket = viewModel.selectedTicketData.collectAsState()
-    val ticketSeed = remember { TicketSeed() }
+    val ticketSeed = viewModel.ticketSeed
     val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
@@ -78,7 +78,7 @@ fun ExpandedMainScreen(
 
     // For Inventory panel
     val selectedInventory = viewModel.selectedInventoryData.collectAsState()
-    val inventorySeed = remember { InventorySeed() }
+    val inventorySeed = viewModel.inventorySeed
     val inventoryPagedItems = viewModel.inventoryPager?.items?.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
 

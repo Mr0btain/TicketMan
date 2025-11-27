@@ -10,5 +10,11 @@ enum class ChangedField {
     COST,
     IMAGE,
     CUSTOMER,
-    USER
+    USER,
+    STREET,
+    CITY,
+    STATE,
+    ZIP,
+    EMAIL,
+    PHONE
 }
