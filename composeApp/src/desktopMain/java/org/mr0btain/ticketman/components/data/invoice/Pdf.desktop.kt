@@ -94,7 +94,7 @@ actual fun makeTicketInvoicePdf(
         addCell(Cell(Phrase("", columnItemsFont)))
         addCell(Cell(Phrase("", columnItemsFont)))
         addCell(Cell(Phrase("", columnItemsFont)))
-        addCell(Cell(Phrase("$ ${formatIntToMoney(total)}", columnItemsFont)))
+        addCell(Cell(Phrase("$ $total", columnItemsFont)))
     }
 
     // Open the document and start adding content

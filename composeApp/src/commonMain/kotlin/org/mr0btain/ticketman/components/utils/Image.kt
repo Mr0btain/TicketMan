@@ -2,24 +2,77 @@ package org.mr0btain.ticketman.components.utils
 
 import androidx.compose.ui.graphics.ImageBitmap
 import io.github.vinceglb.filekit.*
+import io.github.vinceglb.filekit.dialogs.compose.util.encodeToByteArray
+import io.github.vinceglb.filekit.dialogs.compose.util.toImageBitmap
+import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import java.util.UUID
 
-expect fun ByteArray.toImageBitmap(): ImageBitmap
-
-expect fun ImageBitmap.toByteArray(): ByteArray
-
 object ImageUtils {
     val TAG: String = "ImageHandler"
+    val databaseDirectory = FileKit.databasesDir / "images"
 
-    suspend fun getImage(image: StoredImage): ImageBitmap? {
+    const val MAX_THUMB_SIZE = 200
+
+    // Were going to use String instead of UUID because we can get file names as string
+    // and not have to convert them to UUID for every image.
+    val thumbnailCache = LruCache<String, ImageBitmap>(10, "ThumbnailCache")
+    val imageCache = LruCache<String, ImageBitmap>(10, "ImageCache")
+
+    suspend fun getImagesForId(identifier: UUID): List<ImageBitmap> =
+        getImagesFromFolder(identifier.toString(), false)
+
+    suspend fun getThumbnailsForId(identifier: UUID): List<ImageBitmap> =
+        getImagesFromFolder("$identifier", true)
+
+    private suspend fun getImagesFromFolder(folder: String, thumbnail: Boolean): List<ImageBitmap> {
+        val dir = databaseDirectory / folder
+        val images = mutableListOf<ImageBitmap>()
+
+        if (dir.isDirectory()) {
+            dir.list().forEach { file ->
+                try {
+                    if (thumbnail && file.name.startsWith("thumb_")) {
+                        thumbnailCache.get(file.nameWithoutExtension)?.let { imageBitmap ->
+                            images.add(imageBitmap)
+                        } ?: images.add(file.toImageBitmap())
+                    } else if (!file.name.startsWith("thumb_")) {
+                        imageCache.get(file.nameWithoutExtension)?.let { imageBitmap ->
+                            images.add(imageBitmap)
+                        } ?: images.add(file.toImageBitmap())
+                    }
+                } catch (ex: Exception) {
+                    AppLogger.i(TAG, "Error reading image file: ${file.name}")
+                    ex.printStackTrace()
+                }
+            }
+        }
+
+        return images
+    }
+
+    suspend fun getImage(image: StoredImage, thumbnail: Boolean): ImageBitmap? {
         return try {
-            val file = PlatformFile("${image.directory}/${image.identifier}")
+            // Check if we have this image cached and return it if so
+            val cached = imageCache.get(image.identifier.toString())
+            if (cached != null) return cached
 
+            val fileName = if (thumbnail) "thumb_${image.identifier}.png" else "${image.identifier}.png"
+
+            // Else we need to find and pull the image
+            val file = PlatformFile("${image.directory}/$fileName")
+
+            // Make sure it exists
             if (file.exists()) {
-                file.readBytes().toImageBitmap()
+                file.toImageBitmap().also { bitmap ->
+                    if (thumbnail) {
+                        thumbnailCache.put(file.nameWithoutExtension, bitmap)
+                    } else {
+                        imageCache.put(file.nameWithoutExtension, bitmap)
+                    }
+                }
             } else {
                 AppLogger.e("$TAG:GetImage", "File does not exist!")
                 null
@@ -30,23 +83,6 @@ object ImageUtils {
         }
     }
 
-    suspend fun getThumbnail(image: StoredImage): ImageBitmap? {
-        return try {
-            val file = PlatformFile("${image.directory}/${image.identifier}.thumb")
-
-            if (file.exists()) {
-                file.readBytes().toImageBitmap()
-            } else {
-                AppLogger.e("$TAG:GetThumbnail", "File does not exist!")
-                null
-            }
-        } catch (ex: Exception) {
-            AppLogger.e("$TAG:GetThumbnail", SimpleResult.FAIL, ex)
-            null
-        }
-    }
-
-    // TODO: Have this generate a thumbnail as well
     /**
      * This will save an image and a generated thumbnail to storage in the database/images/directory folder.
      * This DOES NOT add the relevant data to the database. Simply stores the image itself
@@ -57,24 +93,26 @@ object ImageUtils {
         image: ImageBitmap
     ): Boolean {
         return try {
-            // Set parent directory
             val parentDirectory = FileKit.databasesDir / "images" / directory
 
-            // Create directories
-            parentDirectory.createDirectories()
+            if (!parentDirectory.exists()) parentDirectory.createDirectories()
 
             // Set and create actual file
-            val file = PlatformFile(parentDirectory, "$identifier")
+            val file = parentDirectory / "$identifier.png"
+            val thumb = parentDirectory / "thumb_$identifier.png"
 
-            // Check if file exists already, if so remove it.
-            // TODO: Not sure if we can just erase the bytes or replace them instead of doing this?
-            if (file.exists()) file.delete()
+            // Make directory if it doesn't exist
+            file.createDirectories()
 
             // Create new file
             file.file.createNewFile()
+            thumb.file.createNewFile()
+
+            val imageBytes = image.encodeToByteArray()
 
             // Write data to disk
-            file.write(image.toByteArray())
+            file write imageBytes
+            thumb write createThumbnail(imageBytes)
 
             // Return success
             true
@@ -97,6 +135,17 @@ object ImageUtils {
         }
 
         return result
+    }
+
+    private suspend fun createThumbnail(image: ByteArray): ByteArray {
+        // Create a thumbnail by compressing and resizing
+        return FileKit.compressImage(
+            bytes = image,
+            quality = 85,
+            maxWidth = MAX_THUMB_SIZE,
+            maxHeight = MAX_THUMB_SIZE,
+            imageFormat = ImageFormat.PNG
+        )
     }
 }
 
