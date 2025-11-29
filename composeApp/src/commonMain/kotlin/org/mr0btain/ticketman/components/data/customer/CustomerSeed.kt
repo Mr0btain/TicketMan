@@ -3,8 +3,12 @@ package org.mr0btain.ticketman.components.data.customer
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.customer.Address
+import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.time.Time
+import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
 class CustomerSeed() : DataSeed() {
@@ -25,6 +29,9 @@ class CustomerSeed() : DataSeed() {
     // Tickets
     private var _tickets: MutableList<UUID> = mutableListOf()
 
+    // Time
+    private var _time: Time = Time.getTime()
+
     val name: PersonName get() = PersonName(_firstName, _lastName)
     val firstName: String get() = _firstName
     val lastName: String get() = _lastName
@@ -38,6 +45,8 @@ class CustomerSeed() : DataSeed() {
     val email: List<String> get() = _email.toList()
     val phone: List<String> get() = _phone.toList()
     val tickets: List<UUID> get() = _tickets.toList()
+
+    val time: Time get() = _time
 
     // snapshot of the last saved state
     private var savedState: State = State()
@@ -126,6 +135,42 @@ class CustomerSeed() : DataSeed() {
         }
     }
 
+    fun setCustomer(
+        customer: Customer,
+        notes: List<NoteData> = emptyList(),
+        tickets: List<UUID> = emptyList()
+    ) {
+        // Name
+        _firstName = customer.name.firstName
+        _lastName = customer.name.lastName
+
+        // Address
+        _street = customer.address.street
+        _city = customer.address.city
+        _state = customer.address.state
+        _zip = customer.address.zip
+
+        // Contact
+        _phone.addAll(customer.contactInfo.phone)
+        _email.addAll(customer.contactInfo.email)
+
+        _notes.addAll(notes)
+        _tickets.addAll(tickets)
+
+        // Time
+        _time = UUIDv7.getTime(customer.identifier)
+
+        markClean() // Mark clean
+    }
+
+    fun setTime(newTime: Time) {
+        _time = newTime
+    }
+
+    fun setTime(newTime: Long) {
+        _time = Time.fromLong(newTime)
+    }
+
     override fun clear() {
         _firstName = ""
         _lastName = ""
@@ -137,6 +182,9 @@ class CustomerSeed() : DataSeed() {
         _phone.clear()
         _tickets.clear()
         _notes.clear()
+        _time = Time.getTime()
+
+        markClean()
     }
 
     override fun markClean() {
@@ -150,7 +198,8 @@ class CustomerSeed() : DataSeed() {
             _email,
             _phone,
             _tickets,
-            _notes
+            _notes,
+            _time
         )
 
         changedFields.clear()
@@ -169,6 +218,7 @@ class CustomerSeed() : DataSeed() {
         val email: List<String> = emptyList(),
         val phone: List<String> = emptyList(),
         val tickets: List<UUID> = emptyList(),
-        val notes: List<NoteData> = emptyList()
+        val notes: List<NoteData> = emptyList(),
+        val time: Time = Time.getTime()
     )
 }

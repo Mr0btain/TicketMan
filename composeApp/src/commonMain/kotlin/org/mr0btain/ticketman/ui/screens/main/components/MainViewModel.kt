@@ -150,10 +150,10 @@ class MainViewModel(
 
     var customerPager: OffsetPager<Customer>? = null
 
+    val customerSeed: CustomerSeed = CustomerSeed()
+
     private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
-
-
 
     /** Sets the selected customer and inserts the data into the cache */
     private suspend fun setSelectedCustomer(customerData: CustomerData) {

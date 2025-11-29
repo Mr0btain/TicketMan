@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.ui.composables.ContactsBlock
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -23,7 +24,7 @@ import java.util.*
 fun CustomerInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    selectedCustomer: CustomerData?,
+    selectedCustomer: CustomerSeed,
     onEditClick: () -> Unit,
     onTicketClick: (UUID) -> Unit,
     onImageClick: (UUID) -> Unit
@@ -63,9 +64,7 @@ fun CustomerInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = selectedCustomer?.customer?.let { customer ->
-                            customer.name.firstName + " " + customer.name.lastName
-                        } ?: "",
+                        text = selectedCustomer.name.toString(),
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -111,92 +110,91 @@ fun CustomerInfoPane(
                             icon = Res.drawable.info
                         )
 
-                        selectedCustomer?.let { (customer, notes, _) ->
-                            PlatformLazyColumn(
-                                modifier = Modifier.padding(4.dp),
-                                isVisible = true
-                            ) {
-                                item {
-                                    // ----------- Date section ---------------
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.Start
+                        PlatformLazyColumn(
+                            modifier = Modifier.padding(4.dp),
+                            isVisible = true
+                        ) {
+                            item {
+                                // ----------- Date section ---------------
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Start
+                                ) {
+                                    // Label
+                                    Text(
+                                        text = "Customer Since",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = labelSize
+                                    )
+
+                                    Spacer(Modifier.padding(4.dp))
+
+                                    // Check if we have a sensible date to display, then show it
+
+                                    Text(
+                                        modifier = Modifier,
+                                        text = selectedCustomer.time.date(),
+                                        fontSize = textSize
+                                    )
+                                }
+
+                                // ----------- Address ---------------
+                                Column(
+                                    horizontalAlignment = Alignment.Start,
+                                    verticalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    // Label
+                                    Text(
+                                        modifier = Modifier
+                                            .padding(2.dp),
+                                        text = "Address",
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = labelSize
+                                    )
+
+                                    Column(
+                                        verticalArrangement = Arrangement.SpaceAround,
+                                        horizontalAlignment = Alignment.Start
                                     ) {
-                                        // Label
-                                        Text(
-                                            text = "Customer Since",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = labelSize
-                                        )
-
-                                        Spacer(Modifier.padding(4.dp))
-
-                                        // Check if we have a sensible date to display, then show it
-
+                                        // Street
                                         Text(
                                             modifier = Modifier,
-                                            text = customer.time().date(),
+                                            text = selectedCustomer.street,
+                                            fontSize = textSize
+                                        )
+
+                                        // City and state
+                                        Text(
+                                            modifier = Modifier,
+                                            text = selectedCustomer.city + " " + selectedCustomer.state,
+                                            fontSize = textSize
+                                        )
+
+                                        // Zip
+                                        Text(
+                                            modifier = Modifier,
+                                            text = selectedCustomer.zip,
                                             fontSize = textSize
                                         )
                                     }
-
-                                    // ----------- Address ---------------
-                                    Column(
-                                        horizontalAlignment = Alignment.Start,
-                                        verticalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        // Label
-                                        Text(
-                                            modifier = Modifier
-                                                .padding(2.dp),
-                                            text = "Address",
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = labelSize
-                                        )
-
-                                        Column(
-                                            verticalArrangement = Arrangement.SpaceAround,
-                                            horizontalAlignment = Alignment.Start
-                                        ) {
-                                            // Street
-                                            Text(
-                                                modifier = Modifier,
-                                                text = customer.address.street,
-                                                fontSize = textSize
-                                            )
-
-                                            // City and state
-                                            Text(
-                                                modifier = Modifier,
-                                                text = customer.address.city + " " + customer.address.state,
-                                                fontSize = textSize
-                                            )
-
-                                            // Zip
-                                            Text(
-                                                modifier = Modifier,
-                                                text = customer.address.zip,
-                                                fontSize = textSize
-                                            )
-                                        }
-                                    }
-
-                                    // ------------ Contacts section ---------------
-                                    ContactsBlock(
-                                        customer = customer,
-                                        labelSize = labelSize,
-                                        textSize = textSize,
-                                        iconSize = iconSize
-                                    )
-
-                                    // ------------ Notes section ---------------
-                                    NoteBlock(
-                                        label = "Notes",
-                                        noteData = notes,
-                                        onImageClick = onImageClick,
-                                        textSize = textSize
-                                    )
                                 }
+
+                                // ------------ Contacts section ---------------
+                                ContactsBlock(
+                                    emailList = selectedCustomer.email,
+                                    phoneList = selectedCustomer.phone,
+                                    labelSize = labelSize,
+                                    textSize = textSize,
+                                    iconSize = iconSize
+                                )
+
+                                // ------------ Notes section ---------------
+                                NoteBlock(
+                                    label = "Notes",
+                                    noteData = notes,
+                                    onImageClick = onImageClick,
+                                    textSize = textSize
+                                )
                             }
                         }
                     }
@@ -222,13 +220,11 @@ fun CustomerInfoPane(
                             icon = Res.drawable.tag
                         )
 
-                        selectedCustomer?.tickets?.let { ticketData ->
-                            SmallTicketList(
-                                ticketData = ticketData,
-                                isDarkMode = isDarkMode,
-                                onClick = { ticketId -> onTicketClick(ticketId) }
-                            )
-                        }
+                        SmallTicketList(
+                            ticketData = selectedCustomer.tickets,
+                            isDarkMode = isDarkMode,
+                            onClick = { ticketId -> onTicketClick(ticketId) }
+                        )
                     }
                 }
             }

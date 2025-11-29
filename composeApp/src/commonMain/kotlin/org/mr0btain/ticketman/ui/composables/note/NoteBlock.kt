@@ -13,13 +13,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.image.ImageData
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
@@ -32,7 +30,7 @@ import java.util.UUID
 fun NoteBlock(
     modifier: Modifier = Modifier,
     label: String = "Notes",
-    noteData: List<NoteData>,
+    notes: List<Note>,
     editable: Boolean = false,
     labelSize: TextUnit = 18.sp,
     textSize: TextUnit = 16.sp,
@@ -47,8 +45,7 @@ fun NoteBlock(
         // Label
         if (label.isNotBlank()) {
             Text(
-                modifier = Modifier
-                    .padding(2.dp),
+                modifier = Modifier.padding(2.dp),
                 text = label,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = labelSize
@@ -58,9 +55,9 @@ fun NoteBlock(
         }
 
         if (!editable) {
-            noteData.sortedByDescending { it.note.time().toLong() }.forEach { data ->
+            notes.sortedByDescending { it.time().toLong() }.forEach { data ->
                 NoteColumn(data, textSize) {
-                    onImageClick(data.note.identifier)
+                    onImageClick(data.identifier)
                 }
             }
         } else {
@@ -78,10 +75,12 @@ fun NoteBlock(
 
 @Composable
 private fun NoteColumn(
-    noteData: NoteData,
+    note: Note,
     textSize: TextUnit,
     onImageClick: (UUID) -> Unit
 ) {
+    val
+
     Column {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -89,14 +88,14 @@ private fun NoteColumn(
         ) {
             // Author
             Text(
-                text = noteData.note.author + ": ",
+                text = note.author + ": ",
                 fontSize = textSize,
                 fontWeight = FontWeight.SemiBold
             )
 
             // Time
             Text(
-                text = noteData.note.time().toString(),
+                text = note.time().toString(),
                 fontSize = (textSize.value - 4).sp,
                 maxLines = 1
             )
@@ -105,7 +104,7 @@ private fun NoteColumn(
         // Text
         Text(
             modifier = Modifier,
-            text = noteData.note.message,
+            text = note.message,
             fontSize = textSize
         )
 

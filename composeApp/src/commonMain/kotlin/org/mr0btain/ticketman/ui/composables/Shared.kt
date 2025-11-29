@@ -299,7 +299,8 @@ fun TableCardTextItem(
 // ----------------------------- Contacts for customer ----------------------------------
 @Composable
 fun ContactsBlock(
-    customer: Customer,
+    phoneList: List<String>,
+    emailList: List<String>,
     labelSize: TextUnit = 12.sp,
     textSize: TextUnit = 16.sp,
     iconSize: Dp = 18.dp
@@ -322,34 +323,32 @@ fun ContactsBlock(
             verticalArrangement = Arrangement.SpaceAround,
             horizontalAlignment = Alignment.Start
         ) {
-            // Email section
-            if (customer.contactInfo.email.isNotEmpty()) {
-                customer.contactInfo.email.forEach { mail ->
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(iconSize),
-                            painter = painterResource(Res.drawable.mail),
-                            contentDescription = "Email"
-                        )
+            // Email list
+            emailList.forEach { mail ->
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        modifier = Modifier.size(iconSize),
+                        painter = painterResource(Res.drawable.mail),
+                        contentDescription = "Email"
+                    )
 
-                        Spacer(Modifier.padding(4.dp))
+                    Spacer(Modifier.padding(4.dp))
 
-                        Text(
-                            modifier = Modifier,
-                            text = mail,
-                            fontSize = textSize
-                        )
-                    }
+                    Text(
+                        modifier = Modifier,
+                        text = mail,
+                        fontSize = textSize
+                    )
                 }
             }
 
             Spacer(Modifier.padding(2.dp))
 
             // Phone number section
-            customer.contactInfo.phone.forEach { item ->
+            phoneList.forEach { item ->
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
