@@ -84,7 +84,7 @@ fun CustomerDialog(
 
         // Add Note dialog
         EditNoteDialog(
-            seedData = noteSeedData,
+            note = noteSeedData.note,
             onConfirm = { result ->
                 scope.launch {
                     val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }

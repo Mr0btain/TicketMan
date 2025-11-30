@@ -11,7 +11,7 @@ import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
-class CustomerSeed() : DataSeed() {
+class CustomerSeed: DataSeed() {
     // Name
     private var _firstName: String = ""
     private var _lastName: String = ""

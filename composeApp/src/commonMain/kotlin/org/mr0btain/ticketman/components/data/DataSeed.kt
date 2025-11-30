@@ -1,10 +1,10 @@
 package org.mr0btain.ticketman.components.data
 
-import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.uuid.UUIDv7
-import java.util.UUID
+import java.util.*
 
 @Suppress("PropertyName")
 abstract class DataSeed {
@@ -17,8 +17,8 @@ abstract class DataSeed {
     protected var _isNew: Boolean = true
     val isNew: Boolean get() = _isNew
 
-    protected var _notes = mutableListOf<NoteData>()
-    val notes: List<NoteData> get() = _notes.toList()
+    protected var _notes = mutableListOf<Note>()
+    val notes: List<Note> get() = _notes.toList()
 
     // List to store the names of fields that have changed
     protected val changedFields = mutableListOf<ChangedField>()
@@ -38,14 +38,14 @@ abstract class DataSeed {
         return changedFields.toList()
     }
 
-    fun setNotes(newNotes: List<NoteData>) {
+    fun setNotes(newNotes: List<Note>) {
         if (_notes != newNotes) {
             _notes = newNotes.toMutableList()
             changedFields.add(ChangedField.NOTE)
         }
     }
 
-    fun addNote(newNote: NoteData) {
+    fun addNote(newNote: Note) {
         if (!_notes.contains(newNote)) {
             _notes.add(newNote)
 
@@ -55,7 +55,7 @@ abstract class DataSeed {
     }
 
     fun removeNote(identifier: UUID) {
-        if (_notes.removeIf { it.note.identifier == identifier })
+        if (_notes.removeIf { it.identifier == identifier })
             changedFields.add(ChangedField.NOTE)
     }
 

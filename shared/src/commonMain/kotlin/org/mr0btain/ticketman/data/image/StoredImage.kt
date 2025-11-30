@@ -13,8 +13,8 @@ import java.util.*
 data class StoredImage(
     @Serializable(UUIDSerializer::class)
     override val identifier: UUID = UUIDv7.randomUUID(),
-    val description: String,
-    val directory: String,
-    val tags: List<String>,
+    val description: String = "",
+    val directory: String = "",
+    val tags: List<String> = emptyList(),
     val lastModified: Long = 0
 ): MainItem, SubItem

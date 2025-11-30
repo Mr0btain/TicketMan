@@ -18,7 +18,7 @@ object ImageUtils {
 
     // Were going to use String instead of UUID because we can get file names as string
     // and not have to convert them to UUID for every image.
-    val thumbnailCache = LruCache<String, ImageBitmap>(10, "ThumbnailCache")
+    val thumbnailCache = LruCache<String, ImageBitmap>(20, "ThumbnailCache")
     val imageCache = LruCache<String, ImageBitmap>(10, "ImageCache")
 
     suspend fun getImagesForId(identifier: UUID): List<ImageBitmap> =
@@ -80,6 +80,43 @@ object ImageUtils {
         } catch (ex: Exception) {
             AppLogger.e("$TAG:GetImage", SimpleResult.FAIL, ex)
             null
+        }
+    }
+
+    suspend fun saveImageFromFile(
+        parentId: UUID,
+        identifier: UUID,
+        file: PlatformFile
+    ): Boolean {
+        return try {
+            // Make new file
+            val newFile = databaseDirectory / parentId.toString() / "$identifier.png"
+
+            // See if directory exists
+            if (!(databaseDirectory / parentId.toString()).exists())
+                newFile.createDirectories()
+
+            // Make sure new file is compressed to manageable size
+            val compressed = FileKit.compressImage(
+                file = file,
+                imageFormat = ImageFormat.PNG,
+                quality = 100,
+                maxWidth = 1920,
+                maxHeight = 1080
+            )
+
+            // Write file to db
+            newFile write compressed
+
+            // Make a write thumbnail
+            val thumbnail = databaseDirectory / parentId.toString() / "thumb_$identifier.png"
+            thumbnail write createThumbnail(compressed)
+
+            true
+        } catch (ex: Exception) {
+            AppLogger.i(TAG, "Failed to save image from file")
+            ex.printStackTrace()
+            false
         }
     }
 
