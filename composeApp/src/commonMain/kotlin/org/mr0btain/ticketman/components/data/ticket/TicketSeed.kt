@@ -4,18 +4,29 @@ import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.operations.DataType
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Identity
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketPriority
+import org.mr0btain.ticketman.data.ticket.TicketPriorityType
+import org.mr0btain.ticketman.data.ticket.TicketStatus
+import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.time.Time
+import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.UUID
 
-// TODO: We could make this handle the entirety of Ticket, with all the priority and such,
-
 class TicketSeed(): DataSeed() {
-    private var _ticket: Ticket? = null
+    private var _device: Device = Device()
+    private var _status: TicketStatus = TicketStatus()
+    private var _priority: TicketPriority = TicketPriority()
     private var _customer: Identity? = null
     private var _user: Identity? = null
 
-    val ticket: Ticket? get() = _ticket
+    val device: Device get() = _device
+    val status: TicketStatus get() = _status
+    val priority: TicketPriority get() = _priority
     val customer: Identity? get() = _customer
     val user: Identity? get() = _user
 
@@ -24,12 +35,16 @@ class TicketSeed(): DataSeed() {
 
     // --- Initial setting up with data ---
     fun setInitial(
-        data: TicketData,
+        ticket: Ticket,
+        notes: Map<Note, List<StoredImage>>,
         customer: Identity? = null,
         user: Identity? = null
     ) {
-        _ticket = data.ticket
-        _notes = data.notes.toMutableList()
+        _identifier = ticket.identifier
+        _device = ticket.device
+        _status = ticket.status
+        _priority = ticket.priority
+        _notes = notes.toMutableMap()
         _customer = customer
         _user = user
 
@@ -37,11 +52,31 @@ class TicketSeed(): DataSeed() {
         _isNew = false
     }
 
-    // -- Setters that automatically mark changes --
-    fun setTicket(newTicket: Ticket) {
-        if (_ticket != newTicket) {
-            _ticket = newTicket
-            changedFields.add(ChangedField.TICKET)
+    fun setIdentifier(newId: UUID) {
+        if (_identifier != newId) {
+            _identifier = newId
+            changedFields.add(ChangedField.IDENTIFIER)
+        }
+    }
+
+    fun setDevice(newDevice: Device) {
+        if (_device != newDevice) {
+            _device = newDevice
+            changedFields.add(ChangedField.DEVICE)
+        }
+    }
+
+    fun setStatus(newStatus: TicketStatus) {
+        if (_status != newStatus) {
+            _status = newStatus
+            changedFields.add(ChangedField.STATUS)
+        }
+    }
+
+    fun setPriority(newPriority: TicketPriority) {
+        if (_priority != newPriority) {
+            _priority = newPriority
+            changedFields.add(ChangedField.PRIORITY)
         }
     }
 
@@ -61,30 +96,40 @@ class TicketSeed(): DataSeed() {
 
     // Reset all fields
     override fun clear() {
-        _ticket = null
+        _identifier = UUIDv7.randomUUID()
+        _device = Device()
+        _status = TicketStatus()
+        _priority = TicketPriority()
         _customer = null
         _user = null
         _notes.clear()
-        _isNew = true
+        _images.clear()
+        _time = UUIDv7.getLongTime(_identifier)
 
+        _isNew = true
         markClean()
     }
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(_ticket, _customer, _user, _notes)
+        savedState = State(_identifier, _device, _status, _priority, _customer, _user,  _notes, _images, _time)
         changedFields.clear()  // Reset the changed fields
     }
 
     override fun toString(): String {
-        return "TicketSeed(ticket=$_ticket, customer=$_customer, user=$_user, notes=$_notes)"
+        return "TicketSeed(ticket=$, customer=$_customer, user=$_user, notes=$_notes)"
     }
 
     private data class State(
-        val ticket: Ticket? = null,
+        val identifier: UUID = UUIDv7.randomUUID(),
+        val device:Device = Device(),
+        val status: TicketStatus = TicketStatus(),
+        val priority: TicketPriority = TicketPriority(),
         val customer: Identity? = null,
         val user: Identity? = null,
-        val notes: List<NoteData> = emptyList()
+        val notes: Map<Note, List<StoredImage>> = emptyMap(),
+        val images: List<StoredImage> = emptyList(),
+        val time: Long = 0
     )
 }
 

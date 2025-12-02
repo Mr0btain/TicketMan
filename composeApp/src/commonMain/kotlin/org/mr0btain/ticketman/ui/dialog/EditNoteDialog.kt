@@ -164,7 +164,7 @@ fun EditNoteDialog(
                                         }
                                     }
                                     .blur(if (isLoading) 8.dp else 0.dp), // blur while loading
-                                imageData = imageData,
+                                storedImages = imageData,
                                 onImageClick = { /* TODO */ },
                                 coroutineScope = scope,
                                 clickEnabled = false

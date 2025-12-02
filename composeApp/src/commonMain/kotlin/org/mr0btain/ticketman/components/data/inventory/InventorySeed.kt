@@ -3,7 +3,12 @@ package org.mr0btain.ticketman.components.data.inventory
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.time.Time
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import java.util.UUID
 
 class InventorySeed: DataSeed() {
     private var _name: String = ""
@@ -33,14 +38,15 @@ class InventorySeed: DataSeed() {
     // --- Initial setting up with data ---
     fun setInitial(
         data: Inventory,
-        notes: List<NoteData>
+        notes: Map<Note, List<StoredImage>>
     ) {
         _name = data.name
         _description = data.description
         _stock = data.stock
         _cost = data.cost.toDoubleOrNull() ?: 0.0
         _price = data.price.toDoubleOrNull() ?: 0.0
-        _notes = notes.toMutableList()
+        _notes = notes.toMutableMap()
+        _time = UUIDv7.getLongTime(data.identifier)
 
         markClean()
         _isNew = false
@@ -77,12 +83,15 @@ class InventorySeed: DataSeed() {
 
     // Reset all fields
     override fun clear() {
+        _identifier = UUIDv7.randomUUID()
         _name = ""
         _description = ""
         _stock = 0
         _cost = 0.0
         _price = 0.0
         _notes.clear()
+        _images.clear()
+        _time = UUIDv7.getLongTime(_identifier)
         _isNew = true
 
         markClean()
@@ -90,7 +99,7 @@ class InventorySeed: DataSeed() {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(_name, _description, _stock, _cost, _price, _notes)
+        savedState = State(_identifier, _name, _description, _stock, _cost, _price, _notes, _images, _time)
         changedFields.clear()  // Reset the changed fields
     }
 
@@ -98,11 +107,14 @@ class InventorySeed: DataSeed() {
         "InventorySeed(name=$_name,description=$_description,stock=$_stock,cost=$_cost,price=$_price, notes=$_notes)"
 
     private data class State(
+        val identifier: UUID = UUIDv7.randomUUID(),
         val name: String = "",
         val description: String = "",
         val stock: Int = 0,
         val cost: Double = 0.0,
         val price: Double = 0.0,
-        val notes: List<NoteData> = emptyList()
+        val notes: Map<Note, List<StoredImage>> = emptyMap(),
+        val images: List<StoredImage> = emptyList(),
+        val time: Long = 0
     )
 }

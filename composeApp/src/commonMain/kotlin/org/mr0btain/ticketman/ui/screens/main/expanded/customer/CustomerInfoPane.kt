@@ -191,7 +191,7 @@ fun CustomerInfoPane(
                                 // ------------ Notes section ---------------
                                 NoteBlock(
                                     label = "Notes",
-                                    noteData = notes,
+                                    notes = selectedCustomer.notes,
                                     onImageClick = onImageClick,
                                     textSize = textSize
                                 )
@@ -221,7 +221,7 @@ fun CustomerInfoPane(
                         )
 
                         SmallTicketList(
-                            ticketData = selectedCustomer.tickets,
+                            tickets = selectedCustomer.tickets,
                             isDarkMode = isDarkMode,
                             onClick = { ticketId -> onTicketClick(ticketId) }
                         )

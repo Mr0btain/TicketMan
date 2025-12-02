@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.data.time.TimeSerializer
 
 @Serializable
 data class TicketStatus(
-    val status: TicketStatusType,
+    val status: TicketStatusType = TicketStatusType.IN_PROGRESS,
     @Serializable(TimeSerializer::class)
     val time: Time = Time.getTime()
 ): SubItem

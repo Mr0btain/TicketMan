@@ -11,26 +11,31 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.utils.ImageUtils
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
 import java.util.UUID
 
-// TODO: Setup editable option
+// TODO: Figure out better way to do images.
 @Composable
 fun NoteBlock(
     modifier: Modifier = Modifier,
     label: String = "Notes",
-    notes: List<Note>,
+    notes: Map<Note, List<StoredImage>>,
     editable: Boolean = false,
     labelSize: TextUnit = 18.sp,
     textSize: TextUnit = 16.sp,
@@ -55,20 +60,25 @@ fun NoteBlock(
         }
 
         if (!editable) {
-            notes.sortedByDescending { it.time().toLong() }.forEach { data ->
-                NoteColumn(data, textSize) {
-                    onImageClick(data.identifier)
+            notes.entries
+                .sortedByDescending { it.key.time().toLong() }
+                .forEach { (note, images) ->
+                    NoteColumn(note, images, textSize) {
+                        onImageClick(it)
+                    }
                 }
-            }
         } else {
-            noteData.sortedByDescending { it.note.time().toLong() }.forEach { data ->
-                EditableNoteColumn(
-                    noteData = data,
-                    textSize = textSize,
-                    onImageClick = { onImageClick(data.note.identifier) },
-                    onEditClick = { onEditClick(data.note.identifier) }
-                )
-            }
+            notes.entries
+                .sortedByDescending { it.key.time().toLong() }
+                .forEach { (note, images) ->
+                    EditableNoteColumn(
+                        note = note,
+                        images = images,
+                        textSize = textSize,
+                        onImageClick = { onImageClick(it) },
+                        onEditClick = { onEditClick(note.identifier) }
+                    )
+                }
         }
     }
 }
@@ -76,11 +86,10 @@ fun NoteBlock(
 @Composable
 private fun NoteColumn(
     note: Note,
+    images: List<StoredImage>,
     textSize: TextUnit,
     onImageClick: (UUID) -> Unit
 ) {
-    val
-
     Column {
         Row(
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -108,13 +117,13 @@ private fun NoteColumn(
             fontSize = textSize
         )
 
-        if (noteData.images.isNotEmpty()) {
+        if (images.isNotEmpty()) {
             Spacer(Modifier.padding(4.dp))
 
             ImagePager(
                 modifier = Modifier.fillMaxWidth(),
-                imageData = noteData.images,
-                onImageClick = { onImageClick(noteData.note.identifier) },
+                storedImages = images,
+                onImageClick = { onImageClick(note.identifier) },
             )
 
             Spacer(Modifier.padding(4.dp))
@@ -124,7 +133,8 @@ private fun NoteColumn(
 
 @Composable
 private fun EditableNoteColumn(
-    noteData: NoteData,
+    note: Note,
+    images: List<StoredImage>,
     textSize: TextUnit,
     onImageClick: (UUID) -> Unit,
     onEditClick: () -> Unit
@@ -149,14 +159,14 @@ private fun EditableNoteColumn(
             ) {
                 // Author
                 Text(
-                    text = noteData.note.author + ": ",
+                    text = note.author + ": ",
                     fontSize = textSize,
                     fontWeight = FontWeight.SemiBold
                 )
 
                 // Time
                 Text(
-                    text = noteData.note.time().toString(),
+                    text = note.time().toString(),
                     fontSize = (textSize.value - 4).sp,
                     maxLines = 1
                 )
@@ -165,17 +175,17 @@ private fun EditableNoteColumn(
             // Text
             Text(
                 modifier = Modifier,
-                text = noteData.note.message,
+                text = note.message,
                 fontSize = textSize
             )
 
-            if (noteData.images.isNotEmpty()) {
+            if (images.isNotEmpty()) {
                 Spacer(Modifier.padding(4.dp))
 
                 ImagePager(
                     modifier = Modifier.fillMaxWidth(),
-                    imageData = noteData.images,
-                    onImageClick = { onImageClick(noteData.note.identifier) },
+                    storedImages = images,
+                    onImageClick = { onImageClick(note.identifier) },
                 )
 
                 Spacer(Modifier.padding(4.dp))

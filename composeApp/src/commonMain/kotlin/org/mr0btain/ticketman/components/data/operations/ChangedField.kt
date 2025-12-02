@@ -16,5 +16,12 @@ enum class ChangedField {
     STATE,
     ZIP,
     EMAIL,
-    PHONE
+    PHONE,
+    TIME,
+    IDENTIFIER,
+    DEVICE,
+    STATUS,
+    PRIORITY,
+    AUTHOR,
+    MESSAGE
 }

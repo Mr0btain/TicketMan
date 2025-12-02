@@ -20,7 +20,7 @@ fun ImagePopup(
             onDismiss = onDismiss
         ) {
             ImagePager(
-                imageData = images,
+                storedImages = images,
                 clickEnabled = false
             )
         }

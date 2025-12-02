@@ -1,12 +1,13 @@
 package org.mr0btain.ticketman.components.data.customer
 
 import org.mr0btain.ticketman.components.data.DataSeed
-import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.ChangedField
-import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
@@ -27,10 +28,7 @@ class CustomerSeed: DataSeed() {
     private var _phone: MutableList<String> = mutableListOf()
 
     // Tickets
-    private var _tickets: MutableList<UUID> = mutableListOf()
-
-    // Time
-    private var _time: Time = Time.getTime()
+    private var _tickets: MutableList<Ticket> = mutableListOf()
 
     val name: PersonName get() = PersonName(_firstName, _lastName)
     val firstName: String get() = _firstName
@@ -44,9 +42,7 @@ class CustomerSeed: DataSeed() {
 
     val email: List<String> get() = _email.toList()
     val phone: List<String> get() = _phone.toList()
-    val tickets: List<UUID> get() = _tickets.toList()
-
-    val time: Time get() = _time
+    val tickets: List<Ticket> get() = _tickets.toList()
 
     // snapshot of the last saved state
     private var savedState: State = State()
@@ -121,7 +117,7 @@ class CustomerSeed: DataSeed() {
         }
     }
 
-    fun addTicket(newTicket: UUID) {
+    fun addTicket(newTicket: Ticket) {
         if (!_tickets.contains(newTicket)) {
             _tickets.add(newTicket)
             changedFields.add(ChangedField.TICKET)
@@ -129,16 +125,15 @@ class CustomerSeed: DataSeed() {
     }
 
     fun removeTicket(ticketToRemove: UUID) {
-        if (_tickets.contains(ticketToRemove)) {
-            _tickets.removeIf { it == ticketToRemove }
+        if (_tickets.removeIf { it.identifier == identifier }) {
             changedFields.add(ChangedField.TICKET)
         }
     }
 
     fun setCustomer(
         customer: Customer,
-        notes: List<NoteData> = emptyList(),
-        tickets: List<UUID> = emptyList()
+        notes: Map<Note, List<StoredImage>> = emptyMap(),
+        tickets: List<Ticket> = emptyList()
     ) {
         // Name
         _firstName = customer.name.firstName
@@ -151,27 +146,21 @@ class CustomerSeed: DataSeed() {
         _zip = customer.address.zip
 
         // Contact
-        _phone.addAll(customer.contactInfo.phone)
-        _email.addAll(customer.contactInfo.email)
+        _phone = customer.contactInfo.phone.toMutableList()
+        _email = customer.contactInfo.email.toMutableList()
 
-        _notes.addAll(notes)
-        _tickets.addAll(tickets)
+        setNotes(notes)
+
+        _tickets = tickets.toMutableList()
 
         // Time
-        _time = UUIDv7.getTime(customer.identifier)
+        _time = UUIDv7.getLongTime(customer.identifier)
 
         markClean() // Mark clean
     }
 
-    fun setTime(newTime: Time) {
-        _time = newTime
-    }
-
-    fun setTime(newTime: Long) {
-        _time = Time.fromLong(newTime)
-    }
-
     override fun clear() {
+        _identifier = UUIDv7.randomUUID()
         _firstName = ""
         _lastName = ""
         _street = ""
@@ -182,13 +171,16 @@ class CustomerSeed: DataSeed() {
         _phone.clear()
         _tickets.clear()
         _notes.clear()
-        _time = Time.getTime()
+        _images.clear()
+        _time = UUIDv7.getLongTime(_identifier)
 
+        _isNew = true
         markClean()
     }
 
     override fun markClean() {
         savedState = State(
+            _identifier,
             _firstName,
             _lastName,
             _street,
@@ -199,6 +191,7 @@ class CustomerSeed: DataSeed() {
             _phone,
             _tickets,
             _notes,
+            _images,
             _time
         )
 
@@ -209,6 +202,7 @@ class CustomerSeed: DataSeed() {
         "CustomerSeed(Name=$_firstName $_lastName, Address=$_street $_city $_state $_zip, Email=$_email, Phone=$_phone, Tickets=$_tickets, Notes=$_notes)"
 
     private data class State(
+        val identifier: UUID = UUIDv7.randomUUID(),
         val firstName: String = "",
         val lastName: String = "",
         val street: String = "",
@@ -217,8 +211,9 @@ class CustomerSeed: DataSeed() {
         val zip: String = "",
         val email: List<String> = emptyList(),
         val phone: List<String> = emptyList(),
-        val tickets: List<UUID> = emptyList(),
-        val notes: List<NoteData> = emptyList(),
-        val time: Time = Time.getTime()
+        val tickets: List<Ticket> = emptyList(),
+        val notes: Map<Note, List<StoredImage>> = emptyMap(),
+        val images: List<StoredImage> = emptyList(),
+        val time: Long = 0
     )
 }

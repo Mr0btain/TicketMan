@@ -129,4 +129,9 @@ object UUIDv7 {
      * If this UUID was generated with UUIDv7 then we can extract the time from it.
      */
     fun getTime(uuid: UUID): Time = Time.fromLong((uuid.mostSignificantBits ushr 16) and 0x0000FFFFFFFFFFFFL)
+
+    /**
+     * If this UUID was generated with UUIDv7 then we can extract the time from it.
+     */
+    fun getLongTime(uuid: UUID): Long = (uuid.mostSignificantBits ushr 16) and 0x0000FFFFFFFFFFFFL
 }

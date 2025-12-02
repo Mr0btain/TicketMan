@@ -16,12 +16,16 @@ import androidx.compose.ui.window.Dialog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -40,7 +44,7 @@ import java.util.*
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
-    seedData: CustomerData?,
+    seedData: CustomerSeed,
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onContinue: (CustomerData) -> Unit,
@@ -48,7 +52,9 @@ fun CustomerDialog(
     isDarkMode: Boolean,
     scope: CoroutineScope = rememberCoroutineScope()
 ) {
-    if (isVisible && seedData != null) {
+    val TAG = "CustomerDialog"
+    if (isVisible) {
+        /*
         // Name
         var firstName by remember(seedData) { mutableStateOf(seedData.customer.name.firstName) }
         var lastName by remember(seedData) { mutableStateOf(seedData.customer.name.lastName) }
@@ -64,6 +70,7 @@ fun CustomerDialog(
         val phone = remember(seedData) { seedData.customer.contactInfo.phone.toMutableStateList() }
         val notes =  remember(seedData) { seedData.notes.toMutableStateList() }
         val tickets = remember(seedData) { seedData.tickets.toMutableStateList() }
+         */
 
         // For deleting item dialog
         var showConfirmDeleteScreen by remember { mutableStateOf(false) }
@@ -72,7 +79,7 @@ fun CustomerDialog(
         var dataType by remember { mutableStateOf(DataType.NONE) }
 
         // Might be a better way of doing this, for now just send it like this
-        var itemToDelete by remember { mutableStateOf<Any?>(null) }
+        var itemToDelete by remember { mutableStateOf<String>("") }
 
         // For adding a basic sub item
         var itemToAdd by remember { mutableStateOf(DataType.NONE) }
@@ -80,12 +87,15 @@ fun CustomerDialog(
 
         // For adding note dialog
         var showNoteDialog by remember { mutableStateOf(false) }
-        var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
+        var selectedNote by remember { mutableStateOf(Note()) }
 
         // Add Note dialog
         EditNoteDialog(
-            note = noteSeedData.note,
+            note = selectedNote,
+            images = seedData.notes[selectedNote] ?: emptyList(),
             onConfirm = { result ->
+                // TODO
+                /*
                 scope.launch {
                     val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
 
@@ -99,10 +109,10 @@ fun CustomerDialog(
 
                     showNoteDialog = false
                 }
+                 */
             },
             isVisible = showNoteDialog,
             onDismissRequest = {
-                noteSeedData = null
                 showNoteDialog = false
             }
         )
@@ -118,11 +128,11 @@ fun CustomerDialog(
                     when (itemToAdd) {
                         DataType.EMAIL -> {
                             // Add item to list
-                            email.add(item)
+                            seedData.addEmail(item)
                         }
                         DataType.PHONE -> {
                             // Add item to list
-                            phone.add(item)
+                            seedData.addPhone(item)
                         }
                         else -> {}
                     }
@@ -139,35 +149,21 @@ fun CustomerDialog(
             dataType = dataType,
             isVisible = showConfirmDeleteScreen && dataType != DataType.NONE,
             onConfirm = {
-                when (dataType) {
-                    DataType.TICKET -> {
-                        (itemToDelete as? UUID)?.let { identifier ->
-                            tickets.removeIf { it.ticket.identifier == identifier }
-                        }
+                try {
+                    when (dataType) {
+                        DataType.TICKET -> seedData.removeTicket(UUID.fromString(itemToDelete))
+                        DataType.EMAIL -> seedData.removeEmail(itemToDelete)
+                        DataType.PHONE -> seedData.removePhone(itemToDelete)
+                        DataType.NOTE -> seedData.removeNote(UUID.fromString(itemToDelete))
+                        else -> {} // Do Nothing
                     }
-
-                    DataType.EMAIL -> {
-                        (itemToDelete as? String)?.let { item ->
-                            email.removeIf { it == item }
-                        }
-                    }
-
-                    DataType.PHONE -> {
-                        (itemToDelete as? String)?.let { item ->
-                            phone.removeIf { it == item }
-                        }
-                    }
-
-                    DataType.NOTE -> {
-                        (itemToDelete as? UUID)?.let { identifier ->
-                            notes.removeIf { it.note.identifier == identifier }
-                        }
-                    }
-
-                    else -> {}
+                } catch (ex: Exception) {
+                    AppLogger.i(TAG, "Error removing item! : $itemToDelete")
+                    ex.printStackTrace()
                 }
 
                 dataType = DataType.NONE
+                itemToDelete = ""
                 showConfirmDeleteScreen = false
             },
             onCancel = {
@@ -365,7 +361,7 @@ fun CustomerDialog(
                             Spacer(Modifier.padding(4.dp))
 
                             NoteBlock(
-                                noteData = notes,
+                                notes = notes,
                                 editable = true,
                                 onImageClick = onImageClick,
                                 onEditClick = { id ->

@@ -7,12 +7,11 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import java.util.*
@@ -22,17 +21,17 @@ import java.util.*
 fun SmallTicketList(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    ticketData: List<TicketData>,
+    tickets: List<Ticket>,
     onClick: (UUID) -> Unit
 ) {
     PlatformLazyColumn(
         modifier = Modifier.padding(4.dp),
-        isVisible = ticketData.isNotEmpty()
+        isVisible = tickets.isNotEmpty()
     ) {
-        items(ticketData.reversed()) { data ->
+        items(tickets.reversed()) { ticket ->
             Card(
                 modifier = Modifier.padding(4.dp),
-                onClick = { onClick(data.ticket.identifier) },
+                onClick = { onClick(ticket.identifier) },
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
             ) {
                 Column(
@@ -45,17 +44,19 @@ fun SmallTicketList(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = data.ticket.device.toString(),
+                            text = ticket.device.toString(),
                             fontSize = 16.sp,
                             fontWeight = FontWeight.SemiBold
                         )
 
                         TableStatusItem(
-                            status = data.ticket.status,
+                            status = ticket.status,
                             isDarkMode = isDarkMode
                         )
                     }
 
+                    // TODO: Maybe add this back in somehow?? not sure if we really do need it
+                    /*
                     Spacer(Modifier.padding(4.dp))
 
                     // Notes section
@@ -82,6 +83,7 @@ fun SmallTicketList(
                             }
                         }
                     }
+                     */
                 }
             }
         }

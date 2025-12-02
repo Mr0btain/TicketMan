@@ -17,13 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.image.ImageData
+import org.mr0btain.ticketman.components.utils.ImageUtils
+import org.mr0btain.ticketman.data.image.StoredImage
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_left
 import ticketman.composeapp.generated.resources.chevron_right
@@ -31,14 +32,22 @@ import ticketman.composeapp.generated.resources.chevron_right
 @Composable
 fun ImagePager(
     modifier: Modifier = Modifier,
-    imageData: List<ImageData>,
+    storedImages: List<StoredImage>,
     onImageClick: () -> Unit = {},
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     clickEnabled: Boolean = true
 ) {
-    val pagerState = rememberPagerState(pageCount = { imageData.size })
+    val pagerState = rememberPagerState(pageCount = { storedImages.size })
     // Used to determine whether a page has been added or not. If it has, then we scroll to the most recent or last page
-    var pageCount by remember { mutableIntStateOf(imageData.size) }
+    var pageCount by remember { mutableIntStateOf(storedImages.size) }
+
+    val images = remember { mutableStateListOf<Pair<StoredImage, ImageBitmap>>() }
+
+    LaunchedEffect(key1 = null) {
+        storedImages.forEach { image ->
+            ImageUtils.getImage(image, true)
+        }
+    }
 
     Box {
         HorizontalPager(
@@ -49,7 +58,7 @@ fun ImagePager(
             snapPosition = SnapPosition.Center
         ) { page ->
             // Actual image
-            if (imageData.size >= page) {
+            if (storedImages.size >= page) {
                 Box(
                     modifier = Modifier
                         .padding(start = 40.dp, end = 40.dp)
@@ -60,7 +69,7 @@ fun ImagePager(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
                             .clickable(enabled = clickEnabled) { onImageClick() },
-                        bitmap = imageData[page].image,
+                        bitmap = images[page].second,
                         contentDescription = null,
                         contentScale = ContentScale.Fit
                     )
@@ -88,10 +97,10 @@ fun ImagePager(
         // Next image button
         IconButton(
             modifier = Modifier.align(Alignment.CenterEnd),
-            enabled = pagerState.currentPage != imageData.size - 1,
+            enabled = pagerState.currentPage != storedImages.size - 1,
             onClick = {
                 coroutineScope.launch {
-                    if (pagerState.currentPage + 1 <= imageData.size)
+                    if (pagerState.currentPage + 1 <= storedImages.size)
                         pagerState.animateScrollToPage(pagerState.currentPage + 1)
                 }
             }
@@ -105,10 +114,10 @@ fun ImagePager(
 
     // If our list has changed, then we should change our scroll to either the last or the first depending on if it
     // is an addition or removal
-    LaunchedEffect(imageData.size) {
-        if (imageData.size > pageCount) {
-            pagerState.scrollToPage(imageData.size - 1)
-        } else if (imageData.size < pageCount) {
+    LaunchedEffect(storedImages.size) {
+        if (storedImages.size > pageCount) {
+            pagerState.scrollToPage(storedImages.size - 1)
+        } else if (storedImages.size < pageCount) {
              pagerState.scrollToPage(0)
         }
     }
