@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.utils.ImageUtils
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
@@ -33,22 +34,18 @@ import ticketman.composeapp.generated.resources.plus
 @Composable
 fun EditNoteDialog(
     modifier: Modifier = Modifier,
-    note: Note,
-    images: List<StoredImage>,
+    seed: NoteSeed,
     label: String = "",
     isVisible: Boolean,
-    onConfirm: (NoteData) -> Unit,
+    onConfirm: () -> Unit,
     onDismissRequest: () -> Unit,
     scope: CoroutineScope = rememberCoroutineScope()
 ) {
     if (isVisible) {
-        var author by remember { mutableStateOf(note.author) }
-        var message by remember { mutableStateOf(note.message) }
-        val imageData = remember { images.toMutableStateList() }
-
         // For ui loading
         var isLoading by remember { mutableStateOf(false) }
 
+        // TODO: Add a dialog for editing image details
         // File dialog for adding an image
         val launcher = rememberFilePickerLauncher(
             type = FileKitType.Image
@@ -62,13 +59,13 @@ fun EditNoteDialog(
 
                     // Save image to database
                     val dbImage = ImageUtils.saveImageFromFile(
-                        parentId = note.identifier,
+                        parentId = seed.identifier,
                         identifier = newImage.identifier,
                         file = file
                     )
 
                     // Add to list resizing to a max of 1080p
-                    if (dbImage) imageData.add(newImage)
+                    if (dbImage) seed.addImage(newImage)
 
                     isLoading = false
                 }
@@ -99,8 +96,8 @@ fun EditNoteDialog(
 
                     OutlinedTextField(
                         label = { Text("Author") },
-                        value = author,
-                        onValueChange = { author = it },
+                        value = seed.author,
+                        onValueChange = { seed.setAuthor(it) },
                         keyboardOptions = KeyboardOptions.Default.copy(
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Next
@@ -112,8 +109,8 @@ fun EditNoteDialog(
 
                     OutlinedTextField(
                         label = { Text("Text") },
-                        value = message,
-                        onValueChange = { message = it },
+                        value = seed.message,
+                        onValueChange = { seed.setMessage(it) },
                         maxLines = 6,
                         keyboardOptions = KeyboardOptions.Default.copy(
                             keyboardType = KeyboardType.Text,
@@ -148,7 +145,7 @@ fun EditNoteDialog(
                         }
                     }
 
-                    if (imageData.isNotEmpty()) {
+                    if (seed.images.isNotEmpty()) {
                         Box(
                             modifier = Modifier
                                 .height(150.dp)
@@ -164,7 +161,7 @@ fun EditNoteDialog(
                                         }
                                     }
                                     .blur(if (isLoading) 8.dp else 0.dp), // blur while loading
-                                storedImages = imageData,
+                                storedImages = seed.images,
                                 onImageClick = { /* TODO */ },
                                 coroutineScope = scope,
                                 clickEnabled = false
@@ -180,16 +177,8 @@ fun EditNoteDialog(
                     ConfirmCancelButtons(
                         onCancelClick = onDismissRequest,
                         onConfirmClick =  {
-                            onConfirm(
-                                NoteData(
-                                    note = Note(
-                                        identifier = note.identifier,
-                                        author = author,
-                                        message = message
-                                    ),
-                                    images = imageData
-                                )
-                            )
+                            // Confirm
+                            onConfirm()
 
                             // Dismiss
                             onDismissRequest()

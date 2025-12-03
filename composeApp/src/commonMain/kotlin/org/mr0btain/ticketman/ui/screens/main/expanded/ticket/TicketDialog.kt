@@ -72,7 +72,7 @@ fun TicketDialog(
 
     // Edit or add update dialog
     EditNoteDialog(
-        seedData = noteSeedData,
+        seed = noteSeedData,
         onConfirm = { result ->
             val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
 

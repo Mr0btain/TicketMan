@@ -1,28 +1,34 @@
 package org.mr0btain.ticketman.components.data.note
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import org.jetbrains.exposed.v1.core.not
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
 class NoteSeed {
-    private var _identifier: UUID = UUIDv7.randomUUID()
-    val identifier: UUID get() = _identifier
+    var identifier: UUID by mutableStateOf(UUIDv7.randomUUID())
+        private set
 
-    private var _images: MutableList<StoredImage> = mutableListOf()
-    val images: List<StoredImage> get() = _images
+    private val _images = mutableStateListOf<StoredImage>()
+    val images: List<StoredImage> = _images
 
-    private var _isNew: Boolean = true
-    val isNew: Boolean get() = _isNew
+    var isNew: Boolean by mutableStateOf(true)
+        private set
 
-    private var _time: Long = 0
-    val time: Long get() = _time
+    var time: Long by mutableStateOf(0)
+        private set
 
-    private var _author: String = ""
-    val author: String get() = _author
+    var author by mutableStateOf("")
+        private set
 
-    private var _message: String = ""
-    val message: String get() = _message
+    var message: String by mutableStateOf("")
+        private set
 
     // List to store the names of fields that have changed
     private val changedFields = mutableListOf<ChangedField>()
@@ -33,16 +39,32 @@ class NoteSeed {
     // snapshot of the last saved state
     private var savedState: State = State()
 
+    fun setNote(
+        note: Note,
+        imageList: List<StoredImage>
+    ) {
+        identifier = note.identifier
+        author = note.author
+        message = note.message
+        time = UUIDv7.getLongTime(identifier)
+
+        setImages(imageList)
+
+        markClean()
+        isNew = false
+    }
+
     fun setIdentifier(newId: UUID) {
-        if (_identifier != newId) {
-            _identifier = newId
+        if (identifier != newId) {
+            identifier = newId
             changedFields.add(ChangedField.IDENTIFIER)
         }
     }
 
     fun setImages(newImages: List<StoredImage>) {
         if (_images != newImages) {
-            _images = newImages.toMutableList()
+            _images.clear()
+            _images.addAll(newImages)
             changedFields.add(ChangedField.IMAGE)
         }
     }
@@ -61,41 +83,43 @@ class NoteSeed {
     }
 
     fun setAuthor(newAuthor: String) {
-        if (_author != newAuthor) {
-            _author = newAuthor
+        if (author != newAuthor) {
+            author = newAuthor
             changedFields.add(ChangedField.AUTHOR)
         }
     }
 
     fun setMessage(newMessage: String) {
-        if (_message != newMessage) {
-            _message = newMessage
+        if (message != newMessage) {
+            message = newMessage
             changedFields.add(ChangedField.MESSAGE)
         }
     }
 
     fun setTime(newTime: Long) {
-        if (_time != newTime) {
-            _time = newTime
+        if (time != newTime) {
+            time = newTime
             changedFields.add(ChangedField.TIME)
         }
     }
 
     fun clear() {
-        _identifier = UUIDv7.randomUUID()
-        _author = ""
-        _message = ""
-        _time = UUIDv7.getLongTime(_identifier)
+        identifier = UUIDv7.randomUUID()
+        author = ""
+        message = ""
+        time = UUIDv7.getLongTime(identifier)
         _images.clear()
 
-        _isNew = true
+        isNew = true
         markClean()
     }
 
     fun markClean() {
-        savedState = State(_identifier, _author, _message, _images, _time)
+        savedState = State(identifier, author, message, _images, time)
         changedFields.clear()
     }
+
+    fun getChangedFields(): List<ChangedField> = changedFields.toList()
 
     override fun toString(): String {
         TODO("Not yet implemented")

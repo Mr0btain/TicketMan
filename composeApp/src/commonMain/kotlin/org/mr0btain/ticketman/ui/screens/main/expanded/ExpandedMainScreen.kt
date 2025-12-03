@@ -11,14 +11,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
-import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.pagination.offset.handleOffsetPager
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -100,7 +97,7 @@ fun ExpandedMainScreen(
     // Doing image click like this we won't be able to open newly added images that were added within this dialog.
     // Which im fine with but it may change later
     CustomerDialog(
-        seedData = selectedCustomer.value,
+        seed = selectedCustomer.value,
         isVisible = showCustomerDialog,
         onImageClick = { id ->
             selectedCustomer.value

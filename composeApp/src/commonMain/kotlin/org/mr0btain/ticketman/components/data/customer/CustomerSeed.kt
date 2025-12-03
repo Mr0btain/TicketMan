@@ -1,90 +1,89 @@
 package org.mr0btain.ticketman.components.data.customer
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
-import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
 class CustomerSeed: DataSeed() {
     // Name
-    private var _firstName: String = ""
-    private var _lastName: String = ""
+    var firstName by mutableStateOf("")
+        private set
+    var lastName by mutableStateOf("")
+        private set
+
+    val name: String
+        get() = "$firstName $lastName"
 
     // Address
-    private var _street: String = ""
-    private var _city: String = ""
-    private var _state: String = ""
-    private var _zip: String = ""
+    var street by mutableStateOf("")
+        private set
+    var city by mutableStateOf("")
+        private set
+    var state by mutableStateOf("")
+        private set
+    var zip by mutableStateOf("")
+        private set
 
     // Contact info
-    private var _email: MutableList<String> = mutableListOf()
-    private var _phone: MutableList<String> = mutableListOf()
+    private var _email = mutableStateListOf<String>()
+    private var _phone = mutableStateListOf<String>()
 
     // Tickets
-    private var _tickets: MutableList<Ticket> = mutableListOf()
+    private var _tickets = mutableStateListOf<UUID>()
 
-    val name: PersonName get() = PersonName(_firstName, _lastName)
-    val firstName: String get() = _firstName
-    val lastName: String get() = _lastName
-
-    val address: Address get() = Address(_street, _city, _state, _zip)
-    val street: String get() = _street
-    val city: String get() = _city
-    val state: String get() = _state
-    val zip: String get() = _zip
-
-    val email: List<String> get() = _email.toList()
-    val phone: List<String> get() = _phone.toList()
-    val tickets: List<Ticket> get() = _tickets.toList()
+    val email: List<String> = _email
+    val phone: List<String> = _phone
+    val tickets: List<UUID> = _tickets
 
     // snapshot of the last saved state
     private var savedState: State = State()
 
     fun setFirstName(newName: String) {
-        if (_firstName != newName) {
-            _firstName = newName
+        if (firstName != newName) {
+            firstName = newName
             changedFields.add(ChangedField.NAME)
         }
     }
 
     fun setLastName(newName: String) {
-        if (_lastName != newName) {
-            _lastName = newName
+        if (lastName != newName) {
+            lastName = newName
             changedFields.add(ChangedField.NAME)
         }
     }
 
     fun setStreet(newStreet: String) {
-        if (_street != newStreet) {
-            _street = newStreet
+        if (street != newStreet) {
+            street = newStreet
             changedFields.add(ChangedField.STREET)
         }
     }
 
     fun setCity(newCity: String) {
-        if (_city != newCity) {
-            _city = newCity
+        if (city != newCity) {
+            city = newCity
             changedFields.add(ChangedField.CITY)
         }
     }
 
     fun setState(newState: String) {
-        if (_state != newState) {
-            _state = newState
+        if (state != newState) {
+            state = newState
             changedFields.add(ChangedField.STATE)
         }
     }
 
     fun setZip(newZip: String) {
-        if (_zip != newZip) {
-            _zip = newZip
+        if (zip != newZip) {
+            zip = newZip
             changedFields.add(ChangedField.ZIP)
         }
     }
@@ -117,7 +116,7 @@ class CustomerSeed: DataSeed() {
         }
     }
 
-    fun addTicket(newTicket: Ticket) {
+    fun addTicket(newTicket: UUID) {
         if (!_tickets.contains(newTicket)) {
             _tickets.add(newTicket)
             changedFields.add(ChangedField.TICKET)
@@ -125,7 +124,7 @@ class CustomerSeed: DataSeed() {
     }
 
     fun removeTicket(ticketToRemove: UUID) {
-        if (_tickets.removeIf { it.identifier == identifier }) {
+        if (_tickets.removeIf { it == identifier }) {
             changedFields.add(ChangedField.TICKET)
         }
     }
@@ -133,73 +132,76 @@ class CustomerSeed: DataSeed() {
     fun setCustomer(
         customer: Customer,
         notes: Map<Note, List<StoredImage>> = emptyMap(),
-        tickets: List<Ticket> = emptyList()
+        tickets: List<UUID> = emptyList()
     ) {
         // Name
-        _firstName = customer.name.firstName
-        _lastName = customer.name.lastName
+        firstName = customer.name.firstName
+        lastName = customer.name.lastName
 
         // Address
-        _street = customer.address.street
-        _city = customer.address.city
-        _state = customer.address.state
-        _zip = customer.address.zip
+        street = customer.address.street
+        city = customer.address.city
+        state = customer.address.state
+        zip = customer.address.zip
 
         // Contact
-        _phone = customer.contactInfo.phone.toMutableList()
-        _email = customer.contactInfo.email.toMutableList()
+        _phone.clear()
+        _phone.addAll(customer.contactInfo.phone)
+        _email.clear()
+        _email.addAll(customer.contactInfo.email)
 
         setNotes(notes)
 
-        _tickets = tickets.toMutableList()
+        _tickets.clear()
+        _tickets.addAll(tickets)
 
         // Time
-        _time = UUIDv7.getLongTime(customer.identifier)
+        time = UUIDv7.getLongTime(customer.identifier)
 
         markClean() // Mark clean
     }
 
     override fun clear() {
-        _identifier = UUIDv7.randomUUID()
-        _firstName = ""
-        _lastName = ""
-        _street = ""
-        _city = ""
-        _state = ""
-        _zip = ""
+        identifier = UUIDv7.randomUUID()
+        firstName = ""
+        lastName = ""
+        street = ""
+        city = ""
+        state = ""
+        zip = ""
         _email.clear()
         _phone.clear()
         _tickets.clear()
         _notes.clear()
         _images.clear()
-        _time = UUIDv7.getLongTime(_identifier)
+        time = UUIDv7.getLongTime(identifier)
 
-        _isNew = true
+        isNew = true
         markClean()
     }
 
     override fun markClean() {
         savedState = State(
-            _identifier,
-            _firstName,
-            _lastName,
-            _street,
-            _city,
-            _state,
-            _zip,
+            identifier,
+            firstName,
+            lastName,
+            street,
+            city,
+            state,
+            zip,
             _email,
             _phone,
             _tickets,
             _notes,
             _images,
-            _time
+            time
         )
 
         changedFields.clear()
     }
 
     override fun toString(): String =
-        "CustomerSeed(Name=$_firstName $_lastName, Address=$_street $_city $_state $_zip, Email=$_email, Phone=$_phone, Tickets=$_tickets, Notes=$_notes)"
+        "CustomerSeed(Name=$firstName $lastName, Address=$street $city $state $zip, Email=${_email.toList()}, Phone=${_phone.toList()}, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
 
     private data class State(
         val identifier: UUID = UUIDv7.randomUUID(),
@@ -211,7 +213,7 @@ class CustomerSeed: DataSeed() {
         val zip: String = "",
         val email: List<String> = emptyList(),
         val phone: List<String> = emptyList(),
-        val tickets: List<Ticket> = emptyList(),
+        val tickets: List<UUID> = emptyList(),
         val notes: Map<Note, List<StoredImage>> = emptyMap(),
         val images: List<StoredImage> = emptyList(),
         val time: Long = 0
