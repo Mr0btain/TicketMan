@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.components.utils.CustomKeyStateMap
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.time.Time
@@ -23,7 +24,7 @@ abstract class DataSeed {
     var isNew: Boolean by mutableStateOf(true)
         protected set
 
-    protected var _notes = mutableStateMapOf<Note, List<StoredImage>>()
+    protected var _notes = CustomKeyStateMap<Note, List<StoredImage>>(indexer = { it.identifier })
     val notes: Map<Note, List<StoredImage>> = _notes
 
     // Time
@@ -64,6 +65,9 @@ abstract class DataSeed {
                 changedFields.add(ChangedField.NOTE)
         }
     }
+
+    fun getNoteImages(identifier: UUID) =
+        _notes.getByField(identifier) ?: emptyList()
 
     fun removeNote(identifier: UUID) {
         _notes.keys

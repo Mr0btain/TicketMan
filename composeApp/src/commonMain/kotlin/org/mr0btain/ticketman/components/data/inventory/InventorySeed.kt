@@ -107,6 +107,13 @@ class InventorySeed: DataSeed() {
     override fun toString(): String =
         "InventorySeed(name=$name,description=$description,stock=$stock,cost=$cost,price=$price, notes=$_notes)"
 
+    fun setCost(newCost: Double) {
+        if (newCost != cost) {
+            cost = newCost
+            changedFields.add(ChangedField.COST)
+        }
+    }
+
     private data class State(
         val identifier: UUID = UUIDv7.randomUUID(),
         val name: String = "",

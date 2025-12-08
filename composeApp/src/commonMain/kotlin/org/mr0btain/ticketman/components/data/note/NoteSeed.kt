@@ -39,6 +39,9 @@ class NoteSeed {
     // snapshot of the last saved state
     private var savedState: State = State()
 
+    val note: Note
+        get() = Note(identifier, author, message)
+
     fun setNote(
         note: Note,
         imageList: List<StoredImage>

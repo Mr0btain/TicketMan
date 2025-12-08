@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.pagination.offset.handleOffsetPager
+import org.mr0btain.ticketman.components.utils.ImageUtils
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
@@ -43,13 +44,11 @@ fun ExpandedMainScreen(
 
     // User stuff
     val userPagedItems = viewModel.userPager?.items?.collectAsState()
-    val selectedUser = viewModel.selectedUserData.collectAsState()
     val userLazyListState = rememberLazyListState()
-
     val currentUser = viewModel.selectedUserData.collectAsState()
 
     // For customer panel
-    val selectedCustomer = viewModel.selectedCustomerData.collectAsState()
+    val customerSeed = viewModel.customerSeed
     val customerPagedItems = viewModel.customerPager?.items?.collectAsState()
     val customerLazyListState = rememberLazyListState()
 
@@ -61,7 +60,6 @@ fun ExpandedMainScreen(
     var isTicketForNewCustomer by remember { mutableStateOf(false) }
 
     // For ticket panel
-    val selectedTicket = viewModel.selectedTicketData.collectAsState()
     val ticketSeed = viewModel.ticketSeed
     val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val ticketLazyListState = rememberLazyListState()
@@ -74,7 +72,6 @@ fun ExpandedMainScreen(
     var showTicketDialog by remember { mutableStateOf(false) }
 
     // For Inventory panel
-    val selectedInventory = viewModel.selectedInventoryData.collectAsState()
     val inventorySeed = viewModel.inventorySeed
     val inventoryPagedItems = viewModel.inventoryPager?.items?.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
@@ -91,26 +88,26 @@ fun ExpandedMainScreen(
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
-    var imagePopupList by remember { mutableStateOf<List<StoredImage>?>(null) }
+    var imagePopupList = remember { mutableStateListOf<StoredImage>() }
 
     // For customer adding or editing
     // Doing image click like this we won't be able to open newly added images that were added within this dialog.
     // Which im fine with but it may change later
     CustomerDialog(
-        seed = selectedCustomer.value,
+        seed = customerSeed,
         isVisible = showCustomerDialog,
         onImageClick = { id ->
-            selectedCustomer.value
-                ?.notes
-                ?.find { it.note.identifier == id }
-                ?.let { (_, images) ->
-                    imagePopupList = images
-                    showImagePopup = true
-                }
+            customerSeed.getNoteImages(id)?.let { storedImages ->
+                imagePopupList.addAll(storedImages)
+                showImagePopup = true
+            }
         },
         onDismiss = { showCustomerDialog = false },
-        onContinue = { result ->
+        onContinue = {
             // Check for a change, if so we need to update the data
+            if (customerSeed.isDirty) {
+
+            }
             if (result != selectedCustomer.value) viewModel.addOrUpdateCustomer(result)
         },
         isDarkMode = isDarkMode
@@ -166,7 +163,7 @@ fun ExpandedMainScreen(
     if (showInventoryDialog) {
         selectedInventory.value?.let { inventoryData ->
             InventoryDialog(
-                seedData = inventoryData,
+                inventorySeed = inventoryData,
                 onDismiss = { showInventoryDialog = false },
                 isDarkMode = isDarkMode,
                 onContinue = {
@@ -209,7 +206,7 @@ fun ExpandedMainScreen(
         images = imagePopupList,
         isVisible = showImagePopup,
         onDismiss = {
-            imagePopupList = null
+            imagePopupList.clear()
             showImagePopup = false
         }
     )

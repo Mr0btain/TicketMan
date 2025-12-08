@@ -20,7 +20,6 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun NoteDialog(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     seed: NoteSeed,
     onConfirm: () -> Unit,
     onDismissRequest: () -> Unit
@@ -31,8 +30,7 @@ fun NoteDialog(
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp,
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp
         ) {
             Column(
                 modifier = Modifier.padding(32.dp),

@@ -60,7 +60,7 @@ fun CustomerDialog(
         var dataType by remember { mutableStateOf(DataType.NONE) }
 
         // Might be a better way of doing this, for now just send it like this
-        var itemToDelete by remember { mutableStateOf<String>("") }
+        var itemToDelete by remember { mutableStateOf("") }
 
         // For adding a basic sub item
         var itemToAdd by remember { mutableStateOf(DataType.NONE) }
@@ -320,7 +320,7 @@ fun CustomerDialog(
                                     dataType = DataType.TICKET
 
                                     // Set item data so we know which item to delete
-                                    itemToDelete = item
+                                    itemToDelete = item.toString()
 
                                     // Popup dialog
                                     showConfirmDeleteScreen = true
@@ -363,7 +363,6 @@ fun CustomerDialog(
                         onCancelClick = { onDismiss() },
                         onConfirmClick = {
                             onContinue()
-
                             onDismiss()
                         }
                     )

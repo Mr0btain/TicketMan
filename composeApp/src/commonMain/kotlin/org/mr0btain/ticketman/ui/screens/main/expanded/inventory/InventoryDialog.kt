@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,12 +10,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.inventory.InventorySeed
+import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
+import org.mr0btain.ticketman.components.utils.MoneyVisualTransformation
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogNoteList
 import org.mr0btain.ticketman.ui.composables.MoneyTextField
@@ -30,20 +30,10 @@ import ticketman.composeapp.generated.resources.plus
 fun InventoryDialog(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
-    onContinue: (InventoryData) -> Unit,
-    seedData: InventoryData,
-    isDarkMode: Boolean
+    onContinue: () -> Unit,
+    inventorySeed: InventorySeed,
+    noteSeed: NoteSeed
 ) {
-    // seed data
-    var name by remember(seedData) { mutableStateOf(seedData.inventory.name) }
-    var description by remember(seedData) { mutableStateOf(seedData.inventory.description) }
-    var stock by remember(seedData) { mutableStateOf(if (seedData.inventory.stock != Int.MAX_VALUE) seedData.inventory.stock.toString() else "0") }
-    val price = rememberTextFieldState(seedData.inventory.price.filter { it.isDigit() })
-    val cost = rememberTextFieldState(seedData.inventory.cost.filter { it.isDigit() })
-
-    // Mutable lists
-    val notes = mutableStateListOf<Note>() //remember(seedData) { seedData.notes.toMutableStateList() }
-
     // For deleting item dialog
     var showConfirmDeleteScreen by remember { mutableStateOf(false) }
     var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
@@ -55,12 +45,8 @@ fun InventoryDialog(
     // Add Note dialog
     if (showAddNoteDialog) {
         NoteDialog(
-            isDarkMode = isDarkMode,
-            label = "Update",
-            onConfirm = { item ->
-                // Add to out list
-                notes.add(item)
-            },
+            seed = noteSeed,
+            onConfirm = { inventorySeed.addNote(noteSeed.note, noteSeed.images) },
             onDismissRequest = { showAddNoteDialog = false }
         )
     }
@@ -104,8 +90,7 @@ fun InventoryDialog(
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp,
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp
         ) {
             Column(
                 modifier = Modifier.padding(32.dp),
@@ -117,7 +102,7 @@ fun InventoryDialog(
                 ) {
                     Text(
                         modifier = Modifier.padding(4.dp),
-                        text = if (seedData.inventory.name.isEmpty()) "Add Item" else "Edit Item: ${seedData.inventory.name}",
+                        text = if (inventorySeed.inventory.name.isEmpty()) "Add Item" else "Edit Item: ${inventorySeed.inventory.name}",
                         fontWeight = FontWeight.SemiBold,
                         fontSize = 26.sp,
                         maxLines = 1
@@ -131,13 +116,13 @@ fun InventoryDialog(
                 // -------------------------------------------- Content ----------------------------------------------------
                 PlatformLazyColumn(
                     modifier = Modifier.height(400.dp),
-                    isVisible = notes.isNotEmpty()
+                    isVisible = inventorySeed.notes.isNotEmpty()
                 ) {
                     item {
                         // -------------------------- Name ------------------------
                         OutlinedTextField(
-                            value = name,
-                            onValueChange = { name = it },
+                            value = inventorySeed.name,
+                            onValueChange = { inventorySeed.setName(it) },
                             label = { Text("Name") }
                         )
 
@@ -145,8 +130,8 @@ fun InventoryDialog(
 
                         // ------------------------- Description -------------------------------
                         OutlinedTextField(
-                            value = description,
-                            onValueChange = { description = it },
+                            value = inventorySeed.description,
+                            onValueChange = { inventorySeed.setDescription(it) },
                             label = { Text("Description") }
                         )
 
@@ -154,28 +139,58 @@ fun InventoryDialog(
 
                         // ------------------------- Stock -------------------------------
                         OutlinedTextField(
-                            value = stock,
-                            onValueChange = { change -> stock = change.filter { it.isDigit() } },
+                            value = inventorySeed.stock.toString(),
+                            onValueChange = { change ->
+                                inventorySeed.setStock(
+                                    change.filter { it.isDigit() }.toInt()
+                                )
+                                            },
                             label = { Text("Stock") }
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
                         // ------------------------- Price -------------------------------
-                        MoneyTextField(
+                        OutlinedTextField(
                             modifier = Modifier.width(280.dp),
-                            state = price,
-                            label = "Price"
+                            value = inventorySeed.price.toString(),
+                            onValueChange = {
+                                newPrice -> inventorySeed.setPrice(
+                                newPrice
+                                    .filter { it.isDigit() || it == '.' }
+                                    .toDoubleOrNull() ?: 0.0
+                                )
+                            },
+                            label = { Text("Price") },
+                            prefix = { Text("$") },
+                            visualTransformation = MoneyVisualTransformation()
                         )
 
                         Spacer(Modifier.padding(4.dp))
 
+                        // TODO: Test this
                         // ------------------------- Cost -------------------------------
+                        OutlinedTextField(
+                            modifier = Modifier.width(280.dp),
+                            value = inventorySeed.cost.toString(),
+                            onValueChange = {
+                                    newPrice -> inventorySeed.setCost(
+                                newPrice
+                                    .filter { it.isDigit() || it == '.' }
+                                    .toDoubleOrNull() ?: 0.0
+                            )
+                            },
+                            label = { Text("Price") },
+                            prefix = { Text("$") },
+                            visualTransformation = MoneyVisualTransformation()
+                        )
+                        /*
                         MoneyTextField(
                             modifier = Modifier.width(280.dp),
                             state = cost,
                             label = "Cost"
                         )
+                         */
 
                         Spacer(Modifier.padding(4.dp))
 
@@ -208,7 +223,7 @@ fun InventoryDialog(
                         Spacer(Modifier.padding(4.dp))
 
                         DialogNoteList(
-                            notes = notes,
+                            notes = inventorySeed.notes.keys.toList(),
                             onDeleteClick = { item ->
                                 itemForDelete = DataType.NOTE
                                 itemUpForDeleteIndex = item
@@ -221,21 +236,8 @@ fun InventoryDialog(
                 Spacer(Modifier.padding(8.dp))
 
                 ConfirmCancelButtons(
-                    onCancelClick = { onDismiss() },
-                    onConfirmClick = {
-                        onContinue(
-                            InventoryData(
-                                inventory = Inventory(
-                                    identifier = seedData.inventory.identifier,
-                                    name = name,
-                                    description = description,
-                                    stock = stock.toIntOrNull() ?: 0,
-                                    price = price.text.toString(),
-                                    cost = cost.text.toString()
-                                )
-                            )
-                        )
-                    }
+                    onCancelClick = onDismiss,
+                    onConfirmClick = onContinue
                 )
             }
         }

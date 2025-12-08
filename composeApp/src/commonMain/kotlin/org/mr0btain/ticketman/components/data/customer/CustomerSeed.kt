@@ -6,9 +6,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.data.customer.Address
+import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
@@ -42,6 +45,12 @@ class CustomerSeed: DataSeed() {
     val email: List<String> = _email
     val phone: List<String> = _phone
     val tickets: List<UUID> = _tickets
+
+    val address: Address
+        get() = Address(street, city, state, zip)
+
+    val customer: Customer
+        get() = Customer(identifier, PersonName(firstName, lastName), address, ContactInfo(email, phone))
 
     // snapshot of the last saved state
     private var savedState: State = State()

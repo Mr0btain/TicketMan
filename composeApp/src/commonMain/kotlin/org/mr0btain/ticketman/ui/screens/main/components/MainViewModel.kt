@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.main.components
 
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.coroutineScope
@@ -12,6 +11,7 @@ import org.mr0btain.ticketman.components.data.customer.*
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketData
@@ -20,13 +20,11 @@ import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
-import org.mr0btain.ticketman.components.utils.ImageUtils
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.database.CustomerDatabaseImpl
@@ -131,16 +129,8 @@ class MainViewModel(
     // Whether we should log exposed transactions or not
     val shouldLog = false
 
-    // TODO: We could add an option to change this. I also think image cache should have a different value and
-    // possibly have a better way of dealing with relevant and irrelevant photos. Maybe a cleanup function
     // Max size of cache
     val maxCacheSize = 20
-
-    /** ----------------------------------------------IMAGE------------------------------------------------------------------- */
-
-    val thumbnailCache = LruCache<UUID, ImageBitmap>(maxCacheSize, "ThumbnailCache")
-
-    val imageCache = LruCache<UUID, ImageBitmap>(maxCacheSize, "ImageCache")
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
@@ -151,6 +141,45 @@ class MainViewModel(
     var customerPager: OffsetPager<Customer>? = null
 
     val customerSeed: CustomerSeed = CustomerSeed()
+
+    fun handleCustomerEdit() {
+        // If we haven't made any changes, then just return
+        if (!customerSeed.isDirty) return
+
+        viewModelScope.launch {
+            // Check if it's new or not
+            if (customerSeed.isNew) {
+                // Insert customer
+                customerDatabase.add(customerSeed.customer)
+
+                // Add notes
+                customerSeed.notes.forEach { (note, images) ->
+                    customerDatabase.addNote(customerSeed.identifier, note, images)
+                }
+
+                // TODO: Setup way to check if these tickets are new or not.
+                // Right now we assume these tickets have already been inserted into the database. Here we just link them
+                // in the customer side
+                // Link tickets
+                customerSeed.tickets.forEach { ticket ->
+                    customerDatabase.addTicket(customerSeed.identifier, ticket)
+                }
+            } else { // Else handle changes
+                customerSeed.getChangedFields().forEach { changedField ->
+                    when (changedField) {
+                        ChangedField.NAME -> {}
+                        ChangedField.EMAIL -> {}
+                        ChangedField.PHONE -> {}
+                        ChangedField.IDENTIFIER -> {}
+                        ChangedField.NOTE -> {}
+                        ChangedField.TIME -> {}
+
+                        else -> {} // Do nothing
+                    }
+                }
+            }
+        }
+    }
 
     private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
     val selectedCustomerData = _selectedCustomerData.asStateFlow()
@@ -165,7 +194,7 @@ class MainViewModel(
 
     }
 
-    suspend fun findCustomer(identifier: UUID): Customer? =
+    suspend fun getCustomer(identifier: UUID): Customer? =
         customerCache.get(identifier)?.customer
             ?: customerDatabase.getById(identifier)
 
@@ -201,14 +230,6 @@ class MainViewModel(
                 }
             }
         }
-    }
-
-    fun setupNewCustomer(name: PersonName = PersonName()) {
-        _selectedCustomerData.value = CustomerData(
-            customer = Customer(
-                name = name
-            )
-        )
     }
 
     fun resetSelectedCustomer() {

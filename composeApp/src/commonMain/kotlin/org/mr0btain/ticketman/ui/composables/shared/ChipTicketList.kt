@@ -13,18 +13,18 @@ import kotlin.collections.forEach
 @Composable
 fun ChipTicketList(
     modifier: Modifier = Modifier,
-    tickets: List<TicketData>,
+    tickets: List<UUID>,
     onTicketClick: (UUID) -> Unit,
     onDeleteClick: (UUID) -> Unit
 ) {
     Column(
         modifier = modifier
     ) {
-        tickets.forEach { (ticket, notes) ->
+        tickets.forEach { ticket ->
             CustomInputChip(
-                label = ticket.device.toString(),
-                onClick = { onTicketClick(ticket.identifier) },
-                onDeleteClick = { onDeleteClick(ticket.identifier) }
+                label = ticket.toString(),
+                onClick = { onTicketClick(ticket) },
+                onDeleteClick = { onDeleteClick(ticket) }
             )
 
             Spacer(Modifier.padding(4.dp))
