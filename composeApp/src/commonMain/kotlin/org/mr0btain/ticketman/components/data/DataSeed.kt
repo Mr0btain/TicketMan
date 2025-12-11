@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import org.mr0btain.ticketman.components.data.customer.CustomerSeed.State
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.utils.CustomKeyStateMap
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -24,8 +25,8 @@ abstract class DataSeed {
     var isNew: Boolean by mutableStateOf(true)
         protected set
 
-    protected var _notes = CustomKeyStateMap<Note, List<StoredImage>>(indexer = { it.identifier })
-    val notes: Map<Note, List<StoredImage>> = _notes
+    protected var _notes = mutableStateListOf<Note>()
+    val notes: List<Note> = _notes
 
     // Time
     var time: Long by mutableStateOf(0)
@@ -38,6 +39,9 @@ abstract class DataSeed {
     val isDirty: Boolean
         get() = changedFields.isNotEmpty()
 
+    // snapshot of the last saved state
+    protected var savedState: Int = 0
+
     // Reset all fields
     abstract fun clear()
 
@@ -49,35 +53,29 @@ abstract class DataSeed {
         return changedFields.toList()
     }
 
-    fun setNotes(newNotes: Map<Note, List<StoredImage>>) {
+    fun setNotes(newNotes: List<Note>) {
         if (_notes != newNotes) {
             _notes.clear()
-            _notes.putAll(newNotes)
+            _notes.addAll(newNotes)
+
             changedFields.add(ChangedField.NOTE)
         }
     }
 
-    fun addNote(newNote: Note, images: List<StoredImage>) {
+    fun addNote(newNote: Note) {
         if (!_notes.contains(newNote)) {
-            _notes[newNote] = images
+            _notes.add(newNote)
 
             if (!changedFields.contains(ChangedField.NOTE))
                 changedFields.add(ChangedField.NOTE)
         }
     }
 
-    fun getNoteImages(identifier: UUID) =
-        _notes.getByField(identifier) ?: emptyList()
-
     fun removeNote(identifier: UUID) {
-        _notes.keys
-            .filter { it.identifier == identifier }
-            .also { foundNote ->
-                _notes.remove(foundNote.first())
-
-                if (!changedFields.contains(ChangedField.NOTE))
-                    changedFields.add(ChangedField.NOTE)
-            }
+        if (_notes.removeIf { it.identifier == identifier }) {
+            if (!changedFields.contains(ChangedField.NOTE))
+                changedFields.add(ChangedField.NOTE)
+        }
     }
 
     fun setTime(newTime: Time) {
@@ -96,13 +94,8 @@ abstract class DataSeed {
         }
     }
 
-    fun getNote(identifier: UUID): Pair<Note, List<StoredImage>>? {
-        val found = notes.keys.firstOrNull { it.identifier == identifier }
-
-        return if (found != null) {
-            Pair(found, notes[found] ?: emptyList())
-        } else null
-    }
+    fun getNote(identifier: UUID): Note? =
+        _notes.firstOrNull { it.identifier == identifier }
 
     abstract override fun toString(): String
 }

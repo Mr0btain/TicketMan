@@ -85,9 +85,8 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * Adds a note to an item and linking it to that item
      * @param identifier Identifier of item to link note to
      * @param note Note to insert and link to item
-     * @param storedImages Images to insert and link to note
      */
-    abstract fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>)
+    abstract fun addNote(identifier: UUID, note: Note)
 
     /** Gets all items */
     abstract fun all(): List<T>?
@@ -112,31 +111,29 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * Returns a list of notes and their respective images
      * @param identifier Identifier of item to get notes for
      */
-    abstract fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>?
+    abstract fun getNotes(identifier: UUID): List<Note>?
 
     /**
      * Adds a note to the database
      * @param note Note to insert
-     * @param storedImages Stored images to add and link to note
      */
-    protected fun insertNote(note: Note, storedImages: List<StoredImage>): NoteEntity? {
+    protected fun insertNote(note: Note): NoteEntity? {
         return appLogTryCatch<NoteEntity?>(INSERT_NOTE_TAG) {
             transaction {
+                // Convert images
+                val imageCollection = note.images.map { image ->
+                    ImageEntity.new(image.identifier) {
+                        description = image.description
+                        tags = image.tags
+                        directory = image.directory
+                    }
+                }
+
                 // Add new note to database
                 val entity = NoteEntity.new(note.identifier) {
                     author = note.author
                     message = note.message
-                }
-
-                if (storedImages.isNotEmpty()) {
-                    // Add images and keep a list of them to add to note image table
-                    val imageCollection = storedImages.map { image ->
-                        ImageEntity.new {
-                            directory = image.directory
-                        }
-                    }
-
-                    entity.images = SizedCollection(imageCollection)
+                    images = SizedCollection(imageCollection)
                 }
 
                 Pair(entity, true)
@@ -171,9 +168,8 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * Updates a note with this data. Essentially replaces the note with the ID with the data passed
      * NOTE: This will delete image entities from the database but NOT the images themselves. for now i guess
      *  @param note Note data
-     *  @param storedImages List of images for note
      */
-    fun updateNote(note: Note, storedImages: List<StoredImage>) {
+    fun updateNote(note: Note) {
         appLogTryCatch(UPDATE_NOTE_TAG) {
             var result = false
 
@@ -190,7 +186,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
                     val updatedImages = mutableListOf<ImageEntity>()
 
-                    storedImages.map { storedImage ->
+                    note.images.map { storedImage ->
                         if (existingImageIds.contains(storedImage.identifier))
                             updateImage(storedImage)?.let { updatedImages.add(it) }
                         else

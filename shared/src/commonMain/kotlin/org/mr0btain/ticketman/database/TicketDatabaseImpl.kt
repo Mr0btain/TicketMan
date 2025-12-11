@@ -165,13 +165,13 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
+    override fun addNote(identifier: UUID, note: Note) {
         appLogTryCatch(ADD_NOTE_TAG) {
             var result = false
 
             transaction {
                 // Insert the note into database and get its entity
-                insertNote(note, storedImages)?.let { noteEntity ->
+                insertNote(note)?.let { noteEntity ->
                     // Add note to customer notes
                     TicketEntity.findByIdAndUpdate(identifier) { ticketEntity ->
                         ticketEntity.notes = SizedCollection(ticketEntity.notes + noteEntity)
@@ -185,14 +185,14 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
-        var result: Map<Note, List<StoredImage>>? = null
+    override fun getNotes(identifier: UUID): List<Note>? {
+        var result: List<Note>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
                 TicketEntity.findById(identifier)?.let { ticketEntity ->
-                    result = ticketEntity.notes.associate { noteEntity ->
-                        noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
+                    result = ticketEntity.notes.map { noteEntity ->
+                        noteEntity.toNote()
                     }
                 } ?: AppLogger.i(GET_NOTES_TAG, TicketError.NOT_FOUND)
             }

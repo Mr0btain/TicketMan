@@ -29,7 +29,7 @@ class CustomerEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
             identifier = id.value,
             name = PersonName.fromString(name),
             address = address,
-            contactInfo = ContactInfo(listOf(email), phone)
+            contactInfo = ContactInfo(email, phone)
         )
     }
 }

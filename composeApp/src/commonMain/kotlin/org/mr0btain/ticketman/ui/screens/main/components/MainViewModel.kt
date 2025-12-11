@@ -10,10 +10,9 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.*
 import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
-import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.operations.ChangedField
-import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.settings.UserSettings
+import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserData
@@ -21,10 +20,8 @@ import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.data.cache.LruCache
-import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.database.CustomerDatabaseImpl
@@ -134,15 +131,15 @@ class MainViewModel(
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
-    val customerCache = LruCache<UUID, CustomerData>(maxCacheSize, "CustomerCache")
+    val customerCache: CustomerCache = CustomerCache()
 
-    private val customerDatabase = CustomerDatabaseImpl()
+    private val customerDatabase: CustomerDatabaseImpl = CustomerDatabaseImpl()
 
     var customerPager: OffsetPager<Customer>? = null
 
     val customerSeed: CustomerSeed = CustomerSeed()
 
-    fun handleCustomerEdit() {
+    fun handleCustomerChanges() {
         // If we haven't made any changes, then just return
         if (!customerSeed.isDirty) return
 
@@ -153,8 +150,8 @@ class MainViewModel(
                 customerDatabase.add(customerSeed.customer)
 
                 // Add notes
-                customerSeed.notes.forEach { (note, images) ->
-                    customerDatabase.addNote(customerSeed.identifier, note, images)
+                customerSeed.notes.forEach { note ->
+                    customerDatabase.addNote(customerSeed.identifier, note)
                 }
 
                 // TODO: Setup way to check if these tickets are new or not.
@@ -162,289 +159,67 @@ class MainViewModel(
                 // in the customer side
                 // Link tickets
                 customerSeed.tickets.forEach { ticket ->
-                    customerDatabase.addTicket(customerSeed.identifier, ticket)
+                    customerDatabase.addTicket(customerSeed.identifier, ticket.identifier)
                 }
             } else { // Else handle changes
                 customerSeed.getChangedFields().forEach { changedField ->
                     when (changedField) {
-                        ChangedField.NAME -> {}
-                        ChangedField.EMAIL -> {}
-                        ChangedField.PHONE -> {}
-                        ChangedField.IDENTIFIER -> {}
-                        ChangedField.NOTE -> {}
-                        ChangedField.TIME -> {}
+                        ChangedField.NAME -> customerDatabase.updateName(customerSeed.identifier, customerSeed.name)
+                        ChangedField.EMAIL -> customerDatabase.updateEmail(customerSeed.identifier, customerSeed.email)
+                        ChangedField.PHONE -> customerDatabase.updatePhone(customerSeed.identifier, customerSeed.phone)
+                        ChangedField.NOTE -> {
+                            // TODO: Flesh this out
+                        }
 
-                        else -> {} // Do nothing
+                        else -> {} // Do nothing. This shouldn't ever happen
                     }
                 }
             }
         }
     }
 
-    private val _selectedCustomerData: MutableStateFlow<CustomerData?> = MutableStateFlow(null)
-    val selectedCustomerData = _selectedCustomerData.asStateFlow()
-
     /** Sets the selected customer and inserts the data into the cache */
-    private suspend fun setSelectedCustomer(customerData: CustomerData) {
-        // Set selected
-        _selectedCustomerData.value = customerData
+    fun setSelectedCustomer(identifier: UUID) {
+        viewModelScope.launch {
+            // Get customer from cache if we can and set the values
+            val cached = customerCache.get(identifier)?.let { (customer, notes, tickets) ->
+                customerSeed.setCustomer(
+                    customer = customer,
+                    notes = notes,
+                    tickets = tickets
+                )
+            }
 
-        // Add to cache
-        customerCache.put(customerData.customer.identifier, customerData)
+            // Else if we didn't have it in cache, pull it and add it to cache
+            if (cached == null) {
+                customerDatabase.getById(identifier)?.let { customer ->
+                    val notes = customerDatabase.getNotes(identifier) ?: emptyList()
 
+                    val tickets = customerDatabase.getTickets(identifier)?.also { ticketList ->
+                        ticketList.forEach { ticketCache.put(it) }
+                    } ?: emptyList()
+
+                    // Set selected
+                    customerSeed.setCustomer(customer, notes, tickets)
+
+                    // Add to cache
+                    customerCache.put(customer, notes, tickets)
+                }
+            }
+        }
     }
 
     suspend fun getCustomer(identifier: UUID): Customer? =
         customerCache.get(identifier)?.customer
             ?: customerDatabase.getById(identifier)
 
-    fun changeSelectedCustomer(identifier: UUID) {
-        viewModelScope.launch {
-            if (selectedCustomerData.value?.customer?.identifier != identifier) {
-                // Check if it exists in cache
-                val cached = customerCache.get(identifier)?.also { customerData ->
-                    _selectedCustomerData.value = customerData
-                }
-
-                // If not pull from database and add to cache
-                if (cached == null) {
-                    customerDatabase.getById(identifier)?.let { customer ->
-                        // Get notes
-                        val notes = customerDatabase.getNotes(identifier)
-                            ?.map { NoteData(it.key, it.value) }
-                            ?: emptyList()
-
-                        // Get tickets
-                        val tickets = customerDatabase.getTickets(identifier)?.map { ticket ->
-                            TicketData(
-                                ticket = ticket,
-                                notes = ticketDatabase.getNotes(ticket.identifier)
-                                    ?.map { NoteData(it.key, it.value) }
-                                    ?: emptyList()
-                            )
-                        } ?: emptyList()
-
-                        // Update selected
-                        setSelectedCustomer(CustomerData(customer, notes, tickets))
-                    }
-                }
-            }
-        }
-    }
-
-    fun resetSelectedCustomer() {
-        _selectedCustomerData.value = null
-    }
-
-    /** Updates a Customer and its data in the database */
-    fun addOrUpdateCustomer(customerData: CustomerData) {
-        viewModelScope.launch {
-            val existingCustomer = customerDatabase.getById(customerData.customer.identifier)?.also { customer ->
-                // Update if its changed
-                if (customerData.customer != customer) customerDatabase.update(customerData.customer)
-
-                // Existing notes for comparison
-                val existingNotes = customerDatabase.getNotes(customerData.customer.identifier)?.map {
-                    NoteData(it.key, it.value)
-                } ?: emptyList()
-
-                // Check if the note exists already and update if it needs to or add new
-                customerData.notes.forEach { noteData ->
-                    existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }?.let { existingNote ->
-                        if (noteData != existingNote) {
-                            customerDatabase.updateNote(noteData.note, noteData.images)
-                        }
-                    } ?: customerDatabase.addNote(
-                        customerData.customer.identifier,
-                        noteData.note,
-                        noteData.images
-                    )
-                }
-
-                // Existing tickets for comparison
-                val existingTickets = customerDatabase.getTickets(customerData.customer.identifier)
-
-                // Add tickets if they're new or update if they've changed
-                customerData.tickets.forEach { ticketData ->
-                    // See if it exists
-                    val ticket = existingTickets?.firstOrNull { it.identifier == ticketData.ticket.identifier }
-                        ?.also { existingTicket ->
-                            // check if ticket has changed, if so update it
-                            // if (ticketData.ticket != existingTicket) ticketDatabase.update(ticketData.ticket)
-
-                            // TODO
-                            // Existing notes for comparison
-                            val existingTicketNotes = ticketDatabase.getNotes(existingTicket.identifier)
-                                ?.map { NoteData(it.key, it.value) }
-
-                            // Check ticket notes if they exist and have changed, if so update else add
-                            ticketData.notes.forEach { noteData ->
-                                existingTicketNotes?.firstOrNull { it.note.identifier == noteData.note.identifier }
-                                    ?.let { existingNote ->
-                                        if (noteData != existingNote) {
-                                            ticketDatabase.updateNote(noteData.note, noteData.images)
-                                        }
-                                    } ?: ticketDatabase.addNote(
-                                    existingTicket.identifier,
-                                    noteData.note,
-                                    noteData.images
-                                )
-                            }
-                        }
-
-                    // Check if it was null, then we need to add a whole new ticket
-                    if (ticket == null) {
-                        // Add to ticket database
-                        ticketDatabase.add(ticketData.ticket)
-
-                        // Add notes to ticket
-                        ticketData.notes.forEach { (note, images) ->
-                            ticketDatabase.addNote(ticketData.ticket.identifier, note, images)
-                        }
-
-                        // Link to customer
-                        customerDatabase.addTicket(customerData.customer.identifier, ticketData.ticket.identifier)
-                    }
-                }
-            }
-
-            // If it doesn't exist, then add new
-            if (existingCustomer == null) {
-                // Add item
-                customerDatabase.add(customerData.customer)
-
-                // Add notes
-                customerData.notes.forEach { (note, images) ->
-                    customerDatabase.addNote(customerData.customer.identifier, note, images)
-                }
-
-                // Add tickets
-                customerData.tickets.forEach { (ticket, notes) ->
-                    // Add ticket
-                    ticketDatabase.add(ticket)
-
-                    // Add notes
-                    notes.forEach { (note, images) ->
-                        ticketDatabase.addNote(ticket.identifier, note, images)
-                    }
-
-                    // link to customer
-                    customerDatabase.addTicket(customerData.customer.identifier, ticket.identifier)
-                }
-            }
-
-            // update selected
-            setSelectedCustomer(customerData)
-        }
-    }
-
-    fun removeSelectedCustomer() {
-        viewModelScope.launch {
-            selectedCustomerData.value?.customer?.identifier?.let { identifier ->
-                customerDatabase.remove(identifier)
-
-                resetSelectedCustomer()
-
-                customerCache.remove(identifier)
-            }
-        }
-    }
-
     suspend fun searchCustomers(query: String) = coroutineScope {
         customerDatabase.search(query, 20) ?: emptyList()
     }
 
-
-    /**
-     *  Removes an item from a customer. NOTE: This DOES NOT delete the item if it is a main item.
-     *  it simply removes the link from the customer. Item is removed from SELECTED Customer. So
-     *  make sure you set it as selected first.
-     *  @param subItemType The type of the item to remove
-     *  @param subItem The actual item.
-     */
-    fun removeCustomerSubItem(subItemType: DataType, subItem: Any?) {
-        viewModelScope.launch {
-            _selectedCustomerData.value?.let { customerData ->
-                // Check what were removing from the customer
-                when (subItemType) {
-                    DataType.TICKET -> {
-                        (subItem as? Ticket)?.let { ticket ->
-                            setSelectedCustomer(
-                                customerData.removeTicket(ticket.identifier)
-                            )
-
-                            customerDatabase.removeTicket(customerData.customer.identifier, ticket.identifier)
-
-                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(
-                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
-                            "SubItem type set as ticket, but item was NOT a Ticket!"
-                        )
-                    }
-
-                    DataType.EMAIL -> {
-                        (subItem as? String)?.let { email ->
-                            setSelectedCustomer(
-                                customerData.removeEmail(email)
-                            )
-
-                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(
-                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
-                            "SubItem type set as email, but was NOT a string!"
-                        )
-                    }
-
-                    DataType.PHONE -> {
-                        (subItem as? String)?.let { phone ->
-                            setSelectedCustomer(
-                                customerData.removePhoneNumber(phone)
-                            )
-
-                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(
-                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
-                            "SubItem type set as phone, but was NOT a string!"
-                        )
-                    }
-
-                    DataType.NOTE -> {
-                        (subItem as? Note)?.let { note ->
-                            setSelectedCustomer(
-                                customerData.removeNote(note.identifier)
-                            )
-
-                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(
-                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
-                            "SubItem type set as Note, but item was NOT a Note!"
-                        )
-                    }
-
-                    DataType.ADDRESS -> {
-                        (subItem as? Address)?.let {
-                            setSelectedCustomer(
-                                customerData.clearAddress()
-                            )
-
-                            AppLogger.m(REMOVE_CUSTOMER_SUB_ITEM_TAG, SimpleResult.SUCCESS)
-                        } ?: AppLogger.i(
-                            REMOVE_CUSTOMER_SUB_ITEM_TAG,
-                            "SubItem type set as Address, but item was NOT Address!"
-                        )
-                    }
-
-                    else -> {
-                        AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "Not a valid SubItem DataType or not set!")
-                    }
-                }
-            } ?: AppLogger.i(REMOVE_CUSTOMER_SUB_ITEM_TAG, "No customer selected!")
-        }
-    }
-
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
 
-    val ticketCache = LruCache<UUID, TicketData>(maxCacheSize, "TicketCache")
+    val ticketCache = TicketCache(maxCacheSize)
 
     private val ticketDatabase = TicketDatabaseImpl()
 

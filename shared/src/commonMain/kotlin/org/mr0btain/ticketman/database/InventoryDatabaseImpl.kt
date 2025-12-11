@@ -190,13 +190,13 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
+    override fun addNote(identifier: UUID, note: Note) {
         appLogTryCatch(ADD_NOTE_TAG) {
             var result = false
 
             transaction {
                 // Insert the note into database and get its entity
-                insertNote(note, storedImages)?.let { noteEntity ->
+                insertNote(note)?.let { noteEntity ->
                     // Add note to notes
                     InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                         inventoryEntity.notes = SizedCollection(inventoryEntity.notes + noteEntity)
@@ -210,14 +210,14 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
-        var result: Map<Note, List<StoredImage>>? = null
+    override fun getNotes(identifier: UUID): List<Note>? {
+        var result: List<Note>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
                 InventoryEntity.findById(identifier)?.let { inventoryEntity ->
-                    result = inventoryEntity.notes.associate { noteEntity ->
-                        noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
+                    result = inventoryEntity.notes.map { noteEntity ->
+                        noteEntity.toNote()
                     }
                 } ?: AppLogger.i(GET_NOTES_TAG, InventoryError.NOT_FOUND)
             }

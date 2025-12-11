@@ -34,6 +34,11 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Administration screen
 // TODO: Kiosk/POS Screen
 // TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
+// TODO: All main data classes have the ability to have images of their own. We should set that up
+// TODO: I'm thinking of making Customer Ticket and User data classes hold their Notes, Images, and such. The only time we really
+// need just the info from the customer or such is when we display it in a list. Could just make a custom data class for that
+// specific case.
+
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable

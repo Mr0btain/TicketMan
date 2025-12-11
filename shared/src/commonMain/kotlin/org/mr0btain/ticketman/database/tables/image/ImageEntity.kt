@@ -13,15 +13,13 @@ class ImageEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var description by ImageTable.description
     var directory by ImageTable.directory
     var tags by ImageTable.tags
-    var time by ImageTable.time
 
     fun toStoredImage(): StoredImage {
         return StoredImage(
             identifier = id.value,
             description = description,
             directory = directory,
-            tags = tags,
-            time = Time.fromLong(time)
+            tags = tags
         )
     }
 }

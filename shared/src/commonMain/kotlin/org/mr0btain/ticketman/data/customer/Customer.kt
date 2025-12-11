@@ -14,7 +14,8 @@ data class Customer(
     override val identifier: UUID = UUIDv7.randomUUID(),
     val name: PersonName = PersonName(),
     val address: Address = Address(),
-    val contactInfo: ContactInfo = ContactInfo()
+    val email: String = "",
+    val phone: String = ""
 ): MainItem {
     fun toIdentity(): Identity =
         Identity(identifier, name.toString())

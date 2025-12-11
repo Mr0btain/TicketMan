@@ -32,13 +32,10 @@ class InventorySeed: DataSeed() {
         price = price.toString()
     )
 
-    // snapshot of the last saved state
-    private var savedState: State = State()
-
     // --- Initial setting up with data ---
     fun setInitial(
         data: Inventory,
-        notes: Map<Note, List<StoredImage>>
+        notes: List<Note> = emptyList()
     ) {
         name = data.name
         description = data.description
@@ -100,7 +97,7 @@ class InventorySeed: DataSeed() {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(identifier, name, description, stock, cost, price, _notes, _images, time)
+        savedState = State(identifier, name, description, stock, cost, price, _notes, _images, time).hashCode()
         changedFields.clear()  // Reset the changed fields
     }
 
@@ -121,7 +118,7 @@ class InventorySeed: DataSeed() {
         val stock: Int = 0,
         val cost: Double = 0.0,
         val price: Double = 0.0,
-        val notes: Map<Note, List<StoredImage>> = emptyMap(),
+        val notes: List<Note> = emptyList(),
         val images: List<StoredImage> = emptyList(),
         val time: Long = 0
     )

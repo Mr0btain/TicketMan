@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
@@ -36,24 +37,20 @@ class CustomerSeed: DataSeed() {
         private set
 
     // Contact info
-    private var _email = mutableStateListOf<String>()
-    private var _phone = mutableStateListOf<String>()
+    var email by mutableStateOf("")
+        private set
+    var phone by mutableStateOf("")
+        private set
 
     // Tickets
-    private var _tickets = mutableStateListOf<UUID>()
-
-    val email: List<String> = _email
-    val phone: List<String> = _phone
-    val tickets: List<UUID> = _tickets
+    private var _tickets = mutableStateListOf<Ticket>()
+    val tickets: List<Ticket> = _tickets
 
     val address: Address
         get() = Address(street, city, state, zip)
 
     val customer: Customer
-        get() = Customer(identifier, PersonName(firstName, lastName), address, ContactInfo(email, phone))
-
-    // snapshot of the last saved state
-    private var savedState: State = State()
+        get() = Customer(identifier, PersonName(firstName, lastName), address, email, phone)
 
     fun setFirstName(newName: String) {
         if (firstName != newName) {
@@ -97,35 +94,21 @@ class CustomerSeed: DataSeed() {
         }
     }
 
-    fun addEmail(newEmail: String) {
-        if (!_email.contains(newEmail)) {
-            _email.add(newEmail)
+    fun setEmail(newEmail: String) {
+        if (email != newEmail) {
+            email = newEmail
             changedFields.add(ChangedField.EMAIL)
         }
     }
 
-    fun removeEmail(emailToRemove: String) {
-        if (_email.contains(emailToRemove)) {
-            _email.removeIf { it == emailToRemove }
-            changedFields.add(ChangedField.EMAIL)
-        }
-    }
-
-    fun addPhone(newPhone: String) {
-        if (!_phone.contains(newPhone)) {
-            _phone.add(newPhone)
+    fun setPhone(newPhone: String) {
+        if (phone != newPhone) {
+            phone = newPhone
             changedFields.add(ChangedField.PHONE)
         }
     }
 
-    fun removePhone(phoneToRemove: String) {
-        if (_phone.contains(phoneToRemove)) {
-            _phone.removeIf { it == phoneToRemove }
-            changedFields.add(ChangedField.PHONE)
-        }
-    }
-
-    fun addTicket(newTicket: UUID) {
+    fun addTicket(newTicket: Ticket) {
         if (!_tickets.contains(newTicket)) {
             _tickets.add(newTicket)
             changedFields.add(ChangedField.TICKET)
@@ -140,8 +123,8 @@ class CustomerSeed: DataSeed() {
 
     fun setCustomer(
         customer: Customer,
-        notes: Map<Note, List<StoredImage>> = emptyMap(),
-        tickets: List<UUID> = emptyList()
+        notes: List<Note> = emptyList(),
+        tickets: List<Ticket> = emptyList()
     ) {
         // Name
         firstName = customer.name.firstName
@@ -154,12 +137,11 @@ class CustomerSeed: DataSeed() {
         zip = customer.address.zip
 
         // Contact
-        _phone.clear()
-        _phone.addAll(customer.contactInfo.phone)
-        _email.clear()
-        _email.addAll(customer.contactInfo.email)
+        phone = customer.phone
+        email = customer.email
 
-        setNotes(notes)
+        _notes.clear()
+        _notes.addAll(notes)
 
         _tickets.clear()
         _tickets.addAll(tickets)
@@ -178,8 +160,8 @@ class CustomerSeed: DataSeed() {
         city = ""
         state = ""
         zip = ""
-        _email.clear()
-        _phone.clear()
+        email = ""
+        phone = ""
         _tickets.clear()
         _notes.clear()
         _images.clear()
@@ -198,19 +180,19 @@ class CustomerSeed: DataSeed() {
             city,
             state,
             zip,
-            _email,
-            _phone,
+            email,
+            phone,
             _tickets,
             _notes,
             _images,
             time
-        )
+        ).hashCode()
 
         changedFields.clear()
     }
 
     override fun toString(): String =
-        "CustomerSeed(Name=$firstName $lastName, Address=$street $city $state $zip, Email=${_email.toList()}, Phone=${_phone.toList()}, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
+        "CustomerSeed(Name=$firstName $lastName, Address=$street $city $state $zip, Email=$email, Phone=$phone, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
 
     private data class State(
         val identifier: UUID = UUIDv7.randomUUID(),
@@ -220,10 +202,10 @@ class CustomerSeed: DataSeed() {
         val city: String = "",
         val state: String = "",
         val zip: String = "",
-        val email: List<String> = emptyList(),
-        val phone: List<String> = emptyList(),
-        val tickets: List<UUID> = emptyList(),
-        val notes: Map<Note, List<StoredImage>> = emptyMap(),
+        val email: String = "",
+        val phone: String = "",
+        val tickets: List<Ticket> = emptyList(),
+        val notes: List<Note> = emptyList(),
         val images: List<StoredImage> = emptyList(),
         val time: Long = 0
     )

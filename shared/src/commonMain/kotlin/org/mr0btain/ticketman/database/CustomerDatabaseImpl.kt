@@ -2,15 +2,12 @@ package org.mr0btain.ticketman.database
 
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
-import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
@@ -28,6 +25,9 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
     private val REMOVE_TICKET_TAG = "$tag:RemoveTicket"
+    private val UPDATE_NAME_TAG = "$tag:UpdateName"
+    private val UPDATE_PHONE_TAG = "$tag:UpdateName"
+    private val UPDATE_EMAIL_TAG = "$tag:UpdateName"
 
     override fun all(): List<Customer>? {
         var result: List<Customer>? = null
@@ -99,8 +99,8 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     CustomerEntity.new(item.identifier) {
                         name = item.name.toString()
                         address = item.address
-                        email = item.contactInfo.email.first()
-                        phone = item.contactInfo.phone
+                        email = item.email
+                        phone = item.phone
                     }
                 }
 
@@ -162,8 +162,8 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 CustomerEntity.new(data.identifier) {
                     name = data.name.toString()
                     address = data.address
-                    email = data.contactInfo.email.first()
-                    phone = data.contactInfo.phone
+                    email = data.email
+                    phone = data.phone
                 }
 
                 true
@@ -181,8 +181,8 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     ?.apply {
                         name = data.name.toString()
                         address = data.address
-                        email = data.contactInfo.email.first()
-                        phone = data.contactInfo.phone
+                        email = data.email
+                        phone = data.phone
 
                         result = true
                     } ?: AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND)
@@ -192,13 +192,64 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun addNote(identifier: UUID, note: Note, storedImages: List<StoredImage>) {
+    fun updateName(identifier: UUID, newName: String) {
+        appLogTryCatch(UPDATE_NAME_TAG) {
+            transaction {
+                var result = false
+
+                CustomerEntity
+                    .findById(identifier)
+                    ?.apply {
+                        name = newName
+                        result = true
+                    } ?: AppLogger.i(UPDATE_NAME_TAG, CustomerError.NOT_FOUND)
+
+                result
+            }
+        }
+    }
+
+    fun updatePhone(identifier: UUID, newPhone: String) {
+        appLogTryCatch(UPDATE_PHONE_TAG) {
+            transaction {
+                var result = false
+
+                CustomerEntity
+                    .findById(identifier)
+                    ?.apply {
+                        phone = newPhone
+                        result = true
+                    } ?: AppLogger.i(UPDATE_PHONE_TAG, CustomerError.NOT_FOUND)
+
+                result
+            }
+        }
+    }
+
+    fun updateEmail(identifier: UUID, newEmail: String) {
+        appLogTryCatch(UPDATE_EMAIL_TAG) {
+            transaction {
+                var result = false
+
+                CustomerEntity
+                    .findById(identifier)
+                    ?.apply {
+                        email = newEmail
+                        result = true
+                    } ?: AppLogger.i(UPDATE_EMAIL_TAG, CustomerError.NOT_FOUND)
+
+                result
+            }
+        }
+    }
+
+    override fun addNote(identifier: UUID, note: Note) {
         appLogTryCatch(ADD_NOTE_TAG) {
             var result = false
 
             transaction {
                 // Insert the note into database and get its entity
-                insertNote(note, storedImages)?.let { noteEntity ->
+                insertNote(note)?.let { noteEntity ->
                     // Add note to customer notes
                     CustomerEntity.findByIdAndUpdate(identifier) { customerEntity ->
                         customerEntity.notes = SizedCollection(customerEntity.notes + noteEntity)
@@ -211,14 +262,14 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun getNotes(identifier: UUID): Map<Note, List<StoredImage>>? {
-        var result: Map<Note, List<StoredImage>>? = null
+    override fun getNotes(identifier: UUID): List<Note>? {
+        var result: List<Note>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
             transaction {
                 CustomerEntity.findById(identifier)?.let { customerEntity ->
-                    result = customerEntity.notes.associate { noteEntity ->
-                        noteEntity.toNote() to noteEntity.images.map { it.toStoredImage() }
+                    result = customerEntity.notes.map { noteEntity ->
+                        noteEntity.toNote()
                     }
                 } ?: AppLogger.i(GET_NOTES_TAG, CustomerError.NOT_FOUND)
             }

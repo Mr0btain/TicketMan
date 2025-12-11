@@ -21,18 +21,15 @@ class TicketSeed(): DataSeed() {
         private set
     var priority: TicketPriority by mutableStateOf(TicketPriority())
         private set
-    var customer: UUID? by mutableStateOf<UUID?>(null)
+    var customer: UUID? by mutableStateOf(null)
         private set
-    var user: UUID? by mutableStateOf<UUID?>(null)
+    var user: UUID? by mutableStateOf(null)
         private set
-
-    // snapshot of the last saved state
-    private var savedState: State = State()
 
     // --- Initial setting up with data ---
     fun setInitial(
         ticket: Ticket,
-        notes: Map<Note, List<StoredImage>>,
+        notes: List<Note> = emptyList(),
         customerId: UUID? = null,
         userId: UUID? = null
     ) {
@@ -107,7 +104,7 @@ class TicketSeed(): DataSeed() {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(identifier, device, status, priority, customer, user,  notes, _images, time)
+        savedState = State(identifier, device, status, priority, customer, user,  notes, _images, time).hashCode()
         changedFields.clear()  // Reset the changed fields
     }
 
@@ -122,7 +119,7 @@ class TicketSeed(): DataSeed() {
         val priority: TicketPriority = TicketPriority(),
         val customer: UUID? = null,
         val user: UUID? = null,
-        val notes: Map<Note, List<StoredImage>> = emptyMap(),
+        val notes: List<Note> = emptyList(),
         val images: List<StoredImage> = emptyList(),
         val time: Long = 0
     )
