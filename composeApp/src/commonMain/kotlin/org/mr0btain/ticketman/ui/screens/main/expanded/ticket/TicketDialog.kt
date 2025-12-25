@@ -36,244 +36,232 @@ import kotlin.uuid.ExperimentalUuidApi
 fun TicketDialog(
     modifier: Modifier = Modifier,
     seed: TicketSeed,
+    isVisible: Boolean,
     onCustomerSearchQuery: suspend (String) -> List<SearchResult>,
     onUserSearchQuery: suspend (String) -> List<SearchResult>,
     onContinue: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    // Customer and User
-    var customer by remember { mutableStateOf(seed.customer) }
-    var user by remember { mutableStateOf(seed.user) }
+    if (isVisible) {
+        // For deleting item dialog
+        var showConfirmDeleteScreen by remember { mutableStateOf(false) }
+        var itemForDelete by remember { mutableStateOf(DataType.NONE) }
 
-    // Device
-    var deviceManufacturer by remember(seed) { mutableStateOf(seed.ticket?.device?.manufacturer ?: "") }
-    var deviceModel by remember(seed) { mutableStateOf(seed.ticket?.device?.model ?: "") }
+        // For editing or adding notes dialog
+        var showNoteDialog by remember { mutableStateOf(false) }
+        var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
 
-    // Status and priority
-    var status by remember(seed) { mutableStateOf(seed.ticket?.status ?: TicketStatus(TicketStatusType.IN_PROGRESS)) }
-    var priority by remember(seed) { mutableStateOf(seed.ticket?.priority ?: TicketPriority(TicketPriorityType.NORMAL)) }
+        // For customer search bar
+        var isCustomerSearchEnabled by remember { mutableStateOf(false) }
 
-    // Mutable lists
-    val notes = remember(seed) { seed.notes.toMutableStateList() }
+        // For employee search bar
+        var isUserSearchEnabled by remember { mutableStateOf(false) }
 
-    // For deleting item dialog
-    var showConfirmDeleteScreen by remember { mutableStateOf(false) }
-    var itemForDelete by remember { mutableStateOf(DataType.NONE) }
+        // Edit or add update dialog
+        EditNoteDialog(
+            seed = noteSeedData,
+            onConfirm = { result ->
+                val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
 
-    // For editing or adding notes dialog
-    var showNoteDialog by remember { mutableStateOf(false) }
-    var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
+                // Check if note exists, if so remove old data
+                if (foundNote != null) notes.remove(foundNote)
 
-    // For customer search bar
-    var isCustomerSearchEnabled by remember { mutableStateOf(false) }
-
-    // For employee search bar
-    var isUserSearchEnabled by remember { mutableStateOf(false) }
-
-    // Edit or add update dialog
-    EditNoteDialog(
-        seed = noteSeedData,
-        onConfirm = { result ->
-            val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
-
-            // Check if note exists, if so remove old data
-            if (foundNote != null) notes.remove(foundNote)
-
-            notes.add(result)
-            noteSeedData = null
-            showNoteDialog = false
-        },
-        isVisible = showNoteDialog,
-        onDismissRequest = {
-            noteSeedData = null
-            showNoteDialog = false
-        }
-    )
-
-    // Delete item dialog
-    if (showConfirmDeleteScreen) {
-        /*
-        ConfirmDeleteDialog(
-            label = when (itemForDelete) {
-                SubItemType.UPDATE -> notes[itemUpForDeleteIndex].note.author + "'s Update"
-                else -> ""
+                notes.add(result)
+                noteSeedData = null
+                showNoteDialog = false
             },
-            isDarkMode = isDarkMode,
-            mainItemType = MainItemType.CUSTOMER,
-            onDismissRequest = { confirm ->
-                if (confirm && itemForDelete != SubItemType.NONE) {
-                    when (itemForDelete) {
-                        SubItemType.UPDATE -> {
-                            // Remove item from list
-                            notes.removeAt(itemUpForDeleteIndex)
-                        }
-
-                        // For everything else do nothing
-                        else -> {}
-                    }
-                }
-
-                showConfirmDeleteScreen = false
-            },
+            isVisible = showNoteDialog,
+            onDismissRequest = {
+                noteSeedData = null
+                showNoteDialog = false
+            }
         )
-         */
-    }
 
-    Dialog(
-        onDismissRequest = { onDismiss() }
-    ) {
-        Surface(
-            modifier = modifier
-                .height(600.dp)
-                .width(600.dp),
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp
+        // Delete item dialog
+        if (showConfirmDeleteScreen) {
+            /*
+            ConfirmDeleteDialog(
+                label = when (itemForDelete) {
+                    SubItemType.UPDATE -> notes[itemUpForDeleteIndex].note.author + "'s Update"
+                    else -> ""
+                },
+                isDarkMode = isDarkMode,
+                mainItemType = MainItemType.CUSTOMER,
+                onDismissRequest = { confirm ->
+                    if (confirm && itemForDelete != SubItemType.NONE) {
+                        when (itemForDelete) {
+                            SubItemType.UPDATE -> {
+                                // Remove item from list
+                                notes.removeAt(itemUpForDeleteIndex)
+                            }
+
+                            // For everything else do nothing
+                            else -> {}
+                        }
+                    }
+
+                    showConfirmDeleteScreen = false
+                },
+            )
+             */
+        }
+
+        Dialog(
+            onDismissRequest = { onDismiss() }
         ) {
-            Column(
-                modifier = Modifier.padding(32.dp)
+            Surface(
+                modifier = modifier
+                    .height(600.dp)
+                    .width(600.dp),
+                shape = RoundedCornerShape(10.dp),
+                shadowElevation = 4.dp
             ) {
-                // -------------------------------------------- Header ----------------------------------------------------
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Center
+                Column(
+                    modifier = Modifier.padding(32.dp)
                 ) {
-                    Text(
-                        modifier = Modifier.padding(4.dp),
-                        text = if (seed.isNew) "Add New Ticket: ${seed.ticket?.identifier}" else "Edit Ticket: ${seed.ticket?.identifier}",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 26.sp,
-                        maxLines = 1
+                    // -------------------------------------------- Header ----------------------------------------------------
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            modifier = Modifier.padding(4.dp),
+                            text = if (seed.isNew) "Add New Ticket: ${seed.ticket?.identifier}" else "Edit Ticket: ${seed.ticket?.identifier}",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 26.sp,
+                            maxLines = 1
+                        )
+                    }
+
+                    HorizontalDivider(Modifier.padding(4.dp))
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    // -------------------------------------------- Content ----------------------------------------------------
+                    PlatformLazyColumn(
+                        modifier = Modifier
+                            .width(500.dp)
+                            .height(400.dp),
+                        isVisible = true
+                    ) {
+                        item {
+                            // ------------------------- Customer -------------------------------
+                            Text(
+                                text = "Customer",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // Customer search bar
+                            // TODO: Maybe make this a regular text field then add and editable button
+                            SearchBar(
+                                modifier = Modifier.padding(start = 8.dp),
+                                initialText = customer.toString(),
+                                onClick = { result -> customer = result.identity() },
+                                onQuery = onCustomerSearchQuery,
+                                enabled = isCustomerSearchEnabled
+                            )
+
+                            Spacer(Modifier.padding(8.dp))
+
+                            // ------------------------- Assigned user -------------------------------
+                            Text(
+                                text = "Assigned User",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // User search bar
+                            // TODO: Maybe make this a regular text field then add and editable button
+                            SearchBar(
+                                modifier = Modifier.padding(start = 8.dp),
+                                initialText = user.toString(),
+                                onClick = { result -> user = result.identity() },
+                                onQuery = onUserSearchQuery,
+                                enabled = isUserSearchEnabled
+                            )
+
+                            Spacer(Modifier.padding(8.dp))
+
+                            // ------------------------- Device -------------------------------
+                            Text(
+                                text = "Device",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // TODO: Maybe make this drop down with list of things?
+                            DialogTextRow(
+                                modifier = Modifier,
+                                firstLabel = "Manufacturer",
+                                firstValue = deviceManufacturer,
+                                onFirstValueChange = { deviceManufacturer = it },
+                                secondLabel = "Model",
+                                secondValue = deviceModel,
+                                onSecondValueChange = { deviceModel = it }
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // ------------------------- Status -------------------------------
+                            Text(
+                                text = "Status",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp
+                            )
+
+                            TicketStatusDropDown(
+                                modifier = Modifier.width(350.dp),
+                                status = status,
+                                onClick = { status = it }
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // ------------------------- Priority -------------------------------
+                            Text(
+                                text = "Priority",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 18.sp
+                            )
+
+                            TicketPriorityDropDown(
+                                modifier = Modifier.width(350.dp),
+                                priority = priority,
+                                onClick = { priority = it }
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // ------------------------- Updates -------------------------------
+                            NoteBlock(
+                                label = "Updates",
+                                noteData = notes,
+                                editable = true,
+                                onEditClick = { id ->
+                                    noteSeedData = notes.find { it.note.identifier == id }
+                                    showNoteDialog = true
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    // -------------------------------------------- Confirm Cancel buttons ----------------------------------------------------
+                    ConfirmCancelButtons(
+                        modifier = Modifier.fillMaxWidth(),
+                        onCancelClick = { onDismiss() },
+                        onConfirmClick = { onContinue() }
                     )
                 }
-
-                HorizontalDivider(Modifier.padding(4.dp))
-
-                Spacer(Modifier.padding(8.dp))
-
-                // -------------------------------------------- Content ----------------------------------------------------
-                PlatformLazyColumn(
-                    modifier = Modifier
-                        .width(500.dp)
-                        .height(400.dp),
-                    isVisible = true
-                ) {
-                    item {
-                        // ------------------------- Customer -------------------------------
-                        Text(
-                            text = "Customer",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // Customer search bar
-                        // TODO: Maybe make this a regular text field then add and editable button
-                        SearchBar(
-                            modifier = Modifier.padding(start = 8.dp),
-                            initialText = customer.toString(),
-                            onClick = { result -> customer = result.identity() },
-                            onQuery = onCustomerSearchQuery,
-                            enabled = isCustomerSearchEnabled
-                        )
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        // ------------------------- Assigned user -------------------------------
-                        Text(
-                            text = "Assigned User",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // User search bar
-                        // TODO: Maybe make this a regular text field then add and editable button
-                        SearchBar(
-                            modifier = Modifier.padding(start = 8.dp),
-                            initialText = user.toString(),
-                            onClick = { result -> user = result.identity() },
-                            onQuery = onUserSearchQuery,
-                            enabled = isUserSearchEnabled
-                        )
-
-                        Spacer(Modifier.padding(8.dp))
-
-                        // ------------------------- Device -------------------------------
-                        Text(
-                            text = "Device",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // TODO: Maybe make this drop down with list of things?
-                        DialogTextRow(
-                            modifier = Modifier,
-                            firstLabel = "Manufacturer",
-                            firstValue = deviceManufacturer,
-                            onFirstValueChange = { deviceManufacturer = it },
-                            secondLabel = "Model",
-                            secondValue = deviceModel,
-                            onSecondValueChange = { deviceModel = it }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // ------------------------- Status -------------------------------
-                        Text(
-                            text = "Status",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        TicketStatusDropDown(
-                            modifier = Modifier.width(350.dp),
-                            status = status,
-                            onClick = { status = it }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // ------------------------- Priority -------------------------------
-                        Text(
-                            text = "Priority",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 18.sp
-                        )
-
-                        TicketPriorityDropDown(
-                            modifier = Modifier.width(350.dp),
-                            priority = priority,
-                            onClick = { priority = it }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // ------------------------- Updates -------------------------------
-                        NoteBlock(
-                            label = "Updates",
-                            noteData = notes,
-                            editable = true,
-                            onEditClick = { id ->
-                                noteSeedData = notes.find { it.note.identifier == id }
-                                showNoteDialog = true
-                            }
-                        )
-                    }
-                }
-
-                Spacer(Modifier.padding(8.dp))
-
-                // -------------------------------------------- Confirm Cancel buttons ----------------------------------------------------
-                ConfirmCancelButtons(
-                    modifier = Modifier.fillMaxWidth(),
-                    onCancelClick = { onDismiss() },
-                    onConfirmClick = { onContinue() }
-                )
             }
         }
     }

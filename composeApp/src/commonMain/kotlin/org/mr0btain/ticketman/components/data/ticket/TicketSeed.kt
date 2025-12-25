@@ -26,8 +26,11 @@ class TicketSeed(): DataSeed() {
     var user: UUID? by mutableStateOf(null)
         private set
 
+    val ticket: Ticket
+        get() = Ticket(identifier, device, status, priority)
+
     // --- Initial setting up with data ---
-    fun setInitial(
+    fun setTicket(
         ticket: Ticket,
         notes: List<Note> = emptyList(),
         customerId: UUID? = null,

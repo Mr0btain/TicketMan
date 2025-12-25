@@ -16,7 +16,4 @@ data class Customer(
     val address: Address = Address(),
     val email: String = "",
     val phone: String = ""
-): MainItem {
-    fun toIdentity(): Identity =
-        Identity(identifier, name.toString())
-}
+): MainItem

@@ -7,13 +7,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.customer.*
-import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.customer.CustomerCache
+import org.mr0btain.ticketman.components.data.customer.CustomerSeed
+import org.mr0btain.ticketman.components.data.inventory.InventoryCache
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
-import org.mr0btain.ticketman.components.data.ticket.TicketData
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.database.SettingsDatabase
@@ -167,11 +167,10 @@ class MainViewModel(
                         ChangedField.NAME -> customerDatabase.updateName(customerSeed.identifier, customerSeed.name)
                         ChangedField.EMAIL -> customerDatabase.updateEmail(customerSeed.identifier, customerSeed.email)
                         ChangedField.PHONE -> customerDatabase.updatePhone(customerSeed.identifier, customerSeed.phone)
-                        ChangedField.NOTE -> {
-                            // TODO: Flesh this out
-                        }
+                        ChangedField.NOTE -> {} // TODO
+                        ChangedField.TICKET -> {} // TODO
 
-                        else -> {} // Do nothing. This shouldn't ever happen
+                        else -> {} // Do nothing
                     }
                 }
             }
@@ -180,6 +179,8 @@ class MainViewModel(
 
     /** Sets the selected customer and inserts the data into the cache */
     fun setSelectedCustomer(identifier: UUID) {
+        if (customerSeed.identifier == identifier) return
+
         viewModelScope.launch {
             // Get customer from cache if we can and set the values
             val cached = customerCache.get(identifier)?.let { (customer, notes, tickets) ->
@@ -227,86 +228,59 @@ class MainViewModel(
 
     val ticketSeed: TicketSeed = TicketSeed()
 
-    private val _selectedTicketData: MutableStateFlow<TicketData?> = MutableStateFlow(null)
-    val selectedTicketData = _selectedTicketData.asStateFlow()
-
     /** Sets selected ticket and adds it to the cache */
-    private suspend fun setSelectedTicket(ticketData: TicketData) {
-        // Set selected ticket
-        _selectedTicketData.value = ticketData
+    fun setSelectedTicket(identifier: UUID) {
+        if (ticketSeed.identifier == identifier) return
 
-        // Add to cache
-        ticketCache.put(ticketData.ticket.identifier, ticketData)
-    }
-
-    fun changeSelectedTicket(identifier: UUID) {
         viewModelScope.launch {
-            if (selectedTicketData.value?.ticket?.identifier != identifier) {
-                val cachedTicket = ticketCache.get(identifier)?.also { ticketData ->
-                    _selectedTicketData.value = ticketData
-                }
+            val cached = ticketCache.get(identifier)?.let { (ticket, notes) ->
+                ticketSeed.setTicket(
+                    ticket = ticket,
+                    notes = notes
+                )
+            }
 
-                if (cachedTicket == null) {
-                    ticketDatabase.getById(identifier)?.let { ticket ->
-                        val notes = ticketDatabase.getNotes(identifier)
-                            ?.map { NoteData(it.key, it.value) }
-                            ?: emptyList()
+            // If cache didn't have ticket, pull it and add to cache
+            if (cached == null) {
+                ticketDatabase.getById(identifier)?.let { ticket ->
+                    // Get notes
+                    val notes = ticketDatabase.getNotes(identifier) ?: emptyList()
 
-                        setSelectedTicket(TicketData(ticket, notes))
-                    }
+                    // Set seed data
+                    ticketSeed.setTicket(ticket, notes)
+
+                    // Insert into cache
+                    ticketCache.put(ticket, notes)
                 }
             }
         }
     }
 
-    fun setupNewTicket() {
-        _selectedTicketData.value = TicketData()
-    }
+    fun handleTicketChange() {
+        // If no changes, then return
+        if (!ticketSeed.isDirty) return
 
-    fun resetSelectedTicket() {
-        _selectedTicketData.value = null
-    }
-
-    fun addOrUpdateTicket(ticketData: TicketData) {
         viewModelScope.launch {
-            val existingTicket = ticketDatabase.getById(ticketData.ticket.identifier)
-                ?.also { ticket ->
-                    // Update if its changed
-                    if (ticketData.ticket != ticket) ticketDatabase.update(ticketData.ticket)
+            if (ticketSeed.isNew) {
+                ticketDatabase.add(ticketSeed.ticket)
 
-                    // Existing notes for comparison
-                    val existingNotes = ticketDatabase.getNotes(ticketData.ticket.identifier)
-                        ?.map { NoteData(it.key, it.value) }
-                        ?: emptyList()
-
-                    // Check if the note exists already and update if it needs to or add new
-                    ticketData.notes.forEach { noteData ->
-                        existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
-                            ?.let { existingNote ->
-                                if (noteData != existingNote) {
-                                    ticketDatabase.updateNote(noteData.note, noteData.images)
-                                }
-                            } ?: ticketDatabase.addNote(
-                            ticketData.ticket.identifier,
-                            noteData.note,
-                            noteData.images
-                        )
-                    }
-                }
-
-            // If it doesn't exist, then add new
-            if (existingTicket == null) {
-                // Add item
-                ticketDatabase.add(ticketData.ticket)
-
-                // Add notes
-                ticketData.notes.forEach { (note, images) ->
-                    ticketDatabase.addNote(ticketData.ticket.identifier, note, images)
+                ticketSeed.notes.forEach { note ->
+                    ticketDatabase.addNote(ticketSeed.identifier, note)
                 }
             }
 
-            // update selected
-            setSelectedTicket(ticketData)
+            ticketSeed.getChangedFields().forEach { changedField ->
+                when (changedField) {
+                    ChangedField.NOTE -> {}
+                    ChangedField.STATUS -> {}
+                    ChangedField.PRIORITY -> {}
+                    ChangedField.DEVICE -> {}
+                    ChangedField.CUSTOMER -> {}
+                    ChangedField.USER -> {}
+
+                    else -> {} // Do nothing
+                }
+            }
         }
     }
 
@@ -314,16 +288,17 @@ class MainViewModel(
         ticketDatabase.search(query, 20) ?: emptyList()
     }
 
-    // TODO:
-    fun removeSelectedTicket() {
+    fun removeTicket(identifier: UUID) {
         viewModelScope.launch {
+            if (ticketSeed.identifier == identifier) ticketSeed.clear()
 
+            ticketDatabase.remove(identifier)
         }
     }
 
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
 
-    val inventoryCache = LruCache<UUID, InventoryData>(maxCacheSize, "InventoryCache")
+    val inventoryCache = InventoryCache()
 
     private val inventoryDatabase = InventoryDatabaseImpl()
 
@@ -331,94 +306,69 @@ class MainViewModel(
 
     val inventorySeed: InventorySeed = InventorySeed()
 
-    private val _selectedInventoryData: MutableStateFlow<InventoryData?> = MutableStateFlow(null)
-    val selectedInventoryData = _selectedInventoryData.asStateFlow()
+    fun setSelectedInventory(identifier: UUID) {
+        if (inventorySeed.identifier == identifier) return
 
-    /** Sets selected inventory and adds it to the cache */
-    private suspend fun setSelectedInventory(inventoryData: InventoryData) {
-        // Set selected inventory
-        _selectedInventoryData.value = inventoryData
+        viewModelScope.launch {
+           val cached = inventoryCache.get(identifier)?.let { (inventory, notes) ->
+               inventorySeed.setInitial(inventory, notes)
+           }
 
-        // Add to cache
-        inventoryCache.put(inventoryData.inventory.identifier, inventoryData)
+            if (cached == null) {
+                inventoryDatabase.getById(identifier)?.let { inventory ->
+                    val notes = inventoryDatabase.getNotes(identifier) ?: emptyList()
+
+                    inventorySeed.setInitial(inventory, notes)
+
+                    inventoryCache.put(inventory, notes)
+                }
+            }
+        }
     }
 
-    fun changeSelectedInventory(identifier: UUID) {
+    fun handleInventoryChange() {
+        if (!inventorySeed.isDirty) return
+
         viewModelScope.launch {
-            if (selectedInventoryData.value?.inventory?.identifier != identifier) {
-                val cachedInventory = inventoryCache.get(identifier)?.also { inventoryData ->
-                    _selectedInventoryData.value = inventoryData
+            if (inventorySeed.isNew) {
+                inventoryDatabase.add(inventorySeed.inventory)
+
+                inventoryDatabase.addImages(inventorySeed.identifier, inventorySeed.images)
+
+                inventorySeed.notes.forEach { note ->
+                    inventoryDatabase.addNote(inventorySeed.identifier, note)
                 }
-
-                if (cachedInventory == null) {
-                    inventoryDatabase.getById(identifier)?.let { inventory ->
-                        val notes = inventoryDatabase.getNotes(identifier)
-                            ?.map { NoteData(it.key, it.value) }
-                            ?: emptyList()
-
-                        val images = inventoryDatabase.getImages(identifier) ?: emptyList()
-
-                        setSelectedInventory(
-                            InventoryData(
-                                inventory = inventory,
-                                notes = notes,
-                                images = images
-                            )
-                        )
+            } else {
+                inventorySeed.getChangedFields().forEach { changedField ->
+                    when (changedField) {
+                        ChangedField.NAME -> inventoryDatabase.updateName(inventorySeed.identifier, inventorySeed.name)
+                        ChangedField.DESCRIPTION -> inventoryDatabase.updateDescription(inventorySeed.identifier, inventorySeed.description)
+                        ChangedField.STOCK -> inventoryDatabase.updateStock(inventorySeed.identifier, inventorySeed.stock)
+                        ChangedField.COST -> inventoryDatabase.updateCost(inventorySeed.identifier, inventorySeed.cost.toString())
+                        ChangedField.PRICE -> inventoryDatabase.updatePrice(inventorySeed.identifier, inventorySeed.price.toString())
+                        ChangedField.NOTE -> {
+                            // TODO: Setup way to see which one has changed
+                            inventorySeed.notes.forEach { note ->
+                                inventoryDatabase.updateNote(note)
+                            }
+                        }
+                        ChangedField.IMAGE -> {
+                            inventorySeed.images.forEach { image ->
+                                inventoryDatabase.updateImage(image)
+                            }
+                        }
+                        else -> {}
                     }
                 }
             }
         }
     }
 
-    fun setupNewInventory() {
-        _selectedInventoryData.value = InventoryData()
-    }
-
-    fun resetSelectedInventory() {
-        _selectedInventoryData.value = null
-    }
-
-    fun addOrUpdateInventory(inventoryData: InventoryData) {
+    fun removeInventory(identifier: UUID) {
         viewModelScope.launch {
-            val existingInventory = inventoryDatabase.getById(inventoryData.inventory.identifier)
-                ?.also { inventory ->
-                    // Update if its changed
-                    if (inventoryData.inventory != inventory) inventoryDatabase.update(inventoryData.inventory)
+            if (inventorySeed.identifier == identifier) inventorySeed.clear()
 
-                    // Existing notes for comparison
-                    val existingNotes = inventoryDatabase.getNotes(inventoryData.inventory.identifier)
-                        ?.map { NoteData(it.key, it.value) }
-                        ?: emptyList()
-
-                    // Check if the note exists already and update if it needs to or add new
-                    inventoryData.notes.forEach { noteData ->
-                        existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
-                            ?.let { existingNote ->
-                                if (noteData != existingNote) {
-                                    inventoryDatabase.updateNote(noteData.note, noteData.images)
-                                }
-                            } ?: inventoryDatabase.addNote(
-                            inventoryData.inventory.identifier,
-                            noteData.note,
-                            noteData.images
-                        )
-                    }
-                }
-
-            // If it doesn't exist, then add new
-            if (existingInventory == null) {
-                // Add item
-                inventoryDatabase.add(inventoryData.inventory)
-
-                // Add notes
-                inventoryData.notes.forEach { (note, images) ->
-                    inventoryDatabase.addNote(inventoryData.inventory.identifier, note, images)
-                }
-            }
-
-            // Set selected
-            setSelectedInventory(inventoryData)
+            inventoryDatabase.remove(identifier)
         }
     }
 
@@ -434,87 +384,9 @@ class MainViewModel(
 
     var userPager: OffsetPager<User>? = null
 
-    private val _selectedUserData: MutableStateFlow<UserData?> = MutableStateFlow(null)
-    val selectedUserData = _selectedUserData.asStateFlow()
-
     /** Sets selected user and adds it to the cache */
-    private suspend fun setSelectedUser(userData: UserData) {
-        // Set selected
-        _selectedUserData.value = userData
-
-        // Add to cache
-        userCache.put(userData.user.identifier, userData)
-    }
-
-    fun changeSelectedUser(identifier: UUID) {
-        viewModelScope.launch {
-            if (selectedUserData.value?.user?.identifier != identifier) {
-                val cachedUser = userCache.get(identifier)?.also { userData ->
-                    _selectedUserData.value = userData
-                }
-
-                if (cachedUser == null) {
-                    userDatabase.getById(identifier)?.let { user ->
-                        val notes = userDatabase.getNotes(identifier)
-                            ?.map { NoteData(it.key, it.value) }
-                            ?: emptyList()
-
-                        _selectedUserData.value = UserData(user, notes)
-                    }
-                }
-            }
-        }
-    }
-
-    fun setupNewUser() {
-        _selectedUserData.value = UserData()
-    }
-
-    fun resetSelectedUser() {
-        _selectedUserData.value = null
-    }
-
-    fun addOrUpdateUser(userData: UserData) {
-        viewModelScope.launch {
-            val existingUser = userDatabase.getById(userData.user.identifier)
-                ?.also { user ->
-                    // Update if its changed
-                    if (userData.user != user) userDatabase.update(userData.user)
-
-                    // Existing notes for comparison
-                    val existingNotes = userDatabase.getNotes(userData.user.identifier)
-                        ?.map { NoteData(it.key, it.value) }
-                        ?: emptyList()
-
-                    // Check if the note exists already and update if it needs to or add new
-                    userData.notes.forEach { noteData ->
-                        existingNotes.firstOrNull { it.note.identifier == noteData.note.identifier }
-                            ?.let { existingNote ->
-                                if (noteData != existingNote) {
-                                    userDatabase.updateNote(noteData.note, noteData.images)
-                                }
-                            } ?: userDatabase.addNote(
-                            userData.user.identifier,
-                            noteData.note,
-                            noteData.images
-                        )
-                    }
-                }
-
-            // If it doesn't exist, then add new
-            if (existingUser == null) {
-                // Add item
-                userDatabase.add(userData.user)
-
-                // Add notes
-                userData.notes.forEach { (note, images) ->
-                    userDatabase.addNote(userData.user.identifier, note, images)
-                }
-            }
-
-            // Set selected
-            setSelectedUser(userData)
-        }
+    private suspend fun setSelectedUser(identifier: UUID) {
+        // TODO
     }
 
     suspend fun searchUsers(query: String) = coroutineScope {
@@ -621,7 +493,7 @@ class MainViewModel(
 
             // Add notes
             notes.forEach { note ->
-                ticketDatabase.addNote(ticket.identifier, note, emptyList())
+                ticketDatabase.addNote(ticket.identifier, note)
             }
 
             // Insert id into list
@@ -637,7 +509,7 @@ class MainViewModel(
 
             // Add notes
             notes.forEach { note ->
-                customerDatabase.addNote(customer.identifier, note, emptyList())
+                customerDatabase.addNote(customer.identifier, note)
             }
 
             // Add random tickets
@@ -654,7 +526,7 @@ class MainViewModel(
             inventoryDatabase.add(inventory)
 
             notes.forEach { note ->
-                inventoryDatabase.addNote(inventory.identifier, note, emptyList())
+                inventoryDatabase.addNote(inventory.identifier, note)
             }
         }
 
@@ -667,7 +539,7 @@ class MainViewModel(
 
             //Add notes
             notes.forEach { note ->
-                userDatabase.addNote(user.identifier, note, emptyList())
+                userDatabase.addNote(user.identifier, note)
             }
 
             // Add random tickets

@@ -24,6 +24,11 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val ADD_IMAGES_TAG = "$tag:AddImages"
     private val REMOVE_IMAGES_TAG = "$tag:RemoveImages"
+    private val UPDATE_NAME_TAG = "$tag:RemoveImages"
+    private val UPDATE_DESCRIPTION_TAG = "$tag:RemoveImages"
+    private val UPDATE_STOCK_TAG = "$tag:RemoveImages"
+    private val UPDATE_COST_TAG = "$tag:RemoveImages"
+    private val UPDATE_PRICE_TAG = "$tag:RemoveImages"
 
     override fun all(): List<Inventory>? {
         var result: List<Inventory>? = null
@@ -184,6 +189,96 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
 
                         result = true
                     } ?: AppLogger.i(UPDATE_TAG, InventoryError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updateName(identifier: UUID, newName: String) {
+        appLogTryCatch(UPDATE_NAME_TAG) {
+            var result = false
+
+            transaction {
+                InventoryEntity
+                    .findById(identifier)
+                    ?.apply {
+                        name = newName
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_NAME_TAG, InventoryError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updateDescription(identifier: UUID, newDescription: String) {
+        appLogTryCatch(UPDATE_DESCRIPTION_TAG) {
+            var result = false
+
+            transaction {
+                InventoryEntity
+                    .findById(identifier)
+                    ?.apply {
+                        description = newDescription
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_DESCRIPTION_TAG, InventoryError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updateStock(identifier: UUID, newStock: Int) {
+        appLogTryCatch(UPDATE_STOCK_TAG) {
+            var result = false
+
+            transaction {
+                InventoryEntity
+                    .findById(identifier)
+                    ?.apply {
+                        stock = newStock
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_STOCK_TAG, InventoryError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updateCost(identifier: UUID, newCost: String) {
+        appLogTryCatch(UPDATE_COST_TAG) {
+            var result = false
+
+            transaction {
+                InventoryEntity
+                    .findById(identifier)
+                    ?.apply {
+                        cost = newCost
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_COST_TAG, InventoryError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updatePrice(identifier: UUID, newPrice: String) {
+        appLogTryCatch(UPDATE_PRICE_TAG) {
+            var result = false
+
+            transaction {
+                InventoryEntity
+                    .findById(identifier)
+                    ?.apply {
+                        price = newPrice
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_PRICE_TAG, InventoryError.NOT_FOUND)
             }
 
             result
