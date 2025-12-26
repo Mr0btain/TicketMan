@@ -1,22 +1,34 @@
 package org.mr0btain.ticketman.database
 
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
+import org.mr0btain.ticketman.database.tables.customer.CustomerTable
+import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketTable
+import org.mr0btain.ticketman.database.tables.user.UserEntity
+import org.mr0btain.ticketman.database.tables.user.UserTable
+import org.mr0btain.ticketman.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
 import java.util.*
 
+@Suppress("PrivatePropertyName")
 class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
+    private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
+    private val GET_USER_TAG = "$tag:GetUser"
+
     override fun all(): List<Ticket>? {
         var result: List<Ticket>? = null
 
@@ -195,6 +207,62 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
                         noteEntity.toNote()
                     }
                 } ?: AppLogger.i(GET_NOTES_TAG, TicketError.NOT_FOUND)
+            }
+
+            result != null
+        }
+
+        return result
+    }
+
+    fun getUser(ticketId: UUID): Identity? {
+        var result: Identity? = null
+
+        appLogTryCatch(GET_USER_TAG) {
+            transaction {
+                result = UserEntity
+                    .wrapRows(
+                        UserTable
+                            .join(
+                                UserTicketTable,
+                                JoinType.INNER,
+                                UserTable.id,
+                                UserTicketTable.user
+                            )
+                            .selectAll()
+                            .where { UserTicketTable.ticket eq ticketId }
+                            .limit(1)
+                    )
+                    .singleOrNull()
+                    ?.toIdentity()
+            }
+
+            result != null
+        }
+
+        return result
+    }
+
+    fun getCustomer(ticketId: UUID): Identity? {
+        var result: Identity? = null
+
+        appLogTryCatch(GET_CUSTOMER_TAG) {
+            transaction {
+                result = CustomerEntity
+                    .wrapRows(
+                        CustomerTable
+                            .join(
+                                CustomerTicketTable,
+                                JoinType.INNER,
+                                CustomerTable.id,
+                                CustomerTicketTable.customer
+                            )
+                            .selectAll()
+                            .where { CustomerTicketTable.ticket eq ticketId }
+                            .limit(1)
+                    )
+                    .singleOrNull()
+                    ?.toIdentity()
             }
 
             result != null

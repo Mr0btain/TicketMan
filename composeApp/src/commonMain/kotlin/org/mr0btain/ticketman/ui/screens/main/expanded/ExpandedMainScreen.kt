@@ -111,57 +111,21 @@ fun ExpandedMainScreen(
     TicketDialog(
         seed = ticketSeed,
         isVisible = showTicketDialog,
-        onContinue = {
-            // TODO: Not sure if we should do this here or not.
-            try {
-                // Check if there's been a change
-                if (ticketSeed.isDirty) {
-                    // Update changes
-                    ticketSeed.getChangedFields().forEach { change ->
-                        when (change) {
-                            ChangedField.TICKET -> {
-                                // Check if ticket is not null, then add or update it
-                                if (ticketSeed.ticket != null) {
-                                    viewModel.addOrUpdateTicket(
-                                        TicketData(
-                                            ticketSeed.ticket!!,
-                                            ticketSeed.notes
-                                        )
-                                    )
-                                }
-                            }
-
-                            else -> {
-                                // Something is really wrong if we hit this
-                            }
-                        }
-                    }
-                }
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-            }
-        },
-        onDismiss = {
-            // Hide dialog
-            showTicketDialog = false
-        },
+        onContinue = { viewModel.handleTicketChange() },
+        onDismiss = { showTicketDialog = false }, // Hide dialog
         onCustomerSearchQuery = { query -> viewModel.searchCustomers(query) },
         onUserSearchQuery = { query -> viewModel.searchUsers(query) }
     )
 
     // For inventory adding or editing
-    if (showInventoryDialog) {
-        selectedInventory.value?.let { inventoryData ->
-            InventoryDialog(
-                inventorySeed = inventoryData,
-                onDismiss = { showInventoryDialog = false },
-                isDarkMode = isDarkMode,
-                onContinue = {
-                    // TODO: Note yet implemented
-                }
-            )
-        }
-    }
+    InventoryDialog(
+        inventorySeed = viewModel.inventorySeed,
+        isVisible = showInventoryDialog,
+        onDismiss = { showInventoryDialog = false },
+        onContinue = {
+            // TODO: Note yet implemented
+        },
+    )
 
     // For confirming deleting an item
     ConfirmDeleteDialog(

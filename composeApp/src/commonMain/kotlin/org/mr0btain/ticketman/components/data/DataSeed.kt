@@ -78,6 +78,7 @@ abstract class DataSeed {
         }
     }
 
+    /*
     fun setTime(newTime: Time) {
         val new = newTime.toLong()
 
@@ -93,9 +94,15 @@ abstract class DataSeed {
             changedFields.add(ChangedField.TIME)
         }
     }
+     */
 
     fun getNote(identifier: UUID): Note? =
         _notes.firstOrNull { it.identifier == identifier }
+
+    fun editNote(note: Note) {
+        _notes.removeIf { it.identifier == note.identifier }
+        _notes.add(note)
+    }
 
     abstract override fun toString(): String
 }

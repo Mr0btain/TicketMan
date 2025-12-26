@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.database.tables.user
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
+import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
@@ -15,7 +16,8 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     var username by UserTable.username
     var password by UserTable.password
     var name by UserTable.name
-    var contactInfo by UserTable.contactInfo
+    var email by UserTable.email
+    var phone by UserTable.phone
     var access by UserTable.access
 
     // For notes
@@ -30,8 +32,13 @@ class UserEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
             username = username,
             password = password,
             name = PersonName.fromString(name),
-            contactInfo = contactInfo,
+            email = email,
+            phone = phone,
             accessLevel = access
         )
+    }
+
+    fun toIdentity(): Identity {
+        return Identity(id.value, name)
     }
 }

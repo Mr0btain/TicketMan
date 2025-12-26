@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.data.user
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.MainItem
-import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.shared.PersonName
@@ -18,12 +17,10 @@ data class User(
     val username: String = "",
     val password: String = "",
     val name: PersonName = PersonName(),
-    val contactInfo: ContactInfo = ContactInfo(),
+    val email: String = "",
+    val phone: String = "",
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED
-): MainItem {
-    fun toIdentity(): Identity =
-        Identity(identifier, name.toString())
-}
+): MainItem
 
 // TODO: Flesh out
 fun hashPassword(password: String): String {

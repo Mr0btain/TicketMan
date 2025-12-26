@@ -9,4 +9,8 @@ object CustomerTicketTable: Table("customer_tickets_table") {
     val ticket = reference("ticket_id", TicketTable, onDelete = ReferenceOption.CASCADE)
 
     override val primaryKey = PrimaryKey(customer, ticket)
+
+    init {
+        index(isUnique = true, ticket)
+    }
 }

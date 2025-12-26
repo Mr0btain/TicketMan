@@ -6,7 +6,6 @@ import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -19,7 +18,6 @@ import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.logging.SimpleResult
 import java.util.*
 
 @Suppress("PrivatePropertyName")

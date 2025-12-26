@@ -11,14 +11,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.data.ticket.TicketPriority
-import org.mr0btain.ticketman.data.ticket.TicketPriorityType
-import org.mr0btain.ticketman.data.ticket.TicketStatus
-import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -37,6 +33,7 @@ fun TicketDialog(
     modifier: Modifier = Modifier,
     seed: TicketSeed,
     isVisible: Boolean,
+    noteSeed: NoteSeed,
     onCustomerSearchQuery: suspend (String) -> List<SearchResult>,
     onUserSearchQuery: suspend (String) -> List<SearchResult>,
     onContinue: () -> Unit,
@@ -49,7 +46,6 @@ fun TicketDialog(
 
         // For editing or adding notes dialog
         var showNoteDialog by remember { mutableStateOf(false) }
-        var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
 
         // For customer search bar
         var isCustomerSearchEnabled by remember { mutableStateOf(false) }
@@ -59,20 +55,15 @@ fun TicketDialog(
 
         // Edit or add update dialog
         EditNoteDialog(
-            seed = noteSeedData,
-            onConfirm = { result ->
-                val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
-
-                // Check if note exists, if so remove old data
-                if (foundNote != null) notes.remove(foundNote)
-
-                notes.add(result)
-                noteSeedData = null
+            seed = noteSeed,
+            onConfirm = {
+                if (noteSeed.isDirty) seed.editNote(noteSeed.note)
+                noteSeed.clear()
                 showNoteDialog = false
             },
             isVisible = showNoteDialog,
             onDismissRequest = {
-                noteSeedData = null
+                noteSeed.clear()
                 showNoteDialog = false
             }
         )
@@ -159,8 +150,8 @@ fun TicketDialog(
                             // TODO: Maybe make this a regular text field then add and editable button
                             SearchBar(
                                 modifier = Modifier.padding(start = 8.dp),
-                                initialText = customer.toString(),
-                                onClick = { result -> customer = result.identity() },
+                                initialText = ,
+                                onClick = { result -> seed.setCustomer(result.identifier) },
                                 onQuery = onCustomerSearchQuery,
                                 enabled = isCustomerSearchEnabled
                             )

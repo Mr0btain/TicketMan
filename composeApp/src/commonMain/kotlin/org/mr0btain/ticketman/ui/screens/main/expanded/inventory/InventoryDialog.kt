@@ -11,15 +11,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.inventory.InventoryData
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.utils.MoneyVisualTransformation
-import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogNoteList
-import org.mr0btain.ticketman.ui.composables.MoneyTextField
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.dialog.NoteDialog
 import ticketman.composeapp.generated.resources.Res
@@ -29,216 +26,219 @@ import ticketman.composeapp.generated.resources.plus
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
+    inventorySeed: InventorySeed,
+    isVisible: Boolean,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
-    inventorySeed: InventorySeed,
     noteSeed: NoteSeed
 ) {
-    // For deleting item dialog
-    var showConfirmDeleteScreen by remember { mutableStateOf(false) }
-    var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
-    var itemForDelete by remember { mutableStateOf(DataType.NONE) }
+    if (isVisible) {
+        // For deleting item dialog
+        var showConfirmDeleteScreen by remember { mutableStateOf(false) }
+        var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
+        var itemForDelete by remember { mutableStateOf(DataType.NONE) }
 
-    // For adding note dialog
-    var showAddNoteDialog by remember { mutableStateOf(false) }
+        // For adding note dialog
+        var showAddNoteDialog by remember { mutableStateOf(false) }
 
-    // Add Note dialog
-    if (showAddNoteDialog) {
-        NoteDialog(
-            seed = noteSeed,
-            onConfirm = { inventorySeed.addNote(noteSeed.note, noteSeed.images) },
-            onDismissRequest = { showAddNoteDialog = false }
-        )
-    }
+        // Add Note dialog
+        if (showAddNoteDialog) {
+            NoteDialog(
+                seed = noteSeed,
+                onConfirm = { inventorySeed.addNote(noteSeed.note) },
+                onDismissRequest = { showAddNoteDialog = false }
+            )
+        }
 
-    // Delete item dialog
-    if (showConfirmDeleteScreen) {
-        /*
-        ConfirmDeleteDialog(
-            label = when (itemForDelete) {
-                SubItemType.NOTE -> notes[itemUpForDeleteIndex].author + "'s Update"
-                else -> ""
-            },
-            isDarkMode = isDarkMode,
-            mainItemType = MainItemType.CUSTOMER,
-            onDismissRequest = { confirm ->
-                if (confirm && itemForDelete != SubItemType.NONE) {
-                    when (itemForDelete) {
-                        SubItemType.NOTE -> {
-                            // Remove item from list
-                            notes.removeAt(itemUpForDeleteIndex)
+        // Delete item dialog
+        if (showConfirmDeleteScreen) {
+            /*
+            ConfirmDeleteDialog(
+                label = when (itemForDelete) {
+                    SubItemType.NOTE -> notes[itemUpForDeleteIndex].author + "'s Update"
+                    else -> ""
+                },
+                isDarkMode = isDarkMode,
+                mainItemType = MainItemType.CUSTOMER,
+                onDismissRequest = { confirm ->
+                    if (confirm && itemForDelete != SubItemType.NONE) {
+                        when (itemForDelete) {
+                            SubItemType.NOTE -> {
+                                // Remove item from list
+                                notes.removeAt(itemUpForDeleteIndex)
+                            }
+
+                            // For everything else do nothing
+                            else -> {}
                         }
-
-                        // For everything else do nothing
-                        else -> {}
                     }
-                }
 
-                // Reset items for delete and set index to insane value
-                itemUpForDeleteIndex = 10000
-                itemForDelete = SubItemType.NONE
+                    // Reset items for delete and set index to insane value
+                    itemUpForDeleteIndex = 10000
+                    itemForDelete = SubItemType.NONE
 
-                showConfirmDeleteScreen = false
-            },
-        )
-         */
-    }
+                    showConfirmDeleteScreen = false
+                },
+            )
+             */
+        }
 
-    Dialog(
-        onDismissRequest = { onDismiss() }
-    ) {
-        Surface(
-            modifier = modifier,
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp
+        Dialog(
+            onDismissRequest = { onDismiss() }
         ) {
-            Column(
-                modifier = Modifier.padding(32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Surface(
+                modifier = modifier,
+                shape = RoundedCornerShape(10.dp),
+                shadowElevation = 4.dp
             ) {
-                // -------------------------------------------- Header ----------------------------------------------------
-                Row(
-                    horizontalArrangement = Arrangement.Center
+                Column(
+                    modifier = Modifier.padding(32.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        modifier = Modifier.padding(4.dp),
-                        text = if (inventorySeed.inventory.name.isEmpty()) "Add Item" else "Edit Item: ${inventorySeed.inventory.name}",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 26.sp,
-                        maxLines = 1
-                    )
-                }
-
-                HorizontalDivider()
-
-                Spacer(Modifier.padding(8.dp))
-
-                // -------------------------------------------- Content ----------------------------------------------------
-                PlatformLazyColumn(
-                    modifier = Modifier.height(400.dp),
-                    isVisible = inventorySeed.notes.isNotEmpty()
-                ) {
-                    item {
-                        // -------------------------- Name ------------------------
-                        OutlinedTextField(
-                            value = inventorySeed.name,
-                            onValueChange = { inventorySeed.setName(it) },
-                            label = { Text("Name") }
+                    // -------------------------------------------- Header ----------------------------------------------------
+                    Row(
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Text(
+                            modifier = Modifier.padding(4.dp),
+                            text = if (inventorySeed.inventory.name.isEmpty()) "Add Item" else "Edit Item: ${inventorySeed.inventory.name}",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 26.sp,
+                            maxLines = 1
                         )
+                    }
 
-                        Spacer(Modifier.padding(4.dp))
+                    HorizontalDivider()
 
-                        // ------------------------- Description -------------------------------
-                        OutlinedTextField(
-                            value = inventorySeed.description,
-                            onValueChange = { inventorySeed.setDescription(it) },
-                            label = { Text("Description") }
-                        )
+                    Spacer(Modifier.padding(8.dp))
 
-                        Spacer(Modifier.padding(4.dp))
-
-                        // ------------------------- Stock -------------------------------
-                        OutlinedTextField(
-                            value = inventorySeed.stock.toString(),
-                            onValueChange = { change ->
-                                inventorySeed.setStock(
-                                    change.filter { it.isDigit() }.toInt()
-                                )
-                                            },
-                            label = { Text("Stock") }
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // ------------------------- Price -------------------------------
-                        OutlinedTextField(
-                            modifier = Modifier.width(280.dp),
-                            value = inventorySeed.price.toString(),
-                            onValueChange = {
-                                newPrice -> inventorySeed.setPrice(
-                                newPrice
-                                    .filter { it.isDigit() || it == '.' }
-                                    .toDoubleOrNull() ?: 0.0
-                                )
-                            },
-                            label = { Text("Price") },
-                            prefix = { Text("$") },
-                            visualTransformation = MoneyVisualTransformation()
-                        )
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // TODO: Test this
-                        // ------------------------- Cost -------------------------------
-                        OutlinedTextField(
-                            modifier = Modifier.width(280.dp),
-                            value = inventorySeed.cost.toString(),
-                            onValueChange = {
-                                    newPrice -> inventorySeed.setCost(
-                                newPrice
-                                    .filter { it.isDigit() || it == '.' }
-                                    .toDoubleOrNull() ?: 0.0
-                            )
-                            },
-                            label = { Text("Price") },
-                            prefix = { Text("$") },
-                            visualTransformation = MoneyVisualTransformation()
-                        )
-                        /*
-                        MoneyTextField(
-                            modifier = Modifier.width(280.dp),
-                            state = cost,
-                            label = "Cost"
-                        )
-                         */
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        // ------------------------- Notes -------------------------------
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Notes",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 14.sp
+                    // -------------------------------------------- Content ----------------------------------------------------
+                    PlatformLazyColumn(
+                        modifier = Modifier.height(400.dp),
+                        isVisible = inventorySeed.notes.isNotEmpty()
+                    ) {
+                        item {
+                            // -------------------------- Name ------------------------
+                            OutlinedTextField(
+                                value = inventorySeed.name,
+                                onValueChange = { inventorySeed.setName(it) },
+                                label = { Text("Name") }
                             )
 
                             Spacer(Modifier.padding(4.dp))
 
-                            IconButton(
-                                modifier = Modifier.size(26.dp),
-                                onClick = { showAddNoteDialog = true }
-                            ) {
-                                Icon(
-                                    modifier = Modifier
-                                        .padding(4.dp)
-                                        .size(20.dp),
-                                    painter = painterResource(Res.drawable.plus),
-                                    contentDescription = "Add new Note"
+                            // ------------------------- Description -------------------------------
+                            OutlinedTextField(
+                                value = inventorySeed.description,
+                                onValueChange = { inventorySeed.setDescription(it) },
+                                label = { Text("Description") }
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // ------------------------- Stock -------------------------------
+                            OutlinedTextField(
+                                value = inventorySeed.stock.toString(),
+                                onValueChange = { change ->
+                                    inventorySeed.setStock(
+                                        change.filter { it.isDigit() }.toInt()
+                                    )
+                                },
+                                label = { Text("Stock") }
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // ------------------------- Price -------------------------------
+                            OutlinedTextField(
+                                modifier = Modifier.width(280.dp),
+                                value = inventorySeed.price.toString(),
+                                onValueChange = {
+                                        newPrice -> inventorySeed.setPrice(
+                                    newPrice
+                                        .filter { it.isDigit() || it == '.' }
+                                        .toDoubleOrNull() ?: 0.0
                                 )
+                                },
+                                label = { Text("Price") },
+                                prefix = { Text("$") },
+                                visualTransformation = MoneyVisualTransformation()
+                            )
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // TODO: Test this
+                            // ------------------------- Cost -------------------------------
+                            OutlinedTextField(
+                                modifier = Modifier.width(280.dp),
+                                value = inventorySeed.cost.toString(),
+                                onValueChange = {
+                                        newPrice -> inventorySeed.setCost(
+                                    newPrice
+                                        .filter { it.isDigit() || it == '.' }
+                                        .toDoubleOrNull() ?: 0.0
+                                )
+                                },
+                                label = { Text("Price") },
+                                prefix = { Text("$") },
+                                visualTransformation = MoneyVisualTransformation()
+                            )
+                            /*
+                            MoneyTextField(
+                                modifier = Modifier.width(280.dp),
+                                state = cost,
+                                label = "Cost"
+                            )
+                             */
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            // ------------------------- Notes -------------------------------
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Notes",
+                                    fontWeight = FontWeight.SemiBold,
+                                    fontSize = 14.sp
+                                )
+
+                                Spacer(Modifier.padding(4.dp))
+
+                                IconButton(
+                                    modifier = Modifier.size(26.dp),
+                                    onClick = { showAddNoteDialog = true }
+                                ) {
+                                    Icon(
+                                        modifier = Modifier
+                                            .padding(4.dp)
+                                            .size(20.dp),
+                                        painter = painterResource(Res.drawable.plus),
+                                        contentDescription = "Add new Note"
+                                    )
+                                }
                             }
+
+                            Spacer(Modifier.padding(4.dp))
+
+                            DialogNoteList(
+                                notes = inventorySeed.notes,
+                                onDeleteClick = { item ->
+                                    itemForDelete = DataType.NOTE
+                                    itemUpForDeleteIndex = item
+                                    showConfirmDeleteScreen = true
+                                }
+                            )
                         }
-
-                        Spacer(Modifier.padding(4.dp))
-
-                        DialogNoteList(
-                            notes = inventorySeed.notes.keys.toList(),
-                            onDeleteClick = { item ->
-                                itemForDelete = DataType.NOTE
-                                itemUpForDeleteIndex = item
-                                showConfirmDeleteScreen = true
-                            }
-                        )
                     }
+
+                    Spacer(Modifier.padding(8.dp))
+
+                    ConfirmCancelButtons(
+                        onCancelClick = onDismiss,
+                        onConfirmClick = onContinue
+                    )
                 }
-
-                Spacer(Modifier.padding(8.dp))
-
-                ConfirmCancelButtons(
-                    onCancelClick = onDismiss,
-                    onConfirmClick = onContinue
-                )
             }
         }
     }

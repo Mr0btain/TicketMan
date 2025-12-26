@@ -4,10 +4,9 @@ import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
@@ -88,7 +87,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 true
             }
         }
-         return count
+        return count
     }
 
     override fun addAll(data: List<Customer>) {
@@ -136,7 +135,11 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                                     (CustomerTable.id.castTo(VarCharColumnType()) like pattern) or
                                     (CustomerTable.email.lowerCase() like pattern)
                         }
-                        .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.email to SortOrder.ASC, CustomerTable.id to SortOrder.ASC)
+                        .orderBy(
+                            CustomerTable.name to SortOrder.ASC,
+                            CustomerTable.email to SortOrder.ASC,
+                            CustomerTable.id to SortOrder.ASC
+                        )
                         .limit(limit)
                         .map { customerEntity ->
                             SearchResult(
@@ -144,7 +147,9 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                                 text = when {
                                     customerEntity.name.startsWith(query, true) -> customerEntity.name
                                     customerEntity.email.startsWith(query, true) -> customerEntity.email
-                                    customerEntity.id.value.toString().startsWith(query, true) -> customerEntity.id.value.toString()
+                                    customerEntity.id.value.toString()
+                                        .startsWith(query, true) -> customerEntity.id.value.toString()
+
                                     else -> customerEntity.name
                                 }
                             )
