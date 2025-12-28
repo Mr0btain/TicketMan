@@ -195,10 +195,7 @@ class MainViewModel(
             if (cached == null) {
                 customerDatabase.getById(identifier)?.let { customer ->
                     val notes = customerDatabase.getNotes(identifier) ?: emptyList()
-
-                    val tickets = customerDatabase.getTickets(identifier)?.also { ticketList ->
-                        ticketList.forEach { ticketCache.put(it) }
-                    } ?: emptyList()
+                    val tickets = customerDatabase.getTickets(identifier)?: emptyList()
 
                     // Set selected
                     customerSeed.setCustomer(customer, notes, tickets)
@@ -233,10 +230,12 @@ class MainViewModel(
         if (ticketSeed.identifier == identifier) return
 
         viewModelScope.launch {
-            val cached = ticketCache.get(identifier)?.let { (ticket, notes) ->
+            val cached = ticketCache.get(identifier)?.let { (ticket, notes, customer, user) ->
                 ticketSeed.setTicket(
                     ticket = ticket,
-                    notes = notes
+                    notes = notes,
+                    customerId = customer,
+                    userId = user
                 )
             }
 
@@ -245,12 +244,14 @@ class MainViewModel(
                 ticketDatabase.getById(identifier)?.let { ticket ->
                     // Get notes
                     val notes = ticketDatabase.getNotes(identifier) ?: emptyList()
+                    val customer = ticketDatabase.getCustomer(identifier)
+                    val user = ticketDatabase.getUser(identifier)
 
                     // Set seed data
                     ticketSeed.setTicket(ticket, notes)
 
                     // Insert into cache
-                    ticketCache.put(ticket, notes)
+                    ticketCache.put(ticket, notes, customer, user)
                 }
             }
         }
@@ -272,9 +273,9 @@ class MainViewModel(
             ticketSeed.getChangedFields().forEach { changedField ->
                 when (changedField) {
                     ChangedField.NOTE -> {}
-                    ChangedField.STATUS -> {}
-                    ChangedField.PRIORITY -> {}
-                    ChangedField.DEVICE -> {}
+                    ChangedField.STATUS -> ticketDatabase.updateStatus(ticketSeed.identifier, ticketSeed.status)
+                    ChangedField.PRIORITY -> ticketDatabase.updatePriority(ticketSeed.identifier, ticketSeed.priority)
+                    ChangedField.DEVICE -> ticketDatabase.updateDevice(ticketSeed.identifier, ticketSeed.device)
                     ChangedField.CUSTOMER -> {}
                     ChangedField.USER -> {}
 

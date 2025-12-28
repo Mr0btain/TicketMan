@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -150,8 +151,8 @@ fun TicketDialog(
                             // TODO: Maybe make this a regular text field then add and editable button
                             SearchBar(
                                 modifier = Modifier.padding(start = 8.dp),
-                                initialText = ,
-                                onClick = { result -> seed.setCustomer(result.identifier) },
+                                initialText = seed.customer?.text ?: "",
+                                onClick = { result -> seed.setCustomer(Identity(result.identifier, result.text)) },
                                 onQuery = onCustomerSearchQuery,
                                 enabled = isCustomerSearchEnabled
                             )
@@ -171,8 +172,8 @@ fun TicketDialog(
                             // TODO: Maybe make this a regular text field then add and editable button
                             SearchBar(
                                 modifier = Modifier.padding(start = 8.dp),
-                                initialText = user.toString(),
-                                onClick = { result -> user = result.identity() },
+                                initialText = seed.user?.text ?: "",
+                                onClick = { result -> seed.setUser(Identity(result.identifier, result.text)) },
                                 onQuery = onUserSearchQuery,
                                 enabled = isUserSearchEnabled
                             )
@@ -192,11 +193,11 @@ fun TicketDialog(
                             DialogTextRow(
                                 modifier = Modifier,
                                 firstLabel = "Manufacturer",
-                                firstValue = deviceManufacturer,
-                                onFirstValueChange = { deviceManufacturer = it },
+                                firstValue = seed.device.manufacturer,
+                                onFirstValueChange = {  }, // TODO
                                 secondLabel = "Model",
-                                secondValue = deviceModel,
-                                onSecondValueChange = { deviceModel = it }
+                                secondValue = seed.device.model,
+                                onSecondValueChange = {  } // TODO
                             )
 
                             Spacer(Modifier.padding(4.dp))
@@ -210,8 +211,8 @@ fun TicketDialog(
 
                             TicketStatusDropDown(
                                 modifier = Modifier.width(350.dp),
-                                status = status,
-                                onClick = { status = it }
+                                status = seed.status,
+                                onClick = { seed.setStatus(it) }
                             )
 
                             Spacer(Modifier.padding(4.dp))
@@ -225,8 +226,8 @@ fun TicketDialog(
 
                             TicketPriorityDropDown(
                                 modifier = Modifier.width(350.dp),
-                                priority = priority,
-                                onClick = { priority = it }
+                                priority = seed.priority,
+                                onClick = { seed.setPriority(it) }
                             )
 
                             Spacer(Modifier.padding(4.dp))
@@ -234,10 +235,10 @@ fun TicketDialog(
                             // ------------------------- Updates -------------------------------
                             NoteBlock(
                                 label = "Updates",
-                                noteData = notes,
+                                notes = seed.notes,
                                 editable = true,
-                                onEditClick = { id ->
-                                    noteSeedData = notes.find { it.note.identifier == id }
+                                onEditClick = { note ->
+                                    noteSeed.setNote(note)
                                     showNoteDialog = true
                                 }
                             )

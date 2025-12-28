@@ -43,15 +43,14 @@ class NoteSeed {
         get() = Note(identifier, author, message)
 
     fun setNote(
-        note: Note,
-        imageList: List<StoredImage>
+        note: Note
     ) {
         identifier = note.identifier
         author = note.author
         message = note.message
         time = UUIDv7.getLongTime(identifier)
 
-        setImages(imageList)
+        setImages(note.images)
 
         markClean()
         isNew = false

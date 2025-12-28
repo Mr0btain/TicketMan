@@ -40,7 +40,7 @@ fun NoteBlock(
     labelSize: TextUnit = 18.sp,
     textSize: TextUnit = 16.sp,
     onImageClick: (UUID) -> Unit = {},
-    onEditClick: (UUID) -> Unit = {}
+    onEditClick: (Note) -> Unit = {}
 ) {
     Column(
         modifier = modifier,
@@ -75,7 +75,7 @@ fun NoteBlock(
                         note = note,
                         textSize = textSize,
                         onImageClick = { onImageClick(it) },
-                        onEditClick = { onEditClick(note.identifier) }
+                        onEditClick = { onEditClick(note) }
                     )
                 }
         }
