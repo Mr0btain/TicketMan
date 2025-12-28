@@ -10,7 +10,10 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketPriority
+import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.database.tables.customer.CustomerTicketTable
@@ -28,6 +31,9 @@ import java.util.*
 class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
     private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
     private val GET_USER_TAG = "$tag:GetUser"
+    private val UPDATE_DEVICE_TAG = "$tag:UpdateDevice"
+    private val UPDATE_STATUS_TAG = "$tag:UpdateStatus"
+    private val UPDATE_PRIORITY_TAG = "$tag:UpdatePriority"
 
     override fun all(): List<Ticket>? {
         var result: List<Ticket>? = null
@@ -171,6 +177,57 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
 
                         result = true
                     } ?: AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updateDevice(identifier: UUID, device: Device) {
+        appLogTryCatch(UPDATE_DEVICE_TAG) {
+            var result = false
+
+            transaction {
+                TicketEntity
+                    .findByIdAndUpdate(identifier) { item ->
+                        item.device = device
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_DEVICE_TAG, TicketError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updateStatus(identifier: UUID, status: TicketStatus) {
+        appLogTryCatch(UPDATE_STATUS_TAG) {
+            var result = false
+
+            transaction {
+                TicketEntity
+                    .findByIdAndUpdate(identifier) { item ->
+                        item.status = status
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_STATUS_TAG, TicketError.NOT_FOUND)
+            }
+
+            result
+        }
+    }
+
+    fun updatePriority(identifier: UUID, priority: TicketPriority) {
+        appLogTryCatch(UPDATE_PRIORITY_TAG) {
+            var result = false
+
+            transaction {
+                TicketEntity
+                    .findByIdAndUpdate(identifier) { item ->
+                        item.priority = priority
+
+                        result = true
+                    } ?: AppLogger.i(UPDATE_PRIORITY_TAG, TicketError.NOT_FOUND)
             }
 
             result
