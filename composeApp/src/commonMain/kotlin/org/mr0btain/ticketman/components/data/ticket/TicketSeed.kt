@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -21,9 +22,9 @@ class TicketSeed(): DataSeed() {
         private set
     var priority: TicketPriority by mutableStateOf(TicketPriority())
         private set
-    var customer: UUID? by mutableStateOf(null)
+    var customer: Identity? by mutableStateOf(null)
         private set
-    var user: UUID? by mutableStateOf(null)
+    var user: Identity? by mutableStateOf(null)
         private set
 
     val ticket: Ticket
@@ -33,15 +34,15 @@ class TicketSeed(): DataSeed() {
     fun setTicket(
         ticket: Ticket,
         notes: List<Note> = emptyList(),
-        customerId: UUID? = null,
-        userId: UUID? = null
+        customerId: Identity? = null,
+        userId: Identity? = null
     ) {
         identifier = ticket.identifier
         device = ticket.device
         status = ticket.status
         priority = ticket.priority
-        customer = customer
-        user = user
+        customer = customerId
+        user = userId
 
         markClean()
         isNew = false
@@ -75,14 +76,14 @@ class TicketSeed(): DataSeed() {
         }
     }
 
-    fun setCustomer(newCustomer: UUID?) {
+    fun setCustomer(newCustomer: Identity?) {
         if (customer != newCustomer) {
             customer = newCustomer
             changedFields.add(ChangedField.CUSTOMER)
         }
     }
 
-    fun setUser(newUser: UUID?) {
+    fun setUser(newUser: Identity?) {
         if (user != newUser) {
             user = newUser
             changedFields.add(ChangedField.USER)
@@ -120,8 +121,8 @@ class TicketSeed(): DataSeed() {
         val device:Device = Device(),
         val status: TicketStatus = TicketStatus(),
         val priority: TicketPriority = TicketPriority(),
-        val customer: UUID? = null,
-        val user: UUID? = null,
+        val customer: Identity? = null,
+        val user: Identity? = null,
         val notes: List<Note> = emptyList(),
         val images: List<StoredImage> = emptyList(),
         val time: Long = 0
