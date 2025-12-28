@@ -35,7 +35,7 @@ import java.util.UUID
 fun NoteBlock(
     modifier: Modifier = Modifier,
     label: String = "Notes",
-    notes: Map<Note, List<StoredImage>>,
+    notes: List<Note>,
     editable: Boolean = false,
     labelSize: TextUnit = 18.sp,
     textSize: TextUnit = 16.sp,
@@ -60,20 +60,19 @@ fun NoteBlock(
         }
 
         if (!editable) {
-            notes.entries
-                .sortedByDescending { it.key.time().toLong() }
-                .forEach { (note, images) ->
-                    NoteColumn(note, images, textSize) {
+            notes
+                .sortedByDescending { it.time().toLong() }
+                .forEach { note ->
+                    NoteColumn(note, textSize) {
                         onImageClick(it)
                     }
                 }
         } else {
-            notes.entries
-                .sortedByDescending { it.key.time().toLong() }
-                .forEach { (note, images) ->
+            notes
+                .sortedByDescending { it.time().toLong() }
+                .forEach { note ->
                     EditableNoteColumn(
                         note = note,
-                        images = images,
                         textSize = textSize,
                         onImageClick = { onImageClick(it) },
                         onEditClick = { onEditClick(note.identifier) }
@@ -86,7 +85,6 @@ fun NoteBlock(
 @Composable
 private fun NoteColumn(
     note: Note,
-    images: List<StoredImage>,
     textSize: TextUnit,
     onImageClick: (UUID) -> Unit
 ) {
@@ -117,12 +115,12 @@ private fun NoteColumn(
             fontSize = textSize
         )
 
-        if (images.isNotEmpty()) {
+        if (note.images.isNotEmpty()) {
             Spacer(Modifier.padding(4.dp))
 
             ImagePager(
                 modifier = Modifier.fillMaxWidth(),
-                storedImages = images,
+                storedImages = note.images,
                 onImageClick = { onImageClick(note.identifier) },
             )
 
@@ -134,7 +132,6 @@ private fun NoteColumn(
 @Composable
 private fun EditableNoteColumn(
     note: Note,
-    images: List<StoredImage>,
     textSize: TextUnit,
     onImageClick: (UUID) -> Unit,
     onEditClick: () -> Unit
@@ -179,12 +176,12 @@ private fun EditableNoteColumn(
                 fontSize = textSize
             )
 
-            if (images.isNotEmpty()) {
+            if (note.images.isNotEmpty()) {
                 Spacer(Modifier.padding(4.dp))
 
                 ImagePager(
                     modifier = Modifier.fillMaxWidth(),
-                    storedImages = images,
+                    storedImages = note.images,
                     onImageClick = { onImageClick(note.identifier) },
                 )
 
