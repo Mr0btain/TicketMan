@@ -10,7 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
@@ -30,7 +30,7 @@ fun TicketPanel(
     isDarkMode: Boolean,
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
-    selectedTicket: TicketData?,
+    selectedTicket: TicketSeed,
     ticketList: List<Ticket>,
     currentUser: UserData?,
     onAddNewTicket: () -> Unit,
@@ -62,7 +62,7 @@ fun TicketPanel(
                 SearchBar(
                     modifier = Modifier.padding(start = 8.dp),
                     label = "Search Tickets",
-                    onClick = { onSelectedTicketChange(it) },
+                    onClick = { onSelectedTicketChange(it.identifier) },
                     onQuery = onSearchQuery
                 )
 

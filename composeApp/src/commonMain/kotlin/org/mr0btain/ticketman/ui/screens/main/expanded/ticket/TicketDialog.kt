@@ -34,7 +34,6 @@ fun TicketDialog(
     modifier: Modifier = Modifier,
     seed: TicketSeed,
     isVisible: Boolean,
-    noteSeed: NoteSeed,
     onCustomerSearchQuery: suspend (String) -> List<SearchResult>,
     onUserSearchQuery: suspend (String) -> List<SearchResult>,
     onContinue: () -> Unit,
@@ -53,6 +52,8 @@ fun TicketDialog(
 
         // For employee search bar
         var isUserSearchEnabled by remember { mutableStateOf(false) }
+
+        val noteSeed = remember { NoteSeed() }
 
         // Edit or add update dialog
         EditNoteDialog(
@@ -152,7 +153,7 @@ fun TicketDialog(
                             SearchBar(
                                 modifier = Modifier.padding(start = 8.dp),
                                 initialText = seed.customer?.text ?: "",
-                                onClick = { result -> seed.setCustomer(Identity(result.identifier, result.text)) },
+                                onClick = { result -> seed.changeCustomer(Identity(result.identifier, result.text)) },
                                 onQuery = onCustomerSearchQuery,
                                 enabled = isCustomerSearchEnabled
                             )
@@ -173,7 +174,7 @@ fun TicketDialog(
                             SearchBar(
                                 modifier = Modifier.padding(start = 8.dp),
                                 initialText = seed.user?.text ?: "",
-                                onClick = { result -> seed.setUser(Identity(result.identifier, result.text)) },
+                                onClick = { result -> seed.changeUser(Identity(result.identifier, result.text)) },
                                 onQuery = onUserSearchQuery,
                                 enabled = isUserSearchEnabled
                             )
@@ -212,7 +213,7 @@ fun TicketDialog(
                             TicketStatusDropDown(
                                 modifier = Modifier.width(350.dp),
                                 status = seed.status,
-                                onClick = { seed.setStatus(it) }
+                                onClick = { seed.changeStatus(it) }
                             )
 
                             Spacer(Modifier.padding(4.dp))
@@ -227,7 +228,7 @@ fun TicketDialog(
                             TicketPriorityDropDown(
                                 modifier = Modifier.width(350.dp),
                                 priority = seed.priority,
-                                onClick = { seed.setPriority(it) }
+                                onClick = { seed.changePriority(it) }
                             )
 
                             Spacer(Modifier.padding(4.dp))

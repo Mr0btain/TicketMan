@@ -20,11 +20,9 @@ import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.utils.ImageUtils
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
@@ -97,7 +95,7 @@ fun EditNoteDialog(
                     OutlinedTextField(
                         label = { Text("Author") },
                         value = seed.author,
-                        onValueChange = { seed.setAuthor(it) },
+                        onValueChange = { seed.changeAuthor(it) },
                         keyboardOptions = KeyboardOptions.Default.copy(
                             keyboardType = KeyboardType.Text,
                             imeAction = ImeAction.Next
@@ -110,7 +108,7 @@ fun EditNoteDialog(
                     OutlinedTextField(
                         label = { Text("Text") },
                         value = seed.message,
-                        onValueChange = { seed.setMessage(it) },
+                        onValueChange = { seed.changeMessage(it) },
                         maxLines = 6,
                         keyboardOptions = KeyboardOptions.Default.copy(
                             keyboardType = KeyboardType.Text,

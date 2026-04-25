@@ -47,7 +47,7 @@ fun NoteDialog(
                 OutlinedTextField(
                     label = { Text("Author") },
                     value = seed.author,
-                    onValueChange = { seed.setAuthor(it) },
+                    onValueChange = { seed.changeAuthor(it) },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next
@@ -60,7 +60,7 @@ fun NoteDialog(
                 OutlinedTextField(
                     label = { Text("Text") },
                     value = seed.message,
-                    onValueChange = { seed.setMessage(it) },
+                    onValueChange = { seed.changeMessage(it) },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next

@@ -6,7 +6,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.mr0btain.ticketman.components.data.ticket.TicketData
 import java.util.UUID
 import kotlin.collections.forEach
 

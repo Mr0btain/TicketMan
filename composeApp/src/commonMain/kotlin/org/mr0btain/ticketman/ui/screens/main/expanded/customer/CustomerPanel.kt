@@ -9,7 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
@@ -20,7 +20,7 @@ fun CustomerPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     customerList: List<Customer>,
-    selectedCustomer: CustomerData?,
+    selectedCustomer: CustomerSeed,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (UUID) -> Unit,

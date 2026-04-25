@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.components.encryption.PeerKeyData
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.encryption.EncryptedData
+import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.server.request.KeyRequest
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
@@ -39,16 +40,17 @@ fun Route.authRoute(
 
                 // Try to parse the decrypted message into a LoginRequest and authenticate the user
                 userService.authenticate(Json.decodeFromString<LoginRequest>(decrypted))?.let { authResponse ->
+                    if (authResponse.id != null) {
+                        // If authentication is successful, update the encryption key for this client
+                        encryptionService.updateKeyIdentifier(identifier, authResponse.id!!)
 
-                    // If authentication is successful, update the encryption key for this client
-                    encryptionService.updateKeyIdentifier(identifier, authResponse.id)
-
-                    // Encrypt the authentication response using the updated key
-                    encryptionService.encryptData(authResponse.id, Json.encodeToString(authResponse))
-                        ?.let { encryptedResponse ->
-                            // Respond to the client with the encrypted authentication response
-                            call.respond(HttpStatusCode.Accepted, encryptedResponse)
-                        } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
+                        // Encrypt the authentication response using the updated key
+                        encryptionService.encryptData(authResponse.id!!, Json.encodeToString(authResponse))
+                            ?.let { encryptedResponse ->
+                                // Respond to the client with the encrypted authentication response
+                                call.respond(HttpStatusCode.Accepted, encryptedResponse)
+                            } ?: call.respond(HttpStatusCode.InternalServerError) // Handle encryption failure
+                    }
                 } ?: call.respond(HttpStatusCode.Unauthorized) // Handle failed authentication
             } ?: call.respond(HttpStatusCode.InternalServerError) // Handle decryption failure
         } ?: call.respond(HttpStatusCode.NotFound) // Handle user not doing
@@ -110,7 +112,7 @@ fun Route.authRoute(
         // Receive key request
         val keyRequest = call.receive<KeyRequest>()
         // Assign random uuid here to store the key for now till we register it to a user on login
-        val id = Uuid.random()
+        val id = UUIDv7.randomUUID()
 
         // Add key to key storage
         encryptionService.registerKey(

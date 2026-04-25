@@ -4,7 +4,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import org.jetbrains.exposed.v1.core.not
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
@@ -12,6 +11,13 @@ import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
 class NoteSeed {
+    // Constructor to set initial data from an existing note if we need to.
+    constructor(initial: Note? = null) {
+        initial?.let {
+            setNote(initial)
+        }
+    }
+
     var identifier: UUID by mutableStateOf(UUIDv7.randomUUID())
         private set
 
@@ -50,20 +56,20 @@ class NoteSeed {
         message = note.message
         time = UUIDv7.getLongTime(identifier)
 
-        setImages(note.images)
+        changeImages(note.images)
 
         markClean()
         isNew = false
     }
 
-    fun setIdentifier(newId: UUID) {
+    fun changeIdentifier(newId: UUID) {
         if (identifier != newId) {
             identifier = newId
             changedFields.add(ChangedField.IDENTIFIER)
         }
     }
 
-    fun setImages(newImages: List<StoredImage>) {
+    fun changeImages(newImages: List<StoredImage>) {
         if (_images != newImages) {
             _images.clear()
             _images.addAll(newImages)
@@ -84,21 +90,21 @@ class NoteSeed {
         }
     }
 
-    fun setAuthor(newAuthor: String) {
+    fun changeAuthor(newAuthor: String) {
         if (author != newAuthor) {
             author = newAuthor
             changedFields.add(ChangedField.AUTHOR)
         }
     }
 
-    fun setMessage(newMessage: String) {
+    fun changeMessage(newMessage: String) {
         if (message != newMessage) {
             message = newMessage
             changedFields.add(ChangedField.MESSAGE)
         }
     }
 
-    fun setTime(newTime: Long) {
+    fun changeTime(newTime: Long) {
         if (time != newTime) {
             time = newTime
             changedFields.add(ChangedField.TIME)

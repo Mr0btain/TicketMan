@@ -10,8 +10,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.image.ImageData
-import org.mr0btain.ticketman.components.data.ticket.TicketData
+import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.ui.composables.*
@@ -28,7 +27,7 @@ fun TicketInfoPane(
     isDarkMode: Boolean,
     customer: Customer,
     assignedUserName: PersonName,
-    ticketData: TicketData?,
+    ticketData: TicketSeed,
     onEditClick: () -> Unit,
     onImageClick: (UUID) -> Unit
 ) {
@@ -60,16 +59,15 @@ fun TicketInfoPane(
 
                     Spacer(Modifier.padding(4.dp))
 
-                    ticketData?.let { (ticket, _) ->
+                    if (!ticketData.isNew) {
                         Text(
                             modifier = Modifier
                                 .padding(4.dp),
-                            text = "Details for: ${ticket.identifier.toString().split("-").first()}",
+                            text = "Details for: ${ticketData.identifier.toString().split("-").first()}",
                             fontSize = 26.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
-
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -178,10 +176,12 @@ fun TicketInfoPane(
                                     Spacer(Modifier.padding(4.dp))
 
                                     // Contacts for customer block
+                                    /*
                                     ContactsBlock(
                                         customer = customer,
                                         labelSize = 16.sp
                                     )
+                                     */
                                 }
                             }
                         }
@@ -259,7 +259,7 @@ fun TicketInfoPane(
                                     Spacer(Modifier.padding(4.dp))
 
                                     NoteBlock(
-                                        noteData = ticketData.notes,
+                                        notes = ticketData.notes,
                                         onImageClick = onImageClick
                                     )
                                 }

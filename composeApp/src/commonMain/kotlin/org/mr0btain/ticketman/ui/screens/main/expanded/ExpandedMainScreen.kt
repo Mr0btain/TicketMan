@@ -11,7 +11,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
-import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.pagination.offset.handleOffsetPager
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -89,7 +88,7 @@ fun ExpandedMainScreen(
 
     // For customer adding or editing
     // Doing image click like this we won't be able to open newly added images that were added within this dialog.
-    // Which im fine with but it may change later
+    // Which I'm fine with but it may change later
     CustomerDialog(
         seed = customerSeed,
         isVisible = showCustomerDialog,
@@ -119,7 +118,7 @@ fun ExpandedMainScreen(
 
     // For inventory adding or editing
     InventoryDialog(
-        inventorySeed = viewModel.inventorySeed,
+        seed = viewModel.inventorySeed,
         isVisible = showInventoryDialog,
         onDismiss = { showInventoryDialog = false },
         onContinue = {
@@ -134,7 +133,7 @@ fun ExpandedMainScreen(
         isVisible = showConfirmDeleteDialog,
         onConfirm = {
             when (dataType) {
-                DataType.CUSTOMER -> { viewModel.removeSelectedCustomer() }
+                DataType.CUSTOMER -> TODO()
                 DataType.TICKET -> TODO()
                 DataType.INVENTORY -> TODO()
                 DataType.USER -> TODO()
@@ -265,37 +264,34 @@ fun ExpandedMainScreen(
                     CustomerPanel(
                         isDarkMode = isDarkMode,
                         onAddCustomer = {
-                            // Set seed data
-                            viewModel.setupNewCustomer()
+                            // Clear seed
+                            customerSeed.clear()
 
                             // Trigger dialog
                             showCustomerDialog = true
                         },
-                        onEditCustomer = {
-                            if (selectedCustomer.value != null)
-                                showCustomerDialog = true
-                        },
-                        onCustomerSelectionChange = { id -> viewModel.changeSelectedCustomer(id) },
+                        onEditCustomer = { showCustomerDialog = true },
+                        onCustomerSelectionChange = { id -> viewModel.setSelectedCustomer(id) },
                         onSearchQuery = { query -> viewModel.searchCustomers(query) },
                         onDeleteCustomer = {
                             dataType = DataType.CUSTOMER
                             showConfirmDeleteDialog = true
                         },
                         onTicketClick = { identifier ->
-                            viewModel.changeSelectedTicket(identifier)
+                            viewModel.setSelectedTicket(identifier)
 
                             showTicketDialog = true
                         },
                         onImageClick = { id ->
-                            selectedCustomer.value
-                                ?.notes
-                                ?.find { it.note.identifier == id }
-                                ?.let { (_, images) ->
-                                    imagePopupList = images
+                            customerSeed.notes
+                                .firstOrNull{ it.identifier == id }
+                                ?.let {
+                                    imagePopupList.clear()
+                                    imagePopupList.addAll(it.images)
                                     showImagePopup = true
                                 }
                         },
-                        selectedCustomer = selectedCustomer.value,
+                        selectedCustomer = customerSeed,
                         customerList = customerPagedItems?.value ?: emptyList(),
                         customerLazyListState = customerLazyListState,
                         coroutineScope = coroutineScope
@@ -304,11 +300,12 @@ fun ExpandedMainScreen(
 
                 // Ticket Panel
                 1 -> {
+                    // TODO: Finish user implementation
                     TicketPanel(
                         isDarkMode = isDarkMode,
                         ticketList = ticketPagedItems?.value ?: emptyList(),
-                        currentUser = currentUser.value,
-                        selectedTicket = selectedTicket.value,
+                        currentUser = null,
+                        selectedTicket = ticketSeed,
                         onAddNewTicket = {
                             // Set up seed data
                             ticketSeed.clear()
@@ -344,14 +341,14 @@ fun ExpandedMainScreen(
                     InventoryPanel(
                         isDarkMode = isDarkMode,
                         inventoryList = inventoryPagedItems?.value ?: emptyList(),
-                        selectedInventory = selectedInventory.value,
-                        onSelectedInventoryChange = { id -> viewModel.changeSelectedInventory(id) },
+                        selectedInventory = inventorySeed,
+                        onSelectedInventoryChange = { id -> viewModel.setSelectedInventory(id) },
                         onSearchQuery = { viewModel.searchInventory(it) },
                         onAddInventory = {
-                            viewModel.setupNewInventory()
+                            inventorySeed.clear()
                             showInventoryDialog = true
                         },
-                        onEditInventory = { if (selectedInventory.value != null) showInventoryDialog = true },
+                        onEditInventory = { showInventoryDialog = true },
                         onDeleteInventory = {
                             dataType = DataType.INVENTORY
                             showConfirmDeleteDialog = true

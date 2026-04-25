@@ -196,7 +196,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 8.dp)
                 ) {
-                    TableCardTextItem(customer.contactInfo.email.getOrElse(0) { "" })
+                    TableCardTextItem(customer.email)
                 }
             } else {
                 Box(
@@ -204,7 +204,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 6.dp)
                 ) {
-                    TableCardTextItem(customer.contactInfo.phone.getOrElse(0) { "" })
+                    TableCardTextItem(customer.email)
                 }
             }
         }

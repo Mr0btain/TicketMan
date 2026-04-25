@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.components.utils.MoneyVisualTransformation
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogNoteList
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import org.mr0btain.ticketman.ui.dialog.NoteDialog
+import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 
@@ -26,11 +26,10 @@ import ticketman.composeapp.generated.resources.plus
 @Composable
 fun InventoryDialog(
     modifier: Modifier = Modifier,
-    inventorySeed: InventorySeed,
+    seed: InventorySeed,
     isVisible: Boolean,
     onDismiss: () -> Unit,
-    onContinue: () -> Unit,
-    noteSeed: NoteSeed
+    onContinue: () -> Unit
 ) {
     if (isVisible) {
         // For deleting item dialog
@@ -38,17 +37,25 @@ fun InventoryDialog(
         var itemUpForDeleteIndex by remember { mutableIntStateOf(0) }
         var itemForDelete by remember { mutableStateOf(DataType.NONE) }
 
-        // For adding note dialog
-        var showAddNoteDialog by remember { mutableStateOf(false) }
+        // For editing or adding notes dialog
+        var showNoteDialog by remember { mutableStateOf(false) }
 
-        // Add Note dialog
-        if (showAddNoteDialog) {
-            NoteDialog(
-                seed = noteSeed,
-                onConfirm = { inventorySeed.addNote(noteSeed.note) },
-                onDismissRequest = { showAddNoteDialog = false }
-            )
-        }
+        val noteSeed = remember { NoteSeed() }
+
+        // Edit or add update dialog
+        EditNoteDialog(
+            seed = noteSeed,
+            onConfirm = {
+                if (noteSeed.isDirty) seed.editNote(noteSeed.note)
+                noteSeed.clear()
+                showNoteDialog = false
+            },
+            isVisible = showNoteDialog,
+            onDismissRequest = {
+                noteSeed.clear()
+                showNoteDialog = false
+            }
+        )
 
         // Delete item dialog
         if (showConfirmDeleteScreen) {
@@ -101,7 +108,7 @@ fun InventoryDialog(
                     ) {
                         Text(
                             modifier = Modifier.padding(4.dp),
-                            text = if (inventorySeed.inventory.name.isEmpty()) "Add Item" else "Edit Item: ${inventorySeed.inventory.name}",
+                            text = if (seed.inventory.name.isEmpty()) "Add Item" else "Edit Item: ${seed.inventory.name}",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 26.sp,
                             maxLines = 1
@@ -115,13 +122,13 @@ fun InventoryDialog(
                     // -------------------------------------------- Content ----------------------------------------------------
                     PlatformLazyColumn(
                         modifier = Modifier.height(400.dp),
-                        isVisible = inventorySeed.notes.isNotEmpty()
+                        isVisible = seed.notes.isNotEmpty()
                     ) {
                         item {
                             // -------------------------- Name ------------------------
                             OutlinedTextField(
-                                value = inventorySeed.name,
-                                onValueChange = { inventorySeed.setName(it) },
+                                value = seed.name,
+                                onValueChange = { seed.changeName(it) },
                                 label = { Text("Name") }
                             )
 
@@ -129,8 +136,8 @@ fun InventoryDialog(
 
                             // ------------------------- Description -------------------------------
                             OutlinedTextField(
-                                value = inventorySeed.description,
-                                onValueChange = { inventorySeed.setDescription(it) },
+                                value = seed.description,
+                                onValueChange = { seed.changeDescription(it) },
                                 label = { Text("Description") }
                             )
 
@@ -138,9 +145,9 @@ fun InventoryDialog(
 
                             // ------------------------- Stock -------------------------------
                             OutlinedTextField(
-                                value = inventorySeed.stock.toString(),
+                                value = seed.stock.toString(),
                                 onValueChange = { change ->
-                                    inventorySeed.setStock(
+                                    seed.changeStock(
                                         change.filter { it.isDigit() }.toInt()
                                     )
                                 },
@@ -152,9 +159,9 @@ fun InventoryDialog(
                             // ------------------------- Price -------------------------------
                             OutlinedTextField(
                                 modifier = Modifier.width(280.dp),
-                                value = inventorySeed.price.toString(),
+                                value = seed.price.toString(),
                                 onValueChange = {
-                                        newPrice -> inventorySeed.setPrice(
+                                        newPrice -> seed.changePrice(
                                     newPrice
                                         .filter { it.isDigit() || it == '.' }
                                         .toDoubleOrNull() ?: 0.0
@@ -171,9 +178,9 @@ fun InventoryDialog(
                             // ------------------------- Cost -------------------------------
                             OutlinedTextField(
                                 modifier = Modifier.width(280.dp),
-                                value = inventorySeed.cost.toString(),
+                                value = seed.cost.toString(),
                                 onValueChange = {
-                                        newPrice -> inventorySeed.setCost(
+                                        newPrice -> seed.changeCost(
                                     newPrice
                                         .filter { it.isDigit() || it == '.' }
                                         .toDoubleOrNull() ?: 0.0
@@ -207,7 +214,7 @@ fun InventoryDialog(
 
                                 IconButton(
                                     modifier = Modifier.size(26.dp),
-                                    onClick = { showAddNoteDialog = true }
+                                    onClick = { showNoteDialog = true }
                                 ) {
                                     Icon(
                                         modifier = Modifier
@@ -222,7 +229,7 @@ fun InventoryDialog(
                             Spacer(Modifier.padding(4.dp))
 
                             DialogNoteList(
-                                notes = inventorySeed.notes,
+                                notes = seed.notes,
                                 onDeleteClick = { item ->
                                     itemForDelete = DataType.NOTE
                                     itemUpForDeleteIndex = item

@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,7 +12,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.inventory.InventorySeed
+import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -24,7 +24,7 @@ import ticketman.composeapp.generated.resources.*
 fun InventoryInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    inventoryData: InventoryData?,
+    inventoryData: InventorySeed,
     onEditClick: () -> Unit
 ) {
     // Main Body
@@ -111,7 +111,7 @@ fun InventoryInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        inventoryData?.let { (inventory, _) ->
+                        if (!inventoryData.isNew) {
                             // Description
                             Column(
                                 modifier = Modifier
@@ -127,7 +127,7 @@ fun InventoryInfoPane(
                                 Spacer(Modifier.padding(4.dp))
 
                                 Text(
-                                    text = inventory.description,
+                                    text = inventoryData.description,
                                     fontSize = 16.sp
                                 )
                             }
@@ -137,7 +137,7 @@ fun InventoryInfoPane(
                             // Cost
                             SimpleTextItem(
                                 label = "Cost",
-                                text = inventory.cost
+                                text = inventoryData.cost.toString()
                             )
 
                             Spacer(Modifier.padding(4.dp))
@@ -145,7 +145,7 @@ fun InventoryInfoPane(
                             // Price
                             SimpleTextItem(
                                 label = "Price",
-                                text = inventory.price
+                                text = inventoryData.price.toString()
                             )
 
                             Spacer(Modifier.padding(4.dp))
@@ -153,7 +153,7 @@ fun InventoryInfoPane(
                             // Date created
                             SimpleTextItem(
                                 label = "Created",
-                                text = inventory.time().date()
+                                text = UUIDv7.getTime(inventoryData.identifier).date()
                             )
                         }
                     }
@@ -178,13 +178,13 @@ fun InventoryInfoPane(
                             icon = Res.drawable.clipboard
                         )
 
-                        inventoryData?.let { (_, notes) ->
+                        if (!inventoryData.isNew) {
                             PlatformLazyColumn(
                                 modifier = Modifier.padding(4.dp),
                                 isVisible = inventoryData.notes.isNotEmpty()
                             ) {
                                 item {
-                                    NoteBlock(noteData = notes)
+                                    NoteBlock(notes = inventoryData.notes)
                                 }
                             }
                         }

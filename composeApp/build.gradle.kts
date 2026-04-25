@@ -118,7 +118,7 @@ kotlin {
             implementation(libs.ktor.client.okhttp)
 
             // open pdf
-            implementation(libs.openpdf)
+            //implementation(libs.openpdf)
         }
     }
 }

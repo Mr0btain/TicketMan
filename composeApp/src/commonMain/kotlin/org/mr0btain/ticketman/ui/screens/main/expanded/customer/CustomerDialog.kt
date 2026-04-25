@@ -13,17 +13,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
-import org.mr0btain.ticketman.components.data.note.NoteData
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
@@ -108,11 +100,11 @@ fun CustomerDialog(
                     when (itemToAdd) {
                         DataType.EMAIL -> {
                             // Add item to list
-                            seed.addEmail(item)
+                            seed.changeEmail(item)
                         }
                         DataType.PHONE -> {
                             // Add item to list
-                            seed.addPhone(item)
+                            seed.changePhone(item)
                         }
                         else -> {}
                     }
@@ -132,8 +124,8 @@ fun CustomerDialog(
                 try {
                     when (dataType) {
                         DataType.TICKET -> seed.removeTicket(UUID.fromString(itemToDelete))
-                        DataType.EMAIL -> seed.removeEmail(itemToDelete)
-                        DataType.PHONE -> seed.removePhone(itemToDelete)
+                        DataType.EMAIL -> seed.changeEmail("")
+                        DataType.PHONE -> seed.changePhone("")
                         DataType.NOTE -> seed.removeNote(UUID.fromString(itemToDelete))
                         else -> {} // Do Nothing
                     }
@@ -207,10 +199,10 @@ fun CustomerDialog(
                                 modifier = Modifier,
                                 firstLabel = "First",
                                 firstValue = seed.firstName,
-                                onFirstValueChange = { seed.setFirstName(it) },
+                                onFirstValueChange = { seed.changeFirstName(it) },
                                 secondLabel = "Last",
                                 secondValue = seed.lastName,
-                                onSecondValueChange = { seed.setLastName(it) }
+                                onSecondValueChange = { seed.changeLastName(it) }
                             )
 
                             Spacer(Modifier.padding(8.dp))
@@ -232,20 +224,20 @@ fun CustomerDialog(
                                     modifier = Modifier,
                                     firstLabel = "Street",
                                     firstValue = seed.street,
-                                    onFirstValueChange = { seed.setStreet(it) },
+                                    onFirstValueChange = { seed.changeStreet(it) },
                                     secondLabel = "City",
                                     secondValue = seed.city,
-                                    onSecondValueChange = { seed.setCity(it) }
+                                    onSecondValueChange = { seed.changeCity(it) }
                                 )
 
                                 DialogTextRow(
                                     modifier = Modifier,
                                     firstLabel = "State",
                                     firstValue = seed.state,
-                                    onFirstValueChange = { seed.setState(it) },
+                                    onFirstValueChange = { seed.changeState(it) },
                                     secondLabel = "Zip",
                                     secondValue = seed.zip,
-                                    onSecondValueChange = { seed.setZip(it) }
+                                    onSecondValueChange = { seed.changeZip(it) }
                                 )
                             }
 
@@ -268,7 +260,7 @@ fun CustomerDialog(
                             // Email list
                             ChipList(
                                 modifier = Modifier,
-                                items = seed.email,
+                                items = listOf(seed.email),
                                 onEditClick = {},
                                 onDeleteClick = { item ->
                                     // Set data type so we know what were looking to delete
@@ -292,7 +284,7 @@ fun CustomerDialog(
                             // Phone List
                             ChipPhoneList(
                                 modifier = Modifier,
-                                items = seed.phone,
+                                items = listOf(seed.phone),
                                 onEditClick = {},
                                 onDeleteClick = { item ->
                                     // Set data type so we know what were looking to delete
@@ -314,7 +306,7 @@ fun CustomerDialog(
 
                             // ------------------------- Ticket list -------------------------------
                             ChipTicketList(
-                                tickets = seed.tickets,
+                                tickets = seed.tickets.map { it.identifier },
                                 onDeleteClick = { item ->
                                     // Set data type so we know what were looking to delete
                                     dataType = DataType.TICKET
@@ -344,11 +336,8 @@ fun CustomerDialog(
                                 notes = seed.notes,
                                 editable = true,
                                 onImageClick = onImageClick,
-                                onEditClick = { id ->
-                                    seed.getNote(id)?.let { (note, images) ->
-                                        noteSeed.setNote(note, images)
-                                    }
-
+                                onEditClick = { note ->
+                                    noteSeed.setNote(note)
                                     showNoteDialog = true
                                 }
                             )

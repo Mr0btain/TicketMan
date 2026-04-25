@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -23,24 +22,20 @@ import kotlin.random.Random
 /**
  * Generates a random customer for testing
  */
-fun generateMockCustomer(): Pair<Customer, List<Note>> {
-    val name = generateRandomName()
-
-    // Generate some mock customer data
-    val customerData = Customer(
+fun generateMockCustomer(): Pair<Customer, List<Note>> = Pair(
+    Customer(
         name = generateRandomName(),
         address = generateRandomAddress(),
-        contactInfo = generateRandomContactInfo(name.firstName, name.lastName)
-    )
-    val notes = mutableListOf<Note>()
-
+        email = generateEmail(),
+        phone = generatePhoneNumber()
+    ),
     // Generate notes
-    (0..Random.nextInt(0, 4)).forEach { _ ->
-        notes.add(generateCustomerNote())
+    buildList {
+        (0..Random.nextInt(0, 4)).forEach { _ ->
+            add(generateCustomerNote())
+        }
     }
-
-    return Pair(customerData, notes)
-}
+)
 
 /**
  * Generates a random inventory for testing
@@ -86,27 +81,17 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
 /**
  * Generates a random user for testing
  */
-fun generateMockUser(): Pair<User, List<Note>> {
-    val accessLevel = AccessLevel.entries.random()
-    val name = generateRandomName()
-    val notes = (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
-
-    // Random ContactInfo (emails and phone numbers)
-    val email = (1..Random.nextInt(1, 3)).map { "user${Random.nextInt(1000, 9999)}@example.com" }
-    val phone = (1..Random.nextInt(1, 4)).map { generateRandomPhoneNumber() }
-    val contactInfo = ContactInfo(email, phone)
-
-    return Pair(
-        User(
-            username = "${name.firstName}_${name.lastName}",
-            password = name.lastName,
-            name = name,
-            contactInfo = contactInfo,
-            accessLevel = accessLevel
-        ),
-        notes
-    )
-}
+fun generateMockUser(name: PersonName = generateRandomName()): Pair<User, List<Note>> = Pair(
+    User(
+        username = "${name.firstName}_${name.lastName}",
+        password = name.lastName,
+        name = name,
+        phone = generatePhoneNumber(),
+        email = generateEmail(),
+        accessLevel = AccessLevel.entries.random()
+    ),
+    (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
+)
 
 /**
  * Generates a fake time for testing
@@ -321,38 +306,27 @@ fun generateRandomInventoryNotes(count: Int): List<Note> {
 /**
  * Generates a random contact info for testing
  */
-private fun generateRandomContactInfo(firstName: String? = null, lastName: String? = null): ContactInfo {
+
+private fun generateEmail(): String {
     val domains = listOf("gmail.com", "yahoo.com", "outlook.com", "icloud.com", "protonmail.com")
 
     // Optionally reuse known first/last names to generate a realistic email
-    val fName = firstName ?: listOf("james", "emily", "michael", "sarah", "david", "laura").random()
-    val lName = lastName ?: listOf("smith", "johnson", "williams", "brown", "jones", "garcia").random()
+    val fName = listOf("james", "emily", "michael", "sarah", "david", "laura").random()
+    val lName = listOf("smith", "johnson", "williams", "brown", "jones", "garcia").random()
 
     val numberPart = Random.nextInt(10, 99)
-    val email = "$fName.$lName$numberPart@${domains.random()}".lowercase()
-
-    val phone = mutableListOf<String>()
-
-    // Random US-style phone number (XXX-XXX-XXXX)
-    (0..Random.nextInt(0, 4)).forEach { _ ->
-        phone.add(generateRandomPhoneNumber())
-    }
-
-    return ContactInfo(listOf(email), phone)
+    return "$fName.$lName$numberPart@${domains.random()}".lowercase()
 }
 
 /**
  * Generates a random phone number for testing
  */
-private fun generateRandomPhoneNumber(): String {
-    // Random US-style phone number (XXX-XXX-XXXX)
-    return buildString {
-        append(Random.nextInt(200, 999))  // Area code
-        append("-")
-        append(Random.nextInt(100, 999))  // Prefix
-        append("-")
-        append(Random.nextInt(1000, 9999)) // Line number
-    }
+private fun generatePhoneNumber(): String = buildString {
+    append(Random.nextInt(200, 999))  // Area code
+    append("-")
+    append(Random.nextInt(100, 999))  // Prefix
+    append("-")
+    append(Random.nextInt(1000, 9999)) // Line number
 }
 
 /**

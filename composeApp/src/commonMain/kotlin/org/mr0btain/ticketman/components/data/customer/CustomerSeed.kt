@@ -7,7 +7,6 @@ import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.customer.ContactInfo
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
@@ -52,72 +51,72 @@ class CustomerSeed: DataSeed() {
     val customer: Customer
         get() = Customer(identifier, PersonName(firstName, lastName), address, email, phone)
 
-    fun setFirstName(newName: String) {
+    fun changeFirstName(newName: String) {
         if (firstName != newName) {
             firstName = newName
-            changedFields.add(ChangedField.NAME)
+            _changedFields.add(ChangedField.NAME)
         }
     }
 
-    fun setLastName(newName: String) {
+    fun changeLastName(newName: String) {
         if (lastName != newName) {
             lastName = newName
-            changedFields.add(ChangedField.NAME)
+            _changedFields.add(ChangedField.NAME)
         }
     }
 
-    fun setStreet(newStreet: String) {
+    fun changeStreet(newStreet: String) {
         if (street != newStreet) {
             street = newStreet
-            changedFields.add(ChangedField.STREET)
+            _changedFields.add(ChangedField.STREET)
         }
     }
 
-    fun setCity(newCity: String) {
+    fun changeCity(newCity: String) {
         if (city != newCity) {
             city = newCity
-            changedFields.add(ChangedField.CITY)
+            _changedFields.add(ChangedField.CITY)
         }
     }
 
-    fun setState(newState: String) {
+    fun changeState(newState: String) {
         if (state != newState) {
             state = newState
-            changedFields.add(ChangedField.STATE)
+            _changedFields.add(ChangedField.STATE)
         }
     }
 
-    fun setZip(newZip: String) {
+    fun changeZip(newZip: String) {
         if (zip != newZip) {
             zip = newZip
-            changedFields.add(ChangedField.ZIP)
+            _changedFields.add(ChangedField.ZIP)
         }
     }
 
-    fun setEmail(newEmail: String) {
+    fun changeEmail(newEmail: String) {
         if (email != newEmail) {
             email = newEmail
-            changedFields.add(ChangedField.EMAIL)
+            _changedFields.add(ChangedField.EMAIL)
         }
     }
 
-    fun setPhone(newPhone: String) {
+    fun changePhone(newPhone: String) {
         if (phone != newPhone) {
             phone = newPhone
-            changedFields.add(ChangedField.PHONE)
+            _changedFields.add(ChangedField.PHONE)
         }
     }
 
     fun addTicket(newTicket: Ticket) {
         if (!_tickets.contains(newTicket)) {
             _tickets.add(newTicket)
-            changedFields.add(ChangedField.TICKET)
+            _changedFields.add(ChangedField.TICKET)
         }
     }
 
     fun removeTicket(ticketToRemove: UUID) {
         if (_tickets.removeIf { it == identifier }) {
-            changedFields.add(ChangedField.TICKET)
+            _changedFields.add(ChangedField.TICKET)
         }
     }
 
@@ -188,7 +187,7 @@ class CustomerSeed: DataSeed() {
             time
         ).hashCode()
 
-        changedFields.clear()
+        _changedFields.clear()
     }
 
     override fun toString(): String =

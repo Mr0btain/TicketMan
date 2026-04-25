@@ -96,7 +96,8 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                         username = item.username
                         password = item.password
                         name = item.name.toString()
-                        contactInfo = item.contactInfo
+                        email = item.email
+                        phone = item.phone
                         access = item.accessLevel
                     }
                 }
@@ -159,7 +160,8 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                     username = data.username
                     password = data.password
                     name = data.name.toString()
-                    contactInfo = data.contactInfo
+                    email = data.email
+                    phone = data.phone
                     access = data.accessLevel
                 }
 
@@ -179,7 +181,8 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                         username = data.username
                         password = data.password
                         name = data.name.toString()
-                        contactInfo = data.contactInfo
+                        email = data.email
+                        phone = data.phone
                         access = data.accessLevel
 
                         result = true

@@ -10,8 +10,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.data.customer.CustomerData
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
+import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.ui.composables.ContactsBlock
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -133,7 +133,7 @@ fun CustomerInfoPane(
 
                                     Text(
                                         modifier = Modifier,
-                                        text = selectedCustomer.time.date(),
+                                        text = Time.fromLong(selectedCustomer.time).toString(),
                                         fontSize = textSize
                                     )
                                 }
@@ -181,8 +181,8 @@ fun CustomerInfoPane(
 
                                 // ------------ Contacts section ---------------
                                 ContactsBlock(
-                                    emailList = selectedCustomer.email,
-                                    phoneList = selectedCustomer.phone,
+                                    emailList = listOf(selectedCustomer.email),
+                                    phoneList = listOf(selectedCustomer.phone),
                                     labelSize = labelSize,
                                     textSize = textSize,
                                     iconSize = iconSize

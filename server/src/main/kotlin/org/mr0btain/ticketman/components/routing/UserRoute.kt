@@ -179,7 +179,8 @@ private fun UserRequest.toModel(id: UUID): User =
         username = username,
         password = hashPassword(password),
         name = name,
-        contactInfo = contactInfo,
+        email = email,
+        phone = phone,
         accessLevel = accessLevel
     )
 

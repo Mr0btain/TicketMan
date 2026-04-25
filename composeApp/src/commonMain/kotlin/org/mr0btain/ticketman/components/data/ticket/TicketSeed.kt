@@ -48,45 +48,45 @@ class TicketSeed(): DataSeed() {
         isNew = false
     }
 
-    fun setIdentifier(newId: UUID) {
+    fun changeIdentifier(newId: UUID) {
         if (identifier != newId) {
             identifier = newId
-            changedFields.add(ChangedField.IDENTIFIER)
+            _changedFields.add(ChangedField.IDENTIFIER)
         }
     }
 
-    fun setDevice(newDevice: Device) {
+    fun changeDevice(newDevice: Device) {
         if (device != newDevice) {
             device = newDevice
-            changedFields.add(ChangedField.DEVICE)
+            _changedFields.add(ChangedField.DEVICE)
         }
     }
 
-    fun setStatus(newStatus: TicketStatus) {
+    fun changeStatus(newStatus: TicketStatus) {
         if (status != newStatus) {
             status = newStatus
-            changedFields.add(ChangedField.STATUS)
+            _changedFields.add(ChangedField.STATUS)
         }
     }
 
-    fun setPriority(newPriority: TicketPriority) {
+    fun changePriority(newPriority: TicketPriority) {
         if (priority != newPriority) {
             priority = newPriority
-            changedFields.add(ChangedField.PRIORITY)
+            _changedFields.add(ChangedField.PRIORITY)
         }
     }
 
-    fun setCustomer(newCustomer: Identity?) {
+    fun changeCustomer(newCustomer: Identity?) {
         if (customer != newCustomer) {
             customer = newCustomer
-            changedFields.add(ChangedField.CUSTOMER)
+            _changedFields.add(ChangedField.CUSTOMER)
         }
     }
 
-    fun setUser(newUser: Identity?) {
+    fun changeUser(newUser: Identity?) {
         if (user != newUser) {
             user = newUser
-            changedFields.add(ChangedField.USER)
+            _changedFields.add(ChangedField.USER)
         }
     }
 
@@ -109,7 +109,7 @@ class TicketSeed(): DataSeed() {
     // Save current state as the new clean snapshot
     override fun markClean() {
         savedState = State(identifier, device, status, priority, customer, user,  notes, _images, time).hashCode()
-        changedFields.clear()  // Reset the changed fields
+        _changedFields.clear()  // Reset the changed fields
     }
 
     override fun toString(): String {

@@ -51,31 +51,31 @@ class InventorySeed: DataSeed() {
     }
 
     // -- Setters that automatically mark changes --
-    fun setName(newName: String) {
+    fun changeName(newName: String) {
         if (name != newName) {
             name = newName
-            changedFields.add(ChangedField.NAME)
+            _changedFields.add(ChangedField.NAME)
         }
     }
 
-    fun setDescription(newDescr: String) {
+    fun changeDescription(newDescr: String) {
         if (description != newDescr) {
             description = newDescr
-            changedFields.add(ChangedField.DESCRIPTION)
+            _changedFields.add(ChangedField.DESCRIPTION)
         }
     }
 
-    fun setStock(newStock: Int) {
+    fun changeStock(newStock: Int) {
         if (stock != newStock) {
             stock = newStock
-            changedFields.add(ChangedField.STOCK)
+            _changedFields.add(ChangedField.STOCK)
         }
     }
 
-    fun setPrice(newPrice: Double) {
+    fun changePrice(newPrice: Double) {
         if (price != newPrice) {
             price = newPrice
-            changedFields.add(ChangedField.PRICE)
+            _changedFields.add(ChangedField.PRICE)
         }
     }
 
@@ -98,16 +98,16 @@ class InventorySeed: DataSeed() {
     // Save current state as the new clean snapshot
     override fun markClean() {
         savedState = State(identifier, name, description, stock, cost, price, _notes, _images, time).hashCode()
-        changedFields.clear()  // Reset the changed fields
+        _changedFields.clear()  // Reset the changed fields
     }
 
     override fun toString(): String =
         "InventorySeed(name=$name,description=$description,stock=$stock,cost=$cost,price=$price, notes=$_notes)"
 
-    fun setCost(newCost: Double) {
+    fun changeCost(newCost: Double) {
         if (newCost != cost) {
             cost = newCost
-            changedFields.add(ChangedField.COST)
+            _changedFields.add(ChangedField.COST)
         }
     }
 
