@@ -12,7 +12,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.components.pagination.offset.handleOffsetPager
+import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
@@ -48,8 +48,8 @@ fun ExpandedMainScreen(
     val customerPagedItems = viewModel.customerPager?.items?.collectAsState()
     val customerLazyListState = rememberLazyListState()
 
-    // Handle the customer pager
-    handleOffsetPager(viewModel.customerPager, customerLazyListState)
+    // Handler for the customer pager
+    offsetPagerHandler(viewModel.customerPager, customerLazyListState)
 
     // For customer dialog
     var showCustomerDialog by remember { mutableStateOf(false) }
@@ -61,8 +61,8 @@ fun ExpandedMainScreen(
     val ticketLazyListState = rememberLazyListState()
     var selectedTicketPanel by remember { mutableIntStateOf(0) }
 
-    // Handle ticket pager
-    handleOffsetPager(viewModel.ticketPager, ticketLazyListState)
+    // Handler for ticket pager
+    offsetPagerHandler(viewModel.ticketPager, ticketLazyListState)
 
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
@@ -72,8 +72,8 @@ fun ExpandedMainScreen(
     val inventoryPagedItems = viewModel.inventoryPager?.items?.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
 
-    // Handle inventory pager
-    handleOffsetPager(viewModel.inventoryPager, inventoryLazyListState)
+    // Handler for inventory pager
+    offsetPagerHandler(viewModel.inventoryPager, inventoryLazyListState)
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
@@ -165,7 +165,8 @@ fun ExpandedMainScreen(
     )
 
     Surface(
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
+        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer
+                else MaterialTheme.colorScheme.background
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -242,7 +243,7 @@ fun ExpandedMainScreen(
                     // TODO: ---------------------------------------------------------------------------------------
                     Button(
                         onClick = {
-                            // TODO
+                            // For testing
                         }
                     ) {
                         Text("Sync")
