@@ -42,6 +42,9 @@ import ticketman.composeapp.generated.resources.user
 // TODO: Make a better way to refresh data in pager when item is deleted.
 
 // TODO: Setup so when we load a ticket into the seed we get the customer and users names somehow.
+// TODO: Fix search bars in dialogs for ticket and others if needed
+
+// TODO: When canceling a change in dialogs, we need to re pull the correct data to clear any changes we made
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
