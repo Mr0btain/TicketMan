@@ -215,6 +215,14 @@ class MainViewModel(
         customerDatabase.search(query, 20) ?: emptyList()
     }
 
+    fun removeCustomer(identifier: UUID) {
+        viewModelScope.launch {
+            if (customerSeed.identifier == identifier) customerSeed.clear()
+
+            customerDatabase.remove(identifier)
+        }
+    }
+
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
 
     val ticketCache = TicketCache(maxCacheSize)
@@ -515,14 +523,16 @@ class MainViewModel(
 
             // Add random tickets
             (0..Random.nextInt(1, 6)).forEach { _ ->
-                customerDatabase.addTicket(customer.identifier, ticketIdentifiers.random())
+                if (ticketIdentifiers.isNotEmpty()) {
+                    // basically popping one random off the list
+                    val randomIndex = Random.nextInt(ticketIdentifiers.size)
+                    customerDatabase.addTicket(customer.identifier, ticketIdentifiers.removeAt(randomIndex))
+                }
             }
         }
 
         (0..inventoryNum).forEach { _ ->
             val (inventory, notes) = generateRandomInventoryItem()
-
-            println(inventory)
 
             inventoryDatabase.add(inventory)
 
@@ -545,7 +555,9 @@ class MainViewModel(
 
             // Add random tickets
             (0..Random.nextInt(4, 12)).forEach { _ ->
-                userDatabase.addTicket(user.identifier, ticketIdentifiers.random())
+                if (ticketIdentifiers.isNotEmpty()) {
+                    userDatabase.addTicket(user.identifier, ticketIdentifiers.random())
+                }
             }
         }
     }

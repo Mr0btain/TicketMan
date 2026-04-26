@@ -20,7 +20,7 @@ fun CustomerPanel(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
     customerList: List<Customer>,
-    selectedCustomer: CustomerSeed,
+    seed: CustomerSeed,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (UUID) -> Unit,
@@ -59,7 +59,7 @@ fun CustomerPanel(
                     isDarkMode = isDarkMode,
                     customerList = customerList,
                     lazyListState = customerLazyListState,
-                    selectedCustomerId = selectedCustomer?.customer?.identifier,
+                    selectedId = seed.customer.identifier,
                     scope = coroutineScope,
                     onClick = { id ->
                         // Set the isupdatefromclick so we don't jar the scroll in the launched effect
@@ -73,7 +73,7 @@ fun CustomerPanel(
                 CustomerInfoPane(
                     modifier = Modifier,
                     isDarkMode = isDarkMode,
-                    selectedCustomer = selectedCustomer,
+                    selectedCustomer = seed,
                     onEditClick = { onEditCustomer() },
                     onTicketClick = onTicketClick,
                     onImageClick = onImageClick
@@ -83,7 +83,7 @@ fun CustomerPanel(
     }
 
     // On list update or search scroll to selected item
-    LaunchedEffect(selectedCustomer) {
+    LaunchedEffect(seed) {
         /*
         if (!isSelectUpdateFromClick) {
             // Get index of visible items

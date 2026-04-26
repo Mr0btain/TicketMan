@@ -37,6 +37,7 @@ class InventorySeed: DataSeed() {
         data: Inventory,
         notes: List<Note> = emptyList()
     ) {
+        identifier = data.identifier
         name = data.name
         description = data.description
         stock = data.stock
@@ -79,6 +80,13 @@ class InventorySeed: DataSeed() {
         }
     }
 
+    fun changeCost(newCost: Double) {
+        if (newCost != cost) {
+            cost = newCost
+            _changedFields.add(ChangedField.COST)
+        }
+    }
+
     // Reset all fields
     override fun clear() {
         identifier = UUIDv7.randomUUID()
@@ -103,13 +111,6 @@ class InventorySeed: DataSeed() {
 
     override fun toString(): String =
         "InventorySeed(name=$name,description=$description,stock=$stock,cost=$cost,price=$price, notes=$_notes)"
-
-    fun changeCost(newCost: Double) {
-        if (newCost != cost) {
-            cost = newCost
-            _changedFields.add(ChangedField.COST)
-        }
-    }
 
     private data class State(
         val identifier: UUID = UUIDv7.randomUUID(),

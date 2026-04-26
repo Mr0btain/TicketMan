@@ -39,6 +39,9 @@ import ticketman.composeapp.generated.resources.user
 // need just the info from the customer or such is when we display it in a list. Could just make a custom data class for that
 // specific case.
 
+// TODO: Fix inventory and customer selected highlight in list
+// TODO: Add a way to load database data after view model init.
+
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable

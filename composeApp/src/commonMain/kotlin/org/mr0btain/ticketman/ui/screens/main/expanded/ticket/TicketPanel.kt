@@ -30,7 +30,7 @@ fun TicketPanel(
     isDarkMode: Boolean,
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
-    selectedTicket: TicketSeed,
+    seed: TicketSeed,
     ticketList: List<Ticket>,
     currentUser: UserData?,
     onAddNewTicket: () -> Unit,
@@ -146,7 +146,7 @@ fun TicketPanel(
                         // Update selected ticket
                         onSelectedTicketChange(ticket)
                     },
-                    selectedId = selectedTicket?.ticket?.identifier,
+                    selectedTicket = seed.ticket.identifier,
                     state = ticketListState,
                     coroutineScope = coroutineScope
                 )
@@ -157,7 +157,7 @@ fun TicketPanel(
                     customer = Customer(), //selectedTicket.customer,
                     assignedUserName = PersonName(), //selectedTicket.assignedUser.name, //(users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser } ?: User()).name,
                     isDarkMode = isDarkMode,
-                    ticketData = selectedTicket,
+                    ticketData = seed,
                     onEditClick = {
                         // Call edit ticket
                         onEditTicket()
@@ -174,7 +174,7 @@ fun TicketPanel(
     // TODO: Maybe make this also switch to the right tab as well
     // On certain list update scroll to selected item
     // This will only really happen if we add a new ticket
-    LaunchedEffect(selectedTicket?.ticket?.identifier, selectedPanel) {
+    LaunchedEffect(seed?.ticket?.identifier, selectedPanel) {
         /*
         if (!isSelectedUpdateFromClick) {
             // Check to see if were even on the list were selecting the ticket for, this comes up if

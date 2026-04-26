@@ -30,7 +30,7 @@ fun TicketListPane(
     isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketList: List<Ticket>,
-    selectedId: UUID?,
+    selectedTicket: UUID,
     onClick: (UUID) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
@@ -110,7 +110,7 @@ fun TicketListPane(
                         } else {
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                         },
-                        selected = selectedId == ticket.identifier,
+                        selected = selectedTicket == ticket.identifier,
                         ticket = ticket,
                         numberWidth = numberColumnWidth,
                         priorityWidth = priorityColumnWidth,

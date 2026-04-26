@@ -291,7 +291,7 @@ fun ExpandedMainScreen(
                                     showImagePopup = true
                                 }
                         },
-                        selectedCustomer = customerSeed,
+                        seed = customerSeed,
                         customerList = customerPagedItems?.value ?: emptyList(),
                         customerLazyListState = customerLazyListState,
                         coroutineScope = coroutineScope
@@ -305,7 +305,7 @@ fun ExpandedMainScreen(
                         isDarkMode = isDarkMode,
                         ticketList = ticketPagedItems?.value ?: emptyList(),
                         currentUser = null,
-                        selectedTicket = ticketSeed,
+                        seed = ticketSeed,
                         onAddNewTicket = {
                             // Set up seed data
                             ticketSeed.clear()

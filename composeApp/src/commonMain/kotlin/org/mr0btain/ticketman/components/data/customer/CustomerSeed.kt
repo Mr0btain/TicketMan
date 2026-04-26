@@ -125,6 +125,9 @@ class CustomerSeed: DataSeed() {
         notes: List<Note> = emptyList(),
         tickets: List<Ticket> = emptyList()
     ) {
+        // Identifier
+        identifier = customer.identifier
+
         // Name
         firstName = customer.name.firstName
         lastName = customer.name.lastName

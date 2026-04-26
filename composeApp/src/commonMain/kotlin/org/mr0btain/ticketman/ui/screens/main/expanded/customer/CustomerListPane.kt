@@ -27,7 +27,7 @@ fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerList: List<Customer>,
     onClick: (UUID) -> Unit,
-    selectedCustomerId: UUID?,
+    selectedId: UUID,
     lazyListState: LazyListState,
     scope: CoroutineScope,
     isDarkMode: Boolean
@@ -94,7 +94,7 @@ fun CustomerListPane(
                 ) { index, customer ->
                     CustomerTableItem(
                         customer = customer,
-                        selected = customer.identifier == selectedCustomerId,
+                        selected = customer.identifier == selectedId,
                         color = if (!isDarkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {
@@ -142,7 +142,7 @@ private fun CustomerHeaderBox(
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
     onClick: (UUID) -> Unit,
-    selected: Boolean = false,
+    selected: Boolean,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,
     nameWidth: Dp,

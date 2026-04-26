@@ -55,10 +55,8 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
     )
 
     val formatter = DecimalFormat("#.00")
-    val now = getFakeTime()
     val costVal = Random.nextDouble(0.5, 50.0)
     val priceVal = costVal * Random.nextDouble(1.2, 2.5)
-    val timeOffset = Random.nextLong(0, 30L * 24 * 60 * 60 * 1000) // up to 30 days ago
     val notes = mutableListOf<Note>()
 
     // Generate notes
@@ -92,21 +90,6 @@ fun generateMockUser(name: PersonName = generateRandomName()): Pair<User, List<N
     ),
     (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
 )
-
-/**
- * Generates a fake time for testing
- */
-private fun getFakeTime(): Long {
-    return Time(
-        year = Random.nextInt(2000, 2025),
-        month = Random.nextInt(1, 12),
-        day = Random.nextInt(1, 21),
-        hour = Random.nextInt(1, 12),
-        minute = Random.nextInt(0, 59),
-        second = Random.nextInt(0, 59),
-        ampm = Time.AMPM.entries.random()
-    ).toLong()
-}
 
 /**
  * Generates a random address for testing

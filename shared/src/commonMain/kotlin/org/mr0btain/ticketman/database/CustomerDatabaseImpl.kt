@@ -71,7 +71,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                     .limit(pageSize)
                     .map { it.toCustomer() }
             }
-
+            println("Customer Paged items size: ${result?.size}")
             result != null
         }
 
