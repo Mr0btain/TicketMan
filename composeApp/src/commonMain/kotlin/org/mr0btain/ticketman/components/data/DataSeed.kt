@@ -25,16 +25,15 @@ abstract class DataSeed {
     protected var _notes = mutableStateListOf<Note>()
     val notes: List<Note> = _notes
 
-    // Time
-    var time: Long by mutableStateOf(0)
-        protected set
-
     // List to store the names of fields that have changed
     protected val _changedFields = mutableListOf<ChangedField>()
 
     // Computed property to check if the object has changed
     val isDirty: Boolean
         get() = _changedFields.isNotEmpty()
+
+    val time: Long
+        get() = UUIDv7.getLongTime(identifier)
 
     // snapshot of the last saved state
     protected var savedState: Int = 0

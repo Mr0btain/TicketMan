@@ -43,7 +43,6 @@ class InventorySeed: DataSeed() {
         stock = data.stock
         cost = data.cost.toDoubleOrNull() ?: 0.0
         price = data.price.toDoubleOrNull() ?: 0.0
-        time = UUIDv7.getLongTime(data.identifier)
 
         setNotes(notes)
 
@@ -97,7 +96,6 @@ class InventorySeed: DataSeed() {
         price = 0.0
         _notes.clear()
         _images.clear()
-        time = UUIDv7.getLongTime(identifier)
         isNew = true
 
         markClean()
@@ -105,7 +103,7 @@ class InventorySeed: DataSeed() {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(identifier, name, description, stock, cost, price, _notes, _images, time).hashCode()
+        savedState = State(identifier, name, description, stock, cost, price, _notes, _images).hashCode()
         _changedFields.clear()  // Reset the changed fields
     }
 
@@ -120,7 +118,6 @@ class InventorySeed: DataSeed() {
         val cost: Double = 0.0,
         val price: Double = 0.0,
         val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList(),
-        val time: Long = 0
+        val images: List<StoredImage> = emptyList()
     )
 }

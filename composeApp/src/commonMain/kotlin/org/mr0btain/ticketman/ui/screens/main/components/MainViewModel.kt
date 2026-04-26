@@ -15,7 +15,9 @@ import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
+import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserData
+import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
@@ -131,7 +133,7 @@ class MainViewModel(
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
-    val customerCache: CustomerCache = CustomerCache()
+    val customerCache: CustomerCache = CustomerCache(maxCacheSize)
 
     private val customerDatabase: CustomerDatabaseImpl = CustomerDatabaseImpl()
 
@@ -313,7 +315,7 @@ class MainViewModel(
 
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
 
-    val inventoryCache = InventoryCache()
+    val inventoryCache = InventoryCache(maxCacheSize)
 
     private val inventoryDatabase = InventoryDatabaseImpl()
 
@@ -395,15 +397,33 @@ class MainViewModel(
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */
 
-    val userCache = LruCache<UUID, UserData>(maxCacheSize, "UserCache")
+    val userCache: UserCache = UserCache(maxCacheSize)
 
     private val userDatabase = UserDatabaseImpl()
 
     var userPager: OffsetPager<User>? = null
 
+    val userSeed: UserSeed = UserSeed()
+
     /** Sets selected user and adds it to the cache */
-    private suspend fun setSelectedUser(identifier: UUID) {
-        // TODO
+    fun setSelectedUser(identifier: UUID) {
+        if (userSeed.identifier == identifier) return
+
+        viewModelScope.launch {
+            val cached = userCache.get(identifier)?.let { (user, notes) ->
+                userSeed.setUser(user, notes)
+            }
+
+            if (cached == null) {
+                userDatabase.getById(identifier)?.let { user ->
+                    val notes = userDatabase.getNotes(identifier) ?: emptyList()
+
+                    userSeed.setUser(user, notes)
+
+                    userCache.put(user, notes)
+                }
+            }
+        }
     }
 
     suspend fun searchUsers(query: String) = coroutineScope {

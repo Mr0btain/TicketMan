@@ -43,6 +43,7 @@ class TicketSeed(): DataSeed() {
         priority = ticket.priority
         customer = customerId
         user = userId
+        _notes.addAll(notes)
 
         markClean()
         isNew = false
@@ -100,7 +101,6 @@ class TicketSeed(): DataSeed() {
         user = null
         _notes.clear()
         _images.clear()
-        time = UUIDv7.getLongTime(identifier)
 
         isNew = true
         markClean()
@@ -108,7 +108,7 @@ class TicketSeed(): DataSeed() {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(identifier, device, status, priority, customer, user,  notes, _images, time).hashCode()
+        savedState = State(identifier, device, status, priority, customer, user,  notes, _images).hashCode()
         _changedFields.clear()  // Reset the changed fields
     }
 
@@ -124,8 +124,7 @@ class TicketSeed(): DataSeed() {
         val customer: Identity? = null,
         val user: Identity? = null,
         val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList(),
-        val time: Long = 0
+        val images: List<StoredImage> = emptyList()
     )
 }
 

@@ -40,8 +40,8 @@ fun ExpandedMainScreen(
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
 
     // User stuff
-    val userPagedItems = viewModel.userPager?.items?.collectAsState()
-    val userLazyListState = rememberLazyListState()
+    //val userPagedItems = viewModel.userPager?.items?.collectAsState()
+    //val userLazyListState = rememberLazyListState()
 
     // For customer panel
     val customerSeed = viewModel.customerSeed
@@ -84,7 +84,7 @@ fun ExpandedMainScreen(
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
-    var imagePopupList = remember { mutableStateListOf<StoredImage>() }
+    val imagePopupList = remember { mutableStateListOf<StoredImage>() }
 
     // For customer adding or editing
     // Doing image click like this we won't be able to open newly added images that were added within this dialog.
@@ -240,7 +240,6 @@ fun ExpandedMainScreen(
                     horizontalArrangement = Arrangement.End,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // TODO: ---------------------------------------------------------------------------------------
                     Button(
                         onClick = {
                             // For testing

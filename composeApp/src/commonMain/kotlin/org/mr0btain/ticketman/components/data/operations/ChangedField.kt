@@ -25,5 +25,8 @@ enum class ChangedField {
     STATUS,
     PRIORITY,
     AUTHOR,
-    MESSAGE
+    MESSAGE,
+    USERNAME,
+    PASSWORD,
+    ACCESS_LEVEL
 }

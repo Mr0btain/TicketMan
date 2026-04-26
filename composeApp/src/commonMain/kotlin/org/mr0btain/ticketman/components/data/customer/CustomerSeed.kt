@@ -148,9 +148,6 @@ class CustomerSeed: DataSeed() {
         _tickets.clear()
         _tickets.addAll(tickets)
 
-        // Time
-        time = UUIDv7.getLongTime(customer.identifier)
-
         markClean() // Mark clean
     }
 
@@ -167,7 +164,6 @@ class CustomerSeed: DataSeed() {
         _tickets.clear()
         _notes.clear()
         _images.clear()
-        time = UUIDv7.getLongTime(identifier)
 
         isNew = true
         markClean()
@@ -186,8 +182,7 @@ class CustomerSeed: DataSeed() {
             phone,
             _tickets,
             _notes,
-            _images,
-            time
+            _images
         ).hashCode()
 
         _changedFields.clear()
@@ -208,7 +203,6 @@ class CustomerSeed: DataSeed() {
         val phone: String = "",
         val tickets: List<Ticket> = emptyList(),
         val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList(),
-        val time: Long = 0
+        val images: List<StoredImage> = emptyList()
     )
 }
