@@ -133,9 +133,9 @@ fun ExpandedMainScreen(
         isVisible = showConfirmDeleteDialog,
         onConfirm = {
             when (dataType) {
-                DataType.CUSTOMER -> TODO()
-                DataType.TICKET -> TODO()
-                DataType.INVENTORY -> TODO()
+                DataType.CUSTOMER -> viewModel.removeCustomer(customerSeed.identifier)
+                DataType.TICKET -> viewModel.removeTicket(ticketSeed.identifier)
+                DataType.INVENTORY -> viewModel.removeInventory(inventorySeed.identifier)
                 DataType.USER -> TODO()
                 else -> {
                     // Do Nothing

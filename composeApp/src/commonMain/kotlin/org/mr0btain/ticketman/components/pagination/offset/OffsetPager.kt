@@ -91,6 +91,32 @@ class OffsetPager<Value>(
         AppLogger.m(REFRESH_TAG, SimpleResult.SUCCESS)
     }
 
+    /** Clears and refreshes current data after a change may have happened in database */
+    suspend fun refreshCurrentData() {
+        // Make sure were not currently refreshing.
+        if (isRefreshing) return
+        isRefreshing = true
+
+        // Clear queue and cache
+        deque.clear()
+        cache.clear()
+
+        // Reset last page so we increment correctly.
+        lastPage = firstPage
+
+        // Fetch data
+        (firstPage..<config.initialLoadSize).forEach { page ->
+            if (page == firstPage)
+                load(page = firstPage, append = true, prepend = false)
+            else
+                loadNext()
+        }
+
+        isRefreshing = false
+
+        AppLogger.m(REFRESH_TAG, SimpleResult.SUCCESS)
+    }
+
     /** Load the next items in database */
     suspend fun loadNext() {
         if (isLoading || reachedEnd) return

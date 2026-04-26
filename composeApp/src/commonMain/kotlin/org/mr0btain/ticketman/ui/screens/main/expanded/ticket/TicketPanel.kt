@@ -174,7 +174,7 @@ fun TicketPanel(
     // TODO: Maybe make this also switch to the right tab as well
     // On certain list update scroll to selected item
     // This will only really happen if we add a new ticket
-    LaunchedEffect(seed?.ticket?.identifier, selectedPanel) {
+    LaunchedEffect(seed.ticket.identifier, selectedPanel) {
         /*
         if (!isSelectedUpdateFromClick) {
             // Check to see if were even on the list were selecting the ticket for, this comes up if

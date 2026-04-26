@@ -217,9 +217,13 @@ class MainViewModel(
 
     fun removeCustomer(identifier: UUID) {
         viewModelScope.launch {
-            if (customerSeed.identifier == identifier) customerSeed.clear()
+            if (customerSeed.identifier == identifier) {
+                customerSeed.clear()
+                customerDatabase.remove(identifier)
 
-            customerDatabase.remove(identifier)
+                // Refresh pager data
+                customerPager?.refreshCurrentData()
+            }
         }
     }
 
@@ -299,9 +303,11 @@ class MainViewModel(
 
     fun removeTicket(identifier: UUID) {
         viewModelScope.launch {
-            if (ticketSeed.identifier == identifier) ticketSeed.clear()
-
-            ticketDatabase.remove(identifier)
+            if (ticketSeed.identifier == identifier) {
+                ticketSeed.clear()
+                ticketDatabase.remove(identifier)
+                ticketPager?.refreshCurrentData()
+            }
         }
     }
 
@@ -373,16 +379,18 @@ class MainViewModel(
         }
     }
 
-    fun removeInventory(identifier: UUID) {
-        viewModelScope.launch {
-            if (inventorySeed.identifier == identifier) inventorySeed.clear()
-
-            inventoryDatabase.remove(identifier)
-        }
-    }
-
     suspend fun searchInventory(query: String) = coroutineScope {
         inventoryDatabase.search(query, 20) ?: emptyList()
+    }
+
+    fun removeInventory(identifier: UUID) {
+        viewModelScope.launch {
+            if (inventorySeed.identifier == identifier) {
+                inventorySeed.clear()
+                inventoryDatabase.remove(identifier)
+                inventoryPager?.refreshCurrentData()
+            }
+        }
     }
 
     /** ----------------------------------------------USER------------------------------------------------------------------- */

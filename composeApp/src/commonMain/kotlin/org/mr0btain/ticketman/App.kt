@@ -29,19 +29,19 @@ import ticketman.composeapp.generated.resources.settings
 import ticketman.composeapp.generated.resources.user
 
 // TODO: Work on UI for mobile size screens
+
 // TODO: Make option to import database data from file?
 
 // TODO: Administration screen
 // TODO: Kiosk/POS Screen
 // TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
 // TODO: All main data classes have the ability to have images of their own. We should set that up
-// TODO: I'm thinking of making Customer Ticket and User data classes hold their Notes, Images, and such. The only time we really
-// need just the info from the customer or such is when we display it in a list. Could just make a custom data class for that
-// specific case.
 
-// TODO: Fix inventory and customer selected highlight in list
 // TODO: Add a way to load database data after view model init.
 
+// TODO: Make a better way to refresh data in pager when item is deleted.
+
+// TODO: Setup so when we load a ticket into the seed we get the customer and users names somehow.
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -177,3 +177,7 @@ fun App() {
         }
     }
 }
+
+// **
+// To remove an item using viewmodel.remove you have to give it an identifier, and it must match selected/seed item.
+// You cannot remove and item unless it is also selected.
