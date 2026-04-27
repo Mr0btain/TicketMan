@@ -16,7 +16,7 @@ data class User(
     override val identifier: UUID = UUIDv7.randomUUID(),
     val username: String = "",
     val password: String = "",
-    val name: PersonName = PersonName(),
+    val name: String = "",
     val email: String = "",
     val phone: String = "",
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED
