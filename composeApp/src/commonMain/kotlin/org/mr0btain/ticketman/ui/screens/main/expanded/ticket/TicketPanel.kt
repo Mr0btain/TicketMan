@@ -11,11 +11,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
-import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.SearchBar
 import java.util.*
@@ -32,7 +32,7 @@ fun TicketPanel(
     onSelectedPanelChange: (Int) -> Unit,
     seed: TicketSeed,
     ticketList: List<Ticket>,
-    currentUser: UserData?,
+    currentUser: User?,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (UUID) -> Unit,
