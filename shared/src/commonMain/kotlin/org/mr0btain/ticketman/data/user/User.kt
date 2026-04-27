@@ -3,11 +3,10 @@ package org.mr0btain.ticketman.data.user
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.data.shared.Identity
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.uuid.UUIDSerializer
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
+import java.util.Locale.getDefault
 
 // TODO: Change to storing password hash instead of raw
 @Serializable
@@ -20,7 +19,15 @@ data class User(
     val email: String = "",
     val phone: String = "",
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED
-): MainItem
+): MainItem {
+    fun cleanName(): String {
+        return name.split(":").joinToString(" ") { n ->
+            n.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(getDefault()) else it.toString()
+            }
+        }
+    }
+}
 
 // TODO: Flesh out
 fun hashPassword(password: String): String {

@@ -96,9 +96,9 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 data.forEach { item ->
                     // Insert into database
                     CustomerEntity.new(item.identifier) {
-                        name = item.name.toString()
+                        name = item.name.lowercase()
                         address = item.address
-                        email = item.email
+                        email = item.email.lowercase()
                         phone = item.phone
                     }
                 }
@@ -165,9 +165,9 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
             transaction {
                 // Insert into database
                 CustomerEntity.new(data.identifier) {
-                    name = data.name.toString()
+                    name = data.name.lowercase()
                     address = data.address
-                    email = data.email
+                    email = data.email.lowercase()
                     phone = data.phone
                 }
 
@@ -184,9 +184,9 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 CustomerEntity
                     .findById(data.identifier)
                     ?.apply {
-                        name = data.name.toString()
+                        name = data.name.lowercase()
                         address = data.address
-                        email = data.email
+                        email = data.email.lowercase()
                         phone = data.phone
 
                         result = true
@@ -205,7 +205,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 CustomerEntity
                     .findById(identifier)
                     ?.apply {
-                        name = newName
+                        name = newName.lowercase()
                         result = true
                     } ?: AppLogger.i(UPDATE_NAME_TAG, CustomerError.NOT_FOUND)
 
@@ -239,7 +239,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                 CustomerEntity
                     .findById(identifier)
                     ?.apply {
-                        email = newEmail
+                        email = newEmail.lowercase()
                         result = true
                     } ?: AppLogger.i(UPDATE_EMAIL_TAG, CustomerError.NOT_FOUND)
 

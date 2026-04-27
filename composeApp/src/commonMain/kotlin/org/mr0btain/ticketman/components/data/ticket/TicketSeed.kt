@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import java.util.*
 
-class TicketSeed(): DataSeed() {
+class TicketSeed: DataSeed() {
     var device: Device by mutableStateOf(Device())
         private set
     var status: TicketStatus by mutableStateOf(TicketStatus())

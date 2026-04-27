@@ -11,8 +11,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
-import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.ui.composables.*
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
@@ -25,9 +23,7 @@ import kotlin.uuid.ExperimentalUuidApi
 fun TicketInfoPane(
     modifier: Modifier = Modifier,
     isDarkMode: Boolean,
-    customer: Customer,
-    assignedUserName: PersonName,
-    ticketData: TicketSeed,
+    seed: TicketSeed,
     onEditClick: () -> Unit,
     onImageClick: (UUID) -> Unit
 ) {
@@ -59,11 +55,11 @@ fun TicketInfoPane(
 
                     Spacer(Modifier.padding(4.dp))
 
-                    if (!ticketData.isNew) {
+                    if (!seed.isNew) {
                         Text(
                             modifier = Modifier
                                 .padding(4.dp),
-                            text = "Details for: ${ticketData.identifier.toString().split("-").first()}",
+                            text = "Details for: ${seed.identifier.toString().split("-").first()}",
                             fontSize = 26.sp,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -113,7 +109,7 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        ticketData?.let {
+                        seed?.let {
                             PlatformLazyColumn(
                                 modifier = Modifier.padding(4.dp),
                                 isVisible = true
@@ -122,7 +118,7 @@ fun TicketInfoPane(
                                     // Customer name
                                     SimpleTextItem(
                                         label = "Customer",
-                                        text = customer.name.firstName + " " + customer.name.lastName
+                                        text = seed.customer?.text ?: ""
                                     )
 
                                     Spacer(Modifier.padding(4.dp))
@@ -130,7 +126,7 @@ fun TicketInfoPane(
                                     // Device manufacturer
                                     SimpleTextItem(
                                         label = "Manufacturer",
-                                        text = ticketData.ticket.device.manufacturer
+                                        text = seed.ticket.device.manufacturer
                                     )
 
                                     Spacer(Modifier.padding(4.dp))
@@ -138,7 +134,7 @@ fun TicketInfoPane(
                                     // Device model
                                     SimpleTextItem(
                                         label = "Model",
-                                        text = ticketData.ticket.device.model
+                                        text = seed.ticket.device.model
                                     )
 
                                     Spacer(Modifier.padding(4.dp))
@@ -146,7 +142,7 @@ fun TicketInfoPane(
                                     // Date created
                                     SimpleTextItem(
                                         label = "Created",
-                                        text = ticketData.ticket.time().date()
+                                        text = seed.ticket.time().date()
                                     )
 
                                     Spacer(Modifier.padding(4.dp))
@@ -167,7 +163,7 @@ fun TicketInfoPane(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                text = assignedUserName.firstName + " " + assignedUserName.lastName,
+                                                text = seed.user?.text ?: "",
                                                 fontSize = 18.sp
                                             )
                                         }
@@ -209,10 +205,10 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(8.dp))
 
-                        ticketData?.let {
+                        seed?.let {
                             PlatformLazyColumn(
                                 modifier = Modifier.padding(8.dp),
-                                isVisible = ticketData.notes.isNotEmpty()
+                                isVisible = seed.notes.isNotEmpty()
                             ) {
                                 item {
                                     Row(
@@ -229,7 +225,7 @@ fun TicketInfoPane(
                                         Spacer(Modifier.padding(4.dp))
 
                                         TableStatusItem(
-                                            status = ticketData.ticket.status,
+                                            status = seed.ticket.status,
                                             isDarkMode = isDarkMode
                                         )
                                     }
@@ -251,7 +247,7 @@ fun TicketInfoPane(
                                         Spacer(Modifier.padding(4.dp))
 
                                         TablePriorityItem(
-                                            priority = ticketData.ticket.priority,
+                                            priority = seed.ticket.priority,
                                             darkMode = isDarkMode
                                         )
                                     }
@@ -259,7 +255,7 @@ fun TicketInfoPane(
                                     Spacer(Modifier.padding(4.dp))
 
                                     NoteBlock(
-                                        notes = ticketData.notes,
+                                        notes = seed.notes,
                                         onImageClick = onImageClick
                                     )
                                 }

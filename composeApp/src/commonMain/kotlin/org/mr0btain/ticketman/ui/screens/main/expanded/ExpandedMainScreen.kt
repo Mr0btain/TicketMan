@@ -304,7 +304,6 @@ fun ExpandedMainScreen(
                     TicketPanel(
                         isDarkMode = isDarkMode,
                         ticketList = ticketPagedItems?.value ?: emptyList(),
-                        currentUser = null,
                         seed = ticketSeed,
                         onAddNewTicket = {
                             // Set up seed data

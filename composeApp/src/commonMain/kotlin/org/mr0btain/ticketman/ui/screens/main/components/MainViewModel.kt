@@ -16,12 +16,10 @@ import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
-import org.mr0btain.ticketman.components.data.user.UserData
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
-import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -36,6 +34,8 @@ import org.mr0btain.ticketman.generateRandomInventoryItem
 import org.mr0btain.ticketman.generateRandomTicket
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.name_divider_character
 import java.util.*
 import kotlin.random.Random
 
@@ -166,7 +166,10 @@ class MainViewModel(
             } else { // Else handle changes
                 customerSeed.getChangedFields().forEach { changedField ->
                     when (changedField) {
-                        ChangedField.NAME -> customerDatabase.updateName(customerSeed.identifier, customerSeed.name)
+                        ChangedField.NAME -> customerDatabase.updateName(
+                            customerSeed.identifier,
+                            customerSeed.name.joinToString(Res.string.name_divider_character.toString())
+                        )
                         ChangedField.EMAIL -> customerDatabase.updateEmail(customerSeed.identifier, customerSeed.email)
                         ChangedField.PHONE -> customerDatabase.updatePhone(customerSeed.identifier, customerSeed.phone)
                         ChangedField.NOTE -> {} // TODO

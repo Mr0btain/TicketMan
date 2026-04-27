@@ -28,6 +28,8 @@ import org.mr0btain.ticketman.ui.composables.shared.ChipTicketList
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.name_divider_character
 import java.util.*
 
 // TODO: Add ability to assign already existing tickets to customer.
@@ -61,6 +63,9 @@ fun CustomerDialog(
         // For adding note dialog
         var showNoteDialog by remember { mutableStateOf(false) }
         val noteSeed = remember { NoteSeed() }
+
+        var firstName by remember { mutableStateOf(seed.firstName) }
+        var lastName by remember { mutableStateOf(seed.lastName) }
 
         // Add Note dialog
         EditNoteDialog(
@@ -199,10 +204,10 @@ fun CustomerDialog(
                                 modifier = Modifier,
                                 firstLabel = "First",
                                 firstValue = seed.firstName,
-                                onFirstValueChange = { seed.changeFirstName(it) },
+                                onFirstValueChange = { firstName = it },
                                 secondLabel = "Last",
                                 secondValue = seed.lastName,
-                                onSecondValueChange = { seed.changeLastName(it) }
+                                onSecondValueChange = { lastName = it }
                             )
 
                             Spacer(Modifier.padding(8.dp))
@@ -351,6 +356,11 @@ fun CustomerDialog(
                         modifier = Modifier.fillMaxWidth(),
                         onCancelClick = { onDismiss() },
                         onConfirmClick = {
+                            // Update first and last names if they've changed
+                            if (firstName != seed.firstName || lastName != seed.lastName) {
+                                   seed.changeName(listOf(firstName, lastName))
+                            }
+
                             onContinue()
                             onDismiss()
                         }

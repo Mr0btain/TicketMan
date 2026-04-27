@@ -11,9 +11,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
-import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
@@ -32,7 +30,6 @@ fun TicketPanel(
     onSelectedPanelChange: (Int) -> Unit,
     seed: TicketSeed,
     ticketList: List<Ticket>,
-    currentUser: User?,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
     onSelectedTicketChange: (UUID) -> Unit,
@@ -154,10 +151,8 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customer = Customer(), //selectedTicket.customer,
-                    assignedUserName = PersonName(), //selectedTicket.assignedUser.name, //(users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser } ?: User()).name,
                     isDarkMode = isDarkMode,
-                    ticketData = seed,
+                    seed = seed,
                     onEditClick = {
                         // Call edit ticket
                         onEditTicket()

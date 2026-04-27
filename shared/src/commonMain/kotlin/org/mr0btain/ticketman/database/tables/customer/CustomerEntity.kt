@@ -5,7 +5,6 @@ import org.jetbrains.exposed.v1.dao.UUIDEntity
 import org.jetbrains.exposed.v1.dao.UUIDEntityClass
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.Identity
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.database.tables.ticket.TicketEntity
 import java.util.*
@@ -27,7 +26,7 @@ class CustomerEntity(entityID: EntityID<UUID>) : UUIDEntity(entityID) {
     fun toCustomer(): Customer {
         return Customer(
             identifier = id.value,
-            name = PersonName.fromString(name),
+            name = name,
             address = address,
             email = email,
             phone = phone

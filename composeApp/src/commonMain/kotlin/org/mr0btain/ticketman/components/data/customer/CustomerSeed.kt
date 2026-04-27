@@ -6,24 +6,27 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.uuid.UUIDv7
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.name_divider_character
 import java.util.*
 
 class CustomerSeed: DataSeed() {
     // Name
-    var firstName by mutableStateOf("")
-        private set
-    var lastName by mutableStateOf("")
-        private set
+    private val _name = mutableStateListOf("")
+    val name: List<String>
+        get() = _name
 
-    val name: String
-        get() = "$firstName $lastName"
+    val firstName: String
+        get() = _name.first()
+    val lastName: String
+        get() = _name.last()
 
     // Address
     var street by mutableStateOf("")
@@ -42,25 +45,19 @@ class CustomerSeed: DataSeed() {
         private set
 
     // Tickets
-    private var _tickets = mutableStateListOf<Ticket>()
+    private val _tickets = mutableStateListOf<Ticket>()
     val tickets: List<Ticket> = _tickets
 
     val address: Address
         get() = Address(street, city, state, zip)
 
     val customer: Customer
-        get() = Customer(identifier, PersonName(firstName, lastName), address, email, phone)
+        get() = Customer(identifier, _name.joinToString(Res.string.name_divider_character.toString()), address, email, phone)
 
-    fun changeFirstName(newName: String) {
-        if (firstName != newName) {
-            firstName = newName
-            _changedFields.add(ChangedField.NAME)
-        }
-    }
-
-    fun changeLastName(newName: String) {
-        if (lastName != newName) {
-            lastName = newName
+    fun changeName(newName: List<String>) {
+        if (_name != newName) {
+            _name.clear()
+            _name.addAll(newName)
             _changedFields.add(ChangedField.NAME)
         }
     }
@@ -129,8 +126,8 @@ class CustomerSeed: DataSeed() {
         identifier = customer.identifier
 
         // Name
-        firstName = customer.name.firstName
-        lastName = customer.name.lastName
+        _name.clear()
+        _name.addAll(splitName(customer.name))
 
         // Address
         street = customer.address.street
@@ -153,8 +150,7 @@ class CustomerSeed: DataSeed() {
 
     override fun clear() {
         identifier = UUIDv7.randomUUID()
-        firstName = ""
-        lastName = ""
+        _name.clear()
         street = ""
         city = ""
         state = ""
@@ -172,8 +168,7 @@ class CustomerSeed: DataSeed() {
     override fun markClean() {
         savedState = State(
             identifier,
-            firstName,
-            lastName,
+            name.joinToString(Res.string.name_divider_character.toString()),
             street,
             city,
             state,
@@ -189,12 +184,11 @@ class CustomerSeed: DataSeed() {
     }
 
     override fun toString(): String =
-        "CustomerSeed(Name=$firstName $lastName, Address=$street $city $state $zip, Email=$email, Phone=$phone, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
+        "CustomerSeed(Name=${splitName(customer.name).joinToString(" ")}, Address=$street $city $state $zip, Email=$email, Phone=$phone, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
 
     private data class State(
         val identifier: UUID = UUIDv7.randomUUID(),
-        val firstName: String = "",
-        val lastName: String = "",
+        val name: String = "",
         val street: String = "",
         val city: String = "",
         val state: String = "",

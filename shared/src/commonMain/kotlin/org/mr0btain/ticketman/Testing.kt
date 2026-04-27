@@ -5,8 +5,6 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PersonName
-import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.randomTicketPriority
@@ -24,7 +22,7 @@ import kotlin.random.Random
  */
 fun generateMockCustomer(): Pair<Customer, List<Note>> = Pair(
     Customer(
-        name = generateRandomName(),
+        name = generateRandomName().joinToString(":"),
         address = generateRandomAddress(),
         email = generateEmail(),
         phone = generatePhoneNumber()
@@ -79,11 +77,11 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
 /**
  * Generates a random user for testing
  */
-fun generateMockUser(name: PersonName = generateRandomName()): Pair<User, List<Note>> = Pair(
+fun generateMockUser(name: List<String> = generateRandomName()): Pair<User, List<Note>> = Pair(
     User(
-        username = "${name.firstName}_${name.lastName}",
-        password = name.lastName,
-        name = name,
+        username = "${name.first()}_${name.last()}",
+        password = name.last(),
+        name = name.joinToString(":"),
         phone = generatePhoneNumber(),
         email = generateEmail(),
         accessLevel = AccessLevel.entries.random()
@@ -126,7 +124,7 @@ private fun generateRandomAddress(): Address {
 /**
  * Generates a random name for testing
  */
-private fun generateRandomName(): PersonName {
+private fun generateRandomName(): List<String> {
     val firstNames = listOf(
         "James", "Mary", "John", "Patricia", "Robert", "Jennifer", "Michael", "Linda",
         "William", "Elizabeth", "David", "Barbara", "Richard", "Susan", "Joseph", "Jessica",
@@ -147,7 +145,7 @@ private fun generateRandomName(): PersonName {
         "Carter", "Roberts"
     )
 
-    return PersonName(firstNames.random(), lastNames.random())
+    return listOf(firstNames.random(), lastNames.random())
 }
 
 /**

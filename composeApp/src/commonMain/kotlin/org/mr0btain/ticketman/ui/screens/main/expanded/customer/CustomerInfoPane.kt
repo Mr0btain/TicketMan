@@ -64,7 +64,7 @@ fun CustomerInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = selectedCustomer.name.toString(),
+                        text = selectedCustomer.name.joinToString(" "),
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )

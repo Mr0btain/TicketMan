@@ -49,6 +49,8 @@ import ticketman.composeapp.generated.resources.user
 
 // TODO: When we hit confirm on a dialog make sure we check and dont hit database
 
+// TODO: Update name in dialogs and such to handle middle names
+
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun App() {

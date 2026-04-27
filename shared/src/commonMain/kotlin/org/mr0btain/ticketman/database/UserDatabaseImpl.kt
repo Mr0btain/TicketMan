@@ -93,10 +93,10 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                 data.forEach { item ->
                     // Insert into database
                     UserEntity.new(item.identifier) {
-                        username = item.username
+                        username = item.username.lowercase()
                         password = item.password
-                        name = item.name.toString()
-                        email = item.email
+                        name = item.name.lowercase()
+                        email = item.email.lowercase()
                         phone = item.phone
                         access = item.accessLevel
                     }
@@ -157,10 +157,10 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
             transaction {
                 // Insert into database
                 UserEntity.new(data.identifier) {
-                    username = data.username
+                    username = data.username.lowercase()
                     password = data.password
-                    name = data.name.toString()
-                    email = data.email
+                    name = data.name.lowercase()
+                    email = data.email.lowercase()
                     phone = data.phone
                     access = data.accessLevel
                 }
@@ -178,10 +178,10 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                 UserEntity
                     .findById(data.identifier)
                     ?.apply {
-                        username = data.username
+                        username = data.username.lowercase()
                         password = data.password
-                        name = data.name.toString()
-                        email = data.email
+                        name = data.name.lowercase()
+                        email = data.email.lowercase()
                         phone = data.phone
                         access = data.accessLevel
 

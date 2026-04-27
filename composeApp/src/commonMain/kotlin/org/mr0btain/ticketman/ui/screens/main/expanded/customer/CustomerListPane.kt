@@ -170,9 +170,7 @@ private fun CustomerTableItem(
                     .padding(start = 4.dp)
                     .width(nameWidth - 4.dp)
             ) {
-                TableCardTextItem(
-                    customer.name.firstName + " " + customer.name.lastName
-                )
+                TableCardTextItem(customer.cleanName())
             }
 
             TableDivider()
