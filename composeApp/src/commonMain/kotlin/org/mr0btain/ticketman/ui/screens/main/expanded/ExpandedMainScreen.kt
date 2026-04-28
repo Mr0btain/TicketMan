@@ -101,7 +101,11 @@ fun ExpandedMainScreen(
                     showImagePopup = true
                 }
         },
-        onDismiss = { showCustomerDialog = false },
+        onDismiss = {
+            showCustomerDialog = false
+            // Reset seed data
+            viewModel.setSelectedCustomer(customerSeed.identifier)
+                    },
         onContinue = { viewModel.handleCustomerChanges() },
         isDarkMode = isDarkMode
     )
@@ -111,7 +115,12 @@ fun ExpandedMainScreen(
         seed = ticketSeed,
         isVisible = showTicketDialog,
         onContinue = { viewModel.handleTicketChange() },
-        onDismiss = { showTicketDialog = false }, // Hide dialog
+        onDismiss = {
+            showTicketDialog = false
+
+            // Reset seed data
+            viewModel.setSelectedTicket(ticketSeed.identifier)
+                    },
         onCustomerSearchQuery = { query -> viewModel.searchCustomers(query) },
         onUserSearchQuery = { query -> viewModel.searchUsers(query) }
     )
@@ -120,7 +129,12 @@ fun ExpandedMainScreen(
     InventoryDialog(
         seed = viewModel.inventorySeed,
         isVisible = showInventoryDialog,
-        onDismiss = { showInventoryDialog = false },
+        onDismiss = {
+            showInventoryDialog = false
+
+            // Reset seed data
+            viewModel.setSelectedInventory(inventorySeed.identifier)
+                    },
         onContinue = {
             // TODO: Note yet implemented
         },

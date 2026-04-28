@@ -48,10 +48,10 @@ fun TicketDialog(
         var showNoteDialog by remember { mutableStateOf(false) }
 
         // For customer search bar
-        var isCustomerSearchEnabled by remember { mutableStateOf(false) }
+        var isCustomerSearchEnabled by remember { mutableStateOf(true) }
 
         // For employee search bar
-        var isUserSearchEnabled by remember { mutableStateOf(false) }
+        var isUserSearchEnabled by remember { mutableStateOf(true) }
 
         val noteSeed = remember { NoteSeed() }
 

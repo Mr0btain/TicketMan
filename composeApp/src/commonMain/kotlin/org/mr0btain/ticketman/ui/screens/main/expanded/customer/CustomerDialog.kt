@@ -33,7 +33,6 @@ import ticketman.composeapp.generated.resources.name_divider_character
 import java.util.*
 
 // TODO: Add ability to assign already existing tickets to customer.
-// TODO: Add ability to edit note
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,

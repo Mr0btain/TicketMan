@@ -184,8 +184,6 @@ class MainViewModel(
 
     /** Sets the selected customer and inserts the data into the cache */
     fun setSelectedCustomer(identifier: UUID) {
-        if (customerSeed.identifier == identifier) return
-
         viewModelScope.launch {
             // Get customer from cache if we can and set the values
             val cached = customerCache.get(identifier)?.let { (customer, notes, tickets) ->
@@ -244,8 +242,6 @@ class MainViewModel(
 
     /** Sets selected ticket and adds it to the cache */
     fun setSelectedTicket(identifier: UUID) {
-        if (ticketSeed.identifier == identifier) return
-
         viewModelScope.launch {
             val cached = ticketCache.get(identifier)?.let { (ticket, notes, customer, user) ->
                 ticketSeed.setTicket(
@@ -264,8 +260,10 @@ class MainViewModel(
                     val customer = ticketDatabase.getCustomer(identifier)
                     val user = ticketDatabase.getUser(identifier)
 
+                    println("Customer: $customer")
+
                     // Set seed data
-                    ticketSeed.setTicket(ticket, notes)
+                    ticketSeed.setTicket(ticket, notes, customer, user)
 
                     // Insert into cache
                     ticketCache.put(ticket, notes, customer, user)
@@ -327,8 +325,6 @@ class MainViewModel(
     val inventorySeed: InventorySeed = InventorySeed()
 
     fun setSelectedInventory(identifier: UUID) {
-        if (inventorySeed.identifier == identifier) return
-
         viewModelScope.launch {
            val cached = inventoryCache.get(identifier)?.let { (inventory, notes) ->
                inventorySeed.setInitial(inventory, notes)
