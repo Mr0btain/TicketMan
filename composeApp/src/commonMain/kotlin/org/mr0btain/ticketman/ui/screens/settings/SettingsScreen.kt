@@ -44,8 +44,8 @@ fun SettingsScreen(
     val TAG = "SettingsScreen"
     val CHECK_URL_TAG = "$TAG:CheckUrl"
 
-    val autoSync = viewModel.autoSyncDatabase.collectAsState(false)
-    val darkMode = viewModel.darkMode.collectAsState(false)
+    val autoSync = viewModel.autoSyncDatabase.collectAsState()
+    val darkMode = viewModel.darkMode.collectAsState()
 
     // Server Url Stuff
     val serverUrl = viewModel.serverAddress.collectAsState()
