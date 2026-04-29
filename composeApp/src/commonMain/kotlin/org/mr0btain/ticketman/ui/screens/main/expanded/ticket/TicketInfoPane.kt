@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.ui.composables.*
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import ticketman.composeapp.generated.resources.*
 import java.util.UUID
 import kotlin.uuid.ExperimentalUuidApi
@@ -22,7 +23,6 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun TicketInfoPane(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     seed: TicketSeed,
     onEditClick: () -> Unit,
     onImageClick: (UUID) -> Unit
@@ -33,7 +33,7 @@ fun TicketInfoPane(
             .padding(8.dp),
         shape = RoundedCornerShape(16.dp),
         shadowElevation = 4.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -224,10 +224,7 @@ fun TicketInfoPane(
 
                                         Spacer(Modifier.padding(4.dp))
 
-                                        TableStatusItem(
-                                            status = seed.ticket.status,
-                                            isDarkMode = isDarkMode
-                                        )
+                                        TableStatusItem(status = seed.ticket.status)
                                     }
 
                                     Spacer(Modifier.padding(4.dp))
@@ -246,10 +243,7 @@ fun TicketInfoPane(
 
                                         Spacer(Modifier.padding(4.dp))
 
-                                        TablePriorityItem(
-                                            priority = seed.ticket.priority,
-                                            darkMode = isDarkMode
-                                        )
+                                        TablePriorityItem(priority = seed.ticket.priority)
                                     }
 
                                     Spacer(Modifier.padding(4.dp))

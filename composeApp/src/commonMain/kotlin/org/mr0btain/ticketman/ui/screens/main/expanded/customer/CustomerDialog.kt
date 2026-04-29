@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
+import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
@@ -40,8 +41,7 @@ fun CustomerDialog(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
-    onImageClick: (UUID) -> Unit,
-    isDarkMode: Boolean
+    onImageClick: (UUID) -> Unit
 ) {
     val TAG = "CustomerDialog"
 
@@ -70,7 +70,6 @@ fun CustomerDialog(
         EditNoteDialog(
             seed = noteSeed,
             onConfirm = {
-                // TODO
                 /*
                 scope.launch {
                     val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
@@ -96,7 +95,6 @@ fun CustomerDialog(
         // Add basic item dialog
         // TODO: Redo this
         AddBasicSubItemDialog(
-            isDarkMode = isDarkMode,
             subItemType = itemToAdd,
             isVisible = showAddBasicSubItemDialog,
             onConfirm = { item ->
@@ -151,13 +149,10 @@ fun CustomerDialog(
         Dialog(
             onDismissRequest = { onDismiss() }
         ) {
-            Surface(
+            CustomSurface(
                 modifier = modifier
                     .height(600.dp)
-                    .width(600.dp),
-                shape = RoundedCornerShape(10.dp),
-                shadowElevation = 4.dp,
-                color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                    .width(600.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(32.dp)
@@ -265,7 +260,9 @@ fun CustomerDialog(
                             ChipList(
                                 modifier = Modifier,
                                 items = listOf(seed.email),
-                                onEditClick = {},
+                                onEditClick = {
+                                    // TODO: Finish this
+                                },
                                 onDeleteClick = { item ->
                                     // Set data type so we know what were looking to delete
                                     dataType = DataType.EMAIL

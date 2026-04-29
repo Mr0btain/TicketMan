@@ -23,7 +23,6 @@ fun MainScreen(
     coroutineScope: CoroutineScope,
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
-    isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
     val platform = getPlatform().name
@@ -33,7 +32,6 @@ fun MainScreen(
         ExpandedMainScreen(
             viewModel = viewModel,
             coroutineScope = coroutineScope,
-            isDarkMode = isDarkMode,
             snackBarState = snackBarState
         )
     } else {
@@ -45,7 +43,6 @@ fun MainScreen(
             ExpandedMainScreen(
                 viewModel = viewModel,
                 coroutineScope = coroutineScope,
-                isDarkMode = isDarkMode,
                 snackBarState = snackBarState
             )
         } else {
@@ -54,7 +51,6 @@ fun MainScreen(
                 coroutineScope = coroutineScope,
                 scrollBarsOnBottom = scrollBarsOnBottom,
                 scrollBarsOnRight = scrollBarsOnRight,
-                isDarkMode = isDarkMode,
                 snackBarState = snackBarState
             )
         }

@@ -23,7 +23,6 @@ import java.util.*
 @Composable
 fun CustomerInfoPane(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     selectedCustomer: CustomerSeed,
     onEditClick: () -> Unit,
     onTicketClick: (UUID) -> Unit,
@@ -220,9 +219,27 @@ fun CustomerInfoPane(
                             icon = Res.drawable.tag
                         )
 
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(start = 24.dp, end = 70.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Priority",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = textSize
+                            )
+
+                            Text(
+                                text = "Status",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = textSize
+                            )
+                        }
+
                         SmallTicketList(
                             tickets = selectedCustomer.tickets,
-                            isDarkMode = isDarkMode,
                             onClick = { ticketId -> onTicketClick(ticketId) }
                         )
                     }

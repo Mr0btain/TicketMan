@@ -23,6 +23,7 @@ import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryPanel
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
@@ -33,7 +34,6 @@ import kotlin.uuid.ExperimentalUuidApi
 fun ExpandedMainScreen(
     viewModel: MainViewModel,
     coroutineScope: CoroutineScope,
-    isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
     // Tab for switching between panels
@@ -106,8 +106,7 @@ fun ExpandedMainScreen(
             // Reset seed data
             viewModel.setSelectedCustomer(customerSeed.identifier)
                     },
-        onContinue = { viewModel.handleCustomerChanges() },
-        isDarkMode = isDarkMode
+        onContinue = { viewModel.handleCustomerChanges() }
     )
 
     // For ticket adding or editing
@@ -179,7 +178,7 @@ fun ExpandedMainScreen(
     )
 
     Surface(
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer
+        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.secondaryContainer
                 else MaterialTheme.colorScheme.background
     ) {
         Column(
@@ -276,7 +275,6 @@ fun ExpandedMainScreen(
             when (tabIndex.value) {
                 0 -> {
                     CustomerPanel(
-                        isDarkMode = isDarkMode,
                         onAddCustomer = {
                             // Clear seed
                             customerSeed.clear()
@@ -316,7 +314,6 @@ fun ExpandedMainScreen(
                 1 -> {
                     // TODO: Finish user implementation
                     TicketPanel(
-                        isDarkMode = isDarkMode,
                         ticketList = ticketPagedItems?.value ?: emptyList(),
                         seed = ticketSeed,
                         onAddNewTicket = {
@@ -352,7 +349,6 @@ fun ExpandedMainScreen(
                 // Inventory panel
                 2 -> {
                     InventoryPanel(
-                        isDarkMode = isDarkMode,
                         inventoryList = inventoryPagedItems?.value ?: emptyList(),
                         selectedInventory = inventorySeed,
                         onSelectedInventoryChange = { id -> viewModel.setSelectedInventory(id) },

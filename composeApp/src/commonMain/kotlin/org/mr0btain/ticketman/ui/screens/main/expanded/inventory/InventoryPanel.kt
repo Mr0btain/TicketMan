@@ -21,7 +21,6 @@ import java.util.*
 @Composable
 fun InventoryPanel(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     inventoryList: List<Inventory>,
     selectedInventory: InventorySeed,
     onSelectedInventoryChange: (UUID) -> Unit,
@@ -59,8 +58,7 @@ fun InventoryPanel(
             ) {
                 // List of all the inventory items
                 InventoryListPane(
-                    isDarkMode = isDarkMode,
-                    selected = selectedInventory?.inventory?.identifier,
+                    selected = selectedInventory.inventory.identifier,
                     inventoryList = inventoryList,
                     onClick = {
                         // Set is update from click
@@ -74,7 +72,6 @@ fun InventoryPanel(
                 )
 
                 InventoryInfoPane(
-                    isDarkMode = isDarkMode,
                     inventoryData = selectedInventory,
                     onEditClick = { onEditInventory() }
                 )

@@ -25,7 +25,6 @@ import java.util.*
 @Composable
 fun TicketPanel(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
     seed: TicketSeed,
@@ -134,7 +133,6 @@ fun TicketPanel(
             ) {
                 // All tickets tab.
                 TicketListPane(
-                    isDarkMode = isDarkMode,
                     ticketList = ticketList,
                     onClick = { ticket ->
                         // Update from click
@@ -151,7 +149,6 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    isDarkMode = isDarkMode,
                     seed = seed,
                     onEditClick = {
                         // Call edit ticket

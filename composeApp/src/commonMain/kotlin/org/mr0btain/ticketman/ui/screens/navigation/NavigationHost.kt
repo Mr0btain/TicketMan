@@ -84,7 +84,6 @@ fun NavigationHost(
             MainScreen(
                 viewModel = mainViewModel,
                 coroutineScope = coroutineScope,
-                isDarkMode = darkMode.value,
                 snackBarState = snackBarState,
                 scrollBarsOnRight = scrollBarsOnRight.value,
                 scrollBarsOnBottom = scrollBarsOnBottom.value

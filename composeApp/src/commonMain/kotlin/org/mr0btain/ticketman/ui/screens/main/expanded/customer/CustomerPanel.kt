@@ -18,7 +18,6 @@ import java.util.*
 @Composable
 fun CustomerPanel(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     customerList: List<Customer>,
     seed: CustomerSeed,
     onAddCustomer: () -> Unit,
@@ -56,7 +55,6 @@ fun CustomerPanel(
             ) {
                 CustomerListPane(
                     modifier = Modifier,
-                    isDarkMode = isDarkMode,
                     customerList = customerList,
                     lazyListState = customerLazyListState,
                     selectedId = seed.customer.identifier,
@@ -72,7 +70,6 @@ fun CustomerPanel(
 
                 CustomerInfoPane(
                     modifier = Modifier,
-                    isDarkMode = isDarkMode,
                     selectedCustomer = seed,
                     onEditClick = { onEditCustomer() },
                     onTicketClick = onTicketClick,

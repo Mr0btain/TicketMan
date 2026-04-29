@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import java.util.*
 
 @Composable
@@ -29,8 +30,7 @@ fun CustomerListPane(
     onClick: (UUID) -> Unit,
     selectedId: UUID,
     lazyListState: LazyListState,
-    scope: CoroutineScope,
-    isDarkMode: Boolean
+    scope: CoroutineScope
 ) {
     // Column widths
     val nameColumnWidth = 200.dp
@@ -43,7 +43,7 @@ fun CustomerListPane(
             .padding(8.dp),
         shape = RoundedCornerShape(10.dp),
         shadowElevation = 4.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -95,7 +95,7 @@ fun CustomerListPane(
                     CustomerTableItem(
                         customer = customer,
                         selected = customer.identifier == selectedId,
-                        color = if (!isDarkMode) {
+                        color = if (!CustomMaterialColors.darkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer

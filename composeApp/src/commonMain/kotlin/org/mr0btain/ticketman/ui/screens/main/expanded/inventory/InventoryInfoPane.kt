@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.data.uuid.UUIDv7
+import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -23,17 +24,14 @@ import ticketman.composeapp.generated.resources.*
 @Composable
 fun InventoryInfoPane(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     inventoryData: InventorySeed,
     onEditClick: () -> Unit
 ) {
     // Main Body
-    Surface(
+    CustomSurface(
         modifier = modifier
             .padding(8.dp),
-        shape = RoundedCornerShape(16.dp),
-        shadowElevation = 4.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier

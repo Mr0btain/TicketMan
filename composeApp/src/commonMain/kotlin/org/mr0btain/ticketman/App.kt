@@ -51,6 +51,8 @@ import ticketman.composeapp.generated.resources.user
 
 // TODO: Update name in dialogs and such to handle middle names
 
+// TODO: Make editing dialogs so that we have a viewing dialog and an edit dialog with an option to switch between the two
+
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun App() {

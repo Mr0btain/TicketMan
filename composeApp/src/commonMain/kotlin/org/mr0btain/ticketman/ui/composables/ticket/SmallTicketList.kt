@@ -7,11 +7,14 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.uuid.UUIDv7
+import org.mr0btain.ticketman.ui.composables.TablePriorityItem
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import java.util.*
@@ -20,7 +23,6 @@ import java.util.*
 @Composable
 fun SmallTicketList(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     tickets: List<Ticket>,
     onClick: (UUID) -> Unit
 ) {
@@ -28,7 +30,13 @@ fun SmallTicketList(
         modifier = Modifier.padding(4.dp),
         isVisible = tickets.isNotEmpty()
     ) {
-        items(tickets.reversed()) { ticket ->
+        items(
+            // Sort them by time, we want the most recent one to be first.
+            tickets.sortedByDescending {
+                UUIDv7.getLongTime(it.identifier)
+            }
+        ) { ticket ->
+            // Actual ticket card
             Card(
                 modifier = Modifier.padding(4.dp),
                 onClick = { onClick(ticket.identifier) },
@@ -37,11 +45,11 @@ fun SmallTicketList(
                 Column(
                     modifier = Modifier.padding(16.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = modifier
                             .fillMaxWidth()
                             .padding(4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalArrangement = Arrangement.SpaceEvenly
                     ) {
                         Text(
                             text = ticket.device.toString(),
@@ -49,10 +57,16 @@ fun SmallTicketList(
                             fontWeight = FontWeight.SemiBold
                         )
 
-                        TableStatusItem(
-                            status = ticket.status,
-                            isDarkMode = isDarkMode
-                        )
+                        Row(
+                            modifier = modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            TablePriorityItem(priority = ticket.priority)
+
+                            TableStatusItem(status = ticket.status)
+                        }
+
+
                     }
 
                     // TODO: Maybe add this back in somehow?? not sure if we really do need it
