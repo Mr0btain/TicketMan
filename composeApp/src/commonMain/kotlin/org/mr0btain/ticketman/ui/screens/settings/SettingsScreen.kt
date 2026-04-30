@@ -32,7 +32,6 @@ import ticketman.composeapp.generated.resources.*
 
 // TODO: Add option for smooth scroll to item on selection or immediate
 // TODO: Readd scroll bar size options now that we've hashed out the scroll bars
-// TODO: Add option for scroll bar size enum
 
 // For now, I think well be fine with using this on every screen size/ platform as it should fit just fine
 @Composable
