@@ -41,13 +41,11 @@ import ticketman.composeapp.generated.resources.user
 
 // TODO: Make a better way to refresh data in pager when item is deleted.
 
-// TODO: Setup so when we load a ticket into the seed we get the customer and users names somehow.
-// TODO: Fix search bars in dialogs for ticket and others if needed
+// TODO: Finish User database stuff.
+// TODO: Fix search bars in dialogs for ticket and others if needed. Currently search bars grab
+// the focus upon opening dialog.
 
-// TODO: When canceling a change in dialogs,
-//  we need to re pull the correct data to clear any changes we made
-
-// TODO: When we hit confirm on a dialog make sure we check and dont hit database
+// TODO: When we hit confirm on a dialog make sure we check and dont hit database ?? dont remem what this is for
 
 // TODO: Update name in dialogs and such to handle middle names
 
