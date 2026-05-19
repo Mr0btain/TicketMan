@@ -1,8 +1,8 @@
 package org.mr0btain.ticketman.database.tables.user
 
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.dao.UUIDEntity
-import org.jetbrains.exposed.v1.dao.UUIDEntityClass
+import org.jetbrains.exposed.v1.dao.java.UUIDEntity
+import org.jetbrains.exposed.v1.dao.java.UUIDEntityClass
 import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.database.tables.note.NoteEntity

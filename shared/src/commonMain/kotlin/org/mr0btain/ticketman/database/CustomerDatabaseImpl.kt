@@ -33,6 +33,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
 
         appLogTryCatch(GET_ALL_TAG) {
             transaction {
+
                 result = CustomerEntity.all().map { item -> item.toCustomer() }
             }
 
