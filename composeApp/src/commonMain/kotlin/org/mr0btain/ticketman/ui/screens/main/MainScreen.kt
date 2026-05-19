@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.ui.screens.main.mobile.MobileMainScreen
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    coroutineScope: CoroutineScope,
+    scope: CoroutineScope,
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
     snackBarState: SnackbarHostState
@@ -31,7 +31,7 @@ fun MainScreen(
     if (platform.contains("Java")) {
         ExpandedMainScreen(
             viewModel = viewModel,
-            coroutineScope = coroutineScope,
+            coroutineScope = scope,
             snackBarState = snackBarState
         )
     } else {
@@ -42,13 +42,13 @@ fun MainScreen(
         if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
             ExpandedMainScreen(
                 viewModel = viewModel,
-                coroutineScope = coroutineScope,
+                coroutineScope = scope,
                 snackBarState = snackBarState
             )
         } else {
             MobileMainScreen(
                 viewModel = viewModel,
-                coroutineScope = coroutineScope,
+                coroutineScope = scope,
                 scrollBarsOnBottom = scrollBarsOnBottom,
                 scrollBarsOnRight = scrollBarsOnRight,
                 snackBarState = snackBarState

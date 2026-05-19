@@ -135,7 +135,7 @@ fun ExpandedMainScreen(
             viewModel.setSelectedInventory(inventorySeed.identifier)
                     },
         onContinue = {
-            // TODO: Note yet implemented
+            // TODO: Not yet implemented
         },
     )
 

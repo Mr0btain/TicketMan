@@ -7,9 +7,10 @@ package org.mr0btain.ticketman.ui.screens.navigation
  */
 
 enum class Destination(val route: String, val index: Int) {
-    DASHBOARD("Dash", 0),
-    MAIN("Main", 1),
-    LOGIN("Login", 2),
-    SETTINGS("Settings", 3),
-    ADMIN("Admin", 4);
+    ADMIN("Admin", 0),
+    DASHBOARD("Dash", 1),
+    INVOICE("Invoice", 2),
+    LOGIN("Login", 3),
+    MAIN("Main", 4),
+    SETTINGS("Settings", 5);
 }
