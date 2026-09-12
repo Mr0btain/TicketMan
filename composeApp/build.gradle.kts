@@ -1,6 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
@@ -12,7 +13,6 @@ plugins {
 
 kotlin {
     androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
@@ -33,8 +33,6 @@ kotlin {
     
     jvm("desktop")
 
-    // Exposed does not support wasmjs
-    /*
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
         outputModuleName = "composeApp"
@@ -54,8 +52,7 @@ kotlin {
         }
         binaries.executable()
     }
-     */
-    
+
     sourceSets {
         val desktopMain by getting
         
@@ -91,7 +88,7 @@ kotlin {
             implementation(libs.bundles.ktorClient)
 
             // Exposed database stuff
-            implementation(libs.bundles.exposed)
+            //implementation(libs.bundles.exposed)
 
             // FileKit for file operations
             implementation(libs.bundles.fileKit)
