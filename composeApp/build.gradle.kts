@@ -5,16 +5,23 @@ import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
 plugins {
     alias(libs.plugins.kotlinMultiplatform)
-    alias(libs.plugins.androidApplication)
+    alias(libs.plugins.androidMultiplatformLibrary)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.serialize)
 }
 
 kotlin {
-    androidTarget {
+    androidLibrary {
+        namespace = "org.mr0btain.ticketman"
+        compileSdk = libs.versions.android.compileSdk.get().toInt()
+
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
+        }
+
+        androidResources {
+            enable = true
         }
     }
     
@@ -55,14 +62,6 @@ kotlin {
 
     sourceSets {
         val desktopMain by getting
-        
-        androidMain.dependencies {
-            implementation(compose.preview)
-            implementation(libs.androidx.activity.compose)
-
-            // ktor
-            implementation(libs.ktor.client.okhttp)
-        }
 
         commonMain.dependencies {
             implementation(compose.runtime)
@@ -117,35 +116,8 @@ kotlin {
     }
 }
 
-android {
-    namespace = "org.mr0btain.ticketman"
-    compileSdk = libs.versions.android.compileSdk.get().toInt()
-
-    defaultConfig {
-        applicationId = "org.mr0btain.ticketman"
-        minSdk = libs.versions.android.minSdk.get().toInt()
-        targetSdk = libs.versions.android.targetSdk.get().toInt()
-        versionCode = 1
-        versionName = "1.0"
-    }
-    packaging {
-        resources {
-            excludes += "/META-INF/{AL2.0,LGPL2.1}"
-        }
-    }
-    buildTypes {
-        getByName("release") {
-            isMinifyEnabled = false
-        }
-    }
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
-    }
-}
-
 dependencies {
-    debugImplementation(compose.uiTooling)
+    androidRuntimeClasspath(compose.uiTooling)
 }
 
 compose.desktop {
