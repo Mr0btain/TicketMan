@@ -19,8 +19,10 @@ import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import java.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
 class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
@@ -41,7 +43,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         return result
     }
 
-    override fun getById(identifier: UUID): User? {
+    override fun getById(identifier: Uuid): User? {
         var result: User? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
@@ -108,7 +110,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
     }
 
-    override fun remove(identifier: UUID) {
+    override fun remove(identifier: Uuid) {
         appLogTryCatch(REMOVE_TAG) {
             var result = false
             transaction {
@@ -194,7 +196,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
     }
 
-    override fun addNote(identifier: UUID, note: Note) {
+    override fun addNote(identifier: Uuid, note: Note) {
         appLogTryCatch(ADD_NOTE_TAG) {
             var result = false
 
@@ -214,7 +216,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
     }
 
-    override fun getNotes(identifier: UUID): List<Note>? {
+    override fun getNotes(identifier: Uuid): List<Note>? {
         var result: List<Note>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
@@ -237,7 +239,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
      * @param userId Identifier of the user
      * @param ticketId Identifier of the ticket
      */
-    fun addTicket(userId: UUID, ticketId: UUID) {
+    fun addTicket(userId: Uuid, ticketId: Uuid) {
         appLogTryCatch(ADD_TICKET_TAG) {
             var result = false
             transaction {
@@ -261,7 +263,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
      *  Gets all tickets for a user
      *  @param identifier Identifier of the user
      */
-    fun getTickets(identifier: UUID): List<Ticket>? {
+    fun getTickets(identifier: Uuid): List<Ticket>? {
         var result: List<Ticket>? = null
 
         appLogTryCatch(GET_TICKETS_TAG) {

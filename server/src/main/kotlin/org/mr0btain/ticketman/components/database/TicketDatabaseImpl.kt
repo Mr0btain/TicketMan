@@ -27,8 +27,10 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import java.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
 class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
     private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
@@ -51,7 +53,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         return result
     }
 
-    override fun getById(identifier: UUID): Ticket? {
+    override fun getById(identifier: Uuid): Ticket? {
         var result: Ticket? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
@@ -115,7 +117,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun remove(identifier: UUID) {
+    override fun remove(identifier: Uuid) {
         appLogTryCatch(REMOVE_TAG) {
             var result = false
 
@@ -185,7 +187,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    fun updateDevice(identifier: UUID, device: Device) {
+    fun updateDevice(identifier: Uuid, device: Device) {
         appLogTryCatch(UPDATE_DEVICE_TAG) {
             var result = false
 
@@ -202,7 +204,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    fun updateStatus(identifier: UUID, status: TicketStatus) {
+    fun updateStatus(identifier: Uuid, status: TicketStatus) {
         appLogTryCatch(UPDATE_STATUS_TAG) {
             var result = false
 
@@ -219,7 +221,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    fun updatePriority(identifier: UUID, priority: TicketPriority) {
+    fun updatePriority(identifier: Uuid, priority: TicketPriority) {
         appLogTryCatch(UPDATE_PRIORITY_TAG) {
             var result = false
 
@@ -236,7 +238,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun addNote(identifier: UUID, note: Note) {
+    override fun addNote(identifier: Uuid, note: Note) {
         appLogTryCatch(ADD_NOTE_TAG) {
             var result = false
 
@@ -256,7 +258,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         }
     }
 
-    override fun getNotes(identifier: UUID): List<Note>? {
+    override fun getNotes(identifier: Uuid): List<Note>? {
         var result: List<Note>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
@@ -274,7 +276,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         return result
     }
 
-    fun getUser(ticketId: UUID): Identity? {
+    fun getUser(ticketId: Uuid): Identity? {
         var result: Identity? = null
 
         appLogTryCatch(GET_USER_TAG) {
@@ -302,7 +304,7 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         return result
     }
 
-    fun getCustomer(ticketId: UUID): Identity? {
+    fun getCustomer(ticketId: Uuid): Identity? {
         var result: Identity? = null
 
         appLogTryCatch(GET_CUSTOMER_TAG) {

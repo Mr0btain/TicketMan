@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
-import org.jetbrains.exposed.v1.core.SqlExpressionBuilder.eq
-import org.jetbrains.exposed.v1.core.StdOutSqlLogger
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.TokenTable.identifier
@@ -64,7 +63,7 @@ class TokenDatabase() {
         try {
             transaction {
                 TokenTable.insert { item ->
-                    item[identifier] = refreshToken.identifier.toString()
+                    item[identifier] = refreshToken.identifier
                     item[token] = refreshToken.token
                 }
             }
@@ -81,8 +80,8 @@ class TokenDatabase() {
     fun update(refreshToken: RefreshToken): Boolean {
         try {
             transaction {
-                TokenTable.update(where = { identifier eq refreshToken.identifier.toString()  }) { item ->
-                    item[identifier] = refreshToken.identifier.toString()
+                TokenTable.update(where = { identifier eq refreshToken.identifier }) { item ->
+                    item[identifier] = refreshToken.identifier
                     item[token] = refreshToken.token
                 }
             }

@@ -1,11 +1,11 @@
 package org.mr0btain.ticketman.components.database.tables.user
 
 import kotlinx.serialization.json.Json
-import org.jetbrains.exposed.v1.core.dao.id.java.UUIDTable
+import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.json.json
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 
-object UserTable : UUIDTable("user") {
+object UserTable : UuidTable("user") {
     val username = text("username")
     val password = text("password")
     val name = text("name")

@@ -5,6 +5,10 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
+import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.address
+import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.email
+import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.name
+import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.phone
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
@@ -14,11 +18,13 @@ import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import java.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Used for all Customer data actions in database
  */
+@OptIn(ExperimentalUuidApi::class)
 open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
@@ -43,7 +49,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         return result
     }
 
-    override fun getById(identifier: UUID): Customer? {
+    override fun getById(identifier: Uuid): Customer? {
         var result: Customer? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
@@ -108,7 +114,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun remove(identifier: UUID) {
+    override fun remove(identifier: Uuid) {
         appLogTryCatch(REMOVE_TAG) {
             var result = false
 
@@ -198,7 +204,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    fun updateName(identifier: UUID, newName: String) {
+    fun updateName(identifier: Uuid, newName: String) {
         appLogTryCatch(UPDATE_NAME_TAG) {
             transaction {
                 var result = false
@@ -215,7 +221,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    fun updatePhone(identifier: UUID, newPhone: String) {
+    fun updatePhone(identifier: Uuid, newPhone: String) {
         appLogTryCatch(UPDATE_PHONE_TAG) {
             transaction {
                 var result = false
@@ -232,7 +238,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    fun updateEmail(identifier: UUID, newEmail: String) {
+    fun updateEmail(identifier: Uuid, newEmail: String) {
         appLogTryCatch(UPDATE_EMAIL_TAG) {
             transaction {
                 var result = false
@@ -249,7 +255,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun addNote(identifier: UUID, note: Note) {
+    override fun addNote(identifier: Uuid, note: Note) {
         appLogTryCatch(ADD_NOTE_TAG) {
             var result = false
 
@@ -268,7 +274,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun getNotes(identifier: UUID): List<Note>? {
+    override fun getNotes(identifier: Uuid): List<Note>? {
         var result: List<Note>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
@@ -291,7 +297,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      * @param customerId Identifier of customer to link ticket to
      * @param ticketId Identifier of ticket to link to customer
      */
-    fun addTicket(customerId: UUID, ticketId: UUID) {
+    fun addTicket(customerId: Uuid, ticketId: Uuid) {
         appLogTryCatch(ADD_TICKET_TAG) {
             var result = false
 
@@ -317,7 +323,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      * @param customerId Identifier of customer to unlink ticket from
      * @param ticketId Identifier of ticket to unlink from customer
      */
-    fun removeTicket(customerId: UUID, ticketId: UUID) {
+    fun removeTicket(customerId: Uuid, ticketId: Uuid) {
         appLogTryCatch(REMOVE_TICKET_TAG) {
             var result = false
 
@@ -342,7 +348,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
      * Gets all tickets for a customer
      * @param identifier Identifier of customer to get tickets for
      */
-    fun getTickets(identifier: UUID): List<Ticket>? {
+    fun getTickets(identifier: Uuid): List<Ticket>? {
         var tickets: List<Ticket>? = null
 
         appLogTryCatch(GET_TICKETS_TAG) {

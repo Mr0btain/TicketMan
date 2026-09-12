@@ -10,18 +10,17 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.database.tables.image.ImageEntity
-import org.mr0btain.ticketman.database.tables.inventory.InventoryEntity
-import org.mr0btain.ticketman.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.error.InventoryError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
-import java.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 
 /**
  * Used for all Inventory data actions in database
  */
+@OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
 class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<Inventory>(tag) {
     private val GET_IMAGES_TAG = "$tag:GetImages"
@@ -48,7 +47,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         return result
     }
 
-    override fun getById(identifier: UUID): Inventory? {
+    override fun getById(identifier: Uuid): Inventory? {
         var result: Inventory? = null
 
         appLogTryCatch(GET_BY_ID_TAG) {
@@ -115,7 +114,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun remove(identifier: UUID) {
+    override fun remove(identifier: Uuid) {
         appLogTryCatch(REMOVE_TAG) {
             var result = false
 
@@ -198,7 +197,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    fun updateName(identifier: UUID, newName: String) {
+    fun updateName(identifier: Uuid, newName: String) {
         appLogTryCatch(UPDATE_NAME_TAG) {
             var result = false
 
@@ -216,7 +215,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    fun updateDescription(identifier: UUID, newDescription: String) {
+    fun updateDescription(identifier: Uuid, newDescription: String) {
         appLogTryCatch(UPDATE_DESCRIPTION_TAG) {
             var result = false
 
@@ -234,7 +233,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    fun updateStock(identifier: UUID, newStock: Int) {
+    fun updateStock(identifier: Uuid, newStock: Int) {
         appLogTryCatch(UPDATE_STOCK_TAG) {
             var result = false
 
@@ -252,7 +251,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    fun updateCost(identifier: UUID, newCost: String) {
+    fun updateCost(identifier: Uuid, newCost: String) {
         appLogTryCatch(UPDATE_COST_TAG) {
             var result = false
 
@@ -270,7 +269,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    fun updatePrice(identifier: UUID, newPrice: String) {
+    fun updatePrice(identifier: Uuid, newPrice: String) {
         appLogTryCatch(UPDATE_PRICE_TAG) {
             var result = false
 
@@ -288,7 +287,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun addNote(identifier: UUID, note: Note) {
+    override fun addNote(identifier: Uuid, note: Note) {
         appLogTryCatch(ADD_NOTE_TAG) {
             var result = false
 
@@ -308,7 +307,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    override fun getNotes(identifier: UUID): List<Note>? {
+    override fun getNotes(identifier: Uuid): List<Note>? {
         var result: List<Note>? = null
 
         appLogTryCatch(GET_NOTES_TAG) {
@@ -330,7 +329,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
      * Gets images for an inventory item
      * @param identifier The identifier of the parent inventory item
      */
-    fun getImages(identifier: UUID): List<StoredImage>? {
+    fun getImages(identifier: Uuid): List<StoredImage>? {
         // Result list
         var result: List<StoredImage>? = null
 
@@ -354,7 +353,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
      * @param identifier The identifier of the inventory item
      * @param images List of images to add
      */
-    fun addImages(identifier: UUID, images: List<StoredImage>) {
+    fun addImages(identifier: Uuid, images: List<StoredImage>) {
         appLogTryCatch(ADD_IMAGES_TAG) {
             var result = false
 
@@ -383,7 +382,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
      * @param identifier The identifier of inventory item
      * @param images List of images to remove
      */
-    fun removeImages(identifier: UUID, images: List<StoredImage>) {
+    fun removeImages(identifier: Uuid, images: List<StoredImage>) {
         appLogTryCatch(REMOVE_IMAGES_TAG) {
             var result = false
             val imageIds = images.map { it.identifier }

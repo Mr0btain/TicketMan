@@ -1,8 +1,8 @@
 package org.mr0btain.ticketman.components.database.tables.inventory
 
-import org.jetbrains.exposed.v1.core.dao.id.java.UUIDTable
+import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 
-object InventoryTable : UUIDTable("inventory") {
+object InventoryTable : UuidTable("inventory") {
     val name = text("name")
     val description = text("description")
     val stock = integer("stock")
