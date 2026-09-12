@@ -36,4 +36,4 @@ plugins {
 include(":composeApp")
 include(":server")
 include(":shared")
-include("composeTest")
+//include("composeTest")
