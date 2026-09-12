@@ -7,7 +7,6 @@ import io.ktor.server.application.Application
 import io.ktor.server.auth.jwt.JWTCredential
 import io.ktor.server.auth.jwt.JWTPrincipal
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.UserDatabaseImpl
 import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration

@@ -12,7 +12,6 @@ import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.data.user.hashPassword
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.uuid.UUIDv7
-import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse

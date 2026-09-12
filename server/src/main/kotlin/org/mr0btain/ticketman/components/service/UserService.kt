@@ -4,7 +4,6 @@ import com.auth0.jwt.interfaces.DecodedJWT
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import java.util.UUID
