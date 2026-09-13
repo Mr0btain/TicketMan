@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Identity
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Device
@@ -54,7 +55,7 @@ class TicketDatabaseImpl: Database<Ticket>() {
     override fun search(
         query: String,
         max: Int
-    ): List<Ticket> {
+    ): List<SearchResult> {
         TODO("Not yet implemented")
     }
 

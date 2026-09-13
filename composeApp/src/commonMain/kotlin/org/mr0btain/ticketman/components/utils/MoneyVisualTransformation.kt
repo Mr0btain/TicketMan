@@ -4,11 +4,10 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.OffsetMapping
 import androidx.compose.ui.text.input.TransformedText
 import androidx.compose.ui.text.input.VisualTransformation
-import java.text.DecimalFormat
 
 class MoneyVisualTransformation : VisualTransformation {
 
-    private val formatter = DecimalFormat("#,##0.00")
+    //private val formatter = DecimalFormat("#,##0.00")
 
     override fun filter(text: AnnotatedString): TransformedText {
         val raw = text.text
@@ -19,7 +18,7 @@ class MoneyVisualTransformation : VisualTransformation {
         // Try to parse to Double, fallback to 0.0
         val value = cleaned.toDoubleOrNull() ?: 0.0
 
-        val formatted = formatter.format(value)
+        val formatted = value.toString() //formatter.format(value)
 
         return TransformedText(
             AnnotatedString(formatted),

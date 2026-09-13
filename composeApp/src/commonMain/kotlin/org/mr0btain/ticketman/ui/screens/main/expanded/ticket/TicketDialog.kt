@@ -28,7 +28,6 @@ import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Add ability to trigger new customer
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TicketDialog(
     modifier: Modifier = Modifier,
@@ -59,7 +58,7 @@ fun TicketDialog(
         EditNoteDialog(
             seed = noteSeed,
             onConfirm = {
-                if (noteSeed.isDirty) seed.editNote(noteSeed.note)
+                if (noteSeed.isDirty) seed.updateNote(noteSeed.note)
                 noteSeed.clear()
                 showNoteDialog = false
             },

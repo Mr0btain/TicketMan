@@ -4,33 +4,23 @@ import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.KeyResponse
-import java.security.*
-import java.security.interfaces.XECPrivateKey
-import java.security.interfaces.XECPublicKey
-import java.security.spec.NamedParameterSpec
-import javax.crypto.Cipher
-import javax.crypto.KeyAgreement
-import javax.crypto.SecretKey
-import javax.crypto.spec.IvParameterSpec
-import javax.crypto.spec.SecretKeySpec
 import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Add error handling
 // TODO: Setup logging
 
 @Suppress("PrivatePropertyName")
-@OptIn(ExperimentalUuidApi::class)
 class ClientEncryptionHandler() {
     // X25519 keys for key exchange
-    private val xPrivateKey: XECPrivateKey
-    val xPublicKey: XECPublicKey
+    private val xPrivateKey: String = "" //XECPrivateKey
+    val xPublicKey: String = "" //XECPublicKey
 
     // Ed25519 keys for signatures
-    private val edKeyPair: KeyPair
+    private val edKeyPair: String = "" //KeyPair
 
     private var sharedSecret: ByteArray? = null
-    private var symmetricKey: SecretKey? = null
-    private var serverSignature: PublicKey? = null
+    private var symmetricKey: String? = null //SecretKey? = null
+    private var serverSignature: String? = null //PublicKey? = null
 
     private val TAG = "EncryptionHandler"
     private val DERIVE_SHARED_KEY_TAG = "$TAG:DeriveSharedKey"
@@ -38,6 +28,7 @@ class ClientEncryptionHandler() {
     private val DECRYPT_TAG = "$TAG:Decrypt"
 
     init {
+        /*
         // Generate X25519 key pair
         val kpg = KeyPairGenerator.getInstance("X25519")
         kpg.initialize(NamedParameterSpec("X25519"))
@@ -47,14 +38,16 @@ class ClientEncryptionHandler() {
 
         // Generate Ed25519 key pair for signatures
         edKeyPair = KeyPairGenerator.getInstance("Ed25519").generateKeyPair()
+         */
     }
 
     // Returns the public key used for signing (Ed25519 key pair)
-    fun getSigningPublicKey(): PublicKey = edKeyPair.public
+    fun getSigningPublicKey(): String? = null //PublicKey = edKeyPair.public
 
     // Derives a shared symmetric key using X25519 key agreement with the server's public key.
     // This key is later used for message encryption/decryption.
     fun deriveSharedKey(keyResponse: KeyResponse) {
+        /*
         try {
             val keyAgreement = KeyAgreement.getInstance("X25519")
             keyAgreement.init(xPrivateKey) // Initialize with client's private X25519 key
@@ -71,10 +64,13 @@ class ClientEncryptionHandler() {
         } catch (ex: Exception) {
             AppLogger.e(DERIVE_SHARED_KEY_TAG, SimpleResult.FAIL, ex)
         }
+         */
+
     }
 
     // Encrypts the message using ChaCha20-Poly1305 and signs the ciphertext using Ed25519
     fun encryptData(encodedItem: String): EncryptedData? {
+        /*
         return try {
             //requireNotNull(symmetricKey) { "Shared key must be derived first." }
             if (symmetricKey == null) return null
@@ -103,10 +99,13 @@ class ClientEncryptionHandler() {
             AppLogger.e(ENCRYPT_TAG, SimpleResult.FAIL, ex)
             null
         }
+         */
+        return null
     }
 
     // Verifies the signature of a received message and decrypts it
     fun decryptData(encryptedData: EncryptedData): String? {
+       /*
         return try {
             requireNotNull(symmetricKey) { "Shared key must be derived first." }
             requireNotNull(serverSignature) { "Server Signature must be received first." }
@@ -132,6 +131,8 @@ class ClientEncryptionHandler() {
             null
         }
 
+        */
+        return null
     }
 
 }

@@ -1,34 +1,22 @@
 package org.mr0btain.ticketman.ui.composables.note
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.components.utils.ImageUtils
-import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.composables.image.ImagePager
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.edit
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 // TODO: Figure out better way to do images.
 @Composable
@@ -39,7 +27,7 @@ fun NoteBlock(
     editable: Boolean = false,
     labelSize: TextUnit = 18.sp,
     textSize: TextUnit = 16.sp,
-    onImageClick: (UUID) -> Unit = {},
+    onImageClick: (Uuid) -> Unit = {},
     onEditClick: (Note) -> Unit = {}
 ) {
     Column(
@@ -61,7 +49,7 @@ fun NoteBlock(
 
         if (!editable) {
             notes
-                .sortedByDescending { it.time().toLong() }
+                .sortedByDescending { it.timestamp.toEpochMilliseconds() }
                 .forEach { note ->
                     NoteColumn(note, textSize) {
                         onImageClick(it)
@@ -69,7 +57,7 @@ fun NoteBlock(
                 }
         } else {
             notes
-                .sortedByDescending { it.time().toLong() }
+                .sortedByDescending { it.timestamp }
                 .forEach { note ->
                     EditableNoteColumn(
                         note = note,
@@ -86,7 +74,7 @@ fun NoteBlock(
 private fun NoteColumn(
     note: Note,
     textSize: TextUnit,
-    onImageClick: (UUID) -> Unit
+    onImageClick: (Uuid) -> Unit
 ) {
     Column {
         Row(
@@ -102,7 +90,7 @@ private fun NoteColumn(
 
             // Time
             Text(
-                text = note.time().toString(),
+                text = note.timestamp.toString(),
                 fontSize = (textSize.value - 4).sp,
                 maxLines = 1
             )
@@ -133,7 +121,7 @@ private fun NoteColumn(
 private fun EditableNoteColumn(
     note: Note,
     textSize: TextUnit,
-    onImageClick: (UUID) -> Unit,
+    onImageClick: (Uuid) -> Unit,
     onEditClick: () -> Unit
 ) {
     Row {
@@ -163,7 +151,7 @@ private fun EditableNoteColumn(
 
                 // Time
                 Text(
-                    text = note.time().toString(),
+                    text = note.timestamp.toString(),
                     fontSize = (textSize.value - 4).sp,
                     maxLines = 1
                 )

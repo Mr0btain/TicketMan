@@ -16,16 +16,14 @@ import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import ticketman.composeapp.generated.resources.*
-import java.util.UUID
-import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 @Composable
 fun TicketInfoPane(
     modifier: Modifier = Modifier,
     seed: TicketSeed,
     onEditClick: () -> Unit,
-    onImageClick: (UUID) -> Unit
+    onImageClick: (Uuid) -> Unit
 ) {
     // Main Body
     Surface(
@@ -142,7 +140,7 @@ fun TicketInfoPane(
                                     // Date created
                                     SimpleTextItem(
                                         label = "Created",
-                                        text = seed.ticket.time().date()
+                                        text = seed.time.toString()
                                     )
 
                                     Spacer(Modifier.padding(4.dp))

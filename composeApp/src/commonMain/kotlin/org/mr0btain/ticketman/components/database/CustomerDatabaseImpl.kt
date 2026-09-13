@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
 import kotlin.uuid.Uuid
@@ -47,7 +48,7 @@ class CustomerDatabaseImpl: Database<Customer>() {
     override fun search(
         query: String,
         max: Int
-    ): List<Customer> {
+    ): List<SearchResult> {
         TODO("Not yet implemented")
     }
 

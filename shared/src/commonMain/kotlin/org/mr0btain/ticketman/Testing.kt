@@ -10,12 +10,9 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.randomTicketPriority
 import org.mr0btain.ticketman.data.ticket.randomTicketStatus
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.data.uuid.UUIDv7
-import java.io.File
-import java.io.FileOutputStream
-import java.security.SecureRandom
-import java.text.DecimalFormat
 import kotlin.random.Random
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Generates a random customer for testing
@@ -52,7 +49,6 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
         "Durable and long-lasting", "Heat-resistant and flexible", "Comes with warranty"
     )
 
-    val formatter = DecimalFormat("#.00")
     val costVal = Random.nextDouble(0.5, 50.0)
     val priceVal = costVal * Random.nextDouble(1.2, 2.5)
     val notes = mutableListOf<Note>()
@@ -67,8 +63,8 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
             name = itemNames.random(),
             description = descriptions.random(),
             stock = Random.nextInt(1, 500),
-            cost = "$${formatter.format(costVal)}",
-            price = "$${formatter.format(priceVal)}"
+            cost = "$$costVal",
+            price = "$$priceVal"
         ),
         notes
     )
@@ -151,6 +147,7 @@ private fun generateRandomName(): List<String> {
 /**
  * Generates a random ticket for testing
  */
+@OptIn(ExperimentalUuidApi::class)
 fun generateRandomTicket(): Pair<Ticket, List<Note>> {
     val manufacturersAndModels = mapOf(
         "Apple" to listOf("iPhone 13", "iPhone 14 Pro", "iPad Pro", "MacBook Air", "MacBook Pro"),
@@ -194,7 +191,7 @@ fun generateRandomTicket(): Pair<Ticket, List<Note>> {
         val message = noteMessages.random()
 
         notes.add(
-            Note(UUIDv7.randomUUID(), author, message)
+            Note(Uuid.generateV7(), author, message)
         )
     }
 
@@ -313,6 +310,7 @@ private fun generatePhoneNumber(): String = buildString {
 /**
  * Generates a random file for testing
  */
+/*
 fun generateRandomFile(path: String, sizeInBytes: Long) {
     val bufferSize = 1024 * 1024 // 1 MB buffer
     val buffer = ByteArray(bufferSize)
@@ -335,3 +333,4 @@ fun generateRandomFile(path: String, sizeInBytes: Long) {
         }
     }
 }
+ */

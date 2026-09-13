@@ -10,7 +10,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -24,12 +23,10 @@ import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryPanel
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
-import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
 // TODO: Maybe move allot of these states and their seed values to viewmodel and move dialogs to App.kt if we use them in many screens
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalUuidApi::class, FlowPreview::class)
 @Composable
 fun ExpandedMainScreen(
     viewModel: MainViewModel,

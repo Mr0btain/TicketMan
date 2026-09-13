@@ -1,11 +1,6 @@
 package org.mr0btain.ticketman.ui.composables.shared
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Label
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -13,7 +8,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.SearchBar
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 /**
  * Top bar for panels that includes a search bar and an add or delete button
@@ -26,7 +21,7 @@ import java.util.UUID
 @Composable
 fun PanelTopBar(
     label: String,
-    onSearchClick: (UUID) -> Unit,
+    onSearchClick: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onAddClick: () -> Unit,
     onDeleteClick: () -> Unit

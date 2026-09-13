@@ -7,24 +7,23 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.uuid.UUIDv7
+import org.mr0btain.ticketman.data.time.createdAt
 import org.mr0btain.ticketman.ui.composables.TablePriorityItem
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import java.util.*
+import kotlin.uuid.Uuid
 
 // TODO: Add time to this
 @Composable
 fun SmallTicketList(
     modifier: Modifier = Modifier,
     tickets: List<Ticket>,
-    onClick: (UUID) -> Unit
+    onClick: (Uuid) -> Unit
 ) {
     PlatformLazyColumn(
         modifier = Modifier.padding(4.dp),
@@ -33,7 +32,7 @@ fun SmallTicketList(
         items(
             // Sort them by time, we want the most recent one to be first.
             tickets.sortedByDescending {
-                UUIDv7.getLongTime(it.identifier)
+                it.identifier.createdAt()
             }
         ) { ticket ->
             // Actual ticket card

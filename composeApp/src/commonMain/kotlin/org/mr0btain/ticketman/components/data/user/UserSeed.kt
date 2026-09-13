@@ -10,12 +10,13 @@ import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.data.uuid.UUIDv7
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.name_divider_character
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-class UserSeed: DataSeed() {
+@OptIn(ExperimentalUuidApi::class)
+class UserSeed: DataSeed("UserSeed") {
     var username: String by mutableStateOf("")
         private set
     var password: String by mutableStateOf("")
@@ -91,7 +92,7 @@ class UserSeed: DataSeed() {
     }
 
     override fun clear() {
-        identifier = UUIDv7.randomUUID()
+        identifier = Uuid.generateV7()
         _notes.clear()
         _images.clear()
         username = ""
@@ -115,7 +116,7 @@ class UserSeed: DataSeed() {
     }
 
     private data class State(
-        val identifier: UUID = UUIDv7.randomUUID(),
+        val identifier: Uuid = Uuid.generateV7(),
         val username: String = "",
         val password: String = "",
         val name: String = "",

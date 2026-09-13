@@ -9,11 +9,12 @@ import org.mr0btain.ticketman.components.encryption.PeerKeyData
 import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.server.request.KeyRequest
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
+import java.security.PublicKey
+import java.security.interfaces.XECPublicKey
 import kotlin.time.ExperimentalTime
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -25,7 +26,7 @@ import kotlin.uuid.Uuid
 // TODO: These let make it a bit hard to follow. Maybe expand them to if statements to make it easier to understand
 // TODO: Add logging
 
-@OptIn(ExperimentalTime::class, ExperimentalUuidApi::class)
+@OptIn(ExperimentalUuidApi::class)
 fun Route.authRoute(
     userService: UserService,
     encryptionService: EncryptionService
@@ -108,18 +109,19 @@ fun Route.authRoute(
 
 
     // Register a public key for encryption
+    // TODO: Fix this
     post("/key/request") {
         // Receive key request
         val keyRequest = call.receive<KeyRequest>()
         // Assign random uuid here to store the key for now till we register it to a user on login
-        val id = UUIDv7.randomUUID()
+        val id = Uuid.generateV7()
 
         // Add key to key storage
         encryptionService.registerKey(
             identifier = id,
             peerKeyData = PeerKeyData(
-                publicKey = keyRequest.publicKey,
-                signingKey = keyRequest.publicSignature
+                publicKey = XECPublicKey.serialVersionUID ,//keyRequest.publicKey,
+                signingKey = PublicKey() //keyRequest.publicSignature
             )
         )
 

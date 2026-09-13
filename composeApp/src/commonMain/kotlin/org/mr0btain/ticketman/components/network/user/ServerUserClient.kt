@@ -10,7 +10,6 @@ import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHand
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.error.onSuccess
@@ -61,7 +60,7 @@ class ServerUserClient(
                 setBody(
                     KeyRequest(
                         publicKey = encryptionHandler.xPublicKey,
-                        publicSignature = encryptionHandler.getSigningPublicKey()
+                        publicSignature = "" //encryptionHandler.getSigningPublicKey()
                     )
                 )
             }
@@ -201,7 +200,7 @@ class ServerUserClient(
                     serverHandler.updateAuthTokens(accessToken.token, token)
 
                     // We don't use UUID here so just slap whatever. Maybe make another data class for this??
-                    return Result.Success(AuthResponse(UUIDv7.randomUUID(), accessToken.token, token))
+                    return Result.Success(AuthResponse(Uuid.generateV7(), accessToken.token, token))
                 }
         }
 

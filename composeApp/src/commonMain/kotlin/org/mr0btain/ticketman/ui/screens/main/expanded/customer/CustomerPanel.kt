@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerPanel(
@@ -22,11 +22,11 @@ fun CustomerPanel(
     seed: CustomerSeed,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
-    onCustomerSelectionChange: (UUID) -> Unit,
+    onCustomerSelectionChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteCustomer: () -> Unit,
-    onTicketClick: (UUID) -> Unit,
-    onImageClick: (UUID) -> Unit,
+    onTicketClick: (Uuid) -> Unit,
+    onImageClick: (Uuid) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope()
 ) {

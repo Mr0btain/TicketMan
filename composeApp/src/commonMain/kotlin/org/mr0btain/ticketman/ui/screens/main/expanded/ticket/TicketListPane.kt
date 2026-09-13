@@ -22,7 +22,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.composables.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
-import java.util.*
+import kotlin.uuid.Uuid
 
 // TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
 
@@ -30,8 +30,8 @@ import java.util.*
 fun TicketListPane(
     modifier: Modifier = Modifier,
     ticketList: List<Ticket>,
-    selectedTicket: UUID,
-    onClick: (UUID) -> Unit,
+    selectedTicket: Uuid,
+    onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {

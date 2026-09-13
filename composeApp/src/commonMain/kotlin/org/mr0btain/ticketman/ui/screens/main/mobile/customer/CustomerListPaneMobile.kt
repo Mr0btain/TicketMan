@@ -21,7 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerListPaneMobile(
@@ -144,7 +144,7 @@ private fun CustomerHeaderBox(
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (UUID) -> Unit,
+    onClick: (Uuid) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,

@@ -11,22 +11,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
-import org.mr0btain.ticketman.data.time.Time
 import org.mr0btain.ticketman.ui.composables.ContactsBlock
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.composables.ticket.SmallTicketList
 import ticketman.composeapp.generated.resources.*
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerInfoPane(
     modifier: Modifier = Modifier,
     selectedCustomer: CustomerSeed,
     onEditClick: () -> Unit,
-    onTicketClick: (UUID) -> Unit,
-    onImageClick: (UUID) -> Unit
+    onTicketClick: (Uuid) -> Unit,
+    onImageClick: (Uuid) -> Unit
 ) {
     // Sizes for icons and text
     val labelSize = 12.sp
@@ -132,7 +131,7 @@ fun CustomerInfoPane(
 
                                     Text(
                                         modifier = Modifier,
-                                        text = Time.fromLong(selectedCustomer.time).toString(),
+                                        text = selectedCustomer.time.toString(),
                                         fontSize = textSize
                                     )
                                 }

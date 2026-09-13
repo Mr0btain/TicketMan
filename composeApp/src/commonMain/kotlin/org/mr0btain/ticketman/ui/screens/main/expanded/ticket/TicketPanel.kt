@@ -13,15 +13,13 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.SearchBar
-import java.util.*
+import kotlin.uuid.Uuid
 
 // TODO: Add hours worked/ inventory items to a list of expense and charges
 // TODO: Add invoice and ability to export
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketPanel(
     modifier: Modifier = Modifier,
@@ -31,10 +29,10 @@ fun TicketPanel(
     ticketList: List<Ticket>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
-    onSelectedTicketChange: (UUID) -> Unit,
+    onSelectedTicketChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteTicket: () -> Unit,
-    onImageClick: (UUID) -> Unit,
+    onImageClick: (Uuid) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {

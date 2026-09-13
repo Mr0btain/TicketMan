@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.database
 
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import kotlin.uuid.Uuid
 
@@ -43,7 +44,7 @@ class InventoryDatabaseImpl: Database<Inventory>() {
     override fun search(
         query: String,
         max: Int
-    ): List<Inventory> {
+    ): List<SearchResult> {
         TODO("Not yet implemented")
     }
 

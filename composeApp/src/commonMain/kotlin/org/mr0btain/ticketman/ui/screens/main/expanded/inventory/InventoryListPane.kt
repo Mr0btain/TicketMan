@@ -23,14 +23,14 @@ import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Composable
 fun InventoryListPane(
     modifier: Modifier = Modifier,
     inventoryList: List<Inventory>,
-    selected: UUID?,
-    onClick: (UUID) -> Unit,
+    selected: Uuid?,
+    onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {

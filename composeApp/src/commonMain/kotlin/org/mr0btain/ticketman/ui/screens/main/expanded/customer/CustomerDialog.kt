@@ -1,10 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,9 +26,7 @@ import org.mr0btain.ticketman.ui.composables.shared.ChipTicketList
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.name_divider_character
-import java.util.*
+import kotlin.uuid.Uuid
 
 // TODO: Add ability to assign already existing tickets to customer.
 @Composable
@@ -41,7 +36,7 @@ fun CustomerDialog(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
-    onImageClick: (UUID) -> Unit
+    onImageClick: (Uuid) -> Unit
 ) {
     val TAG = "CustomerDialog"
 
@@ -125,10 +120,10 @@ fun CustomerDialog(
             onConfirm = {
                 try {
                     when (dataType) {
-                        DataType.TICKET -> seed.removeTicket(UUID.fromString(itemToDelete))
+                        DataType.TICKET -> seed.deleteTicket(Uuid.parse(itemToDelete))
                         DataType.EMAIL -> seed.changeEmail("")
                         DataType.PHONE -> seed.changePhone("")
-                        DataType.NOTE -> seed.removeNote(UUID.fromString(itemToDelete))
+                        DataType.NOTE -> seed.deleteNote(Uuid.parse(itemToDelete))
                         else -> {} // Do Nothing
                     }
                 } catch (ex: Exception) {

@@ -118,7 +118,8 @@ serialize = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "k
 fileKit = [
     "filekit-core",
     "filekit-dialogs",
-    "filekit-dialogs-compose"
+    "filekit-dialogs-compose",
+    "filekit-coil"
 ]
 ktorServer = [
     "logback",

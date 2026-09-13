@@ -6,11 +6,8 @@ import kotlinx.serialization.descriptors.PrimitiveSerialDescriptor
 import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
-import java.security.KeyFactory
-import java.security.PublicKey
-import java.security.spec.X509EncodedKeySpec
-import java.util.Base64
 
+/*
 object PublicKeySerializer: KSerializer<PublicKey> {
     override val descriptor: SerialDescriptor
         get() = PrimitiveSerialDescriptor("PublicKey", PrimitiveKind.STRING)
@@ -26,5 +23,6 @@ object PublicKeySerializer: KSerializer<PublicKey> {
         return keyFactory.generatePublic(keySpec)
     }
 }
+ */
 
 

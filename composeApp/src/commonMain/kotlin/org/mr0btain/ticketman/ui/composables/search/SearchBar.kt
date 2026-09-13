@@ -12,7 +12,6 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import org.mr0btain.ticketman.data.search.SearchResult
-import java.util.*
 import kotlin.time.Duration.Companion.milliseconds
 
 /**

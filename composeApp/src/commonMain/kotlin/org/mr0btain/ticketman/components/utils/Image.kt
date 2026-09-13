@@ -4,15 +4,18 @@ import androidx.compose.ui.graphics.ImageBitmap
 import io.github.vinceglb.filekit.*
 import io.github.vinceglb.filekit.dialogs.compose.util.encodeToByteArray
 import io.github.vinceglb.filekit.dialogs.compose.util.toImageBitmap
+import io.ktor.client.request.invoke
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 object ImageUtils {
     val TAG: String = "ImageHandler"
-    val databaseDirectory = FileKit.databasesDir / "images"
+    //val databaseDirectory = FileKit.databasesDir / "images"
+    // TODO:Fix
+    val databaseDirectory = ""
 
     const val MAX_THUMB_SIZE = 200
 
@@ -21,16 +24,17 @@ object ImageUtils {
     val thumbnailCache = LruCache<String, ImageBitmap>(20, "ThumbnailCache")
     val imageCache = LruCache<String, ImageBitmap>(10, "ImageCache")
 
-    suspend fun getImagesForId(identifier: UUID): List<ImageBitmap> =
+    suspend fun getImagesForId(identifier: Uuid): List<ImageBitmap> =
         getImagesFromFolder(identifier.toString(), false)
 
-    suspend fun getThumbnailsForId(identifier: UUID): List<ImageBitmap> =
+    suspend fun getThumbnailsForId(identifier: Uuid): List<ImageBitmap> =
         getImagesFromFolder("$identifier", true)
 
     private suspend fun getImagesFromFolder(folder: String, thumbnail: Boolean): List<ImageBitmap> {
-        val dir = databaseDirectory / folder
+        //val dir = databaseDirectory / folder
         val images = mutableListOf<ImageBitmap>()
 
+        /*
         if (dir.isDirectory()) {
             dir.list().forEach { file ->
                 try {
@@ -49,12 +53,15 @@ object ImageUtils {
                 }
             }
         }
+         */
 
         return images
     }
 
+    // TODO: (Fix image stuff)
     suspend fun getImage(image: StoredImage, thumbnail: Boolean): ImageBitmap? {
         return try {
+            /*
             // Check if we have this image cached and return it if so
             val cached = imageCache.get(image.identifier.toString())
             if (cached != null) return cached
@@ -77,6 +84,8 @@ object ImageUtils {
                 AppLogger.e("$TAG:GetImage", "File does not exist!")
                 null
             }
+             */
+            null
         } catch (ex: Exception) {
             AppLogger.e("$TAG:GetImage", SimpleResult.FAIL, ex)
             null
@@ -84,12 +93,13 @@ object ImageUtils {
     }
 
     suspend fun saveImageFromFile(
-        parentId: UUID,
-        identifier: UUID,
+        parentId: Uuid,
+        identifier: Uuid,
         file: PlatformFile
     ): Boolean {
         return try {
             // Make new file
+            /*
             val newFile = databaseDirectory / parentId.toString() / "$identifier.png"
 
             // See if directory exists
@@ -97,13 +107,7 @@ object ImageUtils {
                 newFile.createDirectories()
 
             // Make sure new file is compressed to manageable size
-            val compressed = FileKit.compressImage(
-                file = file,
-                imageFormat = ImageFormat.PNG,
-                quality = 100,
-                maxWidth = 1920,
-                maxHeight = 1080
-            )
+            val compressed = file.readBytes()
 
             // Write file to db
             newFile write compressed
@@ -111,6 +115,7 @@ object ImageUtils {
             // Make a write thumbnail
             val thumbnail = databaseDirectory / parentId.toString() / "thumb_$identifier.png"
             thumbnail write createThumbnail(compressed)
+             */
 
             true
         } catch (ex: Exception) {
@@ -125,31 +130,31 @@ object ImageUtils {
      * This DOES NOT add the relevant data to the database. Simply stores the image itself
      */
     suspend fun saveImage(
-        identifier: UUID,
+        identifier: Uuid,
         directory: String,
         image: ImageBitmap
     ): Boolean {
         return try {
-            val parentDirectory = FileKit.databasesDir / "images" / directory
+            val parentDirectory = ""//FileKit.databasesDir / "images" / directory
 
-            if (!parentDirectory.exists()) parentDirectory.createDirectories()
+           // if (!parentDirectory.exists()) parentDirectory.createDirectories()
 
             // Set and create actual file
-            val file = parentDirectory / "$identifier.png"
-            val thumb = parentDirectory / "thumb_$identifier.png"
+            //val file = parentDirectory / "$identifier.png"
+            //val thumb = parentDirectory / "thumb_$identifier.png"
 
             // Make directory if it doesn't exist
-            file.createDirectories()
+            //file.createDirectories()
 
             // Create new file
-            file.file.createNewFile()
-            thumb.file.createNewFile()
+            //file.file.createNewFile()
+            //thumb.file.createNewFile()
 
             val imageBytes = image.encodeToByteArray()
 
             // Write data to disk
-            file write imageBytes
-            thumb write createThumbnail(imageBytes)
+            //file write imageBytes
+            //thumb write createThumbnail(imageBytes)
 
             // Return success
             true
@@ -162,7 +167,7 @@ object ImageUtils {
 
     suspend fun saveImages(
         directory: String,
-        images: List<Pair<UUID, ImageBitmap>>
+        images: List<Pair<Uuid, ImageBitmap>>
     ): Boolean {
         var result = true
 
@@ -176,6 +181,8 @@ object ImageUtils {
 
     private suspend fun createThumbnail(image: ByteArray): ByteArray {
         // Create a thumbnail by compressing and resizing
+        return byteArrayOf()
+        /*
         return FileKit.compressImage(
             bytes = image,
             quality = 85,
@@ -183,6 +190,7 @@ object ImageUtils {
             maxHeight = MAX_THUMB_SIZE,
             imageFormat = ImageFormat.PNG
         )
+         */
     }
 }
 

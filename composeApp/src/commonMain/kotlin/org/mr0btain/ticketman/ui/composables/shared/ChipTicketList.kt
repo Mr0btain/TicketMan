@@ -6,15 +6,15 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import java.util.UUID
 import kotlin.collections.forEach
+import kotlin.uuid.Uuid
 
 @Composable
 fun ChipTicketList(
     modifier: Modifier = Modifier,
-    tickets: List<UUID>,
-    onTicketClick: (UUID) -> Unit,
-    onDeleteClick: (UUID) -> Unit
+    tickets: List<Uuid>,
+    onTicketClick: (Uuid) -> Unit,
+    onDeleteClick: (Uuid) -> Unit
 ) {
     Column(
         modifier = modifier

@@ -13,7 +13,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
-import org.mr0btain.ticketman.data.uuid.UUIDv7
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
@@ -151,7 +150,7 @@ fun InventoryInfoPane(
                             // Date created
                             SimpleTextItem(
                                 label = "Created",
-                                text = UUIDv7.getTime(inventoryData.identifier).date()
+                                text = inventoryData.time.toString()
                             )
                         }
                     }

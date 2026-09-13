@@ -182,7 +182,7 @@ class OffsetPager<Value>(
             when {
                 append -> {
                     // Insert into deque
-                    deque.addLast(result)
+                    deque.add(result) //addLast(result)
 
                     // Set last page upon success
                     lastPage = page
@@ -196,7 +196,7 @@ class OffsetPager<Value>(
 
                 prepend -> {
                     // Insert into deque
-                    deque.addFirst(result)
+                    deque.add(0, result) //addFirst(result)
 
                     // Set first page upon success
                     firstPage = page

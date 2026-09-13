@@ -46,7 +46,7 @@ fun InventoryDialog(
         EditNoteDialog(
             seed = noteSeed,
             onConfirm = {
-                if (noteSeed.isDirty) seed.editNote(noteSeed.note)
+                if (noteSeed.isDirty) seed.updateNote(noteSeed.note)
                 noteSeed.clear()
                 showNoteDialog = false
             },

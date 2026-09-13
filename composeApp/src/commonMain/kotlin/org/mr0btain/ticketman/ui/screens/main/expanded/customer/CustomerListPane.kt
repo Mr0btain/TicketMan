@@ -21,14 +21,14 @@ import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerList: List<Customer>,
-    onClick: (UUID) -> Unit,
-    selectedId: UUID,
+    onClick: (Uuid) -> Unit,
+    selectedId: Uuid,
     lazyListState: LazyListState,
     scope: CoroutineScope
 ) {
@@ -141,7 +141,7 @@ private fun CustomerHeaderBox(
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (UUID) -> Unit,
+    onClick: (Uuid) -> Unit,
     selected: Boolean,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,
