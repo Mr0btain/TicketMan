@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.data.customer.Customer
@@ -353,8 +354,8 @@ class MainViewModel(
                         ChangedField.NAME -> inventoryDatabase.updateName(inventorySeed.identifier, inventorySeed.name)
                         ChangedField.DESCRIPTION -> inventoryDatabase.updateDescription(inventorySeed.identifier, inventorySeed.description)
                         ChangedField.STOCK -> inventoryDatabase.updateStock(inventorySeed.identifier, inventorySeed.stock)
-                        ChangedField.COST -> inventoryDatabase.updateCost(inventorySeed.identifier, inventorySeed.cost.toString())
-                        ChangedField.PRICE -> inventoryDatabase.updatePrice(inventorySeed.identifier, inventorySeed.price.toString())
+                        ChangedField.COST -> inventoryDatabase.updateCost(inventorySeed.identifier, inventorySeed.cost)
+                        ChangedField.PRICE -> inventoryDatabase.updatePrice(inventorySeed.identifier, inventorySeed.price)
                         ChangedField.NOTE -> {
                             // TODO: Setup way to see which one has changed
                             inventorySeed.notes.forEach { note ->
