@@ -1,11 +1,12 @@
 package org.mr0btain.ticketman.data
 
-import org.mr0btain.ticketman.data.time.Time
-import org.mr0btain.ticketman.data.uuid.UUIDv7
-import java.util.*
+import org.mr0btain.ticketman.data.time.createdAt
+import kotlin.time.Instant
+import kotlin.uuid.Uuid
 
-interface MainItem {
-    val identifier: UUID
+abstract class MainItem {
+    abstract val identifier: Uuid
 
-    fun time(): Time = UUIDv7.getTime(identifier)
+    val timestamp: Instant
+        get() = identifier.createdAt()
 }

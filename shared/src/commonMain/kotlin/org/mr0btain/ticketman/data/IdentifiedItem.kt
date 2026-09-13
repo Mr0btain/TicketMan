@@ -1,8 +1,8 @@
 package org.mr0btain.ticketman.data
 
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 interface IdentifiedItem {
-    val identifier: UUID
+    val identifier: Uuid
     val text: String
 }
