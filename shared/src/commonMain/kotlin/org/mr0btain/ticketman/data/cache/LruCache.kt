@@ -1,88 +1,295 @@
 package org.mr0btain.ticketman.data.cache
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
-import org.mr0btain.ticketman.logging.SimpleResult
-import org.mr0btain.ticketman.logging.AppLogger
-import java.util.LinkedHashMap
-
 /**
- * A thread-safe Least Recently Used (LRU) cache implementation for coroutine-based Kotlin applications.
+ * A Least Recently Used (LRU) cache that stores key-value pairs up to a
+ * configurable maximum size.
  *
- * This cache automatically evicts the least recently accessed item when the number of items exceeds [maxSize].
- * Access to the cache is protected using a coroutine-safe [Mutex] to ensure consistency across concurrent operations.
+ * Entries are ordered by how recently they were accessed:
  *
- * @param Key Type of the cache key.
- * @param Value Type of the cache value.
- * @param maxSize Maximum number of items to retain in the cache.
+ * - Reading an entry with [get] makes it the most recently used.
+ * - Adding or updating an entry with [put] makes it the most recently used.
+ * - When [maxSize] is exceeded, the least recently used entry is removed.
+ *
+ * Lookups, insertions, removals, and LRU eviction are all O(1) operations.
+ *
+ * @param K the type of keys maintained by this cache.
+ * @param V the type of values maintained by this cache.
+ * @param maxSize the maximum number of entries the cache can contain.
  */
-class LruCache<Key, Value>(
+class LruCache<K, V>(
     private val maxSize: Int,
-    tag: String = "LruCache"
-): Cache(tag) {
+    tag: String
+) : MutableMap<K, V>, Cache(tag) {
+
+    init {
+        require(maxSize > 0) {
+            "maxSize must be greater than 0"
+        }
+    }
+
     /**
-     * Internal LinkedHashMap with `accessOrder = true` to maintain access order (LRU behavior).
-     * When entries are accessed (via get/put), they move to the end of the map.
-     * The oldest entry (least recently used) is at the front.
+     * Internal node used to maintain the doubly-linked list.
      *
-     * The `removeEldestEntry()` method is overridden to automatically remove
-     * the eldest entry when the size exceeds [maxSize].
+     * Nodes are stored in [map] for O(1) key lookup while [prev] and [next]
+     * maintain the order of least-recently-used to most-recently-used.
      */
-    private val cache = object : LinkedHashMap<Key, Value>(maxSize, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<Key, Value>): Boolean {
-            return size > maxSize
+    private class Node<K, V>(
+        val key: K,
+        var value: V
+    ) {
+        var prev: Node<K, V>? = null
+        var next: Node<K, V>? = null
+    }
+
+    /**
+     * Maps keys directly to their corresponding nodes.
+     *
+     * This allows entries to be found in O(1) time without traversing
+     * the linked list.
+     */
+    private val map = HashMap<K, Node<K, V>>()
+
+    /**
+     * The least recently used entry.
+     *
+     * This entry is removed first when the cache exceeds [maxSize].
+     */
+    private var head: Node<K, V>? = null
+
+    /**
+     * The most recently used entry.
+     *
+     * Newly added and accessed entries are moved to this position.
+     */
+    private var tail: Node<K, V>? = null
+
+    /**
+     * Returns the current number of entries in the cache.
+     */
+    override val size: Int
+        get() = map.size
+
+    /**
+     * Returns the value associated with [key].
+     *
+     * Accessing an existing entry marks it as the most recently used entry.
+     *
+     * @param key the key whose value should be retrieved.
+     * @return the value associated with [key], or null if the key is not present.
+     */
+    override fun get(key: K): V? {
+        val node = map[key] ?: return null
+
+        moveToTail(node)
+
+        return node.value
+    }
+
+    /**
+     * Adds or updates an entry in the cache.
+     *
+     * If the key already exists, its value is updated and the entry becomes
+     * the most recently used. If the key does not exist, a new entry is added.
+     *
+     * If adding the entry causes the cache to exceed [maxSize], the
+     * least recently used entry is automatically removed.
+     *
+     * @param key the key to add or update.
+     * @param value the value associated with [key].
+     * @return the previous value associated with [key], or null if the key
+     *         did not previously exist.
+     */
+    override fun put(key: K, value: V): V? {
+        val existing = map[key]
+
+        if (existing != null) {
+            val oldValue = existing.value
+            existing.value = value
+            moveToTail(existing)
+            return oldValue
+        }
+
+        val node = Node(key, value)
+
+        map[key] = node
+        addToTail(node)
+
+        if (map.size > maxSize) {
+            removeLeastRecentlyUsed()
+        }
+
+        return null
+    }
+
+    /**
+     * Removes the entry associated with [key].
+     *
+     * @param key the key of the entry to remove.
+     * @return the value that was associated with [key], or null if the key
+     *         was not present.
+     */
+    override fun remove(key: K): V? {
+        val node = map.remove(key) ?: return null
+
+        unlink(node)
+
+        return node.value
+    }
+
+    /**
+     * Removes all entries from the cache and resets its LRU ordering.
+     */
+    override fun clear() {
+        map.clear()
+        head = null
+        tail = null
+    }
+
+    /**
+     * Returns true if the cache contains an entry for [key].
+     *
+     * This operation does not affect the entry's LRU position.
+     *
+     * @param key the key to search for.
+     */
+    override fun containsKey(key: K): Boolean =
+        map.containsKey(key)
+
+    /**
+     * Returns true if at least one entry in the cache contains [value].
+     *
+     * @param value the value to search for.
+     */
+    override fun containsValue(value: V): Boolean =
+        map.values.any { it.value == value }
+
+    /**
+     * Returns true if the cache contains no entries.
+     */
+    override fun isEmpty(): Boolean =
+        map.isEmpty()
+
+    /**
+     * Returns the set of keys currently stored in the cache.
+     */
+    override val keys: MutableSet<K>
+        get() = map.keys
+
+    /**
+     * Returns the collection of values currently stored in the cache.
+     */
+    override val values: MutableCollection<V>
+        get() = map.values.mapTo(mutableListOf()) { it.value }
+
+    /**
+     * Returns the entries currently stored in the cache.
+     */
+    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
+        get() = map.values
+            .mapTo(mutableSetOf()) { node ->
+                object : MutableMap.MutableEntry<K, V> {
+
+                    override val key: K
+                        get() = node.key
+
+                    override val value: V
+                        get() = node.value
+
+                    /**
+                     * Updates the value stored by this entry.
+                     *
+                     * @param newValue the new value to associate with the key.
+                     * @return the previous value.
+                     */
+                    override fun setValue(newValue: V): V {
+                        val old = node.value
+                        node.value = newValue
+                        return old
+                    }
+                }
+            }
+
+    /**
+     * Adds all entries from [from] to the cache.
+     *
+     * Entries are added in the iteration order of [from]. Each entry becomes
+     * the most recently used entry when it is added.
+     *
+     * @param from the map whose entries should be added.
+     */
+    override fun putAll(from: Map<out K, V>) {
+        from.forEach { (key, value) ->
+            put(key, value)
         }
     }
 
-    /** A coroutine-safe mutex to ensure atomic operations when multiple coroutines access the cache.*/
-    private val mutex = Mutex()
-
     /**
-     * Retrieves the value associated with [key], or null if not present.
-     * Access is synchronized with [mutex] for thread safety.
+     * Adds [node] to the end of the linked list, making it the
+     * most recently used entry.
      */
-    suspend fun get(key: Key): Value? = mutex.withLock {
-        cache[key]?.also {
-            AppLogger.m("$GET_TAG $key", SimpleResult.SUCCESS)
+    private fun addToTail(node: Node<K, V>) {
+        node.prev = tail
+        node.next = null
+
+        if (tail != null) {
+            tail!!.next = node
+        } else {
+            head = node
         }
+
+        tail = node
     }
 
     /**
-     * Puts the given [key] and [value] into the cache.
-     * If the key already exists, it updates the value and moves the entry to the end (most recently used).
+     * Moves [node] to the end of the linked list, making it the
+     * most recently used entry.
+     *
+     * Does nothing if the node is already the most recently used entry.
      */
-    suspend fun put(key: Key, value: Value) = mutex.withLock {
-        cache[key] = value
-        AppLogger.m(PUT_TAG, "Put: $key")
-    }
-
-    /**
-     * Retrieves the value for the given [key] if it exists, or computes and stores it using [loader] if not.
-     * This supports lazy-loading with suspendable computations.
-     */
-    suspend fun getOrPutSuspend(key: Key, loader: suspend () -> Value): Value = mutex.withLock {
-        cache[key] ?: loader().also {
-            cache[key] = it
+    private fun moveToTail(node: Node<K, V>) {
+        if (node === tail) {
+            return
         }
-    }
 
-    /** Removes the value associated with the given [key] from the cache. */
-    suspend fun remove(key: Key) = mutex.withLock {
-        cache.remove(key)
-        AppLogger.m(REMOVE_TAG, "Removed: $key")
-    }
-
-    /** Clears all entries from the cache. */
-    suspend fun clear() = mutex.withLock {
-        cache.clear()
-        AppLogger.m(CLEAR_TAG, SimpleResult.SUCCESS)
+        unlink(node)
+        addToTail(node)
     }
 
     /**
-     * Returns true if the cache contains [key].
-     * Access is synchronized with [mutex] for thread safety.
+     * Removes [node] from its current position in the linked list.
+     *
+     * This operation does not remove the node from [map].
      */
-    suspend fun contains(key: Key): Boolean = mutex.withLock {
-        cache.containsKey(key)
+    private fun unlink(node: Node<K, V>) {
+        val prev = node.prev
+        val next = node.next
+
+        if (prev != null) {
+            prev.next = next
+        } else {
+            head = next
+        }
+
+        if (next != null) {
+            next.prev = prev
+        } else {
+            tail = prev
+        }
+
+        node.prev = null
+        node.next = null
+    }
+
+    /**
+     * Removes the least recently used entry from the cache.
+     *
+     * The least recently used entry is always located at [head].
+     */
+    private fun removeLeastRecentlyUsed() {
+        val node = head ?: return
+
+        map.remove(node.key)
+        unlink(node)
     }
 }
+
