@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
+import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.components.database.initDatabase
@@ -318,14 +319,14 @@ class MainViewModel(
 
     val inventorySeed: InventorySeed = InventorySeed()
 
-    fun setSelectedInventory(identifier: UUID) {
+    fun setSelectedInventory(identifier: Uuid) {
         viewModelScope.launch {
            val cached = inventoryCache.get(identifier)?.let { (inventory, notes) ->
                inventorySeed.setInitial(inventory, notes)
            }
 
             if (cached == null) {
-                inventoryDatabase.getById(identifier)?.let { inventory ->
+                inventoryDatabase.get(identifier)?.let { inventory ->
                     val notes = inventoryDatabase.getNotes(identifier) ?: emptyList()
 
                     inventorySeed.setInitial(inventory, notes)
@@ -345,9 +346,7 @@ class MainViewModel(
 
                 inventoryDatabase.addImages(inventorySeed.identifier, inventorySeed.images)
 
-                inventorySeed.notes.forEach { note ->
-                    inventoryDatabase.addNote(inventorySeed.identifier, note)
-                }
+                inventoryDatabase.addNotes(inventorySeed.notes, inventorySeed.identifier)
             } else {
                 inventorySeed.getChangedFields().forEach { changedField ->
                     when (changedField) {
@@ -359,12 +358,12 @@ class MainViewModel(
                         ChangedField.NOTE -> {
                             // TODO: Setup way to see which one has changed
                             inventorySeed.notes.forEach { note ->
-                                inventoryDatabase.updateNote(note)
+                                TODO("Not yet implemented")
                             }
                         }
                         ChangedField.IMAGE -> {
                             inventorySeed.images.forEach { image ->
-                                inventoryDatabase.updateImage(image)
+                                TODO("Not yet implemented")
                             }
                         }
                         else -> {}
@@ -378,11 +377,11 @@ class MainViewModel(
         inventoryDatabase.search(query, 20) ?: emptyList()
     }
 
-    fun removeInventory(identifier: UUID) {
+    fun removeInventory(identifier: Uuid) {
         viewModelScope.launch {
             if (inventorySeed.identifier == identifier) {
                 inventorySeed.clear()
-                inventoryDatabase.remove(identifier)
+                inventoryDatabase.delete(identifier)
                 inventoryPager?.refreshCurrentData()
             }
         }
