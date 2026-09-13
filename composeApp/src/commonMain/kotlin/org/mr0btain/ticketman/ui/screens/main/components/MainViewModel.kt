@@ -17,26 +17,16 @@ import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
-import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
-import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
-import org.mr0btain.ticketman.components.database.SettingsDatabase
-import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
-import org.mr0btain.ticketman.components.database.initDatabase
+import org.mr0btain.ticketman.components.database.*
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.generateMockCustomer
-import org.mr0btain.ticketman.generateMockUser
-import org.mr0btain.ticketman.generateRandomInventoryItem
-import org.mr0btain.ticketman.generateRandomTicket
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.name_divider_character
-import kotlin.random.Random
 import kotlin.uuid.Uuid
 
 // TODO: Setup log in button and log in status
