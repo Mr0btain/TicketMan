@@ -22,6 +22,13 @@ class CustomerDatabaseImpl: Database<Customer>() {
         TODO("Not yet implemented")
     }
 
+    override fun getPagedItems(
+        offset: Int,
+        limit: Int
+    ): List<Customer> {
+        TODO("Not yet implemented")
+    }
+
     fun getTickets(id: Uuid): List<Ticket>? {
         TODO("Not yet implemented")
     }
