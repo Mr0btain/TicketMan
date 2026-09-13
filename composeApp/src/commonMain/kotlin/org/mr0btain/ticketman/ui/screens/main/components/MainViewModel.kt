@@ -93,8 +93,8 @@ class MainViewModel(
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
                     ticketDatabase.getPagedItems(
-                        offset = (page * pageSize).toLong(),
-                        pageSize = pageSize
+                        offset = (page * pageSize),
+                        limit = pageSize
                     ) ?: emptyList()
                 }
             )
@@ -104,8 +104,8 @@ class MainViewModel(
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
                     inventoryDatabase.getPagedItems(
-                        offset = (page * pageSize).toLong(),
-                        pageSize = pageSize
+                        offset = (page * pageSize),
+                        limit = pageSize
                     ) ?: emptyList()
                 }
             )
@@ -115,8 +115,8 @@ class MainViewModel(
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
                     userDatabase.getPagedItems(
-                        offset = (page * pageSize).toLong(),
-                        pageSize = pageSize
+                        offset = (page * pageSize),
+                        limit = pageSize
                     ) ?: emptyList()
                 }
             )
@@ -507,79 +507,4 @@ class MainViewModel(
 
     /** ----------------------------------------------TESTING------------------------------------------------------------------- */
 
-    fun fillDatabaseWithTestData() {
-        val ticketIdentifiers = mutableListOf<Uuid>()
-        val ticketNum = 1000
-        val customerNum = 400
-        val inventoryNum = 100
-        val userNum = 25
-
-        (0..ticketNum).forEach { i ->
-            // Generate random ticket
-            val (ticket, notes) = generateRandomTicket()
-
-            // Add ticket to database
-            ticketDatabase.add(ticket)
-
-            // Add notes
-            notes.forEach { note ->
-                ticketDatabase.addNote(ticket.identifier, note)
-            }
-
-            // Insert id into list
-            ticketIdentifiers.add(ticket.identifier)
-        }
-
-        (0..customerNum).forEach { _ ->
-            // Generate random customer
-            val (customer, notes) = generateMockCustomer()
-
-            // Add customer
-            customerDatabase.add(customer)
-
-            // Add notes
-            notes.forEach { note ->
-                customerDatabase.addNote(customer.identifier, note)
-            }
-
-            // Add random tickets
-            (0..Random.nextInt(1, 6)).forEach { _ ->
-                if (ticketIdentifiers.isNotEmpty()) {
-                    // basically popping one random off the list
-                    val randomIndex = Random.nextInt(ticketIdentifiers.size)
-                    customerDatabase.addTicket(customer.identifier, ticketIdentifiers.removeAt(randomIndex))
-                }
-            }
-        }
-
-        (0..inventoryNum).forEach { _ ->
-            val (inventory, notes) = generateRandomInventoryItem()
-
-            inventoryDatabase.add(inventory)
-
-            notes.forEach { note ->
-                inventoryDatabase.addNote(inventory.identifier, note)
-            }
-        }
-
-        (0..userNum).forEach { _ ->
-            // Generate random user
-            val (user, notes) = generateMockUser()
-
-            // Add user to database
-            userDatabase.add(user)
-
-            //Add notes
-            notes.forEach { note ->
-                userDatabase.addNote(user.identifier, note)
-            }
-
-            // Add random tickets
-            (0..Random.nextInt(4, 12)).forEach { _ ->
-                if (ticketIdentifiers.isNotEmpty()) {
-                    userDatabase.addTicket(user.identifier, ticketIdentifiers.random())
-                }
-            }
-        }
-    }
 }
