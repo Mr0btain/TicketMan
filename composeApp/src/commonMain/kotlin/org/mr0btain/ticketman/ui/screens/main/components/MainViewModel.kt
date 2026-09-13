@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.components.database.SettingsDatabase
+import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.data.customer.Customer
@@ -236,7 +237,7 @@ class MainViewModel(
     val ticketSeed: TicketSeed = TicketSeed()
 
     /** Sets selected ticket and adds it to the cache */
-    fun setSelectedTicket(identifier: UUID) {
+    fun setSelectedTicket(identifier: Uuid) {
         viewModelScope.launch {
             val cached = ticketCache.get(identifier)?.let { (ticket, notes, customer, user) ->
                 ticketSeed.setTicket(
@@ -249,7 +250,7 @@ class MainViewModel(
 
             // If cache didn't have ticket, pull it and add to cache
             if (cached == null) {
-                ticketDatabase.getById(identifier)?.let { ticket ->
+                ticketDatabase.get(identifier)?.let { ticket ->
                     // Get notes
                     val notes = ticketDatabase.getNotes(identifier) ?: emptyList()
                     val customer = ticketDatabase.getCustomer(identifier)
@@ -275,9 +276,7 @@ class MainViewModel(
             if (ticketSeed.isNew) {
                 ticketDatabase.add(ticketSeed.ticket)
 
-                ticketSeed.notes.forEach { note ->
-                    ticketDatabase.addNote(ticketSeed.identifier, note)
-                }
+                ticketDatabase.addNotes(ticketSeed.notes, ticketSeed.identifier)
             }
 
             ticketSeed.getChangedFields().forEach { changedField ->
@@ -299,11 +298,11 @@ class MainViewModel(
         ticketDatabase.search(query, 20) ?: emptyList()
     }
 
-    fun removeTicket(identifier: UUID) {
+    fun removeTicket(identifier: Uuid) {
         viewModelScope.launch {
             if (ticketSeed.identifier == identifier) {
                 ticketSeed.clear()
-                ticketDatabase.remove(identifier)
+                ticketDatabase.delete(identifier)
                 ticketPager?.refreshCurrentData()
             }
         }
