@@ -24,10 +24,6 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.database.CustomerDatabaseImpl
-import org.mr0btain.ticketman.database.InventoryDatabaseImpl
-import org.mr0btain.ticketman.database.TicketDatabaseImpl
-import org.mr0btain.ticketman.database.UserDatabaseImpl
 import org.mr0btain.ticketman.generateMockCustomer
 import org.mr0btain.ticketman.generateMockUser
 import org.mr0btain.ticketman.generateRandomInventoryItem
@@ -36,7 +32,6 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.name_divider_character
-import java.util.*
 import kotlin.random.Random
 
 // TODO: Setup log in button and log in status
