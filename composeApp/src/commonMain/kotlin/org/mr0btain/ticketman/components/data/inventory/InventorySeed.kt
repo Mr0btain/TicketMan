@@ -8,10 +8,11 @@ import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.uuid.UUIDv7
-import java.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-class InventorySeed: DataSeed() {
+@OptIn(ExperimentalUuidApi::class)
+class InventorySeed: DataSeed("InventorySeed") {
     var name: String by mutableStateOf("")
         private set
     var description: String by mutableStateOf("")
@@ -88,7 +89,7 @@ class InventorySeed: DataSeed() {
 
     // Reset all fields
     override fun clear() {
-        identifier = UUIDv7.randomUUID()
+        identifier = Uuid.generateV7()
         name = ""
         description = ""
         stock = 0
@@ -111,7 +112,7 @@ class InventorySeed: DataSeed() {
         "InventorySeed(name=$name,description=$description,stock=$stock,cost=$cost,price=$price, notes=$_notes)"
 
     private data class State(
-        val identifier: UUID = UUIDv7.randomUUID(),
+        val identifier: Uuid = Uuid.generateV7(),
         val name: String = "",
         val description: String = "",
         val stock: Int = 0,

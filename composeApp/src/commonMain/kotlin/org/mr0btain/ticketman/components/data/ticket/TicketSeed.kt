@@ -12,10 +12,11 @@ import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketStatus
-import org.mr0btain.ticketman.data.uuid.UUIDv7
-import java.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-class TicketSeed: DataSeed() {
+@OptIn(ExperimentalUuidApi::class)
+class TicketSeed: DataSeed("TicketSeed") {
     var device: Device by mutableStateOf(Device())
         private set
     var status: TicketStatus by mutableStateOf(TicketStatus())
@@ -49,7 +50,7 @@ class TicketSeed: DataSeed() {
         isNew = false
     }
 
-    fun changeIdentifier(newId: UUID) {
+    fun changeIdentifier(newId: Uuid) {
         if (identifier != newId) {
             identifier = newId
             _changedFields.add(ChangedField.IDENTIFIER)
@@ -93,7 +94,7 @@ class TicketSeed: DataSeed() {
 
     // Reset all fields
     override fun clear() {
-        identifier = UUIDv7.randomUUID()
+        identifier = Uuid.generateV7()
         device = Device()
         status = TicketStatus()
         priority = TicketPriority()
@@ -117,7 +118,7 @@ class TicketSeed: DataSeed() {
     }
 
     private data class State(
-        val identifier: UUID = UUIDv7.randomUUID(),
+        val identifier: Uuid = Uuid.generateV7(),
         val device:Device = Device(),
         val status: TicketStatus = TicketStatus(),
         val priority: TicketPriority = TicketPriority(),

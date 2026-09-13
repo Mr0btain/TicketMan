@@ -7,9 +7,12 @@ import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.uuid.UUIDv7
-import java.util.*
+import org.mr0btain.ticketman.data.time.createdAt
+import kotlin.time.Instant
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class NoteSeed {
     // Constructor to set initial data from an existing note if we need to.
     constructor(initial: Note? = null) {
@@ -18,7 +21,7 @@ class NoteSeed {
         }
     }
 
-    var identifier: UUID by mutableStateOf(UUIDv7.randomUUID())
+    var identifier: Uuid by mutableStateOf(Uuid.generateV7())
         private set
 
     private val _images = mutableStateListOf<StoredImage>()
@@ -27,8 +30,8 @@ class NoteSeed {
     var isNew: Boolean by mutableStateOf(true)
         private set
 
-    var time: Long by mutableStateOf(0)
-        private set
+    val time: Instant
+        get() = identifier.createdAt()
 
     var author by mutableStateOf("")
         private set
@@ -40,7 +43,8 @@ class NoteSeed {
     private val changedFields = mutableListOf<ChangedField>()
 
     // To check if the object has changed
-    val isDirty: Boolean get() = changedFields.isNotEmpty()
+    val isDirty: Boolean
+        get() = changedFields.isNotEmpty()
 
     // snapshot of the last saved state
     private var savedState: State = State()
@@ -54,7 +58,6 @@ class NoteSeed {
         identifier = note.identifier
         author = note.author
         message = note.message
-        time = UUIDv7.getLongTime(identifier)
 
         changeImages(note.images)
 
@@ -62,7 +65,7 @@ class NoteSeed {
         isNew = false
     }
 
-    fun changeIdentifier(newId: UUID) {
+    fun changeIdentifier(newId: Uuid) {
         if (identifier != newId) {
             identifier = newId
             changedFields.add(ChangedField.IDENTIFIER)
@@ -84,8 +87,9 @@ class NoteSeed {
         }
     }
 
-    fun removeImage(identifier: UUID) {
-        if (_images.removeIf { it.identifier == identifier }) {
+    fun deleteImage(identifier: Uuid) {
+        _images.first { it.identifier == identifier }.also { index ->
+            _images.remove(index)
             changedFields.add(ChangedField.IMAGE)
         }
     }
@@ -104,18 +108,10 @@ class NoteSeed {
         }
     }
 
-    fun changeTime(newTime: Long) {
-        if (time != newTime) {
-            time = newTime
-            changedFields.add(ChangedField.TIME)
-        }
-    }
-
     fun clear() {
-        identifier = UUIDv7.randomUUID()
+        identifier = Uuid.generateV7()
         author = ""
         message = ""
-        time = UUIDv7.getLongTime(identifier)
         _images.clear()
 
         isNew = true
@@ -123,21 +119,18 @@ class NoteSeed {
     }
 
     fun markClean() {
-        savedState = State(identifier, author, message, _images, time)
+        savedState = State(identifier, author, message, _images)
         changedFields.clear()
     }
 
     fun getChangedFields(): List<ChangedField> = changedFields.toList()
 
-    override fun toString(): String {
-        TODO("Not yet implemented")
-    }
+    override fun toString(): String = "NoteSeed($author, $time: $message)"
 
     private data class State(
-        val identifier: UUID = UUIDv7.randomUUID(),
+        val identifier: Uuid = Uuid.generateV7(),
         val author: String = "",
         val message: String = "",
-        val images: List<StoredImage> = emptyList(),
-        val time: Long = 0
+        val images: List<StoredImage> = emptyList()
     )
 }

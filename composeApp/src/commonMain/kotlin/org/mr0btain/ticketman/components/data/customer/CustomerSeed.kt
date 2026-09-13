@@ -12,14 +12,17 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.uuid.UUIDv7
+import org.mr0btain.ticketman.logging.AppLogger
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.name_divider_character
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
-class CustomerSeed: DataSeed() {
+class CustomerSeed: DataSeed("CustomerSeed") {
+    private val ADD_TICKET_TAG = "ADD_TICKET"
+    private val DELETE_TICKET_TAG = "DELETE_TICKET"
+
     // Name
     private val _name = mutableStateListOf("")
     val name: List<String>
@@ -86,36 +89,53 @@ class CustomerSeed: DataSeed() {
     }
 
     fun changeZip(newZip: String) {
-        if (zip != newZip) {
-            zip = newZip
-            _changedFields.add(ChangedField.ZIP)
+        newZip.filter { it.isDigit() }.also { result ->
+            if (zip != result) {
+                zip = result
+                _changedFields.add(ChangedField.ZIP)
+            }
         }
+
     }
 
     fun changeEmail(newEmail: String) {
-        if (email != newEmail) {
-            email = newEmail
-            _changedFields.add(ChangedField.EMAIL)
+        newEmail.filter { !it.isWhitespace() }.also { result ->
+            if (email != result) {
+                email = result
+                _changedFields.add(ChangedField.EMAIL)
+            }
         }
+
     }
 
     fun changePhone(newPhone: String) {
-        if (phone != newPhone) {
-            phone = newPhone
-            _changedFields.add(ChangedField.PHONE)
+        newPhone.filter { it.isDigit() }.also { result ->
+            if (phone != result) {
+                phone = result
+                _changedFields.add(ChangedField.PHONE)
+            }
         }
     }
 
     fun addTicket(newTicket: Ticket) {
-        if (!_tickets.contains(newTicket)) {
-            _tickets.add(newTicket)
-            _changedFields.add(ChangedField.TICKET)
+        _tickets.indexOfFirst { newTicket.identifier == it.identifier }.also { index ->
+            if (index == -1) {
+                _tickets.add(newTicket)
+                _changedFields.add(ChangedField.TICKET)
+            } else {
+                AppLogger.m(ADD_TICKET_TAG, "Ticket already exists")
+            }
         }
     }
 
-    fun removeTicket(ticketToRemove: Uuid) {
-        if (_tickets.removeAll { it.identifier == ticketToRemove }) {
-            _changedFields.add(ChangedField.TICKET)
+    fun deleteTicket(ticketToRemove: Uuid) {
+        _tickets.indexOfFirst { it.identifier == ticketToRemove }.also { index ->
+            if (index != -1) {
+                _tickets.removeAt(index)
+                _changedFields.add(ChangedField.TICKET)
+            } else {
+                AppLogger.m(DELETE_TICKET_TAG, "Ticket not found")
+            }
         }
     }
 
@@ -151,7 +171,7 @@ class CustomerSeed: DataSeed() {
     }
 
     override fun clear() {
-        identifier = UUIDv7.randomUUID()
+        identifier = Uuid.generateV7()
         _name.clear()
         street = ""
         city = ""
