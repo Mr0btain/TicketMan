@@ -399,7 +399,7 @@ class MainViewModel(
     val userSeed: UserSeed = UserSeed()
 
     /** Sets selected user and adds it to the cache */
-    fun setSelectedUser(identifier: UUID) {
+    fun setSelectedUser(identifier: Uuid) {
         if (userSeed.identifier == identifier) return
 
         viewModelScope.launch {
@@ -408,7 +408,7 @@ class MainViewModel(
             }
 
             if (cached == null) {
-                userDatabase.getById(identifier)?.let { user ->
+                userDatabase.get(identifier)?.let { user ->
                     val notes = userDatabase.getNotes(identifier) ?: emptyList()
 
                     userSeed.setUser(user, notes)
@@ -508,7 +508,7 @@ class MainViewModel(
     /** ----------------------------------------------TESTING------------------------------------------------------------------- */
 
     fun fillDatabaseWithTestData() {
-        val ticketIdentifiers = mutableListOf<UUID>()
+        val ticketIdentifiers = mutableListOf<Uuid>()
         val ticketNum = 1000
         val customerNum = 400
         val inventoryNum = 100
