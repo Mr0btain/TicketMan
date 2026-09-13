@@ -15,8 +15,10 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.uuid.UUIDv7
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.name_divider_character
-import java.util.*
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalUuidApi::class)
 class CustomerSeed: DataSeed() {
     // Name
     private val _name = mutableStateListOf("")
@@ -111,8 +113,8 @@ class CustomerSeed: DataSeed() {
         }
     }
 
-    fun removeTicket(ticketToRemove: UUID) {
-        if (_tickets.removeIf { it == identifier }) {
+    fun removeTicket(ticketToRemove: Uuid) {
+        if (_tickets.removeAll { it.identifier == ticketToRemove }) {
             _changedFields.add(ChangedField.TICKET)
         }
     }
@@ -187,7 +189,7 @@ class CustomerSeed: DataSeed() {
         "CustomerSeed(Name=${splitName(customer.name).joinToString(" ")}, Address=$street $city $state $zip, Email=$email, Phone=$phone, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
 
     private data class State(
-        val identifier: UUID = UUIDv7.randomUUID(),
+        val identifier: Uuid = Uuid.generateV7(),
         val name: String = "",
         val street: String = "",
         val city: String = "",

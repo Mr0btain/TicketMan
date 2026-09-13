@@ -17,6 +17,7 @@ import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
+import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.database.initDatabase
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
@@ -33,6 +34,7 @@ import org.mr0btain.ticketman.logging.SimpleResult
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.name_divider_character
 import kotlin.random.Random
+import kotlin.uuid.Uuid
 
 // TODO: Setup log in button and log in status
 
@@ -77,9 +79,9 @@ class MainViewModel(
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
                     customerDatabase.getPagedItems(
-                        offset = (page * pageSize).toLong(),
-                        pageSize = pageSize
-                    ) ?: emptyList()
+                        offset = (page * pageSize),
+                        limit = pageSize
+                    )
                 }
             )
 
@@ -147,9 +149,7 @@ class MainViewModel(
                 customerDatabase.add(customerSeed.customer)
 
                 // Add notes
-                customerSeed.notes.forEach { note ->
-                    customerDatabase.addNote(customerSeed.identifier, note)
-                }
+                customerDatabase.addNotes(customerSeed.notes, customerSeed.identifier)
 
                 // TODO: Setup way to check if these tickets are new or not.
                 // Right now we assume these tickets have already been inserted into the database. Here we just link them
@@ -178,7 +178,7 @@ class MainViewModel(
     }
 
     /** Sets the selected customer and inserts the data into the cache */
-    fun setSelectedCustomer(identifier: UUID) {
+    fun setSelectedCustomer(identifier: Uuid) {
         viewModelScope.launch {
             // Get customer from cache if we can and set the values
             val cached = customerCache.get(identifier)?.let { (customer, notes, tickets) ->
@@ -191,7 +191,7 @@ class MainViewModel(
 
             // Else if we didn't have it in cache, pull it and add it to cache
             if (cached == null) {
-                customerDatabase.getById(identifier)?.let { customer ->
+                customerDatabase.get(identifier)?.let { customer ->
                     val notes = customerDatabase.getNotes(identifier) ?: emptyList()
                     val tickets = customerDatabase.getTickets(identifier)?: emptyList()
 
@@ -205,19 +205,19 @@ class MainViewModel(
         }
     }
 
-    suspend fun getCustomer(identifier: UUID): Customer? =
+    suspend fun getCustomer(identifier: Uuid): Customer? =
         customerCache.get(identifier)?.customer
-            ?: customerDatabase.getById(identifier)
+            ?: customerDatabase.get(identifier)
 
     suspend fun searchCustomers(query: String) = coroutineScope {
         customerDatabase.search(query, 20) ?: emptyList()
     }
 
-    fun removeCustomer(identifier: UUID) {
+    fun removeCustomer(identifier: Uuid) {
         viewModelScope.launch {
             if (customerSeed.identifier == identifier) {
                 customerSeed.clear()
-                customerDatabase.remove(identifier)
+                customerDatabase.delete(identifier)
 
                 // Refresh pager data
                 customerPager?.refreshCurrentData()
