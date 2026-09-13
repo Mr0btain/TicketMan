@@ -1,24 +1,18 @@
 package org.mr0btain.ticketman.components.data.customer
 
-import org.mr0btain.ticketman.data.cache.LruCache
+import org.mr0btain.ticketman.components.data.CustomCache
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
-import kotlin.uuid.Uuid
 
-class CustomerCache(maxSize: Int) {
-    private val cache = LruCache<String, CustomersData>(maxSize, "CustomerCache")
+class CustomerCache(maxSize: Int): CustomCache<CustomerCache.CustomersData>(maxSize, "CustomerCache") {
 
     suspend fun put(
         customer: Customer,
         notes: List<Note> = emptyList(),
         tickets: List<Ticket> = emptyList()
     ) {
-        cache[customer.identifier.toString()] = CustomersData(customer, notes, tickets)
-    }
-
-    suspend fun get(id: Uuid): CustomersData? {
-        return cache[id.toString()]
+        cache.put(customer.identifier.toString(), CustomersData(customer, notes, tickets))
     }
 
     data class CustomersData(

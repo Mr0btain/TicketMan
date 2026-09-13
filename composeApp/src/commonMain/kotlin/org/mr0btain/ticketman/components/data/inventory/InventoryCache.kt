@@ -1,20 +1,15 @@
 package org.mr0btain.ticketman.components.data.inventory
 
 import org.mr0btain.ticketman.components.data.CustomCache
-import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import java.util.*
 
-class InventoryCache(maxSize: Int) : CustomCache<InventoryCache.InventoryData>("InventoryCache", maxSize) {
+class InventoryCache(maxSize: Int): CustomCache<InventoryCache.InventoryData>(maxSize, "InventoryCache") {
     suspend fun put(
         inventory: Inventory,
         notes: List<Note> = emptyList()
     ) {
-        cache.put(
-            inventory.identifier,
-            InventoryData(inventory, notes)
-        )
+        cache.put(inventory.identifier.toString(), InventoryData(inventory, notes))
     }
 
     data class InventoryData(
