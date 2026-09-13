@@ -45,4 +45,8 @@ class UserDatabaseImpl: Database<User>() {
     ): List<User> {
         TODO("Not yet implemented")
     }
+
+    fun addTicket(id: Uuid, ticket: Uuid): Boolean {
+        TODO("Not yet implemented")
+    }
 }
