@@ -5,19 +5,17 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.service.EncryptionService
-import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.data.user.hashPassword
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.data.uuid.UUIDv7
+import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.hashPassword
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
 import org.mr0btain.ticketman.server.response.SyncResponse
 import org.mr0btain.ticketman.server.response.UserResponse
-import java.util.UUID
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * User routes
@@ -25,61 +23,46 @@ import java.util.UUID
 
 // TODO: Not sure if we should let this handle filtering restricted data, or the database itself.
 // TODO: Handle encryption in the rest of these routes
+@OptIn(ExperimentalUuidApi::class)
 fun Route.userRoute(
-    database: UserDatabaseImpl,
-    encryptionService: EncryptionService
+    database: UserDatabaseImpl
 ) {
     // Sync between client and server
     authenticate {
         post("/sync") {
-            call.getIdentifierFromToken()?.let { identifier ->
-                val encryptedData = call.receive<EncryptedData>()
+            val syncRequest = call.receive<SyncRequest>()
+            val identifier = call.getIdentifierFromToken()
 
-                encryptionService.decryptData(identifier, encryptedData)?.let {
-                    Json.decodeFromString<SyncRequest>(it)
-                }?.let { syncRequest ->
-                    database.all()?.let { data ->
-                        val user = data.firstOrNull { it.identifier == identifier }
+            database.all()?.let { data ->
+                val user = data.firstOrNull { it.identifier == identifier }
 
-                        if (user != null) {
-                            // Filter items by ones the client does not contain
-                            val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }.map { it.copy(password = "") }
+                if (user != null) {
+                    // Filter items by ones the client does not contain
+                    val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }.map { it.copy(password = "") }
 
-                            // Map all the ids in the local database
-                            val dataIdentifiers = data.map { it.identifier }
+                    // Map all the ids in the local database
+                    val dataIdentifiers = data.map { it.identifier }
 
-                            // Filter response data so we can send back a response to request those that are not in our database
-                            val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
+                    // Filter response data so we can send back a response to request those that are not in our database
+                    val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
 
-                            when (user.accessLevel) {
-                                AccessLevel.ADMIN -> {
-                                    encryptionService.encryptData(
-                                        identifier = identifier,
-                                        data = Json.encodeToString(SyncResponse(responseData, requested))
-                                    )?.let { response ->
-                                        call.respond(HttpStatusCode.OK, response)
-                                    } ?: call.respond(HttpStatusCode.InternalServerError)
-                                }
+                    when (user.accessLevel) {
+                        AccessLevel.ADMIN -> {
+                            call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
+                        }
 
-                                else -> {
-                                    val restrictedData = responseData.map { user ->
-                                        User(
-                                            identifier = user.identifier,
-                                            name = user.name
-                                        )
-                                    }
-
-                                    encryptionService.encryptData(
-                                        identifier = identifier,
-                                        data = Json.encodeToString(SyncResponse(restrictedData, requested))
-                                    )?.let { response ->
-                                        call.respond(HttpStatusCode.OK, response)
-                                    } ?: call.respond(HttpStatusCode.InternalServerError)
-                                }
+                        else -> {
+                            val restrictedData = responseData.map { user ->
+                                User(
+                                    identifier = user.identifier,
+                                    name = user.name
+                                )
                             }
-                        } else call.respond(HttpStatusCode.NotFound)
-                    } ?: call.respond(HttpStatusCode.NotFound)
-                }?: call.respond(HttpStatusCode.InternalServerError)
+
+                            call.respond(HttpStatusCode.OK, SyncResponse(restrictedData, requested))
+                        }
+                    }
+                } else call.respond(HttpStatusCode.NotFound)
             } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
@@ -91,7 +74,7 @@ fun Route.userRoute(
     }
 
     post("/register/first") {
-        val identifier = UUIDv7.randomUUID()
+        val identifier = Uuid.generateV7()
 
         if (database.all()?.isEmpty() ?: true) {
             val userRequest = call.receive<UserRequest>()
@@ -108,7 +91,7 @@ fun Route.userRoute(
     authenticate("admin") {
         post("/register") {
             val userRequest = call.receive<UserRequest>()
-            val identifier = UUIDv7.randomUUID()
+            val identifier = Uuid.generateV7()
 
 
             val user = userRequest.toModel(identifier)
@@ -162,7 +145,7 @@ fun Route.userRoute(
                     return@delete
                 }
 
-                database.remove(UUID.fromString(identifier))
+                database.remove(Uuid.parse(identifier))
                 call.respond(HttpStatusCode.Accepted)
             } catch (ex: Exception) {
                 ex.printStackTrace()
@@ -172,7 +155,7 @@ fun Route.userRoute(
     }
 }
 
-private fun UserRequest.toModel(id: UUID): User =
+private fun UserRequest.toModel(id: Uuid): User =
     User(
         identifier = id,
         username = username,

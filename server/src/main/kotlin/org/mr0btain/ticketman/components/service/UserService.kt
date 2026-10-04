@@ -3,10 +3,11 @@ package org.mr0btain.ticketman.components.service
 import com.auth0.jwt.interfaces.DecodedJWT
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 class UserService(
     private val database: UserDatabaseImpl,
@@ -48,7 +49,7 @@ class UserService(
         val refreshToken = tokenDatabase.findByToken(token)
 
         return if (decodedRefreshToken != null && refreshToken != null) {
-            val foundUser = database.getById(UUID.fromString(refreshToken.identifier))
+            val foundUser = database.getById(Uuid.parse(refreshToken.identifier))
             val idFromRefreshToken = decodedRefreshToken.getClaim("identifier").asString()
 
             if (foundUser != null && idFromRefreshToken == foundUser.identifier.toString())

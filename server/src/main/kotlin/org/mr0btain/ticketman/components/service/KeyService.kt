@@ -1,12 +1,8 @@
 package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.encryption.PeerKeyData
-import org.mr0btain.ticketman.components.encryption.ServerEncryptionHandler
-import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.server.response.KeyResponse
-import java.util.*
+import org.mr0btain.ticketman.logging.SimpleResult
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -17,8 +13,8 @@ import kotlin.uuid.Uuid
 
 @OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
-class EncryptionService() {
-    private val handler = ServerEncryptionHandler()
+class KeyService() {
+    //private val handler = ServerEncryptionHandler()
     private val keyStorage = mutableMapOf<Uuid, PeerKeyData>()
 
     private val TAG = "EncryptionService"
@@ -45,6 +41,7 @@ class EncryptionService() {
         } ?: AppLogger.i(UPDATE_KEY_IDENTIFIER, "Identifier Not Found")
     }
 
+    /*
     /** Encrypt data to a specific client */
     fun encryptData(identifier: Uuid, data: String): EncryptedData? {
         return keyStorage[identifier]?.let { peerKey ->
@@ -101,7 +98,7 @@ class EncryptionService() {
         }
     }
 
-    /** Get keys needed to send messages to server */
+/** Get keys needed to send messages to server */
     // TODO: Fix this
     fun getPublicKeyResponse(): KeyResponse {
         return KeyResponse(
@@ -109,4 +106,5 @@ class EncryptionService() {
             publicSignature = "" //handler.getSigningPublicKey()
         )
     }
+     */
 }

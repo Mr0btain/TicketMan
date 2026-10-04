@@ -7,7 +7,6 @@ import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.routing.configureRouting
-import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
@@ -45,14 +44,14 @@ fun Application.module() {
         val database = configureDatabase(path.ifBlank { appDir.toString() })
         val jwtService = JwtService(this, database.userDatabase)
         val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase)
-        val encryptionService = EncryptionService()
+        //val keyService = KeyService()
 
         println("USER: ${database.userDatabase.all()?.firstOrNull { it.accessLevel == AccessLevel.ADMIN }}")
 
         configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
-        configureRouting(userService, database, encryptionService)
+        configureRouting(userService, database)
 
         AppLogger.m("SERVER", "Server initialized!")
 

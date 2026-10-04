@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -57,6 +58,12 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
 
         return result
+    }
+
+    fun getAccessLevel(identifier: Uuid): AccessLevel {
+        getById(identifier)?.accessLevel?.let { return it }
+
+        return AccessLevel.NONE
     }
 
     override fun getPagedItems(offset: Long, pageSize: Int): List<User>? {

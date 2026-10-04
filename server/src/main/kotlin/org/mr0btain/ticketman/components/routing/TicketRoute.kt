@@ -3,47 +3,31 @@ package org.mr0btain.ticketman.components.routing
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
-import io.ktor.server.response.respond
+import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.service.EncryptionService
-import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.encryption.EncryptedData
+import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 fun Route.ticketRoute(
-    database: TicketDatabaseImpl,
-    encryptionService: EncryptionService
+    database: TicketDatabaseImpl
 ) {
     // Sync between client and server
     authenticate {
         post("/sync") {
-            call.getIdentifierFromToken()?.let { identifier ->
-                val encryptedData = call.receive<EncryptedData>()
+            val syncRequest = call.receive<SyncRequest>()
 
-                encryptionService.decryptData(identifier, encryptedData)?.let {
-                    Json.decodeFromString<SyncRequest>(it)
-                }?.let { syncRequest ->
-                    database.all()?.let { data ->
-                        // Filter items by ones the client does not contain
-                        val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }
+            database.all()?.let { data ->
+                // Filter items by ones the client does not contain
+                val responseData = data.filter { syncRequest.clientData.contains(it.identifier) }
 
-                        // Map all the ids in the local database
-                        val dataIdentifiers = data.map { it.identifier }
+                // Map all the ids in the local database
+                val dataIdentifiers = data.map { it.identifier }
 
-                        // Filter response data so we can send back a response to request those that are not in our database
-                        val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
-
-                        encryptionService.encryptData(
-                            identifier = identifier,
-                            data = Json.encodeToString(SyncResponse(responseData, requested))
-                        )?.let { response ->
-                            call.respond(HttpStatusCode.OK, response)
-                        } ?: call.respond(HttpStatusCode.InternalServerError)
-                    } ?: call.respond(HttpStatusCode.NotFound)
-                }?: call.respond(HttpStatusCode.InternalServerError)
+                // Filter response data so we can send back a response to request those that are not in our database
+                val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
+                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
             } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
@@ -52,11 +36,7 @@ fun Route.ticketRoute(
     authenticate("restricted") {
         get("/all") {
             database.all()?.let { data ->
-                val string = Json.encodeToString(data)
-                println(string)
-                call.handleEncryption(encryptionService, string)?.let { message ->
-                    call.respond(HttpStatusCode.Accepted, message)
-                } ?: call.respond(HttpStatusCode.InternalServerError)
+                call.respond(HttpStatusCode.Accepted, data)
             } ?: call.respond(HttpStatusCode.NotFound)
         }
     }
@@ -64,40 +44,26 @@ fun Route.ticketRoute(
     // Adding new
     authenticate {
         post("/add") {
-            call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptData(
-                    identifier = identifier,
-                    data = call.receive<EncryptedData>()
-                )?.let { message ->
-                    database.add(Json.decodeFromString<Ticket>(message))
-
-                    call.respond(HttpStatusCode.Accepted)
-                }?: call.respond(HttpStatusCode.InternalServerError)
-            }?: call.respond(HttpStatusCode.NotFound)
+            database.add(call.receive()).also {
+                call.respond(HttpStatusCode.Created)
+            }
         }
     }
 
     // Update
     authenticate {
         post("/update") {
-            call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptData(
-                    identifier = identifier,
-                    data = call.receive<EncryptedData>()
-                )?.let { message ->
-                    database.update(Json.decodeFromString<Ticket>(message))
-                    call.respond(HttpStatusCode.Accepted)
-                }?: call.respond(HttpStatusCode.InternalServerError)
-            }?: call.respond(HttpStatusCode.NotFound)
+            database.update(call.receive()).also {
+                call.respond(HttpStatusCode.Accepted)
+            }
         }
     }
 
     // Bulk add mostly for syncing
     authenticate {
         post("/add/all") {
-            call.handleDecryption<List<Ticket>>(encryptionService)?.let { result ->
-                database.addAll(result)
-                call.respond(HttpStatusCode.Accepted)
+            database.addAll(call.receive()).also {
+                call.respond(HttpStatusCode.Created)
             }
         }
     }
@@ -112,7 +78,7 @@ fun Route.ticketRoute(
                 return@delete
             }
 
-            database.remove(UUID.fromString(identifier))
+            database.remove(Uuid.parse(identifier))
             call.respond(HttpStatusCode.Accepted)
         }
     }

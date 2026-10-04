@@ -16,7 +16,7 @@ data class User(
     val name: String = "",
     val email: String = "",
     val phone: String = "",
-    val accessLevel: AccessLevel = AccessLevel.RESTRICTED
+    val accessLevel: AccessLevel = AccessLevel.NONE
 ): MainItem() {
     fun cleanName(): String {
         return name.split(":").joinToString(" ") { n ->
