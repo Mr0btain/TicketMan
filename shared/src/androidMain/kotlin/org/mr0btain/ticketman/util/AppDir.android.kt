@@ -7,6 +7,7 @@ import kotlinx.io.files.Path
 actual class AppDir(
     context: Context
 ) {
+    actual val TAG = "AppDir"
     actual val appId: String = "TicketMan"
 
     actual val path: Path? = Path(context.dataDir.path)

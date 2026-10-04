@@ -8,6 +8,7 @@ import kotlinx.io.files.Path
  */
 
 expect class AppDir {
+    val TAG: String
     val appId: String
     val path: Path?
     val currentPlatform: Platform
