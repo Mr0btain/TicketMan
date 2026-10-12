@@ -3,12 +3,15 @@ package org.mr0btain.ticketman.components.routing
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
+import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.hashPassword
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.request.UserRequest
 import org.mr0btain.ticketman.server.response.BooleanResponse
@@ -27,65 +30,56 @@ import kotlin.uuid.Uuid
 fun Route.userRoute(
     database: UserDatabaseImpl
 ) {
-    // Sync between client and server
+    val TAG = "UserRoute"
+    val GET_TAG = "$TAG:Get"
+    val FETCH_TAG = "$TAG:Fetch"
+    val DELETE_TAG = "$TAG:Delete"
+    val UPDATE_TAG = "$TAG:Update"
+    val SEARCH_TAG = "$TAG:Search"
+
     authenticate {
-        post("/sync") {
-            val syncRequest = call.receive<SyncRequest>()
-            val identifier = call.getIdentifierFromToken()
+        post("/get") {
+            val request = call.receive<Uuid>()
 
-            database.all()?.let { data ->
-                val user = data.firstOrNull { it.identifier == identifier }
+            val result = database.getById(request)
 
-                if (user != null) {
-                    // Filter items by ones the client does not contain
-                    val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }.map { it.copy(password = "") }
-
-                    // Map all the ids in the local database
-                    val dataIdentifiers = data.map { it.identifier }
-
-                    // Filter response data so we can send back a response to request those that are not in our database
-                    val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
-
-                    when (user.accessLevel) {
-                        AccessLevel.ADMIN -> {
-                            call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
-                        }
-
-                        else -> {
-                            val restrictedData = responseData.map { user ->
-                                User(
-                                    identifier = user.identifier,
-                                    name = user.name
-                                )
-                            }
-
-                            call.respond(HttpStatusCode.OK, SyncResponse(restrictedData, requested))
-                        }
-                    }
-                } else call.respond(HttpStatusCode.NotFound)
-            } ?: call.respond(HttpStatusCode.NotFound)
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(GET_TAG, "$request not found")
+            }
         }
     }
 
-    // TODO: Not sure if this is the right way to go about this
-    get("/isnewdatabase") {
-        if (database.all()?.isEmpty() ?: true) call.respond(BooleanResponse(true))
-        else call.respond(BooleanResponse(false))
+    authenticate {
+        post("/fetch") {
+            val request = call.receive<PagedRequest>()
+
+            val result = database.getPagedItems(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(FETCH_TAG, "$request not found")
+            }
+        }
     }
 
-    post("/register/first") {
-        val identifier = Uuid.generateV7()
+    authenticate {
+        post("/search") {
+            val request = call.receive<String>()
 
-        if (database.all()?.isEmpty() ?: true) {
-            val userRequest = call.receive<UserRequest>()
+            val result = database.search(request)
 
-            // TODO: Figure this out
-            // First user is always admin?
-            val user = userRequest.toModel(identifier).copy(accessLevel = AccessLevel.ADMIN)
-
-            database.add(user)
-            call.respond(HttpStatusCode.Created, user.toResponse())
-        } else call.respond(HttpStatusCode.Unauthorized)
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(SEARCH_TAG, "$request not found")
+            }
+        }
     }
 
     authenticate("admin") {

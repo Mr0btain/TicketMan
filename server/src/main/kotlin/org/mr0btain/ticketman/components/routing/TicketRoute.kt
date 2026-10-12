@@ -3,9 +3,12 @@ package org.mr0btain.ticketman.components.routing
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
+import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.Uuid
@@ -13,31 +16,55 @@ import kotlin.uuid.Uuid
 fun Route.ticketRoute(
     database: TicketDatabaseImpl
 ) {
-    // Sync between client and server
+    val TAG = "TicketRoute"
+    val GET_TAG = "$TAG:Get"
+    val FETCH_TAG = "$TAG:Fetch"
+    val DELETE_TAG = "$TAG:Delete"
+    val UPDATE_TAG = "$TAG:Update"
+    val SEARCH_TAG = "$TAG:Search"
+
     authenticate {
-        post("/sync") {
-            val syncRequest = call.receive<SyncRequest>()
+        post("/get") {
+            val request = call.receive<Uuid>()
 
-            database.all()?.let { data ->
-                // Filter items by ones the client does not contain
-                val responseData = data.filter { syncRequest.clientData.contains(it.identifier) }
+            val result = database.getById(request)
 
-                // Map all the ids in the local database
-                val dataIdentifiers = data.map { it.identifier }
-
-                // Filter response data so we can send back a response to request those that are not in our database
-                val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
-                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
-            } ?: call.respond(HttpStatusCode.NotFound)
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(GET_TAG, "$request not found")
+            }
         }
     }
 
-    // Get all
-    authenticate("restricted") {
-        get("/all") {
-            database.all()?.let { data ->
-                call.respond(HttpStatusCode.Accepted, data)
-            } ?: call.respond(HttpStatusCode.NotFound)
+    authenticate {
+        post("/fetch") {
+            val request = call.receive<PagedRequest>()
+
+            val result = database.getPagedItems(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(FETCH_TAG, "$request not found")
+            }
+        }
+    }
+
+    authenticate {
+        post("/search") {
+            val request = call.receive<String>()
+
+            val result = database.search(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(SEARCH_TAG, "$request not found")
+            }
         }
     }
 
@@ -55,15 +82,6 @@ fun Route.ticketRoute(
         post("/update") {
             database.update(call.receive()).also {
                 call.respond(HttpStatusCode.Accepted)
-            }
-        }
-    }
-
-    // Bulk add mostly for syncing
-    authenticate {
-        post("/add/all") {
-            database.addAll(call.receive()).also {
-                call.respond(HttpStatusCode.Created)
             }
         }
     }

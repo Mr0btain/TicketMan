@@ -4,12 +4,12 @@ import kotlinx.serialization.Serializable
 import kotlin.uuid.Uuid
 
 /**
- * Small wrapper class for a basic person and the identifier for that person in the system
+ * Small wrapper class for a basic entity that has an identifier in the system
  * @param identifier The UUID pointing to the person.
  * @param text The name of the person in plain text form.
  */
 @Serializable
-data class Identity(
+data class EntityReference(
     val identifier: Uuid,
     val text: String,
     ) {

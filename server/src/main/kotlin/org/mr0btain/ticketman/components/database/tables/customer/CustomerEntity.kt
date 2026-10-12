@@ -6,11 +6,9 @@ import org.jetbrains.exposed.v1.dao.UuidEntityClass
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.shared.Identity
-import kotlin.uuid.ExperimentalUuidApi
+import org.mr0btain.ticketman.data.shared.EntityReference
 import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 class CustomerEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     companion object : UuidEntityClass<CustomerEntity>(CustomerTable)
 
@@ -19,10 +17,8 @@ class CustomerEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var email by CustomerTable.email
     var address by CustomerTable.address
 
-    // For notes
     var notes by NoteEntity via CustomerNoteTable
 
-    // For tickets
     var tickets by TicketEntity via CustomerTicketTable
 
     fun toCustomer(): Customer {
@@ -35,7 +31,7 @@ class CustomerEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
         )
     }
 
-    fun toIdentity(): Identity {
-        return Identity(id.value, name)
+    fun toIdentity(): EntityReference {
+        return EntityReference(id.value, name)
     }
 }

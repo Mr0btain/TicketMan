@@ -10,14 +10,16 @@ import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.plugins.logging.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.network.ServerHandler
+import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.logging.AppLogger
 
-fun createDatabaseHttpClient(
+fun createRemoteHttpClient(
     engine: HttpClientEngine,
-    serverHandler: ServerHandler
+    getAccessToken: () -> String?,
+    getRefreshToken: () -> String?,
+    refreshTokens: () -> Token?
 ): HttpClient {
-    val TAG = "CreateDatabaseHttpClient"
+    val TAG = "CreateRemoteHttpClient"
 
     // TODO: Secure the storage of these, maybe encrypt?
     return HttpClient(engine) {
@@ -33,8 +35,8 @@ fun createDatabaseHttpClient(
                 loadTokens {
                     AppLogger.m("$TAG:LoadTokens", "Loading stored tokens")
                     // Load tokens from a local storage and return them as the 'BearerTokens' instance
-                    val accessToken = serverHandler.getAccessToken() ?: ""
-                    val refreshToken = serverHandler.getRefreshToken() ?: ""
+                    val accessToken = getAccessToken() ?: ""
+                    val refreshToken = getRefreshToken() ?: ""
 
                     BearerTokens(accessToken, refreshToken)
                 }
@@ -42,12 +44,11 @@ fun createDatabaseHttpClient(
                 refreshTokens {
                     AppLogger.m("$TAG:RefreshTokens", "Refreshing tokens with server")
                     // Refresh tokens and return them as the 'BearerTokens' instance
-                    val authResponse = serverHandler.refreshTokens()
+                    val authResponse = refreshTokens()
 
-                    if (authResponse.isNotBlank()) {
+                    if (authResponse != null) {
                         AppLogger.m("$TAG:RefreshTokens", "SUCCESS")
-                        BearerTokens("", "")
-                        //BearerTokens(authResponse.accessToken ?: "", authResponse.refreshToken)
+                        BearerTokens(authResponse.access ?: "", authResponse.refresh)
                     } else {
                         AppLogger.i("$TAG:RefreshTokens", "FAIL")
                         BearerTokens("", "")

@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.data.customer.CustomerCache
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.data.inventory.InventoryCache
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
+import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
@@ -18,6 +19,8 @@ import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.database.*
+import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -42,8 +45,6 @@ class MainViewModel(
 ) : ViewModel() {
     private val TAG = "MainViewModel"
     private val INIT_TAG = "$TAG:Init"
-    private val INIT_SYNC_TAG = "$TAG:Init_Sync"
-    private val REMOVE_CUSTOMER_SUB_ITEM_TAG = "$TAG:RemoveCustomerSubItem"
     private val CUSTOMER_PAGER_TAG = "CustomerPager"
     private val TICKET_PAGER_TAG = "TicketPager"
     private val INVENTORY_PAGER_TAG = "InventoryPagerTag"
@@ -71,8 +72,8 @@ class MainViewModel(
                 tag = CUSTOMER_PAGER_TAG,
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
-                    customerDatabase.getPagedItems(
-                        offset = (page * pageSize),
+                    remoteHandler.customerRepo.fetch(
+                        offset = (page * pageSize).toLong(),
                         limit = pageSize
                     )
                 }
@@ -82,10 +83,10 @@ class MainViewModel(
                 tag = TICKET_PAGER_TAG,
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
-                    ticketDatabase.getPagedItems(
-                        offset = (page * pageSize),
+                    remoteHandler.ticketRepo.fetch(
+                        offset = (page * pageSize).toLong(),
                         limit = pageSize
-                    ) ?: emptyList()
+                    )
                 }
             )
 
@@ -93,10 +94,10 @@ class MainViewModel(
                 tag = INVENTORY_PAGER_TAG,
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
-                    inventoryDatabase.getPagedItems(
-                        offset = (page * pageSize),
+                    remoteHandler.inventoryRepo.fetch(
+                        offset = (page * pageSize).toLong(),
                         limit = pageSize
-                    ) ?: emptyList()
+                    )
                 }
             )
 
@@ -104,12 +105,18 @@ class MainViewModel(
                 tag = USER_PAGER_TAG,
                 coroutineScope = viewModelScope,
                 fetch = { page, pageSize ->
-                    userDatabase.getPagedItems(
-                        offset = (page * pageSize),
+                    remoteHandler.userRepo.fetch(
+                        offset = (page * pageSize).toLong(),
                         limit = pageSize
-                    ) ?: emptyList()
+                    )
                 }
             )
+
+            // Run init in seeds
+            customerSeed.init()
+            ticketSeed.init()
+            inventorySeed.init()
+            userSeed.init()
         }
     }
 
@@ -121,11 +128,18 @@ class MainViewModel(
     // Max size of cache
     val maxCacheSize = 20
 
+    val localStorage = LocalStorage()
+
+    /** ----------------------------------------------REMOTE------------------------------------------------------------------- */
+
+    val remoteHandler = RemoteHandler(
+        engine = getHttpEngine(),
+        localStorage = localStorage
+    )
+
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
     val customerCache: CustomerCache = CustomerCache(maxCacheSize)
-
-    private val customerDatabase: CustomerDatabaseImpl = CustomerDatabaseImpl()
 
     var customerPager: OffsetPager<Customer>? = null
 
@@ -139,31 +153,30 @@ class MainViewModel(
             // Check if it's new or not
             if (customerSeed.isNew) {
                 // Insert customer
-                customerDatabase.add(customerSeed.customer)
+                remoteHandler.customerRepo.add(customerSeed.customer)
 
                 // Add notes
-                customerDatabase.addNotes(customerSeed.notes, customerSeed.identifier)
+                customerSeed.notes.forEach { note ->
+                    remoteHandler.customerRepo.addNote( customerSeed.identifier, note)
+                }
+
 
                 // TODO: Setup way to check if these tickets are new or not.
                 // Right now we assume these tickets have already been inserted into the database. Here we just link them
                 // in the customer side
                 // Link tickets
                 customerSeed.tickets.forEach { ticket ->
-                    customerDatabase.addTicket(customerSeed.identifier, ticket.identifier)
+                    remoteHandler.customerRepo.addTicket(customerSeed.identifier, ticket.identifier)
                 }
             } else { // Else handle changes
                 customerSeed.getChangedFields().forEach { changedField ->
                     when (changedField) {
-                        ChangedField.NAME -> customerDatabase.updateName(
-                            customerSeed.identifier,
-                            customerSeed.name.joinToString(Res.string.name_divider_character.toString())
-                        )
-                        ChangedField.EMAIL -> customerDatabase.updateEmail(customerSeed.identifier, customerSeed.email)
-                        ChangedField.PHONE -> customerDatabase.updatePhone(customerSeed.identifier, customerSeed.phone)
                         ChangedField.NOTE -> {} // TODO
                         ChangedField.TICKET -> {} // TODO
 
-                        else -> {} // Do nothing
+                        else -> {
+                            // TODO: setup update
+                        }
                     }
                 }
             }
@@ -184,9 +197,9 @@ class MainViewModel(
 
             // Else if we didn't have it in cache, pull it and add it to cache
             if (cached == null) {
-                customerDatabase.get(identifier)?.let { customer ->
-                    val notes = customerDatabase.getNotes(identifier) ?: emptyList()
-                    val tickets = customerDatabase.getTickets(identifier)?: emptyList()
+                remoteHandler.customerRepo.get(identifier)?.let { customer ->
+                    val notes = remoteHandler.customerRepo.getNotes(identifier)
+                    val tickets = remoteHandler.customerRepo.getTickets(identifier)
 
                     // Set selected
                     customerSeed.setCustomer(customer, notes, tickets)
@@ -200,17 +213,17 @@ class MainViewModel(
 
     suspend fun getCustomer(identifier: Uuid): Customer? =
         customerCache.get(identifier)?.customer
-            ?: customerDatabase.get(identifier)
+            ?: remoteHandler.customerRepo.get(identifier)
 
     suspend fun searchCustomers(query: String) = coroutineScope {
-        customerDatabase.search(query, 20) ?: emptyList()
+        remoteHandler.customerRepo.search(query, 20)
     }
 
     fun removeCustomer(identifier: Uuid) {
         viewModelScope.launch {
             if (customerSeed.identifier == identifier) {
                 customerSeed.clear()
-                customerDatabase.delete(identifier)
+                remoteHandler.customerRepo.remove(identifier)
 
                 // Refresh pager data
                 customerPager?.refreshCurrentData()
@@ -221,8 +234,6 @@ class MainViewModel(
     /** ----------------------------------------------TICKET------------------------------------------------------------------- */
 
     val ticketCache = TicketCache(maxCacheSize)
-
-    private val ticketDatabase = TicketDatabaseImpl()
 
     var ticketPager: OffsetPager<Ticket>? = null
 
@@ -242,13 +253,11 @@ class MainViewModel(
 
             // If cache didn't have ticket, pull it and add to cache
             if (cached == null) {
-                ticketDatabase.get(identifier)?.let { ticket ->
+                remoteHandler.ticketRepo.get(identifier)?.let { ticket ->
                     // Get notes
-                    val notes = ticketDatabase.getNotes(identifier) ?: emptyList()
-                    val customer = ticketDatabase.getCustomer(identifier)
-                    val user = ticketDatabase.getUser(identifier)
-
-                    println("Customer: $customer")
+                    val notes = remoteHandler.ticketRepo.getNotes(identifier)
+                    val customer = remoteHandler.ticketRepo.getCustomer(identifier)
+                    val user = remoteHandler.ticketRepo.getUser(identifier)
 
                     // Set seed data
                     ticketSeed.setTicket(ticket, notes, customer, user)
@@ -266,35 +275,44 @@ class MainViewModel(
 
         viewModelScope.launch {
             if (ticketSeed.isNew) {
-                ticketDatabase.add(ticketSeed.ticket)
+                remoteHandler.ticketRepo.add(ticketSeed.ticket)
 
-                ticketDatabase.addNotes(ticketSeed.notes, ticketSeed.identifier)
+                ticketSeed.notes.forEach { note ->
+                    remoteHandler.ticketRepo.addNote(ticketSeed.identifier, note)
+                }
             }
 
             ticketSeed.getChangedFields().forEach { changedField ->
                 when (changedField) {
                     ChangedField.NOTE -> {}
-                    ChangedField.STATUS -> ticketDatabase.updateStatus(ticketSeed.identifier, ticketSeed.status)
-                    ChangedField.PRIORITY -> ticketDatabase.updatePriority(ticketSeed.identifier, ticketSeed.priority)
-                    ChangedField.DEVICE -> ticketDatabase.updateDevice(ticketSeed.identifier, ticketSeed.device)
-                    ChangedField.CUSTOMER -> {}
-                    ChangedField.USER -> {}
+                    ChangedField.CUSTOMER -> {
+                       ticketSeed.customer?.identifier?.let { customerId ->
+                           remoteHandler.ticketRepo.setUser(ticketSeed.identifier, customerId)
+                       }
+                    }
+                    ChangedField.USER -> {
+                        ticketSeed.user?.identifier?.let { userId ->
+                            remoteHandler.ticketRepo.setUser(ticketSeed.identifier, userId)
+                        }
+                    }
 
-                    else -> {} // Do nothing
+                    else -> {
+                        // TODO: Prolly just update?
+                    }
                 }
             }
         }
     }
 
     suspend fun searchTickets(query: String) = coroutineScope {
-        ticketDatabase.search(query, 20) ?: emptyList()
+        remoteHandler.ticketRepo.search(query, 20)
     }
 
     fun removeTicket(identifier: Uuid) {
         viewModelScope.launch {
             if (ticketSeed.identifier == identifier) {
                 ticketSeed.clear()
-                ticketDatabase.delete(identifier)
+                remoteHandler.ticketRepo.remove(identifier)
                 ticketPager?.refreshCurrentData()
             }
         }
@@ -303,8 +321,6 @@ class MainViewModel(
     /** ----------------------------------------------INVENTORY------------------------------------------------------------------- */
 
     val inventoryCache = InventoryCache(maxCacheSize)
-
-    private val inventoryDatabase = InventoryDatabaseImpl()
 
     var inventoryPager: OffsetPager<Inventory>? = null
 
@@ -317,8 +333,8 @@ class MainViewModel(
            }
 
             if (cached == null) {
-                inventoryDatabase.get(identifier)?.let { inventory ->
-                    val notes = inventoryDatabase.getNotes(identifier) ?: emptyList()
+                remoteHandler.inventoryRepo.get(identifier)?.let { inventory ->
+                    val notes = remoteHandler.inventoryRepo.getNotes(identifier)
 
                     inventorySeed.setInitial(inventory, notes)
 
@@ -333,19 +349,18 @@ class MainViewModel(
 
         viewModelScope.launch {
             if (inventorySeed.isNew) {
-                inventoryDatabase.add(inventorySeed.inventory)
+                remoteHandler.inventoryRepo.add(inventorySeed.inventory)
 
-                inventoryDatabase.addImages(inventorySeed.identifier, inventorySeed.images)
+                inventorySeed.images.forEach { image ->
+                    remoteHandler.inventoryRepo.addImage(inventorySeed.identifier, image)
+                }
 
-                inventoryDatabase.addNotes(inventorySeed.notes, inventorySeed.identifier)
+                inventorySeed.notes.forEach { note ->
+                    remoteHandler.inventoryRepo.addNote(inventorySeed.identifier, note)
+                }
             } else {
                 inventorySeed.getChangedFields().forEach { changedField ->
                     when (changedField) {
-                        ChangedField.NAME -> inventoryDatabase.updateName(inventorySeed.identifier, inventorySeed.name)
-                        ChangedField.DESCRIPTION -> inventoryDatabase.updateDescription(inventorySeed.identifier, inventorySeed.description)
-                        ChangedField.STOCK -> inventoryDatabase.updateStock(inventorySeed.identifier, inventorySeed.stock)
-                        ChangedField.COST -> inventoryDatabase.updateCost(inventorySeed.identifier, inventorySeed.cost)
-                        ChangedField.PRICE -> inventoryDatabase.updatePrice(inventorySeed.identifier, inventorySeed.price)
                         ChangedField.NOTE -> {
                             // TODO: Setup way to see which one has changed
                             inventorySeed.notes.forEach { note ->
@@ -357,7 +372,9 @@ class MainViewModel(
                                 TODO("Not yet implemented")
                             }
                         }
-                        else -> {}
+                        else -> {
+                            // TODO()
+                        }
                     }
                 }
             }
@@ -365,14 +382,14 @@ class MainViewModel(
     }
 
     suspend fun searchInventory(query: String) = coroutineScope {
-        inventoryDatabase.search(query, 20) ?: emptyList()
+        remoteHandler.inventoryRepo.search(query, 20)
     }
 
     fun removeInventory(identifier: Uuid) {
         viewModelScope.launch {
             if (inventorySeed.identifier == identifier) {
                 inventorySeed.clear()
-                inventoryDatabase.delete(identifier)
+                remoteHandler.inventoryRepo.remove(identifier)
                 inventoryPager?.refreshCurrentData()
             }
         }
@@ -381,8 +398,6 @@ class MainViewModel(
     /** ----------------------------------------------USER------------------------------------------------------------------- */
 
     val userCache: UserCache = UserCache(maxCacheSize)
-
-    private val userDatabase = UserDatabaseImpl()
 
     var userPager: OffsetPager<User>? = null
 
@@ -398,8 +413,8 @@ class MainViewModel(
             }
 
             if (cached == null) {
-                userDatabase.get(identifier)?.let { user ->
-                    val notes = userDatabase.getNotes(identifier) ?: emptyList()
+                remoteHandler.userRepo.get(identifier)?.let { user ->
+                    val notes = remoteHandler.userRepo.getNotes(identifier)
 
                     userSeed.setUser(user, notes)
 
@@ -410,7 +425,7 @@ class MainViewModel(
     }
 
     suspend fun searchUsers(query: String) = coroutineScope {
-        userDatabase.search(query, 20) ?: emptyList()
+        remoteHandler.userRepo.search(query, 20) ?: emptyList()
     }
 
     /** ----------------------------------------------UI------------------------------------------------------------------- */

@@ -129,11 +129,15 @@ fun CustomerInfoPane(
 
                                     // Check if we have a sensible date to display, then show it
 
-                                    Text(
-                                        modifier = Modifier,
-                                        text = selectedCustomer.time.toString(),
-                                        fontSize = textSize
-                                    )
+                                    // If the customer is new, and it's not dirty, then most likely its blank so don't bother showing
+                                    // the time.
+                                    if (!selectedCustomer.isNew || selectedCustomer.isDirty) {
+                                        Text(
+                                            modifier = Modifier,
+                                            text = selectedCustomer.time.toString(),
+                                            fontSize = textSize
+                                        )
+                                    }
                                 }
 
                                 // ----------- Address ---------------

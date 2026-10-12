@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.*
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -8,6 +9,18 @@ fun Route.imageRoute(
     appDir: String
 ) {
     val imageUploadDir = "$appDir/database/images"
+
+    authenticate {
+        post("/get") {
+            // TODO()
+        }
+    }
+
+    authenticate {
+        post("/fetch") {
+            // TODO()
+        }
+    }
 
 
     post("/upload-image") {

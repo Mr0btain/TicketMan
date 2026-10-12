@@ -4,8 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.operations.ChangedField
-import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.time.createdAt
 import org.mr0btain.ticketman.logging.AppLogger
@@ -24,8 +24,8 @@ abstract class DataSeed(tag: String) {
     var identifier: Uuid by mutableStateOf(Uuid.generateV7())
         protected set
 
-    protected val _images = mutableStateListOf<StoredImage>()
-    val images: List<StoredImage> = _images
+    protected val _images = mutableStateListOf<ImageBitmap>()
+    val images: List<ImageBitmap> = _images
 
     var isNew: Boolean by mutableStateOf(true)
         protected set
@@ -35,6 +35,10 @@ abstract class DataSeed(tag: String) {
 
     // List to store the names of fields that have changed
     protected val _changedFields = mutableListOf<ChangedField>()
+
+    fun init() {
+        clear()
+    }
 
     // Computed property to check if the object has changed
     val isDirty: Boolean

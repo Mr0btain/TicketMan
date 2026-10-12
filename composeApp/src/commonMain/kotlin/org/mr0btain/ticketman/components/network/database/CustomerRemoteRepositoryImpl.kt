@@ -1,78 +1,60 @@
 package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
+import io.ktor.client.request.get
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import org.mr0btain.ticketman.components.network.handleHttpResponse
+import org.mr0btain.ticketman.components.network.handlePlainHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.MainItem
-import org.mr0btain.ticketman.data.encryption.EncryptedData
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.error.onSuccess
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.SyncResponse
-import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 class CustomerRemoteRepositoryImpl(
-    val client: HttpClient,
-    private val encryptionHandler: ClientEncryptionHandler
-) : RemoteRepository(
+    httpClient: HttpClient
+) : RemoteRepository<Customer>(
     tag = "CustomerRemoteRepositoryImpl",
-    client = client,
-    encryptionHandler = encryptionHandler
+    client = httpClient,
+    route = "api/data/customer"
 ) {
-    override var serverUrl = ""
+    private val ADD_TICKET_TAG = "addTicket"
+    private val GET_TICKETS_TAG = "getTickets"
 
-    override fun changeUrl(url: String) {
-        serverUrl = "$url/api/data/customer"
-    }
-
-    override suspend fun sync(data: List<MainItem>): List<Customer> {
+    suspend fun addTicket(identifier: Uuid, ticket: Uuid) {
         if (serverUrl.isNotBlank()) {
-            val identifiers = data.map { it.identifier }
-
-            if (identifiers.isNotEmpty()) {
-                networkErrorTryCatch(SYNC_TAG) {
-                    client.post {
-                        url("$serverUrl/sync")
-                        contentType(ContentType.Application.Json)
-                        setBody(
-                            encryptionHandler.encryptData(
-                                Json.encodeToString(SyncRequest(identifiers))
-                            )
-                        )
-                    }
-                }?.let { response -> handleHttpResponse<EncryptedData>(SYNC_TAG, response) }
-                    ?.onSuccess { encryptedMessage ->
-                        encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                            val syncResponse = Json.decodeFromString<SyncResponse>(decrypted)
-
-                            val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
-
-                            if (requested.isNotEmpty()) batchSend(requested)
-
-                            return syncResponse.data.filterIsInstance<Customer>()
-                        }
-                    }
-            } else return getAll()
-        }
-
-        return listOf()
-    }
-
-    override suspend fun getAll(): List<Customer> {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(GET_ALL_TAG) {
-                client.get("${serverUrl}/all")
-            }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
-                ?.onSuccess { encryptedMessage ->
-                    encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<Customer>>(decrypted)
-                    }
+            networkErrorTryCatch(ADD_TICKET_TAG) {
+                client.post {
+                    url("$serverUrl/add/ticket/$identifier")
+                    contentType(ContentType.Application.Json)
+                    setBody(ticket)
                 }
+            }?.let { response -> handlePlainHttpResponse(ADD_TICKET_TAG, response) }
+        }
+    }
+
+    suspend fun getTickets(identifier: Uuid): List<Ticket> {
+        if (serverUrl.isNotBlank()) {
+            val response = networkErrorTryCatch(GET_TICKETS_TAG) {
+                client.get {
+                    url("$serverUrl/get/tickets/$identifier")
+                    contentType(ContentType.Application.Json)
+                    setBody(identifier)
+                }
+            }
+
+            if (response != null) {
+                val result = handleHttpResponse<List<Ticket>>(GET_TICKETS_TAG, response)
+
+                result.onSuccess {
+                    return it
+                }
+            }
         }
 
         return emptyList()

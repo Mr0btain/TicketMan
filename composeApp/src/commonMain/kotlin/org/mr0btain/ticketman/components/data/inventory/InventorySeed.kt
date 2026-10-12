@@ -3,9 +3,9 @@ package org.mr0btain.ticketman.components.data.inventory
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
-import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import kotlin.uuid.ExperimentalUuidApi
@@ -104,7 +104,7 @@ class InventorySeed: DataSeed("InventorySeed") {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(identifier, name, description, stock, cost, price, _notes, _images).hashCode()
+        savedState = State(identifier, name, description, stock, cost, price, _notes).hashCode()
         _changedFields.clear()  // Reset the changed fields
     }
 
@@ -119,6 +119,6 @@ class InventorySeed: DataSeed("InventorySeed") {
         val cost: Double = 0.0,
         val price: Double = 0.0,
         val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList()
+        val images: List<ImageBitmap> = emptyList()
     )
 }

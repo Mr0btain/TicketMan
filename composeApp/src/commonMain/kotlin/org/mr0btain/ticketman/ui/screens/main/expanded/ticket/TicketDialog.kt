@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.data.shared.Identity
+import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
@@ -24,7 +24,6 @@ import org.mr0btain.ticketman.ui.composables.search.SearchBar
 import org.mr0btain.ticketman.ui.composables.ticket.TicketPriorityDropDown
 import org.mr0btain.ticketman.ui.composables.ticket.TicketStatusDropDown
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
-import kotlin.uuid.ExperimentalUuidApi
 
 // TODO: Add ability to trigger new customer
 
@@ -152,7 +151,7 @@ fun TicketDialog(
                             SearchBar(
                                 modifier = Modifier.padding(start = 8.dp),
                                 initialText = seed.customer?.text ?: "",
-                                onClick = { result -> seed.changeCustomer(Identity(result.identifier, result.text)) },
+                                onClick = { result -> seed.changeCustomer(EntityReference(result.identifier, result.text)) },
                                 onQuery = onCustomerSearchQuery,
                                 enabled = isCustomerSearchEnabled
                             )
@@ -173,7 +172,7 @@ fun TicketDialog(
                             SearchBar(
                                 modifier = Modifier.padding(start = 8.dp),
                                 initialText = seed.user?.text ?: "",
-                                onClick = { result -> seed.changeUser(Identity(result.identifier, result.text)) },
+                                onClick = { result -> seed.changeUser(EntityReference(result.identifier, result.text)) },
                                 onQuery = onUserSearchQuery,
                                 enabled = isUserSearchEnabled
                             )

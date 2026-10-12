@@ -39,8 +39,14 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
 suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): Result<T, NetworkError> {
     return when (response.status.value) {
         in 200..299 -> {
-            AppLogger.m(tag, SimpleResult.SUCCESS)
-            Result.Success(response.body<T>())
+            try {
+                val result = Result.Success(response.body<T>())
+                AppLogger.m(tag, SimpleResult.SUCCESS)
+                result
+            } catch (ex: Exception) {
+                AppLogger.i(tag, ex.toString())
+                Result.Error(NetworkError.UNKNOWN)
+            }
         }
 
         401 -> {
@@ -75,7 +81,7 @@ suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpRes
     }
 }
 
-fun handleHttpResponse(tag: String, response: HttpResponse) {
+fun handlePlainHttpResponse(tag: String, response: HttpResponse) {
     when (response.status.value) {
         in 200..299 -> AppLogger.m(tag, SimpleResult.SUCCESS)
         401 -> AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)

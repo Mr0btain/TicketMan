@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.TicketError
@@ -33,22 +34,6 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     private val UPDATE_PHONE_TAG = "$tag:UpdateName"
     private val UPDATE_EMAIL_TAG = "$tag:UpdateName"
 
-    override fun all(): List<Customer>? {
-        var result: List<Customer>? = null
-
-        appLogTryCatch(GET_ALL_TAG) {
-            transaction {
-
-                result = CustomerEntity.all().map { item -> item.toCustomer() }
-            }
-
-            // Return boolean
-            result != null
-        }
-
-        return result
-    }
-
     override fun getById(identifier: Uuid): Customer? {
         var result: Customer? = null
 
@@ -65,16 +50,16 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         return result
     }
 
-    override fun getPagedItems(offset: Long, pageSize: Int): List<Customer>? {
+    override fun getPagedItems(request: PagedRequest): List<Customer>? {
         var result: List<Customer>? = null
 
         appLogTryCatch(GET_PAGED_ITEMS_TAG) {
             transaction {
                 result = CustomerEntity
                     .all()
-                    .orderBy(CustomerTable.name to SortOrder.ASC, CustomerTable.id to SortOrder.DESC)
-                    .offset(offset)
-                    .limit(pageSize)
+                    .orderBy(name to SortOrder.ASC, CustomerTable.id to SortOrder.DESC)
+                    .offset(request.offset)
+                    .limit(request.itemsPerPage)
                     .map { it.toCustomer() }
             }
             println("Customer Paged items size: ${result?.size}")
@@ -130,6 +115,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
     }
 
     override fun search(query: String, limit: Int): List<SearchResult>? {
+        // TODO()
         println("Searching for customer with: ${query}")
         return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
             transaction {

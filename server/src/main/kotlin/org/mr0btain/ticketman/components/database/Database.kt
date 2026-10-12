@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.ImageError
 import org.mr0btain.ticketman.error.NoteError
 import org.mr0btain.ticketman.logging.SimpleResult
@@ -25,7 +26,6 @@ import kotlin.uuid.Uuid
 @Suppress("PropertyName")
 @OptIn(ExperimentalUuidApi::class)
 abstract class Database<T : MainItem>(protected val tag: String) {
-    protected val GET_ALL_TAG = "$tag:GetAll"
     protected val GET_BY_ID_TAG = "$tag:GetById"
     protected val GET_PAGED_ITEMS_TAG = "$tag:GetPagedItems"
     protected val ADD_ALL_TAG = "$tag:AddAll"
@@ -91,9 +91,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     abstract fun addNote(identifier: Uuid, note: Note)
 
-    /** Gets all items */
-    abstract fun all(): List<T>?
-
     /** Returns the total number of items */
     abstract fun count(): Long
 
@@ -109,7 +106,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * @param offset The starting offset to get items from
      * @param pageSize The amount of items to fetch
      */
-    abstract fun getPagedItems(offset: Long, pageSize: Int): List<T>?
+    abstract fun getPagedItems(request: PagedRequest): List<T>?
 
     /**
      * Returns a list of notes and their respective images

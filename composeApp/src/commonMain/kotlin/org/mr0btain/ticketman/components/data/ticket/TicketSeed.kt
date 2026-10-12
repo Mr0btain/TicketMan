@@ -3,10 +3,10 @@ package org.mr0btain.ticketman.components.data.ticket
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
-import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.data.shared.Identity
+import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -23,9 +23,9 @@ class TicketSeed: DataSeed("TicketSeed") {
         private set
     var priority: TicketPriority by mutableStateOf(TicketPriority())
         private set
-    var customer: Identity? by mutableStateOf(null)
+    var customer: EntityReference? by mutableStateOf(null)
         private set
-    var user: Identity? by mutableStateOf(null)
+    var user: EntityReference? by mutableStateOf(null)
         private set
 
     val ticket: Ticket
@@ -35,8 +35,8 @@ class TicketSeed: DataSeed("TicketSeed") {
     fun setTicket(
         ticket: Ticket,
         notes: List<Note> = emptyList(),
-        customerId: Identity? = null,
-        userId: Identity? = null
+        customerId: EntityReference? = null,
+        userId: EntityReference? = null
     ) {
         identifier = ticket.identifier
         device = ticket.device
@@ -78,14 +78,14 @@ class TicketSeed: DataSeed("TicketSeed") {
         }
     }
 
-    fun changeCustomer(newCustomer: Identity?) {
+    fun changeCustomer(newCustomer: EntityReference?) {
         if (customer != newCustomer) {
             customer = newCustomer
             _changedFields.add(ChangedField.CUSTOMER)
         }
     }
 
-    fun changeUser(newUser: Identity?) {
+    fun changeUser(newUser: EntityReference?) {
         if (user != newUser) {
             user = newUser
             _changedFields.add(ChangedField.USER)
@@ -122,10 +122,10 @@ class TicketSeed: DataSeed("TicketSeed") {
         val device:Device = Device(),
         val status: TicketStatus = TicketStatus(),
         val priority: TicketPriority = TicketPriority(),
-        val customer: Identity? = null,
-        val user: Identity? = null,
+        val customer: EntityReference? = null,
+        val user: EntityReference? = null,
         val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList()
+        val images: List<ImageBitmap> = emptyList()
     )
 }
 

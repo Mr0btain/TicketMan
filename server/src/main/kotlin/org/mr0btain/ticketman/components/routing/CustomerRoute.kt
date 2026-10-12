@@ -7,8 +7,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.SyncResponse
+import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.Uuid
 
 // TODO: Add more comments to help understand whats going on
@@ -16,25 +16,12 @@ import kotlin.uuid.Uuid
 fun Route.customerRoute(
     database: CustomerDatabaseImpl
 ) {
-    // Sync between client and server
-    authenticate {
-        post("/sync") {
-            val syncRequest = call.receive<SyncRequest>()
-
-            database.all()?.let { data ->
-                // Filter items by ones the client does not contain
-                val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }
-
-                // Map all the ids in the local database
-                val dataIdentifiers = data.map { it.identifier }
-
-                // Filter response data so we can send back a response to request those that are not in our database
-                val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
-
-                call.respond(HttpStatusCode.OK, SyncResponse(responseData, requested))
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
-    }
+    val TAG = "CustomerRoute"
+    val GET_TAG = "$TAG:Get"
+    val FETCH_TAG = "$TAG:Fetch"
+    val DELETE_TAG = "$TAG:Delete"
+    val UPDATE_TAG = "$TAG:Update"
+    val SEARCH_TAG = "$TAG:Search"
 
     // Adding new
     authenticate {
@@ -47,23 +34,51 @@ fun Route.customerRoute(
         }
     }
 
-    // Update
     authenticate {
-        post("/update") {
-            val received = call.receive<Customer>()
-            database.update(received)
-            call.respond(HttpStatusCode.Accepted)
+        post("/add/images/{identifier}") {
+            // TODO()
         }
     }
 
-    // Bulk add mostly for syncing
     authenticate {
-        post("/add/all") {
-            val list = call.receive<List<Customer>>()
+        post("/add/note/{identifier}") {
+            // TODO()
+        }
+    }
 
-            database.addAll(list)
+    authenticate {
+        post("/fetch") {
+            val request = call.receive<PagedRequest>()
 
-            call.respond(HttpStatusCode.Accepted)
+            val result = database.getPagedItems(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(FETCH_TAG, "$request not found")
+            }
+        }
+    }
+
+    authenticate {
+        post("/get") {
+            val request = call.receive<Uuid>()
+
+            val result = database.getById(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(GET_TAG, "$request not found")
+            }
+        }
+    }
+
+    authenticate {
+        post("/get/notes/{identifier}") {
+            // TODO()
         }
     }
 
@@ -74,10 +89,45 @@ fun Route.customerRoute(
 
             if (identifier == null) {
                 call.respond(HttpStatusCode.NotFound)
-                return@delete
+            } else {
+                database.remove(Uuid.parse(identifier))
+                call.respond(HttpStatusCode.Accepted)
             }
+        }
+    }
 
-            database.remove(Uuid.parse(identifier))
+    authenticate {
+        delete("/remove/note/{identifier}") {
+            // TODO()
+        }
+    }
+
+    authenticate {
+        delete("/remove/image/{identifier}") {
+            // TODO()
+        }
+    }
+
+    authenticate {
+        post("/search") {
+            val request = call.receive<String>()
+
+            val result = database.search(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(SEARCH_TAG, "$request not found")
+            }
+        }
+    }
+
+    // Update
+    authenticate {
+        post("/update") {
+            val received = call.receive<Customer>()
+            database.update(received)
             call.respond(HttpStatusCode.Accepted)
         }
     }

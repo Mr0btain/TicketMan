@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.components.database.tables.user.UserEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.data.shared.Identity
+import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -276,8 +276,8 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         return result
     }
 
-    fun getUser(ticketId: Uuid): Identity? {
-        var result: Identity? = null
+    fun getUser(ticketId: Uuid): EntityReference? {
+        var result: EntityReference? = null
 
         appLogTryCatch(GET_USER_TAG) {
             transaction {
@@ -304,8 +304,8 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         return result
     }
 
-    fun getCustomer(ticketId: Uuid): Identity? {
-        var result: Identity? = null
+    fun getCustomer(ticketId: Uuid): EntityReference? {
+        var result: EntityReference? = null
 
         appLogTryCatch(GET_CUSTOMER_TAG) {
             transaction {

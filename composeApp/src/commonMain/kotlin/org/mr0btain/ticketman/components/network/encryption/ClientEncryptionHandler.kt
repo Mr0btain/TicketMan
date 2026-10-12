@@ -9,7 +9,8 @@ import kotlin.uuid.ExperimentalUuidApi
 // TODO: Add error handling
 // TODO: Setup logging
 
-@Suppress("PrivatePropertyName")
+//@Suppress("PrivatePropertyName")
+/*
 class ClientEncryptionHandler() {
     // X25519 keys for key exchange
     private val xPrivateKey: String = "" //XECPrivateKey
@@ -136,3 +137,4 @@ class ClientEncryptionHandler() {
     }
 
 }
+ */
