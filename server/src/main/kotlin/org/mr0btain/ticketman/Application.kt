@@ -46,7 +46,7 @@ fun Application.module() {
         val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase)
         //val keyService = KeyService()
 
-        println("USER: ${database.userDatabase.all()?.firstOrNull { it.accessLevel == AccessLevel.ADMIN }}")
+        //println("USER: ${database.userDatabase.all()?.firstOrNull { it.accessLevel == AccessLevel.ADMIN }}")
 
         configureSerialization()
         configureContentNegotiation()

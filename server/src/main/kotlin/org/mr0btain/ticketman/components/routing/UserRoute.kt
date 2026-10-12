@@ -83,15 +83,14 @@ fun Route.userRoute(
     }
 
     authenticate("admin") {
+        // TODO: Fix this
         post("/register") {
             val userRequest = call.receive<UserRequest>()
             val identifier = Uuid.generateV7()
+            val userExists = database.getByUsername(userRequest.username) != null
 
-
-            val user = userRequest.toModel(identifier)
-            val userExists = database.all()?.map { it.username }?.contains(user.username)
-
-            if (userExists != null && !userExists) {
+            if (!userExists) {
+                val user = userRequest.toModel(identifier)
                 database.add(user)
                 call.respond(HttpStatusCode.Created, user.toResponse())
             } else call.respond(HttpStatusCode.Conflict)

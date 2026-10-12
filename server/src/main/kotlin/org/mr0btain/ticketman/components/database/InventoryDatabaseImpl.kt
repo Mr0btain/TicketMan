@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.InventoryError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
@@ -32,21 +33,6 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
     private val UPDATE_COST_TAG = "$tag:RemoveImages"
     private val UPDATE_PRICE_TAG = "$tag:RemoveImages"
 
-    override fun all(): List<Inventory>? {
-        var result: List<Inventory>? = null
-
-        appLogTryCatch(GET_ALL_TAG) {
-            // Go into database and convert data to customer data item
-            transaction {
-                result = InventoryEntity.all().map { item -> item.toInventory() }
-            }
-
-            result != null
-        }
-
-        return result
-    }
-
     override fun getById(identifier: Uuid): Inventory? {
         var result: Inventory? = null
 
@@ -63,7 +49,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         return result
     }
 
-    override fun getPagedItems(offset: Long, pageSize: Int): List<Inventory>? {
+    override fun getPagedItems(request: PagedRequest): List<Inventory>? {
         var result: List<Inventory>? = null
 
         appLogTryCatch(GET_PAGED_ITEMS_TAG) {
@@ -71,8 +57,8 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                 result = InventoryEntity
                     .all()
                     .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.id to SortOrder.DESC)
-                    .offset(offset)
-                    .limit(pageSize)
+                    .offset(request.offset)
+                    .limit(request.itemsPerPage)
                     .map { it.toInventory() }
             }
 

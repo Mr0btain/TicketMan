@@ -36,10 +36,6 @@ abstract class DataSeed(tag: String) {
     // List to store the names of fields that have changed
     protected val _changedFields = mutableListOf<ChangedField>()
 
-    fun init() {
-        clear()
-    }
-
     // Computed property to check if the object has changed
     val isDirty: Boolean
         get() = _changedFields.isNotEmpty()

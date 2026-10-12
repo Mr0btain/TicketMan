@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.UserService
+import org.mr0btain.ticketman.logging.AppLogger
 
 fun Application.configureRouting(
     userService: UserService,
@@ -25,7 +26,10 @@ fun Application.configureRouting(
 
         // Just a callback to tell client the server is up
         route("/") {
-            get { call.respond(HttpStatusCode.OK) }
+            get {
+                call.respond(HttpStatusCode.OK)
+                AppLogger.m("ROUTE.CHECK", "Client hit")
+            }
         }
 
         route("/api/auth") {

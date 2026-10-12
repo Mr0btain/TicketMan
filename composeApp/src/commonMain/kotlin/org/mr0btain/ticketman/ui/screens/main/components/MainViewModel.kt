@@ -52,9 +52,6 @@ class MainViewModel(
 
     fun init() {
         viewModelScope.launch {
-            // Initialize databases
-            initDatabase()
-
             // Initialize settings
             settingsDatabase.initialize()
 
@@ -111,12 +108,6 @@ class MainViewModel(
                     )
                 }
             )
-
-            // Run init in seeds
-            customerSeed.init()
-            ticketSeed.init()
-            inventorySeed.init()
-            userSeed.init()
         }
     }
 
@@ -480,8 +471,9 @@ class MainViewModel(
 
     fun updateServerUrl(url: String) {
         _serverAddress.value = url
+
         viewModelScope.launch {
-            //dataHandler.updateServerUrl(url)
+            remoteHandler.setUrl(url)
             saveSettings()
         }
     }

@@ -252,10 +252,10 @@ fun ExpandedMainScreen(
                 ) {
                     Button(
                         onClick = {
-                            // For testing
+
                         }
                     ) {
-                        Text("Sync")
+                        Text("Reload")
                     }
 
                     // TODO: Make this only work if not logged in or hide if logged in

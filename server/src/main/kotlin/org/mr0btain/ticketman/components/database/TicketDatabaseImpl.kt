@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketPriority
@@ -39,20 +40,6 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
     private val UPDATE_STATUS_TAG = "$tag:UpdateStatus"
     private val UPDATE_PRIORITY_TAG = "$tag:UpdatePriority"
 
-    override fun all(): List<Ticket>? {
-        var result: List<Ticket>? = null
-
-        appLogTryCatch(GET_ALL_TAG) {
-            transaction {
-                result = TicketEntity.all().map { item -> item.toTicket() }
-            }
-
-            result != null
-        }
-
-        return result
-    }
-
     override fun getById(identifier: Uuid): Ticket? {
         var result: Ticket? = null
 
@@ -69,15 +56,15 @@ class TicketDatabaseImpl() : Database<Ticket>("TicketLocalDatabase") {
         return result
     }
 
-    override fun getPagedItems(offset: Long, pageSize: Int): List<Ticket>? {
+    override fun getPagedItems(request: PagedRequest): List<Ticket>? {
         var result: List<Ticket>? = null
 
         appLogTryCatch(GET_PAGED_ITEMS_TAG) {
             transaction {
                 result = TicketEntity.all()
                     .orderBy(TicketTable.id to SortOrder.DESC) // or ASC
-                    .offset(offset)
-                    .limit(pageSize)
+                    .offset(request.offset)
+                    .limit(request.itemsPerPage)
                     .map { it.toTicket() }
             }
 

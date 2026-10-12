@@ -68,16 +68,6 @@ fun Route.inventoryRoute(
         }
     }
 
-    // Get all
-    authenticate("restricted") {
-        get("/all") {
-            // TODO: Setup large data transfers for these kinds of things
-            database.all()?.let { data ->
-                call.respond(HttpStatusCode.Accepted, data)
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
-    }
-
     // Adding new
     authenticate {
         post("/add") {

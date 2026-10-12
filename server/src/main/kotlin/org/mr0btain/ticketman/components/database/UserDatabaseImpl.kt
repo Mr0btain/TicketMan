@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.database
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.castTo
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
@@ -13,6 +14,7 @@ import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.NoteError
@@ -28,21 +30,6 @@ import kotlin.uuid.Uuid
 class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
-
-    override fun all(): List<User>? {
-        var result: List<User>? = null
-
-        appLogTryCatch(GET_ALL_TAG) {
-            // Go into database and convert data to customer data item
-            transaction {
-                result = UserEntity.all().map { item -> item.toUser() }
-            }
-
-            result != null
-        }
-
-        return result
-    }
 
     override fun getById(identifier: Uuid): User? {
         var result: User? = null
@@ -60,13 +47,40 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         return result
     }
 
+    fun getByUsername(username: String): User? {
+        var result: User? = null
+
+        appLogTryCatch(GET_BY_ID_TAG) {
+            transaction {
+                UserEntity
+                    .searchQuery(UserTable.username eq username)
+                    .firstOrNull()?.let { queryResult ->
+                        result = User(
+                            identifier = queryResult[UserTable.id].value,
+                            username = queryResult[UserTable.username],
+                            name = queryResult[UserTable.name],
+                            email = queryResult[UserTable.email],
+                            password = queryResult[UserTable.password],
+                            phone = queryResult[UserTable.phone],
+                            accessLevel = queryResult[UserTable.access]
+                        )
+                    }
+
+            }
+
+            result != null
+        }
+
+        return result
+    }
+
     fun getAccessLevel(identifier: Uuid): AccessLevel {
         getById(identifier)?.accessLevel?.let { return it }
 
         return AccessLevel.NONE
     }
 
-    override fun getPagedItems(offset: Long, pageSize: Int): List<User>? {
+    override fun getPagedItems(request: PagedRequest): List<User>? {
         var result: List<User>? = null
 
         appLogTryCatch(GET_PAGED_ITEMS_TAG) {
@@ -74,8 +88,8 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                 result = UserEntity
                     .all()
                     .orderBy(UserTable.name to SortOrder.ASC, UserTable.id to SortOrder.ASC)
-                    .offset(offset)
-                    .limit(pageSize)
+                    .offset(request.offset)
+                    .limit(request.itemsPerPage)
                     .map { it.toUser() }
             }
 

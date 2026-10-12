@@ -15,7 +15,7 @@ class UserService(
     private val tokenDatabase: TokenDatabase
 ) {
     fun authenticate(loginRequest: LoginRequest): AuthResponse? {
-        val foundUser = database.all()?.firstOrNull { it.username == loginRequest.username }
+        val foundUser = database.getByUsername(loginRequest.username)
 
         // Check if user was found and process request
         return if (foundUser != null && foundUser.password == loginRequest.password) {
@@ -40,8 +40,9 @@ class UserService(
         } else null
     }
 
+    // TODO: Really fix this
     fun authenticateUser(loginRequest: LoginRequest): User? {
-        return database.all()?.firstOrNull { it.username == loginRequest.username }
+        return database.getByUsername(loginRequest.username)
     }
 
     fun refreshToken(token: String): String? {
