@@ -58,8 +58,7 @@ fun Application.module() {
         AppLogger.m("SERVER", "Server initialized!")
 
 
-        val generateTestData = true
-
+        val generateTestData = false
         if (generateTestData) {
             val ticketIdentifiers = mutableListOf<Uuid>()
             val ticketNum = 1000
@@ -83,6 +82,8 @@ fun Application.module() {
                 ticketIdentifiers.add(ticket.identifier)
             }
 
+            val customerTickets = ticketIdentifiers
+
             (0..customerNum).forEach { _ ->
                 // Generate random customer
                 val (customer, notes) = generateMockCustomer()
@@ -97,7 +98,8 @@ fun Application.module() {
 
                 // Add random tickets
                 (0..Random.nextInt(1, 6)).forEach { _ ->
-                    database.customerDatabase.addTicket(customer.identifier, ticketIdentifiers.random())
+                    if (customerTickets.isNotEmpty())
+                        database.customerDatabase.addTicket(customer.identifier, customerTickets.removeFirst())
                 }
             }
 
@@ -113,6 +115,8 @@ fun Application.module() {
                 }
             }
 
+            val userTickets = ticketIdentifiers
+
             (0..userNum).forEach { _ ->
                 // Generate random user
                 val (user, notes) = generateMockUser()
@@ -127,7 +131,8 @@ fun Application.module() {
 
                 // Add random tickets
                 (0..Random.nextInt(4, 12)).forEach { _ ->
-                    database.userDatabase.addTicket(user.identifier, ticketIdentifiers.random())
+                    if (userTickets.isNotEmpty())
+                        database.userDatabase.addTicket(user.identifier, userTickets.removeFirst())
                 }
             }
         }
