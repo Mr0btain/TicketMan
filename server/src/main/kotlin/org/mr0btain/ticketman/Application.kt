@@ -12,6 +12,8 @@ import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.util.AppDir
+import kotlin.random.Random
+import kotlin.uuid.Uuid
 
 // TODO: Setup way for admin to change access levels for things individually
 // TODO: Maybe add ability for different users to have different instances of the databases and add admin settings to force all sync or allow individual
@@ -57,41 +59,75 @@ fun Application.module() {
 
 
         val generateTestData = true
-        val testNum = 20
-        val testData = generateMockData(testNum)
 
         if (generateTestData) {
-            for (i in 0..testNum) {
-                val customer = testData.customers[i]
-                database.customerDatabase.add(customer.first)
+            val ticketIdentifiers = mutableListOf<Uuid>()
+            val ticketNum = 1000
+            val customerNum = 400
+            val inventoryNum = 100
+            val userNum = 25
 
-                customer.second.forEach { note ->
-                    database.customerDatabase.addNote(customer.first.identifier, note)
+            (0..ticketNum).forEach { i ->
+                // Generate random ticket
+                val (ticket, notes) = generateRandomTicket()
+
+                // Add ticket to database
+                database.ticketDatabase.add(ticket)
+
+                // Add notes
+                notes.forEach { note ->
+                    database.ticketDatabase.addNote(ticket.identifier, note)
                 }
 
-                AppLogger.m("SERVER", "Customer Added ${customer.first.name}")
+                // Insert id into list
+                ticketIdentifiers.add(ticket.identifier)
+            }
 
-                val ticket = testData.tickets[i]
-                database.ticketDatabase.add(ticket.first)
+            (0..customerNum).forEach { _ ->
+                // Generate random customer
+                val (customer, notes) = generateMockCustomer()
 
-                ticket.second.forEach { note ->
-                    database.ticketDatabase.addNote(ticket.first.identifier, note)
+                // Add customer
+                database.customerDatabase.add(customer)
+
+                // Add notes
+                notes.forEach { note ->
+                    database.customerDatabase.addNote(customer.identifier, note)
                 }
 
-                AppLogger.m("SERVER", "Ticket Added ${ticket.first.identifier}")
+                // Add random tickets
+                (0..Random.nextInt(1, 6)).forEach { _ ->
+                    database.customerDatabase.addTicket(customer.identifier, ticketIdentifiers.random())
+                }
+            }
 
-                val inventory = testData.inventory[i]
-                database.inventoryDatabase.add(inventory.first)
+            (0..inventoryNum).forEach { _ ->
+                val (inventory, notes) = generateRandomInventoryItem()
 
-                inventory.second.forEach { note ->
-                    database.inventoryDatabase.addNote(inventory.first.identifier, note)
+                //println(inventory)
+
+                database.inventoryDatabase.add(inventory)
+
+                notes.forEach { note ->
+                    database.inventoryDatabase.addNote(inventory.identifier, note)
+                }
+            }
+
+            (0..userNum).forEach { _ ->
+                // Generate random user
+                val (user, notes) = generateMockUser()
+
+                // Add user to database
+                database.userDatabase.add(user)
+
+                //Add notes
+                notes.forEach { note ->
+                    database.userDatabase.addNote(user.identifier, note)
                 }
 
-                val user = testData.users[i]
-                database.userDatabase.add(user.first)
-
-                user.second.forEach { note ->
-                    database.userDatabase.addNote(user.first.identifier, note)
+                // Add random tickets
+                (0..Random.nextInt(4, 12)).forEach { _ ->
+                    database.userDatabase.addTicket(user.identifier, ticketIdentifiers.random())
                 }
             }
         }
