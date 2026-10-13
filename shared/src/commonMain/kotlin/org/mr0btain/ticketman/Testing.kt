@@ -14,6 +14,29 @@ import kotlin.random.Random
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+data class TestData(
+    val customers: List<Pair<Customer, List<Note>>>,
+    val tickets: List<Pair<Ticket, List<Note>>>,
+    val inventory: List<Pair<Inventory, List<Note>>>,
+    val users: List<Pair<User, List<Note>>>
+)
+
+fun generateMockData(num: Int): TestData {
+    val customers = mutableListOf<Pair<Customer, List<Note>>>()
+    val tickets = mutableListOf<Pair<Ticket, List<Note>>>()
+    val inventory = mutableListOf<Pair<Inventory, List<Note>>>()
+    val users = mutableListOf<Pair<User, List<Note>>>()
+
+    (0..num).forEach {
+        customers.add(generateMockCustomer())
+        tickets.add(generateRandomTicket())
+        inventory.add(generateRandomInventoryItem())
+        users.add(generateMockUser())
+    }
+
+    return TestData(customers, tickets, inventory, users)
+}
+
 /**
  * Generates a random customer for testing
  */
@@ -51,12 +74,7 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
 
     val costVal = Random.nextDouble(0.5, 50.0)
     val priceVal = costVal * Random.nextDouble(1.2, 2.5)
-    val notes = mutableListOf<Note>()
-
-    // Generate notes
-    (0..Random.nextInt(0, 12)).forEach { _ ->
-        notes.add(generateCustomerNote())
-    }
+    val notes = generateRandomInventoryNotes(Random.nextInt(0, 12))
 
     return Pair(
         Inventory(

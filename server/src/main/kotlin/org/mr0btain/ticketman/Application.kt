@@ -55,12 +55,45 @@ fun Application.module() {
 
         AppLogger.m("SERVER", "Server initialized!")
 
-        /*
-        val testData = generateMockData(20)
-        database.customerDatabase.addAll(testData.first)
-        database.ticketDatabase.addAll(testData.second)
-        database.userDatabase.addAll(testData.third)
-        database.inventoryDatabase.addAll(generateRandomInventoryItems(60))
-         */
+
+        val generateTestData = true
+        val testNum = 20
+        val testData = generateMockData(testNum)
+
+        if (generateTestData) {
+            for (i in 0..testNum) {
+                val customer = testData.customers[i]
+                database.customerDatabase.add(customer.first)
+
+                customer.second.forEach { note ->
+                    database.customerDatabase.addNote(customer.first.identifier, note)
+                }
+
+                AppLogger.m("SERVER", "Customer Added ${customer.first.name}")
+
+                val ticket = testData.tickets[i]
+                database.ticketDatabase.add(ticket.first)
+
+                ticket.second.forEach { note ->
+                    database.ticketDatabase.addNote(ticket.first.identifier, note)
+                }
+
+                AppLogger.m("SERVER", "Ticket Added ${ticket.first.identifier}")
+
+                val inventory = testData.inventory[i]
+                database.inventoryDatabase.add(inventory.first)
+
+                inventory.second.forEach { note ->
+                    database.inventoryDatabase.addNote(inventory.first.identifier, note)
+                }
+
+                val user = testData.users[i]
+                database.userDatabase.add(user.first)
+
+                user.second.forEach { note ->
+                    database.userDatabase.addNote(user.first.identifier, note)
+                }
+            }
+        }
     }
 }
