@@ -5,6 +5,7 @@ import io.github.vinceglb.filekit.dialogs.compose.util.encodeToByteArray
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import io.ktor.util.reflect.*
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.handlePlainHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
@@ -17,11 +18,21 @@ import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.onSuccess
 import kotlin.uuid.Uuid
 
+/**
+ * Base client for a MainItem type's server routes.
+ * @param itemType Type info for T, e.g. typeInfo<Customer>()
+ * @param listType Type info for List<T>, e.g. typeInfo<List<Customer>>()
+ * These are needed because T is erased at runtime, so kotlinx serialization can't find a serializer for it.
+ */
+
+// TODO: Im not a fan of the itemtype and listtype but it works for the moment. Will have to fix this later.
 @Suppress("PropertyName")
 abstract class RemoteRepository<T: MainItem>(
     protected val tag: String,
     protected val client: HttpClient,
-    val route: String
+    val route: String,
+    private val itemType: TypeInfo,
+    private val listType: TypeInfo
 ) {
     protected val FETCH_TAG = "$tag:Fetch"
     protected val SEARCH_TAG = "$tag:Fetch"
@@ -35,9 +46,10 @@ abstract class RemoteRepository<T: MainItem>(
     protected val GET_TAG = "$tag:Get"
     protected val GET_NOTES_TAG = "$tag:GetNotes"
 
-    var serverUrl: String = route
+    // Stays blank until a server is set so requests are skipped instead of going to a relative url
+    var serverUrl: String = ""
         set(value) {
-            field = "$value/$route"
+            field = if (value.isBlank()) "" else "${value.trimEnd('/')}/$route"
         }
 
     suspend fun add(data: T) {
@@ -46,7 +58,7 @@ abstract class RemoteRepository<T: MainItem>(
                 client.post {
                     url("$serverUrl/add")
                     contentType(ContentType.Application.Json)
-                    setBody<MainItem>(data)
+                    setBody(data, itemType)
                 }
             }?.let { response -> handlePlainHttpResponse(ADD_TAG, response) }
         }
@@ -80,7 +92,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun fetch(offset: Long, limit: Int): List<T> {
         if (serverUrl.isNotBlank()) {
             val response = networkErrorTryCatch(FETCH_TAG) {
-                client.get {
+                client.post {
                     url("$serverUrl/fetch")
                     contentType(ContentType.Application.Json)
                     setBody(PagedRequest(offset,limit))
@@ -88,7 +100,7 @@ abstract class RemoteRepository<T: MainItem>(
             }
 
             if (response != null) {
-                val result = handleHttpResponse<List<T>>(FETCH_TAG, response)
+                val result = handleHttpResponse<List<T>>(FETCH_TAG, response, listType)
 
                 result.onSuccess {
                     return it
@@ -102,7 +114,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun get(identifier: Uuid): T? {
         if (serverUrl.isNotBlank()) {
             val response = networkErrorTryCatch(GET_TAG) {
-                client.get {
+                client.post {
                     url("$serverUrl/get")
                     contentType(ContentType.Application.Json)
                     setBody(identifier)
@@ -110,10 +122,10 @@ abstract class RemoteRepository<T: MainItem>(
             }
 
             if (response != null) {
-                val result = handleHttpResponse<MainItem>(GET_TAG, response)
+                val result = handleHttpResponse<T>(GET_TAG, response, itemType)
 
                 result.onSuccess {
-                    return it as? T
+                    return it
                 }
             }
         }
@@ -154,7 +166,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun getNotes(identifier: Uuid): List<Note> {
         if (serverUrl.isNotBlank()) {
             val response = networkErrorTryCatch(GET_NOTES_TAG) {
-                client.get {
+                client.post {
                     url("$serverUrl/get/notes/$identifier")
                     contentType(ContentType.Application.Json)
                     setBody(identifier)
@@ -197,7 +209,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun search(query: String, limit: Int): List<SearchResult> {
         if (serverUrl.isNotBlank()) {
             val response = networkErrorTryCatch(SEARCH_TAG) {
-                client.get {
+                client.post {
                     url("$serverUrl/search")
                     contentType(ContentType.Application.Json)
                     setBody(SearchQuery(query, limit))
@@ -222,7 +234,7 @@ abstract class RemoteRepository<T: MainItem>(
                 client.post {
                     url("$serverUrl/update")
                     contentType(ContentType.Application.Json)
-                    setBody<MainItem>(data)
+                    setBody(data, itemType)
                 }
             }?.let { response -> handlePlainHttpResponse(ADD_TAG, response) }
         }

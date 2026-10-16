@@ -4,7 +4,6 @@ import io.ktor.http.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
@@ -26,12 +25,9 @@ fun Route.authRoute(
         val received = call.receive<LoginRequest>()
 
         // Try to parse the message into a LoginRequest and authenticate the user, responding with
-        // the uuid.
+        // the uuid and tokens.
         userService.authenticate(received)?.let { authResponse ->
-            if (authResponse.id != null) {
-                // Respond
-                call.respond(HttpStatusCode.Accepted, authResponse.id.toString())
-            }
+            call.respond(HttpStatusCode.Accepted, authResponse)
         } ?: call.respond(HttpStatusCode.Unauthorized) // Handle failed authentication
     }
 
@@ -43,7 +39,7 @@ fun Route.authRoute(
         userService.authenticateUser(request)?.let { user ->
 
             // Respond with HTTP 202 Accepted if authentication and key update are successful
-            call.respond(HttpStatusCode.Accepted, Json.encodeToString(user.accessLevel))
+            call.respond(HttpStatusCode.Accepted, user.accessLevel)
 
         } ?: call.respond(HttpStatusCode.Unauthorized) // Respond with 401 if authentication fails
     }
@@ -55,7 +51,7 @@ fun Route.authRoute(
 
         // Try to refresh the token using the provided refresh token
         userService.refreshToken(request.token)?.let { newToken ->
-            call.respond(HttpStatusCode.Accepted, Json.encodeToString(RefreshTokenResponse(newToken)))
+            call.respond(HttpStatusCode.Accepted, RefreshTokenResponse(newToken))
         } ?: call.respond(HttpStatusCode.Unauthorized)
     }
 }

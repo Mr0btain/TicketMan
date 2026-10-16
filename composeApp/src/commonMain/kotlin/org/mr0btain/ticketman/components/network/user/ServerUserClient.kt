@@ -53,8 +53,8 @@ class ServerUserClient(
      */
     suspend fun login(): Boolean {
         // Get username and password
-        val username = remoteHandler.getUsername() ?: ""
-        val password = remoteHandler.getPassword() ?: ""
+        val username = remoteHandler.getUsername()
+        val password = remoteHandler.getPassword()
 
         return login(username, password)
     }
@@ -72,6 +72,7 @@ class ServerUserClient(
                 }
             }?.let { response -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response) }
                 ?.onSuccess { authResponse ->
+                    println(authResponse)
                     if (authResponse.refreshToken != null && authResponse.accessToken != null) {
                         remoteHandler.updateAuthTokens(authResponse.accessToken!!, authResponse.refreshToken!!)
                         return true

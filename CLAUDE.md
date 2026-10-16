@@ -23,7 +23,7 @@ Use `./gradlew` (Git Bash) or `.\gradlew.bat` (PowerShell).
 ./gradlew :shared:jvmTest                                # Shared module tests (JVM)
 ```
 
-There is no lint task configured. Test coverage is minimal; `server/src/test/.../ApplicationTest.kt` shows the pattern for server tests: `testApplication` doesn't load `application.yaml`, so supply a `MapApplicationConfig` with `env.dataPath` (point it at a temp dir) and the `jwt.*` keys before calling `module()`.
+There is no lint task configured. Test coverage is minimal (server only). `testApplication` doesn't load `application.yaml`, so server tests use the helpers in `server/src/test/.../TestServer.kt`: `createTestDataDir()`, `configureTestServer(dataDir)` (supplies `env.dataPath` and `jwt.*` via `MapApplicationConfig`), and `cleanupTestDataDir(dataDir)` in `@AfterTest` (shuts H2 down, then deletes the dir). `AuthTest.kt` shows the login → bearer request → refresh flow.
 
 Server config lives in `server/src/main/resources/application.yaml`, overridable by env vars: `PORT`, `SECRET` (JWT secret), `NAME`, `DATA_PATH` (where the H2 DB is created; falls back to the platform `AppDir`). `Application.module()` contains a `generateTestData` flag that seeds the DB with mock tickets/customers/inventory/users.
 

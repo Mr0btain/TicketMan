@@ -17,7 +17,7 @@ fun createRemoteHttpClient(
     engine: HttpClientEngine,
     getAccessToken: () -> String?,
     getRefreshToken: () -> String?,
-    refreshTokens: () -> Token?
+    refreshTokens: suspend () -> Token?
 ): HttpClient {
     val TAG = "CreateRemoteHttpClient"
 
@@ -44,14 +44,15 @@ fun createRemoteHttpClient(
                 refreshTokens {
                     AppLogger.m("$TAG:RefreshTokens", "Refreshing tokens with server")
                     // Refresh tokens and return them as the 'BearerTokens' instance
-                    val authResponse = refreshTokens()
+                    val token = refreshTokens()
 
-                    if (authResponse != null) {
+                    if (token != null) {
                         AppLogger.m("$TAG:RefreshTokens", "SUCCESS")
-                        BearerTokens(authResponse.access ?: "", authResponse.refresh)
+                        BearerTokens(token.access, token.refresh)
                     } else {
+                        // Returning null stops Ktor from retrying so the 401 reaches the caller
                         AppLogger.i("$TAG:RefreshTokens", "FAIL")
-                        BearerTokens("", "")
+                        null
                     }
                 }
             }

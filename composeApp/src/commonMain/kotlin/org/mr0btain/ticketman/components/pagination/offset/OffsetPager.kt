@@ -9,14 +9,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
  * Custom offset pager. We needed more control over the pager state so we can handle jumping to items that may
- * be pretty far down the list. It's easier to handle when we have full control over the pager itself
+ * be pretty far down the list. It's easier to handle when we have full control over the pager itself.
+ * Doesn't load anything on creation, call [refresh] to do the first load.
  * @param coroutineScope Coroutine scope for suspend functions
  * @param config OffsetPagerConfig that defines the parameters of the pager
  * @param fetch Function used to fetch the items
@@ -33,9 +33,6 @@ class OffsetPager<Value>(
     private val LOAD_PREVIOUS_TAG = "$tag:LoadPrevious"
     private val REFRESH_TAG = "$tag:Refresh"
     private val TRIM_TAG = "$tag:Trim"
-
-    // Initialize the pager
-    init { coroutineScope.launch { refresh() } }
 
     /** Cache for holding pages that may be requested again, this helps save on hits to a database. */
     private val cache = LruCache<Int, List<Value>>(config.cacheSize, CACHE_TAG)

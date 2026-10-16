@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
+import io.ktor.util.reflect.typeInfo
 import io.ktor.client.request.get
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -19,7 +20,9 @@ class TicketRemoteRepositoryImpl(
 ) : RemoteRepository<Ticket>(
     tag = "TicketRemoteRepositoryImpl",
     client = client,
-    route = "api/data/ticket"
+    route = "api/data/ticket",
+    itemType = typeInfo<Ticket>(),
+    listType = typeInfo<List<Ticket>>()
 ) {
     private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
     private val SET_CUSTOMER_TAG = "$tag:SetCustomer"

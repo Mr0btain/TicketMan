@@ -252,7 +252,7 @@ fun ExpandedMainScreen(
                 ) {
                     Button(
                         onClick = {
-
+                            viewModel.refreshPagers()
                         }
                     ) {
                         Text("Reload")

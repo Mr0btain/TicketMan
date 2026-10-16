@@ -64,6 +64,9 @@ class MainViewModel(
                 _autoSyncDatabase.value = result.autoSync
             } ?: AppLogger.i(INIT_TAG, SimpleResult.FAIL)
 
+            // Connect and log in before the pagers do their first fetch
+            remoteHandler.setUrl(_serverAddress.value)
+
             // Initialize pagers
             customerPager = OffsetPager(
                 tag = CUSTOMER_PAGER_TAG,
@@ -108,6 +111,9 @@ class MainViewModel(
                     )
                 }
             )
+
+            // Pagers don't load themselves, so do the first load now that we're connected
+            refreshPagers()
         }
     }
 
@@ -120,6 +126,20 @@ class MainViewModel(
     val maxCacheSize = 20
 
     val localStorage = LocalStorage()
+
+    fun refreshPagers() {
+        viewModelScope.launch {
+            customerPager?.refresh()
+            ticketPager?.refresh()
+            userPager?.refresh()
+            inventoryPager?.refresh()
+
+            println(customerPager?.items?.value?.size)
+            println(ticketPager?.items?.value?.size)
+            println(inventoryPager?.items?.value?.size)
+        }
+
+    }
 
     /** ----------------------------------------------REMOTE------------------------------------------------------------------- */
 
@@ -475,6 +495,9 @@ class MainViewModel(
         viewModelScope.launch {
             remoteHandler.setUrl(url)
             saveSettings()
+
+            // Reload lists from the new server
+            refreshPagers()
         }
     }
 
