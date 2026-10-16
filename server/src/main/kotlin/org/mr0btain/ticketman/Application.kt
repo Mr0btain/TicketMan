@@ -46,9 +46,6 @@ fun Application.module() {
         val database = configureDatabase(path.ifBlank { appDir.toString() })
         val jwtService = JwtService(this, database.userDatabase)
         val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase)
-        //val keyService = KeyService()
-
-        //println("USER: ${database.userDatabase.all()?.firstOrNull { it.accessLevel == AccessLevel.ADMIN }}")
 
         configureSerialization()
         configureContentNegotiation()
@@ -59,6 +56,11 @@ fun Application.module() {
 
 
         val generateTestData = false
+
+        //val admin = database.userDatabase.getAdmin()
+
+        //println("Admin: $admin")
+
         if (generateTestData) {
             val ticketIdentifiers = mutableListOf<Uuid>()
             val ticketNum = 1000

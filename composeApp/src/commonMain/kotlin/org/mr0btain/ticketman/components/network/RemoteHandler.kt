@@ -57,18 +57,12 @@ class RemoteHandler(
     /**
      * Gets stored username from database
      */
-    suspend fun getUsername(): String {
-        // dataHandler.getStoredUsername()
-        return "admin"
-    }
+    suspend fun getUsername(): String = localStorage.getUsername()
 
     /**
      * Gets stored password from database
      */
-    suspend fun getPassword(): String {
-        // dataHandler.getStoredPassword()
-        return "password"
-    }
+    suspend fun getPassword(): String = localStorage.getPassword()
 
     /**
      * Gets stored access token from database
@@ -96,7 +90,9 @@ class RemoteHandler(
     /**
      * Updates stored tokens in database
      */
-    suspend fun updateAuthTokens(access: String, refresh: String) = "" //dataHandler.updateStoredAuthTokens(access, refresh)
+    suspend fun updateAuthTokens(access: String, refresh: String) {
+
+    }
 
     /**
      * Try to log in to server with username and password

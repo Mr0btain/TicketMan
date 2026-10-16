@@ -31,6 +31,32 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
 
+    fun getAdmin(): User? {
+        var result: User? = null
+
+        appLogTryCatch("GETADMIN") {
+            transaction {
+                UserEntity
+                    .searchQuery(UserTable.access eq AccessLevel.ADMIN)
+                    .firstOrNull()?.let { queryResult ->
+                        result = User(
+                            identifier = queryResult[UserTable.id].value,
+                            username = queryResult[UserTable.username],
+                            name = queryResult[UserTable.name],
+                            email = queryResult[UserTable.email],
+                            password = queryResult[UserTable.password],
+                            phone = queryResult[UserTable.phone],
+                            accessLevel = queryResult[UserTable.access]
+                        )
+                    }
+
+                result != null
+            }
+        }
+
+        return result
+    }
+
     override fun getById(identifier: Uuid): User? {
         var result: User? = null
 
