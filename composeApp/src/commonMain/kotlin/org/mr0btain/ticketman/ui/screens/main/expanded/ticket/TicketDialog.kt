@@ -118,7 +118,7 @@ fun TicketDialog(
                     ) {
                         Text(
                             modifier = Modifier.padding(4.dp),
-                            text = if (seed.isNew) "Add New Ticket: ${seed.ticket.identifier}" else "Edit Ticket: ${seed.ticket?.identifier}",
+                            text = if (seed.isNew) "Add New Ticket: ${seed.ticket.identifier}" else "Edit Ticket: ${seed.ticket.identifier}",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 26.sp,
                             maxLines = 1

@@ -107,7 +107,7 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(4.dp))
 
-                        seed?.let {
+                        seed.let {
                             PlatformLazyColumn(
                                 modifier = Modifier.padding(4.dp),
                                 isVisible = true
@@ -171,11 +171,11 @@ fun TicketInfoPane(
 
                                     // Contacts for customer block
                                     /*
-                                    ContactsBlock(
-                                        customer = customer,
-                                        labelSize = 16.sp
-                                    )
-                                     */
+                                                        ContactsBlock(
+                                                            customer = customer,
+                                                            labelSize = 16.sp
+                                                        )
+                                                         */
                                 }
                             }
                         }

@@ -79,7 +79,7 @@ fun SearchBar(
             colors = OutlinedTextFieldDefaults.colors(),
             singleLine = true,
             modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true)
                 .fillMaxWidth()
         )
 
