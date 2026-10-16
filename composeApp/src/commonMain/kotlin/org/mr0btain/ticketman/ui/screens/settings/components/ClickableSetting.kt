@@ -64,6 +64,13 @@ fun ClickableSetting(
 
                 Spacer(modifier = Modifier.weight(1.0f))
 
+                Text(
+                    text = settingItem.initialState,
+                    style = textStyle
+                )
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 Icon(
                     painterResource(Res.drawable.arrow_right),
                     tint = MaterialTheme.colorScheme.surfaceTint,

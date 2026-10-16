@@ -25,7 +25,7 @@ fun TextSetting(
     settingItem: SettingItem<String>,
     textStyle: TextStyle = MaterialTheme.typography.bodyMedium
 ) {
-    var state by remember { mutableStateOf("") }
+    var state by remember(settingItem.initialState) { mutableStateOf(settingItem.initialState) }
     var showDialog by remember { mutableStateOf(false) }
 
     TextEditDialog(
