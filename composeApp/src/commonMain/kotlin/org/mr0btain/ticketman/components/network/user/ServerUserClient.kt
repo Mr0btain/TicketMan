@@ -53,6 +53,12 @@ class ServerUserClient(
      * Log in to server using supplied credentials
      */
     suspend fun login(username: String = localStorage.username, password: String = localStorage.password): Boolean {
+        // Nothing to log in with, this happens when credentials aren't remembered
+        if (username.isBlank() || password.isBlank()) {
+            AppLogger.i(LOGIN_TAG, "FAIL: Missing credentials")
+            return false
+        }
+
         if (checkServerConnection()) {
             networkErrorTryCatch(LOGIN_TAG) {
                 userHttpClient.post {
@@ -64,8 +70,15 @@ class ServerUserClient(
                 ?.onSuccess { authResponse ->
                     println(authResponse)
                     if (authResponse.refreshToken != null && authResponse.accessToken != null) {
-                        localStorage.accessToken = authResponse.refreshToken!!
-                        localStorage.refreshToken = authResponse.accessToken!!
+                        localStorage.accessToken = authResponse.accessToken!!
+                        localStorage.refreshToken = authResponse.refreshToken!!
+
+                        // Only keep credentials around if the user wants them remembered
+                        if (localStorage.rememberLogin) {
+                            localStorage.username = username
+                            localStorage.password = password
+                        }
+
                         return true
                     }
                 }

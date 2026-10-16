@@ -13,7 +13,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.dashboard.DashboardScreen
 import org.mr0btain.ticketman.ui.screens.invoice.InvoiceScreen
@@ -67,17 +66,7 @@ fun NavigationHost(
                 modifier = modifier.fillMaxSize()
             ) {
                 LoginScreen(
-                    onConfirm = { user, pass ->
-                        if (user.isNotEmpty() && pass.isNotEmpty()) {
-                            coroutineScope.launch {
-                                //mainViewModel.dataHandler.updateStoredUsername(user)
-                                //mainViewModel.dataHandler.updateStoredPassword(pass)
-                            }
-                        }
-
-                        true
-                    },
-                    onDismiss = {},
+                    onConfirm = { user, pass -> mainViewModel.login(user, pass) },
                     snackBarState = snackBarState,
                     viewModel = mainViewModel
                 )

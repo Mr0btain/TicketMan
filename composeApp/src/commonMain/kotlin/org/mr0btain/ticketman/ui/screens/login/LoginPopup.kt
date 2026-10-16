@@ -21,6 +21,7 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
 import org.mr0btain.ticketman.ui.screens.login.components.LoginDialogState
 import org.mr0btain.ticketman.ui.screens.login.components.LoginField
+import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.ServerAddressField
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 
@@ -32,69 +33,35 @@ fun LoginPopup(
     viewModel: MainViewModel,
     coroutineScope: CoroutineScope
 ) {
-    var state by remember { mutableStateOf(LoginDialogState.Login) }
-    var labelState by remember { mutableStateOf("Server Address") }
-    var error by remember { mutableStateOf(false) }
-    val effect = remember { 0 }
+    val loginState by viewModel.loginState.collectAsState()
+    val serverConnected by viewModel.serverConnected.collectAsState()
 
-    // We only ever want this to run once
-    // Check connection to the server using stored value, if its good no need to reenter it
-    LaunchedEffect(effect) {
-        /*
-        if (viewModel.dataHandler.checkServerConnection()) {
-            state = LoginDialogState.Login
-        }
-         */
+    // Whether we've tried an address in this popup, so we only flag errors after an attempt
+    var addressAttempted by remember { mutableStateOf(false) }
+
+    // Ask for the address until we can reach a server, then ask for credentials
+    val state = when {
+        loginState == LoginState.LOADING -> LoginDialogState.Loading
+        !serverConnected -> LoginDialogState.Address
+        else -> LoginDialogState.Login
+    }
+
+    val error = when (state) {
+        LoginDialogState.Address -> addressAttempted
+        LoginDialogState.Login -> loginState == LoginState.FAILED
+        LoginDialogState.Loading -> false
     }
 
     LoginDialog(
         modifier = modifier,
         state = state,
-        labelState = labelState,
+        labelState = state.name,
         error = error,
-        onLoginConfirm = { user, pass ->
-            // Set state to loading
-            labelState = "Loading"
-            state = LoginDialogState.Loading
-
-            coroutineScope.launch {
-                /*
-                // Try to log in to server
-                val result = viewModel.dataHandler.loginToServer(user, pass)
-
-                // If we've successfully logged in then call dismiss and move on
-                if (result) {
-                    onDismiss()
-                } else {
-                    error = true
-                    labelState = "Login"
-                    state = LoginDialogState.Login
-                }
-                 */
-            }
-        },
+        initialUsername = viewModel.savedUsername,
+        onLoginConfirm = { user, pass -> viewModel.login(user, pass) },
         onAddressConfirm = { address ->
-            // Trigger loading screen
-            labelState = "Loading"
-            state = LoginDialogState.Loading
-
-            coroutineScope.launch {
-                // Try to hit server
-                /*
-                val result = viewModel.dataHandler.checkNewServerConnection(address)
-
-                // Handle result
-                if (result) {
-                    error = false
-                    labelState = "Login"
-                    state = LoginDialogState.Login
-                } else {
-                    error = true
-                    labelState = "Server Address"
-                    state = LoginDialogState.Address
-                }
-                 */
-            }
+            addressAttempted = true
+            viewModel.setServerUrl(address.trim())
         },
         onDismiss = onDismiss
     )
@@ -107,6 +74,7 @@ private fun LoginDialog(
     state: LoginDialogState,
     labelState: String,
     error: Boolean,
+    initialUsername: String,
     onAddressConfirm: (String) -> Unit,
     onLoginConfirm: (user: String, pass: String) -> Unit,
     onDismiss: () -> Unit
@@ -127,8 +95,8 @@ private fun LoginDialog(
                 targetState = state,
                 transitionSpec = {
                     fadeIn(
-                        animationSpec = tween(3000)
-                    ) togetherWith fadeOut(animationSpec = tween(3000))
+                        animationSpec = tween(300)
+                    ) togetherWith fadeOut(animationSpec = tween(300))
                 },
                 label = labelState
             ) { targetState ->
@@ -145,10 +113,8 @@ private fun LoginDialog(
                         LoginField(
                             modifier = Modifier.padding(padding),
                             error = error,
-                            onConfirm = { user, pass -> onLoginConfirm(user, pass) },
-                            onDismiss = {
-                                // Do nothing as we need to log in
-                            }
+                            initialUsername = initialUsername,
+                            onConfirm = { user, pass -> onLoginConfirm(user, pass) }
                         )
                     }
 

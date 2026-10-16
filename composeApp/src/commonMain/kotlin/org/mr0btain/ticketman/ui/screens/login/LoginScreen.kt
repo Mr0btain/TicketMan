@@ -8,8 +8,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
+import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.LoginField
 import org.mr0btain.ticketman.ui.screens.login.components.TwoFactorField
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -18,18 +18,18 @@ import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
  * Login screen composable made for dialog but can be used either way
  */
 
-// TODO: Implement logic for login
+// Debug screen for viewing the login form outside the popup, the popup is the real login
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
-    onConfirm: (user:String, pass: String) -> Boolean,
-    onDismiss: () -> Unit,
+    onConfirm: (user:String, pass: String) -> Unit,
     snackBarState: SnackbarHostState
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
+    val loginState by viewModel.loginState.collectAsState()
 
     Surface {
         Column(
@@ -81,22 +81,21 @@ fun LoginScreen(
 
             Spacer(Modifier.padding(12.dp))
 
-            Button(
-                onClick = {
-                    viewModel.viewModelScope.launch {
-                        //iewModel.dataHandler.syncData()
-                    }
-                }
-            ) {
-                Text("Sync Server")
-            }
+            Text(
+                text = "State: ${loginState.name}",
+                style = MaterialTheme.typography.bodyMedium
+            )
 
             if (selectedTab == 0) {
-                LoginField(
-                    onConfirm = { user, pass -> onConfirm(user, pass) },
-                    onDismiss = {},
-                    error = false
-                )
+                if (loginState == LoginState.LOADING) {
+                    CircularLoading(Modifier.padding(48.dp))
+                } else {
+                    LoginField(
+                        onConfirm = { user, pass -> onConfirm(user, pass) },
+                        initialUsername = viewModel.savedUsername,
+                        error = loginState == LoginState.FAILED
+                    )
+                }
             } else {
                 TwoFactorField()
             }

@@ -17,16 +17,17 @@ import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
+import org.mr0btain.ticketman.components.network.ConnectionResult
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
+import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import kotlin.uuid.Uuid
-
-// TODO: Setup log in button and log in status
 
 /**
  * Main View model for the project.
@@ -46,58 +47,30 @@ class MainViewModel(
     private val USER_PAGER_TAG = "UserPagerTag"
 
     fun init() {
+        // When the session can't be refreshed, ask the user to log in again
+        viewModelScope.launch {
+            remoteHandler.authExpired.collect {
+                _loginState.value = LoginState.LOGGED_OUT
+                _showLogin.value = true
+            }
+        }
+
         viewModelScope.launch {
             // Pull saved settings
             _darkMode.value = localStorage.darkMode
             _serverUrl.value = localStorage.serverUrl
+            _rememberLogin.value = localStorage.rememberLogin
+            _defaultTab.value = localStorage.defaultTab
+            _pageSize.value = localStorage.pageSize
+            _searchLimit.value = localStorage.searchLimit
+            _cacheSize.value = localStorage.cacheSize
+            _selectedMainTabIndex.value = localStorage.defaultTab
 
-            // Set url in all our handlers
-            remoteHandler.setUrl(localStorage.serverUrl)
+            // Set url in all our handlers and log in with any stored credentials
+            handleConnectionResult(remoteHandler.setUrl(localStorage.serverUrl))
 
             // Initialize pagers
-            customerPager = OffsetPager(
-                tag = CUSTOMER_PAGER_TAG,
-                coroutineScope = viewModelScope,
-                fetch = { page, pageSize ->
-                    remoteHandler.customerRepo.fetch(
-                        offset = (page * pageSize).toLong(),
-                        limit = pageSize
-                    )
-                }
-            )
-
-            ticketPager = OffsetPager(
-                tag = TICKET_PAGER_TAG,
-                coroutineScope = viewModelScope,
-                fetch = { page, pageSize ->
-                    remoteHandler.ticketRepo.fetch(
-                        offset = (page * pageSize).toLong(),
-                        limit = pageSize
-                    )
-                }
-            )
-
-            inventoryPager = OffsetPager(
-                tag = INVENTORY_PAGER_TAG,
-                coroutineScope = viewModelScope,
-                fetch = { page, pageSize ->
-                    remoteHandler.inventoryRepo.fetch(
-                        offset = (page * pageSize).toLong(),
-                        limit = pageSize
-                    )
-                }
-            )
-
-            userPager = OffsetPager(
-                tag = USER_PAGER_TAG,
-                coroutineScope = viewModelScope,
-                fetch = { page, pageSize ->
-                    remoteHandler.userRepo.fetch(
-                        offset = (page * pageSize).toLong(),
-                        limit = pageSize
-                    )
-                }
-            )
+            buildPagers()
 
             // Pagers don't load themselves, so do the first load now that we're connected
             refreshPagers()
@@ -109,8 +82,61 @@ class MainViewModel(
     // Whether we should log exposed transactions or not
     val shouldLog = false
 
-    // Max size of cache
-    val maxCacheSize = 20
+    // Max size of cache. Caches are built with the view model, so changes apply on next start
+    val maxCacheSize = localStorage.cacheSize
+
+    /** (Re)builds all the pagers using the current page size */
+    private fun buildPagers() {
+        val config = OffsetPagerConfig(pageSize = _pageSize.value)
+
+        customerPager = OffsetPager(
+            tag = CUSTOMER_PAGER_TAG,
+            coroutineScope = viewModelScope,
+            config = config,
+            fetch = { page, pageSize ->
+                remoteHandler.customerRepo.fetch(
+                    offset = (page * pageSize).toLong(),
+                    limit = pageSize
+                )
+            }
+        )
+
+        ticketPager = OffsetPager(
+            tag = TICKET_PAGER_TAG,
+            coroutineScope = viewModelScope,
+            config = config,
+            fetch = { page, pageSize ->
+                remoteHandler.ticketRepo.fetch(
+                    offset = (page * pageSize).toLong(),
+                    limit = pageSize
+                )
+            }
+        )
+
+        inventoryPager = OffsetPager(
+            tag = INVENTORY_PAGER_TAG,
+            coroutineScope = viewModelScope,
+            config = config,
+            fetch = { page, pageSize ->
+                remoteHandler.inventoryRepo.fetch(
+                    offset = (page * pageSize).toLong(),
+                    limit = pageSize
+                )
+            }
+        )
+
+        userPager = OffsetPager(
+            tag = USER_PAGER_TAG,
+            coroutineScope = viewModelScope,
+            config = config,
+            fetch = { page, pageSize ->
+                remoteHandler.userRepo.fetch(
+                    offset = (page * pageSize).toLong(),
+                    limit = pageSize
+                )
+            }
+        )
+    }
 
     fun refreshPagers() {
         viewModelScope.launch {
@@ -207,7 +233,7 @@ class MainViewModel(
             ?: remoteHandler.customerRepo.get(identifier)
 
     suspend fun searchCustomers(query: String) = coroutineScope {
-        remoteHandler.customerRepo.search(query, 20)
+        remoteHandler.customerRepo.search(query, _searchLimit.value)
     }
 
     fun removeCustomer(identifier: Uuid) {
@@ -296,7 +322,7 @@ class MainViewModel(
     }
 
     suspend fun searchTickets(query: String) = coroutineScope {
-        remoteHandler.ticketRepo.search(query, 20)
+        remoteHandler.ticketRepo.search(query, _searchLimit.value)
     }
 
     fun removeTicket(identifier: Uuid) {
@@ -373,7 +399,7 @@ class MainViewModel(
     }
 
     suspend fun searchInventory(query: String) = coroutineScope {
-        remoteHandler.inventoryRepo.search(query, 20)
+        remoteHandler.inventoryRepo.search(query, _searchLimit.value)
     }
 
     fun removeInventory(identifier: Uuid) {
@@ -416,7 +442,7 @@ class MainViewModel(
     }
 
     suspend fun searchUsers(query: String) = coroutineScope {
-        remoteHandler.userRepo.search(query, 20)
+        remoteHandler.userRepo.search(query, _searchLimit.value)
     }
 
     /** ----------------------------------------------UI------------------------------------------------------------------- */
@@ -438,6 +464,65 @@ class MainViewModel(
         _showLogin.value = value
     }
 
+    /** ----------------------------------------------LOGIN------------------------------------------------------------------- */
+
+    private val _loginState: MutableStateFlow<LoginState> = MutableStateFlow(LoginState.LOGGED_OUT)
+    val loginState = _loginState.asStateFlow()
+
+    // Whether the server at the current url could be reached
+    private val _serverConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val serverConnected = _serverConnected.asStateFlow()
+
+    /** Username saved from the last login, blank unless remember login is on */
+    val savedUsername: String
+        get() = localStorage.username
+
+    /** Logs in with the given credentials. Credentials are only saved if remember login is on */
+    fun login(user: String, pass: String) {
+        if (user.isBlank() || pass.isBlank()) {
+            _loginState.value = LoginState.FAILED
+            return
+        }
+
+        _loginState.value = LoginState.LOADING
+
+        viewModelScope.launch {
+            if (remoteHandler.login(user.trim(), pass)) {
+                _loginState.value = LoginState.LOGGED_IN
+                _showLogin.value = false
+                refreshPagers()
+            } else {
+                _loginState.value = LoginState.FAILED
+            }
+        }
+    }
+
+    /** Ends the session and clears out any loaded data */
+    fun logout() {
+        viewModelScope.launch {
+            remoteHandler.logout()
+            _loginState.value = LoginState.LOGGED_OUT
+
+            // Drop anything pulled while logged in
+            customerSeed.clear()
+            ticketSeed.clear()
+            inventorySeed.clear()
+            userSeed.clear()
+            buildPagers()
+        }
+    }
+
+    private fun handleConnectionResult(result: ConnectionResult) {
+        _serverConnected.value = result != ConnectionResult.UNREACHABLE
+
+        if (result == ConnectionResult.LOGGED_IN) {
+            _loginState.value = LoginState.LOGGED_IN
+            _showLogin.value = false
+        } else {
+            _loginState.value = LoginState.LOGGED_OUT
+        }
+    }
+
     /** ----------------------------------------------SETTINGS------------------------------------------------------------------- */
 
     private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
@@ -445,6 +530,21 @@ class MainViewModel(
 
     private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
     val serverUrl = _serverUrl.asStateFlow()
+
+    private val _rememberLogin: MutableStateFlow<Boolean> = MutableStateFlow(LocalStorage.DEFAULT_REMEMBER_LOGIN)
+    val rememberLogin = _rememberLogin.asStateFlow()
+
+    private val _defaultTab: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_TAB)
+    val defaultTab = _defaultTab.asStateFlow()
+
+    private val _pageSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_PAGE_SIZE)
+    val pageSize = _pageSize.asStateFlow()
+
+    private val _searchLimit: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_SEARCH_LIMIT)
+    val searchLimit = _searchLimit.asStateFlow()
+
+    private val _cacheSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_CACHE_SIZE)
+    val cacheSize = _cacheSize.asStateFlow()
 
     private val _scrollBarsOnBottom: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val scrollBarsOnBottom = _scrollBarsOnBottom.asStateFlow()
@@ -462,11 +562,54 @@ class MainViewModel(
         _serverUrl.value = url
         localStorage.serverUrl = url
 
+        _loginState.value = LoginState.LOADING
+
         viewModelScope.launch {
-            remoteHandler.setUrl(url)
+            handleConnectionResult(remoteHandler.setUrl(url))
             // Reload lists from the new server
             refreshPagers()
         }
+    }
+
+    fun toggleRememberLogin() {
+        val value = !_rememberLogin.value
+        _rememberLogin.value = value
+        localStorage.rememberLogin = value
+
+        // Forget anything we've already stored
+        if (!value) {
+            viewModelScope.launch { localStorage.clearCredentials() }
+        }
+    }
+
+    /** Sets which main tab is shown on start, wraps around past the last tab */
+    fun setDefaultTab(index: Int) {
+        val value = index.mod(MAIN_TAB_COUNT)
+        _defaultTab.value = value
+        localStorage.defaultTab = value
+    }
+
+    fun setPageSize(size: Int) {
+        val value = size.coerceIn(PAGE_SIZE_RANGE)
+        _pageSize.value = value
+        localStorage.pageSize = value
+
+        // Pagers hold their config, so rebuild them with the new size
+        buildPagers()
+        refreshPagers()
+    }
+
+    fun setSearchLimit(limit: Int) {
+        val value = limit.coerceIn(SEARCH_LIMIT_RANGE)
+        _searchLimit.value = value
+        localStorage.searchLimit = value
+    }
+
+    /** Cache size is only read when the view model is built, so this applies on next start */
+    fun setCacheSize(size: Int) {
+        val value = size.coerceIn(CACHE_SIZE_RANGE)
+        _cacheSize.value = value
+        localStorage.cacheSize = value
     }
 
     fun toggleScrollBarsOnBottom() {
@@ -480,5 +623,12 @@ class MainViewModel(
     }
 
     /** ----------------------------------------------TESTING------------------------------------------------------------------- */
+
+    companion object {
+        const val MAIN_TAB_COUNT = 3
+        val PAGE_SIZE_RANGE = 5..100
+        val SEARCH_LIMIT_RANGE = 1..100
+        val CACHE_SIZE_RANGE = 1..200
+    }
 
 }

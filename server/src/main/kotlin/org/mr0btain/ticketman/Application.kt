@@ -16,17 +16,10 @@ import kotlin.random.Random
 import kotlin.uuid.Uuid
 
 // TODO: Setup way for admin to change access levels for things individually
-// TODO: Maybe add ability for different users to have different instances of the databases and add admin settings to force all sync or allow individual
-
-// Currently im thinking we first pass keys, then we log in, then on approval we assign the user a random identifier and refresh the encryption key
-// that we store for that specific user. So when we talk first, its un-encrypted. then once were encrypted and user logs in we respond with the unique identifier
-// that's used from then on. so it would be ever-changing between sessions.
-
-// TODO: Should also setup some sort of timeout for session encryption and tokens. So after so much time we clear them?
+// TODO: Should also setup some sort of timeout for session tokens. So after so much time we clear them?
 
 /**
  * Main
- * Assume all requests are through http, encrypt everything.
  */
 
 fun main(args: Array<String>) {
@@ -38,8 +31,6 @@ fun Application.module() {
     val appDir = AppDir().path
 
     println("AppDir: $appDir")
-
-    // TODO: Eventually we will switch this over to use an environment variable or the directory the app is running in
 
     // Check path dir
     if (path.isNotBlank() || appDir != null) {
@@ -57,9 +48,9 @@ fun Application.module() {
 
         val generateTestData = false
 
-        //val admin = database.userDatabase.getAdmin()
+        val admin = database.userDatabase.getAdmin()
 
-        //println("Admin: $admin")
+        println("Admin: $admin")
 
         if (generateTestData) {
             val ticketIdentifiers = mutableListOf<Uuid>()
