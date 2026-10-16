@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
-import org.mr0btain.ticketman.components.database.*
+import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
@@ -28,8 +28,6 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.name_divider_character
 import kotlin.uuid.Uuid
 
 // TODO: Setup log in button and log in status
@@ -133,12 +131,7 @@ class MainViewModel(
             ticketPager?.refresh()
             userPager?.refresh()
             inventoryPager?.refresh()
-
-            println(customerPager?.items?.value?.size)
-            println(ticketPager?.items?.value?.size)
-            println(inventoryPager?.items?.value?.size)
         }
-
     }
 
     /** ----------------------------------------------REMOTE------------------------------------------------------------------- */
