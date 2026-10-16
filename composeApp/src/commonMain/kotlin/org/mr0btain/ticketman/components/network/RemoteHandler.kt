@@ -23,7 +23,7 @@ class RemoteHandler(
     private val TAG = "ServerHandler"
     private val SET_SERVER_URL_TAG = "$TAG:SetServerUrl"
     private val REFRESH_TOKENS_TAG = "$TAG:RefreshTokens"
-    val userClient = ServerUserClient(createUserHttpClient(engine), this)
+    val userClient = ServerUserClient(createUserHttpClient(engine), localStorage)
 
     private val httpClient = createRemoteHttpClient(
         engine = engine,
@@ -68,24 +68,14 @@ class RemoteHandler(
     }
 
     /**
-     * Gets stored username from database
-     */
-    suspend fun getUsername(): String = localStorage.getUsername()
-
-    /**
-     * Gets stored password from database
-     */
-    suspend fun getPassword(): String = localStorage.getPassword()
-
-    /**
      * Gets stored access token from database
      */
-    fun getAccessToken() = localStorage.getAccessToken()
+    fun getAccessToken() = localStorage.accessToken
 
     /**
      * Gets both stored tokens from database
      */
-    fun getRefreshToken() = localStorage.getRefreshToken()
+    fun getRefreshToken() = localStorage.refreshToken
 
     /**
      * Gets both stored tokens from database
@@ -98,11 +88,9 @@ class RemoteHandler(
      * @return The new tokens, or null if we couldn't authenticate
      */
     suspend fun refreshTokens(): Token? {
-        val refreshToken = getRefreshToken()
-
-        if (refreshToken.isNotBlank()) {
+        if (localStorage.refreshToken.isNotBlank()) {
             // On success this stores the new access token through updateAuthTokens
-            if (userClient.refreshTokens(refreshToken) is Result.Success) {
+            if (userClient.refreshTokens(localStorage.refreshToken) is Result.Success) {
                 AppLogger.m(REFRESH_TOKENS_TAG, SimpleResult.SUCCESS)
                 return getStoredToken()
             }
@@ -119,19 +107,11 @@ class RemoteHandler(
         }
     }
 
-    /**
-     * Updates stored tokens in database
-     */
-    suspend fun updateAuthTokens(access: String, refresh: String) {
-        localStorage.setAccessToken(access)
-        localStorage.setRefreshToken(refresh)
-    }
-
     // Identifier isn't used by the http client so leave it blank
     private fun getStoredToken() = Token(
         identifier = "",
-        refresh = getRefreshToken(),
-        access = getAccessToken()
+        refresh = localStorage.refreshToken,
+        access = localStorage.accessToken
     )
 
     /**

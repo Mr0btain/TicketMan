@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.network.user
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
@@ -26,7 +27,7 @@ import kotlin.uuid.Uuid
 @OptIn(ExperimentalUuidApi::class)
 class ServerUserClient(
     private val userHttpClient: HttpClient,
-    private val remoteHandler: RemoteHandler
+    private val localStorage: LocalStorage
 ) {
     companion object {
         private const val TAG = "ServerUserClient"
@@ -49,20 +50,9 @@ class ServerUserClient(
     }
 
     /**
-     * Log in to server using stored credentials
-     */
-    suspend fun login(): Boolean {
-        // Get username and password
-        val username = remoteHandler.getUsername()
-        val password = remoteHandler.getPassword()
-
-        return login(username, password)
-    }
-
-    /**
      * Log in to server using supplied credentials
      */
-    suspend fun login(username: String, password: String): Boolean {
+    suspend fun login(username: String = localStorage.username, password: String = localStorage.password): Boolean {
         if (checkServerConnection()) {
             networkErrorTryCatch(LOGIN_TAG) {
                 userHttpClient.post {
@@ -74,7 +64,8 @@ class ServerUserClient(
                 ?.onSuccess { authResponse ->
                     println(authResponse)
                     if (authResponse.refreshToken != null && authResponse.accessToken != null) {
-                        remoteHandler.updateAuthTokens(authResponse.accessToken!!, authResponse.refreshToken!!)
+                        localStorage.accessToken = authResponse.refreshToken!!
+                        localStorage.refreshToken = authResponse.accessToken!!
                         return true
                     }
                 }
@@ -119,7 +110,7 @@ class ServerUserClient(
                 }
             }?.let { response -> handleHttpResponse<RefreshTokenResponse>(REFRESH_TOKEN_TAG, response) }
                 ?.onSuccess { accessToken ->
-                    remoteHandler.updateAuthTokens(accessToken.token, token)
+                    localStorage.accessToken = accessToken.token
 
                     // We don't use UUID here so just slap whatever. Maybe make another data class for this??
                     return Result.Success(AuthResponse(Uuid.generateV7(), accessToken.token, token))

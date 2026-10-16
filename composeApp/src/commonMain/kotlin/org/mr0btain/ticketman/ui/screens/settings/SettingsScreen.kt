@@ -7,15 +7,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.mr0btain.ticketman.logging.AppLogger
@@ -26,12 +20,7 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
-import org.mr0btain.ticketman.ui.screens.settings.components.SwitchSetting
-import org.mr0btain.ticketman.ui.screens.settings.components.TextSetting
 import ticketman.composeapp.generated.resources.*
-
-// TODO: Add option for smooth scroll to item on selection or immediate
-// TODO: Readd scroll bar size options now that we've hashed out the scroll bars
 
 // For now, I think well be fine with using this on every screen size/ platform as it should fit just fine
 @Composable
@@ -43,12 +32,8 @@ fun SettingsScreen(
     val TAG = "SettingsScreen"
     val CHECK_URL_TAG = "$TAG:CheckUrl"
 
-    val autoSync = viewModel.autoSyncDatabase.collectAsState()
     val darkMode = viewModel.darkMode.collectAsState()
-
-    // Server Url Stuff
     val serverUrl = viewModel.serverAddress.collectAsState()
-    var showUrlEditDialog by remember { mutableStateOf(false) }
 
     val textStyle = MaterialTheme.typography.bodyMedium
     val childTextStyle = MaterialTheme.typography.bodySmall
@@ -70,38 +55,17 @@ fun SettingsScreen(
                     description = "Url used to connect to the server",
                     label = "Server Url",
                     enabled = true,
-                    initialState = viewModel.serverAddress.value,
+                    initialState = serverUrl,
                     onClick = { url ->
                         try {
                             viewModel.updateServerUrl(url as? String ?: "")
-
                             true
-                            /*
-                            if ( viewModel.dataHandler.checkNewServerConnection(url)) {
-                                viewModel.updateServerUrl(url)
-                                isUrlError = false
-                                showUrlEditDialog = false
-                                AppLogger.m(CHECK_URL_TAG, SimpleError.SUCCESS)
-                            } else isUrlError = true
-                             */
                         } catch (ex: Exception) {
                             AppLogger.e(CHECK_URL_TAG, SimpleResult.FAIL, ex)
                             false
                         }
                     },
                     type = SettingType.TEXT
-                ),
-                SettingItem(
-                    icon = painterResource(Res.drawable.download_cloud),
-                    description = "Auto sync with server",
-                    label = "Server Auto Sync",
-                    enabled = true,
-                    initialState = viewModel.autoSyncDatabase.value,
-                    onClick = {
-                        viewModel.toggleAutoSync()
-                        true
-                              },
-                    type = SettingType.SWITCH
                 )
             )
         ),
