@@ -33,7 +33,7 @@ fun SettingsScreen(
     val CHECK_URL_TAG = "$TAG:CheckUrl"
 
     val darkMode = viewModel.darkMode.collectAsState()
-    val serverUrl = viewModel.serverAddress.collectAsState()
+    val serverUrl = viewModel.serverUrl.collectAsState()
 
     val textStyle = MaterialTheme.typography.bodyMedium
     val childTextStyle = MaterialTheme.typography.bodySmall
@@ -55,10 +55,10 @@ fun SettingsScreen(
                     description = "Url used to connect to the server",
                     label = "Server Url",
                     enabled = true,
-                    initialState = serverUrl,
+                    initialState = serverUrl.value,
                     onClick = { url ->
                         try {
-                            viewModel.updateServerUrl(url as? String ?: "")
+                            viewModel.setServerUrl(url as? String ?: "")
                             true
                         } catch (ex: Exception) {
                             AppLogger.e(CHECK_URL_TAG, SimpleResult.FAIL, ex)

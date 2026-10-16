@@ -203,7 +203,7 @@ fun TicketInfoPane(
 
                         Spacer(Modifier.padding(8.dp))
 
-                        seed?.let {
+                        seed.let {
                             PlatformLazyColumn(
                                 modifier = Modifier.padding(8.dp),
                                 isVisible = seed.notes.isNotEmpty()

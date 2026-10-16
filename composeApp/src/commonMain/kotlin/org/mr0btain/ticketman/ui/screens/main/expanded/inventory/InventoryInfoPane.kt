@@ -55,7 +55,7 @@ fun InventoryInfoPane(
                     Text(
                         modifier = Modifier
                             .padding(4.dp),
-                        text = inventoryData?.inventory?.name ?: "",
+                        text = inventoryData.inventory.name,
                         fontSize = 26.sp,
                         fontWeight = FontWeight.SemiBold
                     )

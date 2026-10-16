@@ -13,12 +13,10 @@ import org.mr0btain.ticketman.components.data.inventory.InventoryCache
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.data.operations.ChangedField
-import org.mr0btain.ticketman.components.data.settings.UserSettings
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
-import org.mr0btain.ticketman.components.database.SettingsDatabase
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
@@ -26,8 +24,6 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.logging.SimpleResult
 import kotlin.uuid.Uuid
 
 // TODO: Setup log in button and log in status
@@ -51,20 +47,12 @@ class MainViewModel(
 
     fun init() {
         viewModelScope.launch {
-            // Initialize settings
-            settingsDatabase.initialize()
-
             // Pull saved settings
-            settingsDatabase.getSettings()?.let { result ->
-                _darkMode.value = result.darkMode
-                _serverAddress.value = result.serverUrl
-                _scrollBarsOnRight.value = result.scrollBarsOnRight
-                _scrollBarsOnBottom.value = result.scrollBarsOnBottom
-                _autoSyncDatabase.value = result.autoSync
-            } ?: AppLogger.i(INIT_TAG, SimpleResult.FAIL)
+            _darkMode.value = localStorage.darkMode
+            _serverUrl.value = localStorage.serverUrl
 
-            // Connect and log in before the pagers do their first fetch
-            remoteHandler.setUrl(_serverAddress.value)
+            // Set url in all our handlers
+            remoteHandler.setUrl(localStorage.serverUrl)
 
             // Initialize pagers
             customerPager = OffsetPager(
@@ -428,7 +416,7 @@ class MainViewModel(
     }
 
     suspend fun searchUsers(query: String) = coroutineScope {
-        remoteHandler.userRepo.search(query, 20) ?: emptyList()
+        remoteHandler.userRepo.search(query, 20)
     }
 
     /** ----------------------------------------------UI------------------------------------------------------------------- */
@@ -452,13 +440,11 @@ class MainViewModel(
 
     /** ----------------------------------------------SETTINGS------------------------------------------------------------------- */
 
-    private val settingsDatabase = SettingsDatabase(shouldLog)
-
     private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val darkMode = _darkMode.asStateFlow()
 
-    private val _serverAddress: MutableStateFlow<String> = MutableStateFlow("")
-    val serverAddress = _serverAddress.asStateFlow()
+    private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
+    val serverUrl = _serverUrl.asStateFlow()
 
     private val _scrollBarsOnBottom: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val scrollBarsOnBottom = _scrollBarsOnBottom.asStateFlow()
@@ -466,28 +452,18 @@ class MainViewModel(
     private val _scrollBarsOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val scrollBarsOnRight = _scrollBarsOnRight.asStateFlow()
 
-    private val _autoSyncDatabase: MutableStateFlow<Boolean> = MutableStateFlow(true)
-    val autoSyncDatabase = _autoSyncDatabase.asStateFlow()
-
-    fun toggleAutoSync() {
-        val value = !_autoSyncDatabase.value
-        _autoSyncDatabase.value = value
-        saveSettings()
-    }
-
     fun toggleDarkMode() {
         val value = !_darkMode.value
         _darkMode.value = value
-        saveSettings()
+        localStorage.darkMode = value
     }
 
-    fun updateServerUrl(url: String) {
-        _serverAddress.value = url
+    fun setServerUrl(url: String) {
+        _serverUrl.value = url
+        localStorage.serverUrl = url
 
         viewModelScope.launch {
             remoteHandler.setUrl(url)
-            saveSettings()
-
             // Reload lists from the new server
             refreshPagers()
         }
@@ -496,25 +472,11 @@ class MainViewModel(
     fun toggleScrollBarsOnBottom() {
         val value = !_scrollBarsOnBottom.value
         _scrollBarsOnBottom.value = value
-        saveSettings()
     }
 
     fun toggleScrollBarsOnRight() {
         val value = !_scrollBarsOnRight.value
         _scrollBarsOnRight.value = value
-        saveSettings()
-    }
-
-    private fun saveSettings() {
-        settingsDatabase.saveSettings(
-            UserSettings(
-                darkMode = _darkMode.value,
-                serverUrl = _serverAddress.value,
-                autoSync = _autoSyncDatabase.value,
-                scrollBarsOnRight = _scrollBarsOnRight.value,
-                scrollBarsOnBottom = _scrollBarsOnBottom.value
-            )
-        )
     }
 
     /** ----------------------------------------------TESTING------------------------------------------------------------------- */

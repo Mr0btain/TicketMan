@@ -5,6 +5,8 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _password: String = ""
     private var _accessToken: String = ""
     private var _refreshToken: String = ""
+    private var _darkMode: Boolean = false
+    private var _serverUrl: String = ""
 
     var username: String
         get() = _username
@@ -34,12 +36,29 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(REFRESH_TOKEN_KEY, value.trim())
         }
 
+    var darkMode: Boolean
+        get() = _darkMode
+        set(value) {
+            _darkMode = value
+            store.putString(DARK_MODE_KEY, value.toString().trim())
+            println(value.toString().trim())
+        }
+
+    var serverUrl: String
+    get() = _serverUrl
+    set(value) {
+        _serverUrl = value
+        store.putString(SERVER_URL_KEY, value.trim())
+    }
+
     // Initialize by pulling stored values
     init {
         _accessToken = store.getString(ACCESS_TOKEN_KEY, "")
         _refreshToken = store.getString(REFRESH_TOKEN_KEY, "")
         _username = store.getString(USERNAME_KEY, "")
         _password = store.getString(PASSWORD_KEY, "")
+        _darkMode = store.getString(DARK_MODE_KEY, "") == "true"
+        _serverUrl = store.getString(SERVER_URL_KEY, "")
     }
 
     /**
@@ -60,5 +79,7 @@ class LocalStorage(private val store: KeyValueStore) {
         const val REFRESH_TOKEN_KEY = "refresh_token"
         const val USERNAME_KEY = "username"
         const val PASSWORD_KEY = "password"
+        const val DARK_MODE_KEY = "dark_mode"
+        const val SERVER_URL_KEY = "server_url"
     }
 }
