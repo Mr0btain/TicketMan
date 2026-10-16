@@ -1,20 +1,16 @@
 # Ticket Man
-Ticket Managing app built for repair shops. This is an app make for repair shop ticket tracking that has
-a database that can be local or on a dedicated server. Multiple users and encryption for some things to help 
-keep it secure.
+Ticket Managing app built for repair shops or really any kind of shop that would use tickets to manage things. The goal is to get it working on every platform we can. I've been working on this off and on to really learn kotlin and compose. Allot of the older stuff is really not great implementation but it does work at the moment. As I go I'll update older sections to a more normal or simplier way.
 
 ## Platform Status'
 
 ### Multiplatform
 
 - [x] Server-Client Communication
-- [x] Server-Client Encryption
-- [ ] Serverless/Client Side is server implementation
-- [x] Local Database
+- [ ] Server-Client Encryption
 - [ ] Image Storage
-- Image Storage somewhat defined
+- [ ] Large data transfer between client and server
 
-### Desktop
+### Desktop/Tablet
 
 - [x] Customer UI
 - [x] Ticket UI
@@ -22,15 +18,7 @@ keep it secure.
 - [ ] Admin UI
 - [ ] Kiosk UI
 
-### Android
-
-- [ ] Customer UI
-- [ ] Ticket UI
-- [ ] Inventory UI
-- [ ] Admin UI
-- [ ] Kiosk UI
-
-### IOS
+### Android &* IOS
 
 - [ ] Customer UI
 - [ ] Ticket UI
@@ -41,5 +29,5 @@ keep it secure.
 ### Server
 
 - [x] Database
-- [ ] API Routes
-- [ ] User Creation/Handling
+- [x] API Routes
+- [x] User Creation/Handling
