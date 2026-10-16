@@ -39,7 +39,8 @@ import kotlin.uuid.Uuid
 
 @Suppress("PrivatePropertyName")
 class MainViewModel(
-    val snackBarHost: SnackbarHostState
+    val snackBarHost: SnackbarHostState,
+    private val localStorage: LocalStorage
 ) : ViewModel() {
     private val TAG = "MainViewModel"
     private val INIT_TAG = "$TAG:Init"
@@ -122,8 +123,6 @@ class MainViewModel(
 
     // Max size of cache
     val maxCacheSize = 20
-
-    val localStorage = LocalStorage()
 
     fun refreshPagers() {
         viewModelScope.launch {

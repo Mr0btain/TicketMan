@@ -1,30 +1,32 @@
 package org.mr0btain.ticketman.components.data.local
 
 // TODO("Finish implementation")
-class LocalStorage() {
-    private var refreshToken: String? = null
-    private var username: String = "kenneth_mitchell"
-    private var password: String = "Mitchell"
-    private var accessToken: String? = null
+class LocalStorage(private val store: KeyValueStore) {
+    private var username: String = "kenneth_sanchez"
+    private var password: String = "Sanchez"
 
-    fun getAccessToken(): String = accessToken ?: ""
+    fun getAccessToken(): String = store.getString(ACCESS_TOKEN_KEY, "")
     fun setAccessToken(token: String) {
-        accessToken = token
+        store.putString(ACCESS_TOKEN_KEY, token)
     }
     fun setRefreshToken(token: String) {
-        refreshToken = token
+        store.putString(REFRESH_TOKEN_KEY, token)
     }
-    fun getRefreshToken(): String = refreshToken ?: ""
+    fun getRefreshToken(): String = store.getString(REFRESH_TOKEN_KEY, "")
 
-    // Admin: User(
-    // identifier=01a135ff-c386-733b-9289-229e12f7398c,
-    // username=kenneth_mitchell,
-    // password=Mitchell,
-    // name=kenneth:mitchell,
-    // email=james.smith52@gmail.com,
-    // phone=769-856-8578,
-    // accessLevel=ADMIN)
+    /**
+     * Removes the stored tokens. Uses delete over KSafe's clearAll since that also wipes the encryption keys
+     */
+    suspend fun clearSession() {
+        store.delete(ACCESS_TOKEN_KEY)
+        store.delete(REFRESH_TOKEN_KEY)
+    }
 
     fun getUsername(): String = username
     fun getPassword(): String = password
+
+    private companion object {
+        const val ACCESS_TOKEN_KEY = "access_token"
+        const val REFRESH_TOKEN_KEY = "refresh_token"
+    }
 }

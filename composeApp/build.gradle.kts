@@ -91,10 +91,14 @@ kotlin {
 
             // FileKit for file operations
             implementation(libs.bundles.fileKit)
+
+            // Encrypted key-value storage
+            implementation(libs.ksafe)
         }
 
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+            implementation(libs.kotlin.coroutines.test)
         }
 
         nativeMain.dependencies {
@@ -127,7 +131,7 @@ compose.desktop {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.mr0btain.ticketman"
             packageVersion = "1.0.0"
-            modules("jdk.unsupported")
+            modules("jdk.unsupported", "java.management")
             modules("jdk.unsupported.desktop")
         }
 

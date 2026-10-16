@@ -27,9 +27,11 @@ exposed = "1.5.0"
 #sqlitejdbc = "3.53.4.0"
 openpdf = "2.0.5"
 kotlinx-io = "0.9.1"
+ksafe = "3.3.0"
 
 [libraries]
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -101,6 +103,9 @@ openpdf = { module = "io.github.librepdf:openpdf", version.ref = "openpdf" }
 
 # File Stuff
 kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
+
+# Encrypted key-value storage
+ksafe = { module = "eu.anifantakis:ksafe", version.ref = "ksafe" }
 
 [plugins]
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
