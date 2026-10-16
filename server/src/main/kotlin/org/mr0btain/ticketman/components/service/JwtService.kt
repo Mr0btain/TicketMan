@@ -3,18 +3,17 @@ package org.mr0btain.ticketman.components.service
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
-import io.ktor.server.application.Application
-import io.ktor.server.auth.jwt.JWTCredential
-import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.application.*
+import io.ktor.server.auth.jwt.*
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.database.UserDatabaseImpl
-import java.util.UUID
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaInstant
+import kotlin.uuid.Uuid
 
 class JwtService(
     private val application: Application,
@@ -70,7 +69,7 @@ class JwtService(
 
     fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
         val id = extractId(credential)
-        val foundUser = id?.let { userDatabase.getById(UUID.fromString(it)) }
+        val foundUser = id?.let { userDatabase.getById(Uuid.parse(it)) }
 
         return foundUser?.let {
             if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {

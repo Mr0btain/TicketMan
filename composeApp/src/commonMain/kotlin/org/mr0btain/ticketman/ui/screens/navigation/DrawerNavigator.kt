@@ -36,7 +36,22 @@ fun DrawerNavigator(
                         .verticalScroll(rememberScrollState())
                 ) {
                     Spacer(Modifier.height(12.dp))
+
                     Text("Main", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
+
+                    // Admin Screen
+                    NavigationDrawerItem(
+                        label = { Text("Admin") },
+                        selected = false,
+                        onClick = {
+                            coroutineScope.launch {
+                                navHostController.navigate(Destination.ADMIN.route)
+
+                                // Close drawer
+                                drawerState.close()
+                            }
+                        }
+                    )
 
                     // Main Screen
                     NavigationDrawerItem(
@@ -53,13 +68,14 @@ fun DrawerNavigator(
                         }
                     )
 
-                    // Admin Screen
+                    // Invoice
                     NavigationDrawerItem(
-                        label = { Text("Admin") },
+                        label = { Text("Invoice") },
                         selected = false,
                         onClick = {
                             coroutineScope.launch {
-                                navHostController.navigate(Destination.ADMIN.route)
+                                // Navigate to screen
+                                navHostController.navigate(Destination.INVOICE.route)
 
                                 // Close drawer
                                 drawerState.close()

@@ -2,14 +2,12 @@ package org.mr0btain.ticketman.data.ticket
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.SubItem
-import org.mr0btain.ticketman.data.time.Time
-import org.mr0btain.ticketman.data.time.TimeSerializer
+import kotlin.time.Clock
 
 @Serializable
 data class TicketStatus(
-    val status: TicketStatusType,
-    @Serializable(TimeSerializer::class)
-    val time: Time = Time.getTime()
+    val status: TicketStatusType = TicketStatusType.IN_PROGRESS,
+    val time: Long = Clock.System.now().toEpochMilliseconds(),
 ): SubItem
 
 @Serializable

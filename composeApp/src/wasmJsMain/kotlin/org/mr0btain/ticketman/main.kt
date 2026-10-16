@@ -2,13 +2,23 @@ package org.mr0btain.ticketman
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport
+import eu.anifantakis.lib.ksafe.KSafe
+import eu.anifantakis.lib.ksafe.awaitCacheReady
 import kotlinx.browser.document
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.injection.initKoin
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
-    ComposeViewport(document.body!!) {
-        initKoin()
-        App()
+    val koin = initKoin().koin
+
+    MainScope().launch {
+        // KSafe loads from storage asynchronously on web, reads before this finishes return the default value
+        koin.get<KSafe>().awaitCacheReady()
+
+        ComposeViewport(document.body!!) {
+            App()
+        }
     }
 }

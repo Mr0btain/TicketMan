@@ -87,7 +87,7 @@ class CursorPagerState<Key, T>(
                     before?.let { key ->
                         val page = cache.get(key) ?: fetch(before, after)
 
-                        deque.addFirst(page.items)
+                        deque.add(0, page.items) //addFirst(page.items)
 
                         prevCursor = page.prevCursor
                         reachedStart = page.prevCursor == null
@@ -98,7 +98,7 @@ class CursorPagerState<Key, T>(
                     after?.let { key ->
                         val page = cache.get(key) ?: fetch(before, after)
 
-                        deque.addLast(page.items)
+                        deque.add(page.items) //addLast(page.items)
 
                         nextCursor = page.nextCursor
                         reachedEnd = page.nextCursor == null

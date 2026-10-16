@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.logging
 
 
+/*
 actual object AppLogger {
     actual fun e(tag: String, message: String, throwable: Throwable?) {
         if (throwable != null) {
@@ -22,3 +23,4 @@ actual object AppLogger {
         println("[$tag] $message")
     }
 }
+ */

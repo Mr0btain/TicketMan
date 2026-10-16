@@ -27,7 +27,6 @@ fun LoginScreen(
     viewModel: MainViewModel,
     onConfirm: (user:String, pass: String) -> Boolean,
     onDismiss: () -> Unit,
-    isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -99,7 +98,7 @@ fun LoginScreen(
                     error = false
                 )
             } else {
-                TwoFactorField(isDarkMode = isDarkMode)
+                TwoFactorField()
             }
         }
     }

@@ -5,92 +5,80 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.service.EncryptionService
+import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.database.CustomerDatabaseImpl
-import org.mr0btain.ticketman.database.UserDatabaseImpl
-import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.SyncResponse
-import java.util.UUID
+import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.logging.AppLogger
+import kotlin.uuid.Uuid
 
 // TODO: Add more comments to help understand whats going on
 
 fun Route.customerRoute(
-    database: CustomerDatabaseImpl,
-    userDatabase: UserDatabaseImpl,
-    encryptionService: EncryptionService
+    database: CustomerDatabaseImpl
 ) {
-    // Sync between client and server
-    authenticate {
-        post("/sync") {
-            call.getIdentifierFromToken()?.let { identifier ->
-                val encryptedData = call.receive<EncryptedData>()
-
-                encryptionService.decryptData(identifier, encryptedData)?.let {
-                    Json.decodeFromString<SyncRequest>(it)
-                }?.let { syncRequest ->
-                    database.all()?.let { data ->
-                        // Filter items by ones the client does not contain
-                        val responseData = data.filter { !syncRequest.clientData.contains(it.identifier) }
-
-                        // Map all the ids in the local database
-                        val dataIdentifiers = data.map { it.identifier }
-
-                        // Filter response data so we can send back a response to request those that are not in our database
-                        val requested = syncRequest.clientData.filter { !dataIdentifiers.contains(it) }
-
-                        encryptionService.encryptData(
-                            identifier = identifier,
-                            data = Json.encodeToString(SyncResponse(responseData, requested))
-                        )?.let { response ->
-                            call.respond(HttpStatusCode.OK, response)
-                        } ?: call.respond(HttpStatusCode.InternalServerError)
-                    } ?: call.respond(HttpStatusCode.NotFound)
-                }?: call.respond(HttpStatusCode.InternalServerError)
-            } ?: call.respond(HttpStatusCode.NotFound)
-        }
-    }
+    val TAG = "CustomerRoute"
+    val GET_TAG = "$TAG:Get"
+    val FETCH_TAG = "$TAG:Fetch"
+    val DELETE_TAG = "$TAG:Delete"
+    val UPDATE_TAG = "$TAG:Update"
+    val SEARCH_TAG = "$TAG:Search"
 
     // Adding new
     authenticate {
         post("/add") {
-            call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptData(
-                    identifier = identifier,
-                    data = call.receive<EncryptedData>()
-                )?.let { message ->
-                    database.add(Json.decodeFromString<Customer>(message))
+            val received = call.receive<Customer>()
 
-                    call.respond(HttpStatusCode.Accepted)
-                }?: call.respond(HttpStatusCode.InternalServerError)
-            }?: call.respond(HttpStatusCode.NotFound)
+            database.add(received)
+
+            call.respond(HttpStatusCode.Accepted)
         }
     }
 
-    // Update
     authenticate {
-        post("/update") {
-            call.getIdentifierFromToken()?.let { identifier ->
-                encryptionService.decryptData(
-                    identifier = identifier,
-                    data = call.receive<EncryptedData>()
-                )?.let { message ->
-                    database.update(Json.decodeFromString<Customer>(message))
-                    call.respond(HttpStatusCode.Accepted)
-                }?: call.respond(HttpStatusCode.InternalServerError)
-            }?: call.respond(HttpStatusCode.NotFound)
+        post("/add/images/{identifier}") {
+            // TODO()
         }
     }
 
-    // Bulk add mostly for syncing
     authenticate {
-        post("/add/all") {
-            call.handleDecryption<List<Customer>>(encryptionService)?.let { result ->
-                database.addAll(result)
-                call.respond(HttpStatusCode.Accepted)
+        post("/add/note/{identifier}") {
+            // TODO()
+        }
+    }
+
+    authenticate {
+        post("/fetch") {
+            val request = call.receive<PagedRequest>()
+
+            val result = database.getPagedItems(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(FETCH_TAG, "$request not found")
             }
+        }
+    }
+
+    authenticate {
+        post("/get") {
+            val request = call.receive<Uuid>()
+
+            val result = database.getById(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(GET_TAG, "$request not found")
+            }
+        }
+    }
+
+    authenticate {
+        post("/get/notes/{identifier}") {
+            // TODO()
         }
     }
 
@@ -101,10 +89,45 @@ fun Route.customerRoute(
 
             if (identifier == null) {
                 call.respond(HttpStatusCode.NotFound)
-                return@delete
+            } else {
+                database.remove(Uuid.parse(identifier))
+                call.respond(HttpStatusCode.Accepted)
             }
+        }
+    }
 
-            database.remove(UUID.fromString(identifier))
+    authenticate {
+        delete("/remove/note/{identifier}") {
+            // TODO()
+        }
+    }
+
+    authenticate {
+        delete("/remove/image/{identifier}") {
+            // TODO()
+        }
+    }
+
+    authenticate {
+        post("/search") {
+            val request = call.receive<String>()
+
+            val result = database.search(request)
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(SEARCH_TAG, "$request not found")
+            }
+        }
+    }
+
+    // Update
+    authenticate {
+        post("/update") {
+            val received = call.receive<Customer>()
+            database.update(received)
             call.respond(HttpStatusCode.Accepted)
         }
     }

@@ -15,7 +15,7 @@ import androidx.compose.runtime.snapshotFlow
  * @param lazyListState The LazyListState
  */
 @Composable
-fun <Value>handleOffsetPager(
+fun <Value>offsetPagerHandler(
     offsetPager: OffsetPager<Value>?,
     lazyListState: LazyListState
 ) {

@@ -1,79 +1,43 @@
 package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
+import io.ktor.util.reflect.typeInfo
+import io.ktor.client.request.get
+import io.ktor.client.request.setBody
+import io.ktor.client.request.url
+import io.ktor.http.ContentType
+import io.ktor.http.contentType
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainItem
+import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.encryption.EncryptedData
 import org.mr0btain.ticketman.error.onSuccess
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.SyncResponse
-import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
-@OptIn(ExperimentalUuidApi::class)
 class TicketRemoteRepositoryImpl(
-    private val client: HttpClient,
-    private val encryptionHandler: ClientEncryptionHandler
-) : RemoteRepository(
+    client: HttpClient
+) : RemoteRepository<Ticket>(
     tag = "TicketRemoteRepositoryImpl",
     client = client,
-    encryptionHandler = encryptionHandler
+    route = "api/data/ticket",
+    itemType = typeInfo<Ticket>(),
+    listType = typeInfo<List<Ticket>>()
 ) {
-    override var serverUrl = ""
+    private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
+    private val SET_CUSTOMER_TAG = "$tag:SetCustomer"
+    private val GET_USER_TAG = "$tag:GetUser"
+    private val SET_USER_TAG = "$tag:SetUser"
 
-    override fun changeUrl(url: String) {
-        serverUrl = "$url/api/data/ticket"
-    }
+    suspend fun getCustomer(identifier: Uuid): EntityReference? =
+        getEntity(GET_CUSTOMER_TAG, "$serverUrl/get/customer/$identifier")
 
-    override suspend fun sync(data: List<MainItem>): List<Ticket> {
-        if (serverUrl.isNotBlank()) {
-            val identifiers = data.map { it.identifier }
+    suspend fun setCustomer(identifier: Uuid, customerId: Uuid) =
+        setEntity(SET_CUSTOMER_TAG, customerId, "$serverUrl/set/customer/$identifier")
 
-            if (identifiers.isNotEmpty()) {
-                networkErrorTryCatch(SYNC_TAG) {
-                    client.post {
-                        url("$serverUrl/sync")
-                        contentType(ContentType.Application.Json)
-                        setBody(
-                            encryptionHandler.encryptData(
-                                Json.encodeToString(SyncRequest(identifiers))
-                            )
-                        )
-                    }
-                }?.let { response -> handleHttpResponse<EncryptedData>(SYNC_TAG, response) }
-                    ?.onSuccess { encryptedMessage ->
-                        encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                            val syncResponse = Json.decodeFromString<SyncResponse>(decrypted)
-                            val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
+    suspend fun getUser(identifier: Uuid): EntityReference? =
+        getEntity(GET_USER_TAG, "$serverUrl/get/user/$identifier")
 
-                            if (requested.isNotEmpty()) batchSend(requested)
-
-                            return syncResponse.data.filterIsInstance<Ticket>()
-                        }
-                    }
-            } else return getAll()
-        }
-
-        return listOf()
-    }
-
-    override suspend fun getAll(): List<Ticket> {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(GET_ALL_TAG) {
-                client.get("${serverUrl}/all")
-            }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
-                ?.onSuccess { encryptedMessage ->
-                    encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<Ticket>>(decrypted)
-                    }
-                }
-        }
-
-        return emptyList()
-    }
+    suspend fun setUser(identifier: Uuid, userId: Uuid) =
+        setEntity(SET_USER_TAG, userId, "$serverUrl/set/user/$identifier")
 }

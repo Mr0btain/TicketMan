@@ -9,24 +9,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.inventory.InventoryData
+import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
-import org.mr0btain.ticketman.ui.composables.search.SearchBar
 import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
-import java.util.*
+import kotlin.uuid.Uuid
 
 // TODO: Setup setting reorder on stock hitting a certain amount. Like a popup on login or when it happens?
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventoryPanel(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     inventoryList: List<Inventory>,
-    selectedInventory: InventoryData?,
-    onSelectedInventoryChange: (UUID) -> Unit,
+    selectedInventory: InventorySeed,
+    onSelectedInventoryChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
@@ -61,8 +57,7 @@ fun InventoryPanel(
             ) {
                 // List of all the inventory items
                 InventoryListPane(
-                    isDarkMode = isDarkMode,
-                    selected = selectedInventory?.inventory?.identifier,
+                    selected = selectedInventory.inventory.identifier,
                     inventoryList = inventoryList,
                     onClick = {
                         // Set is update from click
@@ -76,7 +71,6 @@ fun InventoryPanel(
                 )
 
                 InventoryInfoPane(
-                    isDarkMode = isDarkMode,
                     inventoryData = selectedInventory,
                     onEditClick = { onEditInventory() }
                 )

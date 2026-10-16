@@ -21,17 +21,17 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.composables.*
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import java.util.*
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import kotlin.uuid.Uuid
 
 // TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
 
 @Composable
 fun TicketListPane(
-    isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     ticketList: List<Ticket>,
-    selectedId: UUID?,
-    onClick: (UUID) -> Unit,
+    selectedTicket: Uuid,
+    onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
@@ -41,13 +41,10 @@ fun TicketListPane(
     val noteColumnWidth = 320.dp
     val statusColumnWidth = 120.dp
 
-    Surface(
+    CustomSurface(
         modifier = modifier
             .wrapContentSize()
-            .padding(8.dp),
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = 4.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+            .padding(8.dp)
     ) {
         Column(
             modifier = Modifier
@@ -105,18 +102,17 @@ fun TicketListPane(
                     key = { _, ticket -> ticket.identifier }
                 ) { index, ticket ->
                     TicketTableItem(
-                        color = if (!isDarkMode) {
+                        color = if (!CustomMaterialColors.darkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
                         },
-                        selected = selectedId == ticket.identifier,
+                        selected = selectedTicket == ticket.identifier,
                         ticket = ticket,
                         numberWidth = numberColumnWidth,
                         priorityWidth = priorityColumnWidth,
                         noteWidth = noteColumnWidth,
                         statusWidth = statusColumnWidth,
-                        isDarkMode = isDarkMode,
                         onClick = { onClick(ticket.identifier) }
                     )
                 }
@@ -159,7 +155,6 @@ private fun TicketTableItem(
     priorityWidth: Dp,
     noteWidth: Dp,
     statusWidth: Dp,
-    isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
     Surface(
@@ -202,7 +197,6 @@ private fun TicketTableItem(
 
                 TablePriorityItem(
                     priority = ticket.priority,
-                    darkMode = isDarkMode,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }
@@ -227,7 +221,6 @@ private fun TicketTableItem(
             ) {
                 TableStatusItem(
                     status = ticket.status,
-                    isDarkMode = isDarkMode,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }

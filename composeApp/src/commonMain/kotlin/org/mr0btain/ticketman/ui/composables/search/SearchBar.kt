@@ -12,7 +12,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import org.mr0btain.ticketman.data.search.SearchResult
-import java.util.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * SearchBox for searching customers. Will return an id or a name and a true if they want to add new if it doesn't exist
@@ -25,46 +25,50 @@ import java.util.*
 @Composable
 fun SearchBar(
     modifier: Modifier = Modifier,
-    label: String,
-    onClick: (UUID) -> Unit,
-    onQuery: suspend (String) -> List<SearchResult>
+    label: String = "",
+    initialText: String = "",
+    onClick: (SearchResult) -> Unit,
+    onQuery: suspend (String) -> List<SearchResult>,
+    enabled: Boolean = true
 ) {
-    var query by remember { mutableStateOf("") }
+    var query by remember { mutableStateOf(initialText) }
     var suggestions by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
     var expanded by remember { mutableStateOf(false) }
     var isLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        snapshotFlow { query }
-            .debounce(400)
-            .filter { it.isNotBlank() }
-            .distinctUntilChanged()
-            .flatMapLatest { text ->
-                flow {
-                    isLoading = true
+        if (query.isNotEmpty()) {
+            snapshotFlow { query }
+                .debounce(400.milliseconds)
+                .filter { it.isNotBlank() }
+                .distinctUntilChanged()
+                .flatMapLatest { text ->
+                    flow {
+                        isLoading = true
 
-                    val results = onQuery(text)
+                        val results = onQuery(text)
 
-                    emit(results)
+                        emit(results)
+                    }
                 }
-            }
-            .collect { results ->
-                suggestions = results
+                .collect { results ->
+                    suggestions = results
 
-                expanded = results.isNotEmpty()
+                    expanded = results.isNotEmpty()
 
-                isLoading = false
-            }
+                    isLoading = false
+                }
+        }
     }
 
     ExposedDropdownMenuBox(
         expanded = expanded,
-        onExpandedChange = { expanded = !expanded },
+        onExpandedChange = { if (enabled) expanded = !expanded },
         modifier = modifier.sizeIn(maxWidth = 400.dp)
     ) {
         OutlinedTextField(
             value = query,
-            onValueChange = { query = it },
+            onValueChange = { if (enabled) query = it },
             label = { Text(label) },
             trailingIcon = {
                 if (isLoading)
@@ -75,7 +79,7 @@ fun SearchBar(
             colors = OutlinedTextFieldDefaults.colors(),
             singleLine = true,
             modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryEditable, true)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, true)
                 .fillMaxWidth()
         )
 
@@ -96,7 +100,7 @@ fun SearchBar(
                     },
                     onClick = {
                         query = ranked.text
-                        onClick(ranked.identifier)
+                        onClick(ranked)
                         expanded = false
                     }
                 )

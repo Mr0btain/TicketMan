@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.data.invoice
 
+/*
 import com.lowagie.text.Cell
 import com.lowagie.text.Document
 import com.lowagie.text.Font
@@ -94,7 +95,7 @@ actual fun makeTicketInvoicePdf(
         addCell(Cell(Phrase("", columnItemsFont)))
         addCell(Cell(Phrase("", columnItemsFont)))
         addCell(Cell(Phrase("", columnItemsFont)))
-        addCell(Cell(Phrase("$ ${formatIntToMoney(total)}", columnItemsFont)))
+        addCell(Cell(Phrase("$ $total", columnItemsFont)))
     }
 
     // Open the document and start adding content
@@ -155,3 +156,4 @@ actual fun makeTicketInvoicePdf(
     // Close file writer
     pdfWriter.close()
 }
+ */

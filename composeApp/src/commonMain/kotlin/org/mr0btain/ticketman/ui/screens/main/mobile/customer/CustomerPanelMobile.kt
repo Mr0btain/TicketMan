@@ -8,7 +8,6 @@ import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.shared.PersonName
 
 @Composable
 fun CustomerPanelMobile(
@@ -17,7 +16,7 @@ fun CustomerPanelMobile(
     selectedCustomerId: String,
     customerList: List<Customer>,
     ticketList: List<Ticket>,
-    onAddCustomer: (PersonName) -> Unit,
+    onAddCustomer: (String) -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (String) -> Unit,
     onDeleteCustomer: (String) -> Unit,

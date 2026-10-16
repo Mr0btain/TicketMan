@@ -28,8 +28,7 @@ import ticketman.composeapp.generated.resources.shield
 @Composable
 fun TwoFactorField(
     modifier: Modifier = Modifier,
-    state: TextFieldState = rememberTextFieldState(),
-    isDarkMode: Boolean
+    state: TextFieldState = rememberTextFieldState()
 ) {
     Column(modifier) {
         Column(

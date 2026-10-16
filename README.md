@@ -12,24 +12,31 @@ keep it secure.
 - [ ] Serverless/Client Side is server implementation
 - [x] Local Database
 - [ ] Image Storage
+- Image Storage somewhat defined
 
 ### Desktop
 
 - [x] Customer UI
 - [x] Ticket UI
 - [x] Inventory UI
+- [ ] Admin UI
+- [ ] Kiosk UI
 
 ### Android
 
 - [ ] Customer UI
 - [ ] Ticket UI
 - [ ] Inventory UI
+- [ ] Admin UI
+- [ ] Kiosk UI
 
 ### IOS
 
 - [ ] Customer UI
 - [ ] Ticket UI
 - [ ] Inventory UI
+- [ ] Admin UI
+- [ ] Kiosk UI
 
 ### Server
 

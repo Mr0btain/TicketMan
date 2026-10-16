@@ -18,18 +18,19 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import java.util.*
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import kotlin.uuid.Uuid
 
 @Composable
 fun InventoryListPane(
-    isDarkMode: Boolean,
     modifier: Modifier = Modifier,
     inventoryList: List<Inventory>,
-    selected: UUID?,
-    onClick: (UUID) -> Unit,
+    selected: Uuid?,
+    onClick: (Uuid) -> Unit,
     state: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope
 ) {
@@ -40,13 +41,10 @@ fun InventoryListPane(
     val priceColumnWidth = 60.dp
     val costColumnWidth = 60.dp
 
-    Surface(
+    CustomSurface(
         modifier = modifier
             .wrapContentSize()
-            .padding(8.dp),
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = 4.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+            .padding(8.dp)
     ) {
         // ------------------------------------------ Header -----------------------------------------------------
         Column(
@@ -112,7 +110,7 @@ fun InventoryListPane(
                     key = { _, inventory -> inventory.identifier }
                 ) { index, inventory ->
                     InventoryTableItem(
-                        color = if (!isDarkMode) {
+                        color = if (!CustomMaterialColors.darkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
@@ -124,7 +122,6 @@ fun InventoryListPane(
                         descriptionColumnWidth = descriptionColumnWidth,
                         costColumnWidth = costColumnWidth,
                         priceColumnWidth = priceColumnWidth,
-                        isDarkMode = isDarkMode,
                         onClick = { onClick(inventory.identifier) }
                     )
                 }
@@ -168,7 +165,6 @@ private fun InventoryTableItem(
     descriptionColumnWidth: Dp,
     priceColumnWidth: Dp,
     costColumnWidth: Dp,
-    isDarkMode: Boolean,
     onClick: () -> Unit
 ) {
     Surface(

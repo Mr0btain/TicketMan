@@ -1,5 +1,3 @@
-import org.gradle.kotlin.dsl.implementation
-import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
@@ -12,7 +10,6 @@ plugins {
 
 kotlin {
     androidTarget {
-        @OptIn(ExperimentalKotlinGradlePluginApi::class)
         compilerOptions {
             jvmTarget.set(JvmTarget.JVM_11)
         }
@@ -23,9 +20,6 @@ kotlin {
     //iosSimulatorArm64()
     
     jvm()
-
-    /*
-
 
     @OptIn(ExperimentalWasmDsl::class)
     wasmJs {
@@ -43,32 +37,32 @@ kotlin {
             }
         }
     }
-     */
-    
+
     sourceSets {
         commonMain.dependencies {
             // put your Multiplatform dependencies here
+            implementation(libs.kotlin.coroutines)
 
             // Serialization
             implementation(libs.kotlinx.serialization.json)
-
-            // Exposed
-            implementation(libs.exposed.core)
-            implementation(libs.exposed.jdbc)
-            implementation(libs.exposed.dao)
-            implementation(libs.exposed.json)
-
-            // Exposed dbs
-            implementation(libs.h2)
-            implementation(libs.postgresql)
 
             // FileOps
             //implementation(libs.bundles.fileOps)
             implementation(libs.kotlinx.io)
         }
 
+        androidMain.dependencies {
+        }
+
+
+        jvmMain.dependencies {
+        }
+
         commonTest.dependencies {
             implementation(libs.kotlin.test)
+        }
+
+        wasmJsMain.dependencies {
         }
     }
 }

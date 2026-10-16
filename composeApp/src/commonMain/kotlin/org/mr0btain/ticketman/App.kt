@@ -23,91 +23,135 @@ import org.mr0btain.ticketman.ui.screens.navigation.SideAppNav
 import org.mr0btain.ticketman.ui.theme.AppTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
+import ticketman.composeapp.generated.resources.file_text
 import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
 import ticketman.composeapp.generated.resources.user
 
 // TODO: Work on UI for mobile size screens
+
 // TODO: Make option to import database data from file?
 
 // TODO: Administration screen
+// TODO: Kiosk/POS Screen
 // TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
+// TODO: All main data classes have the ability to have images of their own. We should set that up
 
-// TODO: Make dedicated screens for adding tickets and such and just have nav handle it
-// TODO: Should also add dedicated screens for working on tickets or changing them.
+// TODO: Add a way to load database data after view model init.
+
+// TODO: Make a better way to refresh data in pager when item is deleted.
+
+// TODO: Finish User database stuff.
+// TODO: Fix search bars in dialogs for ticket and others if needed. Currently search bars grab
+// the focus upon opening dialog.
+
+// TODO: When we hit confirm on a dialog make sure we check and dont hit database ?? dont remem what this is for
+
+// TODO: Update name in dialogs and such to handle middle names
+
+// TODO: Make editing dialogs so that we have a viewing dialog and an edit dialog with an option to switch between the two
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
 fun App() {
-    KoinContext {
-        // View Model
-        val mainViewModel = koinViewModel<MainViewModel>()
+    // View Model
+    val mainViewModel = koinViewModel<MainViewModel>()
 
-        // For snack bar messages
-        val snackBarHostState = mainViewModel.snackBarHost
+    // For snack bar messages
+    val snackBarHostState = mainViewModel.snackBarHost
 
-        // Navigation
-        val navigator = rememberNavController()
+    // Navigation
+    val navigator = rememberNavController()
 
-        // Main scope to use with coroutines
-        val mainScope = rememberCoroutineScope()
+    // Main scope to use with coroutines
+    val mainScope = rememberCoroutineScope()
 
-        // Generate some mock data and add it to the database
-        //mainViewModel.fillDatabaseWithTestData()
+    // Generate some mock data and add it to the database
+    //mainViewModel.fillDatabaseWithTestData()
 
-        // Current employee info
-        //val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
+    // Current employee info
+    //val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
 
-        // Should we show login popup or not
-        val shouldShowLogin = mainViewModel.showLogin.collectAsState()
+    // Should we show login popup or not
+    val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
-        val initialDestination = Destination.MAIN
+    val initialDestination = Destination.ADMIN
 
-        val navDestination = listOf(
-            NavigationItem(
-                title = "Admin",
-                icon = painterResource(Res.drawable.archive),
-                destination = Destination.ADMIN
-            ),
-            NavigationItem(
-                title = "Dashboard",
-                icon = painterResource(Res.drawable.monitor),
-                destination = Destination.DASHBOARD
-            ),
-            NavigationItem(
-                title = "Login",
-                icon = painterResource(Res.drawable.user),
-                destination = Destination.LOGIN
-            ),
-            NavigationItem(
-                title = "Main",
-                icon = painterResource(Res.drawable.home),
-                destination = Destination.MAIN
-            ),
-            NavigationItem(
-                title = "Settings",
-                icon = painterResource(Res.drawable.settings),
-                destination = Destination.SETTINGS
-            )
+    val navDestination = listOf(
+        NavigationItem(
+            title = "Admin",
+            icon = painterResource(Res.drawable.archive),
+            destination = Destination.ADMIN
+        ),
+        NavigationItem(
+            title = "Dashboard",
+            icon = painterResource(Res.drawable.monitor),
+            destination = Destination.DASHBOARD
+        ),
+        NavigationItem(
+            title = "Invoice",
+            icon = painterResource(Res.drawable.file_text),
+            destination = Destination.INVOICE
+        ),
+        NavigationItem(
+            title = "Login",
+            icon = painterResource(Res.drawable.user),
+            destination = Destination.LOGIN
+        ),
+        NavigationItem(
+            title = "Main",
+            icon = painterResource(Res.drawable.home),
+            destination = Destination.MAIN
+        ),
+        NavigationItem(
+            title = "Settings",
+            icon = painterResource(Res.drawable.settings),
+            destination = Destination.SETTINGS
         )
+    )
 
-        AppTheme(
-            darkTheme = mainViewModel.darkMode.collectAsState(false).value
-        ) {
-            println("Platform: ${getPlatform().name}")
+    AppTheme(
+        darkTheme = mainViewModel.darkMode.collectAsState(false).value
+    ) {
+        println("Platform: ${getPlatform().name}")
 
-            if (shouldShowLogin.value) {
-                LoginPopup(
-                    modifier = Modifier.padding(24.dp),
-                    viewModel = mainViewModel,
-                    onDismiss = { mainViewModel.changeShowLogin(!shouldShowLogin.value) },
-                    coroutineScope = mainScope
-                )
-            }
+        if (shouldShowLogin.value) {
+            LoginPopup(
+                modifier = Modifier.padding(24.dp),
+                viewModel = mainViewModel,
+                onDismiss = { mainViewModel.changeShowLogin(!shouldShowLogin.value) },
+                coroutineScope = mainScope
+            )
+        }
 
-            // Check if were on desktop, if so we can avoid using window size class entirely.
-            if (getPlatform().name.contains("Java")) {
+        // Check if were on desktop, if so we can avoid using window size class entirely.
+        if (getPlatform().name.contains("Java")) {
+            SideAppNav(
+                navHostController = navigator,
+                content = { paddingValues ->
+                    NavigationHost(
+                        modifier = Modifier.padding(paddingValues),
+                        navHostController = navigator,
+                        coroutineScope = mainScope,
+                        mainViewModel = mainViewModel,
+                        snackBarState = snackBarHostState,
+                        initialDestination = initialDestination
+                    )
+                },
+                topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
+                coroutineScope = mainScope,
+                destinations = navDestination,
+                initialDestination = initialDestination
+            )
+        } else {
+            // Calculating screen size if were on mobile. This should only update when the screen is rotated.
+            val windowSizeClass = calculateWindowSizeClass()
+
+            // Change our view dependent on screen size. Mostly to differentiate from tablet or phone screen
+            if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
+                // TODO: Test on actual tablet
+                // Tablet screen just use desktop sidebar
                 SideAppNav(
                     navHostController = navigator,
                     content = { paddingValues ->
@@ -126,48 +170,26 @@ fun App() {
                     initialDestination = initialDestination
                 )
             } else {
-                // Calculating screen size if were on mobile. This should only update when the screen is rotated.
-                val windowSizeClass = calculateWindowSizeClass()
-
-                // Change our view dependent on screen size. Mostly to differentiate from tablet or phone screen
-                if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
-                    // TODO: Test on actual tablet
-                    // Tablet screen just use desktop sidebar
-                    SideAppNav(
-                        navHostController = navigator,
-                        content = { paddingValues ->
-                            NavigationHost(
-                                modifier = Modifier.padding(paddingValues),
-                                navHostController = navigator,
-                                coroutineScope = mainScope,
-                                mainViewModel = mainViewModel,
-                                snackBarState = snackBarHostState,
-                                initialDestination = initialDestination
-                            )
-                        },
-                        topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
-                        coroutineScope = mainScope,
-                        destinations = navDestination,
-                        initialDestination = initialDestination
-                    )
-                } else {
-                    // Phone screen
-                    BottomNavigationDrawer(
-                        navController = navigator,
-                        coroutineScope = mainScope,
-                        destinations = navDestination,
-                        content = { paddingValues ->
-                            NavigationHost(
-                                modifier = Modifier.padding(paddingValues),
-                                coroutineScope = mainScope,
-                                navHostController = navigator,
-                                mainViewModel = mainViewModel,
-                                snackBarState = snackBarHostState
-                            )
-                        }
-                    )
-                }
+                // Phone screen
+                BottomNavigationDrawer(
+                    navController = navigator,
+                    coroutineScope = mainScope,
+                    destinations = navDestination,
+                    content = { paddingValues ->
+                        NavigationHost(
+                            modifier = Modifier.padding(paddingValues),
+                            coroutineScope = mainScope,
+                            navHostController = navigator,
+                            mainViewModel = mainViewModel,
+                            snackBarState = snackBarHostState
+                        )
+                    }
+                )
             }
         }
     }
 }
+
+// **
+// To remove an item using viewmodel.remove you have to give it an identifier, and it must match selected/seed item.
+// You cannot remove and item unless it is also selected.

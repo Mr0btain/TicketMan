@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.network
 import io.ktor.client.call.*
 import io.ktor.client.statement.*
 import io.ktor.util.network.*
+import io.ktor.util.reflect.*
 import kotlinx.serialization.SerializationException
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.logging.SimpleResult
@@ -36,11 +37,24 @@ inline fun <T> networkErrorTryCatch(tag: String, block: () -> T): T? {
 /**
  * Handles the http response form server logging the result whether it be a fail or success
  */
-suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): Result<T, NetworkError> {
+suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpResponse): Result<T, NetworkError> =
+    handleHttpResponse(tag, response, typeInfo<T>())
+
+/**
+ * Same as above but with the body type supplied explicitly. Needed from generic classes where T is erased,
+ * since kotlinx serialization can't find a serializer for an erased type.
+ */
+suspend fun <T> handleHttpResponse(tag: String, response: HttpResponse, bodyType: TypeInfo): Result<T, NetworkError> {
     return when (response.status.value) {
         in 200..299 -> {
-            AppLogger.m(tag, SimpleResult.SUCCESS)
-            Result.Success(response.body<T>())
+            try {
+                val result = Result.Success(response.body<T>(bodyType))
+                AppLogger.m(tag, SimpleResult.SUCCESS)
+                result
+            } catch (ex: Exception) {
+                AppLogger.i(tag, ex.toString())
+                Result.Error(NetworkError.UNKNOWN)
+            }
         }
 
         401 -> {
@@ -75,7 +89,7 @@ suspend inline fun <reified T> handleHttpResponse(tag: String, response: HttpRes
     }
 }
 
-fun handleHttpResponse(tag: String, response: HttpResponse) {
+fun handlePlainHttpResponse(tag: String, response: HttpResponse) {
     when (response.status.value) {
         in 200..299 -> AppLogger.m(tag, SimpleResult.SUCCESS)
         401 -> AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)

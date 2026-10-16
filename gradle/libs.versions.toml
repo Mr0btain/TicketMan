@@ -1,37 +1,37 @@
 [versions]
-agp = "8.10.1"
-android-compileSdk = "35"
-android-minSdk = "30"
-android-targetSdk = "35"
-androidx-activity = "1.10.1"
-androidx-appcompat = "1.7.1"
-androidx-constraintlayout = "2.2.1"
-androidx-core = "1.16.0"
-androidx-espresso = "3.6.1"
-androidx-lifecycle = "2.9.0"
-androidx-testExt = "1.2.1"
-composeHotReload = "1.0.0-alpha10"
-composeMultiplatform = "1.8.1"
-compose-navigation = "2.7.0-alpha07"
-h2 = "2.2.224"
+agp = "9.1.1"
+android-compileSdk = "36"
+android-minSdk = "24"
+android-targetSdk = "36"
+androidx-activity = "1.13.0"
+androidx-appcompat = "1.8.0"
+androidx-constraintlayout = "2.2.2"
+androidx-core = "1.19.1"
+androidx-espresso = "3.7.0"
+androidx-lifecycle = "2.11.0"
+androidx-testExt = "1.3.0"
+composeMultiplatform = "1.12.1"
 junit = "4.13.2"
-kotlin = "2.1.21"
-kotlinx-coroutines = "1.10.2"
-logback-version = "1.4.14"
-postgres-version = "42.7.7"
-ktor = "3.2.0"
-logback = "1.5.18"
-koin = "4.0.4"
+kotlin = "2.4.20"
+kotlinx-coroutines = "1.11.0"
+ktor = "3.6.0"
+logback = "1.6.5"
+koin = "4.2.2"
+compose-navigation = "2.9.2"
+h2 = "2.5.252"
+#postgres-version = "42.7.13"
 material3WindowSizeClassMultiplatform = "0.5.0"
-filekit = "0.10.0-beta04"
-kotlinxSerializationJson = "1.8.1"
-exposed = "1.0.0-beta-2"
-sqlitejdbc = "3.44.1.0"
+filekit = "0.16.0"
+kotlinxSerializationJson = "1.11.0"
+exposed = "1.5.0"
+#sqlitejdbc = "3.53.4.0"
 openpdf = "2.0.5"
-kotlinx-io = "0.8.0"
-
+kotlinx-io = "0.9.1"
+ksafe = "3.3.0"
 
 [libraries]
+kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
 junit = { module = "junit:junit", version.ref = "junit" }
@@ -95,8 +95,8 @@ exposed-crypt = { module = "org.jetbrains.exposed:exposed-crypt", version.ref = 
 
 # Databases
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
-sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlitejdbc" }
-postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres-version" }
+#sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlitejdbc" }
+#postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres-version" }
 
 # Pdf
 openpdf = { module = "io.github.librepdf:openpdf", version.ref = "openpdf" }
@@ -104,10 +104,14 @@ openpdf = { module = "io.github.librepdf:openpdf", version.ref = "openpdf" }
 # File Stuff
 kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 
+# Encrypted key-value storage
+ksafe = { module = "eu.anifantakis:ksafe", version.ref = "ksafe" }
+
 [plugins]
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
 androidLibrary = { id = "com.android.library", version.ref = "agp" }
-composeHotReload = { id = "org.jetbrains.compose.hot-reload", version.ref = "composeHotReload" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
@@ -119,7 +123,8 @@ serialize = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "k
 fileKit = [
     "filekit-core",
     "filekit-dialogs",
-    "filekit-dialogs-compose"
+    "filekit-dialogs-compose",
+    "filekit-coil"
 ]
 ktorServer = [
     "logback",
@@ -149,6 +154,7 @@ exposed = [
     "exposed-jdbc",
     "exposed-dao",
     "exposed-json",
-    "exposed-crypt"
+    "exposed-crypt",
+    "h2"
 ]
 koin = ["koin-core", "koin-compose", "koin-composeVM"]

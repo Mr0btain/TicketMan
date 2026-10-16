@@ -1,10 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,16 +10,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.components.data.customer.CustomerData
-import org.mr0btain.ticketman.components.data.note.NoteData
+import org.mr0btain.ticketman.components.data.customer.CustomerSeed
+import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.data.customer.Address
-import org.mr0btain.ticketman.data.customer.ContactInfo
-import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.shared.PersonName
+import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
+import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.note.NoteBlock
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
@@ -33,38 +26,21 @@ import org.mr0btain.ticketman.ui.composables.shared.ChipTicketList
 import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
-import java.util.*
+import kotlin.uuid.Uuid
 
 // TODO: Add ability to assign already existing tickets to customer.
-// TODO: Add ability to edit note
 @Composable
 fun CustomerDialog(
     modifier: Modifier = Modifier,
-    seedData: CustomerData?,
+    seed: CustomerSeed,
     isVisible: Boolean,
     onDismiss: () -> Unit,
-    onContinue: (CustomerData) -> Unit,
-    onImageClick: (UUID) -> Unit,
-    isDarkMode: Boolean,
-    scope: CoroutineScope = rememberCoroutineScope()
+    onContinue: () -> Unit,
+    onImageClick: (Uuid) -> Unit
 ) {
-    if (isVisible && seedData != null) {
-        // Name
-        var firstName by remember(seedData) { mutableStateOf(seedData.customer.name.firstName) }
-        var lastName by remember(seedData) { mutableStateOf(seedData.customer.name.lastName) }
+    val TAG = "CustomerDialog"
 
-        // Address
-        var street by remember(seedData) { mutableStateOf(seedData.customer.address.street) }
-        var city by remember(seedData) { mutableStateOf(seedData.customer.address.city) }
-        var state by remember(seedData) { mutableStateOf(seedData.customer.address.state) }
-        var zip by remember(seedData) { mutableStateOf(seedData.customer.address.zip) }
-
-        // Mutable lists
-        val email = remember(seedData) { seedData.customer.contactInfo.email.toMutableStateList() }
-        val phone = remember(seedData) { seedData.customer.contactInfo.phone.toMutableStateList() }
-        val notes =  remember(seedData) { seedData.notes.toMutableStateList() }
-        val tickets = remember(seedData) { seedData.tickets.toMutableStateList() }
-
+    if (isVisible) {
         // For deleting item dialog
         var showConfirmDeleteScreen by remember { mutableStateOf(false) }
 
@@ -72,7 +48,7 @@ fun CustomerDialog(
         var dataType by remember { mutableStateOf(DataType.NONE) }
 
         // Might be a better way of doing this, for now just send it like this
-        var itemToDelete by remember { mutableStateOf<Any?>(null) }
+        var itemToDelete by remember { mutableStateOf("") }
 
         // For adding a basic sub item
         var itemToAdd by remember { mutableStateOf(DataType.NONE) }
@@ -80,12 +56,16 @@ fun CustomerDialog(
 
         // For adding note dialog
         var showNoteDialog by remember { mutableStateOf(false) }
-        var noteSeedData by remember { mutableStateOf<NoteData?>(null) }
+        val noteSeed = remember { NoteSeed() }
+
+        var firstName by remember { mutableStateOf(seed.firstName) }
+        var lastName by remember { mutableStateOf(seed.lastName) }
 
         // Add Note dialog
         EditNoteDialog(
-            seedData = noteSeedData,
-            onConfirm = { result ->
+            seed = noteSeed,
+            onConfirm = {
+                /*
                 scope.launch {
                     val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
 
@@ -99,10 +79,10 @@ fun CustomerDialog(
 
                     showNoteDialog = false
                 }
+                 */
             },
             isVisible = showNoteDialog,
             onDismissRequest = {
-                noteSeedData = null
                 showNoteDialog = false
             }
         )
@@ -110,7 +90,6 @@ fun CustomerDialog(
         // Add basic item dialog
         // TODO: Redo this
         AddBasicSubItemDialog(
-            isDarkMode = isDarkMode,
             subItemType = itemToAdd,
             isVisible = showAddBasicSubItemDialog,
             onConfirm = { item ->
@@ -118,11 +97,11 @@ fun CustomerDialog(
                     when (itemToAdd) {
                         DataType.EMAIL -> {
                             // Add item to list
-                            email.add(item)
+                            seed.changeEmail(item)
                         }
                         DataType.PHONE -> {
                             // Add item to list
-                            phone.add(item)
+                            seed.changePhone(item)
                         }
                         else -> {}
                     }
@@ -139,35 +118,21 @@ fun CustomerDialog(
             dataType = dataType,
             isVisible = showConfirmDeleteScreen && dataType != DataType.NONE,
             onConfirm = {
-                when (dataType) {
-                    DataType.TICKET -> {
-                        (itemToDelete as? UUID)?.let { identifier ->
-                            tickets.removeIf { it.ticket.identifier == identifier }
-                        }
+                try {
+                    when (dataType) {
+                        DataType.TICKET -> seed.deleteTicket(Uuid.parse(itemToDelete))
+                        DataType.EMAIL -> seed.changeEmail("")
+                        DataType.PHONE -> seed.changePhone("")
+                        DataType.NOTE -> seed.deleteNote(Uuid.parse(itemToDelete))
+                        else -> {} // Do Nothing
                     }
-
-                    DataType.EMAIL -> {
-                        (itemToDelete as? String)?.let { item ->
-                            email.removeIf { it == item }
-                        }
-                    }
-
-                    DataType.PHONE -> {
-                        (itemToDelete as? String)?.let { item ->
-                            phone.removeIf { it == item }
-                        }
-                    }
-
-                    DataType.NOTE -> {
-                        (itemToDelete as? UUID)?.let { identifier ->
-                            notes.removeIf { it.note.identifier == identifier }
-                        }
-                    }
-
-                    else -> {}
+                } catch (ex: Exception) {
+                    AppLogger.i(TAG, "Error removing item! : $itemToDelete")
+                    ex.printStackTrace()
                 }
 
                 dataType = DataType.NONE
+                itemToDelete = ""
                 showConfirmDeleteScreen = false
             },
             onCancel = {
@@ -179,13 +144,10 @@ fun CustomerDialog(
         Dialog(
             onDismissRequest = { onDismiss() }
         ) {
-            Surface(
+            CustomSurface(
                 modifier = modifier
                     .height(600.dp)
-                    .width(600.dp),
-                shape = RoundedCornerShape(10.dp),
-                shadowElevation = 4.dp,
-                color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+                    .width(600.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(32.dp)
@@ -197,9 +159,9 @@ fun CustomerDialog(
                     ) {
                         Text(
                             modifier = Modifier.padding(4.dp),
-                            text = if (seedData.customer.name.toString().isEmpty()) {
+                            text = if (seed.name.isEmpty()) {
                                 "Add Customer"
-                            } else "Edit Customer: ${seedData.customer.name.toString()}",
+                            } else "Edit Customer: ${seed.name}",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 26.sp,
                             maxLines = 1
@@ -230,10 +192,10 @@ fun CustomerDialog(
                             DialogTextRow(
                                 modifier = Modifier,
                                 firstLabel = "First",
-                                firstValue = firstName,
+                                firstValue = seed.firstName,
                                 onFirstValueChange = { firstName = it },
                                 secondLabel = "Last",
-                                secondValue = lastName,
+                                secondValue = seed.lastName,
                                 onSecondValueChange = { lastName = it }
                             )
 
@@ -255,21 +217,21 @@ fun CustomerDialog(
                                 DialogTextRow(
                                     modifier = Modifier,
                                     firstLabel = "Street",
-                                    firstValue = street,
-                                    onFirstValueChange = { street = it },
+                                    firstValue = seed.street,
+                                    onFirstValueChange = { seed.changeStreet(it) },
                                     secondLabel = "City",
-                                    secondValue = city,
-                                    onSecondValueChange = { city = it }
+                                    secondValue = seed.city,
+                                    onSecondValueChange = { seed.changeCity(it) }
                                 )
 
                                 DialogTextRow(
                                     modifier = Modifier,
                                     firstLabel = "State",
-                                    firstValue = state,
-                                    onFirstValueChange = { state = it },
+                                    firstValue = seed.state,
+                                    onFirstValueChange = { seed.changeState(it) },
                                     secondLabel = "Zip",
-                                    secondValue = zip,
-                                    onSecondValueChange = { zip = it }
+                                    secondValue = seed.zip,
+                                    onSecondValueChange = { seed.changeZip(it) }
                                 )
                             }
 
@@ -292,8 +254,10 @@ fun CustomerDialog(
                             // Email list
                             ChipList(
                                 modifier = Modifier,
-                                items = email,
-                                onEditClick = {},
+                                items = listOf(seed.email),
+                                onEditClick = {
+                                    // TODO: Finish this
+                                },
                                 onDeleteClick = { item ->
                                     // Set data type so we know what were looking to delete
                                     dataType = DataType.EMAIL
@@ -316,7 +280,7 @@ fun CustomerDialog(
                             // Phone List
                             ChipPhoneList(
                                 modifier = Modifier,
-                                items = phone,
+                                items = listOf(seed.phone),
                                 onEditClick = {},
                                 onDeleteClick = { item ->
                                     // Set data type so we know what were looking to delete
@@ -338,13 +302,13 @@ fun CustomerDialog(
 
                             // ------------------------- Ticket list -------------------------------
                             ChipTicketList(
-                                tickets = tickets,
+                                tickets = seed.tickets.map { it.identifier },
                                 onDeleteClick = { item ->
                                     // Set data type so we know what were looking to delete
                                     dataType = DataType.TICKET
 
                                     // Set item data so we know which item to delete
-                                    itemToDelete = item
+                                    itemToDelete = item.toString()
 
                                     // Popup dialog
                                     showConfirmDeleteScreen = true
@@ -358,27 +322,22 @@ fun CustomerDialog(
 
                             // ------------------------- Notes -------------------------------
                             AddItemLabel("Notes") {
-                                noteSeedData = NoteData()
+                                noteSeed.clear()
                                 showNoteDialog = true
                             }
 
                             Spacer(Modifier.padding(4.dp))
 
                             NoteBlock(
-                                noteData = notes,
+                                notes = seed.notes,
                                 editable = true,
                                 onImageClick = onImageClick,
-                                onEditClick = { id ->
-                                    noteSeedData = notes.find { it.note.identifier == id }
-
+                                onEditClick = { note ->
+                                    noteSeed.setNote(note)
                                     showNoteDialog = true
                                 }
                             )
-
-                            Spacer(Modifier.padding(4.dp))
-
                         }
-
                     }
 
                     Spacer(Modifier.padding(8.dp))
@@ -388,27 +347,12 @@ fun CustomerDialog(
                         modifier = Modifier.fillMaxWidth(),
                         onCancelClick = { onDismiss() },
                         onConfirmClick = {
-                            onContinue(
-                                CustomerData(
-                                    customer = Customer(
-                                        identifier = seedData.customer.identifier,
-                                        name = PersonName(
-                                            firstName.lowercase().replaceFirstChar { it.uppercase() },
-                                            lastName.lowercase().replaceFirstChar { it.uppercase() }
-                                        ),
-                                        address = Address(
-                                            street.lowercase().replaceFirstChar { it.uppercase() },
-                                            city.lowercase().replaceFirstChar { it.uppercase() },
-                                            state.lowercase().replaceFirstChar { it.uppercase() },
-                                            zip
-                                        ),
-                                        contactInfo = ContactInfo(email, phone)
-                                    ),
-                                    tickets = tickets,
-                                    notes = notes
-                                )
-                            )
+                            // Update first and last names if they've changed
+                            if (firstName != seed.firstName || lastName != seed.lastName) {
+                                   seed.changeName(listOf(firstName, lastName))
+                            }
 
+                            onContinue()
                             onDismiss()
                         }
                     )

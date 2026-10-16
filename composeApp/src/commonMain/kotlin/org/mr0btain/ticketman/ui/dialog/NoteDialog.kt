@@ -12,7 +12,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -20,23 +20,17 @@ import kotlin.uuid.ExperimentalUuidApi
 @Composable
 fun NoteDialog(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
-    seedData: Note = Note(),
-    label: String = "Add",
-    onConfirm: (Note) -> Unit,
+    seed: NoteSeed,
+    onConfirm: () -> Unit,
     onDismissRequest: () -> Unit
 ) {
-    var author by remember { mutableStateOf(seedData.author) }
-    var text by remember { mutableStateOf(seedData.message) }
-
     Dialog(
         onDismissRequest = { onDismissRequest() },
     ) {
         Surface(
             modifier = modifier,
             shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp,
-            color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
+            shadowElevation = 4.dp
         ) {
             Column(
                 modifier = Modifier.padding(32.dp),
@@ -44,7 +38,7 @@ fun NoteDialog(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = label,
+                    text = if (seed.isNew) "Add" else "Edit",
                     fontSize = 20.sp
                 )
 
@@ -52,8 +46,8 @@ fun NoteDialog(
 
                 OutlinedTextField(
                     label = { Text("Author") },
-                    value = author,
-                    onValueChange = { author = it },
+                    value = seed.author,
+                    onValueChange = { seed.changeAuthor(it) },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next
@@ -65,8 +59,8 @@ fun NoteDialog(
 
                 OutlinedTextField(
                     label = { Text("Text") },
-                    value = text,
-                    onValueChange = { text = it },
+                    value = seed.message,
+                    onValueChange = { seed.changeMessage(it) },
                     keyboardOptions = KeyboardOptions.Default.copy(
                         keyboardType = KeyboardType.Text,
                         imeAction = ImeAction.Next
@@ -79,12 +73,8 @@ fun NoteDialog(
                 ConfirmCancelButtons(
                     onCancelClick = onDismissRequest,
                     onConfirmClick = {
-                        // Prettify author name
-                        val authorName = author.split(" ")
-                            .joinToString(" ") { name -> name.lowercase().replaceFirstChar { it.uppercase() } }
-
                         // Call onConfirm
-                        onConfirm(Note(seedData.identifier, authorName, text.replaceFirstChar { it.uppercase() }))
+                        onConfirm()
 
                         // Dismiss
                         onDismissRequest()

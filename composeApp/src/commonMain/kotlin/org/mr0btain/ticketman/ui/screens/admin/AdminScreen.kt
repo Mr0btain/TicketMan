@@ -13,16 +13,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 
 @Composable
 fun AdminScreen(
     viewModel: MainViewModel,
-    isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
     Surface(
         modifier = Modifier.fillMaxSize(),
-        color = if (isDarkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
+        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
     ) {
         Box(
             contentAlignment = Alignment.Center

@@ -12,7 +12,6 @@ actual fun VerticalScrollBar(
     thickness: Dp,
     enabled: Boolean
 ) {
-    // No scroll bar needed for android
 }
 
 @Composable
@@ -22,5 +21,4 @@ actual fun VerticalScrollBar(
     thickness: Dp,
     enabled: Boolean
 ) {
-    // No scroll bar needed for android
 }

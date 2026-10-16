@@ -351,9 +351,16 @@ fun AppTheme(
     dynamicColor: Boolean = true,
     content: @Composable() () -> Unit
 ) {
+    // High jacking this to set custom material colors object
   val colorScheme = when {
-      darkTheme -> darkScheme
-      else -> lightScheme
+      darkTheme -> {
+          CustomMaterialColors.isDarkMode(true)
+          darkScheme
+      }
+      else -> {
+          CustomMaterialColors.isDarkMode(false)
+          lightScheme
+      }
   }
 
   MaterialTheme(

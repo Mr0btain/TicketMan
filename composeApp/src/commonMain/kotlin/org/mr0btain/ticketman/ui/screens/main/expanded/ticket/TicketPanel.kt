@@ -10,35 +10,29 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.ticket.TicketData
-import org.mr0btain.ticketman.components.data.user.UserData
-import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.data.shared.PersonName
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.composables.AddOrDeleteButtonRow
 import org.mr0btain.ticketman.ui.composables.search.SearchBar
-import java.util.*
+import kotlin.uuid.Uuid
 
 // TODO: Add hours worked/ inventory items to a list of expense and charges
 // TODO: Add invoice and ability to export
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TicketPanel(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     selectedPanel: Int,
     onSelectedPanelChange: (Int) -> Unit,
-    selectedTicket: TicketData?,
+    seed: TicketSeed,
     ticketList: List<Ticket>,
-    currentUser: UserData?,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
-    onSelectedTicketChange: (UUID) -> Unit,
+    onSelectedTicketChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteTicket: () -> Unit,
-    onImageClick: (UUID) -> Unit,
+    onImageClick: (Uuid) -> Unit,
     coroutineScope: CoroutineScope,
     ticketListState: LazyListState
 ) {
@@ -62,7 +56,7 @@ fun TicketPanel(
                 SearchBar(
                     modifier = Modifier.padding(start = 8.dp),
                     label = "Search Tickets",
-                    onClick = { onSelectedTicketChange(it) },
+                    onClick = { onSelectedTicketChange(it.identifier) },
                     onQuery = onSearchQuery
                 )
 
@@ -137,7 +131,6 @@ fun TicketPanel(
             ) {
                 // All tickets tab.
                 TicketListPane(
-                    isDarkMode = isDarkMode,
                     ticketList = ticketList,
                     onClick = { ticket ->
                         // Update from click
@@ -146,7 +139,7 @@ fun TicketPanel(
                         // Update selected ticket
                         onSelectedTicketChange(ticket)
                     },
-                    selectedId = selectedTicket?.ticket?.identifier,
+                    selectedTicket = seed.ticket.identifier,
                     state = ticketListState,
                     coroutineScope = coroutineScope
                 )
@@ -154,10 +147,7 @@ fun TicketPanel(
                 // This pane shows the info for selected ticket
                 TicketInfoPane(
                     modifier = Modifier,
-                    customer = Customer(), //selectedTicket.customer,
-                    assignedUserName = PersonName(), //selectedTicket.assignedUser.name, //(users.firstOrNull() { it.identifier.toString() == selectedTicket.assignedUser } ?: User()).name,
-                    isDarkMode = isDarkMode,
-                    ticketData = selectedTicket,
+                    seed = seed,
                     onEditClick = {
                         // Call edit ticket
                         onEditTicket()
@@ -174,7 +164,7 @@ fun TicketPanel(
     // TODO: Maybe make this also switch to the right tab as well
     // On certain list update scroll to selected item
     // This will only really happen if we add a new ticket
-    LaunchedEffect(selectedTicket?.ticket?.identifier, selectedPanel) {
+    LaunchedEffect(seed.ticket.identifier, selectedPanel) {
         /*
         if (!isSelectedUpdateFromClick) {
             // Check to see if were even on the list were selecting the ticket for, this comes up if

@@ -1,23 +1,26 @@
 package org.mr0btain.ticketman.components.routing
 
-import io.ktor.http.HttpStatusCode
-import io.ktor.http.content.*
-import io.ktor.server.request.*
+import io.ktor.server.auth.authenticate
 import io.ktor.server.routing.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.database.tables.image.ImageEntity
-import org.mr0btain.ticketman.database.tables.note.NoteEntity
-import java.io.File
 import kotlin.uuid.ExperimentalUuidApi
-import kotlin.uuid.Uuid
-import kotlin.uuid.toJavaUuid
 
 
-@OptIn(ExperimentalUuidApi::class)
 fun Route.imageRoute(
     appDir: String
 ) {
     val imageUploadDir = "$appDir/database/images"
+
+    authenticate {
+        post("/get") {
+            // TODO()
+        }
+    }
+
+    authenticate {
+        post("/fetch") {
+            // TODO()
+        }
+    }
 
 
     post("/upload-image") {

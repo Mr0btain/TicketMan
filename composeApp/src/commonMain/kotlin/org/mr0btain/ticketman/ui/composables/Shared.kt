@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.composables
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -25,6 +28,7 @@ import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import org.mr0btain.ticketman.ui.theme.extendedDark
 import org.mr0btain.ticketman.ui.theme.extendedLight
 import ticketman.composeapp.generated.resources.Res
@@ -33,6 +37,30 @@ import ticketman.composeapp.generated.resources.phone
 import ticketman.composeapp.generated.resources.x
 
 // This holds things used frequently
+
+@Composable
+fun CustomSurface(
+    modifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(10.dp),
+    color: Color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.secondaryContainer
+else MaterialTheme.colorScheme.surface,
+    contentColor: Color = contentColorFor(color),
+    tonalElevation: Dp = 0.dp,
+    shadowElevation: Dp = 4.dp,
+    border: BorderStroke? = null,
+    content: @Composable () -> Unit
+) {
+    Surface(
+        modifier = modifier,
+        shape = shape,
+        color = color,
+        contentColor = contentColor,
+        tonalElevation = tonalElevation,
+        shadowElevation = shadowElevation,
+        border = border,
+        content = content
+    )
+}
 
 @Composable
 fun ConfirmCancelButtons(
@@ -198,27 +226,26 @@ fun TableStatusItem(
     modifier: Modifier = Modifier,
     status: TicketStatus,
     textModifier: Modifier = Modifier,
-    textStyle: TextStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
-    isDarkMode: Boolean
+    textStyle: TextStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
 ) {
     Surface(
         modifier = modifier.padding(4.dp),
         shape = RoundedCornerShape(4.dp),
         color = when (status.status) {
-            TicketStatusType.IN_PROGRESS -> if (isDarkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
+            TicketStatusType.IN_PROGRESS -> CustomMaterialColors.inProgress
             TicketStatusType.ON_HOLD -> MaterialTheme.colorScheme.error
-            TicketStatusType.DONE -> if (isDarkMode) extendedDark.onSuccess.color else extendedLight.onSuccess.color
+            TicketStatusType.DONE -> CustomMaterialColors.success
         }
     ) {
         Text(
             modifier = textModifier.padding(start = 6.dp, end = 6.dp),
-            text = status.status.name,
+            text = status.status.name.replace("_", " "),
             fontWeight = textStyle.fontWeight,
             fontSize = textStyle.fontSize,
             fontFamily = textStyle.fontFamily,
             textAlign = textStyle.textAlign,
             color = textStyle.color,
-            maxLines = 3,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
@@ -229,8 +256,7 @@ fun TablePriorityItem(
     modifier: Modifier = Modifier,
     priority: TicketPriority,
     textModifier: Modifier = Modifier,
-    textStyle: TextStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary),
-    darkMode: Boolean
+    textStyle: TextStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
 ) {
     Surface(
         modifier = modifier.padding(4.dp),
@@ -238,19 +264,18 @@ fun TablePriorityItem(
         color = when (priority.priority) {
             TicketPriorityType.LOW -> MaterialTheme.colorScheme.secondary
             TicketPriorityType.NORMAL -> MaterialTheme.colorScheme.primary
-            TicketPriorityType.HIGH -> if (darkMode) extendedDark.inProgress.color else extendedLight.inProgress.color
-            TicketPriorityType.URGENT -> MaterialTheme.colorScheme.error
+            else -> MaterialTheme.colorScheme.error
         }
     ) {
         Text(
             modifier = textModifier.padding(start = 6.dp, end = 6.dp),
-            text = priority.priority.name,
+            text = priority.priority.name.replace("_", " "),
             fontWeight = textStyle.fontWeight,
             fontSize = textStyle.fontSize,
             fontFamily = textStyle.fontFamily,
             textAlign = textStyle.textAlign,
             color = textStyle.color,
-            maxLines = 3,
+            maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
     }
@@ -299,7 +324,8 @@ fun TableCardTextItem(
 // ----------------------------- Contacts for customer ----------------------------------
 @Composable
 fun ContactsBlock(
-    customer: Customer,
+    phoneList: List<String>,
+    emailList: List<String>,
     labelSize: TextUnit = 12.sp,
     textSize: TextUnit = 16.sp,
     iconSize: Dp = 18.dp
@@ -322,34 +348,32 @@ fun ContactsBlock(
             verticalArrangement = Arrangement.SpaceAround,
             horizontalAlignment = Alignment.Start
         ) {
-            // Email section
-            if (customer.contactInfo.email.isNotEmpty()) {
-                customer.contactInfo.email.forEach { mail ->
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            modifier = Modifier.size(iconSize),
-                            painter = painterResource(Res.drawable.mail),
-                            contentDescription = "Email"
-                        )
+            // Email list
+            emailList.forEach { mail ->
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        modifier = Modifier.size(iconSize),
+                        painter = painterResource(Res.drawable.mail),
+                        contentDescription = "Email"
+                    )
 
-                        Spacer(Modifier.padding(4.dp))
+                    Spacer(Modifier.padding(4.dp))
 
-                        Text(
-                            modifier = Modifier,
-                            text = mail,
-                            fontSize = textSize
-                        )
-                    }
+                    Text(
+                        modifier = Modifier,
+                        text = mail,
+                        fontSize = textSize
+                    )
                 }
             }
 
             Spacer(Modifier.padding(2.dp))
 
             // Phone number section
-            customer.contactInfo.phone.forEach { item ->
+            phoneList.forEach { item ->
                 Row(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically

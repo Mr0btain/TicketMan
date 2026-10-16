@@ -6,7 +6,7 @@ import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 
 val viewModelModule = module {
     // Main view model
-    viewModel { initMainViewModel(get()) }
+    viewModel { initMainViewModel(get(), get()) }
 }
 
 

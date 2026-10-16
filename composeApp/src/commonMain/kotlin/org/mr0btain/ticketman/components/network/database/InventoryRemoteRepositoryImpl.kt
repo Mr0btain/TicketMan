@@ -1,79 +1,15 @@
 package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
-import io.ktor.client.request.*
-import io.ktor.http.*
-import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
-import org.mr0btain.ticketman.components.network.handleHttpResponse
-import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import io.ktor.util.reflect.typeInfo
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.MainItem
-import org.mr0btain.ticketman.data.encryption.EncryptedData
-import org.mr0btain.ticketman.error.onSuccess
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.SyncResponse
-import kotlin.uuid.ExperimentalUuidApi
 
-@OptIn(ExperimentalUuidApi::class)
 class InventoryRemoteRepositoryImpl(
-    val client: HttpClient,
-    private val encryptionHandler: ClientEncryptionHandler
-) : RemoteRepository(
+    client: HttpClient
+) : RemoteRepository<Inventory>(
     tag = "InventoryRemoteRepositoryImpl",
     client = client,
-    encryptionHandler = encryptionHandler
-) {
-    override var serverUrl = ""
-
-    override fun changeUrl(url: String) {
-        serverUrl = "$url/api/data/inventory"
-    }
-
-    override suspend fun sync(data: List<MainItem>): List<Inventory> {
-        if (serverUrl.isNotBlank()) {
-            val identifiers = data.map { it.identifier }
-
-            if (identifiers.isNotEmpty()) {
-                networkErrorTryCatch(SYNC_TAG) {
-                    client.post {
-                        url("$serverUrl/sync")
-                        contentType(ContentType.Application.Json)
-                        setBody(
-                            encryptionHandler.encryptData(
-                                Json.encodeToString(SyncRequest(identifiers))
-                            )
-                        )
-                    }
-                }?.let { response -> handleHttpResponse<EncryptedData>(SYNC_TAG, response) }
-                    ?.onSuccess { encryptedMessage ->
-                        encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                            val syncResponse = Json.decodeFromString<SyncResponse>(decrypted)
-                            val requested = data.filter { item -> syncResponse.requested.contains(item.identifier) }
-
-                            if (requested.isNotEmpty()) batchSend(requested)
-
-                            return syncResponse.data.filterIsInstance<Inventory>()
-                        }
-                    }
-            } else return getAll()
-        }
-
-        return listOf()
-    }
-
-    override suspend fun getAll(): List<Inventory> {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(GET_ALL_TAG) {
-                client.get("${serverUrl}/all")
-            }?.let { response -> handleHttpResponse<EncryptedData>(GET_ALL_TAG, response) }
-                ?.onSuccess { encryptedMessage ->
-                    encryptionHandler.decryptData(encryptedMessage)?.let { decrypted ->
-                        return Json.decodeFromString<List<Inventory>>(decrypted)
-                    }
-                }
-        }
-
-        return emptyList()
-    }
-}
+    route = "api/data/inventory",
+    itemType = typeInfo<Inventory>(),
+    listType = typeInfo<List<Inventory>>()
+)

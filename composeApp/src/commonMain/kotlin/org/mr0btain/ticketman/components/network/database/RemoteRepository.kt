@@ -1,97 +1,242 @@
 package org.mr0btain.ticketman.components.network.database
 
-import io.ktor.client.HttpClient
-import io.ktor.client.request.delete
-import io.ktor.client.request.post
-import io.ktor.client.request.setBody
-import io.ktor.client.request.url
-import io.ktor.http.ContentType
-import io.ktor.http.contentType
-import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.network.encryption.ClientEncryptionHandler
+import androidx.compose.ui.graphics.ImageBitmap
+import io.github.vinceglb.filekit.dialogs.compose.util.encodeToByteArray
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import io.ktor.util.reflect.*
 import org.mr0btain.ticketman.components.network.handleHttpResponse
+import org.mr0btain.ticketman.components.network.handlePlainHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainItem
-import kotlin.uuid.ExperimentalUuidApi
+import org.mr0btain.ticketman.data.search.SearchQuery
+import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.shared.EntityReference
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.error.onSuccess
 import kotlin.uuid.Uuid
 
-// TODO: Eventually set up a way to designate if the client is Host or remote and adapt this to something more akin to it
+/**
+ * Base client for a MainItem type's server routes.
+ * @param itemType Type info for T, e.g. typeInfo<Customer>()
+ * @param listType Type info for List<T>, e.g. typeInfo<List<Customer>>()
+ * These are needed because T is erased at runtime, so kotlinx serialization can't find a serializer for it.
+ */
 
+// TODO: Im not a fan of the itemtype and listtype but it works for the moment. Will have to fix this later.
 @Suppress("PropertyName")
-abstract class RemoteRepository(
-    tag: String,
-    private val client: HttpClient,
-    private val encryptionHandler: ClientEncryptionHandler
+abstract class RemoteRepository<T: MainItem>(
+    protected val tag: String,
+    protected val client: HttpClient,
+    val route: String,
+    private val itemType: TypeInfo,
+    private val listType: TypeInfo
 ) {
-    protected val SYNC_TAG = "$tag:Sync"
-    protected val GET_ALL_TAG = "$tag:GetAll"
-    protected val SEND_TAG = "$tag:Send"
-    protected val BATCH_SEND_TAG = "$tag:BatchSend"
+    protected val FETCH_TAG = "$tag:Fetch"
+    protected val SEARCH_TAG = "$tag:Fetch"
+    protected val ADD_TAG = "$tag:Add"
+    protected val ADD_IMAGE_TAG = "$tag:AddImage"
+    protected val ADD_NOTE_TAG = "$tag:AddNote"
     protected val UPDATE_TAG = "$tag:Update"
     protected val REMOVE_TAG = "$tag:Remove"
+    protected val REMOVE_NOTE_TAG = "$tag:RemoveNote"
 
-    protected abstract var serverUrl: String
+    protected val GET_TAG = "$tag:Get"
+    protected val GET_NOTES_TAG = "$tag:GetNotes"
 
-    abstract fun changeUrl(url: String)
+    // Stays blank until a server is set so requests are skipped instead of going to a relative url
+    var serverUrl: String = ""
+        set(value) {
+            field = if (value.isBlank()) "" else "${value.trimEnd('/')}/$route"
+        }
 
-    abstract suspend fun sync(data: List<MainItem>): List<MainItem>
-
-    suspend fun send(data: MainItem) {
+    suspend fun add(data: T) {
         if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(SEND_TAG) {
+            networkErrorTryCatch(ADD_TAG) {
                 client.post {
                     url("$serverUrl/add")
                     contentType(ContentType.Application.Json)
-                    setBody(
-                        encryptionHandler.encryptData(
-                            Json.encodeToString(data)
-                        )
-                    )
+                    setBody(data, itemType)
                 }
-            }?.let { response -> handleHttpResponse(SEND_TAG, response) }
+            }?.let { response -> handlePlainHttpResponse(ADD_TAG, response) }
         }
     }
 
-    suspend fun batchSend(data: List<MainItem>) {
+    // TODO: Setup a way to send images/large data transfers.
+    suspend fun addImage(identifier: Uuid, image: ImageBitmap) {
         if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(BATCH_SEND_TAG) {
+            networkErrorTryCatch(ADD_IMAGE_TAG) {
                 client.post {
-                    url("$serverUrl/add/all")
+                    url("$serverUrl/add/image")
                     contentType(ContentType.Application.Json)
-                    setBody(
-                        encryptionHandler.encryptData(
-                            Json.encodeToString(data)
-                        )
-                    )
+                    setBody(image.encodeToByteArray())
                 }
-            }?.let { response -> handleHttpResponse(BATCH_SEND_TAG, response) }
+            }?.let { response -> handlePlainHttpResponse(ADD_IMAGE_TAG, response) }
         }
     }
 
-    abstract suspend fun getAll(): List<MainItem>
+    suspend fun addNote(identifier: Uuid, note: Note) {
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(ADD_NOTE_TAG) {
+                client.post {
+                    url("$serverUrl/add/note/$identifier")
+                    contentType(ContentType.Application.Json)
+                    setBody(note)
+                }
+            }?.let { response -> handlePlainHttpResponse(ADD_NOTE_TAG, response) }
+        }
+    }
 
-    suspend fun update(data: MainItem) {
+    suspend fun fetch(offset: Long, limit: Int): List<T> {
+        if (serverUrl.isNotBlank()) {
+            val response = networkErrorTryCatch(FETCH_TAG) {
+                client.post {
+                    url("$serverUrl/fetch")
+                    contentType(ContentType.Application.Json)
+                    setBody(PagedRequest(offset,limit))
+                }
+            }
+
+            if (response != null) {
+                val result = handleHttpResponse<List<T>>(FETCH_TAG, response, listType)
+
+                result.onSuccess {
+                    return it
+                }
+            }
+        }
+
+        return emptyList()
+    }
+
+    suspend fun get(identifier: Uuid): T? {
+        if (serverUrl.isNotBlank()) {
+            val response = networkErrorTryCatch(GET_TAG) {
+                client.post {
+                    url("$serverUrl/get")
+                    contentType(ContentType.Application.Json)
+                    setBody(identifier)
+                }
+            }
+
+            if (response != null) {
+                val result = handleHttpResponse<T>(GET_TAG, response, itemType)
+
+                result.onSuccess {
+                    return it
+                }
+            }
+        }
+
+        return null
+    }
+
+    protected suspend fun getEntity(tag: String, url: String): EntityReference? {
+        if (serverUrl.isNotBlank()) {
+            val response = networkErrorTryCatch(tag) {
+                client.get { url(url) }
+            }
+
+            if (response != null) {
+                val result = handleHttpResponse<EntityReference>(tag, response)
+
+                result.onSuccess {
+                    return it
+                }
+            }
+        }
+
+        return null
+    }
+
+    protected suspend fun setEntity(tag: String, entityId: Uuid, url: String) {
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(tag) {
+                client.post {
+                    url(url)
+                    contentType(ContentType.Application.Json)
+                    setBody(entityId)
+                }
+            }?.let { response -> handlePlainHttpResponse(tag, response) }
+        }
+    }
+
+    suspend fun getNotes(identifier: Uuid): List<Note> {
+        if (serverUrl.isNotBlank()) {
+            val response = networkErrorTryCatch(GET_NOTES_TAG) {
+                client.post {
+                    url("$serverUrl/get/notes/$identifier")
+                    contentType(ContentType.Application.Json)
+                    setBody(identifier)
+                }
+            }
+
+            if (response != null) {
+                val result = handleHttpResponse<List<Note>>(GET_NOTES_TAG, response)
+
+                result.onSuccess {
+                    return it
+                }
+            }
+        }
+
+        return emptyList()
+    }
+
+    suspend fun remove(identifier: Uuid) {
+        if (serverUrl.isNotBlank()) {
+            networkErrorTryCatch(REMOVE_TAG) {
+                client.delete { url("$serverUrl/remove/$identifier") }
+            }?.let { response -> handlePlainHttpResponse(REMOVE_TAG, response) }
+        }
+    }
+
+    suspend fun removeNote(identifier: Uuid) {
+        // TODO: Setup way to check if it was successful or not
+        if (serverUrl.isNotBlank()) {
+            val response = networkErrorTryCatch(REMOVE_NOTE_TAG) {
+                client.delete { url("$serverUrl/remove/note/$identifier") }
+            }
+
+            if (response != null) {
+                handlePlainHttpResponse(REMOVE_NOTE_TAG, response)
+            }
+        }
+    }
+
+    suspend fun search(query: String, limit: Int): List<SearchResult> {
+        if (serverUrl.isNotBlank()) {
+            val response = networkErrorTryCatch(SEARCH_TAG) {
+                client.post {
+                    url("$serverUrl/search")
+                    contentType(ContentType.Application.Json)
+                    setBody(SearchQuery(query, limit))
+                }
+            }
+
+            if (response != null) {
+                val result = handleHttpResponse<List<SearchResult>>(SEARCH_TAG, response)
+
+                result.onSuccess {
+                    return it
+                }
+            }
+        }
+
+        return emptyList()
+    }
+
+    suspend fun update(data: T) {
         if (serverUrl.isNotBlank()) {
             networkErrorTryCatch(UPDATE_TAG) {
                 client.post {
                     url("$serverUrl/update")
                     contentType(ContentType.Application.Json)
-                    setBody(
-                        encryptionHandler.encryptData(
-                            Json.encodeToString(data)
-                        )
-                    )
+                    setBody(data, itemType)
                 }
-            }?.let { response -> handleHttpResponse(SEND_TAG, response) }
-        }
-    }
-
-    @OptIn(ExperimentalUuidApi::class)
-    suspend fun remove(identifier: Uuid) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(REMOVE_TAG) {
-                client.delete { url("$serverUrl/remove/$identifier") }
-            }?.let { response -> handleHttpResponse(REMOVE_TAG, response) }
+            }?.let { response -> handlePlainHttpResponse(ADD_TAG, response) }
         }
     }
 }

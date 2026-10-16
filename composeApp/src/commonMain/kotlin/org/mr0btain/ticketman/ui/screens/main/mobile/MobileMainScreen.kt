@@ -15,7 +15,6 @@ fun MobileMainScreen(
     coroutineScope: CoroutineScope,
     scrollBarsOnBottom: Boolean,
     scrollBarsOnRight: Boolean,
-    isDarkMode: Boolean,
     snackBarState: SnackbarHostState
 ) {
     /*

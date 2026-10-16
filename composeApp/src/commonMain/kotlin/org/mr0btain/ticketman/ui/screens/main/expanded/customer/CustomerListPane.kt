@@ -20,17 +20,17 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import java.util.*
+import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerListPane(
     modifier: Modifier = Modifier,
     customerList: List<Customer>,
-    onClick: (UUID) -> Unit,
-    selectedCustomerId: UUID?,
+    onClick: (Uuid) -> Unit,
+    selectedId: Uuid,
     lazyListState: LazyListState,
-    scope: CoroutineScope,
-    isDarkMode: Boolean
+    scope: CoroutineScope
 ) {
     // Column widths
     val nameColumnWidth = 200.dp
@@ -43,7 +43,7 @@ fun CustomerListPane(
             .padding(8.dp),
         shape = RoundedCornerShape(10.dp),
         shadowElevation = 4.dp,
-        color = if (isDarkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
     ) {
         Column(
             modifier = Modifier
@@ -94,8 +94,8 @@ fun CustomerListPane(
                 ) { index, customer ->
                     CustomerTableItem(
                         customer = customer,
-                        selected = customer.identifier == selectedCustomerId,
-                        color = if (!isDarkMode) {
+                        selected = customer.identifier == selectedId,
+                        color = if (!CustomMaterialColors.darkMode) {
                             if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
                         } else {
                             if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
@@ -141,8 +141,8 @@ private fun CustomerHeaderBox(
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (UUID) -> Unit,
-    selected: Boolean = false,
+    onClick: (Uuid) -> Unit,
+    selected: Boolean,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,
     nameWidth: Dp,
@@ -170,9 +170,7 @@ private fun CustomerTableItem(
                     .padding(start = 4.dp)
                     .width(nameWidth - 4.dp)
             ) {
-                TableCardTextItem(
-                    customer.name.firstName + " " + customer.name.lastName
-                )
+                TableCardTextItem(customer.cleanName())
             }
 
             TableDivider()
@@ -193,7 +191,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 8.dp)
                 ) {
-                    TableCardTextItem(customer.contactInfo.email.getOrElse(0) { "" })
+                    TableCardTextItem(customer.email)
                 }
             } else {
                 Box(
@@ -201,7 +199,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 6.dp)
                 ) {
-                    TableCardTextItem(customer.contactInfo.phone.getOrElse(0) { "" })
+                    TableCardTextItem(customer.phone)
                 }
             }
         }

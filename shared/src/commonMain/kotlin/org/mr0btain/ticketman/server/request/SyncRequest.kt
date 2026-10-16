@@ -1,11 +1,9 @@
 package org.mr0btain.ticketman.server.request
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.data.uuid.UUIDListSerializer
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 @Serializable
 data class SyncRequest(
-    @Serializable(with = UUIDListSerializer::class)
-    val clientData: List<UUID>
+    val clientData: List<Uuid>
 )

@@ -1,8 +1,8 @@
 package org.mr0btain.ticketman.data.cache
 
+/*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.util.LinkedHashMap
 
 /**
  * A simple coroutine-safe fixed-size cache that evicts the oldest inserted entry
@@ -61,3 +61,4 @@ class FixedSizeCache<Key, Value>(
         cache.size
     }
 }
+ */

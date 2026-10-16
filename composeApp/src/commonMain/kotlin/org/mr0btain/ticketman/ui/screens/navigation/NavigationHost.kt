@@ -16,6 +16,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.dashboard.DashboardScreen
+import org.mr0btain.ticketman.ui.screens.invoice.InvoiceScreen
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -30,7 +31,6 @@ fun NavigationHost(
     mainViewModel: MainViewModel,
     snackBarState: SnackbarHostState
 ) {
-    val darkMode = mainViewModel.darkMode.collectAsState()
     val scrollBarsOnRight = mainViewModel.scrollBarsOnRight.collectAsState()
     val scrollBarsOnBottom = mainViewModel.scrollBarsOnBottom.collectAsState()
 
@@ -42,7 +42,6 @@ fun NavigationHost(
         composable(Destination.ADMIN.route) {
             AdminScreen(
                 viewModel = mainViewModel,
-                isDarkMode = darkMode.value,
                 snackBarState = snackBarState
             )
         }
@@ -51,6 +50,12 @@ fun NavigationHost(
             DashboardScreen(
                 viewModel = mainViewModel,
                 snackBarState = snackBarState
+            )
+        }
+
+        composable(Destination.INVOICE.route) {
+            InvoiceScreen(
+                viewModel = mainViewModel
             )
         }
 
@@ -73,7 +78,6 @@ fun NavigationHost(
                         true
                     },
                     onDismiss = {},
-                    isDarkMode = darkMode.value,
                     snackBarState = snackBarState,
                     viewModel = mainViewModel
                 )
@@ -83,8 +87,7 @@ fun NavigationHost(
         composable(Destination.MAIN.route) {
             MainScreen(
                 viewModel = mainViewModel,
-                coroutineScope = coroutineScope,
-                isDarkMode = darkMode.value,
+                scope = coroutineScope,
                 snackBarState = snackBarState,
                 scrollBarsOnRight = scrollBarsOnRight.value,
                 scrollBarsOnBottom = scrollBarsOnBottom.value

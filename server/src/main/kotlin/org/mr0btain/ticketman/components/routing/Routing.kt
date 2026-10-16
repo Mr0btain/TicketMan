@@ -7,13 +7,12 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
-import org.mr0btain.ticketman.components.service.EncryptionService
 import org.mr0btain.ticketman.components.service.UserService
+import org.mr0btain.ticketman.logging.AppLogger
 
 fun Application.configureRouting(
     userService: UserService,
-    localDatabase: LocalDatabase,
-    encryptionService: EncryptionService
+    localDatabase: LocalDatabase
 ) {
     install(StatusPages) {
         exception<Throwable> { call, cause ->
@@ -27,39 +26,37 @@ fun Application.configureRouting(
 
         // Just a callback to tell client the server is up
         route("/") {
-            get { call.respond(HttpStatusCode.OK) }
+            get {
+                call.respond(HttpStatusCode.OK)
+                AppLogger.m("ROUTE.CHECK", "Client hit")
+            }
         }
 
         route("/api/auth") {
-            authRoute(userService, encryptionService)
+            authRoute(userService)
         }
 
         route("/api/user") {
             userRoute(
-                database = localDatabase.userDatabase,
-                encryptionService = encryptionService
+                database = localDatabase.userDatabase
             )
         }
 
         route("/api/data/customer") {
             customerRoute(
-                database = localDatabase.customerDatabase,
-                userDatabase = localDatabase.userDatabase,
-                encryptionService = encryptionService
-                )
+                database = localDatabase.customerDatabase
+            )
         }
 
         route("/api/data/ticket") {
             ticketRoute(
-                database = localDatabase.ticketDatabase,
-                encryptionService = encryptionService
+                database = localDatabase.ticketDatabase
             )
         }
 
         route("/api/data/inventory") {
             inventoryRoute(
-                database = localDatabase.inventoryDatabase,
-                encryptionService = encryptionService
+                database = localDatabase.inventoryDatabase
             )
         }
     }

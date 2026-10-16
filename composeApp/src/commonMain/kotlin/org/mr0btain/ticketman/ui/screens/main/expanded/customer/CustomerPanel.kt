@@ -9,25 +9,24 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.data.customer.CustomerData
+import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerPanel(
     modifier: Modifier = Modifier,
-    isDarkMode: Boolean,
     customerList: List<Customer>,
-    selectedCustomer: CustomerData?,
+    seed: CustomerSeed,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
-    onCustomerSelectionChange: (UUID) -> Unit,
+    onCustomerSelectionChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteCustomer: () -> Unit,
-    onTicketClick: (UUID) -> Unit,
-    onImageClick: (UUID) -> Unit,
+    onTicketClick: (Uuid) -> Unit,
+    onImageClick: (Uuid) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState(),
     coroutineScope: CoroutineScope = rememberCoroutineScope()
 ) {
@@ -56,10 +55,9 @@ fun CustomerPanel(
             ) {
                 CustomerListPane(
                     modifier = Modifier,
-                    isDarkMode = isDarkMode,
                     customerList = customerList,
                     lazyListState = customerLazyListState,
-                    selectedCustomerId = selectedCustomer?.customer?.identifier,
+                    selectedId = seed.customer.identifier,
                     scope = coroutineScope,
                     onClick = { id ->
                         // Set the isupdatefromclick so we don't jar the scroll in the launched effect
@@ -72,8 +70,7 @@ fun CustomerPanel(
 
                 CustomerInfoPane(
                     modifier = Modifier,
-                    isDarkMode = isDarkMode,
-                    selectedCustomer = selectedCustomer,
+                    selectedCustomer = seed,
                     onEditClick = { onEditCustomer() },
                     onTicketClick = onTicketClick,
                     onImageClick = onImageClick
@@ -83,7 +80,7 @@ fun CustomerPanel(
     }
 
     // On list update or search scroll to selected item
-    LaunchedEffect(selectedCustomer) {
+    LaunchedEffect(seed) {
         /*
         if (!isSelectUpdateFromClick) {
             // Get index of visible items

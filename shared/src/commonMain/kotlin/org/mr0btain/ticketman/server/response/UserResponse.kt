@@ -2,12 +2,10 @@ package org.mr0btain.ticketman.server.response
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.inventory.AccessLevel
-import org.mr0btain.ticketman.data.uuid.UUIDSerializer
-import java.util.UUID
+import kotlin.uuid.Uuid
 
 @Serializable
 data class UserResponse(
-    @Serializable(UUIDSerializer::class)
-    val identifier: UUID,
+    val identifier: Uuid,
     val accessLevel: AccessLevel
 )

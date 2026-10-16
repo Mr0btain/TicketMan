@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman
 
 import androidx.compose.ui.window.ComposeUIViewController
-import org.example.project.injection.initKoin
+import org.mr0btain.ticketman.components.injection.initKoin
 
 fun MainViewController() = ComposeUIViewController {
     initKoin()

@@ -21,7 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
-import java.util.*
+import kotlin.uuid.Uuid
 
 @Composable
 fun CustomerListPaneMobile(
@@ -144,7 +144,7 @@ private fun CustomerHeaderBox(
 @Composable
 private fun CustomerTableItem(
     modifier: Modifier = Modifier,
-    onClick: (UUID) -> Unit,
+    onClick: (Uuid) -> Unit,
     selected: Boolean = false,
     color: Color = MaterialTheme.colorScheme.surface,
     customer: Customer,
@@ -173,9 +173,7 @@ private fun CustomerTableItem(
                     .padding(start = 4.dp)
                     .width(nameWidth - 4.dp)
             ) {
-                TableCardTextItem(
-                    customer.name.firstName + " " + customer.name.lastName
-                )
+                TableCardTextItem(customer.cleanName())
             }
 
             TableDivider()
@@ -196,7 +194,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 8.dp)
                 ) {
-                    TableCardTextItem(customer.contactInfo.email.getOrElse(0) { "" })
+                    TableCardTextItem(customer.email)
                 }
             } else {
                 Box(
@@ -204,7 +202,7 @@ private fun CustomerTableItem(
                         .padding(start = 4.dp)
                         .width(contactWidth - 6.dp)
                 ) {
-                    TableCardTextItem(customer.contactInfo.phone.getOrElse(0) { "" })
+                    TableCardTextItem(customer.email)
                 }
             }
         }

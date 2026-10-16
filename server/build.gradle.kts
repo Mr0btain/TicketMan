@@ -25,5 +25,6 @@ dependencies {
     // Testing bundle
     implementation(libs.bundles.ktorServerTesting)
 
+    // Exposed for database
     implementation(libs.bundles.exposed)
 }

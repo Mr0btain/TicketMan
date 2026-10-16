@@ -9,8 +9,8 @@ import org.mr0btain.ticketman.data.SubItem
 
 @Serializable
 data class Device(
-    val manufacturer: String,
-    val model: String
+    val manufacturer: String = "",
+    val model: String = ""
 ): SubItem {
     override fun toString(): String {
         return "$manufacturer $model"
