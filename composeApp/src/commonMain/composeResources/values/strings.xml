@@ -3,17 +3,10 @@
 
     <string name="username_string">Username</string>
     <string name="password_string">Password</string>
-    <string name="server_address_string">Server Address</string>
-    <string name="warning_password_level">Password strength</string>
-    <string name="warning_password_level_strong">Strong</string>
-    <string name="warning_password_level_weak">Weak</string>
-    <string name="login_text">Login</string>
-    <string name="login_button_text">Confirm</string>
+    <string name="server_address_string">Server address</string>
+    <string name="login_text">Log in</string>
 
     <string name="settings_text">Settings</string>
-    <string name="settings_first_group">Basic</string>
-    <string name="settings_second_group">Data</string>
-    <string name="settings_third_group">UI</string>
 
     <string name="username_preference_key">Username</string>
     <string name="password_preference_key">Password</string>

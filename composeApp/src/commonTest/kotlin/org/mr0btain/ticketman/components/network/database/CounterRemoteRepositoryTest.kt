@@ -71,6 +71,14 @@ class CounterRemoteRepositoryTest {
     }
 
     @Test
+    fun ticketFetchRoutes() = runTest {
+        tickets.fetch(0, 20)
+        tickets.fetchMine(20, 20)
+
+        assertEquals(listOf("POST /api/data/ticket/fetch", "POST /api/data/ticket/fetch/mine"), requests)
+    }
+
+    @Test
     fun ticketAndCustomerLinkRoutes() = runTest {
         val id = Uuid.parse("00000000-0000-7000-8000-000000000001")
 

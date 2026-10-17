@@ -1,17 +1,17 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.components.utils.formatDay
 import org.mr0btain.ticketman.components.utils.formatEnumName
@@ -26,14 +26,39 @@ import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.server.request.CheckInRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.composables.SectionCard
-import org.mr0btain.ticketman.ui.composables.SimpleTextItem
-import org.mr0btain.ticketman.ui.composables.signature.SignaturePad
-import org.mr0btain.ticketman.ui.composables.ticket.TicketPriorityDropDown
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.feedback.TmDot
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.feedback.tone
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.inputs.SignaturePad
+import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.navigation.TmStepper
+import org.mr0btain.ticketman.ui.kit.search.TmSearchField
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
+import org.mr0btain.ticketman.ui.kit.selection.TmFilterChip
+import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.alert_triangle
+import ticketman.composeapp.generated.resources.check_square
+import ticketman.composeapp.generated.resources.edit_3
+import ticketman.composeapp.generated.resources.smartphone
+import ticketman.composeapp.generated.resources.tool
+import ticketman.composeapp.generated.resources.user
+import ticketman.composeapp.generated.resources.user_plus
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+
+/** Widest the wizard's panels get, so lines stay readable on big screens */
+private val FORM_WIDTH = 680.dp
 
 private enum class CheckInStep(val label: String) {
     CUSTOMER("Customer"),
@@ -57,9 +82,9 @@ private class CheckInForm(customer: Customer?) {
     var accessories by mutableStateOf("")
     var problem by mutableStateOf("")
     var priority by mutableStateOf(TicketPriority(TicketPriorityType.NORMAL))
-    var estimate by mutableStateOf("")
+    var estimateCents by mutableLongStateOf(0L)
     var promisedInDays by mutableStateOf<Int?>(3)
-    var deposit by mutableStateOf("")
+    var depositInput by mutableLongStateOf(0L)
     var depositMethod by mutableStateOf(PaymentMethod.CARD)
     var technician by mutableStateOf<SearchResult?>(null)
     var strokes by mutableStateOf<List<List<SignaturePoint>>>(emptyList())
@@ -70,15 +95,13 @@ private class CheckInForm(customer: Customer?) {
         get() = Device(manufacturer.trim(), model.trim(), serial.trim())
 
     val depositCents: Long?
-        get() = Money.parse(deposit)?.takeIf { it > 0 }
+        get() = depositInput.takeIf { it > 0 }
 
     fun problem(step: CheckInStep, needsSignature: Boolean): String? = when (step) {
         CheckInStep.CUSTOMER -> if (customer == null) "Pick or add a customer" else null
         CheckInStep.DEVICE -> if (manufacturer.isBlank() && model.isBlank()) "Enter the make or model" else null
         CheckInStep.REPAIR -> when {
             problem.isBlank() -> "Describe what's wrong"
-            estimate.isNotBlank() && Money.parse(estimate) == null -> "Estimate isn't a price"
-            deposit.isNotBlank() && Money.parse(deposit) == null -> "Deposit isn't an amount"
             else -> null
         }
         CheckInStep.SIGN -> when {
@@ -99,7 +122,7 @@ private class CheckInForm(customer: Customer?) {
                 problem = problem.trim(),
                 condition = condition.trim(),
                 accessories = accessories.trim(),
-                estimateCents = Money.parse(estimate),
+                estimateCents = estimateCents.takeIf { it > 0 },
                 promisedAt = promisedInDays?.let { promiseTimeInDays(it) }
             ),
             customerIdentifier = customer!!.identifier,
@@ -129,6 +152,7 @@ fun CheckInWizard(
     val form = remember(startingCustomer) { CheckInForm(startingCustomer) }
     val needsSignature = terms.isNotBlank()
     val steps = CheckInStep.entries.filter { it != CheckInStep.SIGN || needsSignature }
+    val spacing = TmTheme.spacing
 
     var step by remember(startingCustomer) { mutableStateOf(if (startingCustomer != null) CheckInStep.DEVICE else CheckInStep.CUSTOMER) }
     var submitting by remember { mutableStateOf(false) }
@@ -140,70 +164,69 @@ fun CheckInWizard(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
         // ------------------------------------------ Steps ------------------------------------------
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        TmPageHeader(title = "Check in", onBack = onCancel)
+
+        TmStepper(
+            steps = steps.map { it.label },
+            currentIndex = index,
+            onSelect = { step = steps[it] },
+            canOpen = { position -> position <= index || steps.take(position).all { form.problem(it, needsSignature) == null } }
+        )
+
+        Column(
+            modifier = Modifier.widthIn(max = FORM_WIDTH),
+            verticalArrangement = Arrangement.spacedBy(spacing.md)
         ) {
-            Text(text = "Check In", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-
-            Spacer(Modifier.padding(8.dp))
-
-            steps.forEachIndexed { position, each ->
-                val reachable = position <= index || steps.take(position).all { form.problem(it, needsSignature) == null }
-
-                FilterChip(
-                    selected = each == step,
-                    enabled = reachable,
-                    onClick = { step = each },
-                    label = { Text("${position + 1}. ${each.label}") }
-                )
-            }
-        }
-
-        when (step) {
-            CheckInStep.CUSTOMER -> CustomerStep(form, onSearchCustomers, onAddCustomer)
-            CheckInStep.DEVICE -> DeviceStep(form, onRepeatCheck, onOpenTicket)
-            CheckInStep.REPAIR -> RepairStep(form, onSearchTechnicians)
-            CheckInStep.SIGN -> SignStep(form, terms)
-            CheckInStep.REVIEW -> ReviewStep(form, needsSignature)
-        }
-
-        (error ?: problem)?.let {
-            Text(modifier = Modifier.padding(horizontal = 16.dp), text = it, fontSize = 14.sp, color = MaterialTheme.colorScheme.error)
-        }
-
-        // ------------------------------------------ Moving between steps ------------------------------------------
-        Row(
-            modifier = Modifier.padding(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(onClick = onCancel) { Text("Cancel") }
-
-            if (index > 0) {
-                OutlinedButton(onClick = { step = steps[index - 1] }) { Text("Back") }
+            when (step) {
+                CheckInStep.CUSTOMER -> CustomerStep(form, onSearchCustomers, onAddCustomer)
+                CheckInStep.DEVICE -> DeviceStep(form, onRepeatCheck, onOpenTicket)
+                CheckInStep.REPAIR -> RepairStep(form, onSearchTechnicians)
+                CheckInStep.SIGN -> SignStep(form, terms)
+                CheckInStep.REVIEW -> ReviewStep(form, needsSignature)
             }
 
-            if (step != CheckInStep.REVIEW) {
-                Button(
-                    enabled = problem == null,
-                    onClick = { step = steps[index + 1] }
-                ) { Text("Next") }
-            } else {
-                Button(
-                    enabled = !submitting && steps.all { form.problem(it, needsSignature) == null },
-                    onClick = {
-                        submitting = true
-                        error = null
-                        onSubmit(form.toRequest(needsSignature)) { problemSaving ->
-                            submitting = false
-                            error = problemSaving
+            (error ?: problem)?.let {
+                TmNotice(text = it, kind = if (error != null) TmNoticeKind.ERROR else TmNoticeKind.INFO)
+            }
+
+            // ------------------------------------------ Moving between steps ------------------------------------------
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.md, Alignment.End)
+            ) {
+                TmButton(text = "Cancel", onClick = onCancel, variant = TmButtonVariant.GHOST, size = TmControlSize.LARGE)
+
+                if (index > 0) {
+                    TmButton(text = "Back", onClick = { step = steps[index - 1] }, variant = TmButtonVariant.SECONDARY, size = TmControlSize.LARGE)
+                }
+
+                if (step != CheckInStep.REVIEW) {
+                    TmButton(
+                        text = "Next: ${steps[index + 1].label.lowercase()}",
+                        enabled = problem == null,
+                        size = TmControlSize.LARGE,
+                        onClick = { step = steps[index + 1] }
+                    )
+                } else {
+                    TmButton(
+                        text = "Check in",
+                        enabled = steps.all { form.problem(it, needsSignature) == null },
+                        loading = submitting,
+                        size = TmControlSize.LARGE,
+                        onClick = {
+                            submitting = true
+                            error = null
+                            onSubmit(form.toRequest(needsSignature)) { problemSaving ->
+                                submitting = false
+                                error = problemSaving
+                            }
                         }
-                    }
-                ) { Text("Check In") }
+                    )
+                }
             }
         }
     }
@@ -227,16 +250,12 @@ private fun CustomerStep(
     }
 
     form.customer?.let { customer ->
-        SectionCard(modifier = Modifier.widthIn(max = 640.dp), title = "Customer") {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(text = customer.cleanName(), fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
-                    Text(text = listOf(customer.phone, customer.email).filter { it.isNotBlank() }.joinToString(" - "))
-                }
-
-                OutlinedButton(onClick = { form.customer = null }) { Text("Change") }
-            }
-        }
+        TmPanel(
+            title = customer.cleanName(),
+            subtitle = listOf(customer.phone, customer.email).filter { it.isNotBlank() }.joinToString(", "),
+            icon = Res.drawable.user,
+            actions = { TmButton(text = "Change customer", onClick = { form.customer = null }, variant = TmButtonVariant.SECONDARY) }
+        ) {}
         return
     }
 
@@ -257,35 +276,33 @@ private fun CustomerStep(
         return
     }
 
-    SectionCard(
-        modifier = Modifier.widthIn(max = 640.dp),
-        title = "Find the Customer",
-        action = { Button(onClick = { adding = true }) { Text("New Customer") } }
+    TmPanel(
+        title = "Find the customer",
+        icon = Res.drawable.user,
+        actions = { TmButton(text = "New customer", onClick = { adding = true }, variant = TmButtonVariant.SECONDARY, leadingIcon = Res.drawable.user_plus) }
     ) {
-        OutlinedTextField(
+        TmSearchField(
             modifier = Modifier.fillMaxWidth(),
-            value = query,
-            onValueChange = { query = it },
-            label = { Text("Phone number or name") },
-            singleLine = true
+            query = query,
+            onQueryChange = { query = it },
+            placeholder = "Phone number or name",
+            size = TmControlSize.LARGE
         )
 
-        if (query.isNotBlank() && matches.isEmpty()) EmptyMessage("Nobody matches, add them as a new customer")
+        if (query.isNotBlank() && matches.isEmpty()) {
+            Text(text = "Nobody matches, add them as a new customer", style = TmTheme.typography.body, color = TmTheme.colors.textMuted)
+        }
 
-        matches.forEach { customer ->
-            Surface(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                onClick = {
-                    form.customer = customer
-                    form.signedName = customer.cleanName()
-                },
-                shape = RoundedCornerShape(6.dp),
-                color = Color.Transparent
-            ) {
-                Row(Modifier.padding(8.dp)) {
-                    Text(modifier = Modifier.weight(1f), text = customer.cleanName(), fontWeight = FontWeight.SemiBold)
-                    Text(text = listOf(customer.phone, customer.email).filter { it.isNotBlank() }.joinToString(" - "))
-                }
+        Column {
+            matches.forEach { customer ->
+                TmListRow(
+                    title = customer.cleanName(),
+                    subtitle = listOf(customer.phone, customer.email).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null },
+                    onClick = {
+                        form.customer = customer
+                        form.signedName = customer.cleanName()
+                    }
+                )
             }
         }
     }
@@ -306,71 +323,56 @@ private fun DeviceStep(
         repeats = onRepeatCheck(customer.identifier, form.device, form.ticketIdentifier)
     }
 
-    SectionCard(modifier = Modifier.widthIn(max = 640.dp), title = "Device") {
-        Row {
-            OutlinedTextField(
-                modifier = Modifier.weight(1f).padding(end = 4.dp),
-                value = form.manufacturer,
-                onValueChange = { form.manufacturer = it },
-                label = { Text("Make") },
-                singleLine = true
-            )
+    TmPanel(title = "Device", icon = Res.drawable.smartphone) {
+        TmFieldPair(
+            { TmTextField(modifier = it, value = form.manufacturer, onValueChange = { v -> form.manufacturer = v }, label = "Make", placeholder = "Apple") },
+            { TmTextField(modifier = it, value = form.model, onValueChange = { v -> form.model = v }, label = "Model", placeholder = "iPhone 13") }
+        )
 
-            OutlinedTextField(
-                modifier = Modifier.weight(1f).padding(start = 4.dp),
-                value = form.model,
-                onValueChange = { form.model = it },
-                label = { Text("Model") },
-                singleLine = true
-            )
-        }
-
-        OutlinedTextField(
+        TmTextField(
             modifier = Modifier.fillMaxWidth(),
             value = form.serial,
             onValueChange = { form.serial = it },
-            label = { Text("Serial or IMEI") },
-            singleLine = true
+            label = "Serial or IMEI",
+            textStyle = TmTheme.typography.numeric
         )
 
-        OutlinedTextField(
+        TmTextField(
             modifier = Modifier.fillMaxWidth(),
             value = form.condition,
             onValueChange = { form.condition = it },
-            label = { Text("Condition (scratches, dents, cracks)") },
+            label = "Condition",
+            placeholder = "Scratches, dents, cracks",
+            singleLine = false,
             minLines = 2
         )
 
-        OutlinedTextField(
+        TmTextField(
             modifier = Modifier.fillMaxWidth(),
             value = form.accessories,
             onValueChange = { form.accessories = it },
-            label = { Text("Left with it (charger, case, cable)") },
-            singleLine = true
+            label = "Left with it",
+            placeholder = "Charger, case, cable"
         )
     }
 
     if (repeats.isNotEmpty()) {
-        SectionCard(modifier = Modifier.widthIn(max = 640.dp), title = "Possible Repeat Repair") {
-            Text(
-                text = "This customer brought this device in recently. Check whether it's covered by the last repair.",
-                fontSize = 14.sp,
-                color = CustomMaterialColors.inProgress
+        TmPanel(title = "Possible repeat repair", icon = Res.drawable.alert_triangle) {
+            TmNotice(
+                kind = TmNoticeKind.WARNING,
+                text = "This customer brought this device in recently. Check whether it's covered by the last repair."
             )
 
-            repeats.forEach { summary ->
-                val ticket = summary.ticket
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(text = "${ticket.label} - ${ticket.problem.ifBlank { "no problem noted" }}", fontWeight = FontWeight.SemiBold)
-                        Text(
-                            text = ticket.pickedUpAt?.let { "Picked up ${formatTimeAgo(it)}" }
-                                ?: "Checked in ${formatTimeAgo(ticket.identifier.timestampMillis())}",
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    TextButton(onClick = { onOpenTicket(ticket.identifier) }) { Text("Look") }
+            Column {
+                repeats.forEach { summary ->
+                    val ticket = summary.ticket
+                    TmListRow(
+                        title = ticket.problem.ifBlank { "No problem noted" },
+                        subtitle = ticket.pickedUpAt?.let { "Picked up ${formatTimeAgo(it)}" }
+                            ?: "Checked in ${formatTimeAgo(ticket.identifier.timestampMillis())}",
+                        leading = { TicketIdText(ticket.label, Modifier.width(104.dp)) },
+                        trailing = { TmButton(text = "Open", onClick = { onOpenTicket(ticket.identifier) }, variant = TmButtonVariant.GHOST) }
+                    )
                 }
             }
         }
@@ -384,166 +386,178 @@ private fun RepairStep(
 ) {
     var techQuery by remember { mutableStateOf("") }
     var techMatches by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
+    val spacing = TmTheme.spacing
 
     LaunchedEffect(techQuery) {
         delay(300)
         techMatches = if (techQuery.isBlank()) emptyList() else onSearchTechnicians(techQuery)
     }
 
-    SectionCard(modifier = Modifier.widthIn(max = 640.dp), title = "Repair") {
-        OutlinedTextField(
+    TmPanel(title = "Repair", icon = Res.drawable.tool) {
+        TmTextField(
             modifier = Modifier.fillMaxWidth(),
             value = form.problem,
             onValueChange = { form.problem = it },
-            label = { Text("What's wrong, in the customer's words") },
+            label = "What's wrong, in the customer's words",
+            singleLine = false,
             minLines = 3
         )
 
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TicketPriorityDropDown(
-                modifier = Modifier.weight(1f).padding(end = 4.dp),
-                priority = form.priority,
-                onClick = { form.priority = it }
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+            TmDropdown(
+                modifier = Modifier.weight(1f),
+                label = "Priority",
+                options = TicketPriorityType.entries,
+                selected = form.priority.priority,
+                onSelect = { form.priority = TicketPriority(it) },
+                optionLabel = { formatEnumName(it.name) },
+                optionLeading = { TmDot(TmTheme.colors.tone(it).color) }
             )
 
-            OutlinedTextField(
-                modifier = Modifier.weight(1f).padding(start = 4.dp),
-                value = form.estimate,
-                onValueChange = { form.estimate = it },
-                label = { Text("Estimate ($)") },
-                singleLine = true
-            )
-        }
-
-        Text(modifier = Modifier.padding(top = 12.dp), text = "Promised for", fontWeight = FontWeight.SemiBold)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf(0, 1, 2, 3, 5, 7).forEach { days ->
-                FilterChip(
-                    selected = form.promisedInDays == days,
-                    onClick = { form.promisedInDays = days },
-                    label = { Text(formatDay(promiseTimeInDays(days))) }
-                )
-            }
-
-            FilterChip(
-                selected = form.promisedInDays == null,
-                onClick = { form.promisedInDays = null },
-                label = { Text("No date") }
+            TmMoneyField(
+                modifier = Modifier.weight(1f),
+                label = "Estimate",
+                cents = form.estimateCents,
+                onCentsChange = { form.estimateCents = it },
+                supportingText = "Leave at 0.00 for no estimate"
             )
         }
 
-        Text(modifier = Modifier.padding(top = 12.dp), text = "Deposit", fontWeight = FontWeight.SemiBold)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                modifier = Modifier.width(160.dp),
-                value = form.deposit,
-                onValueChange = { form.deposit = it },
-                label = { Text("Amount ($)") },
-                singleLine = true
-            )
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            Text(text = "Promised for", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+            ChipRow {
+                listOf(0, 1, 2, 3, 5, 7).forEach { days ->
+                    TmFilterChip(
+                        text = formatDay(promiseTimeInDays(days)),
+                        selected = form.promisedInDays == days,
+                        onClick = { form.promisedInDays = days }
+                    )
+                }
 
-            Spacer(Modifier.padding(4.dp))
-
-            PaymentMethod.entries.forEach { method ->
-                FilterChip(
-                    modifier = Modifier.padding(end = 4.dp),
-                    selected = form.depositMethod == method,
-                    onClick = { form.depositMethod = method },
-                    label = { Text(formatEnumName(method.name)) }
-                )
+                TmFilterChip(text = "No date", selected = form.promisedInDays == null, onClick = { form.promisedInDays = null })
             }
         }
 
-        Text(modifier = Modifier.padding(top = 12.dp), text = "Technician", fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.Bottom) {
+            TmMoneyField(
+                modifier = Modifier.width(180.dp),
+                label = "Deposit",
+                cents = form.depositInput,
+                onCentsChange = { form.depositInput = it }
+            )
+
+            TmSegmented(
+                label = "Paid by",
+                options = PaymentMethod.entries,
+                selected = form.depositMethod,
+                onSelect = { form.depositMethod = it },
+                optionLabel = { formatEnumName(it.name) }
+            )
+        }
+
         val technician = form.technician
         if (technician != null) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(modifier = Modifier.weight(1f), text = technician.text)
-                TextButton(onClick = { form.technician = null }) { Text("Change") }
+            KeyValueRow(label = "Technician") {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = technician.text, style = TmTheme.typography.label, color = TmTheme.colors.text)
+                    TmButton(text = "Change", onClick = { form.technician = null }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                }
             }
         } else {
-            OutlinedTextField(
+            TmSearchField(
                 modifier = Modifier.fillMaxWidth(),
-                value = techQuery,
-                onValueChange = { techQuery = it },
-                label = { Text("Assign to (optional)") },
-                singleLine = true
+                label = "Technician",
+                query = techQuery,
+                onQueryChange = { techQuery = it },
+                placeholder = "Assign to someone (optional)"
             )
 
-            techMatches.forEach { match ->
-                TextButton(onClick = {
-                    form.technician = match
-                    techQuery = ""
-                }) { Text(match.text) }
+            Column {
+                techMatches.forEach { match ->
+                    TmListRow(
+                        title = match.text,
+                        icon = Res.drawable.user,
+                        onClick = {
+                            form.technician = match
+                            techQuery = ""
+                        }
+                    )
+                }
             }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ChipRow(content: @Composable () -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm),
+        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)
+    ) { content() }
+}
+
 @Composable
 private fun SignStep(form: CheckInForm, terms: String) {
-    SectionCard(modifier = Modifier.widthIn(max = 760.dp), title = "Customer Signature") {
-        Text(text = "Repair terms", fontWeight = FontWeight.SemiBold)
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
 
-        Surface(
-            modifier = Modifier
+    TmPanel(title = "Customer signature", subtitle = "By signing, the customer agrees to the repair terms", icon = Res.drawable.edit_3) {
+        Box(
+            Modifier
                 .fillMaxWidth()
                 .heightIn(max = 180.dp)
-                .padding(vertical = 6.dp),
-            shape = RoundedCornerShape(6.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant
+                .background(colors.surfaceSunken, TmTheme.shapes.control)
+                .border(1.dp, colors.hairline, TmTheme.shapes.control)
         ) {
             Text(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(10.dp),
+                    .padding(spacing.md),
                 text = terms,
-                fontSize = 14.sp
+                style = TmTheme.typography.body,
+                color = colors.text
             )
         }
-
-        Text(text = "By signing, the customer agrees to the terms above.", fontSize = 13.sp)
 
         SignaturePad(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(220.dp)
-                .padding(vertical = 8.dp),
+                .height(220.dp),
             strokes = form.strokes,
             onStrokesChange = { form.strokes = it },
             onSize = { form.aspectRatio = it }
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.Bottom) {
+            TmTextField(
                 modifier = Modifier.weight(1f),
                 value = form.signedName,
                 onValueChange = { form.signedName = it },
-                label = { Text("Name of whoever signed") },
-                singleLine = true
+                label = "Name of whoever signed"
             )
 
-            Spacer(Modifier.padding(4.dp))
-
-            OutlinedButton(onClick = { form.strokes = emptyList() }) { Text("Clear") }
+            TmButton(text = "Clear signature", onClick = { form.strokes = emptyList() }, variant = TmButtonVariant.SECONDARY)
         }
     }
 }
 
 @Composable
 private fun ReviewStep(form: CheckInForm, needsSignature: Boolean) {
-    SectionCard(modifier = Modifier.widthIn(max = 640.dp), title = "Check Everything Over") {
-        SimpleTextItem("Customer", form.customer?.cleanName().orEmpty())
-        SimpleTextItem("Device", form.device.toString().trim())
-        if (form.serial.isNotBlank()) SimpleTextItem("Serial", form.serial)
-        SimpleTextItem("Problem", form.problem.trim())
-        if (form.condition.isNotBlank()) SimpleTextItem("Condition", form.condition.trim())
-        if (form.accessories.isNotBlank()) SimpleTextItem("Left with it", form.accessories.trim())
-        SimpleTextItem("Priority", formatEnumName(form.priority.priority.name))
-        Money.parse(form.estimate)?.let { SimpleTextItem("Estimate", Money.format(it)) }
-        SimpleTextItem("Promised", form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")
-        form.depositCents?.let { SimpleTextItem("Deposit", "${Money.format(it)} ${formatEnumName(form.depositMethod.name).lowercase()}") }
-        SimpleTextItem("Technician", form.technician?.text ?: "Not assigned")
-        if (needsSignature) SimpleTextItem("Signed by", form.signedName)
+    TmPanel(title = "Check everything over", icon = Res.drawable.check_square) {
+        Column {
+            KeyValueRow(label = "Customer", value = form.customer?.cleanName().orEmpty())
+            KeyValueRow(label = "Device", value = form.device.toString().trim())
+            if (form.serial.isNotBlank()) KeyValueRow(label = "Serial", value = form.serial, numeric = true)
+            KeyValueRow(label = "Problem", value = form.problem.trim())
+            if (form.condition.isNotBlank()) KeyValueRow(label = "Condition", value = form.condition.trim())
+            if (form.accessories.isNotBlank()) KeyValueRow(label = "Left with it", value = form.accessories.trim())
+            KeyValueRow(label = "Priority", value = formatEnumName(form.priority.priority.name))
+            if (form.estimateCents > 0) KeyValueRow(label = "Estimate", value = Money.format(form.estimateCents), numeric = true)
+            KeyValueRow(label = "Promised", value = form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")
+            form.depositCents?.let { KeyValueRow(label = "Deposit", value = "${Money.format(it)} by ${formatEnumName(form.depositMethod.name).lowercase()}") }
+            KeyValueRow(label = "Technician", value = form.technician?.text ?: "Not assigned")
+            if (needsSignature) KeyValueRow(label = "Signed by", value = form.signedName)
+        }
     }
 }

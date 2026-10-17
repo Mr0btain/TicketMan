@@ -73,6 +73,7 @@ class TicketDatabaseImpl(
     private val SIGNATURE_TAG = "$tag:Signature"
     private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
     private val GET_USER_TAG = "$tag:GetUser"
+    private val GET_PAGED_FOR_USER_TAG = "$tag:GetPagedForUser"
     private val UPDATE_DEVICE_TAG = "$tag:UpdateDevice"
     private val UPDATE_STATUS_TAG = "$tag:UpdateStatus"
     private val UPDATE_PRIORITY_TAG = "$tag:UpdatePriority"
@@ -102,6 +103,34 @@ class TicketDatabaseImpl(
                     .orderBy(TicketTable.id to SortOrder.DESC) // or ASC
                     .offset(request.offset)
                     .limit(request.itemsPerPage)
+                    .map { it.toTicket() }
+            }
+
+            result != null
+        }
+
+        return result
+    }
+
+    /**
+     * A page of the tickets assigned to a user, newest first like [getPagedItems]
+     * @param userId Identifier of the technician
+     */
+    fun getPagedItemsForUser(userId: Uuid, request: PagedRequest): List<Ticket>? {
+        var result: List<Ticket>? = null
+
+        appLogTryCatch(GET_PAGED_FOR_USER_TAG) {
+            transaction {
+                result = TicketEntity
+                    .wrapRows(
+                        TicketTable
+                            .join(UserTicketTable, JoinType.INNER, TicketTable.id, UserTicketTable.ticket)
+                            .selectAll()
+                            .where { UserTicketTable.user eq userId }
+                            .orderBy(TicketTable.id to SortOrder.DESC)
+                            .offset(request.offset)
+                            .limit(request.itemsPerPage)
+                    )
                     .map { it.toTicket() }
             }
 

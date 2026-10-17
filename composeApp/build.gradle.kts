@@ -97,6 +97,10 @@ kotlin {
 
             // Local dates and times for display
             implementation(libs.kotlinx.datetime)
+
+            // Frosted glass blur for the ui kit
+            implementation(libs.haze)
+            implementation(libs.haze.blur)
         }
 
         commonTest.dependencies {

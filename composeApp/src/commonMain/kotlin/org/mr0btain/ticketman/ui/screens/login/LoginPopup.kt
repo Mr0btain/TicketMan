@@ -5,35 +5,29 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
-import org.mr0btain.ticketman.ui.composables.loading.CircularLoading
+import org.jetbrains.compose.resources.stringResource
+import org.mr0btain.ticketman.server.request.AccountRequest
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
 import org.mr0btain.ticketman.ui.screens.login.components.LoginDialogState
 import org.mr0btain.ticketman.ui.screens.login.components.LoginField
-import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.RequestAccountForm
 import org.mr0btain.ticketman.ui.screens.login.components.ServerAddressField
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.login_text
 
 @Composable
 fun LoginPopup(
-    modifier: Modifier,
     onDismiss: () -> Unit,
-    viewModel: MainViewModel,
-    coroutineScope: CoroutineScope
+    viewModel: MainViewModel
 ) {
     val loginState by viewModel.loginState.collectAsState()
     val serverConnected by viewModel.serverConnected.collectAsState()
@@ -60,9 +54,7 @@ fun LoginPopup(
     }
 
     LoginDialog(
-        modifier = modifier,
         state = state,
-        labelState = state.name,
         error = error,
         initialUsername = viewModel.savedUsername,
         message = loginMessage,
@@ -78,12 +70,9 @@ fun LoginPopup(
     )
 }
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 private fun LoginDialog(
-    modifier: Modifier = Modifier,
     state: LoginDialogState,
-    labelState: String,
     error: Boolean,
     initialUsername: String,
     message: String?,
@@ -94,61 +83,41 @@ private fun LoginDialog(
     onBackFromRequest: () -> Unit,
     onDismiss: () -> Unit
 ) {
-    val padding = 48.dp
-
-    Dialog(
+    TmDialog(
+        title = when (state) {
+            LoginDialogState.Address -> "Connect to the shop's server"
+            LoginDialogState.Login -> stringResource(Res.string.login_text)
+            LoginDialogState.Request -> "Request an account"
+            LoginDialogState.Loading -> "Logging in"
+        },
+        description = when (state) {
+            LoginDialogState.Address -> "Type the address your admin gave you."
+            LoginDialogState.Login -> "New and have a setup code? Enter it as your password."
+            LoginDialogState.Request -> "An admin looks it over. Once approved, log in with this username and password to finish setting up."
+            LoginDialogState.Loading -> null
+        },
         onDismissRequest = onDismiss,
-        properties = DialogProperties()
+        maxWidth = 460.dp
     ) {
-        Surface(
-            modifier = modifier,
-            color = MaterialTheme.colorScheme.secondaryContainer,
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 10.dp
-        ) {
-            AnimatedContent(
-                targetState = state,
-                transitionSpec = {
-                    fadeIn(
-                        animationSpec = tween(300)
-                    ) togetherWith fadeOut(animationSpec = tween(300))
-                },
-                label = labelState
-            ) { targetState ->
-                when (targetState) {
-                    LoginDialogState.Address -> {
-                        ServerAddressField(
-                            modifier = Modifier.padding(padding),
-                            onContinue = { address -> onAddressConfirm(address) },
-                            error = error
-                        )
-                    }
+        AnimatedContent(
+            targetState = state,
+            transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },
+            label = "Login step"
+        ) { targetState ->
+            when (targetState) {
+                LoginDialogState.Address -> ServerAddressField(onContinue = onAddressConfirm, error = error)
 
-                    LoginDialogState.Login -> {
-                        LoginField(
-                            modifier = Modifier.padding(padding),
-                            error = error,
-                            initialUsername = initialUsername,
-                            message = message,
-                            onRequestAccount = onRequestAccount,
-                            onConfirm = { user, pass -> onLoginConfirm(user, pass) }
-                        )
-                    }
+                LoginDialogState.Login -> LoginField(
+                    error = error,
+                    initialUsername = initialUsername,
+                    message = message,
+                    onRequestAccount = onRequestAccount,
+                    onConfirm = onLoginConfirm
+                )
 
-                    LoginDialogState.Request -> {
-                        RequestAccountForm(
-                            modifier = Modifier.padding(32.dp),
-                            onSubmit = onSubmitRequest,
-                            onBack = onBackFromRequest
-                        )
-                    }
+                LoginDialogState.Request -> RequestAccountForm(onSubmit = onSubmitRequest, onBack = onBackFromRequest)
 
-                    LoginDialogState.Loading -> {
-                        CircularLoading(
-                            Modifier.padding(padding)
-                        )
-                    }
-                }
+                LoginDialogState.Loading -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { TmLoading() }
             }
         }
     }

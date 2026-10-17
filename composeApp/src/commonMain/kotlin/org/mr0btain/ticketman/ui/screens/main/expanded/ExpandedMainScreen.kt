@@ -2,19 +2,21 @@ package org.mr0btain.ticketman.ui.screens.main.expanded
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.ui.composables.image.ImagePopup
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
+import org.mr0btain.ticketman.ui.kit.containers.TmTabs
+import org.mr0btain.ticketman.ui.kit.data.ImagePopup
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
@@ -23,16 +25,16 @@ import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryPanel
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.refresh_cw
+import kotlin.uuid.Uuid
 
 // TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
 // TODO: Maybe move allot of these states and their seed values to viewmodel and move dialogs to App.kt if we use them in many screens
 
 @Composable
 fun ExpandedMainScreen(
-    viewModel: MainViewModel,
-    coroutineScope: CoroutineScope,
-    snackBarState: SnackbarHostState
+    viewModel: MainViewModel
 ) {
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
@@ -58,7 +60,8 @@ fun ExpandedMainScreen(
     val ticketSeed = viewModel.ticketSeed
     val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val ticketLazyListState = rememberLazyListState()
-    var selectedTicketPanel by remember { mutableIntStateOf(0) }
+    val ticketScope by viewModel.ticketScope.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // Handler for ticket pager
     offsetPagerHandler(viewModel.ticketPager, ticketLazyListState)
@@ -85,21 +88,22 @@ fun ExpandedMainScreen(
     var showImagePopup by remember { mutableStateOf(false) }
     val imagePopupList = remember { mutableStateListOf<StoredImage>() }
 
+    // Opens the photos of the note with this identifier
+    fun showNoteImages(notes: List<Note>, noteIdentifier: Uuid) {
+        notes.firstOrNull { it.identifier == noteIdentifier }?.let { note ->
+            imagePopupList.clear()
+            imagePopupList.addAll(note.images)
+            showImagePopup = true
+        }
+    }
+
     // For customer adding or editing
     // Doing image click like this we won't be able to open newly added images that were added within this dialog.
     // Which I'm fine with but it may change later
     CustomerDialog(
         seed = customerSeed,
         isVisible = showCustomerDialog,
-        onImageClick = { id ->
-            customerSeed.notes
-                .firstOrNull { it.identifier == id }
-                ?.let { note ->
-                    imagePopupList.clear()
-                    imagePopupList.addAll(note.images)
-                    showImagePopup = true
-                }
-        },
+        onImageClick = { id -> showNoteImages(customerSeed.notes, id) },
         onDismiss = {
             showCustomerDialog = false
             // Reset seed data
@@ -176,204 +180,98 @@ fun ExpandedMainScreen(
         }
     )
 
-    Surface(
-        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.secondaryContainer
-                else MaterialTheme.colorScheme.background
+    val spacing = TmTheme.spacing
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(spacing.sm)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Row(
-                modifier = Modifier.padding(4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Start
-            ) {
-                Box(
-                    modifier = Modifier.width(390.dp)
-                ) {
-                    SecondaryTabRow(
-                        selectedTabIndex = tabIndex.value,
-                        modifier = Modifier
-                            .padding(top = 4.dp, start = 4.dp)
-                            .wrapContentWidth(),
-                        containerColor = Color.Transparent
-                    ) {
-                        // Customer Tab
-                        Tab(
-                            selected = tabIndex.value == 0,
-                            onClick = { viewModel.changeMainTabIndex(0) },
-                            modifier = Modifier.wrapContentWidth(),
-                            text = {
-                                Text(
-                                    text = "Customers",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TmTabs(
+                modifier = Modifier.weight(1f),
+                tabs = listOf("Customers", "Tickets", "Inventory"),
+                selectedIndex = tabIndex.value,
+                onSelect = { viewModel.changeMainTabIndex(it) }
+            )
 
-                        // Ticket Tab
-                        Tab(
-                            selected = tabIndex.value == 1,
-                            onClick = { viewModel.changeMainTabIndex(1) },
-                            modifier = Modifier.wrapContentWidth(),
-                            text = {
-                                Text(
-                                    text = "Tickets",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        )
+            TmIconButton(
+                icon = Res.drawable.refresh_cw,
+                contentDescription = "Reload the lists",
+                onClick = { viewModel.refreshPagers() }
+            )
+        }
 
-                        // Inventory Tab
-                        Tab(
-                            selected = tabIndex.value == 2,
-                            onClick = { viewModel.changeMainTabIndex(2) },
-                            modifier = Modifier.wrapContentWidth(),
-                            text = {
-                                Text(
-                                    text = "Inventory",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    maxLines = 1,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        )
-                    }
-                }
+        if (loginState.value != LoginState.LOGGED_IN) {
+            TmNotice(
+                kind = TmNoticeKind.INFO,
+                text = "You're not logged in, so these lists can't load. Log in from the bottom of the sidebar."
+            )
+        }
 
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(end = 8.dp),
-                    horizontalArrangement = Arrangement.End,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Button(
-                        onClick = {
-                            viewModel.refreshPagers()
-                        }
-                    ) {
-                        Text("Reload")
-                    }
+        when (tabIndex.value) {
+            0 -> CustomerPanel(
+                onAddCustomer = {
+                    customerSeed.clear()
+                    showCustomerDialog = true
+                },
+                onEditCustomer = { showCustomerDialog = true },
+                onCustomerSelectionChange = { id -> viewModel.setSelectedCustomer(id) },
+                onSearchQuery = { query -> viewModel.searchCustomers(query) },
+                onDeleteCustomer = {
+                    dataType = DataType.CUSTOMER
+                    showConfirmDeleteDialog = true
+                },
+                onTicketClick = { identifier ->
+                    viewModel.setSelectedTicket(identifier)
+                    showTicketDialog = true
+                },
+                onImageClick = { id -> showNoteImages(customerSeed.notes, id) },
+                seed = customerSeed,
+                customerList = customerPagedItems?.value ?: emptyList(),
+                customerLazyListState = customerLazyListState
+            )
 
-                    if (loginState.value == LoginState.LOGGED_IN) {
-                        Button(
-                            onClick = { viewModel.logout() }
-                        ) {
-                            Text("Log Out")
-                        }
-                    } else {
-                        Button(
-                            onClick = { viewModel.changeShowLogin(true) },
-                            enabled = loginState.value != LoginState.LOADING
-                        ) {
-                            Text("Log In")
-                        }
-                    }
-                }
-            }
+            // TODO: Finish user implementation
+            1 -> TicketPanel(
+                ticketList = ticketPagedItems?.value ?: emptyList(),
+                seed = ticketSeed,
+                onAddNewTicket = {
+                    ticketSeed.clear()
+                    showTicketDialog = true
+                },
+                onEditTicket = { if (!ticketSeed.isNew) showTicketDialog = true },
+                onSelectedTicketChange = { id -> viewModel.setSelectedTicket(id) },
+                onTicketScopeChange = { newScope ->
+                    viewModel.setTicketScope(newScope)
+                    // The new list is a different set of tickets, so start it from the top
+                    scope.launch { ticketLazyListState.scrollToItem(0) }
+                },
+                onSearchQuery = { viewModel.searchTickets(it) },
+                onDeleteTicket = {
+                    dataType = DataType.TICKET
+                    showConfirmDeleteDialog = true
+                },
+                ticketScope = ticketScope,
+                ticketListState = ticketLazyListState,
+                onImageClick = { id -> showNoteImages(ticketSeed.notes, id) }
+            )
 
-            HorizontalDivider()
-
-            when (tabIndex.value) {
-                0 -> {
-                    CustomerPanel(
-                        onAddCustomer = {
-                            // Clear seed
-                            customerSeed.clear()
-
-                            // Trigger dialog
-                            showCustomerDialog = true
-                        },
-                        onEditCustomer = { showCustomerDialog = true },
-                        onCustomerSelectionChange = { id -> viewModel.setSelectedCustomer(id) },
-                        onSearchQuery = { query -> viewModel.searchCustomers(query) },
-                        onDeleteCustomer = {
-                            dataType = DataType.CUSTOMER
-                            showConfirmDeleteDialog = true
-                        },
-                        onTicketClick = { identifier ->
-                            viewModel.setSelectedTicket(identifier)
-
-                            showTicketDialog = true
-                        },
-                        onImageClick = { id ->
-                            customerSeed.notes
-                                .firstOrNull{ it.identifier == id }
-                                ?.let {
-                                    imagePopupList.clear()
-                                    imagePopupList.addAll(it.images)
-                                    showImagePopup = true
-                                }
-                        },
-                        seed = customerSeed,
-                        customerList = customerPagedItems?.value ?: emptyList(),
-                        customerLazyListState = customerLazyListState,
-                        coroutineScope = coroutineScope
-                    )
-                }
-
-                // Ticket Panel
-                1 -> {
-                    // TODO: Finish user implementation
-                    TicketPanel(
-                        ticketList = ticketPagedItems?.value ?: emptyList(),
-                        seed = ticketSeed,
-                        onAddNewTicket = {
-                            // Set up seed data
-                            ticketSeed.clear()
-
-                            // Show the dialog
-                            showTicketDialog = true
-                        },
-                        onEditTicket = { if (!ticketSeed.isNew) showTicketDialog = true },
-                        onSelectedTicketChange = { id -> viewModel.setSelectedTicket(id) },
-                        onSelectedPanelChange = { selectedTicketPanel = it },
-                        onSearchQuery = { viewModel.searchTickets(it) },
-                        onDeleteTicket = {
-                            dataType = DataType.TICKET
-                            showConfirmDeleteDialog = true
-                        },
-                        selectedPanel = selectedTicketPanel,
-                        ticketListState = ticketLazyListState,
-                        coroutineScope = coroutineScope,
-                        onImageClick = { id ->
-                            ticketSeed.notes
-                                .firstOrNull{ it.identifier == id }
-                                ?.let {
-                                    imagePopupList.clear()
-                                    imagePopupList.addAll(it.images)
-                                    showImagePopup = true
-                                }
-                        }
-                    )
-                }
-
-                // Inventory panel
-                2 -> {
-                    InventoryPanel(
-                        inventoryList = inventoryPagedItems?.value ?: emptyList(),
-                        selectedInventory = inventorySeed,
-                        onSelectedInventoryChange = { id -> viewModel.setSelectedInventory(id) },
-                        onSearchQuery = { viewModel.searchInventory(it) },
-                        onAddInventory = {
-                            inventorySeed.clear()
-                            showInventoryDialog = true
-                        },
-                        onEditInventory = { showInventoryDialog = true },
-                        onDeleteInventory = {
-                            dataType = DataType.INVENTORY
-                            showConfirmDeleteDialog = true
-                        },
-                        coroutineScope = coroutineScope,
-                        inventoryListState = inventoryLazyListState
-                    )
-                }
-            }
+            2 -> InventoryPanel(
+                inventoryList = inventoryPagedItems?.value ?: emptyList(),
+                selectedInventory = inventorySeed,
+                onSelectedInventoryChange = { id -> viewModel.setSelectedInventory(id) },
+                onSearchQuery = { viewModel.searchInventory(it) },
+                onAddInventory = {
+                    inventorySeed.clear()
+                    showInventoryDialog = true
+                },
+                onEditInventory = { showInventoryDialog = true },
+                onDeleteInventory = {
+                    dataType = DataType.INVENTORY
+                    showConfirmDeleteDialog = true
+                },
+                inventoryListState = inventoryLazyListState
+            )
         }
     }
 }

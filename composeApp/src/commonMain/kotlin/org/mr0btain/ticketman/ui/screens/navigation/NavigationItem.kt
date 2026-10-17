@@ -1,9 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.navigation
 
-import androidx.compose.ui.graphics.painter.Painter
+import org.jetbrains.compose.resources.DrawableResource
 
 data class NavigationItem(
     val title: String,
-    val icon: Painter,
+    val icon: DrawableResource,
     val destination: Destination
 )

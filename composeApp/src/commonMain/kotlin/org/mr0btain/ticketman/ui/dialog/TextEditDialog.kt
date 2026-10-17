@@ -1,15 +1,8 @@
 package org.mr0btain.ticketman.ui.dialog
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -17,14 +10,15 @@ import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 
 /**
- * Text edit dialog
+ * Dialog for changing one text value, like a setting
+ * @param onConfirm Gets the new value, returns false to keep the dialog open and mark the value as wrong
+ * @param hint Shown under the field, and in place of the generic message when a value is rejected
  */
-
 @Composable
 fun TextEditDialog(
     label: String,
@@ -32,66 +26,39 @@ fun TextEditDialog(
     visible: Boolean,
     onConfirm: (String) -> Boolean,
     onCancel: () -> Unit,
-    keyboardType: KeyboardType
+    keyboardType: KeyboardType,
+    hint: String? = null
 ) {
+    if (!visible) return
+
     val focusRequester = remember { FocusRequester() }
     var isError by remember { mutableStateOf(false) }
+    var field by remember(value) { mutableStateOf(TextFieldValue(text = value, selection = TextRange(value.length))) }
 
-    var textFieldValueState by remember(value) {
-        mutableStateOf(
-            TextFieldValue(
-                text =value,
-                selection = TextRange(value.length)
-            )
+    fun save() {
+        if (onConfirm(field.text)) {
+            isError = false
+            onCancel()
+        } else {
+            isError = true
+        }
+    }
+
+    TmDialog(
+        title = label,
+        onDismissRequest = onCancel,
+        actions = { TmButtonRow(confirmText = "Save", onConfirm = ::save, onCancel = onCancel) }
+    ) {
+        TmTextField(
+            modifier = Modifier.focusRequester(focusRequester),
+            value = field,
+            onValueChange = { field = it },
+            supportingText = hint,
+            error = if (isError) hint ?: "That value can't be used" else null,
+            keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(onDone = { save() })
         )
     }
 
-    if (visible) {
-        Dialog(
-            onDismissRequest = onCancel
-        ) {
-            Surface(
-                color = MaterialTheme.colorScheme.secondaryContainer,
-                shape = RoundedCornerShape(16.dp),
-                shadowElevation = 4.dp
-            ) {
-                Column(
-                    modifier = Modifier
-                        .wrapContentSize()
-                        .padding(32.dp),
-                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier.focusRequester(focusRequester),
-                        label = { Text(label) },
-                        singleLine = true,
-                        value = textFieldValueState,
-                        shape = RoundedCornerShape(8.dp),
-                        onValueChange = { textFieldValueState = it },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = keyboardType,
-                            imeAction = ImeAction.Next
-                        ),
-                        isError = isError
-                    )
-
-                    Spacer(Modifier.padding(12.dp))
-
-                    ConfirmCancelButtons(
-                        onConfirmClick = {
-                            val result = onConfirm(textFieldValueState.text)
-
-                            if (result) {
-                                isError = false
-                                onCancel()
-                            } else isError = true
-                        },
-                        onCancelClick = onCancel
-                    )
-                }
-            }
-        }
-
-        LaunchedEffect(Unit) { focusRequester.requestFocus() }
-    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
 }

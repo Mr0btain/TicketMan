@@ -1,20 +1,24 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.ui.composables.DialogTextRow
-import org.mr0btain.ticketman.ui.composables.SectionCard
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.user_plus
 
 /**
  * Fields for a new customer. Only the name and a phone or email are required
@@ -23,7 +27,7 @@ import org.mr0btain.ticketman.ui.composables.SectionCard
 @Composable
 fun CustomerForm(
     modifier: Modifier = Modifier,
-    title: String = "New Customer",
+    title: String = "New customer",
     onSave: (Customer, (String?) -> Unit) -> Unit,
     onCancel: () -> Unit
 ) {
@@ -37,6 +41,7 @@ fun CustomerForm(
     var zip by remember { mutableStateOf("") }
     var saving by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+    val spacing = TmTheme.spacing
 
     val problem = when {
         firstName.isBlank() -> "Enter their name"
@@ -44,75 +49,50 @@ fun CustomerForm(
         else -> null
     }
 
-    SectionCard(modifier = modifier.widthIn(max = 640.dp), title = title) {
-        DialogTextRow(
-            firstLabel = "First Name",
-            firstValue = firstName,
-            onFirstValueChange = { firstName = it },
-            secondLabel = "Last Name",
-            secondValue = lastName,
-            onSecondValueChange = { lastName = it }
+    TmPanel(modifier = modifier.widthIn(max = 640.dp), title = title, icon = Res.drawable.user_plus) {
+        TmFieldPair(
+            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
+            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
         )
-
-        DialogTextRow(
-            firstLabel = "Phone",
-            firstValue = phone,
-            onFirstValueChange = { phone = it },
-            secondLabel = "Email",
-            secondValue = email,
-            onSecondValueChange = { email = it }
+        TmFieldPair(
+            { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") },
+            { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") }
         )
-
-        DialogTextRow(
-            firstLabel = "Street",
-            firstValue = street,
-            onFirstValueChange = { street = it },
-            secondLabel = "City",
-            secondValue = city,
-            onSecondValueChange = { city = it }
-        )
-
-        DialogTextRow(
-            firstLabel = "State",
-            firstValue = state,
-            onFirstValueChange = { state = it },
-            secondLabel = "Zip",
-            secondValue = zip,
-            onSecondValueChange = { zip = it }
-        )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = street, onValueChange = { street = it }, label = "Street")
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+            TmTextField(modifier = Modifier.weight(2f), value = city, onValueChange = { city = it }, label = "City")
+            TmTextField(modifier = Modifier.weight(1f), value = state, onValueChange = { state = it }, label = "State")
+            TmTextField(modifier = Modifier.weight(1f), value = zip, onValueChange = { zip = it }, label = "Zip")
+        }
 
         (error ?: problem.takeIf { firstName.isNotEmpty() || phone.isNotEmpty() })?.let {
-            Text(text = it, fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
+            TmNotice(text = it, kind = if (error != null) TmNoticeKind.ERROR else TmNoticeKind.WARNING)
         }
 
-        Row(
-            modifier = Modifier.padding(top = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(onClick = onCancel) { Text("Cancel") }
+        TmButtonRow(
+            confirmText = "Save customer",
+            confirmEnabled = problem == null,
+            loading = saving,
+            onCancel = onCancel,
+            onConfirm = {
+                saving = true
+                error = null
 
-            Button(
-                enabled = problem == null && !saving,
-                onClick = {
-                    saving = true
-                    error = null
+                val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
 
-                    val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
-                    onSave(
-                        Customer(
-                            name = joinName(name).lowercase(),
-                            phone = phone.trim(),
-                            email = email.trim(),
-                            address = Address(street.trim(), city.trim(), state.trim(), zip.trim())
-                        )
-                    ) { problemSaving ->
-                        saving = false
-                        error = problemSaving
-                    }
+                onSave(
+                    Customer(
+                        name = joinName(name).lowercase(),
+                        phone = phone.trim(),
+                        email = email.trim(),
+                        address = Address(street.trim(), city.trim(), state.trim(), zip.trim())
+                    )
+                ) { problemSaving ->
+                    saving = false
+                    error = problemSaving
                 }
-            ) { Text("Save Customer") }
-        }
+            }
+        )
     }
 }
 
@@ -127,12 +107,10 @@ fun NewCustomerScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
     ) {
-        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(text = "New Customer", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        }
-
+        TmPageHeader(title = "New customer", onBack = onCancel)
         CustomerForm(title = "Details", onSave = onSave, onCancel = onCancel)
     }
 }

@@ -1,35 +1,33 @@
 package org.mr0btain.ticketman
 
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.navigation.compose.rememberNavController
-import org.jetbrains.compose.resources.painterResource
-import org.koin.compose.KoinContext
+import org.mr0btain.ticketman.components.debug.BuildConfigImpl
 import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
+import org.mr0btain.ticketman.ui.screens.navigation.PhoneAppShell
+import org.mr0btain.ticketman.ui.screens.navigation.WideAppShell
+import org.mr0btain.ticketman.ui.screens.navigation.navigateTo
 import org.mr0btain.ticketman.ui.screens.navigation.Destination
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationItem
-import org.mr0btain.ticketman.ui.screens.navigation.SideAppNav
-import org.mr0btain.ticketman.ui.theme.AppTheme
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.file_text
 import ticketman.composeapp.generated.resources.home
+import ticketman.composeapp.generated.resources.layers
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
-import ticketman.composeapp.generated.resources.user
 
 // TODO: Work on UI for mobile size screens
 
@@ -87,49 +85,32 @@ fun App() {
 
     // Admin screen is only listed for admins
     val isAdmin = mainViewModel.isAdmin.collectAsState()
-    val adminIcon = painterResource(Res.drawable.archive)
+    val currentUser = mainViewModel.currentUser.collectAsState()
 
+    val isDebug = remember { BuildConfigImpl().isDebug() }
+
+    // Logging in happens from the bottom of the nav rail, so the old login screen isn't listed
     val navDestination = listOfNotNull(
-        if (isAdmin.value) NavigationItem(
-            title = "Admin",
-            icon = adminIcon,
-            destination = Destination.ADMIN
-        ) else null,
-        NavigationItem(
-            title = "Counter",
-            icon = painterResource(Res.drawable.monitor),
-            destination = Destination.DASHBOARD
-        ),
-        NavigationItem(
-            title = "Invoice",
-            icon = painterResource(Res.drawable.file_text),
-            destination = Destination.INVOICE
-        ),
-        NavigationItem(
-            title = "Login",
-            icon = painterResource(Res.drawable.user),
-            destination = Destination.LOGIN
-        ),
-        NavigationItem(
-            title = "Main",
-            icon = painterResource(Res.drawable.home),
-            destination = Destination.MAIN
-        ),
-        NavigationItem(
-            title = "Settings",
-            icon = painterResource(Res.drawable.settings),
-            destination = Destination.SETTINGS
-        )
+        if (isAdmin.value) NavigationItem("Admin", Res.drawable.archive, Destination.ADMIN) else null,
+        NavigationItem("Counter", Res.drawable.monitor, Destination.DASHBOARD),
+        NavigationItem("Invoices", Res.drawable.file_text, Destination.INVOICE),
+        NavigationItem("Main", Res.drawable.home, Destination.MAIN),
+        NavigationItem("Settings", Res.drawable.settings, Destination.SETTINGS),
+        // Component gallery is for working on the ui kit, so only listed in debug builds
+        if (isDebug) NavigationItem("Components", Res.drawable.layers, Destination.GALLERY) else null
     )
 
-    AppTheme(
-        darkTheme = mainViewModel.darkMode.collectAsState(false).value
+    TmTheme(
+        palette = mainViewModel.palette.collectAsState().value,
+        font = mainViewModel.font.collectAsState().value,
+        darkTheme = mainViewModel.darkMode.collectAsState().value,
+        reduceTransparency = mainViewModel.reduceTransparency.collectAsState().value
     ) {
         println("Platform: ${getPlatform().name}")
 
         if (kioskActive.value) {
             KioskShell(mainViewModel)
-            return@AppTheme
+            return@TmTheme
         }
 
         accountSetup.value?.let { setup ->
@@ -144,74 +125,41 @@ fun App() {
 
         if (shouldShowLogin.value) {
             LoginPopup(
-                modifier = Modifier.padding(24.dp),
                 viewModel = mainViewModel,
-                onDismiss = { mainViewModel.changeShowLogin(false) },
-                coroutineScope = mainScope
+                onDismiss = { mainViewModel.changeShowLogin(false) }
             )
         }
 
-        // Check if were on desktop, if so we can avoid using window size class entirely.
-        if (getPlatform().name.contains("Java")) {
-            SideAppNav(
+        val host: @Composable () -> Unit = {
+            NavigationHost(
                 navHostController = navigator,
-                content = { paddingValues ->
-                    NavigationHost(
-                        modifier = Modifier.padding(paddingValues),
-                        navHostController = navigator,
-                        coroutineScope = mainScope,
-                        mainViewModel = mainViewModel,
-                        snackBarState = snackBarHostState,
-                        initialDestination = initialDestination
-                    )
-                },
-                topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
                 coroutineScope = mainScope,
-                destinations = navDestination,
+                mainViewModel = mainViewModel,
+                snackBarState = snackBarHostState,
                 initialDestination = initialDestination
             )
-        } else {
-            // Calculating screen size if were on mobile. This should only update when the screen is rotated.
-            val windowSizeClass = calculateWindowSizeClass()
+        }
 
-            // Change our view dependent on screen size. Mostly to differentiate from tablet or phone screen
-            if (windowSizeClass.widthSizeClass == WindowWidthSizeClass.Expanded) {
-                // TODO: Test on actual tablet
-                // Tablet screen just use desktop sidebar
-                SideAppNav(
-                    navHostController = navigator,
-                    content = { paddingValues ->
-                        NavigationHost(
-                            modifier = Modifier.padding(paddingValues),
-                            navHostController = navigator,
-                            coroutineScope = mainScope,
-                            mainViewModel = mainViewModel,
-                            snackBarState = snackBarHostState,
-                            initialDestination = initialDestination
-                        )
-                    },
-                    topAppText = "Welcome: ", //${currentEmployee.value.name.firstName + " " + currentEmployee.value.name.lastName}
-                    coroutineScope = mainScope,
-                    destinations = navDestination,
-                    initialDestination = initialDestination
-                )
-            } else {
-                // Phone screen
-                BottomNavigationDrawer(
-                    navController = navigator,
-                    coroutineScope = mainScope,
-                    destinations = navDestination,
-                    content = { paddingValues ->
-                        NavigationHost(
-                            modifier = Modifier.padding(paddingValues),
-                            coroutineScope = mainScope,
-                            navHostController = navigator,
-                            mainViewModel = mainViewModel,
-                            snackBarState = snackBarHostState
-                        )
-                    }
-                )
-            }
+        // Desktop always gets the rail, phones and tablets go by window width
+        val wide = getPlatform().name.contains("Java") ||
+                calculateWindowSizeClass().widthSizeClass == WindowWidthSizeClass.Expanded
+
+        if (wide) {
+            WideAppShell(
+                navHostController = navigator,
+                destinations = navDestination,
+                snackBarState = snackBarHostState,
+                user = currentUser.value,
+                onLogin = { mainViewModel.changeShowLogin(true) },
+                onLogout = { mainViewModel.logout() },
+                onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
+            ) { host() }
+        } else {
+            PhoneAppShell(
+                navHostController = navigator,
+                destinations = navDestination,
+                snackBarState = snackBarHostState
+            ) { host() }
         }
     }
 }

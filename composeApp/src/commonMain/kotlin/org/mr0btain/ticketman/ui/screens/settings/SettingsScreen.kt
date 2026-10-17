@@ -1,32 +1,30 @@
 package org.mr0btain.ticketman.ui.screens.settings
 
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
+import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
+import org.mr0btain.ticketman.ui.kit.containers.TmLazyColumn
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.data.station.StationStatus
+import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.ChangePinDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
-import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
+import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import ticketman.composeapp.generated.resources.*
 
 // For now, I think well be fine with using this on every screen size/ platform as it should fit just fine
@@ -34,12 +32,16 @@ import ticketman.composeapp.generated.resources.*
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
-    scope: CoroutineScope
+    scope: CoroutineScope,
+    onOpenGallery: (() -> Unit)? = null
 ) {
     val TAG = "SettingsScreen"
     val CHECK_URL_TAG = "$TAG:CheckUrl"
 
     val darkMode = viewModel.darkMode.collectAsState()
+    val palette = viewModel.palette.collectAsState()
+    val font = viewModel.font.collectAsState()
+    val reduceTransparency = viewModel.reduceTransparency.collectAsState()
     val serverUrl = viewModel.serverUrl.collectAsState()
     val rememberLogin = viewModel.rememberLogin.collectAsState()
     val defaultTab = viewModel.defaultTab.collectAsState()
@@ -73,19 +75,15 @@ fun SettingsScreen(
     // Names of the main screen tabs, in tab index order
     val tabNames = listOf("Customers", "Tickets", "Inventory")
 
-    val textStyle = MaterialTheme.typography.bodyMedium
-    val childTextStyle = MaterialTheme.typography.bodySmall
-
     val settingsGroups = listOf(
         SettingItemGroup(
-            label = stringResource(Res.string.settings_first_group),
-            textStyle = textStyle,
-            childTextStyle = childTextStyle,
+            label = "Login",
+            icon = Res.drawable.lock,
             items = listOf(
                 SettingItem(
                     icon = if (rememberLogin.value) painterResource(Res.drawable.lock) else painterResource(Res.drawable.unlock),
                     description = "Save username and password after logging in",
-                    label = "Remember Login",
+                    label = "Remember login",
                     enabled = true,
                     initialState = rememberLogin.value,
                     onClick = {
@@ -97,7 +95,7 @@ fun SettingsScreen(
                 SettingItem(
                     icon = painterResource(Res.drawable.home),
                     description = "Main screen tab shown on start",
-                    label = "Start Tab",
+                    label = "Start tab",
                     enabled = true,
                     initialState = tabNames.getOrElse(defaultTab.value) { "" },
                     onClick = {
@@ -109,14 +107,13 @@ fun SettingsScreen(
             )
         ),
         SettingItemGroup(
-            label = stringResource(Res.string.settings_second_group),
-            textStyle = textStyle,
-            childTextStyle = childTextStyle,
+            label = "Server and data",
+            icon = Res.drawable.server,
             items = listOf(
                 SettingItem(
                     icon = painterResource(Res.drawable.server),
-                    description = "Url used to connect to the server",
-                    label = "Server Url",
+                    description = "Where the server is, like 192.168.1.20:8080",
+                    label = "Server address",
                     enabled = true,
                     initialState = serverUrl.value,
                     onClick = { url ->
@@ -133,7 +130,7 @@ fun SettingsScreen(
                 SettingItem(
                     icon = painterResource(Res.drawable.monitor),
                     description = "Name admins see for this device, used from the next login",
-                    label = "Device Name",
+                    label = "Device name",
                     enabled = true,
                     initialState = deviceName.value,
                     onClick = { name ->
@@ -146,7 +143,7 @@ fun SettingsScreen(
                     icon = painterResource(Res.drawable.list),
                     description = "Number of items loaded per page " +
                             "(${MainViewModel.PAGE_SIZE_RANGE.first}-${MainViewModel.PAGE_SIZE_RANGE.last})",
-                    label = "Page Size",
+                    label = "Page size",
                     enabled = true,
                     initialState = pageSize.value.toString(),
                     onClick = { value ->
@@ -160,7 +157,7 @@ fun SettingsScreen(
                     icon = painterResource(Res.drawable.search),
                     description = "Max number of search results " +
                             "(${MainViewModel.SEARCH_LIMIT_RANGE.first}-${MainViewModel.SEARCH_LIMIT_RANGE.last})",
-                    label = "Search Result Limit",
+                    label = "Search result limit",
                     enabled = true,
                     initialState = searchLimit.value.toString(),
                     onClick = { value ->
@@ -174,7 +171,7 @@ fun SettingsScreen(
                     icon = painterResource(Res.drawable.database),
                     description = "Max items kept in each cache, applies on restart " +
                             "(${MainViewModel.CACHE_SIZE_RANGE.first}-${MainViewModel.CACHE_SIZE_RANGE.last})",
-                    label = "Cache Size",
+                    label = "Cache size",
                     enabled = true,
                     initialState = cacheSize.value.toString(),
                     onClick = { value ->
@@ -187,9 +184,8 @@ fun SettingsScreen(
             )
         ),
         SettingItemGroup(
-            label = "Account & Station",
-            textStyle = textStyle,
-            childTextStyle = childTextStyle,
+            label = "Account and station",
+            icon = Res.drawable.key,
             items = listOf(
                 SettingItem(
                     icon = painterResource(Res.drawable.key),
@@ -215,7 +211,7 @@ fun SettingsScreen(
                         StationStatus.PENDING -> "Waiting for an admin to approve \"${station.value?.name}\""
                         StationStatus.APPROVED -> "Approved as \"${station.value?.name}\""
                     },
-                    label = "Counter Station",
+                    label = "Counter station",
                     enabled = true,
                     initialState = "",
                     onClick = {
@@ -225,41 +221,29 @@ fun SettingsScreen(
                     type = SettingType.CLICKABLE_TEXT
                 )
             )
-        ),
-        SettingItemGroup(
-            label = stringResource(Res.string.settings_third_group),
-            textStyle = textStyle,
-            childTextStyle = childTextStyle,
-            items = listOf(
-                SettingItem(
-                    icon = if (darkMode.value) painterResource(Res.drawable.moon) else painterResource(Res.drawable.sun),
-                    description = "UI dark mode or light mode",
-                    label = "Dark Mode",
-                    enabled = true,
-                    initialState = darkMode.value,
-                    onClick = {
-                        viewModel.toggleDarkMode()
-                        true
-                    },
-                    type = SettingType.SWITCH
-                )
-            )
         )
     )
 
-    Surface(
-        modifier = modifier
-            .padding(8.dp)
-            .fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    TmLazyColumn(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
     ) {
-        PlatformLazyColumn(
-            modifier = Modifier.padding(16.dp),
-            isVisible = true
-        ) {
-            items(settingsGroups) { group ->
-                SettingsGroup(settingItemGroup = group)
-            }
+        item {
+            AppearanceSettings(
+                palette = palette.value,
+                onPaletteChange = viewModel::setPalette,
+                darkTheme = darkMode.value,
+                onDarkThemeChange = { dark -> if (dark != darkMode.value) viewModel.toggleDarkMode() },
+                font = font.value,
+                onFontChange = viewModel::setFont,
+                reduceTransparency = reduceTransparency.value,
+                onReduceTransparencyChange = { viewModel.toggleReduceTransparency() },
+                onOpenGallery = onOpenGallery
+            )
+        }
+
+        items(settingsGroups) { group ->
+            SettingsGroup(settingItemGroup = group)
         }
     }
 }

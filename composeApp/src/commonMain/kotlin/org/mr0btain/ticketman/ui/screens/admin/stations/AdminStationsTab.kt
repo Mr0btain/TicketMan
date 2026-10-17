@@ -2,23 +2,30 @@ package org.mr0btain.ticketman.ui.screens.admin.stations
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.composables.SectionCard
-import org.mr0btain.ticketman.components.utils.formatDateTime
-import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
+import org.mr0btain.ticketman.ui.kit.foundation.TmSurfaceLevel
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.selection.TmSwitch
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.monitor
 
 /**
  * Devices staff can PIN in at. Devices register themselves from Settings, admins approve them here
@@ -30,69 +37,53 @@ fun AdminStationsTab(
     onKiosk: (Station, KioskSettings) -> Unit,
     onRemove: (Station) -> Unit
 ) {
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(8.dp)
     ) {
-        SectionCard(
+        TmPanel(
             modifier = Modifier.widthIn(max = 900.dp),
-            title = "Stations (${stations.size})"
+            title = "Stations",
+            subtitle = "Staff can only sign in with a PIN on an approved station. A device asks to be one from Settings, Counter station.",
+            icon = Res.drawable.monitor
         ) {
-            Text(
-                text = "Staff can only sign in with a PIN on an approved station. A device asks to be one from Settings > Counter Station.",
-                fontSize = 13.sp
-            )
-
-            Spacer(Modifier.padding(4.dp))
-
             if (stations.isEmpty()) {
-                EmptyMessage("No devices have asked to be a station")
+                TmEmptyState(icon = Res.drawable.monitor, title = "No devices have asked to be a station")
             }
 
             stations.forEach { station ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = if (station.status == StationStatus.APPROVED) CustomMaterialColors.success else CustomMaterialColors.inProgress
+                val approved = station.status == StationStatus.APPROVED
+
+                TmSurface(level = TmSurfaceLevel.SUNKEN, modifier = Modifier.fillMaxWidth()) {
+                    Column(
+                        modifier = Modifier.padding(spacing.md),
+                        verticalArrangement = Arrangement.spacedBy(spacing.sm)
                     ) {
-                        Text(
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                            text = if (station.status == StationStatus.APPROVED) "Approved" else "Waiting",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = station.name, style = TmTheme.typography.subtitle, color = colors.text)
+                                    TmBadge(text = if (approved) "Approved" else "Waiting for approval", tone = if (approved) colors.success else colors.warning)
+                                }
+                                Text(
+                                    text = "Registered by ${station.requestedBy} ${formatTimeAgo(station.requestedAt)}" +
+                                        (station.approvedAt?.let { ", approved by ${station.approvedBy} on ${formatDateTime(it)}" } ?: ""),
+                                    style = TmTheme.typography.caption,
+                                    color = colors.textMuted
+                                )
+                            }
+
+                            if (!approved) TmButton(text = "Approve", onClick = { onApprove(station) })
+                            TmButton(text = "Remove", onClick = { onRemove(station) }, variant = TmButtonVariant.GHOST)
+                        }
+
+                        if (approved) KioskControls(station, onKiosk)
                     }
-
-                    Spacer(Modifier.padding(6.dp))
-
-                    Column(Modifier.weight(1f)) {
-                        Text(text = station.name, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            text = "Registered by ${station.requestedBy} ${formatTimeAgo(station.requestedAt)}" +
-                                (station.approvedAt?.let { " - approved by ${station.approvedBy} on ${formatDateTime(it)}" } ?: ""),
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    if (station.status == StationStatus.PENDING) {
-                        Button(onClick = { onApprove(station) }) { Text("Approve") }
-                        Spacer(Modifier.padding(4.dp))
-                    }
-
-                    OutlinedButton(onClick = { onRemove(station) }) { Text("Remove") }
                 }
-
-                if (station.status == StationStatus.APPROVED) KioskControls(station, onKiosk)
-
-                HorizontalDivider()
             }
         }
     }
@@ -105,38 +96,41 @@ fun AdminStationsTab(
 private fun KioskControls(station: Station, onKiosk: (Station, KioskSettings) -> Unit) {
     var timeout by remember(station) { mutableStateOf(station.idleTimeoutSeconds.toString()) }
     val seconds = timeout.toIntOrNull()?.takeIf { it in Station.IDLE_TIMEOUT_RANGE }
+    val spacing = TmTheme.spacing
 
     Row(
-        modifier = Modifier.padding(start = 12.dp, bottom = 6.dp),
+        horizontalArrangement = Arrangement.spacedBy(spacing.md),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Switch(
+        TmSwitch(
             checked = station.kioskEnabled,
-            onCheckedChange = { enabled ->
-                onKiosk(station, KioskSettings(enabled, seconds ?: station.idleTimeoutSeconds))
-            }
+            contentDescription = "Kiosk mode",
+            onCheckedChange = { enabled -> onKiosk(station, KioskSettings(enabled, seconds ?: station.idleTimeoutSeconds)) }
         )
 
         Text(
-            modifier = Modifier.padding(horizontal = 8.dp),
             text = if (station.kioskEnabled) "Kiosk mode, locks after" else "Kiosk mode off, would lock after",
-            fontSize = 13.sp
+            style = TmTheme.typography.body,
+            color = TmTheme.colors.text
         )
 
-        OutlinedTextField(
-            modifier = Modifier.width(110.dp),
+        TmTextField(
+            modifier = Modifier.width(90.dp),
             value = timeout,
             onValueChange = { text -> timeout = text.filter { it.isDigit() }.take(4) },
-            label = { Text("Seconds") },
-            isError = seconds == null,
-            singleLine = true
+            textStyle = TmTheme.typography.numeric,
+            size = TmControlSize.SMALL,
+            error = if (seconds == null) "" else null
         )
 
-        Spacer(Modifier.padding(4.dp))
+        Text(text = "seconds", style = TmTheme.typography.body, color = TmTheme.colors.textMuted)
 
-        TextButton(
+        TmButton(
+            text = "Save",
+            variant = TmButtonVariant.SECONDARY,
+            size = TmControlSize.SMALL,
             enabled = seconds != null && seconds != station.idleTimeoutSeconds,
             onClick = { seconds?.let { onKiosk(station, KioskSettings(station.kioskEnabled, it)) } }
-        ) { Text("Save") }
+        )
     }
 }

@@ -2,27 +2,28 @@ package org.mr0btain.ticketman.ui.screens.admin
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.*
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
+import org.mr0btain.ticketman.server.response.InviteResponse
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
+import org.mr0btain.ticketman.ui.kit.containers.TmTabs
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
 import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
-import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
 import org.mr0btain.ticketman.ui.screens.admin.users.ApproveDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.InviteCodeDialog
@@ -31,16 +32,18 @@ import org.mr0btain.ticketman.ui.screens.admin.users.ResetPasswordDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.UserDialog
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.refresh_cw
+import ticketman.composeapp.generated.resources.shield
 
 private enum class AdminTab(val label: String) {
     OVERVIEW("Overview"),
     USERS("Users"),
     SESSIONS("Sessions"),
     STATIONS("Stations"),
-    LOW_STOCK("Low Stock"),
-    SERVER("Server & Data"),
-    AUDIT("Audit Log")
+    LOW_STOCK("Low stock"),
+    SERVER("Server and data"),
+    AUDIT("Audit log")
 }
 
 /**
@@ -56,22 +59,16 @@ fun AdminScreen(
 ) {
     val isAdmin by viewModel.isAdmin.collectAsState()
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
-    ) {
-        if (isAdmin) {
-            AdminContent(viewModel, coroutineScope, onNavigateToMain)
-        } else {
-            NotAdminMessage(viewModel)
-        }
+    if (isAdmin) {
+        AdminContent(viewModel, onNavigateToMain)
+    } else {
+        NotAdminMessage(viewModel)
     }
 }
 
 @Composable
 private fun AdminContent(
     viewModel: MainViewModel,
-    coroutineScope: CoroutineScope,
     onNavigateToMain: () -> Unit
 ) {
     val admin = viewModel.admin
@@ -162,70 +159,45 @@ private fun AdminContent(
     )
 
     if (showDeleteDialog) {
-        SimpleConfirmDeleteDialog(
-            itemName = userSeed.username,
-            isDarkMode = CustomMaterialColors.darkMode,
-            onDismissRequest = { confirmed ->
-                if (confirmed) admin.deleteUser(userSeed.user)
+        TmConfirmDialog(
+            title = "Delete ${userSeed.username}?",
+            message = "Their account goes for good. Deactivating keeps their history and stops them logging in.",
+            confirmText = "Delete user",
+            destructive = true,
+            onConfirm = {
+                admin.deleteUser(userSeed.user)
                 showDeleteDialog = false
-            }
+            },
+            onDismissRequest = { showDeleteDialog = false }
         )
     }
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)
     ) {
         // ------------------------------------------ Tabs ------------------------------------------
-        Row(
-            modifier = Modifier.padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            SecondaryScrollableTabRow(
-                selectedTabIndex = selectedTab.ordinal,
-                modifier = Modifier
-                    .weight(1f)
-                    .padding(top = 4.dp, start = 4.dp),
-                containerColor = Color.Transparent,
-                edgePadding = 0.dp
-            ) {
-                AdminTab.entries.forEach { tab ->
-                    Tab(
-                        selected = selectedTab == tab,
-                        onClick = { selectedTab = tab },
-                        text = {
-                            Text(
-                                text = tab.label,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    )
-                }
-            }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            TmTabs(
+                modifier = Modifier.weight(1f),
+                tabs = AdminTab.entries.map { it.label },
+                selectedIndex = selectedTab.ordinal,
+                onSelect = { selectedTab = AdminTab.entries[it] },
+                badges = if (pending.isNotEmpty()) mapOf(AdminTab.USERS.ordinal to pending.size) else emptyMap()
+            )
 
-            if (isLoading) {
-                CircularProgressIndicator(
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .size(24.dp),
-                    strokeWidth = 3.dp
-                )
-            }
-
-            Button(
-                modifier = Modifier.padding(end = 8.dp),
+            TmButton(
+                text = "Refresh",
                 enabled = !isLoading,
+                loading = isLoading,
+                variant = TmButtonVariant.SECONDARY,
+                leadingIcon = Res.drawable.refresh_cw,
                 onClick = {
                     admin.refreshAll()
                     viewModel.refreshPagers()
                 }
-            ) {
-                Text("Refresh")
-            }
+            )
         }
-
-        HorizontalDivider()
 
         // ------------------------------------------ Content ------------------------------------------
         when (selectedTab) {
@@ -253,7 +225,6 @@ private fun AdminContent(
                 seed = userSeed,
                 currentUserIdentifier = currentUser?.identifier,
                 listState = userListState,
-                coroutineScope = coroutineScope,
                 onSelect = { identifier -> viewModel.setSelectedUser(identifier) },
                 onSearchQuery = { query -> viewModel.searchUsers(query) },
                 onAdd = {
@@ -321,36 +292,16 @@ private fun AdminContent(
 @Composable
 private fun NotAdminMessage(viewModel: MainViewModel) {
     val loginState by viewModel.loginState.collectAsState()
+    val loggedIn = loginState == LoginState.LOGGED_IN
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = "Admin access required",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.SemiBold
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        TmEmptyState(
+            icon = Res.drawable.shield,
+            title = "Admin access required",
+            message = if (loggedIn) "Your account doesn't have admin access." else "Log in with an admin account to use this screen.",
+            actionText = if (loggedIn) null else "Log in",
+            onAction = { if (loginState != LoginState.LOADING) viewModel.changeShowLogin(true) }
         )
-
-        Spacer(Modifier.padding(8.dp))
-
-        Text(
-            text = if (loginState == LoginState.LOGGED_IN) "Your account doesn't have admin access."
-                else "Log in with an admin account to use this screen.",
-            fontSize = 16.sp
-        )
-
-        if (loginState != LoginState.LOGGED_IN) {
-            Spacer(Modifier.padding(8.dp))
-
-            Button(
-                enabled = loginState != LoginState.LOADING,
-                onClick = { viewModel.changeShowLogin(true) }
-            ) {
-                Text("Log In")
-            }
-        }
     }
 }
 

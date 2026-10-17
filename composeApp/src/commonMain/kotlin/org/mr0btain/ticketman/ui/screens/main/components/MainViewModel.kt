@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
+import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
@@ -35,6 +36,10 @@ import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.ui.kit.theme.TmFont
+import org.mr0btain.ticketman.ui.kit.theme.TmFonts
+import org.mr0btain.ticketman.ui.kit.theme.TmPalette
+import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
 import org.mr0btain.ticketman.ui.screens.kiosk.components.KioskHandler
@@ -81,6 +86,10 @@ class MainViewModel(
         viewModelScope.launch {
             // Pull saved settings
             _darkMode.value = localStorage.darkMode
+            _palette.value = TmPalettes.byId(localStorage.themeId)
+            _font.value = TmFonts.byId(localStorage.fontId)
+            _reduceTransparency.value = localStorage.reduceTransparency
+            _ticketScope.value = TicketScope.byName(localStorage.ticketScope)
             _serverUrl.value = localStorage.serverUrl
             _rememberLogin.value = localStorage.rememberLogin
             _defaultTab.value = localStorage.defaultTab
@@ -129,10 +138,11 @@ class MainViewModel(
             coroutineScope = viewModelScope,
             config = config,
             fetch = { page, pageSize ->
-                remoteHandler.ticketRepo.fetch(
-                    offset = (page * pageSize).toLong(),
-                    limit = pageSize
-                )
+                val offset = (page * pageSize).toLong()
+                when (_ticketScope.value) {
+                    TicketScope.MINE -> remoteHandler.ticketRepo.fetchMine(offset = offset, limit = pageSize)
+                    TicketScope.ALL -> remoteHandler.ticketRepo.fetch(offset = offset, limit = pageSize)
+                }
             }
         )
 
@@ -291,6 +301,18 @@ class MainViewModel(
     val ticketCache = TicketCache(maxCacheSize)
 
     var ticketPager: OffsetPager<Ticket>? = null
+
+    private val _ticketScope = MutableStateFlow(TicketScope.DEFAULT)
+    val ticketScope = _ticketScope.asStateFlow()
+
+    /** Switches the ticket list between the user's tickets and everyone's, and reloads it */
+    fun setTicketScope(scope: TicketScope) {
+        if (_ticketScope.value == scope) return
+
+        _ticketScope.value = scope
+        localStorage.ticketScope = scope.name
+        viewModelScope.launch { ticketPager?.refresh() }
+    }
 
     val ticketSeed: TicketSeed = TicketSeed()
 
@@ -802,8 +824,17 @@ class MainViewModel(
 
     /** ----------------------------------------------SETTINGS------------------------------------------------------------------- */
 
-    private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(LocalStorage.DEFAULT_DARK_MODE)
     val darkMode = _darkMode.asStateFlow()
+
+    private val _palette: MutableStateFlow<TmPalette> = MutableStateFlow(TmPalettes.default)
+    val palette = _palette.asStateFlow()
+
+    private val _font: MutableStateFlow<TmFont> = MutableStateFlow(TmFonts.default)
+    val font = _font.asStateFlow()
+
+    private val _reduceTransparency: MutableStateFlow<Boolean> = MutableStateFlow(false)
+    val reduceTransparency = _reduceTransparency.asStateFlow()
 
     private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
     val serverUrl = _serverUrl.asStateFlow()
@@ -833,16 +864,26 @@ class MainViewModel(
         _deviceName.value = localStorage.deviceName
     }
 
-    private val _scrollBarsOnBottom: MutableStateFlow<Boolean> = MutableStateFlow(true)
-    val scrollBarsOnBottom = _scrollBarsOnBottom.asStateFlow()
-
-    private val _scrollBarsOnRight: MutableStateFlow<Boolean> = MutableStateFlow(true)
-    val scrollBarsOnRight = _scrollBarsOnRight.asStateFlow()
-
     fun toggleDarkMode() {
         val value = !_darkMode.value
         _darkMode.value = value
         localStorage.darkMode = value
+    }
+
+    fun setPalette(palette: TmPalette) {
+        _palette.value = palette
+        localStorage.themeId = palette.id
+    }
+
+    fun setFont(font: TmFont) {
+        _font.value = font
+        localStorage.fontId = font.id
+    }
+
+    fun toggleReduceTransparency() {
+        val value = !_reduceTransparency.value
+        _reduceTransparency.value = value
+        localStorage.reduceTransparency = value
     }
 
     fun setServerUrl(url: String) {
@@ -897,16 +938,6 @@ class MainViewModel(
         val value = size.coerceIn(CACHE_SIZE_RANGE)
         _cacheSize.value = value
         localStorage.cacheSize = value
-    }
-
-    fun toggleScrollBarsOnBottom() {
-        val value = !_scrollBarsOnBottom.value
-        _scrollBarsOnBottom.value = value
-    }
-
-    fun toggleScrollBarsOnRight() {
-        val value = !_scrollBarsOnRight.value
-        _scrollBarsOnRight.value = value
     }
 
     /** ----------------------------------------------TESTING------------------------------------------------------------------- */

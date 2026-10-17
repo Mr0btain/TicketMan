@@ -1,38 +1,44 @@
 package org.mr0btain.ticketman.ui.screens.admin.users
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.user.UserSeed
-import org.mr0btain.ticketman.data.user.UserStatus
-import org.mr0btain.ticketman.data.search.SearchResult
-import org.mr0btain.ticketman.server.response.PendingUserResponse
-import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.ui.composables.CustomSurface
-import org.mr0btain.ticketman.ui.composables.SimpleTextItem
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
-import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
 import org.mr0btain.ticketman.components.utils.formatDateTime
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
+import org.mr0btain.ticketman.server.response.PendingUserResponse
+import org.mr0btain.ticketman.ui.screens.shared.PanelTopBar
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmColumn
+import org.mr0btain.ticketman.ui.kit.data.TmTableRow
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
+import org.mr0btain.ticketman.ui.screens.main.expanded.DetailSection
+import org.mr0btain.ticketman.ui.screens.main.expanded.RecordDetail
+import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsLayout
+import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsList
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.user
+import ticketman.composeapp.generated.resources.users
 import kotlin.uuid.Uuid
+
+private val COLUMNS = listOf(
+    TmColumn("Username", weight = 1f),
+    TmColumn("Name", weight = 1.1f),
+    TmColumn("Access", width = 120.dp),
+    TmColumn("Email", weight = 1.3f)
+)
 
 /**
  * User management, a list of users with the selected one's details beside it
@@ -49,7 +55,6 @@ fun AdminUsersTab(
     seed: UserSeed,
     currentUserIdentifier: Uuid?,
     listState: LazyListState,
-    coroutineScope: CoroutineScope,
     onSelect: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onAdd: () -> Unit,
@@ -62,9 +67,8 @@ fun AdminUsersTab(
     onDelete: () -> Unit
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
     ) {
         PendingUsersCard(
             pending = pending,
@@ -74,37 +78,39 @@ fun AdminUsersTab(
             onRenew = onRenewInvite
         )
 
-        PanelTopBar(
-            label = "User",
-            onSearchClick = onSelect,
-            onSearchQuery = onSearchQuery,
-            onAddClick = onAdd,
-            onDeleteClick = onDelete
-        )
-
-        Spacer(Modifier.padding(4.dp))
-
-        Row(
-            modifier = Modifier.sizeIn(maxHeight = 560.dp)
-        ) {
-            UserListPane(
-                userList = userList,
-                selected = if (seed.isNew) null else seed.identifier,
-                onClick = onSelect,
-                state = listState,
-                coroutineScope = coroutineScope
-            )
-
-            UserInfoPane(
-                seed = seed,
-                listed = userList.firstOrNull { it.identifier == seed.identifier },
-                isSelf = seed.identifier == currentUserIdentifier,
-                onEdit = onEdit,
-                onResetPassword = onResetPassword,
-                onSetActive = onSetActive,
-                onLogOutEverywhere = onLogOutEverywhere,
-                onUnlockPin = onUnlockPin,
-                onResetPin = onResetPin
+        Box(Modifier.weight(1f)) {
+            RecordsLayout(
+                toolbar = {
+                    PanelTopBar(
+                        label = "User",
+                        onSearchClick = onSelect,
+                        onSearchQuery = onSearchQuery,
+                        onAddClick = onAdd,
+                        onDeleteClick = onDelete,
+                        canDelete = !seed.isNew
+                    )
+                },
+                list = {
+                    UserListPane(
+                        userList = userList,
+                        selected = if (seed.isNew) null else seed.identifier,
+                        onClick = onSelect,
+                        state = listState
+                    )
+                },
+                detail = {
+                    UserInfoPane(
+                        seed = seed,
+                        listed = userList.firstOrNull { it.identifier == seed.identifier },
+                        isSelf = seed.identifier == currentUserIdentifier,
+                        onEdit = onEdit,
+                        onResetPassword = onResetPassword,
+                        onSetActive = onSetActive,
+                        onLogOutEverywhere = onLogOutEverywhere,
+                        onUnlockPin = onUnlockPin,
+                        onResetPin = onResetPin
+                    )
+                }
             )
         }
     }
@@ -115,83 +121,27 @@ private fun UserListPane(
     userList: List<User>,
     selected: Uuid?,
     onClick: (Uuid) -> Unit,
-    state: LazyListState,
-    coroutineScope: CoroutineScope
+    state: LazyListState
 ) {
-    val usernameWidth = 150.dp
-    val nameWidth = 170.dp
-    val accessWidth = 100.dp
-    val emailWidth = 200.dp
+    val colors = TmTheme.colors
 
-    CustomSurface(
-        modifier = Modifier
-            .wrapContentSize()
-            .padding(8.dp)
+    RecordsList(
+        columns = COLUMNS,
+        state = state,
+        isEmpty = userList.isEmpty(),
+        emptyTitle = "No users loaded",
+        emptyIcon = Res.drawable.users
     ) {
-        Column(
-            modifier = Modifier.padding(start = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier = Modifier.height(46.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(Modifier.padding(4.dp))
-                HeaderText("Username", usernameWidth)
-                HeaderText("Name", nameWidth)
-                HeaderText("Access", accessWidth)
-                HeaderText("Email", emailWidth)
-            }
-
-            HorizontalDivider(modifier = Modifier.width(usernameWidth + nameWidth + accessWidth + emailWidth))
-
-            if (userList.isEmpty()) {
-                Box(Modifier.width(usernameWidth + nameWidth + accessWidth + emailWidth)) {
-                    EmptyMessage("No users loaded")
-                }
-            }
-
-            PlatformLazyColumn(
-                modifier = Modifier
-                    .width(usernameWidth + nameWidth + accessWidth + emailWidth + 30.dp)
-                    .padding(start = 4.dp),
-                state = state,
-                scope = coroutineScope,
-                isVisible = userList.isNotEmpty()
-            ) {
-                itemsIndexed(
-                    items = userList,
-                    key = { _, user -> user.identifier }
-                ) { index, user ->
-                    Surface(
-                        modifier = Modifier
-                            .padding(2.dp)
-                            .clickable { onClick(user.identifier) },
-                        shape = RoundedCornerShape(8.dp),
-                        shadowElevation = 4.dp,
-                        color = if (!CustomMaterialColors.darkMode) {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                        } else {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                        },
-                        border = if (selected == user.identifier) BorderStroke(2.dp, MaterialTheme.colorScheme.primary)
-                            else BorderStroke(0.dp, Color.Transparent)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            CellText(user.username, usernameWidth)
-                            CellText(user.cleanName(), nameWidth)
-                            Row(Modifier.width(accessWidth), verticalAlignment = Alignment.CenterVertically) {
-                                UserStateChip(user)
-                                if (user.pinLocked) {
-                                    Text(modifier = Modifier.padding(start = 4.dp), text = "PIN", fontSize = 10.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                            CellText(user.email, emailWidth)
-                        }
+        items(userList, key = { it.identifier }) { user ->
+            TmTableRow(COLUMNS, selected = selected == user.identifier, onClick = { onClick(user.identifier) }) { column ->
+                when (column) {
+                    0 -> Text(user.username, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    1 -> Text(user.cleanName(), style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    2 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                        UserStateChip(user)
+                        if (user.pinLocked) TmBadge(text = "PIN", tone = colors.danger, dot = false)
                     }
+                    3 -> Text(user.email, style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
@@ -210,127 +160,63 @@ private fun UserInfoPane(
     onUnlockPin: () -> Unit,
     onResetPin: () -> Unit
 ) {
-    CustomSurface(
-        modifier = Modifier
-            .width(360.dp)
-            .padding(8.dp)
+    val user = seed.user
+    val isActive = user.status == UserStatus.ACTIVE
+
+    // The seed doesn't carry PIN state, the listed copy does
+    val hasPin = listed?.hasPin == true
+    val pinLocked = listed?.pinLocked == true
+
+    RecordDetail(
+        title = user.cleanName().ifBlank { user.username },
+        subtitle = if (isSelf) "This is you" else user.username,
+        icon = Res.drawable.user,
+        isEmpty = seed.isNew,
+        emptyTitle = "No user picked",
+        onEdit = onEdit
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            if (seed.isNew) {
-                EmptyMessage("Select a user to see their details")
-                return@Column
-            }
+        UserStateChip(user)
 
-            val user = seed.user
-            val isActive = user.status == UserStatus.ACTIVE
-
-            // The seed doesn't carry PIN state, the listed copy does
-            val hasPin = listed?.hasPin == true
-            val pinLocked = listed?.pinLocked == true
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    modifier = Modifier.weight(1f),
-                    text = user.cleanName().ifBlank { user.username },
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+        DetailSection("Details") {
+            Column {
+                KeyValueRow(label = "Username", value = user.username)
+                KeyValueRow(label = "Email", value = user.email.ifBlank { "None" })
+                KeyValueRow(label = "Phone", value = user.phone.ifBlank { "None" })
+                KeyValueRow(label = "Added", value = formatDateTime(seed.time.toEpochMilliseconds()))
+                KeyValueRow(
+                    label = "PIN",
+                    value = when {
+                        pinLocked -> "Locked after too many tries"
+                        hasPin -> "Set"
+                        else -> "Not set"
+                    }
                 )
-
-                UserStateChip(user)
             }
+        }
 
-            if (isSelf) Text(text = "This is you", fontSize = 12.sp)
-
-            Spacer(Modifier.padding(4.dp))
-            HorizontalDivider()
-            Spacer(Modifier.padding(4.dp))
-
-            SimpleTextItem("Username", user.username)
-            SimpleTextItem("Email", user.email.ifBlank { "-" })
-            SimpleTextItem("Phone", user.phone.ifBlank { "-" })
-            SimpleTextItem("Added", formatDateTime(seed.time.toEpochMilliseconds()))
-            SimpleTextItem(
-                "PIN",
-                when {
-                    pinLocked -> "Locked"
-                    hasPin -> "Set"
-                    else -> "Not set"
-                }
-            )
-
-            Spacer(Modifier.padding(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Button(onClick = onEdit) { Text("Edit") }
-                OutlinedButton(onClick = onResetPassword) { Text("Reset Password") }
-            }
-
-            Spacer(Modifier.padding(4.dp))
-
-            OutlinedButton(
-                modifier = Modifier.fillMaxWidth(),
-                onClick = onLogOutEverywhere
-            ) {
-                Text("Log Out Everywhere")
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                if (pinLocked) {
-                    Button(onClick = onUnlockPin) { Text("Unlock PIN") }
+        DetailSection("Access") {
+            Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                    TmButton(text = "Reset password", onClick = onResetPassword, variant = TmButtonVariant.SECONDARY)
+                    TmButton(text = "Log out everywhere", onClick = onLogOutEverywhere, variant = TmButtonVariant.SECONDARY)
                 }
 
-                if (hasPin) {
-                    OutlinedButton(onClick = onResetPin) { Text("Clear PIN") }
+                if (pinLocked || hasPin) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                        if (pinLocked) TmButton(text = "Unlock PIN", onClick = onUnlockPin)
+                        if (hasPin) TmButton(text = "Clear PIN", onClick = onResetPin, variant = TmButtonVariant.SECONDARY)
+                    }
                 }
-            }
 
-            Spacer(Modifier.padding(4.dp))
-
-            // Deactivated users keep their history but can't log in
-            if (!isSelf) {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    onClick = { onSetActive(!isActive) },
-                    colors = if (isActive) ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                        else ButtonDefaults.buttonColors()
-                ) {
-                    Text(if (isActive) "Deactivate" else "Reactivate")
+                // Deactivated users keep their history but can't log in
+                if (!isSelf) {
+                    TmButton(
+                        text = if (isActive) "Deactivate user" else "Reactivate user",
+                        onClick = { onSetActive(!isActive) },
+                        variant = if (isActive) TmButtonVariant.DANGER else TmButtonVariant.PRIMARY
+                    )
                 }
             }
         }
     }
-}
-
-@Composable
-private fun HeaderText(label: String, width: Dp) {
-    Text(
-        modifier = Modifier.width(width),
-        text = label,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 14.sp
-    )
-}
-
-@Composable
-private fun CellText(text: String, width: Dp) {
-    Text(
-        modifier = Modifier
-            .width(width)
-            .padding(end = 8.dp),
-        text = text,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 12.sp,
-        maxLines = 1,
-        overflow = TextOverflow.Ellipsis
-    )
 }

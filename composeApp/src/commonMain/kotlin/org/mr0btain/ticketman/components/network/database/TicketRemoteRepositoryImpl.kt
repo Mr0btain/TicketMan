@@ -40,6 +40,10 @@ class TicketRemoteRepositoryImpl(
     private val GET_BY_NUMBER_TAG = "$tag:GetByNumber"
     private val GET_HISTORY_TAG = "$tag:GetHistory"
     private val GET_SIGNATURE_TAG = "$tag:GetSignature"
+    private val FETCH_MINE_TAG = "$tag:FetchMine"
+
+    /** A page of the tickets assigned to whoever is logged in, newest first */
+    suspend fun fetchMine(offset: Long, limit: Int): List<Ticket> = fetchPage(FETCH_MINE_TAG, "fetch/mine", offset, limit)
 
     /** Adds a ticket and returns it as saved, with the number the server gave it */
     suspend fun create(ticket: Ticket): Result<Ticket, ServerError> {

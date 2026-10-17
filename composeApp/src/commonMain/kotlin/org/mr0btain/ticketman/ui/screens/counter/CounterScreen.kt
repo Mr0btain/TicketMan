@@ -1,22 +1,31 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterView
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.search.TmSearchField
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.dollar_sign
+import ticketman.composeapp.generated.resources.lock
+import ticketman.composeapp.generated.resources.plus
+import ticketman.composeapp.generated.resources.tag
+import ticketman.composeapp.generated.resources.user_plus
 
 /**
  * The shop counter. One search box for everything, the queue on the side, and keyboard shortcuts so the common
@@ -24,11 +33,11 @@ import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
  */
 @Composable
 fun CounterScreen(
-    viewModel: MainViewModel
+    viewModel: MainViewModel,
+    modifier: Modifier = Modifier
 ) {
     val counter = viewModel.counter
     val loginState by viewModel.loginState.collectAsState()
-    val currentUser by viewModel.currentUser.collectAsState()
 
     val view by counter.view.collectAsState()
     val query by counter.query.collectAsState()
@@ -57,8 +66,10 @@ fun CounterScreen(
         }
     }
 
-    Surface(
-        modifier = Modifier
+    val spacing = TmTheme.spacing
+
+    Box(
+        modifier = modifier
             .fillMaxSize()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent false
@@ -93,65 +104,69 @@ fun CounterScreen(
 
                     else -> false
                 }
-            },
-        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.background
+            }
     ) {
         if (loginState != LoginState.LOGGED_IN) {
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text(text = "Log in to use the counter", fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.padding(8.dp))
-                Button(onClick = { viewModel.changeShowLogin(true) }) { Text("Log In") }
-            }
-            return@Surface
+            TmEmptyState(
+                modifier = Modifier.align(Alignment.Center),
+                icon = Res.drawable.lock,
+                title = "Log in to use the counter",
+                message = "Check-ins, pickups and the queue show up once you're signed in.",
+                actionText = "Log in",
+                onAction = { viewModel.changeShowLogin(true) }
+            )
+            return@Box
         }
 
-        Column(Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(spacing.sm)
+        ) {
             // ------------------------------------------ Top bar ------------------------------------------
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm)
             ) {
-                OutlinedTextField(
+                TmSearchField(
                     modifier = Modifier
                         .weight(1f)
                         .focusRequester(searchFocus),
-                    value = query,
-                    onValueChange = { counter.setQuery(it) },
-                    label = { Text("Search tickets and customers (F2)") },
-                    singleLine = true,
-                    textStyle = MaterialTheme.typography.titleLarge
+                    query = query,
+                    onQueryChange = { counter.setQuery(it) },
+                    placeholder = "Search tickets and customers  (F2)",
+                    loading = searching,
+                    size = TmControlSize.LARGE
                 )
 
                 if (canEdit) {
-                    Button(onClick = { counter.startCheckIn() }) { Text("Check In (F3)") }
-                    OutlinedButton(onClick = { counter.startNewCustomer() }) { Text("New Customer") }
+                    TmButton(text = "Check in  (F3)", onClick = { counter.startCheckIn() }, size = TmControlSize.LARGE, leadingIcon = Res.drawable.plus)
+                    TmButton(
+                        text = "New customer",
+                        onClick = { counter.startNewCustomer() },
+                        variant = TmButtonVariant.SECONDARY,
+                        size = TmControlSize.LARGE,
+                        leadingIcon = Res.drawable.user_plus
+                    )
                 }
 
-                OutlinedButton(onClick = { counter.openPriceCheck() }) { Text("Price Check (F4)") }
+                TmButton(
+                    text = "Price check  (F4)",
+                    onClick = { counter.openPriceCheck() },
+                    variant = TmButtonVariant.SECONDARY,
+                    size = TmControlSize.LARGE,
+                    leadingIcon = Res.drawable.tag
+                )
 
-                if (!canEdit) {
-                    Text(text = "View only", fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
-                }
-
-                currentUser?.let { user ->
-                    Text(text = user.cleanName().ifBlank { user.username }, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
+                if (!canEdit) TmBadge(text = "View only", tone = TmTheme.colors.neutral)
             }
 
             // ------------------------------------------ Main area and queue ------------------------------------------
-            Row(Modifier.fillMaxSize()) {
+            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(horizontal = 8.dp)
                 ) {
                     when (view) {
                         CounterView.HOME -> SearchResults(
@@ -172,6 +187,7 @@ fun CounterScreen(
                                 onBack = { counter.goHome() },
                                 printAction = {
                                     PrintButton(
+                                        size = TmControlSize.LARGE,
                                         templates = listOfNotNull(
                                             PrintTemplate.CLAIM_SLIP,
                                             PrintTemplate.DEVICE_TAG,
@@ -182,8 +198,12 @@ fun CounterScreen(
                                     )
                                 },
                                 extraActions = {
-                                    Spacer(Modifier.padding(8.dp))
-                                    Button(onClick = { counter.startPickup(detail.ticket.identifier) }) { Text("Pick Up (F5)") }
+                                    TmButton(
+                                        text = "Pick up  (F5)",
+                                        onClick = { counter.startPickup(detail.ticket.identifier) },
+                                        size = TmControlSize.LARGE,
+                                        leadingIcon = Res.drawable.dollar_sign
+                                    )
                                 }
                             )
                         }
@@ -195,7 +215,7 @@ fun CounterScreen(
                                 onBack = { counter.goHome() },
                                 actions = {
                                     if (canEdit) {
-                                        Button(onClick = { counter.startCheckIn(detail.customer) }) { Text("Check In a Device") }
+                                        TmButton(text = "Check in a device", onClick = { counter.startCheckIn(detail.customer) }, leadingIcon = Res.drawable.plus)
                                     }
                                 }
                             )
@@ -227,7 +247,8 @@ fun CounterScreen(
                                 onDone = { counter.goHome() },
                                 actions = {
                                     PrintButton(
-                                        label = "Print Claim Slip",
+                                        label = "Print claim slip",
+                                        size = TmControlSize.LARGE,
                                         templates = listOf(PrintTemplate.CLAIM_SLIP, PrintTemplate.DEVICE_TAG),
                                         defaultPaper = shop.defaultPaper,
                                         onPrint = { template, paper, onResult -> counter.print(result.ticket.identifier, template, paper, onResult) }
@@ -253,7 +274,8 @@ fun CounterScreen(
                                 onDone = { counter.goHome() },
                                 actions = {
                                     PrintButton(
-                                        label = "Print Receipt",
+                                        label = "Print receipt",
+                                        size = TmControlSize.LARGE,
                                         templates = listOf(PrintTemplate.RECEIPT),
                                         defaultPaper = shop.defaultPaper,
                                         onPrint = { template, paper, onResult -> counter.print(invoice.ticketIdentifier, template, paper, onResult) }
@@ -276,7 +298,7 @@ fun CounterScreen(
 
                 QueuePanel(
                     modifier = Modifier
-                        .width(380.dp)
+                        .width(360.dp)
                         .fillMaxHeight(),
                     queue = queue,
                     onTicketClick = { counter.openTicket(it) }

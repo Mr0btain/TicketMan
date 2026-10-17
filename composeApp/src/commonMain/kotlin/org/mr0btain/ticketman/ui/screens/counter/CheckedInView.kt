@@ -1,18 +1,19 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.utils.formatDay
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.server.response.CheckInResponse
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 
 /**
  * Shown right after a check in, with the number big enough to read out to the customer
@@ -27,28 +28,41 @@ fun CheckedInView(
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val ticket = result.ticket
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(32.dp),
+            .padding(spacing.xxl),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.spacedBy(spacing.sm, Alignment.CenterVertically)
     ) {
-        Text(text = "Checked in", fontSize = 22.sp)
-        Text(text = ticket.label, fontSize = 64.sp, fontWeight = FontWeight.Bold)
-        Text(text = ticket.device.toString(), fontSize = 20.sp)
+        TmBadge(text = "Checked in", tone = colors.success)
 
-        ticket.promisedAt?.let { Text(modifier = Modifier.padding(top = 8.dp), text = "Promised ${formatDay(it).lowercase()}", fontSize = 16.sp) }
-        result.invoice?.let { Text(text = "Deposit taken: ${Money.format(it.paidCents)}", fontSize = 16.sp) }
+        // The one place a ticket number is read out loud, so it's as big as the screen allows
+        TicketIdText(
+            number = ticket.label,
+            style = TmTheme.typography.numericHero
+        )
 
-        Spacer(Modifier.padding(16.dp))
+        Text(text = ticket.device.toString(), style = TmTheme.typography.title, color = colors.text)
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        val details = listOfNotNull(
+            ticket.promisedAt?.let { "Promised ${formatDay(it).lowercase()}" },
+            result.invoice?.let { "Deposit taken ${Money.format(it.paidCents)}" }
+        )
+        if (details.isNotEmpty()) {
+            Text(text = details.joinToString(". "), style = TmTheme.typography.bodyLarge, color = colors.textMuted)
+        }
+
+        Spacer(Modifier.height(spacing.lg))
+
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
             actions()
-            OutlinedButton(onClick = onOpenTicket) { Text("Open Ticket") }
-            OutlinedButton(onClick = onCheckInAnother) { Text("Check In Another") }
-            Button(onClick = onDone) { Text("Done") }
+            TmButton(text = "Open ticket", onClick = onOpenTicket, variant = TmButtonVariant.SECONDARY, size = TmControlSize.LARGE)
+            TmButton(text = "Check in another", onClick = onCheckInAnother, variant = TmButtonVariant.SECONDARY, size = TmControlSize.LARGE)
+            TmButton(text = "Done", onClick = onDone, size = TmControlSize.LARGE)
         }
     }
 }

@@ -1,23 +1,19 @@
 package org.mr0btain.ticketman.ui.screens.admin.users
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
-import org.mr0btain.ticketman.ui.composables.DialogTextRow
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.screens.admin.components.AccessLevelDropDown
-import org.mr0btain.ticketman.ui.screens.login.components.PasswordTextField
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 
 /**
  * Add or edit a user. The password field only shows for new users, existing ones use [ResetPasswordDialog]
@@ -56,125 +52,67 @@ fun UserDialog(
         else -> null
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .width(520.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    modifier = Modifier.padding(4.dp),
-                    text = if (isNew) "Add User" else "Edit User: ${user.username}",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 24.sp,
-                    maxLines = 1
-                )
+    TmDialog(
+        title = if (isNew) "New user" else "Edit ${user.username}",
+        onDismissRequest = onDismiss,
+        maxWidth = 560.dp,
+        dismissOnOutsideClick = false,
+        actions = {
+            TmButtonRow(
+                confirmText = if (isNew) "Add user" else "Save user",
+                confirmEnabled = error == null,
+                onCancel = onDismiss,
+                onConfirm = {
+                    val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
 
-                HorizontalDivider()
-                Spacer(Modifier.padding(8.dp))
-
-                DialogTextRow(
-                    firstLabel = "Username",
-                    firstValue = username,
-                    onFirstValueChange = { username = it.trim() },
-                    secondLabel = "Email",
-                    secondValue = email,
-                    onSecondValueChange = { email = it }
-                )
-
-                DialogTextRow(
-                    firstLabel = "First Name",
-                    firstValue = firstName,
-                    onFirstValueChange = { firstName = it },
-                    secondLabel = "Last Name",
-                    secondValue = lastName,
-                    onSecondValueChange = { lastName = it }
-                )
-
-                Row(
-                    modifier = Modifier.padding(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedTextField(
-                        modifier = Modifier.weight(0.5f),
-                        label = { Text("Phone") },
-                        value = phone,
-                        onValueChange = { phone = it },
-                        singleLine = true
-                    )
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    AccessLevelDropDown(
-                        modifier = Modifier.weight(0.5f),
-                        accessLevel = accessLevel,
-                        enabled = !isSelf,
-                        onSelect = { accessLevel = it }
+                    onConfirm(
+                        user.copy(
+                            username = username,
+                            name = joinName(name),
+                            email = email.trim(),
+                            phone = phone.trim(),
+                            accessLevel = accessLevel
+                        ),
+                        password
                     )
                 }
-
-                if (isSelf) {
-                    Text(
-                        text = "You can't change your own access",
-                        fontSize = 12.sp
-                    )
-                }
-
-                if (isNew) {
-                    PasswordTextField(
-                        modifier = Modifier.padding(8.dp),
-                        text = password,
-                        labelText = "Password",
-                        validateStrengthPassword = true,
-                        onTextChanged = { password = it }
-                    )
-
-                    PasswordTextField(
-                        modifier = Modifier.padding(8.dp),
-                        text = confirmPassword,
-                        labelText = "Confirm Password",
-                        hasError = confirmPassword.isNotEmpty() && confirmPassword != password,
-                        onTextChanged = { confirmPassword = it }
-                    )
-                }
-
-                Spacer(Modifier.padding(8.dp))
-
-                if (error != null) {
-                    Text(
-                        text = error,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.error
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-                }
-
-                ConfirmCancelButtons(
-                    onCancelClick = onDismiss,
-                    onConfirmClick = {
-                        if (error == null) {
-                            val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
-                            onConfirm(
-                                user.copy(
-                                    username = username,
-                                    name = joinName(name),
-                                    email = email.trim(),
-                                    phone = phone.trim(),
-                                    accessLevel = accessLevel
-                                ),
-                                password
-                            )
-                        }
-                    }
+            )
+        }
+    ) {
+        TmFieldPair(
+            { TmTextField(modifier = it, value = username, onValueChange = { v -> username = v.trim() }, label = "Username") },
+            {
+                AccessLevelDropDown(
+                    modifier = it,
+                    accessLevel = accessLevel,
+                    enabled = !isSelf,
+                    onSelect = { level -> accessLevel = level }
                 )
             }
+        )
+        TmFieldPair(
+            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
+            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
+        )
+        TmFieldPair(
+            { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
+            { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") }
+        )
+
+        if (isSelf) TmNotice(text = "You can't change your own access.")
+
+        if (isNew) {
+            TmPasswordField(value = password, onValueChange = { password = it }, showStrength = true)
+            TmPasswordField(
+                value = confirmPassword,
+                onValueChange = { confirmPassword = it },
+                label = "Confirm password",
+                error = if (confirmPassword.isNotEmpty() && confirmPassword != password) "Passwords don't match" else null
+            )
+        }
+
+        if (error != null && (username.isNotEmpty() || password.isNotEmpty())) {
+            TmNotice(text = error, kind = TmNoticeKind.WARNING)
         }
     }
 }
@@ -200,61 +138,27 @@ fun ResetPasswordDialog(
         else -> null
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 4.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .width(420.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    modifier = Modifier.padding(4.dp),
-                    text = "Reset Password: ${user.username}",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 22.sp,
-                    maxLines = 1
-                )
-
-                HorizontalDivider()
-                Spacer(Modifier.padding(8.dp))
-
-                PasswordTextField(
-                    modifier = Modifier.padding(8.dp),
-                    text = password,
-                    labelText = "New Password",
-                    validateStrengthPassword = true,
-                    onTextChanged = { password = it }
-                )
-
-                PasswordTextField(
-                    modifier = Modifier.padding(8.dp),
-                    text = confirmPassword,
-                    labelText = "Confirm Password",
-                    hasError = confirmPassword.isNotEmpty() && confirmPassword != password,
-                    onTextChanged = { confirmPassword = it }
-                )
-
-                Text(
-                    text = "They'll be logged out and need the new password to log back in.",
-                    fontSize = 12.sp
-                )
-
-                Spacer(Modifier.padding(8.dp))
-
-                if (error != null && confirmPassword.isNotEmpty()) {
-                    Text(text = error, fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
-                    Spacer(Modifier.padding(4.dp))
-                }
-
-                ConfirmCancelButtons(
-                    onCancelClick = onDismiss,
-                    onConfirmClick = { if (error == null) onConfirm(password) }
-                )
-            }
+    TmDialog(
+        title = "Reset ${user.username}'s password",
+        description = "They'll be logged out and need the new password to log back in.",
+        onDismissRequest = onDismiss,
+        maxWidth = 440.dp,
+        dismissOnOutsideClick = false,
+        actions = {
+            TmButtonRow(
+                confirmText = "Reset password",
+                confirmEnabled = error == null,
+                onCancel = onDismiss,
+                onConfirm = { onConfirm(password) }
+            )
         }
+    ) {
+        TmPasswordField(value = password, onValueChange = { password = it }, label = "New password", showStrength = true)
+        TmPasswordField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = "Confirm password",
+            error = if (confirmPassword.isNotEmpty() && confirmPassword != password) "Passwords don't match" else null
+        )
     }
 }
