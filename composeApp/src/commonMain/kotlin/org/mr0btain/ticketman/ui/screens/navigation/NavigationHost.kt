@@ -41,7 +41,9 @@ fun NavigationHost(
         composable(Destination.ADMIN.route) {
             AdminScreen(
                 viewModel = mainViewModel,
-                snackBarState = snackBarState
+                snackBarState = snackBarState,
+                coroutineScope = coroutineScope,
+                onNavigateToMain = { navHostController.navigate(Destination.MAIN.route) }
             )
         }
 

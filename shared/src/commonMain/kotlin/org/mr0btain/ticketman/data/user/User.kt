@@ -6,7 +6,10 @@ import org.mr0btain.ticketman.data.inventory.AccessLevel
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-// TODO: Change to storing password hash instead of raw
+/**
+ * A user of the app. The server stores [password] as a hash and blanks it before sending a user to a client,
+ * clients only fill it in when creating a user.
+ */
 @Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class User(
@@ -23,9 +26,7 @@ data class User(
             n.replaceFirstChar { it.titlecase() }
         }
     }
-}
 
-// TODO: Flesh out
-fun hashPassword(password: String): String {
-    return password
+    /** Copy that's safe to send over the network */
+    fun withoutPassword(): User = copy(password = "")
 }

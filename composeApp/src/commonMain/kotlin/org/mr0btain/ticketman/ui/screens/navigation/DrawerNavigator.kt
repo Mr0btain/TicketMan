@@ -23,7 +23,8 @@ fun DrawerNavigator(
     coroutineScope: CoroutineScope,
     navHostController: NavHostController,
     topAppText: String,
-    snackBarHostState: SnackbarHostState
+    snackBarHostState: SnackbarHostState,
+    showAdmin: Boolean = false
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
 
@@ -40,18 +41,20 @@ fun DrawerNavigator(
                     Text("Main", modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.titleLarge)
 
                     // Admin Screen
-                    NavigationDrawerItem(
-                        label = { Text("Admin") },
-                        selected = false,
-                        onClick = {
-                            coroutineScope.launch {
-                                navHostController.navigate(Destination.ADMIN.route)
+                    if (showAdmin) {
+                        NavigationDrawerItem(
+                            label = { Text("Admin") },
+                            selected = false,
+                            onClick = {
+                                coroutineScope.launch {
+                                    navHostController.navigate(Destination.ADMIN.route)
 
-                                // Close drawer
-                                drawerState.close()
+                                    // Close drawer
+                                    drawerState.close()
+                                }
                             }
-                        }
-                    )
+                        )
+                    }
 
                     // Main Screen
                     NavigationDrawerItem(

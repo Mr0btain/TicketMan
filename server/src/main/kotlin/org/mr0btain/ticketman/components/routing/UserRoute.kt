@@ -3,39 +3,63 @@ package org.mr0btain.ticketman.components.routing
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
-import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.data.user.hashPassword
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.request.UserRequest
-import org.mr0btain.ticketman.server.response.BooleanResponse
-import org.mr0btain.ticketman.server.response.SyncResponse
+import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.response.UserResponse
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * User routes
+ * User routes. Passwords are never sent back, users come out with a blank password.
+ * Changing users is admin only, and the server keeps at least one admin around.
  */
 
-// TODO: Not sure if we should let this handle filtering restricted data, or the database itself.
 // TODO: Handle encryption in the rest of these routes
 @OptIn(ExperimentalUuidApi::class)
 fun Route.userRoute(
-    database: UserDatabaseImpl
+    database: UserDatabaseImpl,
+    tokenDatabase: TokenDatabase,
+    auditLog: AuditLogDatabase
 ) {
     val TAG = "UserRoute"
     val GET_TAG = "$TAG:Get"
+    val ME_TAG = "$TAG:Me"
     val FETCH_TAG = "$TAG:Fetch"
-    val DELETE_TAG = "$TAG:Delete"
+    val ADD_TAG = "$TAG:Add"
     val UPDATE_TAG = "$TAG:Update"
+    val PASSWORD_TAG = "$TAG:Password"
+    val REMOVE_TAG = "$TAG:Remove"
     val SEARCH_TAG = "$TAG:Search"
+    val ENTITY_TYPE = "user"
+
+    /** Whether taking [target]'s admin away would leave the server with no admins */
+    fun isLastAdmin(target: User): Boolean =
+        target.accessLevel == AccessLevel.ADMIN && database.countByAccessLevel(AccessLevel.ADMIN) <= 1
+
+    // Logged in user, any active access level can see themselves
+    authenticate("restricted") {
+        get("/me") {
+            val identifier = call.getIdentifierFromToken()
+            val result = identifier?.let { database.getById(it) }
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result.withoutPassword())
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(ME_TAG, "$identifier not found")
+            }
+        }
+    }
 
     authenticate {
         post("/get") {
@@ -44,7 +68,7 @@ fun Route.userRoute(
             val result = database.getById(request)
 
             if (result != null) {
-                call.respond(HttpStatusCode.OK, result)
+                call.respond(HttpStatusCode.OK, result.withoutPassword())
             } else {
                 call.respond(HttpStatusCode.NotFound)
                 AppLogger.m(GET_TAG, "$request not found")
@@ -59,7 +83,7 @@ fun Route.userRoute(
             val result = database.getPagedItems(request)
 
             if (result != null) {
-                call.respond(HttpStatusCode.OK, result)
+                call.respond(HttpStatusCode.OK, result.map { it.withoutPassword() })
             } else {
                 call.respond(HttpStatusCode.NotFound)
                 AppLogger.m(FETCH_TAG, "$request not found")
@@ -69,9 +93,9 @@ fun Route.userRoute(
 
     authenticate {
         post("/search") {
-            val request = call.receive<String>()
+            val request = call.receive<SearchQuery>()
 
-            val result = database.search(request)
+            val result = database.search(request.query, request.limit)
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
@@ -82,32 +106,93 @@ fun Route.userRoute(
         }
     }
 
+    // Add a new user, the password comes in plain and gets hashed by the database
     authenticate("admin") {
-        // TODO: Fix this
-        post("/register") {
-            val userRequest = call.receive<UserRequest>()
-            val identifier = Uuid.generateV7()
-            val userExists = database.getByUsername(userRequest.username) != null
+        post("/add") {
+            val user = call.receive<User>()
 
-            if (!userExists) {
-                val user = userRequest.toModel(identifier)
-                database.add(user)
-                call.respond(HttpStatusCode.Created, user.toResponse())
-            } else call.respond(HttpStatusCode.Conflict)
+            when {
+                user.username.isBlank() || user.password.isBlank() -> {
+                    call.respond(HttpStatusCode.BadRequest, "Username and password are required")
+                }
+
+                database.getByUsername(user.username) != null -> {
+                    call.respond(HttpStatusCode.Conflict, "Username is already taken")
+                    AppLogger.i(ADD_TAG, "${user.username} already exists")
+                }
+
+                else -> {
+                    database.add(user)
+                    call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, user.identifier, "Added ${user.username} as ${user.accessLevel}")
+                    call.respond(HttpStatusCode.Created, UserResponse(user.identifier, user.accessLevel))
+                }
+            }
         }
     }
 
-    // Update
+    // Update everything but the password, which has its own route
     authenticate("admin") {
         post("/update") {
-            try {
-                val user = call.receive<User>()
+            val user = call.receive<User>()
+            val existing = database.getById(user.identifier)
+            val sameUsername = database.getByUsername(user.username)
 
-                database.update(user)
-                call.respond(HttpStatusCode.Accepted)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
+            when {
+                existing == null -> call.respond(HttpStatusCode.NotFound)
+
+                user.username.isBlank() -> call.respond(HttpStatusCode.BadRequest, "Username is required")
+
+                sameUsername != null && sameUsername.identifier != user.identifier -> {
+                    call.respond(HttpStatusCode.Conflict, "Username is already taken")
+                }
+
+                user.accessLevel != AccessLevel.ADMIN && call.getIdentifierFromToken() == user.identifier -> {
+                    call.respond(HttpStatusCode.Conflict, "You can't remove your own admin access")
+                }
+
+                user.accessLevel != AccessLevel.ADMIN && isLastAdmin(existing) -> {
+                    call.respond(HttpStatusCode.Conflict, "There has to be at least one admin")
+                }
+
+                else -> {
+                    database.update(user.withoutPassword())
+
+                    // Deactivating should also end their session
+                    if (user.accessLevel == AccessLevel.NONE) tokenDatabase.remove(user.identifier.toString())
+
+                    val details = if (existing.accessLevel != user.accessLevel) {
+                        "Access ${existing.accessLevel} -> ${user.accessLevel}"
+                    } else "Updated details"
+
+                    call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, user.identifier, "${user.username}: $details")
+                    call.respond(HttpStatusCode.Accepted)
+                    AppLogger.m(UPDATE_TAG, "${user.identifier} updated")
+                }
+            }
+        }
+    }
+
+    // Reset a password, which also logs that user out everywhere
+    authenticate("admin") {
+        post("/password/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val request = call.receive<PasswordResetRequest>()
+
+            when {
+                identifier == null -> call.respond(HttpStatusCode.BadRequest)
+
+                request.password.isBlank() -> call.respond(HttpStatusCode.BadRequest, "Password is required")
+
+                !database.updatePassword(identifier, request.password) -> call.respond(HttpStatusCode.NotFound)
+
+                else -> {
+                    // Keep the admin's own session alive when they change their own password
+                    if (call.getIdentifierFromToken() != identifier) tokenDatabase.remove(identifier.toString())
+
+                    call.audit(auditLog, AuditAction.PASSWORD_RESET, ENTITY_TYPE, identifier)
+                    call.respond(HttpStatusCode.Accepted)
+                    AppLogger.m(PASSWORD_TAG, "$identifier password reset")
+                }
             }
         }
     }
@@ -116,51 +201,42 @@ fun Route.userRoute(
     authenticate("admin") {
         post("/add/all") {
             try {
-                val customers = call.receive<List<User>>()
+                val users = call.receive<List<User>>()
 
-                database.addAll(customers)
+                database.addAll(users)
+                call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, details = "Bulk added ${users.size} users")
                 call.respond(HttpStatusCode.Accepted)
             } catch (ex: Exception) {
-                ex.printStackTrace()
+                AppLogger.e(ADD_TAG, "Bulk add failed", ex)
                 call.respond(HttpStatusCode.BadRequest)
             }
         }
     }
 
-    // Delete
+    // Remove
     authenticate("admin") {
-        delete("/delete/{userIdentifier}") {
-            try {
-                val identifier = call.parameters["userIdentifier"]
+        delete("/remove/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val existing = identifier?.let { database.getById(it) }
 
-                if (identifier == null) {
-                    call.respond(HttpStatusCode.NotFound)
-                    return@delete
+            when {
+                identifier == null || existing == null -> call.respond(HttpStatusCode.NotFound)
+
+                call.getIdentifierFromToken() == identifier -> {
+                    call.respond(HttpStatusCode.Conflict, "You can't delete yourself")
                 }
 
-                database.remove(Uuid.parse(identifier))
-                call.respond(HttpStatusCode.Accepted)
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-                call.respond(HttpStatusCode.BadRequest)
+                isLastAdmin(existing) -> call.respond(HttpStatusCode.Conflict, "There has to be at least one admin")
+
+                else -> {
+                    tokenDatabase.remove(identifier.toString())
+                    database.remove(identifier)
+
+                    call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier, "Removed ${existing.username}")
+                    call.respond(HttpStatusCode.Accepted)
+                    AppLogger.m(REMOVE_TAG, "$identifier removed")
+                }
             }
         }
     }
 }
-
-private fun UserRequest.toModel(id: Uuid): User =
-    User(
-        identifier = id,
-        username = username,
-        password = hashPassword(password),
-        name = name,
-        email = email,
-        phone = phone,
-        accessLevel = accessLevel
-    )
-
-private fun User.toResponse(): UserResponse =
-    UserResponse(
-        identifier = identifier,
-        accessLevel = accessLevel
-    )

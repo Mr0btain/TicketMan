@@ -5,6 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.util.network.*
 import io.ktor.util.reflect.*
 import kotlinx.serialization.SerializationException
+import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
@@ -57,46 +58,57 @@ suspend fun <T> handleHttpResponse(tag: String, response: HttpResponse, bodyType
             }
         }
 
-        401 -> {
-            AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)
-            Result.Error(NetworkError.UNAUTHORIZED)
-        }
-
-        409 -> {
-            AppLogger.i(tag, NetworkError.CONFLICT.name)
-            Result.Error(NetworkError.CONFLICT)
-        }
-
-        408 -> {
-            AppLogger.i(tag, NetworkError.REQUEST_TIMEOUT.name)
-            Result.Error(NetworkError.REQUEST_TIMEOUT)
-        }
-
-        413 -> {
-            AppLogger.i(tag, NetworkError.PAYLOAD_TOO_LARGE.name)
-            Result.Error(NetworkError.PAYLOAD_TOO_LARGE)
-        }
-
-        in 500..599 -> {
-            AppLogger.i(tag, NetworkError.SERVER_ERROR.name)
-            Result.Error(NetworkError.SERVER_ERROR)
-        }
-
         else -> {
-            AppLogger.i(tag, NetworkError.UNKNOWN.name)
-            Result.Error(NetworkError.UNKNOWN)
+            val error = networkErrorFor(response.status.value)
+            AppLogger.i(tag, error.name)
+            Result.Error(error)
         }
     }
 }
 
-fun handlePlainHttpResponse(tag: String, response: HttpResponse) {
-    when (response.status.value) {
-        in 200..299 -> AppLogger.m(tag, SimpleResult.SUCCESS)
-        401 -> AppLogger.i(tag, NetworkError.UNAUTHORIZED.name)
-        409 -> AppLogger.i(tag, NetworkError.CONFLICT.name)
-        408 -> AppLogger.i(tag, NetworkError.REQUEST_TIMEOUT.name)
-        413 -> AppLogger.i(tag, NetworkError.PAYLOAD_TOO_LARGE.name)
-        in 500..599 -> AppLogger.i(tag, NetworkError.SERVER_ERROR.name)
-        else -> AppLogger.i(tag, NetworkError.UNKNOWN.name)
+/** Maps a non success status code to a [NetworkError] */
+fun networkErrorFor(statusCode: Int): NetworkError =
+    when (statusCode) {
+        400 -> NetworkError.BAD_REQUEST
+        401 -> NetworkError.UNAUTHORIZED
+        403 -> NetworkError.FORBIDDEN
+        404 -> NetworkError.NOT_FOUND
+        408 -> NetworkError.REQUEST_TIMEOUT
+        409 -> NetworkError.CONFLICT
+        413 -> NetworkError.PAYLOAD_TOO_LARGE
+        in 500..599 -> NetworkError.SERVER_ERROR
+        else -> NetworkError.UNKNOWN
     }
+
+fun handlePlainHttpResponse(tag: String, response: HttpResponse) {
+    if (response.status.value in 200..299) {
+        AppLogger.m(tag, SimpleResult.SUCCESS)
+    } else {
+        AppLogger.i(tag, networkErrorFor(response.status.value).name)
+    }
+}
+
+/**
+ * For calls where we only care whether it worked. On failure the server's plain text reason, if it sent one,
+ * comes back in the [ServerError] so it can be shown to the user
+ */
+suspend fun handleActionHttpResponse(tag: String, response: HttpResponse?): EmptyResult<ServerError> {
+    if (response == null) return Result.Error(ServerError(NetworkError.NO_INTERNET))
+
+    if (response.status.value in 200..299) {
+        AppLogger.m(tag, SimpleResult.SUCCESS)
+        return Result.Success(Unit)
+    }
+
+    val error = networkErrorFor(response.status.value)
+
+    // Only take short plain text bodies, anything else is a page or json we don't want in a snackbar
+    val reason = try {
+        response.bodyAsText().takeIf { it.isNotBlank() && it.length < 200 && !it.trimStart().startsWith("{") }
+    } catch (ex: Exception) {
+        null
+    }
+
+    AppLogger.i(tag, "${error.name}${reason?.let { ": $it" } ?: ""}")
+    return Result.Error(ServerError(error, reason))
 }

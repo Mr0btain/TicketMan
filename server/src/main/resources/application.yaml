@@ -15,6 +15,8 @@ jwt:
 env:
     name: "$NAME:Server"
     dataPath: "$DATA_PATH:"
+    # Password for the "admin" user made on first start, a random one is logged if blank
+    adminPassword: "$ADMIN_PASSWORD:"
 # postgres:
 #  url: "jdbc:postgresql://localhost/default"
 #  user: username

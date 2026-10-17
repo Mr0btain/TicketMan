@@ -33,7 +33,6 @@ import ticketman.composeapp.generated.resources.user
 
 // TODO: Make option to import database data from file?
 
-// TODO: Administration screen
 // TODO: Kiosk/POS Screen
 // TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
 // TODO: All main data classes have the ability to have images of their own. We should set that up
@@ -76,14 +75,18 @@ fun App() {
     // Should we show login popup or not
     val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
-    val initialDestination = Destination.ADMIN
+    val initialDestination = Destination.MAIN
 
-    val navDestination = listOf(
-        NavigationItem(
+    // Admin screen is only listed for admins
+    val isAdmin = mainViewModel.isAdmin.collectAsState()
+    val adminIcon = painterResource(Res.drawable.archive)
+
+    val navDestination = listOfNotNull(
+        if (isAdmin.value) NavigationItem(
             title = "Admin",
-            icon = painterResource(Res.drawable.archive),
+            icon = adminIcon,
             destination = Destination.ADMIN
-        ),
+        ) else null,
         NavigationItem(
             title = "Dashboard",
             icon = painterResource(Res.drawable.monitor),

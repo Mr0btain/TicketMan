@@ -8,4 +8,9 @@ abstract class CustomCache<T>(maxSize: Int, tag: String) {
 
     suspend fun get(identifier: Uuid): T? =
         cache[identifier.toString()]
+
+    /** Drops an item so the next read pulls it fresh */
+    fun remove(identifier: Uuid) {
+        cache.remove(identifier.toString())
+    }
 }

@@ -5,8 +5,11 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
+import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.Uuid
@@ -14,7 +17,8 @@ import kotlin.uuid.Uuid
 // TODO: Add more comments to help understand whats going on
 
 fun Route.customerRoute(
-    database: CustomerDatabaseImpl
+    database: CustomerDatabaseImpl,
+    auditLog: AuditLogDatabase
 ) {
     val TAG = "CustomerRoute"
     val GET_TAG = "$TAG:Get"
@@ -22,6 +26,7 @@ fun Route.customerRoute(
     val DELETE_TAG = "$TAG:Delete"
     val UPDATE_TAG = "$TAG:Update"
     val SEARCH_TAG = "$TAG:Search"
+    val ENTITY_TYPE = "customer"
 
     // Adding new
     authenticate {
@@ -30,6 +35,7 @@ fun Route.customerRoute(
 
             database.add(received)
 
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier)
             call.respond(HttpStatusCode.Accepted)
         }
     }
@@ -91,6 +97,7 @@ fun Route.customerRoute(
                 call.respond(HttpStatusCode.NotFound)
             } else {
                 database.remove(Uuid.parse(identifier))
+                call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
                 call.respond(HttpStatusCode.Accepted)
             }
         }
@@ -110,9 +117,9 @@ fun Route.customerRoute(
 
     authenticate {
         post("/search") {
-            val request = call.receive<String>()
+            val request = call.receive<SearchQuery>()
 
-            val result = database.search(request)
+            val result = database.search(request.query, request.limit)
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
@@ -128,6 +135,7 @@ fun Route.customerRoute(
         post("/update") {
             val received = call.receive<Customer>()
             database.update(received)
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier)
             call.respond(HttpStatusCode.Accepted)
         }
     }

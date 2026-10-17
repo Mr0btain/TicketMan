@@ -5,6 +5,7 @@ import com.auth0.jwt.JWTVerifier
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.server.application.*
 import io.ktor.server.auth.jwt.*
+import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import kotlin.time.Clock
@@ -17,7 +18,8 @@ import kotlin.uuid.Uuid
 
 class JwtService(
     private val application: Application,
-    private val userDatabase: UserDatabaseImpl
+    private val userDatabase: UserDatabaseImpl,
+    private val tokenDatabase: TokenDatabase
 ) {
     private val secret = getConfigProperty("jwt.secret")
     private val issuer = getConfigProperty("jwt.issuer")
@@ -37,34 +39,42 @@ class JwtService(
 
     /**
      * Generates a token given a UUID and a duration
+     * @param sessionId Shared by a login's refresh token and every access token made from it
      */
 
     @OptIn(ExperimentalTime::class)
-    fun createJwtToken(identifier: String, expiresIn: Duration): String =
-        JWT
+    fun createJwtToken(identifier: String, expiresIn: Duration, sessionId: String): String {
+        val now = Clock.System.now()
+
+        return JWT
             .create()
             .withAudience(audience)
             .withIssuer(issuer)
             .withClaim("identifier", identifier)
-            .withExpiresAt(Clock.System.now().plus(expiresIn).toJavaInstant())
+            .withClaim(SESSION_CLAIM, sessionId)
+            .withIssuedAt(now.toJavaInstant())
+            .withExpiresAt(now.plus(expiresIn).toJavaInstant())
             .sign(Algorithm.HMAC256(secret))
+    }
 
     /**
      * Generates an access token
      */
 
-    fun createAccessToken(identifier: String): String =
-        createJwtToken(identifier, 1.hours)
+    fun createAccessToken(identifier: String, sessionId: String): String =
+        createJwtToken(identifier, 1.hours, sessionId)
 
     /**
      * Generates a refresh token
      */
 
-    fun createRefreshToken(identifier: String): String =
-        createJwtToken(identifier,  365.days)
+    fun createRefreshToken(identifier: String, sessionId: String): String =
+        createJwtToken(identifier,  365.days, sessionId)
 
     /**
-     * Verify credentials along with access level to verify if its legit and allowed
+     * Verify credentials along with access level to verify if its legit and allowed.
+     * The token also has to belong to the user's current session, so revoking a session or logging in
+     * again cuts off older access tokens right away
      */
 
     fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
@@ -72,15 +82,28 @@ class JwtService(
         val foundUser = id?.let { userDatabase.getById(Uuid.parse(it)) }
 
         return foundUser?.let {
-            if (audienceMatches(credential) && foundUser.accessLevel.confirmAccessLevel(minAccessLevel)) {
+            if (
+                audienceMatches(credential) &&
+                foundUser.accessLevel.meets(minAccessLevel) &&
+                isFromCurrentSession(id, credential)
+            ) {
                 JWTPrincipal(credential.payload)
             } else null
         }
     }
 
-    // Checks if access level is high enough
-    private fun AccessLevel.confirmAccessLevel(minAccessLevel: AccessLevel): Boolean =
-        this.level >= minAccessLevel.level
+    // Checks the access token came from the refresh token that's stored for this user
+    private fun isFromCurrentSession(id: String, credential: JWTCredential): Boolean {
+        val session = tokenDatabase.findById(id) ?: return false
+
+        val sessionId = try {
+            JWT.decode(session.token).getClaim(SESSION_CLAIM).asString()
+        } catch (ex: Exception) {
+            null
+        } ?: return true // Sessions from before tokens had a session id
+
+        return credential.payload.getClaim(SESSION_CLAIM).asString() == sessionId
+    }
 
     /**
      * Checks if audience matches
@@ -100,4 +123,8 @@ class JwtService(
     // Checks if audience matches
     private fun audienceMatches(credential: JWTCredential): Boolean =
         credential.payload.audience.contains(audience)
+
+    companion object {
+        const val SESSION_CLAIM = "sid"
+    }
 }

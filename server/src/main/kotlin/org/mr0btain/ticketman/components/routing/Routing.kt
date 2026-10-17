@@ -7,11 +7,13 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
+import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 
 fun Application.configureRouting(
     userService: UserService,
+    adminService: AdminService,
     localDatabase: LocalDatabase
 ) {
     install(StatusPages) {
@@ -38,25 +40,44 @@ fun Application.configureRouting(
 
         route("/api/user") {
             userRoute(
-                database = localDatabase.userDatabase
+                database = localDatabase.userDatabase,
+                tokenDatabase = localDatabase.tokenDatabase,
+                auditLog = localDatabase.auditLogDatabase
+            )
+        }
+
+        route("/api/admin") {
+            adminRoute(
+                database = localDatabase,
+                adminService = adminService
+            )
+        }
+
+        route("/api/shop") {
+            shopRoute(
+                database = localDatabase.shopDatabase,
+                auditLog = localDatabase.auditLogDatabase
             )
         }
 
         route("/api/data/customer") {
             customerRoute(
-                database = localDatabase.customerDatabase
+                database = localDatabase.customerDatabase,
+                auditLog = localDatabase.auditLogDatabase
             )
         }
 
         route("/api/data/ticket") {
             ticketRoute(
-                database = localDatabase.ticketDatabase
+                database = localDatabase.ticketDatabase,
+                auditLog = localDatabase.auditLogDatabase
             )
         }
 
         route("/api/data/inventory") {
             inventoryRoute(
-                database = localDatabase.inventoryDatabase
+                database = localDatabase.inventoryDatabase,
+                auditLog = localDatabase.auditLogDatabase
             )
         }
     }

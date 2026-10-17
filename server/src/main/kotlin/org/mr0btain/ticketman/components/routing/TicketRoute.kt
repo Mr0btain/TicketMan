@@ -6,15 +6,20 @@ import io.ktor.server.request.*
 import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.Uuid
 
 fun Route.ticketRoute(
-    database: TicketDatabaseImpl
+    database: TicketDatabaseImpl,
+    auditLog: AuditLogDatabase
 ) {
     val TAG = "TicketRoute"
     val GET_TAG = "$TAG:Get"
@@ -22,6 +27,7 @@ fun Route.ticketRoute(
     val DELETE_TAG = "$TAG:Delete"
     val UPDATE_TAG = "$TAG:Update"
     val SEARCH_TAG = "$TAG:Search"
+    val ENTITY_TYPE = "ticket"
 
     authenticate {
         post("/get") {
@@ -55,9 +61,9 @@ fun Route.ticketRoute(
 
     authenticate {
         post("/search") {
-            val request = call.receive<String>()
+            val request = call.receive<SearchQuery>()
 
-            val result = database.search(request)
+            val result = database.search(request.query, request.limit)
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
@@ -71,18 +77,22 @@ fun Route.ticketRoute(
     // Adding new
     authenticate {
         post("/add") {
-            database.add(call.receive()).also {
-                call.respond(HttpStatusCode.Created)
-            }
+            val received = call.receive<Ticket>()
+
+            database.add(received)
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier)
+            call.respond(HttpStatusCode.Created)
         }
     }
 
     // Update
     authenticate {
         post("/update") {
-            database.update(call.receive()).also {
-                call.respond(HttpStatusCode.Accepted)
-            }
+            val received = call.receive<Ticket>()
+
+            database.update(received)
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, "Status ${received.status.status}")
+            call.respond(HttpStatusCode.Accepted)
         }
     }
 
@@ -97,6 +107,7 @@ fun Route.ticketRoute(
             }
 
             database.remove(Uuid.parse(identifier))
+            call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
             call.respond(HttpStatusCode.Accepted)
         }
     }
