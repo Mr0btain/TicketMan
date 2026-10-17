@@ -1,7 +1,9 @@
 package org.mr0btain.ticketman.components.data.local
 
 import kotlinx.coroutines.test.runTest
+import org.mr0btain.ticketman.data.station.StationCredentials
 import kotlin.test.*
+import kotlin.uuid.Uuid
 
 class LocalStorageTest {
     private val store = InMemoryKeyValueStore()
@@ -140,5 +142,17 @@ class LocalStorageTest {
 
         localStorage.deviceName = "  "
         assertTrue(localStorage.deviceName.isNotBlank())
+    }
+
+    @Test
+    fun stationCredentialsRoundTripAndClear() {
+        assertNull(localStorage.stationCredentials)
+
+        val credentials = StationCredentials(Uuid.random(), "secret")
+        localStorage.stationCredentials = credentials
+        assertEquals(credentials, LocalStorage(store).stationCredentials)
+
+        localStorage.stationCredentials = null
+        assertNull(localStorage.stationCredentials)
     }
 }

@@ -93,16 +93,21 @@ class AccountTest {
         assertEquals(HttpStatusCode.OK, client.get("/api/user/me") { bearerAuth(token) }.status)
         assertEquals(HttpStatusCode.Unauthorized, postJson("/api/data/ticket/fetch", json.encodeToString(PagedRequest(0, 5)), token).status)
 
-        val setup = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person", email = "n@shop.test")), token)
+        // A PIN is required
+        val noPin = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person")), token)
+        assertEquals(HttpStatusCode.BadRequest, noPin.status)
+
+        val setup = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person", email = "n@shop.test", pin = "246813")), token)
         assertEquals(HttpStatusCode.Accepted, setup.status)
 
         assertEquals(HttpStatusCode.OK, postJson("/api/data/ticket/fetch", json.encodeToString(PagedRequest(0, 5)), token).status)
         assertEquals(LoginStatus.OK, loginResult("newbie", "new_password").status)
         assertEquals("n@shop.test", users.getByUsername("newbie")!!.email)
         assertEquals(AccessLevel.NORMAL, users.getByUsername("newbie")!!.accessLevel)
+        assertTrue(users.getByUsername("newbie")!!.hasPin)
 
         // Only once
-        assertEquals(HttpStatusCode.Conflict, postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "x")), token).status)
+        assertEquals(HttpStatusCode.Conflict, postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "x", pin = "246813")), token).status)
     }
 
     @Test
@@ -171,7 +176,7 @@ class AccountTest {
 
         val finish = postJson(
             "/api/auth/setup/invite",
-            json.encodeToString(InviteSetupRequest(setupToken, password = "my_new_password", name = "invited:person"))
+            json.encodeToString(InviteSetupRequest(setupToken, password = "my_new_password", name = "invited:person", pin = "246813"))
         )
         assertEquals(HttpStatusCode.Accepted, finish.status)
         val session = json.decodeFromString<AuthResponse>(finish.bodyAsText())

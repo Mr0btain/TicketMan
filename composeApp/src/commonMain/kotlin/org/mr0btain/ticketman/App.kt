@@ -126,8 +126,8 @@ fun App() {
         accountSetup.value?.let { setup ->
             AccountSetupDialog(
                 setup = setup,
-                onFinish = { name, email, phone, password, onResult ->
-                    mainViewModel.completeAccountSetup(name, email, phone, password, onResult)
+                onFinish = { name, email, phone, password, pin, onResult ->
+                    mainViewModel.completeAccountSetup(name, email, phone, password, pin, onResult)
                 },
                 onCancel = { mainViewModel.cancelAccountSetup() }
             )

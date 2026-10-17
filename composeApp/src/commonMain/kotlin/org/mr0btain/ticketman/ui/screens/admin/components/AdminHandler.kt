@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.EmptyResult
@@ -59,6 +60,9 @@ class AdminHandler(
     private val _pending = MutableStateFlow<List<PendingUserResponse>>(emptyList())
     val pending = _pending.asStateFlow()
 
+    private val _stations = MutableStateFlow<List<Station>>(emptyList())
+    val stations = _stations.asStateFlow()
+
     private val _sessions = MutableStateFlow<List<SessionResponse>>(emptyList())
     val sessions = _sessions.asStateFlow()
 
@@ -84,6 +88,7 @@ class AdminHandler(
             loadOverview()
             loadLowStock()
             _pending.value = users.getPending()
+            _stations.value = admin.getStations()
             _sessions.value = admin.getSessions()
             _serverInfo.value = admin.getServerInfo()
             _shopProfile.value = admin.getShopProfile()
@@ -128,6 +133,7 @@ class AdminHandler(
     fun clear() {
         _stats.value = null
         _pending.value = emptyList()
+        _stations.value = emptyList()
         _lowStock.value = emptyList()
         _sessions.value = emptyList()
         _serverInfo.value = null
@@ -266,6 +272,46 @@ class AdminHandler(
                 }
 
                 is Result.Error -> notify(result.error.message)
+            }
+        }
+    }
+
+    // ------------------------------------------ PINs and stations ------------------------------------------
+
+    fun unlockPin(user: User) {
+        scope.launch {
+            report(users.unlockPin(user.identifier), "Unlocked ${user.username}'s PIN") {
+                onUsersChanged(user.identifier)
+            }
+        }
+    }
+
+    /** Clears their PIN so they set a new one from their settings */
+    fun resetPin(user: User) {
+        scope.launch {
+            report(users.resetPin(user.identifier), "Cleared ${user.username}'s PIN") {
+                onUsersChanged(user.identifier)
+            }
+        }
+    }
+
+    fun refreshStations() {
+        scope.launch { _stations.value = admin.getStations() }
+    }
+
+    fun approveStation(station: Station) {
+        scope.launch {
+            report(admin.approveStation(station.identifier), "Approved ${station.name}") {
+                _stations.value = admin.getStations()
+            }
+        }
+    }
+
+    fun removeStation(station: Station) {
+        scope.launch {
+            report(admin.removeStation(station.identifier), "Removed ${station.name}") {
+                _stations.value = admin.getStations()
+                _sessions.value = admin.getSessions()
             }
         }
     }

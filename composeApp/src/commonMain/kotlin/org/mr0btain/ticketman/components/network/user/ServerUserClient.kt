@@ -18,7 +18,11 @@ import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
+import org.mr0btain.ticketman.data.station.StaffMember
+import org.mr0btain.ticketman.data.station.Station
+import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.mr0btain.ticketman.server.request.PinLoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.LoginStatus
@@ -46,6 +50,8 @@ class ServerUserClient(
         private const val CHECK_SERVER_CONNECTION_URL_TAG = "$TAG:CheckServerConnectionURL"
         private const val REQUEST_ACCOUNT_TAG = "$TAG:RequestAccount"
         private const val INVITE_SETUP_TAG = "$TAG:InviteSetup"
+        private const val PIN_LOGIN_TAG = "$TAG:PinLogin"
+        private const val STATION_TAG = "$TAG:Station"
     }
 
     private var serverUrl = ""
@@ -111,6 +117,62 @@ class ServerUserClient(
         }
 
         return true
+    }
+
+    /**
+     * Switches to a user at this station with their PIN. Stores their tokens but not their credentials,
+     * a PIN isn't something to log back in with
+     */
+    suspend fun pinLogin(station: StationCredentials, userIdentifier: Uuid, pin: String): EmptyResult<ServerError> {
+        val response = networkErrorTryCatch(PIN_LOGIN_TAG) {
+            userHttpClient.post {
+                url("$serverUrl/api/auth/pin")
+                contentType(ContentType.Application.Json)
+                setBody(PinLoginRequest(station, userIdentifier, pin))
+            }
+        }
+
+        return when (val result = handleDataHttpResponse<AuthResponse>(PIN_LOGIN_TAG, response)) {
+            is Result.Success -> {
+                val access = result.data.accessToken
+                val refresh = result.data.refreshToken
+
+                if (access != null && refresh != null) {
+                    localStorage.accessToken = access
+                    localStorage.refreshToken = refresh
+                    Result.Success(Unit)
+                } else Result.Error(ServerError(NetworkError.UNKNOWN))
+            }
+
+            is Result.Error -> result
+        }
+    }
+
+    /** This station's record, null if it isn't registered or the server doesn't know it */
+    suspend fun stationStatus(station: StationCredentials): Station? {
+        val response = networkErrorTryCatch(STATION_TAG) {
+            userHttpClient.post {
+                url("$serverUrl/api/auth/station/status")
+                contentType(ContentType.Application.Json)
+                setBody(station)
+            }
+        } ?: return null
+
+        handleHttpResponse<Station>(STATION_TAG, response).onSuccess { return it }
+        return null
+    }
+
+    /** People who can PIN in here */
+    suspend fun stationStaff(station: StationCredentials): Result<List<StaffMember>, ServerError> {
+        val response = networkErrorTryCatch(STATION_TAG) {
+            userHttpClient.post {
+                url("$serverUrl/api/auth/station/staff")
+                contentType(ContentType.Application.Json)
+                setBody(station)
+            }
+        }
+
+        return handleDataHttpResponse(STATION_TAG, response)
     }
 
     /** Asks for an account, an admin has to approve it before it can be used */

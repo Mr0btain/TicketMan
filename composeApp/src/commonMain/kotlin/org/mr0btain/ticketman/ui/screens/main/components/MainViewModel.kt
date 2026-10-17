@@ -31,6 +31,7 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
@@ -588,18 +589,18 @@ class MainViewModel(
      * @param password Required for invites, optional for approved requests
      * @param onResult Gets null when it went through, otherwise what went wrong
      */
-    fun completeAccountSetup(name: String, email: String, phone: String, password: String, onResult: (String?) -> Unit) {
+    fun completeAccountSetup(name: String, email: String, phone: String, password: String, pin: String, onResult: (String?) -> Unit) {
         val setup = _accountSetup.value ?: return
 
         viewModelScope.launch {
             val result = when (setup) {
                 is AccountSetup.Approved -> remoteHandler.userRepo.completeSetup(
-                    AccountSetupRequest(name = name, email = email, phone = phone, password = password)
+                    AccountSetupRequest(name = name, email = email, phone = phone, password = password, pin = pin)
                 )
 
                 is AccountSetup.Invite -> remoteHandler.completeInviteSetup(
                     setup.username,
-                    InviteSetupRequest(setup.setupToken, password = password, name = name, email = email, phone = phone)
+                    InviteSetupRequest(setup.setupToken, password = password, name = name, email = email, phone = phone, pin = pin)
                 )
             }
 
@@ -610,6 +611,59 @@ class MainViewModel(
                     _loginMessage.value = null
                     loadCurrentUser()
                     refreshPagers()
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /**
+     * Changes your own station PIN
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun changePin(currentPassword: String, pin: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            when (val result = remoteHandler.userRepo.setOwnPin(currentPassword, pin)) {
+                is Result.Success -> {
+                    loadCurrentUser()
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** ----------------------------------------------STATION------------------------------------------------------------------- */
+
+    // This device's station record, null when it isn't one
+    private val _station: MutableStateFlow<Station?> = MutableStateFlow(null)
+    val station = _station.asStateFlow()
+
+    /** Asks the server about this device's station, forgetting the credentials if the server no longer has it */
+    fun refreshStation() {
+        val credentials = localStorage.stationCredentials ?: run {
+            _station.value = null
+            return
+        }
+
+        viewModelScope.launch {
+            _station.value = remoteHandler.userClient.stationStatus(credentials)
+        }
+    }
+
+    /**
+     * Registers this device as a station, which an admin then approves
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun registerStation(name: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            when (val result = remoteHandler.adminRepo.registerStation(localStorage.deviceId, name.trim())) {
+                is Result.Success -> {
+                    localStorage.stationCredentials = result.data.credentials
+                    _station.value = result.data.station
                     onResult(null)
                 }
 
@@ -701,6 +755,9 @@ class MainViewModel(
             _loginState.value = LoginState.LOGGED_OUT
             _currentUser.value = null
         }
+
+        // Station status only needs a reachable server, not a login
+        if (result != ConnectionResult.UNREACHABLE) refreshStation()
     }
 
     /** ----------------------------------------------SETTINGS------------------------------------------------------------------- */

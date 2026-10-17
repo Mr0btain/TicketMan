@@ -14,6 +14,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
+import org.mr0btain.ticketman.data.user.PinRules
+import org.mr0btain.ticketman.ui.composables.PinTextField
 import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
 import org.mr0btain.ticketman.ui.screens.login.components.MIN_PASSWORD_LENGTH
 import org.mr0btain.ticketman.ui.screens.login.components.PasswordTextField
@@ -25,7 +27,7 @@ import org.mr0btain.ticketman.ui.screens.login.components.PasswordTextField
 @Composable
 fun AccountSetupDialog(
     setup: AccountSetup,
-    onFinish: (name: String, email: String, phone: String, password: String, onResult: (String?) -> Unit) -> Unit,
+    onFinish: (name: String, email: String, phone: String, password: String, pin: String, onResult: (String?) -> Unit) -> Unit,
     onCancel: () -> Unit
 ) {
     val existing = (setup as? AccountSetup.Approved)?.user
@@ -42,6 +44,8 @@ fun AccountSetupDialog(
     var phone by remember(setup) { mutableStateOf(existing?.phone.orEmpty()) }
     var password by remember(setup) { mutableStateOf("") }
     var confirmPassword by remember(setup) { mutableStateOf("") }
+    var pin by remember(setup) { mutableStateOf("") }
+    var confirmPin by remember(setup) { mutableStateOf("") }
 
     var submitting by remember(setup) { mutableStateOf(false) }
     var serverError by remember(setup) { mutableStateOf<String?>(null) }
@@ -51,6 +55,8 @@ fun AccountSetupDialog(
         firstName.isBlank() -> "Your name is required"
         (isInvite || password.isNotEmpty()) && password.length < MIN_PASSWORD_LENGTH -> "Password needs at least $MIN_PASSWORD_LENGTH characters"
         password != confirmPassword -> "Passwords don't match"
+        PinRules.problem(pin) != null -> PinRules.problem(pin)
+        pin != confirmPin -> "PINs don't match"
         else -> null
     }
 
@@ -134,6 +140,29 @@ fun AccountSetupDialog(
                     onTextChanged = { confirmPassword = it }
                 )
 
+                Text(
+                    modifier = Modifier.padding(top = 12.dp),
+                    text = "Pick a ${PinRules.LENGTH} digit PIN for signing in at the counter.",
+                    fontSize = 13.sp
+                )
+
+                Row {
+                    PinTextField(
+                        modifier = Modifier.weight(1f).padding(end = 4.dp),
+                        value = pin,
+                        label = "PIN",
+                        onValueChange = { pin = it }
+                    )
+
+                    PinTextField(
+                        modifier = Modifier.weight(1f).padding(start = 4.dp),
+                        value = confirmPin,
+                        label = "Confirm PIN",
+                        isError = confirmPin.length == PinRules.LENGTH && confirmPin != pin,
+                        onValueChange = { confirmPin = it }
+                    )
+                }
+
                 (serverError ?: problem)?.let { message ->
                     Text(
                         modifier = Modifier.padding(top = 8.dp),
@@ -159,7 +188,7 @@ fun AccountSetupDialog(
 
                             val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
 
-                            onFinish(joinName(name).lowercase(), email.trim(), phone.trim(), password) { error ->
+                            onFinish(joinName(name).lowercase(), email.trim(), phone.trim(), password, pin) { error ->
                                 submitting = false
                                 serverError = error
                             }

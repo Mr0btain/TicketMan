@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.server.request.AccountSetupRequest
 import org.mr0btain.ticketman.server.request.ApproveRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
+import org.mr0btain.ticketman.server.request.SetPinRequest
 import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.server.response.PendingUserResponse
 import kotlin.uuid.Uuid
@@ -40,6 +41,7 @@ class UserRemoteRepositoryImpl(
     private val APPROVE_TAG = "$tag:Approve"
     private val REJECT_TAG = "$tag:Reject"
     private val INVITE_TAG = "$tag:Invite"
+    private val PIN_TAG = "$tag:Pin"
 
     /** The logged in user */
     suspend fun getMe(): User? {
@@ -69,6 +71,43 @@ class UserRemoteRepositoryImpl(
         }
 
         return handleActionHttpResponse(RESET_PASSWORD_TAG, response)
+    }
+
+    /** Changes your own PIN, needs your password */
+    suspend fun setOwnPin(currentPassword: String, pin: String): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(PIN_TAG) {
+            client.post {
+                url("$serverUrl/me/pin")
+                contentType(ContentType.Application.Json)
+                setBody(SetPinRequest(currentPassword, pin))
+            }
+        }
+
+        return handleActionHttpResponse(PIN_TAG, response)
+    }
+
+    /** Lets a PIN that locked from wrong tries work again, admin only */
+    suspend fun unlockPin(identifier: Uuid): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(PIN_TAG) {
+            client.post { url("$serverUrl/pin/$identifier/unlock") }
+        }
+
+        return handleActionHttpResponse(PIN_TAG, response)
+    }
+
+    /** Clears a user's PIN so they have to set a new one, admin only */
+    suspend fun resetPin(identifier: Uuid): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(PIN_TAG) {
+            client.delete { url("$serverUrl/pin/$identifier") }
+        }
+
+        return handleActionHttpResponse(PIN_TAG, response)
     }
 
     /** Finishes first login setup after an approved request */

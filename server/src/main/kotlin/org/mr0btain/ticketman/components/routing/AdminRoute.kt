@@ -99,6 +99,38 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
+        // ------------------------------------------ Stations ------------------------------------------
+
+        get("/stations") {
+            call.respond(HttpStatusCode.OK, database.stationDatabase.getAll())
+        }
+
+        post("/stations/{identifier}/approve") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier != null && database.stationDatabase.approve(identifier, call.username(database.userDatabase))) {
+                call.audit(auditLog, AuditAction.UPDATE, "station", identifier, "Approved ${database.stationDatabase.getById(identifier)?.name}")
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
+        // Removing a station also signs out whoever is PINned in there
+        delete("/stations/{identifier}") {
+            val station = call.uuidParameter("identifier")?.let { database.stationDatabase.getById(it) }
+
+            if (station == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@delete
+            }
+
+            database.stationDatabase.remove(station.identifier)
+            database.tokenDatabase.removePinSessionsForDevice(station.deviceId)
+            call.audit(auditLog, AuditAction.DELETE, "station", station.identifier, "Removed ${station.name}")
+            call.respond(HttpStatusCode.Accepted)
+        }
+
         get("/server") {
             call.respond(HttpStatusCode.OK, adminService.getServerInfo())
         }

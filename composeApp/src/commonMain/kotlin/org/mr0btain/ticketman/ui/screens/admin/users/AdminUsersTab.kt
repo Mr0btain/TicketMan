@@ -57,6 +57,8 @@ fun AdminUsersTab(
     onResetPassword: () -> Unit,
     onSetActive: (Boolean) -> Unit,
     onLogOutEverywhere: () -> Unit,
+    onUnlockPin: () -> Unit,
+    onResetPin: () -> Unit,
     onDelete: () -> Unit
 ) {
     Column(
@@ -95,11 +97,14 @@ fun AdminUsersTab(
 
             UserInfoPane(
                 seed = seed,
+                listed = userList.firstOrNull { it.identifier == seed.identifier },
                 isSelf = seed.identifier == currentUserIdentifier,
                 onEdit = onEdit,
                 onResetPassword = onResetPassword,
                 onSetActive = onSetActive,
-                onLogOutEverywhere = onLogOutEverywhere
+                onLogOutEverywhere = onLogOutEverywhere,
+                onUnlockPin = onUnlockPin,
+                onResetPin = onResetPin
             )
         }
     }
@@ -178,7 +183,12 @@ private fun UserListPane(
                         ) {
                             CellText(user.username, usernameWidth)
                             CellText(user.cleanName(), nameWidth)
-                            Box(Modifier.width(accessWidth)) { UserStateChip(user) }
+                            Row(Modifier.width(accessWidth), verticalAlignment = Alignment.CenterVertically) {
+                                UserStateChip(user)
+                                if (user.pinLocked) {
+                                    Text(modifier = Modifier.padding(start = 4.dp), text = "PIN", fontSize = 10.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                }
+                            }
                             CellText(user.email, emailWidth)
                         }
                     }
@@ -191,11 +201,14 @@ private fun UserListPane(
 @Composable
 private fun UserInfoPane(
     seed: UserSeed,
+    listed: User?,
     isSelf: Boolean,
     onEdit: () -> Unit,
     onResetPassword: () -> Unit,
     onSetActive: (Boolean) -> Unit,
-    onLogOutEverywhere: () -> Unit
+    onLogOutEverywhere: () -> Unit,
+    onUnlockPin: () -> Unit,
+    onResetPin: () -> Unit
 ) {
     CustomSurface(
         modifier = Modifier
@@ -212,6 +225,10 @@ private fun UserInfoPane(
 
             val user = seed.user
             val isActive = user.status == UserStatus.ACTIVE
+
+            // The seed doesn't carry PIN state, the listed copy does
+            val hasPin = listed?.hasPin == true
+            val pinLocked = listed?.pinLocked == true
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -236,6 +253,14 @@ private fun UserInfoPane(
             SimpleTextItem("Email", user.email.ifBlank { "-" })
             SimpleTextItem("Phone", user.phone.ifBlank { "-" })
             SimpleTextItem("Added", formatDateTime(seed.time.toEpochMilliseconds()))
+            SimpleTextItem(
+                "PIN",
+                when {
+                    pinLocked -> "Locked"
+                    hasPin -> "Set"
+                    else -> "Not set"
+                }
+            )
 
             Spacer(Modifier.padding(8.dp))
 
@@ -254,6 +279,19 @@ private fun UserInfoPane(
                 onClick = onLogOutEverywhere
             ) {
                 Text("Log Out Everywhere")
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (pinLocked) {
+                    Button(onClick = onUnlockPin) { Text("Unlock PIN") }
+                }
+
+                if (hasPin) {
+                    OutlinedButton(onClick = onResetPin) { Text("Clear PIN") }
+                }
             }
 
             Spacer(Modifier.padding(4.dp))

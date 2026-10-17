@@ -95,8 +95,8 @@ class JwtService(
      * Generates a refresh token
      */
 
-    fun createRefreshToken(identifier: String, sessionId: String): String =
-        createJwtToken(identifier,  365.days, sessionId)
+    fun createRefreshToken(identifier: String, sessionId: String, lifetime: Duration = 365.days): String =
+        createJwtToken(identifier, lifetime, sessionId)
 
     /**
      * Verify credentials along with access level to verify if its legit and allowed.

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.data.local
 
+import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.getPlatform
 import kotlin.uuid.Uuid
 
@@ -100,6 +101,16 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(CACHE_SIZE_KEY, value.toString())
         }
 
+    /** Set once this device registers as a station, the secret proves PIN logins come from here */
+    var stationCredentials: StationCredentials?
+        get() = Uuid.parseOrNull(store.getString(STATION_ID_KEY, ""))?.let { id ->
+            store.getString(STATION_SECRET_KEY, "").takeIf { it.isNotBlank() }?.let { StationCredentials(id, it) }
+        }
+        set(value) {
+            store.putString(STATION_ID_KEY, value?.stationId?.toString().orEmpty())
+            store.putString(STATION_SECRET_KEY, value?.secret.orEmpty())
+        }
+
     /** Made the first time it's needed and kept, lets the server tell this device's session apart from the user's others */
     val deviceId: String
         get() {
@@ -189,5 +200,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val CACHE_SIZE_KEY = "cache_size"
         private const val DEVICE_ID_KEY = "device_id"
         private const val DEVICE_NAME_KEY = "device_name"
+        private const val STATION_ID_KEY = "station_id"
+        private const val STATION_SECRET_KEY = "station_secret"
     }
 }

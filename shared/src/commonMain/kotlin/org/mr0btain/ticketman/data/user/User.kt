@@ -22,7 +22,11 @@ data class User(
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
     val status: UserStatus = UserStatus.ACTIVE,
     /** Approved but hasn't finished first login setup, can't do anything else until they do */
-    val needsSetup: Boolean = false
+    val needsSetup: Boolean = false,
+    /** Has a PIN for stations, the PIN itself never leaves the server */
+    val hasPin: Boolean = false,
+    /** Too many wrong PINs, an admin has to unlock it */
+    val pinLocked: Boolean = false
 ): MainItem() {
     /** Active, set up, with a real access level. The only kind of user that can do anything */
     fun canAccess(minimum: AccessLevel): Boolean =

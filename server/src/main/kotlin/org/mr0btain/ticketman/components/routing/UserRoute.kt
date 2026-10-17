@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
 import org.mr0btain.ticketman.server.request.ApproveRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
+import org.mr0btain.ticketman.server.request.SetPinRequest
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.response.UserResponse
@@ -122,6 +123,47 @@ fun Route.userRoute(
             } else {
                 call.respond(HttpStatusCode.NotFound)
                 AppLogger.m(SEARCH_TAG, "$request not found")
+            }
+        }
+    }
+
+    // ------------------------------------------ PINs ------------------------------------------
+
+    authenticate("restricted") {
+        // Change your own PIN, needs your password
+        post("/me/pin") {
+            val identifier = call.getIdentifierFromToken()
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.Unauthorized)
+                return@post
+            }
+
+            call.respondAccount(accountService.setOwnPin(identifier, call.receive<SetPinRequest>()))
+        }
+    }
+
+    authenticate("admin") {
+        post("/pin/{identifier}/unlock") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier != null && database.unlockPin(identifier)) {
+                call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Unlocked PIN")
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
+        // Clears the PIN, they set a new one from their settings
+        delete("/pin/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier != null && database.clearPin(identifier)) {
+                call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Reset PIN")
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
             }
         }
     }

@@ -39,7 +39,9 @@ data class AccountSetupRequest(
     val name: String,
     val email: String = "",
     val phone: String = "",
-    val password: String = ""
+    val password: String = "",
+    /** PIN for stations, required */
+    val pin: String = ""
 )
 
 /**
@@ -52,6 +54,8 @@ data class InviteSetupRequest(
     val name: String,
     val email: String = "",
     val phone: String = "",
+    /** PIN for stations, required */
+    val pin: String = "",
     val deviceId: String = "",
     val deviceName: String = ""
 )

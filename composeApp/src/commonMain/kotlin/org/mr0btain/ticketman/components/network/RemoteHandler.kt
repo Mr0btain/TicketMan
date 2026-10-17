@@ -19,7 +19,9 @@ import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
+import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 
@@ -175,6 +177,18 @@ class RemoteHandler(
         }
 
         return result
+    }
+
+    /**
+     * Switches who's signed in at this station. The previous person's session on this station ends
+     */
+    suspend fun pinLogin(userIdentifier: Uuid, pin: String): EmptyResult<ServerError> {
+        val station = localStorage.stationCredentials
+            ?: return Result.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
+
+        return userClient.pinLogin(station, userIdentifier, pin).also { result ->
+            if (result is Result.Success) onLoggedIn()
+        }
     }
 
     /** Finishes an invite, which also logs in */

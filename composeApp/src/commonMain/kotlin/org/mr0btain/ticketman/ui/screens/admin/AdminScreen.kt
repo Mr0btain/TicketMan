@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
+import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
 import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
 import org.mr0btain.ticketman.ui.screens.admin.users.ApproveDialog
@@ -35,6 +36,7 @@ private enum class AdminTab(val label: String) {
     OVERVIEW("Overview"),
     USERS("Users"),
     SESSIONS("Sessions"),
+    STATIONS("Stations"),
     LOW_STOCK("Low Stock"),
     SERVER("Server & Data"),
     AUDIT("Audit Log")
@@ -81,6 +83,7 @@ private fun AdminContent(
     val lowStockThreshold by admin.lowStockThreshold.collectAsState()
     val sessions by admin.sessions.collectAsState()
     val pending by admin.pending.collectAsState()
+    val stations by admin.stations.collectAsState()
     val serverInfo by admin.serverInfo.collectAsState()
     val shopProfile by admin.shopProfile.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
@@ -260,6 +263,8 @@ private fun AdminContent(
                 onResetPassword = { if (!userSeed.isNew) showResetPasswordDialog = true },
                 onSetActive = { active -> admin.setUserActive(userSeed.user, active) },
                 onLogOutEverywhere = { admin.revokeAllSessions(userSeed.user) },
+                onUnlockPin = { admin.unlockPin(userSeed.user) },
+                onResetPin = { admin.resetPin(userSeed.user) },
                 onDelete = { if (!userSeed.isNew) showDeleteDialog = true }
             )
 
@@ -268,6 +273,12 @@ private fun AdminContent(
                 currentUserIdentifier = currentUser?.identifier,
                 currentSessionId = admin.currentSessionId(),
                 onRevoke = { session -> admin.revokeSession(session) }
+            )
+
+            AdminTab.STATIONS -> AdminStationsTab(
+                stations = stations,
+                onApprove = { admin.approveStation(it) },
+                onRemove = { admin.removeStation(it) }
             )
 
             AdminTab.LOW_STOCK -> AdminLowStockTab(

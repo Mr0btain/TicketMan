@@ -43,7 +43,14 @@ fun Application.module() {
         val dataPath = path.ifBlank { appDir.toString() }
         val database = configureDatabase(dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase)
-        val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase, database.inviteDatabase, database.auditLogDatabase)
+        val userService = UserService(
+            database = database.userDatabase,
+            jwtService = jwtService,
+            tokenDatabase = database.tokenDatabase,
+            inviteDatabase = database.inviteDatabase,
+            stationDatabase = database.stationDatabase,
+            auditLog = database.auditLogDatabase
+        )
         val accountService = AccountService(database.userDatabase, database.inviteDatabase, userService, jwtService, database.auditLogDatabase)
         val adminService = AdminService(
             database = database,

@@ -23,6 +23,9 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var access by UserTable.access
     var status by UserTable.status
     var needsSetup by UserTable.needsSetup
+    var pinHash by UserTable.pinHash
+    var pinFailedAttempts by UserTable.pinFailedAttempts
+    var pinLocked by UserTable.pinLocked
 
     // For notes
     var notes by NoteEntity via UserNoteTable
@@ -40,7 +43,9 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             phone = phone,
             accessLevel = access,
             status = UserStatus.entries.firstOrNull { it.name == status } ?: UserStatus.ACTIVE,
-            needsSetup = needsSetup
+            needsSetup = needsSetup,
+            hasPin = pinHash.isNotBlank(),
+            pinLocked = pinLocked
         )
     }
 

@@ -112,6 +112,21 @@ class TokenDatabase() {
         }
     }
 
+    /** Ends the PIN sessions on a device, so only whoever PINs in last is signed in at a station */
+    fun removePinSessionsForDevice(deviceId: String) {
+        if (deviceId.isBlank()) return
+
+        appLogTryCatch(REMOVE_FOR_USER_TAG) {
+            transaction {
+                TokenTable.deleteWhere {
+                    (TokenTable.deviceId eq deviceId) and (TokenTable.kind eq SessionKind.PIN.name)
+                }
+            }
+
+            true
+        }
+    }
+
     fun getAll(): List<StoredSession> {
         return appLogTryCatch<List<StoredSession>>(GET_ALL_TAG) {
             transaction {

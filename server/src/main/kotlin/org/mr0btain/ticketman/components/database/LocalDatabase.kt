@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTabl
 import org.mr0btain.ticketman.components.database.tables.note.NoteImageTable
 import org.mr0btain.ticketman.components.database.tables.note.NoteTable
 import org.mr0btain.ticketman.components.database.tables.shop.ShopTable
+import org.mr0btain.ticketman.components.database.tables.station.StationTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketNoteTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHistoryTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
@@ -54,6 +55,7 @@ class LocalDatabase (
     val statsDatabase = StatsDatabase()
     val counterDatabase = CounterDatabase(ticketDatabase, customerDatabase)
     val inviteDatabase = InviteDatabase()
+    val stationDatabase = StationDatabase()
 
     // Every table, in an order where references come before the tables that use them
     private val tables = arrayOf(
@@ -75,7 +77,8 @@ class LocalDatabase (
         TokenTable,
         ShopTable,
         AuditLogTable,
-        InviteTable
+        InviteTable,
+        StationTable
     )
 
     /**
@@ -121,7 +124,10 @@ class LocalDatabase (
     private fun JdbcTransaction.addUserColumns() {
         listOf(
             UserTable.status to "DEFAULT '${UserStatus.ACTIVE.name}' NOT NULL",
-            UserTable.needsSetup to "DEFAULT FALSE NOT NULL"
+            UserTable.needsSetup to "DEFAULT FALSE NOT NULL",
+            UserTable.pinHash to "DEFAULT '' NOT NULL",
+            UserTable.pinFailedAttempts to "DEFAULT 0 NOT NULL",
+            UserTable.pinLocked to "DEFAULT FALSE NOT NULL"
         ).forEach { (column, constraints) ->
             exec(
                 "ALTER TABLE ${identity(UserTable)} ADD COLUMN IF NOT EXISTS " +

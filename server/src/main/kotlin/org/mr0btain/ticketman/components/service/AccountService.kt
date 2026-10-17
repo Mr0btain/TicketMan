@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.components.database.InviteDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.user.UsernameRules
@@ -12,6 +13,7 @@ import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
+import org.mr0btain.ticketman.server.request.SetPinRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.server.response.PendingKind
@@ -153,8 +155,10 @@ class AccountService(
         if (!user.needsSetup) return AccountResult.Conflict("Your account is already set up")
         if (request.name.isBlank()) return AccountResult.Invalid("Your name is required")
         if (request.password.isNotBlank()) passwordProblem(request.password)?.let { return AccountResult.Invalid(it) }
+        PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
 
         users.update(user.copy(name = request.name.trim(), email = request.email.trim(), phone = request.phone.trim(), password = request.password))
+        users.setPin(identifier, request.pin)
         users.setState(identifier, UserStatus.ACTIVE, needsSetup = false)
         auditLog.log(identifier, AuditAction.UPDATE, "user", identifier.toString(), "Finished account setup")
 
@@ -173,8 +177,10 @@ class AccountService(
 
         if (request.name.isBlank()) return AccountResult.Invalid("Your name is required")
         passwordProblem(request.password)?.let { return AccountResult.Invalid(it) }
+        PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
 
         users.update(user.copy(name = request.name.trim(), email = request.email.trim(), phone = request.phone.trim(), password = request.password))
+        users.setPin(identifier, request.pin)
         users.setState(identifier, UserStatus.ACTIVE, needsSetup = false)
         invites.remove(identifier)
 
@@ -185,6 +191,19 @@ class AccountService(
             ?: return AccountResult.Invalid("Couldn't log in")
 
         return AccountResult.Done(session)
+    }
+
+    /** Changes your own PIN, checked against your password so a borrowed session can't do it */
+    fun setOwnPin(identifier: Uuid, request: SetPinRequest): AccountResult<Unit> {
+        val user = users.getById(identifier) ?: return AccountResult.NotFound
+
+        if (!PasswordHasher.verify(request.currentPassword, user.password)) return AccountResult.Invalid("Password is wrong")
+        PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
+
+        users.setPin(identifier, request.pin)
+        auditLog.log(identifier, AuditAction.UPDATE, "user", identifier.toString(), "Changed PIN")
+
+        return AccountResult.Done(Unit)
     }
 
     private fun passwordProblem(password: String): String? =
