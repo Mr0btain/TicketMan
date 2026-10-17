@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.print.PrintTemplate
+import org.mr0btain.ticketman.components.print.PrintTemplates
+import org.mr0btain.ticketman.components.print.printDocument
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -17,6 +20,7 @@ import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -417,6 +421,34 @@ class CounterHandler(
                     onResult(result.error.message)
                 }
             }
+        }
+    }
+
+    // ------------------------------------------ Printing ------------------------------------------
+
+    /**
+     * Prints one of the counter's slips for a ticket, loading it fresh so the printout matches the server
+     * @param onResult Gets null when it went to the printer or they cancelled, otherwise what went wrong
+     */
+    fun print(ticketIdentifier: Uuid, template: PrintTemplate, paper: PaperSize, onResult: (String?) -> Unit) {
+        scope.launch {
+            val detail = loadTicket(ticketIdentifier) ?: run {
+                onResult("Couldn't load the ticket to print")
+                return@launch
+            }
+
+            val shop = remoteHandler.adminRepo.getShopProfile() ?: _shop.value
+
+            val document = when (template) {
+                PrintTemplate.CLAIM_SLIP -> PrintTemplates.claimSlip(shop, detail.ticket, detail.customer, detail.invoice, detail.signature)
+                PrintTemplate.DEVICE_TAG -> PrintTemplates.deviceTag(detail.ticket, detail.customer)
+                PrintTemplate.RECEIPT -> detail.invoice?.let { PrintTemplates.receipt(shop, detail.ticket, detail.customer, it) } ?: run {
+                    onResult("This ticket has no invoice yet")
+                    return@launch
+                }
+            }
+
+            onResult(printDocument(document, paper))
         }
     }
 

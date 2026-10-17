@@ -110,6 +110,13 @@ kotlin {
             implementation(libs.ktor.client.darwin)
         }
 
+        val desktopTest by getting {
+            dependencies {
+                // Reads back the QR codes we make
+                implementation(libs.zxing.core)
+            }
+        }
+
         desktopMain.dependencies {
             implementation(compose.desktop.currentOs)
             implementation(libs.kotlinx.coroutinesSwing)

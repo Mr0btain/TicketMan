@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
@@ -296,6 +297,17 @@ private fun ShopProfileCard(
             minLines = 2,
             maxLines = 4
         )
+
+        Text(modifier = Modifier.padding(start = 8.dp, top = 4.dp), text = "Default paper for printing", fontSize = 13.sp)
+        Row(modifier = Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PaperSize.entries.forEach { paper ->
+                FilterChip(
+                    selected = profile.defaultPaper == paper,
+                    onClick = { profile = profile.copy(defaultPaper = paper) },
+                    label = { Text(paper.label) }
+                )
+            }
+        }
 
         OutlinedTextField(
             modifier = Modifier

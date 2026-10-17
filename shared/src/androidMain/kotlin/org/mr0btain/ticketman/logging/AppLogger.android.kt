@@ -4,6 +4,8 @@ import android.util.Log
 import org.mr0btain.ticketman.error.ErrorCode
 
 actual object AppLogger {
+    actual var LOG_LEVEL: LogLevel = LogLevel.NORMAL
+
     actual fun e(tag: String, message: String, throwable: Throwable?) {
         if (throwable != null) {
             Log.e(tag, message, throwable)
@@ -11,6 +13,8 @@ actual object AppLogger {
             Log.e(tag, message)
         }
     }
+
+    actual fun e(tag: String, message: ErrorCode, throwable: Throwable?) = e(tag, message.message, throwable)
 
     actual fun d(tag: String, message: String) { Log.d(tag, message) }
 

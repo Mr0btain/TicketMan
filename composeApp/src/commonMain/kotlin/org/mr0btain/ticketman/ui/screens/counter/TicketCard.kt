@@ -40,6 +40,7 @@ fun TicketCard(
     onAddNote: (String) -> Unit,
     onCustomerClick: () -> Unit,
     onBack: () -> Unit,
+    printAction: @Composable () -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {}
 ) {
     val ticket = detail.ticket
@@ -74,6 +75,11 @@ fun TicketCard(
             )
 
             Spacer(Modifier.weight(1f))
+
+            // Anyone can print, restricted users included
+            printAction()
+
+            Spacer(Modifier.padding(8.dp))
 
             Text(
                 text = "In ${formatTimeAgo(ticket.identifier.timestampMillis()).removeSuffix(" ago")}",

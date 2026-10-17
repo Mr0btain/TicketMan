@@ -13,6 +13,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import org.mr0btain.ticketman.components.print.AndroidPrintHost
 import org.mr0btain.ticketman.ui.AppWindow
 
 class MainActivity : ComponentActivity() {
@@ -26,6 +27,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         //ContextUtils.setContext(context = this)
         appContext = applicationContext
+        AndroidPrintHost.attach(this)
 
         setContent {
             // Kiosk mode hides the status and navigation bars, a swipe brings them back for a moment

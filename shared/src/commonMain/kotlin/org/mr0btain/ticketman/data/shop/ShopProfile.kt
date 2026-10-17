@@ -20,9 +20,18 @@ data class ShopProfile(
     /** A device back within this many days of its last repair gets flagged at check in */
     val repeatWindowDays: Int = DEFAULT_REPEAT_WINDOW_DAYS,
     /** What customers agree to when they sign at check in, blank skips the signature */
-    val repairTerms: String = ""
+    val repairTerms: String = "",
+    /** Paper the counter prints on unless someone picks another */
+    val defaultPaper: PaperSize = PaperSize.RECEIPT_80MM
 ) {
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90
     }
+}
+
+/** Paper the counter can print slips and receipts on */
+@Serializable
+enum class PaperSize(val label: String) {
+    RECEIPT_80MM("80mm receipt"),
+    LETTER("Letter")
 }

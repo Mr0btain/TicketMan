@@ -55,6 +55,15 @@ fun promiseTimeInDays(days: Int): Long {
 
 private const val PROMISE_HOUR = 17
 
+/** Epoch millis as "Fri Oct 17 2026", for paper where "today" won't make sense later */
+fun formatDate(millis: Long): String {
+    val date = localDate(millis)
+    val day = date.dayOfWeek.name.take(3).lowercase().replaceFirstChar { it.titlecase() }
+    val month = date.month.name.take(3).lowercase().replaceFirstChar { it.titlecase() }
+
+    return "$day $month ${date.day} ${date.year}"
+}
+
 /** Whether the time falls on a day before today */
 fun isBeforeToday(millis: Long): Boolean =
     localDate(millis) < Clock.System.now().toLocalDateTime(zone).date

@@ -12,6 +12,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterView
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
@@ -169,6 +170,17 @@ fun CounterScreen(
                                 onAddNote = { counter.addTicketNote(it) },
                                 onCustomerClick = { detail.customer?.let { counter.openCustomer(it.identifier) } },
                                 onBack = { counter.goHome() },
+                                printAction = {
+                                    PrintButton(
+                                        templates = listOfNotNull(
+                                            PrintTemplate.CLAIM_SLIP,
+                                            PrintTemplate.DEVICE_TAG,
+                                            PrintTemplate.RECEIPT.takeIf { detail.invoice != null }
+                                        ),
+                                        defaultPaper = shop.defaultPaper,
+                                        onPrint = { template, paper, onResult -> counter.print(detail.ticket.identifier, template, paper, onResult) }
+                                    )
+                                },
                                 extraActions = {
                                     Spacer(Modifier.padding(8.dp))
                                     Button(onClick = { counter.startPickup(detail.ticket.identifier) }) { Text("Pick Up (F5)") }
@@ -212,7 +224,15 @@ fun CounterScreen(
                                 result = result,
                                 onOpenTicket = { counter.openTicket(result.ticket.identifier) },
                                 onCheckInAnother = { counter.startCheckIn() },
-                                onDone = { counter.goHome() }
+                                onDone = { counter.goHome() },
+                                actions = {
+                                    PrintButton(
+                                        label = "Print Claim Slip",
+                                        templates = listOf(PrintTemplate.CLAIM_SLIP, PrintTemplate.DEVICE_TAG),
+                                        defaultPaper = shop.defaultPaper,
+                                        onPrint = { template, paper, onResult -> counter.print(result.ticket.identifier, template, paper, onResult) }
+                                    )
+                                }
                             )
                         }
 
@@ -230,7 +250,15 @@ fun CounterScreen(
                         CounterView.PICKED_UP -> lastPickup?.let { invoice ->
                             PickedUpView(
                                 invoice = invoice,
-                                onDone = { counter.goHome() }
+                                onDone = { counter.goHome() },
+                                actions = {
+                                    PrintButton(
+                                        label = "Print Receipt",
+                                        templates = listOf(PrintTemplate.RECEIPT),
+                                        defaultPaper = shop.defaultPaper,
+                                        onPrint = { template, paper, onResult -> counter.print(invoice.ticketIdentifier, template, paper, onResult) }
+                                    )
+                                }
                             )
                         }
 
