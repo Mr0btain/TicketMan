@@ -17,7 +17,23 @@ data class Station(
     val requestedBy: String,
     val requestedAt: Long,
     val approvedBy: String? = null,
-    val approvedAt: Long? = null
+    val approvedAt: Long? = null,
+    /** Locks the device to the counter with PIN sign in, only for approved stations */
+    val kioskEnabled: Boolean = false,
+    /** Seconds with nothing touched before a kiosk locks */
+    val idleTimeoutSeconds: Int = DEFAULT_IDLE_TIMEOUT_SECONDS
+) {
+    companion object {
+        const val DEFAULT_IDLE_TIMEOUT_SECONDS = 120
+        val IDLE_TIMEOUT_RANGE = 30..3_600
+    }
+}
+
+/** Turns kiosk mode on or off for a station */
+@Serializable
+data class KioskSettings(
+    val enabled: Boolean,
+    val idleTimeoutSeconds: Int = Station.DEFAULT_IDLE_TIMEOUT_SECONDS
 )
 
 @Serializable

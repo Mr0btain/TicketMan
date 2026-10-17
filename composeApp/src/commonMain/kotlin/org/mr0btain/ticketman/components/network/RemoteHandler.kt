@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import kotlin.uuid.Uuid
@@ -55,6 +56,12 @@ class RemoteHandler(
     val adminRepo = AdminRemoteRepository(httpClient)
     val counterRepo = CounterRemoteRepository(httpClient)
     val invoiceRepo = InvoiceRemoteRepository(httpClient)
+
+    /**
+     * Whether an expired session can be fixed by logging in again with the saved username and password.
+     * Kiosks turn this off so a locked counter can't quietly sign the device's owner back in
+     */
+    var credentialFallback: Boolean = true
 
     // Base url once a server has been reached, used for routes outside the repositories
     private var serverUrl = ""
@@ -145,7 +152,7 @@ class RemoteHandler(
             AppLogger.i(REFRESH_TOKENS_TAG, "Refresh token rejected, logging in again")
         }
 
-        return if (userClient.login() is LoginOutcome.LoggedIn) {
+        return if (credentialFallback && userClient.login() is LoginOutcome.LoggedIn) {
             AppLogger.m(REFRESH_TOKENS_TAG, SimpleResult.SUCCESS)
             getStoredToken()
         } else {
@@ -215,6 +222,28 @@ class RemoteHandler(
         localStorage.password = ""
         httpClient.authProvider<BearerAuthProvider>()?.clearToken()
         AppLogger.m(LOGOUT_TAG, SimpleResult.SUCCESS)
+    }
+
+    /**
+     * Ends this device's session but keeps the saved login, used when a kiosk locks
+     */
+    suspend fun endSession() {
+        if (serverUrl.isNotBlank() && localStorage.accessToken.isNotBlank()) {
+            networkErrorTryCatch(LOGOUT_TAG) {
+                httpClient.post { url("$serverUrl/api/auth/logout") }
+            }?.let { response -> handlePlainHttpResponse(LOGOUT_TAG, response) }
+        }
+
+        localStorage.clearSession()
+        httpClient.authProvider<BearerAuthProvider>()?.clearToken()
+    }
+
+    /** People who can PIN in at this station, empty if it isn't one */
+    suspend fun stationStaff(): Result<List<StaffMember>, ServerError> {
+        val station = localStorage.stationCredentials
+            ?: return Result.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
+
+        return userClient.stationStaff(station)
     }
 
     /**

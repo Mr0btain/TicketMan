@@ -8,6 +8,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationCredentials
@@ -238,5 +239,29 @@ class StationTest {
 
         val response = postJson("/api/station/register", json.encodeToString(StationRegistrationRequest("x", "Mine")), login(clerk))
         assertEquals(HttpStatusCode.Unauthorized, response.status)
+    }
+
+    @Test
+    fun adminsTurnKioskModeOnForApprovedStations() = testApplication {
+        setup()
+        val pending = register(deviceId = "pending-1", approve = false)
+
+        val refused = postJson("/api/admin/stations/${pending.stationId}/kiosk", json.encodeToString(KioskSettings(true)), adminToken)
+        assertEquals(HttpStatusCode.Conflict, refused.status)
+
+        val station = register()
+        val tooShort = postJson("/api/admin/stations/${station.stationId}/kiosk", json.encodeToString(KioskSettings(true, idleTimeoutSeconds = 5)), adminToken)
+        assertEquals(HttpStatusCode.BadRequest, tooShort.status)
+
+        val on = postJson("/api/admin/stations/${station.stationId}/kiosk", json.encodeToString(KioskSettings(true, idleTimeoutSeconds = 90)), adminToken)
+        assertEquals(HttpStatusCode.Accepted, on.status)
+
+        // The station sees it with its own credentials
+        val status = json.decodeFromString<Station>(postJson("/api/auth/station/status", json.encodeToString(station)).bodyAsText())
+        assertTrue(status.kioskEnabled)
+        assertEquals(90, status.idleTimeoutSeconds)
+
+        // Only admins
+        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/admin/stations/${station.stationId}/kiosk", json.encodeToString(KioskSettings(false)), login(tech)).status)
     }
 }

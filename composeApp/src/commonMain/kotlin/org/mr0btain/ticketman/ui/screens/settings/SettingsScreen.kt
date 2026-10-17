@@ -63,6 +63,8 @@ fun SettingsScreen(
         isVisible = showStation,
         station = station.value,
         defaultName = deviceName.value,
+        kioskActive = viewModel.kiosk.active.collectAsState().value,
+        onResumeKiosk = { viewModel.kiosk.resume() },
         onRefresh = { viewModel.refreshStation() },
         onDismiss = { showStation = false },
         onRegister = { name, onResult -> viewModel.registerStation(name, onResult) }

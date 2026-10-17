@@ -37,6 +37,7 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
+import org.mr0btain.ticketman.ui.screens.kiosk.components.KioskHandler
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
@@ -66,9 +67,14 @@ class MainViewModel(
         // When the session can't be refreshed, ask the user to log in again
         viewModelScope.launch {
             remoteHandler.authExpired.collect {
-                _loginState.value = LoginState.LOGGED_OUT
-                _currentUser.value = null
-                _showLogin.value = true
+                // A kiosk goes back to its PIN screen instead of asking for a password
+                if (kiosk.active.value) {
+                    kiosk.lock()
+                } else {
+                    _loginState.value = LoginState.LOGGED_OUT
+                    _currentUser.value = null
+                    _showLogin.value = true
+                }
             }
         }
 
@@ -656,6 +662,24 @@ class MainViewModel(
     // This device's station record, null when it isn't one
     private val _station: MutableStateFlow<Station?> = MutableStateFlow(null)
     val station = _station.asStateFlow()
+
+    val kiosk = KioskHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        station = station,
+        onSignedIn = {
+            _loginState.value = LoginState.LOGGED_IN
+            loadCurrentUser()
+            refreshPagers()
+        },
+        onSignedOut = {
+            _loginState.value = LoginState.LOGGED_OUT
+            _currentUser.value = null
+            counter.clear()
+            admin.clear()
+        },
+        isAdmin = { _currentUser.value?.canAccess(AccessLevel.ADMIN) == true }
+    )
 
     /** Asks the server about this device's station, forgetting the credentials if the server no longer has it */
     fun refreshStation() {

@@ -110,6 +110,8 @@ fun StationDialog(
     isVisible: Boolean,
     station: Station?,
     defaultName: String,
+    kioskActive: Boolean,
+    onResumeKiosk: () -> Unit,
     onRefresh: () -> Unit,
     onDismiss: () -> Unit,
     onRegister: (name: String, onResult: (String?) -> Unit) -> Unit
@@ -157,6 +159,15 @@ fun StationDialog(
                         text = "Registering again needs a new approval.",
                         fontSize = 12.sp
                     )
+                }
+
+                // An admin left kiosk mode on this device, let them put it back
+                if (station?.kioskEnabled == true && !kioskActive) {
+                    Text(modifier = Modifier.padding(top = 8.dp), text = "Kiosk mode is on for this station but was left on this device.", fontSize = 13.sp)
+                    Button(onClick = {
+                        onResumeKiosk()
+                        onDismiss()
+                    }) { Text("Go Back to Kiosk Mode") }
                 }
 
                 serverError?.let {

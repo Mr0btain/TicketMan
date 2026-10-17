@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
@@ -97,6 +98,20 @@ class AdminRemoteRepository(
 
         val response = networkErrorTryCatch(STATIONS_TAG) {
             client.post { url("$adminUrl/stations/$identifier/approve") }
+        }
+
+        return handleActionHttpResponse(STATIONS_TAG, response)
+    }
+
+    suspend fun setKiosk(identifier: Uuid, settings: KioskSettings): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(STATIONS_TAG) {
+            client.post {
+                url("$adminUrl/stations/$identifier/kiosk")
+                contentType(ContentType.Application.Json)
+                setBody(settings)
+            }
         }
 
         return handleActionHttpResponse(STATIONS_TAG, response)

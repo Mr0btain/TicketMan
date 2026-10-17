@@ -10,6 +10,7 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.station.StationTable
 import org.mr0btain.ticketman.components.service.PasswordHasher
+import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.data.station.StationStatus
@@ -31,6 +32,7 @@ class StationDatabase {
     private val GET_TAG = "$TAG:Get"
     private val APPROVE_TAG = "$TAG:Approve"
     private val REMOVE_TAG = "$TAG:Remove"
+    private val KIOSK_TAG = "$TAG:Kiosk"
 
     private val random = SecureRandom()
 
@@ -106,6 +108,18 @@ class StationDatabase {
             }
         } ?: false
 
+    fun setKiosk(identifier: Uuid, settings: KioskSettings): Boolean =
+        appLogTryCatch<Boolean>(KIOSK_TAG) {
+            transaction {
+                val updated = StationTable.update(where = { StationTable.id eq identifier }) { row ->
+                    row[kioskEnabled] = settings.enabled
+                    row[idleTimeoutSeconds] = settings.idleTimeoutSeconds
+                } > 0
+
+                Pair(updated, updated)
+            }
+        } ?: false
+
     fun remove(identifier: Uuid): Boolean =
         appLogTryCatch<Boolean>(REMOVE_TAG) {
             transaction {
@@ -123,6 +137,8 @@ class StationDatabase {
             requestedBy = this[StationTable.requestedBy],
             requestedAt = this[StationTable.requestedAt],
             approvedBy = this[StationTable.approvedBy],
-            approvedAt = this[StationTable.approvedAt]
+            approvedAt = this[StationTable.approvedAt],
+            kioskEnabled = this[StationTable.kioskEnabled],
+            idleTimeoutSeconds = this[StationTable.idleTimeoutSeconds]
         )
 }

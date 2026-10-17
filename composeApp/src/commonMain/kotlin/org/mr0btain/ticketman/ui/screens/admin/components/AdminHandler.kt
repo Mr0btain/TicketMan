@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
@@ -302,6 +303,16 @@ class AdminHandler(
     fun approveStation(station: Station) {
         scope.launch {
             report(admin.approveStation(station.identifier), "Approved ${station.name}") {
+                _stations.value = admin.getStations()
+            }
+        }
+    }
+
+    fun setKiosk(station: Station, settings: KioskSettings) {
+        val message = if (settings.enabled) "Kiosk mode on for ${station.name}" else "Kiosk mode off for ${station.name}"
+
+        scope.launch {
+            report(admin.setKiosk(station.identifier, settings), message) {
                 _stations.value = admin.getStations()
             }
         }

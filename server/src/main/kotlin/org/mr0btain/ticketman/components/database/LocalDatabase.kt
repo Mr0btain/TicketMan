@@ -97,7 +97,8 @@ class LocalDatabase (
     private val migratedTables = arrayOf(
         TicketTable,
         TokenTable,
-        InventoryTable
+        InventoryTable,
+        StationTable
     )
 
     /**

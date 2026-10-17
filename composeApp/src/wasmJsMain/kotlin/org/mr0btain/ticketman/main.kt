@@ -8,6 +8,7 @@ import kotlinx.browser.document
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.injection.initKoin
+import org.mr0btain.ticketman.ui.AppWindow
 
 @OptIn(ExperimentalComposeUiApi::class)
 fun main() {
@@ -19,6 +20,18 @@ fun main() {
 
         ComposeViewport(document.body!!) {
             App()
+        }
+    }
+
+    // Kiosk mode asks for fullscreen. Browsers may refuse until the page has been clicked, which is fine
+    MainScope().launch {
+        AppWindow.fullscreen.collect { fullscreen ->
+            try {
+                if (fullscreen && document.fullscreenElement == null) document.documentElement?.requestFullscreen()
+                if (!fullscreen && document.fullscreenElement != null) document.exitFullscreen()
+            } catch (ex: Throwable) {
+                println("Fullscreen not allowed: $ex")
+            }
         }
     }
 }

@@ -278,6 +278,7 @@ private fun AdminContent(
             AdminTab.STATIONS -> AdminStationsTab(
                 stations = stations,
                 onApprove = { admin.approveStation(it) },
+                onKiosk = { station, settings -> admin.setKiosk(station, settings) },
                 onRemove = { admin.removeStation(it) }
             )
 

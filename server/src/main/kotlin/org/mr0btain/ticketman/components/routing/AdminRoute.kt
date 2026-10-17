@@ -10,6 +10,9 @@ import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.station.KioskSettings
+import org.mr0btain.ticketman.data.station.Station
+import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SeedRequest
 import kotlin.time.Clock
@@ -113,6 +116,32 @@ fun Route.adminRoute(
                 call.respond(HttpStatusCode.Accepted)
             } else {
                 call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
+        // Kiosk mode only makes sense on a station that's been approved
+        post("/stations/{identifier}/kiosk") {
+            val station = call.uuidParameter("identifier")?.let { database.stationDatabase.getById(it) }
+            val settings = call.receive<KioskSettings>()
+
+            when {
+                station == null -> call.respond(HttpStatusCode.NotFound)
+
+                station.status != StationStatus.APPROVED -> call.respond(HttpStatusCode.Conflict, "Approve the station first")
+
+                settings.idleTimeoutSeconds !in Station.IDLE_TIMEOUT_RANGE -> call.respond(
+                    HttpStatusCode.BadRequest,
+                    "Idle timeout has to be ${Station.IDLE_TIMEOUT_RANGE.first} to ${Station.IDLE_TIMEOUT_RANGE.last} seconds"
+                )
+
+                else -> {
+                    database.stationDatabase.setKiosk(station.identifier, settings)
+                    call.audit(
+                        auditLog, AuditAction.SETTINGS_UPDATE, "station", station.identifier,
+                        if (settings.enabled) "Kiosk on for ${station.name}, locks after ${settings.idleTimeoutSeconds}s" else "Kiosk off for ${station.name}"
+                    )
+                    call.respond(HttpStatusCode.Accepted)
+                }
             }
         }
 
