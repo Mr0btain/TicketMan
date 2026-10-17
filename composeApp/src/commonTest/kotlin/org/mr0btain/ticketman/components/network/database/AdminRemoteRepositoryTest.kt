@@ -75,13 +75,15 @@ class AdminRemoteRepositoryTest {
     fun shopAndSessionRoutes() = runTest {
         assertEquals("Shop", admin.getShopProfile()?.name)
         admin.updateShopProfile(ShopProfile())
-        admin.revokeSession(Uuid.parse("00000000-0000-7000-8000-000000000001"))
+        admin.revokeSession("session-1")
+        admin.revokeUserSessions(Uuid.parse("00000000-0000-7000-8000-000000000001"))
 
         assertEquals(
             listOf(
                 "GET /api/shop",
                 "POST /api/shop/update",
-                "DELETE /api/admin/sessions/00000000-0000-7000-8000-000000000001"
+                "DELETE /api/admin/sessions/session-1",
+                "DELETE /api/admin/sessions/user/00000000-0000-7000-8000-000000000001"
             ),
             requests
         )
@@ -120,7 +122,7 @@ class AdminRemoteRepositoryTest {
         val unset = AdminRemoteRepository(client)
 
         assertNull(unset.getStats(5, 10))
-        assertIs<Result.Error<*>>(unset.revokeSession(Uuid.random()))
+        assertIs<Result.Error<*>>(unset.revokeSession("session-1"))
         assertTrue(requests.isEmpty())
     }
 }

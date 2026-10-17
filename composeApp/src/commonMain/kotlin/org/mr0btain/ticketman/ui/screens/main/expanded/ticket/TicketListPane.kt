@@ -181,7 +181,7 @@ private fun TicketTableItem(
                 contentAlignment = Alignment.Center
             ) {
                 TableTicketIdItem(
-                    label = ticket.identifier.toString(),
+                    label = ticket.label,
                     textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
                 )
             }

@@ -14,8 +14,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.ui.screens.admin.components.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.SectionCard
+import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.ui.composables.EmptyMessage
+import org.mr0btain.ticketman.ui.composables.SectionCard
 import kotlin.uuid.Uuid
 
 /**
@@ -96,8 +97,8 @@ fun AdminLowStockTab(
                         fontWeight = FontWeight.Bold,
                         color = if (item.stock <= 0) MaterialTheme.colorScheme.error else LocalContentColor.current
                     )
-                    Text(item.cost, Modifier.width(90.dp))
-                    Text(item.price, Modifier.width(90.dp))
+                    Text(Money.format(item.costCents), Modifier.width(90.dp))
+                    Text(Money.format(item.priceCents), Modifier.width(90.dp))
 
                     TextButton(
                         modifier = Modifier.width(80.dp),

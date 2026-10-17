@@ -7,13 +7,19 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
+import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.CheckInService
+import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 
 fun Application.configureRouting(
     userService: UserService,
+    accountService: AccountService,
     adminService: AdminService,
+    invoiceService: InvoiceService,
+    checkInService: CheckInService,
     localDatabase: LocalDatabase
 ) {
     install(StatusPages) {
@@ -35,13 +41,14 @@ fun Application.configureRouting(
         }
 
         route("/api/auth") {
-            authRoute(userService)
+            authRoute(userService, accountService, localDatabase.stationDatabase, localDatabase.userDatabase)
         }
 
         route("/api/user") {
             userRoute(
                 database = localDatabase.userDatabase,
                 tokenDatabase = localDatabase.tokenDatabase,
+                accountService = accountService,
                 auditLog = localDatabase.auditLogDatabase
             )
         }
@@ -50,6 +57,32 @@ fun Application.configureRouting(
             adminRoute(
                 database = localDatabase,
                 adminService = adminService
+            )
+        }
+
+        route("/api/counter") {
+            counterRoute(
+                database = localDatabase.counterDatabase,
+                shopDatabase = localDatabase.shopDatabase,
+                invoiceService = invoiceService,
+                checkInService = checkInService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route("/api/invoice") {
+            invoiceRoute(
+                database = localDatabase.invoiceDatabase,
+                service = invoiceService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route("/api/station") {
+            stationRoute(
+                database = localDatabase.stationDatabase,
+                userDatabase = localDatabase.userDatabase,
+                auditLog = localDatabase.auditLogDatabase
             )
         }
 
@@ -63,6 +96,9 @@ fun Application.configureRouting(
         route("/api/data/customer") {
             customerRoute(
                 database = localDatabase.customerDatabase,
+                ticketDatabase = localDatabase.ticketDatabase,
+                counterDatabase = localDatabase.counterDatabase,
+                userDatabase = localDatabase.userDatabase,
                 auditLog = localDatabase.auditLogDatabase
             )
         }
@@ -70,6 +106,7 @@ fun Application.configureRouting(
         route("/api/data/ticket") {
             ticketRoute(
                 database = localDatabase.ticketDatabase,
+                userDatabase = localDatabase.userDatabase,
                 auditLog = localDatabase.auditLogDatabase
             )
         }
@@ -77,6 +114,7 @@ fun Application.configureRouting(
         route("/api/data/inventory") {
             inventoryRoute(
                 database = localDatabase.inventoryDatabase,
+                userDatabase = localDatabase.userDatabase,
                 auditLog = localDatabase.auditLogDatabase
             )
         }

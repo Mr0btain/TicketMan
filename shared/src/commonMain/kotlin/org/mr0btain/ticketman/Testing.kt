@@ -10,7 +10,9 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.randomTicketPriority
 import org.mr0btain.ticketman.data.ticket.randomTicketStatus
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.money.Money
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -81,8 +83,8 @@ fun generateRandomInventoryItem(): Pair<Inventory, List<Note>> {
             name = itemNames.random(),
             description = descriptions.random(),
             stock = Random.nextInt(1, 500),
-            cost = "$$costVal",
-            price = "$$priceVal"
+            costCents = Money.fromDollars(costVal),
+            priceCents = Money.fromDollars(priceVal)
         ),
         notes
     )
@@ -215,9 +217,13 @@ fun generateRandomTicket(): Pair<Ticket, List<Note>> {
 
     return Pair(
         Ticket(
-            device = Device(manufacturer, model),
+            device = Device(manufacturer, model, serial = "SN${Random.nextInt(100_000, 999_999)}"),
             status = randomTicketStatus(),
-            priority = randomTicketPriority()
+            priority = randomTicketPriority(),
+            problem = noteMessages.random(),
+            accessories = listOf("", "Charger", "Case", "Charger and case").random(),
+            estimateCents = Random.nextLong(30, 400) * 100,
+            promisedAt = Clock.System.now().toEpochMilliseconds() + Random.nextLong(-3, 10) * 86_400_000L
         ),
         notes
     )

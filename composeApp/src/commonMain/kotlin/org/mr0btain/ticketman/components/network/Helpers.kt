@@ -112,3 +112,20 @@ suspend fun handleActionHttpResponse(tag: String, response: HttpResponse?): Empt
     AppLogger.i(tag, "${error.name}${reason?.let { ": $it" } ?: ""}")
     return Result.Error(ServerError(error, reason))
 }
+
+/**
+ * Like [handleActionHttpResponse] but also reads the body on success
+ */
+suspend inline fun <reified T> handleDataHttpResponse(tag: String, response: HttpResponse?): Result<T, ServerError> {
+    if (response != null && response.status.value in 200..299) {
+        return when (val result = handleHttpResponse<T>(tag, response)) {
+            is Result.Success -> result
+            is Result.Error -> Result.Error(ServerError(result.error))
+        }
+    }
+
+    return when (val failed = handleActionHttpResponse(tag, response)) {
+        is Result.Error -> failed
+        is Result.Success -> Result.Error(ServerError(NetworkError.UNKNOWN))
+    }
+}

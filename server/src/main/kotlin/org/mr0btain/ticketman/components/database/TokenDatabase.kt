@@ -1,152 +1,168 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.components.database.TokenTable.identifier
-import org.mr0btain.ticketman.components.database.TokenTable.token
-import org.mr0btain.ticketman.logging.SimpleResult
-import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.error.appLogTryCatch
+import org.mr0btain.ticketman.server.response.SessionKind
+import kotlin.time.Clock
 
+/**
+ * Stores logged in sessions, a user can have one per device
+ */
 @Suppress("PrivatePropertyName")
 class TokenDatabase() {
     private val TAG = "TokenDatabase"
-    private val FIND_BY_ID_TAG = "$TAG:FindById"
+    private val FIND_BY_SESSION_TAG = "$TAG:FindBySession"
     private val FIND_BY_TOKEN_TAG = "$TAG:FindByToken"
     private val ADD_TAG = "$TAG:Add"
-    private val UPDATE_TAG = "$TAG:Update"
+    private val TOUCH_TAG = "$TAG:Touch"
     private val REMOVE_TAG = "$TAG:Remove"
+    private val REMOVE_FOR_USER_TAG = "$TAG:RemoveForUser"
     private val GET_ALL_TAG = "$TAG:GetAll"
     private val COUNT_TAG = "$TAG:Count"
+    private val CLEAR_LEGACY_TAG = "$TAG:ClearLegacy"
 
-    fun findById(identifier: String): RefreshToken? {
-        var found: RefreshToken? = null
+    fun findBySessionId(sessionId: String): StoredSession? {
+        if (sessionId.isBlank()) return null
 
-        try {
+        return appLogTryCatch<StoredSession?>(FIND_BY_SESSION_TAG) {
             transaction {
-                TokenTable.selectAll().where { TokenTable.identifier eq identifier }.firstOrNull()?.let { item ->
-                    found = RefreshToken(
-                        identifier = item[TokenTable.identifier],
-                        token = item[token]
-                    )
-                } ?: AppLogger.i(FIND_BY_ID_TAG, SimpleResult.FAIL)
+                val found = TokenTable.selectAll().where { TokenTable.sessionId eq sessionId }.firstOrNull()?.toSession()
+                Pair(found, found != null)
             }
-
-            AppLogger.m(FIND_BY_ID_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.e(FIND_BY_ID_TAG, SimpleResult.FAIL, ex)
         }
-
-        return found
     }
 
-    fun findByToken(refreshToken: String): RefreshToken? {
-        var found: RefreshToken? = null
-
-        try {
+    fun findByToken(refreshToken: String): StoredSession? {
+        return appLogTryCatch<StoredSession?>(FIND_BY_TOKEN_TAG) {
             transaction {
-                TokenTable.selectAll().where { token eq refreshToken }.firstOrNull()?.let { item ->
-                    found = RefreshToken(
-                        identifier = item[identifier],
-                        token = item[token]
-                    )
-                } ?: AppLogger.i(FIND_BY_TOKEN_TAG, SimpleResult.FAIL)
+                val found = TokenTable.selectAll().where { TokenTable.token eq refreshToken }.firstOrNull()?.toSession()
+                Pair(found, found != null)
             }
-
-            AppLogger.m(FIND_BY_TOKEN_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.e(FIND_BY_TOKEN_TAG, SimpleResult.FAIL, ex)
         }
-
-        return found
     }
 
-    fun add(refreshToken: RefreshToken): Boolean {
-        try {
+    /**
+     * Saves a new session. A device that logs in again replaces its old session for that user
+     */
+    fun add(session: StoredSession): Boolean {
+        return appLogTryCatch<Boolean>(ADD_TAG) {
             transaction {
-                TokenTable.insert { item ->
-                    item[identifier] = refreshToken.identifier
-                    item[token] = refreshToken.token
+                if (session.deviceId.isNotBlank()) {
+                    TokenTable.deleteWhere {
+                        (TokenTable.identifier eq session.userIdentifier) and (TokenTable.deviceId eq session.deviceId)
+                    }
+                }
+
+                TokenTable.insert { row ->
+                    row[identifier] = session.userIdentifier
+                    row[token] = session.token
+                    row[sessionId] = session.sessionId
+                    row[deviceId] = session.deviceId
+                    row[deviceName] = session.deviceName
+                    row[kind] = session.kind.name
+                    row[createdAt] = session.createdAt
+                    row[lastUsedAt] = session.lastUsedAt
+                }
+
+                Pair(true, true)
+            }
+        } ?: false
+    }
+
+    /** Marks a session as just used */
+    fun touch(sessionId: String) {
+        appLogTryCatch(TOUCH_TAG) {
+            transaction {
+                TokenTable.update(where = { TokenTable.sessionId eq sessionId }) { row ->
+                    row[lastUsedAt] = Clock.System.now().toEpochMilliseconds()
+                } > 0
+            }
+        }
+    }
+
+    /** Ends one session, false if it didn't exist */
+    fun remove(sessionId: String): Boolean {
+        return appLogTryCatch<Boolean>(REMOVE_TAG) {
+            transaction {
+                val removed = TokenTable.deleteWhere { TokenTable.sessionId eq sessionId } > 0
+                Pair(removed, removed)
+            }
+        } ?: false
+    }
+
+    /**
+     * Ends every session a user has
+     * @param keepSessionId A session to leave alone, like the one making the request
+     */
+    fun removeAllForUser(userIdentifier: String, keepSessionId: String? = null) {
+        appLogTryCatch(REMOVE_FOR_USER_TAG) {
+            transaction {
+                TokenTable.deleteWhere {
+                    val forUser = TokenTable.identifier eq userIdentifier
+                    if (keepSessionId != null) forUser and (TokenTable.sessionId neq keepSessionId) else forUser
                 }
             }
 
-            AppLogger.m(ADD_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.e(ADD_TAG, SimpleResult.FAIL, ex)
-            return false
+            true
         }
-
-        return true
     }
 
-    fun update(refreshToken: RefreshToken): Boolean {
-        try {
+    /** Ends the PIN sessions on a device, so only whoever PINs in last is signed in at a station */
+    fun removePinSessionsForDevice(deviceId: String) {
+        if (deviceId.isBlank()) return
+
+        appLogTryCatch(REMOVE_FOR_USER_TAG) {
             transaction {
-                TokenTable.update(where = { identifier eq refreshToken.identifier }) { item ->
-                    item[identifier] = refreshToken.identifier
-                    item[token] = refreshToken.token
+                TokenTable.deleteWhere {
+                    (TokenTable.deviceId eq deviceId) and (TokenTable.kind eq SessionKind.PIN.name)
                 }
             }
 
-            AppLogger.m(UPDATE_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.e(UPDATE_TAG, SimpleResult.FAIL, ex)
-            return false
+            true
         }
-
-        return true
     }
 
-    fun remove(identifier: String): Boolean {
-        try {
+    fun getAll(): List<StoredSession> {
+        return appLogTryCatch<List<StoredSession>>(GET_ALL_TAG) {
             transaction {
-               TokenTable.deleteWhere { this.identifier eq identifier }
+                Pair(TokenTable.selectAll().map { it.toSession() }, true)
             }
-
-            AppLogger.m(REMOVE_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.e(REMOVE_TAG, SimpleResult.FAIL, ex)
-            return false
-        }
-
-        return true
-    }
-
-    /** Every stored refresh token, one per logged in user */
-    fun getAll(): List<RefreshToken> {
-        var found: List<RefreshToken> = emptyList()
-
-        try {
-            transaction {
-                found = TokenTable.selectAll().map { item ->
-                    RefreshToken(
-                        identifier = item[identifier],
-                        token = item[token]
-                    )
-                }
-            }
-
-            AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.e(GET_ALL_TAG, SimpleResult.FAIL, ex)
-        }
-
-        return found
+        }.orEmpty()
     }
 
     fun count(): Long {
-        var count = 0L
-
-        try {
+        return appLogTryCatch<Long>(COUNT_TAG) {
             transaction {
-                count = TokenTable.selectAll().count()
+                Pair(TokenTable.selectAll().count(), true)
+            }
+        } ?: 0
+    }
+
+    /** Drops sessions from before sessions had ids, those users just log in again */
+    fun clearLegacySessions() {
+        appLogTryCatch(CLEAR_LEGACY_TAG) {
+            transaction {
+                TokenTable.deleteWhere { TokenTable.sessionId eq "" }
             }
 
-            AppLogger.m(COUNT_TAG, SimpleResult.SUCCESS)
-        } catch (ex: Exception) {
-            AppLogger.e(COUNT_TAG, SimpleResult.FAIL, ex)
+            true
         }
-
-        return count
     }
+
+    private fun ResultRow.toSession(): StoredSession =
+        StoredSession(
+            sessionId = this[TokenTable.sessionId],
+            userIdentifier = this[TokenTable.identifier],
+            token = this[TokenTable.token],
+            deviceId = this[TokenTable.deviceId],
+            deviceName = this[TokenTable.deviceName],
+            kind = SessionKind.entries.firstOrNull { it.name == this[TokenTable.kind] } ?: SessionKind.PASSWORD,
+            createdAt = this[TokenTable.createdAt],
+            lastUsedAt = this[TokenTable.lastUsedAt]
+        )
 }

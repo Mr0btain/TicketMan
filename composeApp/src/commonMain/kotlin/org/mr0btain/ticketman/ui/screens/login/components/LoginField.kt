@@ -14,6 +14,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
@@ -25,6 +26,8 @@ fun LoginField(
     modifier: Modifier = Modifier,
     error: Boolean,
     initialUsername: String = "",
+    message: String? = null,
+    onRequestAccount: (() -> Unit)? = null,
     onConfirm: (String, String) -> Unit
 ) {
     val userName = remember { mutableStateOf(initialUsername) }
@@ -54,6 +57,24 @@ fun LoginField(
             showPasswordOnClick = { showPassword.value = !showPassword.value }
         )
 
+        Text(
+            modifier = Modifier.padding(top = 6.dp),
+            text = "New and have a setup code? Enter it as your password.",
+            fontSize = 12.sp
+        )
+
+        if (message != null) {
+            Text(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .widthIn(max = 320.dp),
+                text = message,
+                fontSize = 14.sp,
+                color = if (error) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+        }
+
         Spacer(Modifier.padding(12.dp))
 
         Button(
@@ -66,6 +87,12 @@ fun LoginField(
                 text = stringResource(Res.string.login_button_text),
                 fontSize = 18.sp
             )
+        }
+
+        if (onRequestAccount != null) {
+            TextButton(onClick = onRequestAccount) {
+                Text("Request an account")
+            }
         }
     }
 }

@@ -5,7 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -18,16 +20,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.user.UserSeed
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
-import org.mr0btain.ticketman.ui.screens.admin.components.AccessLevelChip
-import org.mr0btain.ticketman.ui.screens.admin.components.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.formatDateTime
+import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
+import org.mr0btain.ticketman.ui.composables.EmptyMessage
+import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import kotlin.uuid.Uuid
 
@@ -37,6 +40,11 @@ import kotlin.uuid.Uuid
  */
 @Composable
 fun AdminUsersTab(
+    pending: List<PendingUserResponse>,
+    onInvite: () -> Unit,
+    onApprove: (User) -> Unit,
+    onReject: (User) -> Unit,
+    onRenewInvite: (User) -> Unit,
     userList: List<User>,
     seed: UserSeed,
     currentUserIdentifier: Uuid?,
@@ -48,11 +56,24 @@ fun AdminUsersTab(
     onEdit: () -> Unit,
     onResetPassword: () -> Unit,
     onSetActive: (Boolean) -> Unit,
+    onLogOutEverywhere: () -> Unit,
+    onUnlockPin: () -> Unit,
+    onResetPin: () -> Unit,
     onDelete: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
     ) {
+        PendingUsersCard(
+            pending = pending,
+            onInvite = onInvite,
+            onApprove = onApprove,
+            onReject = onReject,
+            onRenew = onRenewInvite
+        )
+
         PanelTopBar(
             label = "User",
             onSearchClick = onSelect,
@@ -76,10 +97,14 @@ fun AdminUsersTab(
 
             UserInfoPane(
                 seed = seed,
+                listed = userList.firstOrNull { it.identifier == seed.identifier },
                 isSelf = seed.identifier == currentUserIdentifier,
                 onEdit = onEdit,
                 onResetPassword = onResetPassword,
-                onSetActive = onSetActive
+                onSetActive = onSetActive,
+                onLogOutEverywhere = onLogOutEverywhere,
+                onUnlockPin = onUnlockPin,
+                onResetPin = onResetPin
             )
         }
     }
@@ -158,7 +183,12 @@ private fun UserListPane(
                         ) {
                             CellText(user.username, usernameWidth)
                             CellText(user.cleanName(), nameWidth)
-                            Box(Modifier.width(accessWidth)) { AccessLevelChip(user.accessLevel) }
+                            Row(Modifier.width(accessWidth), verticalAlignment = Alignment.CenterVertically) {
+                                UserStateChip(user)
+                                if (user.pinLocked) {
+                                    Text(modifier = Modifier.padding(start = 4.dp), text = "PIN", fontSize = 10.sp, color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold)
+                                }
+                            }
                             CellText(user.email, emailWidth)
                         }
                     }
@@ -171,10 +201,14 @@ private fun UserListPane(
 @Composable
 private fun UserInfoPane(
     seed: UserSeed,
+    listed: User?,
     isSelf: Boolean,
     onEdit: () -> Unit,
     onResetPassword: () -> Unit,
-    onSetActive: (Boolean) -> Unit
+    onSetActive: (Boolean) -> Unit,
+    onLogOutEverywhere: () -> Unit,
+    onUnlockPin: () -> Unit,
+    onResetPin: () -> Unit
 ) {
     CustomSurface(
         modifier = Modifier
@@ -190,7 +224,11 @@ private fun UserInfoPane(
             }
 
             val user = seed.user
-            val isActive = user.accessLevel != AccessLevel.NONE
+            val isActive = user.status == UserStatus.ACTIVE
+
+            // The seed doesn't carry PIN state, the listed copy does
+            val hasPin = listed?.hasPin == true
+            val pinLocked = listed?.pinLocked == true
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -202,7 +240,7 @@ private fun UserInfoPane(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                AccessLevelChip(user.accessLevel)
+                UserStateChip(user)
             }
 
             if (isSelf) Text(text = "This is you", fontSize = 12.sp)
@@ -215,6 +253,14 @@ private fun UserInfoPane(
             SimpleTextItem("Email", user.email.ifBlank { "-" })
             SimpleTextItem("Phone", user.phone.ifBlank { "-" })
             SimpleTextItem("Added", formatDateTime(seed.time.toEpochMilliseconds()))
+            SimpleTextItem(
+                "PIN",
+                when {
+                    pinLocked -> "Locked"
+                    hasPin -> "Set"
+                    else -> "Not set"
+                }
+            )
 
             Spacer(Modifier.padding(8.dp))
 
@@ -224,6 +270,28 @@ private fun UserInfoPane(
             ) {
                 Button(onClick = onEdit) { Text("Edit") }
                 OutlinedButton(onClick = onResetPassword) { Text("Reset Password") }
+            }
+
+            Spacer(Modifier.padding(4.dp))
+
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onLogOutEverywhere
+            ) {
+                Text("Log Out Everywhere")
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                if (pinLocked) {
+                    Button(onClick = onUnlockPin) { Text("Unlock PIN") }
+                }
+
+                if (hasPin) {
+                    OutlinedButton(onClick = onResetPin) { Text("Clear PIN") }
+                }
             }
 
             Spacer(Modifier.padding(4.dp))

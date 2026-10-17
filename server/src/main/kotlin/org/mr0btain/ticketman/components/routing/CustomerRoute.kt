@@ -6,7 +6,10 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.database.CounterDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
+import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchQuery
@@ -14,45 +17,25 @@ import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.Uuid
 
-// TODO: Add more comments to help understand whats going on
-
+/**
+ * Customer routes. Reading is open to every logged in user, changes need NORMAL access
+ */
 fun Route.customerRoute(
     database: CustomerDatabaseImpl,
+    ticketDatabase: TicketDatabaseImpl,
+    counterDatabase: CounterDatabase,
+    userDatabase: UserDatabaseImpl,
     auditLog: AuditLogDatabase
 ) {
     val TAG = "CustomerRoute"
     val GET_TAG = "$TAG:Get"
     val FETCH_TAG = "$TAG:Fetch"
-    val DELETE_TAG = "$TAG:Delete"
-    val UPDATE_TAG = "$TAG:Update"
     val SEARCH_TAG = "$TAG:Search"
     val ENTITY_TYPE = "customer"
 
-    // Adding new
-    authenticate {
-        post("/add") {
-            val received = call.receive<Customer>()
+    // ------------------------------------------ Reading ------------------------------------------
 
-            database.add(received)
-
-            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier)
-            call.respond(HttpStatusCode.Accepted)
-        }
-    }
-
-    authenticate {
-        post("/add/images/{identifier}") {
-            // TODO()
-        }
-    }
-
-    authenticate {
-        post("/add/note/{identifier}") {
-            // TODO()
-        }
-    }
-
-    authenticate {
+    authenticate("restricted") {
         post("/fetch") {
             val request = call.receive<PagedRequest>()
 
@@ -65,9 +48,7 @@ fun Route.customerRoute(
                 AppLogger.m(FETCH_TAG, "$request not found")
             }
         }
-    }
 
-    authenticate {
         post("/get") {
             val request = call.receive<Uuid>()
 
@@ -80,42 +61,7 @@ fun Route.customerRoute(
                 AppLogger.m(GET_TAG, "$request not found")
             }
         }
-    }
 
-    authenticate {
-        post("/get/notes/{identifier}") {
-            // TODO()
-        }
-    }
-
-    // Remove customer
-    authenticate {
-        delete("/remove/{identifier}") {
-            val identifier = call.parameters["identifier"]
-
-            if (identifier == null) {
-                call.respond(HttpStatusCode.NotFound)
-            } else {
-                database.remove(Uuid.parse(identifier))
-                call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
-                call.respond(HttpStatusCode.Accepted)
-            }
-        }
-    }
-
-    authenticate {
-        delete("/remove/note/{identifier}") {
-            // TODO()
-        }
-    }
-
-    authenticate {
-        delete("/remove/image/{identifier}") {
-            // TODO()
-        }
-    }
-
-    authenticate {
         post("/search") {
             val request = call.receive<SearchQuery>()
 
@@ -128,15 +74,86 @@ fun Route.customerRoute(
                 AppLogger.m(SEARCH_TAG, "$request not found")
             }
         }
-    }
 
-    // Update
-    authenticate {
-        post("/update") {
-            val received = call.receive<Customer>()
-            database.update(received)
-            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier)
-            call.respond(HttpStatusCode.Accepted)
+        // The customer's tickets, newest first
+        get("/get/tickets/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null || database.getById(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@get
+            }
+
+            call.respond(HttpStatusCode.OK, counterDatabase.customerTickets(identifier).map { it.ticket })
         }
     }
+
+    // ------------------------------------------ Changing ------------------------------------------
+
+    authenticate {
+        post("/add") {
+            val received = call.receive<Customer>()
+
+            database.add(received)
+
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier, received.cleanName())
+            call.respond(HttpStatusCode.Accepted)
+        }
+
+        post("/update") {
+            val received = call.receive<Customer>()
+
+            if (database.getById(received.identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            database.update(received)
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.cleanName())
+            call.respond(HttpStatusCode.Accepted)
+        }
+
+        delete("/remove/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.NotFound)
+            } else {
+                database.remove(identifier)
+                call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
+                call.respond(HttpStatusCode.Accepted)
+            }
+        }
+
+        // Link a ticket to this customer, the body is the ticket's identifier
+        post("/add/ticket/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val ticket = call.receive<Uuid>()
+
+            if (identifier != null && ticketDatabase.setCustomer(ticket, identifier)) {
+                call.audit(auditLog, AuditAction.UPDATE, "ticket", ticket, "Linked to customer $identifier")
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
+        // Images aren't uploaded through the client yet
+        post("/add/images/{identifier}") {
+            call.respond(HttpStatusCode.NotImplemented)
+        }
+
+        delete("/remove/image/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.BadRequest)
+            } else {
+                database.removeImage(identifier)
+                call.respond(HttpStatusCode.Accepted)
+            }
+        }
+    }
+
+    noteRoutes(database, userDatabase, auditLog, ENTITY_TYPE)
 }

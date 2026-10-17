@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
+import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.PaneHeader
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
@@ -134,7 +135,7 @@ fun InventoryInfoPane(
                             // Cost
                             SimpleTextItem(
                                 label = "Cost",
-                                text = inventoryData.cost.toString()
+                                text = Money.format(Money.fromDollars(inventoryData.cost))
                             )
 
                             Spacer(Modifier.padding(4.dp))
@@ -142,7 +143,7 @@ fun InventoryInfoPane(
                             // Price
                             SimpleTextItem(
                                 label = "Price",
-                                text = inventoryData.price.toString()
+                                text = Money.format(Money.fromDollars(inventoryData.price))
                             )
 
                             Spacer(Modifier.padding(4.dp))

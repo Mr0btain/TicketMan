@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import kotlin.uuid.ExperimentalUuidApi
@@ -28,8 +29,37 @@ class TicketSeed: DataSeed("TicketSeed") {
     var user: EntityReference? by mutableStateOf(null)
         private set
 
+    // Server owned, kept so they show and survive a round trip
+    var number: TicketNumber? by mutableStateOf(null)
+        private set
+    var pickedUpAt: Long? by mutableStateOf(null)
+        private set
+
+    var problem: String by mutableStateOf("")
+        private set
+    var condition: String by mutableStateOf("")
+        private set
+    var accessories: String by mutableStateOf("")
+        private set
+    var estimateCents: Long? by mutableStateOf(null)
+        private set
+    var promisedAt: Long? by mutableStateOf(null)
+        private set
+
     val ticket: Ticket
-        get() = Ticket(identifier, device, status, priority)
+        get() = Ticket(
+            identifier = identifier,
+            device = device,
+            status = status,
+            priority = priority,
+            number = number,
+            problem = problem,
+            condition = condition,
+            accessories = accessories,
+            estimateCents = estimateCents,
+            promisedAt = promisedAt,
+            pickedUpAt = pickedUpAt
+        )
 
     // --- Initial setting up with data ---
     fun setTicket(
@@ -44,6 +74,14 @@ class TicketSeed: DataSeed("TicketSeed") {
         priority = ticket.priority
         customer = customerId
         user = userId
+        number = ticket.number
+        pickedUpAt = ticket.pickedUpAt
+        problem = ticket.problem
+        condition = ticket.condition
+        accessories = ticket.accessories
+        estimateCents = ticket.estimateCents
+        promisedAt = ticket.promisedAt
+        _notes.clear()
         _notes.addAll(notes)
 
         markClean()
@@ -78,6 +116,41 @@ class TicketSeed: DataSeed("TicketSeed") {
         }
     }
 
+    fun changeProblem(new: String) {
+        if (problem != new) {
+            problem = new
+            _changedFields.add(ChangedField.PROBLEM)
+        }
+    }
+
+    fun changeCondition(new: String) {
+        if (condition != new) {
+            condition = new
+            _changedFields.add(ChangedField.CONDITION)
+        }
+    }
+
+    fun changeAccessories(new: String) {
+        if (accessories != new) {
+            accessories = new
+            _changedFields.add(ChangedField.ACCESSORIES)
+        }
+    }
+
+    fun changeEstimate(new: Long?) {
+        if (estimateCents != new) {
+            estimateCents = new
+            _changedFields.add(ChangedField.ESTIMATE)
+        }
+    }
+
+    fun changePromisedAt(new: Long?) {
+        if (promisedAt != new) {
+            promisedAt = new
+            _changedFields.add(ChangedField.PROMISED)
+        }
+    }
+
     fun changeCustomer(newCustomer: EntityReference?) {
         if (customer != newCustomer) {
             customer = newCustomer
@@ -100,6 +173,13 @@ class TicketSeed: DataSeed("TicketSeed") {
         priority = TicketPriority()
         customer = null
         user = null
+        number = null
+        pickedUpAt = null
+        problem = ""
+        condition = ""
+        accessories = ""
+        estimateCents = null
+        promisedAt = null
         _notes.clear()
         _images.clear()
 
@@ -109,12 +189,12 @@ class TicketSeed: DataSeed("TicketSeed") {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(identifier, device, status, priority, customer, user,  notes, _images).hashCode()
+        savedState = State(identifier, device, status, priority, customer, user,  notes, _images, ticket).hashCode()
         _changedFields.clear()  // Reset the changed fields
     }
 
     override fun toString(): String {
-        return "TicketSeed(ticket=$, customer=$customer, user=$user, notes=$_notes)"
+        return "TicketSeed(ticket=$ticket, customer=$customer, user=$user, notes=$_notes)"
     }
 
     private data class State(
@@ -125,7 +205,8 @@ class TicketSeed: DataSeed("TicketSeed") {
         val customer: EntityReference? = null,
         val user: EntityReference? = null,
         val notes: List<Note> = emptyList(),
-        val images: List<ImageBitmap> = emptyList()
+        val images: List<ImageBitmap> = emptyList(),
+        val ticket: Ticket? = null
     )
 }
 

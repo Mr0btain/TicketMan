@@ -94,6 +94,9 @@ kotlin {
 
             // Encrypted key-value storage
             implementation(libs.ksafe)
+
+            // Local dates and times for display
+            implementation(libs.kotlinx.datetime)
         }
 
         commonTest.dependencies {
@@ -105,6 +108,13 @@ kotlin {
         nativeMain.dependencies {
             // ktor
             implementation(libs.ktor.client.darwin)
+        }
+
+        val desktopTest by getting {
+            dependencies {
+                // Reads back the QR codes we make
+                implementation(libs.zxing.core)
+            }
         }
 
         desktopMain.dependencies {

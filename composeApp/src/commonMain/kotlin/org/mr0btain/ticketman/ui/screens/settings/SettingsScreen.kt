@@ -7,6 +7,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
@@ -16,7 +20,10 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.data.station.StationStatus
+import org.mr0btain.ticketman.ui.screens.settings.components.ChangePinDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
+import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
@@ -39,6 +46,29 @@ fun SettingsScreen(
     val pageSize = viewModel.pageSize.collectAsState()
     val searchLimit = viewModel.searchLimit.collectAsState()
     val cacheSize = viewModel.cacheSize.collectAsState()
+    val deviceName = viewModel.deviceName.collectAsState()
+    val station = viewModel.station.collectAsState()
+    val currentUser = viewModel.currentUser.collectAsState()
+
+    var showChangePin by remember { mutableStateOf(false) }
+    var showStation by remember { mutableStateOf(false) }
+
+    ChangePinDialog(
+        isVisible = showChangePin,
+        onDismiss = { showChangePin = false },
+        onSave = { password, pin, onResult -> viewModel.changePin(password, pin, onResult) }
+    )
+
+    StationDialog(
+        isVisible = showStation,
+        station = station.value,
+        defaultName = deviceName.value,
+        kioskActive = viewModel.kiosk.active.collectAsState().value,
+        onResumeKiosk = { viewModel.kiosk.resume() },
+        onRefresh = { viewModel.refreshStation() },
+        onDismiss = { showStation = false },
+        onRegister = { name, onResult -> viewModel.registerStation(name, onResult) }
+    )
 
     // Names of the main screen tabs, in tab index order
     val tabNames = listOf("Customers", "Tickets", "Inventory")
@@ -101,6 +131,18 @@ fun SettingsScreen(
                     type = SettingType.TEXT
                 ),
                 SettingItem(
+                    icon = painterResource(Res.drawable.monitor),
+                    description = "Name admins see for this device, used from the next login",
+                    label = "Device Name",
+                    enabled = true,
+                    initialState = deviceName.value,
+                    onClick = { name ->
+                        viewModel.setDeviceName(name as? String ?: "")
+                        true
+                    },
+                    type = SettingType.TEXT
+                ),
+                SettingItem(
                     icon = painterResource(Res.drawable.list),
                     description = "Number of items loaded per page " +
                             "(${MainViewModel.PAGE_SIZE_RANGE.first}-${MainViewModel.PAGE_SIZE_RANGE.last})",
@@ -141,6 +183,46 @@ fun SettingsScreen(
                             ?.let { viewModel.setCacheSize(it); true } ?: false
                     },
                     type = SettingType.TEXT
+                )
+            )
+        ),
+        SettingItemGroup(
+            label = "Account & Station",
+            textStyle = textStyle,
+            childTextStyle = childTextStyle,
+            items = listOf(
+                SettingItem(
+                    icon = painterResource(Res.drawable.key),
+                    description = when {
+                        currentUser.value == null -> "Log in to change your PIN"
+                        currentUser.value?.pinLocked == true -> "Your PIN is locked, ask an admin to unlock it"
+                        currentUser.value?.hasPin == true -> "PIN used to sign in at counter stations"
+                        else -> "You don't have a PIN yet, set one to use counter stations"
+                    },
+                    label = "Change PIN",
+                    enabled = currentUser.value != null,
+                    initialState = "",
+                    onClick = {
+                        if (currentUser.value != null) showChangePin = true
+                        true
+                    },
+                    type = SettingType.CLICKABLE_TEXT
+                ),
+                SettingItem(
+                    icon = painterResource(Res.drawable.monitor),
+                    description = when (station.value?.status) {
+                        null -> "Make this device a station staff can PIN in at"
+                        StationStatus.PENDING -> "Waiting for an admin to approve \"${station.value?.name}\""
+                        StationStatus.APPROVED -> "Approved as \"${station.value?.name}\""
+                    },
+                    label = "Counter Station",
+                    enabled = true,
+                    initialState = "",
+                    onClick = {
+                        showStation = true
+                        true
+                    },
+                    type = SettingType.CLICKABLE_TEXT
                 )
             )
         ),

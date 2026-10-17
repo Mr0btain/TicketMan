@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.core.eq
@@ -10,6 +12,7 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserEntity
@@ -23,6 +26,8 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.PinRules
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.NoteError
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
@@ -38,25 +43,23 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
     private val ADD_TICKET_TAG = "$tag:AddTicket"
     private val UPDATE_PASSWORD_TAG = "$tag:UpdatePassword"
     private val COUNT_BY_ACCESS_TAG = "$tag:CountByAccess"
+    private val MIGRATE_TAG = "$tag:MigrateDeactivated"
+    private val SET_STATE_TAG = "$tag:SetState"
+    private val GET_PENDING_TAG = "$tag:GetPending"
+    private val SET_PIN_TAG = "$tag:SetPin"
+    private val CHECK_PIN_TAG = "$tag:CheckPin"
+    private val GET_PIN_USERS_TAG = "$tag:GetPinUsers"
 
+    /** Any active admin, null when there are none */
     fun getAdmin(): User? {
         var result: User? = null
 
         appLogTryCatch("GETADMIN") {
             transaction {
-                UserEntity
-                    .searchQuery(UserTable.access eq AccessLevel.ADMIN)
-                    .firstOrNull()?.let { queryResult ->
-                        result = User(
-                            identifier = queryResult[UserTable.id].value,
-                            username = queryResult[UserTable.username],
-                            name = queryResult[UserTable.name],
-                            email = queryResult[UserTable.email],
-                            password = queryResult[UserTable.password],
-                            phone = queryResult[UserTable.phone],
-                            accessLevel = queryResult[UserTable.access]
-                        )
-                    }
+                result = UserEntity
+                    .find { (UserTable.access eq AccessLevel.ADMIN) and (UserTable.status eq UserStatus.ACTIVE.name) }
+                    .firstOrNull()
+                    ?.toUser()
 
                 result != null
             }
@@ -86,20 +89,10 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
 
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
-                UserEntity
-                    .searchQuery(UserTable.username eq username.lowercase())
-                    .firstOrNull()?.let { queryResult ->
-                        result = User(
-                            identifier = queryResult[UserTable.id].value,
-                            username = queryResult[UserTable.username],
-                            name = queryResult[UserTable.name],
-                            email = queryResult[UserTable.email],
-                            password = queryResult[UserTable.password],
-                            phone = queryResult[UserTable.phone],
-                            accessLevel = queryResult[UserTable.access]
-                        )
-                    }
-
+                result = UserEntity
+                    .find { UserTable.username eq username.trim().lowercase() }
+                    .firstOrNull()
+                    ?.toUser()
             }
 
             result != null
@@ -157,6 +150,8 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                         email = item.email.lowercase()
                         phone = item.phone
                         access = item.accessLevel
+                        status = item.status.name
+                        needsSetup = item.needsSetup
                     }
                 }
 
@@ -227,6 +222,8 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                     email = data.email.lowercase()
                     phone = data.phone
                     access = data.accessLevel
+                    status = data.status.name
+                    needsSetup = data.needsSetup
                 }
 
                 true
@@ -249,6 +246,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                         email = data.email.lowercase()
                         phone = data.phone
                         access = data.accessLevel
+                        status = data.status.name
 
                         result = true
                     } ?: AppLogger.i(UPDATE_TAG, UserError.NOT_FOUND)
@@ -277,6 +275,213 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         }
 
         return result
+    }
+
+    /**
+     * Changes a user's status, access level and whether they need setup in one go. Used by approving and setup,
+     * since a normal update leaves setup alone
+     * @return Whether the user was found
+     */
+    fun setState(identifier: Uuid, status: UserStatus, accessLevel: AccessLevel? = null, needsSetup: Boolean) : Boolean {
+        var result = false
+
+        appLogTryCatch(SET_STATE_TAG) {
+            transaction {
+                UserEntity.findById(identifier)?.let { userEntity ->
+                    userEntity.status = status.name
+                    accessLevel?.let { userEntity.access = it }
+                    userEntity.needsSetup = needsSetup
+                    result = true
+                } ?: AppLogger.i(SET_STATE_TAG, UserError.NOT_FOUND)
+            }
+
+            result
+        }
+
+        return result
+    }
+
+    /** Sets a user's station PIN and clears any lock */
+    fun setPin(identifier: Uuid, pin: String): Boolean {
+        var result = false
+
+        appLogTryCatch(SET_PIN_TAG) {
+            transaction {
+                UserEntity.findById(identifier)?.let { userEntity ->
+                    userEntity.pinHash = PasswordHasher.hash(pin)
+                    userEntity.pinFailedAttempts = 0
+                    userEntity.pinLocked = false
+                    result = true
+                } ?: AppLogger.i(SET_PIN_TAG, UserError.NOT_FOUND)
+            }
+
+            result
+        }
+
+        return result
+    }
+
+    /** Removes a user's PIN, they have to set a new one before using a station */
+    fun clearPin(identifier: Uuid): Boolean {
+        var result = false
+
+        appLogTryCatch(SET_PIN_TAG) {
+            transaction {
+                UserEntity.findById(identifier)?.let { userEntity ->
+                    userEntity.pinHash = ""
+                    userEntity.pinFailedAttempts = 0
+                    userEntity.pinLocked = false
+                    result = true
+                } ?: AppLogger.i(SET_PIN_TAG, UserError.NOT_FOUND)
+            }
+
+            result
+        }
+
+        return result
+    }
+
+    /** Lets a locked PIN be used again */
+    fun unlockPin(identifier: Uuid): Boolean {
+        var result = false
+
+        appLogTryCatch(SET_PIN_TAG) {
+            transaction {
+                UserEntity.findById(identifier)?.let { userEntity ->
+                    userEntity.pinFailedAttempts = 0
+                    userEntity.pinLocked = false
+                    result = true
+                } ?: AppLogger.i(SET_PIN_TAG, UserError.NOT_FOUND)
+            }
+
+            result
+        }
+
+        return result
+    }
+
+    /**
+     * Checks a PIN, counting wrong ones. The PIN locks after [PinRules.MAX_ATTEMPTS] wrong tries in a row
+     */
+    fun checkPin(identifier: Uuid, pin: String): PinCheck {
+        var result = PinCheck.NO_PIN
+
+        appLogTryCatch(CHECK_PIN_TAG) {
+            transaction {
+                val userEntity = UserEntity.findById(identifier)
+
+                result = when {
+                    userEntity == null || userEntity.pinHash.isBlank() -> PinCheck.NO_PIN
+                    userEntity.pinLocked -> PinCheck.LOCKED
+
+                    PasswordHasher.verify(pin, userEntity.pinHash) -> {
+                        userEntity.pinFailedAttempts = 0
+                        PinCheck.OK
+                    }
+
+                    else -> {
+                        userEntity.pinFailedAttempts += 1
+                        if (userEntity.pinFailedAttempts >= PinRules.MAX_ATTEMPTS) {
+                            userEntity.pinLocked = true
+                            PinCheck.LOCKED
+                        } else PinCheck.WRONG
+                    }
+                }
+            }
+
+            result == PinCheck.OK
+        }
+
+        return result
+    }
+
+    fun getPinFailedAttempts(identifier: Uuid): Int {
+        var result = 0
+
+        appLogTryCatch(CHECK_PIN_TAG) {
+            transaction {
+                result = UserEntity.findById(identifier)?.pinFailedAttempts ?: 0
+            }
+
+            true
+        }
+
+        return result
+    }
+
+    /** Active, set up users with a PIN that isn't locked, for a station's list of who can sign in */
+    fun getPinUsers(): List<User> {
+        var result: List<User> = emptyList()
+
+        appLogTryCatch(GET_PIN_USERS_TAG) {
+            transaction {
+                result = UserEntity
+                    .find {
+                        (UserTable.status eq UserStatus.ACTIVE.name) and
+                            (UserTable.needsSetup eq false) and
+                            (UserTable.pinHash neq "") and
+                            (UserTable.pinLocked eq false)
+                    }
+                    .orderBy(UserTable.name to SortOrder.ASC)
+                    .map { it.toUser() }
+            }
+
+            true
+        }
+
+        return result
+    }
+
+    /** Users waiting on approval or an invite */
+    fun getPending(): List<User> {
+        var result: List<User> = emptyList()
+
+        appLogTryCatch(GET_PENDING_TAG) {
+            transaction {
+                result = UserEntity
+                    .find { UserTable.status eq UserStatus.PENDING.name }
+                    .orderBy(UserTable.id to SortOrder.ASC)
+                    .map { it.toUser() }
+            }
+
+            true
+        }
+
+        return result
+    }
+
+    /** Active admins, at least one has to be kept */
+    fun countActiveAdmins(): Long {
+        var count = 0L
+
+        appLogTryCatch(COUNT_BY_ACCESS_TAG) {
+            transaction {
+                count = UserTable.selectAll()
+                    .where { (UserTable.access eq AccessLevel.ADMIN) and (UserTable.status eq UserStatus.ACTIVE.name) }
+                    .count()
+            }
+
+            true
+        }
+
+        return count
+    }
+
+    /**
+     * Users from before statuses existed were deactivated by setting their access to NONE.
+     * Moves them to the DEACTIVATED status with RESTRICTED access
+     */
+    fun migrateDeactivatedUsers() {
+        appLogTryCatch(MIGRATE_TAG) {
+            transaction {
+                UserTable.update(where = { UserTable.access eq AccessLevel.NONE }) { row ->
+                    row[UserTable.status] = UserStatus.DEACTIVATED.name
+                    row[UserTable.access] = AccessLevel.RESTRICTED
+                }
+            }
+
+            true
+        }
     }
 
     /** Number of users with this access level */
@@ -382,4 +587,16 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
 
         return result
     }
+}
+
+/** Result of checking a PIN */
+enum class PinCheck {
+    OK,
+    WRONG,
+
+    /** Locked from too many wrong tries, or was already */
+    LOCKED,
+
+    /** No such user or they haven't set a PIN */
+    NO_PIN
 }

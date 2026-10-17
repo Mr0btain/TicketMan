@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.components.database.tables.inventory.InventoryEnti
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -27,11 +28,12 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val ADD_IMAGES_TAG = "$tag:AddImages"
     private val REMOVE_IMAGES_TAG = "$tag:RemoveImages"
-    private val UPDATE_NAME_TAG = "$tag:RemoveImages"
-    private val UPDATE_DESCRIPTION_TAG = "$tag:RemoveImages"
-    private val UPDATE_STOCK_TAG = "$tag:RemoveImages"
-    private val UPDATE_COST_TAG = "$tag:RemoveImages"
-    private val UPDATE_PRICE_TAG = "$tag:RemoveImages"
+    private val UPDATE_NAME_TAG = "$tag:UpdateName"
+    private val UPDATE_DESCRIPTION_TAG = "$tag:UpdateDescription"
+    private val UPDATE_STOCK_TAG = "$tag:UpdateStock"
+    private val UPDATE_COST_TAG = "$tag:UpdateCost"
+    private val UPDATE_PRICE_TAG = "$tag:UpdatePrice"
+    private val MIGRATE_PRICES_TAG = "$tag:MigrateLegacyPrices"
 
     override fun getById(identifier: Uuid): Inventory? {
         var result: Inventory? = null
@@ -90,8 +92,8 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                         name = item.name
                         description = item.description
                         stock = item.stock
-                        cost = item.cost
-                        price = item.price
+                        costCents = item.costCents
+                        priceCents = item.priceCents
                     }
                 }
             }
@@ -119,12 +121,14 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
     override fun search(query: String, limit: Int): List<SearchResult>? {
         return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
             transaction {
-                val pattern = "${query.lowercase()}%"
+                val pattern = "${query.trim().lowercase()}%"
+                val contains = "%${query.trim().lowercase()}%"
 
                 Pair(
                     InventoryEntity
                         .find {
-                            (InventoryTable.name.lowerCase() like pattern) or
+                            (InventoryTable.name.lowerCase() like contains) or
+                                    (InventoryTable.description.lowerCase() like contains) or
                                     (InventoryTable.id.castTo(VarCharColumnType()) like pattern)
                         }
                         .orderBy(InventoryTable.name to SortOrder.ASC, InventoryTable.id to SortOrder.ASC)
@@ -152,8 +156,8 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                     name = data.name
                     description = data.description
                     stock = data.stock
-                    cost = data.cost
-                    price = data.price
+                    costCents = data.costCents
+                    priceCents = data.priceCents
                 }
 
                 true
@@ -172,8 +176,8 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                         name = data.name
                         description = data.description
                         stock = data.stock
-                        cost = data.cost
-                        price = data.price
+                        costCents = data.costCents
+                        priceCents = data.priceCents
 
                         result = true
                     } ?: AppLogger.i(UPDATE_TAG, InventoryError.NOT_FOUND)
@@ -237,7 +241,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    fun updateCost(identifier: Uuid, newCost: String) {
+    fun updateCost(identifier: Uuid, newCost: Long) {
         appLogTryCatch(UPDATE_COST_TAG) {
             var result = false
 
@@ -245,7 +249,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                 InventoryEntity
                     .findById(identifier)
                     ?.apply {
-                        cost = newCost
+                        costCents = newCost
 
                         result = true
                     } ?: AppLogger.i(UPDATE_COST_TAG, InventoryError.NOT_FOUND)
@@ -255,7 +259,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
         }
     }
 
-    fun updatePrice(identifier: Uuid, newPrice: String) {
+    fun updatePrice(identifier: Uuid, newPrice: Long) {
         appLogTryCatch(UPDATE_PRICE_TAG) {
             var result = false
 
@@ -263,7 +267,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                 InventoryEntity
                     .findById(identifier)
                     ?.apply {
-                        price = newPrice
+                        priceCents = newPrice
 
                         result = true
                     } ?: AppLogger.i(UPDATE_PRICE_TAG, InventoryError.NOT_FOUND)
@@ -271,6 +275,47 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
 
             result
         }
+    }
+
+    /**
+     * Moves prices typed as text by older versions, like "$12.50", into the cents columns
+     */
+    fun migrateLegacyPrices() {
+        appLogTryCatch(MIGRATE_PRICES_TAG) {
+            transaction {
+                InventoryEntity
+                    .find { (InventoryTable.legacyCost neq "") or (InventoryTable.legacyPrice neq "") }
+                    .forEach { item ->
+                        if (item.costCents == 0L) item.costCents = Money.parse(item.legacyCost) ?: 0
+                        if (item.priceCents == 0L) item.priceCents = Money.parse(item.legacyPrice) ?: 0
+                        item.legacyCost = ""
+                        item.legacyPrice = ""
+                    }
+            }
+
+            true
+        }
+    }
+
+    /**
+     * Takes stock away, or puts it back with a negative [amount]. Items with untracked stock are left alone
+     * @return Whether the item was found
+     */
+    fun adjustStock(identifier: Uuid, amount: Int): Boolean {
+        var result = false
+
+        appLogTryCatch(UPDATE_STOCK_TAG) {
+            transaction {
+                InventoryEntity.findById(identifier)?.let { item ->
+                    if (item.stock != Int.MAX_VALUE) item.stock -= amount
+                    result = true
+                } ?: AppLogger.i(UPDATE_STOCK_TAG, InventoryError.NOT_FOUND)
+            }
+
+            result
+        }
+
+        return result
     }
 
     override fun addNote(identifier: Uuid, note: Note) {

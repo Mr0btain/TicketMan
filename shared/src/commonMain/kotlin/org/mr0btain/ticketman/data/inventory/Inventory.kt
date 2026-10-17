@@ -12,6 +12,8 @@ data class Inventory(
     val name: String = "",
     val description: String = "",
     val stock: Int = Int.MAX_VALUE,
-    val cost: String = "",
-    val price: String = ""
+    /** What we pay, in cents */
+    val costCents: Long = 0,
+    /** What we charge, in cents */
+    val priceCents: Long = 0
 ): MainItem()

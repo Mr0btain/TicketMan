@@ -10,8 +10,12 @@ import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.station.KioskSettings
+import org.mr0btain.ticketman.data.station.Station
+import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SeedRequest
+import java.time.LocalDate
 import kotlin.time.Clock
 
 /**
@@ -51,6 +55,26 @@ fun Route.adminRoute(
             }
         }
 
+        // End of day numbers, ?date=yyyy-mm-dd or today
+        get("/report/daily") {
+            val date = call.queryParameters["date"]?.let {
+                try {
+                    LocalDate.parse(it)
+                } catch (ex: Exception) {
+                    null
+                }
+            }
+
+            if (call.queryParameters["date"] != null && date == null) {
+                call.respond(HttpStatusCode.BadRequest, "Date has to look like 2026-10-17")
+                return@get
+            }
+
+            val report = database.statsDatabase.dailyReport(date ?: LocalDate.now())
+
+            if (report != null) call.respond(HttpStatusCode.OK, report) else call.respond(HttpStatusCode.InternalServerError)
+        }
+
         get("/inventory/low-stock") {
             val threshold = call.queryParameters["threshold"]?.toIntOrNull() ?: DEFAULT_LOW_STOCK_THRESHOLD
             val limit = (call.queryParameters["limit"]?.toIntOrNull() ?: MAX_LIMIT).coerceIn(1, MAX_LIMIT)
@@ -70,24 +94,91 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.OK, adminService.getSessions())
         }
 
-        // Log a user out by dropping their refresh token, their access tokens stop working with it
-        delete("/sessions/{identifier}") {
-            val identifier = call.uuidParameter("identifier")
+        // Log out one device. Its access tokens stop working with it
+        delete("/sessions/{sessionId}") {
+            val session = call.parameters["sessionId"]?.let { database.tokenDatabase.findBySessionId(it) }
 
-            if (identifier == null) {
-                call.respond(HttpStatusCode.BadRequest)
-                return@delete
-            }
-
-            if (database.tokenDatabase.findById(identifier.toString()) == null) {
+            if (session == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            database.tokenDatabase.remove(identifier.toString())
-            call.audit(auditLog, AuditAction.SESSION_REVOKE, "user", identifier)
+            database.tokenDatabase.remove(session.sessionId)
+            call.audit(auditLog, AuditAction.SESSION_REVOKE, "user", session.userIdentifier, "Logged out ${session.deviceName.ifBlank { "a device" }}")
             call.respond(HttpStatusCode.Accepted)
-            AppLogger.m(SESSIONS_TAG, "$identifier session revoked")
+            AppLogger.m(SESSIONS_TAG, "${session.sessionId} session revoked")
+        }
+
+        // Log a user out of every device
+        delete("/sessions/user/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null || database.userDatabase.getById(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@delete
+            }
+
+            database.tokenDatabase.removeAllForUser(identifier.toString())
+            call.audit(auditLog, AuditAction.SESSION_REVOKE, "user", identifier, "Logged out everywhere")
+            call.respond(HttpStatusCode.Accepted)
+        }
+
+        // ------------------------------------------ Stations ------------------------------------------
+
+        get("/stations") {
+            call.respond(HttpStatusCode.OK, database.stationDatabase.getAll())
+        }
+
+        post("/stations/{identifier}/approve") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier != null && database.stationDatabase.approve(identifier, call.username(database.userDatabase))) {
+                call.audit(auditLog, AuditAction.UPDATE, "station", identifier, "Approved ${database.stationDatabase.getById(identifier)?.name}")
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
+        // Kiosk mode only makes sense on a station that's been approved
+        post("/stations/{identifier}/kiosk") {
+            val station = call.uuidParameter("identifier")?.let { database.stationDatabase.getById(it) }
+            val settings = call.receive<KioskSettings>()
+
+            when {
+                station == null -> call.respond(HttpStatusCode.NotFound)
+
+                station.status != StationStatus.APPROVED -> call.respond(HttpStatusCode.Conflict, "Approve the station first")
+
+                settings.idleTimeoutSeconds !in Station.IDLE_TIMEOUT_RANGE -> call.respond(
+                    HttpStatusCode.BadRequest,
+                    "Idle timeout has to be ${Station.IDLE_TIMEOUT_RANGE.first} to ${Station.IDLE_TIMEOUT_RANGE.last} seconds"
+                )
+
+                else -> {
+                    database.stationDatabase.setKiosk(station.identifier, settings)
+                    call.audit(
+                        auditLog, AuditAction.SETTINGS_UPDATE, "station", station.identifier,
+                        if (settings.enabled) "Kiosk on for ${station.name}, locks after ${settings.idleTimeoutSeconds}s" else "Kiosk off for ${station.name}"
+                    )
+                    call.respond(HttpStatusCode.Accepted)
+                }
+            }
+        }
+
+        // Removing a station also signs out whoever is PINned in there
+        delete("/stations/{identifier}") {
+            val station = call.uuidParameter("identifier")?.let { database.stationDatabase.getById(it) }
+
+            if (station == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@delete
+            }
+
+            database.stationDatabase.remove(station.identifier)
+            database.tokenDatabase.removePinSessionsForDevice(station.deviceId)
+            call.audit(auditLog, AuditAction.DELETE, "station", station.identifier, "Removed ${station.name}")
+            call.respond(HttpStatusCode.Accepted)
         }
 
         get("/server") {

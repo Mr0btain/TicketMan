@@ -16,8 +16,10 @@ class InventoryEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var name by InventoryTable.name
     var description by InventoryTable.description
     var stock by InventoryTable.stock
-    var cost by InventoryTable.cost
-    var price by InventoryTable.price
+    var legacyCost by InventoryTable.legacyCost
+    var legacyPrice by InventoryTable.legacyPrice
+    var costCents by InventoryTable.costCents
+    var priceCents by InventoryTable.priceCents
 
     // For notes
     var notes by NoteEntity via InventoryNoteTable
@@ -31,8 +33,8 @@ class InventoryEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             name = name,
             description = description,
             stock = stock,
-            cost = cost,
-            price = price
+            costCents = costCents,
+            priceCents = priceCents
         )
     }
 }

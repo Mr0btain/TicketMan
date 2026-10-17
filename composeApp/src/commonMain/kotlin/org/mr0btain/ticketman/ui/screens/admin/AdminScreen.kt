@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
@@ -20,7 +21,12 @@ import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
+import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
+import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
+import org.mr0btain.ticketman.ui.screens.admin.users.ApproveDialog
+import org.mr0btain.ticketman.ui.screens.admin.users.InviteCodeDialog
+import org.mr0btain.ticketman.ui.screens.admin.users.InviteDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.ResetPasswordDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.UserDialog
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
@@ -31,6 +37,7 @@ private enum class AdminTab(val label: String) {
     OVERVIEW("Overview"),
     USERS("Users"),
     SESSIONS("Sessions"),
+    STATIONS("Stations"),
     LOW_STOCK("Low Stock"),
     SERVER("Server & Data"),
     AUDIT("Audit Log")
@@ -73,9 +80,12 @@ private fun AdminContent(
 
     val isLoading by admin.isLoading.collectAsState()
     val stats by admin.stats.collectAsState()
+    val dailyReport by admin.dailyReport.collectAsState()
     val lowStock by admin.lowStock.collectAsState()
     val lowStockThreshold by admin.lowStockThreshold.collectAsState()
     val sessions by admin.sessions.collectAsState()
+    val pending by admin.pending.collectAsState()
+    val stations by admin.stations.collectAsState()
     val serverInfo by admin.serverInfo.collectAsState()
     val shopProfile by admin.shopProfile.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
@@ -94,6 +104,33 @@ private fun AdminContent(
     var isNewUser by remember { mutableStateOf(false) }
     var showResetPasswordDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // New account dialogs
+    var showInviteDialog by remember { mutableStateOf(false) }
+    var approving by remember { mutableStateOf<User?>(null) }
+    var shownInvite by remember { mutableStateOf<InviteResponse?>(null) }
+
+    InviteDialog(
+        isVisible = showInviteDialog,
+        onDismiss = { showInviteDialog = false },
+        onInvite = { request ->
+            admin.invite(request) { invite ->
+                showInviteDialog = false
+                shownInvite = invite
+            }
+        }
+    )
+
+    ApproveDialog(
+        user = approving,
+        onDismiss = { approving = null },
+        onApprove = { level -> approving?.let { user -> admin.approve(user, level) { approving = null } } }
+    )
+
+    InviteCodeDialog(
+        invite = shownInvite,
+        onDismiss = { shownInvite = null }
+    )
 
     // Fresh numbers whenever the screen is opened
     LaunchedEffect(Unit) {
@@ -194,6 +231,10 @@ private fun AdminContent(
         when (selectedTab) {
             AdminTab.OVERVIEW -> AdminOverviewTab(
                 stats = stats,
+                dailyReport = dailyReport,
+                defaultPaper = shopProfile?.defaultPaper ?: PaperSize.RECEIPT_80MM,
+                onMoveReport = { admin.moveDailyReport(it) },
+                onPrintReport = { paper, onResult -> admin.printDailyReport(paper, onResult) },
                 onTicketClick = { identifier ->
                     viewModel.setSelectedTicket(identifier)
                     viewModel.changeMainTabIndex(TICKET_TAB)
@@ -203,6 +244,11 @@ private fun AdminContent(
             )
 
             AdminTab.USERS -> AdminUsersTab(
+                pending = pending,
+                onInvite = { showInviteDialog = true },
+                onApprove = { user -> approving = user },
+                onReject = { user -> admin.reject(user) },
+                onRenewInvite = { user -> admin.renewInvite(user) { invite -> shownInvite = invite } },
                 userList = users?.value ?: emptyList(),
                 seed = userSeed,
                 currentUserIdentifier = currentUser?.identifier,
@@ -222,13 +268,24 @@ private fun AdminContent(
                 },
                 onResetPassword = { if (!userSeed.isNew) showResetPasswordDialog = true },
                 onSetActive = { active -> admin.setUserActive(userSeed.user, active) },
+                onLogOutEverywhere = { admin.revokeAllSessions(userSeed.user) },
+                onUnlockPin = { admin.unlockPin(userSeed.user) },
+                onResetPin = { admin.resetPin(userSeed.user) },
                 onDelete = { if (!userSeed.isNew) showDeleteDialog = true }
             )
 
             AdminTab.SESSIONS -> AdminSessionsTab(
                 sessions = sessions,
                 currentUserIdentifier = currentUser?.identifier,
+                currentSessionId = admin.currentSessionId(),
                 onRevoke = { session -> admin.revokeSession(session) }
+            )
+
+            AdminTab.STATIONS -> AdminStationsTab(
+                stations = stations,
+                onApprove = { admin.approveStation(it) },
+                onKiosk = { station, settings -> admin.setKiosk(station, settings) },
+                onRemove = { admin.removeStation(it) }
             )
 
             AdminTab.LOW_STOCK -> AdminLowStockTab(

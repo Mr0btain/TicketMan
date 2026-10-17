@@ -43,7 +43,7 @@ fun TicketStatusDropDown(
             shadowElevation = 4.dp,
             containerColor = MaterialTheme.colorScheme.surface
         ) {
-            TicketStatusType.entries.forEach { option ->
+            TicketStatusType.selectable.forEach { option ->
                 DropdownMenuItem(
                     text = { Text(
                         text = option.name,

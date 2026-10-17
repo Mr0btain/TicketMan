@@ -19,8 +19,19 @@ data class User(
     val name: String = "",
     val email: String = "",
     val phone: String = "",
-    val accessLevel: AccessLevel = AccessLevel.NONE
+    val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
+    val status: UserStatus = UserStatus.ACTIVE,
+    /** Approved but hasn't finished first login setup, can't do anything else until they do */
+    val needsSetup: Boolean = false,
+    /** Has a PIN for stations, the PIN itself never leaves the server */
+    val hasPin: Boolean = false,
+    /** Too many wrong PINs, an admin has to unlock it */
+    val pinLocked: Boolean = false
 ): MainItem() {
+    /** Active, set up, with a real access level. The only kind of user that can do anything */
+    fun canAccess(minimum: AccessLevel): Boolean =
+        status == UserStatus.ACTIVE && !needsSetup && accessLevel.meets(minimum)
+
     fun cleanName(): String {
         return name.split(":").joinToString(" ") { n ->
             n.replaceFirstChar { it.titlecase() }

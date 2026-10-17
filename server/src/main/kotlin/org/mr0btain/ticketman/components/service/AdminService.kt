@@ -27,29 +27,33 @@ class AdminService(
 
     private val startedAt = Clock.System.now().toEpochMilliseconds()
 
-    /** Logged in users, newest login first */
+    /** Logged in devices, most recently used first */
     fun getSessions(): List<SessionResponse> {
-        return database.tokenDatabase.getAll().mapNotNull { refreshToken ->
-            val identifier = Uuid.parseOrNull(refreshToken.identifier) ?: return@mapNotNull null
+        return database.tokenDatabase.getAll().mapNotNull { session ->
+            val identifier = Uuid.parseOrNull(session.userIdentifier) ?: return@mapNotNull null
             val user = database.userDatabase.getById(identifier) ?: return@mapNotNull null
 
-            // Only reading the dates for display, the token was verified when it was handed out
+            // Only reading the expiry for display, the token was verified when it was handed out
             val decoded = try {
-                JWT.decode(refreshToken.token)
+                JWT.decode(session.token)
             } catch (ex: Exception) {
                 AppLogger.i(SESSIONS_TAG, "Couldn't decode token for $identifier")
                 null
             }
 
             SessionResponse(
+                sessionId = session.sessionId,
                 userIdentifier = identifier,
                 username = user.username,
                 name = user.name,
                 accessLevel = user.accessLevel,
-                issuedAt = decoded?.issuedAtAsInstant?.toEpochMilli(),
+                deviceName = session.deviceName,
+                kind = session.kind,
+                createdAt = session.createdAt.takeIf { it > 0 },
+                lastUsedAt = session.lastUsedAt.takeIf { it > 0 },
                 expiresAt = decoded?.expiresAtAsInstant?.toEpochMilli()
             )
-        }.sortedByDescending { it.issuedAt ?: 0 }
+        }.sortedByDescending { it.lastUsedAt ?: 0 }
     }
 
     fun getServerInfo(): ServerInfoResponse {

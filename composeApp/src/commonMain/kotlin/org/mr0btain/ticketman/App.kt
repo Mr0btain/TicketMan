@@ -13,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
+import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
+import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
@@ -75,6 +77,12 @@ fun App() {
     // Should we show login popup or not
     val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
+    // First login setup that has to be finished
+    val accountSetup = mainViewModel.accountSetup.collectAsState()
+
+    // Approved stations with kiosk mode show only the counter, signed into by PIN
+    val kioskActive = mainViewModel.kiosk.active.collectAsState()
+
     val initialDestination = Destination.MAIN
 
     // Admin screen is only listed for admins
@@ -88,7 +96,7 @@ fun App() {
             destination = Destination.ADMIN
         ) else null,
         NavigationItem(
-            title = "Dashboard",
+            title = "Counter",
             icon = painterResource(Res.drawable.monitor),
             destination = Destination.DASHBOARD
         ),
@@ -118,6 +126,21 @@ fun App() {
         darkTheme = mainViewModel.darkMode.collectAsState(false).value
     ) {
         println("Platform: ${getPlatform().name}")
+
+        if (kioskActive.value) {
+            KioskShell(mainViewModel)
+            return@AppTheme
+        }
+
+        accountSetup.value?.let { setup ->
+            AccountSetupDialog(
+                setup = setup,
+                onFinish = { name, email, phone, password, pin, onResult ->
+                    mainViewModel.completeAccountSetup(name, email, phone, password, pin, onResult)
+                },
+                onCancel = { mainViewModel.cancelAccountSetup() }
+            )
+        }
 
         if (shouldShowLogin.value) {
             LoginPopup(

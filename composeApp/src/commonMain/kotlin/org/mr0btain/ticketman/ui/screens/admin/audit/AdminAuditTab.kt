@@ -14,9 +14,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.audit.AuditEntry
-import org.mr0btain.ticketman.ui.screens.admin.components.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.formatDateTime
-import org.mr0btain.ticketman.ui.screens.admin.components.formatEnumName
+import org.mr0btain.ticketman.ui.composables.EmptyMessage
+import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 
 /**

@@ -23,15 +23,26 @@ import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.network.ConnectionResult
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.database.RemoteRepository
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
+import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
+import org.mr0btain.ticketman.ui.screens.kiosk.components.KioskHandler
+import org.mr0btain.ticketman.components.network.user.LoginOutcome
+import org.mr0btain.ticketman.server.request.AccountRequest
+import org.mr0btain.ticketman.server.request.AccountSetupRequest
+import org.mr0btain.ticketman.server.request.InviteSetupRequest
+import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import kotlin.uuid.Uuid
 
@@ -56,9 +67,14 @@ class MainViewModel(
         // When the session can't be refreshed, ask the user to log in again
         viewModelScope.launch {
             remoteHandler.authExpired.collect {
-                _loginState.value = LoginState.LOGGED_OUT
-                _currentUser.value = null
-                _showLogin.value = true
+                // A kiosk goes back to its PIN screen instead of asking for a password
+                if (kiosk.active.value) {
+                    kiosk.lock()
+                } else {
+                    _loginState.value = LoginState.LOGGED_OUT
+                    _currentUser.value = null
+                    _showLogin.value = true
+                }
             }
         }
 
@@ -169,42 +185,57 @@ class MainViewModel(
 
     val customerSeed: CustomerSeed = CustomerSeed()
 
+    /** Saves the customer seed: the customer, its notes, and any tickets linked to it */
     fun handleCustomerChanges() {
         // If we haven't made any changes, then just return
         if (!customerSeed.isDirty) return
 
+        val customer = customerSeed.customer
+        val notes = customerSeed.notes.toList()
+        val tickets = customerSeed.tickets.toList()
+        val changed = customerSeed.getChangedFields().toSet()
+        val isNew = customerSeed.isNew
+
         viewModelScope.launch {
-            // Check if it's new or not
-            if (customerSeed.isNew) {
-                // Insert customer
-                remoteHandler.customerRepo.add(customerSeed.customer)
+            val repo = remoteHandler.customerRepo
 
-                // Add notes
-                customerSeed.notes.forEach { note ->
-                    remoteHandler.customerRepo.addNote( customerSeed.identifier, note)
-                }
+            val saved = if (isNew) repo.add(customer) else {
+                // Notes and tickets are saved on their own, only send the customer if something else changed
+                if ((changed - setOf(ChangedField.NOTE, ChangedField.TICKET)).isNotEmpty()) repo.update(customer)
+                else Result.Success(Unit)
+            }
 
+            if (saved is Result.Error) {
+                snackBarHost.showSnackbar("Customer not saved: ${saved.error.message}")
+                return@launch
+            }
 
-                // TODO: Setup way to check if these tickets are new or not.
-                // Right now we assume these tickets have already been inserted into the database. Here we just link them
-                // in the customer side
-                // Link tickets
-                customerSeed.tickets.forEach { ticket ->
-                    remoteHandler.customerRepo.addTicket(customerSeed.identifier, ticket.identifier)
-                }
-            } else { // Else handle changes
-                customerSeed.getChangedFields().forEach { changedField ->
-                    when (changedField) {
-                        ChangedField.NOTE -> {} // TODO
-                        ChangedField.TICKET -> {} // TODO
+            if (isNew || ChangedField.NOTE in changed) syncNotes(customer.identifier, notes, repo)
 
-                        else -> {
-                            // TODO: setup update
-                        }
-                    }
+            // Tickets can be linked here, unlinking happens by giving the ticket to another customer
+            if (isNew || ChangedField.TICKET in changed) {
+                val linked = repo.getTickets(customer.identifier).map { it.identifier }.toSet()
+                tickets.filter { it.identifier !in linked }.forEach { ticket ->
+                    repo.addTicket(customer.identifier, ticket.identifier)
                 }
             }
+
+            customerCache.remove(customer.identifier)
+            setSelectedCustomer(customer.identifier)
+            customerPager?.refreshCurrentData()
         }
+    }
+
+    /**
+     * Makes the server's notes match [notes], adding new ones and removing ones that were deleted
+     */
+    private suspend fun syncNotes(identifier: Uuid, notes: List<Note>, repo: RemoteRepository<*>) {
+        val existing = repo.getNotes(identifier)
+        val existingIds = existing.map { it.identifier }.toSet()
+        val keptIds = notes.map { it.identifier }.toSet()
+
+        notes.filter { it.identifier !in existingIds }.forEach { note -> repo.addNote(identifier, note) }
+        existing.filter { it.identifier !in keptIds }.forEach { note -> repo.removeNote(note.identifier) }
     }
 
     /** Sets the selected customer and inserts the data into the cache */
@@ -293,38 +324,51 @@ class MainViewModel(
         }
     }
 
+    /** Saves the ticket seed: the ticket, its notes, and who it belongs to and is assigned to */
     fun handleTicketChange() {
         // If no changes, then return
         if (!ticketSeed.isDirty) return
 
+        val ticket = ticketSeed.ticket
+        val notes = ticketSeed.notes.toList()
+        val customer = ticketSeed.customer
+        val user = ticketSeed.user
+        val changed = ticketSeed.getChangedFields().toSet()
+        val isNew = ticketSeed.isNew
+
         viewModelScope.launch {
-            if (ticketSeed.isNew) {
-                remoteHandler.ticketRepo.add(ticketSeed.ticket)
+            val repo = remoteHandler.ticketRepo
 
-                ticketSeed.notes.forEach { note ->
-                    remoteHandler.ticketRepo.addNote(ticketSeed.identifier, note)
+            if (isNew) {
+                // Created through create so the seed picks up the number the server gave it
+                when (val created = repo.create(ticket)) {
+                    is Result.Error -> {
+                        snackBarHost.showSnackbar("Ticket not saved: ${created.error.message}")
+                        return@launch
+                    }
+
+                    is Result.Success -> ticketSeed.setTicket(created.data, notes, customer, user)
+                }
+            } else {
+                val linkFields = setOf(ChangedField.NOTE, ChangedField.CUSTOMER, ChangedField.USER)
+
+                if ((changed - linkFields).isNotEmpty()) {
+                    val updated = repo.update(ticket)
+
+                    if (updated is Result.Error) {
+                        snackBarHost.showSnackbar("Ticket not saved: ${updated.error.message}")
+                        return@launch
+                    }
                 }
             }
 
-            ticketSeed.getChangedFields().forEach { changedField ->
-                when (changedField) {
-                    ChangedField.NOTE -> {}
-                    ChangedField.CUSTOMER -> {
-                       ticketSeed.customer?.identifier?.let { customerId ->
-                           remoteHandler.ticketRepo.setUser(ticketSeed.identifier, customerId)
-                       }
-                    }
-                    ChangedField.USER -> {
-                        ticketSeed.user?.identifier?.let { userId ->
-                            remoteHandler.ticketRepo.setUser(ticketSeed.identifier, userId)
-                        }
-                    }
+            if (isNew || ChangedField.NOTE in changed) syncNotes(ticket.identifier, notes, repo)
+            if (customer != null && (isNew || ChangedField.CUSTOMER in changed)) repo.setCustomer(ticket.identifier, customer.identifier)
+            if (user != null && (isNew || ChangedField.USER in changed)) repo.setUser(ticket.identifier, user.identifier)
 
-                    else -> {
-                        // TODO: Prolly just update?
-                    }
-                }
-            }
+            ticketCache.remove(ticket.identifier)
+            setSelectedTicket(ticket.identifier)
+            ticketPager?.refreshCurrentData()
         }
     }
 
@@ -472,6 +516,15 @@ class MainViewModel(
         }
     }
 
+    /** ----------------------------------------------COUNTER------------------------------------------------------------------- */
+
+    val counter = CounterHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        snackBarHost = snackBarHost,
+        canEdit = { _currentUser.value?.canAccess(AccessLevel.NORMAL) == true }
+    )
+
     /** ----------------------------------------------ADMIN------------------------------------------------------------------- */
 
     val admin = AdminHandler(
@@ -509,13 +562,161 @@ class MainViewModel(
     private val _currentUser: MutableStateFlow<User?> = MutableStateFlow(null)
     val currentUser = _currentUser.asStateFlow()
 
+    /** Whether the logged in user can change things, restricted users can only look. The server checks this too */
+    val canEdit: StateFlow<Boolean> = _currentUser
+        .map { user -> user?.canAccess(AccessLevel.NORMAL) == true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     /** Whether the logged in user can use the admin screen. The server checks this too, this just hides things */
     val isAdmin: StateFlow<Boolean> = _currentUser
-        .map { user -> user?.accessLevel?.meets(AccessLevel.ADMIN) == true }
+        .map { user -> user?.canAccess(AccessLevel.ADMIN) == true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private suspend fun loadCurrentUser() {
-        _currentUser.value = remoteHandler.userRepo.getMe()
+        val user = remoteHandler.userRepo.getMe()
+        _currentUser.value = user
+
+        // Approved but not set up yet, they have to finish before anything else
+        if (user?.needsSetup == true) _accountSetup.value = AccountSetup.Approved(user)
+    }
+
+    // Shown on the login form, like when an account is still waiting for approval
+    private val _loginMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+    val loginMessage = _loginMessage.asStateFlow()
+
+    // First login setup waiting to be finished, null when there isn't one
+    private val _accountSetup: MutableStateFlow<AccountSetup?> = MutableStateFlow(null)
+    val accountSetup = _accountSetup.asStateFlow()
+
+    /**
+     * Asks for an account from the login screen
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun requestAccount(request: AccountRequest, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            when (val result = remoteHandler.userClient.requestAccount(request)) {
+                is Result.Success -> {
+                    _loginMessage.value = "Request sent. An admin has to approve it before you can log in."
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /**
+     * Finishes whichever setup is waiting
+     * @param password Required for invites, optional for approved requests
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun completeAccountSetup(name: String, email: String, phone: String, password: String, pin: String, onResult: (String?) -> Unit) {
+        val setup = _accountSetup.value ?: return
+
+        viewModelScope.launch {
+            val result = when (setup) {
+                is AccountSetup.Approved -> remoteHandler.userRepo.completeSetup(
+                    AccountSetupRequest(name = name, email = email, phone = phone, password = password, pin = pin)
+                )
+
+                is AccountSetup.Invite -> remoteHandler.completeInviteSetup(
+                    setup.username,
+                    InviteSetupRequest(setup.setupToken, password = password, name = name, email = email, phone = phone, pin = pin)
+                )
+            }
+
+            when (result) {
+                is Result.Success -> {
+                    _accountSetup.value = null
+                    _loginState.value = LoginState.LOGGED_IN
+                    _loginMessage.value = null
+                    loadCurrentUser()
+                    refreshPagers()
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /**
+     * Changes your own station PIN
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun changePin(currentPassword: String, pin: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            when (val result = remoteHandler.userRepo.setOwnPin(currentPassword, pin)) {
+                is Result.Success -> {
+                    loadCurrentUser()
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** ----------------------------------------------STATION------------------------------------------------------------------- */
+
+    // This device's station record, null when it isn't one
+    private val _station: MutableStateFlow<Station?> = MutableStateFlow(null)
+    val station = _station.asStateFlow()
+
+    val kiosk = KioskHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        station = station,
+        onSignedIn = {
+            _loginState.value = LoginState.LOGGED_IN
+            loadCurrentUser()
+            refreshPagers()
+        },
+        onSignedOut = {
+            _loginState.value = LoginState.LOGGED_OUT
+            _currentUser.value = null
+            counter.clear()
+            admin.clear()
+        },
+        isAdmin = { _currentUser.value?.canAccess(AccessLevel.ADMIN) == true }
+    )
+
+    /** Asks the server about this device's station, forgetting the credentials if the server no longer has it */
+    fun refreshStation() {
+        val credentials = localStorage.stationCredentials ?: run {
+            _station.value = null
+            return
+        }
+
+        viewModelScope.launch {
+            _station.value = remoteHandler.userClient.stationStatus(credentials)
+        }
+    }
+
+    /**
+     * Registers this device as a station, which an admin then approves
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun registerStation(name: String, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            when (val result = remoteHandler.adminRepo.registerStation(localStorage.deviceId, name.trim())) {
+                is Result.Success -> {
+                    localStorage.stationCredentials = result.data.credentials
+                    _station.value = result.data.station
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** Backs out of setup, logging out if they were logged in for it */
+    fun cancelAccountSetup() {
+        val setup = _accountSetup.value
+        _accountSetup.value = null
+
+        if (setup is AccountSetup.Approved) logout()
     }
 
     // Whether the server at the current url could be reached
@@ -536,13 +737,31 @@ class MainViewModel(
         _loginState.value = LoginState.LOADING
 
         viewModelScope.launch {
-            if (remoteHandler.login(user.trim(), pass)) {
-                _loginState.value = LoginState.LOGGED_IN
-                _showLogin.value = false
-                loadCurrentUser()
-                refreshPagers()
-            } else {
-                _loginState.value = LoginState.FAILED
+            _loginMessage.value = null
+
+            when (val outcome = remoteHandler.login(user.trim(), pass)) {
+                is LoginOutcome.LoggedIn -> {
+                    _loginState.value = LoginState.LOGGED_IN
+                    _showLogin.value = false
+                    loadCurrentUser()
+                    if (!outcome.needsSetup) refreshPagers()
+                }
+
+                LoginOutcome.PendingApproval -> {
+                    _loginState.value = LoginState.LOGGED_OUT
+                    _loginMessage.value = "Your account is waiting for an admin to approve it."
+                }
+
+                is LoginOutcome.InviteSetup -> {
+                    _loginState.value = LoginState.LOGGED_OUT
+                    _showLogin.value = false
+                    _accountSetup.value = AccountSetup.Invite(outcome.username, outcome.setupToken)
+                }
+
+                LoginOutcome.Failed -> {
+                    _loginState.value = LoginState.FAILED
+                    _loginMessage.value = "Wrong username, password or setup code."
+                }
             }
         }
     }
@@ -554,6 +773,7 @@ class MainViewModel(
             _loginState.value = LoginState.LOGGED_OUT
             _currentUser.value = null
             admin.clear()
+            counter.clear()
 
             // Drop anything pulled while logged in
             customerSeed.clear()
@@ -575,6 +795,9 @@ class MainViewModel(
             _loginState.value = LoginState.LOGGED_OUT
             _currentUser.value = null
         }
+
+        // Station status only needs a reachable server, not a login
+        if (result != ConnectionResult.UNREACHABLE) refreshStation()
     }
 
     /** ----------------------------------------------SETTINGS------------------------------------------------------------------- */
@@ -599,6 +822,16 @@ class MainViewModel(
 
     private val _cacheSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_CACHE_SIZE)
     val cacheSize = _cacheSize.asStateFlow()
+
+    // Name shown to admins in the session list, sent at login
+    private val _deviceName: MutableStateFlow<String> = MutableStateFlow(localStorage.deviceName)
+    val deviceName = _deviceName.asStateFlow()
+
+    /** Takes effect on the next login */
+    fun setDeviceName(name: String) {
+        localStorage.deviceName = name
+        _deviceName.value = localStorage.deviceName
+    }
 
     private val _scrollBarsOnBottom: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val scrollBarsOnBottom = _scrollBarsOnBottom.asStateFlow()

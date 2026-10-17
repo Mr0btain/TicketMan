@@ -6,20 +6,26 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
+import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.station.KioskSettings
+import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.SeedRequest
+import org.mr0btain.ticketman.server.request.StationRegistrationRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
+import org.mr0btain.ticketman.server.response.StationRegistrationResponse
 import kotlin.uuid.Uuid
 
 /**
@@ -40,6 +46,8 @@ class AdminRemoteRepository(
     private val AUDIT_TAG = "$TAG:Audit"
     private val GET_SHOP_TAG = "$TAG:GetShop"
     private val UPDATE_SHOP_TAG = "$TAG:UpdateShop"
+    private val STATIONS_TAG = "$TAG:Stations"
+    private val DAILY_REPORT_TAG = "$TAG:DailyReport"
 
     private var baseUrl = ""
 
@@ -56,20 +64,92 @@ class AdminRemoteRepository(
     suspend fun getStats(lowStockThreshold: Int, recentLimit: Int): AdminStatsResponse? =
         getJson(STATS_TAG, "$adminUrl/stats?lowStock=$lowStockThreshold&recent=$recentLimit")
 
+    /** End of day numbers, for today when [date] (yyyy-mm-dd) is null */
+    suspend fun getDailyReport(date: String?): DailyReport? =
+        getJson(DAILY_REPORT_TAG, "$adminUrl/report/daily" + (date?.let { "?date=$it" } ?: ""))
+
     suspend fun getLowStock(threshold: Int, limit: Int): List<Inventory> =
         getJson(LOW_STOCK_TAG, "$adminUrl/inventory/low-stock?threshold=$threshold&limit=$limit") ?: emptyList()
 
     suspend fun getSessions(): List<SessionResponse> =
         getJson(SESSIONS_TAG, "$adminUrl/sessions") ?: emptyList()
 
-    suspend fun revokeSession(userIdentifier: Uuid): EmptyResult<ServerError> {
+    /** Logs out one device */
+    suspend fun revokeSession(sessionId: String): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkErrorTryCatch(REVOKE_SESSION_TAG) {
-            client.delete { url("$adminUrl/sessions/$userIdentifier") }
+            client.delete { url("$adminUrl/sessions/$sessionId") }
         }
 
         return handleActionHttpResponse(REVOKE_SESSION_TAG, response)
+    }
+
+    /** Logs a user out of every device */
+    suspend fun revokeUserSessions(userIdentifier: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(REVOKE_SESSION_TAG) {
+            client.delete { url("$adminUrl/sessions/user/$userIdentifier") }
+        }
+
+        return handleActionHttpResponse(REVOKE_SESSION_TAG, response)
+    }
+
+    suspend fun getStations(): List<Station> =
+        getJson(STATIONS_TAG, "$adminUrl/stations") ?: emptyList()
+
+    suspend fun approveStation(identifier: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(STATIONS_TAG) {
+            client.post { url("$adminUrl/stations/$identifier/approve") }
+        }
+
+        return handleActionHttpResponse(STATIONS_TAG, response)
+    }
+
+    suspend fun setKiosk(identifier: Uuid, settings: KioskSettings): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(STATIONS_TAG) {
+            client.post {
+                url("$adminUrl/stations/$identifier/kiosk")
+                contentType(ContentType.Application.Json)
+                setBody(settings)
+            }
+        }
+
+        return handleActionHttpResponse(STATIONS_TAG, response)
+    }
+
+    /** Removes a station, signing out whoever is PINned in there */
+    suspend fun removeStation(identifier: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(STATIONS_TAG) {
+            client.delete { url("$adminUrl/stations/$identifier") }
+        }
+
+        return handleActionHttpResponse(STATIONS_TAG, response)
+    }
+
+    /**
+     * Registers this device as a station. Needs NORMAL access, then an admin approves it
+     * @return The registration, including the secret which is only handed out here
+     */
+    suspend fun registerStation(deviceId: String, name: String): Result<StationRegistrationResponse, ServerError> {
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkErrorTryCatch(STATIONS_TAG) {
+            client.post {
+                url("$baseUrl/api/station/register")
+                contentType(ContentType.Application.Json)
+                setBody(StationRegistrationRequest(deviceId, name))
+            }
+        }
+
+        return handleDataHttpResponse(STATIONS_TAG, response)
     }
 
     suspend fun getServerInfo(): ServerInfoResponse? =

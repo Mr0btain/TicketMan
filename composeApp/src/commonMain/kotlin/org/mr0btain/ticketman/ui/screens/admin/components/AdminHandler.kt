@@ -5,19 +5,34 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 import org.mr0btain.ticketman.components.data.saveFile
+import org.mr0btain.ticketman.components.print.PrintTemplates
+import org.mr0btain.ticketman.components.print.printDocument
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.station.KioskSettings
+import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
+import org.mr0btain.ticketman.server.response.InviteResponse
+import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
 import kotlin.time.Clock
@@ -46,11 +61,20 @@ class AdminHandler(
     private val _stats = MutableStateFlow<AdminStatsResponse?>(null)
     val stats = _stats.asStateFlow()
 
+    private val _dailyReport = MutableStateFlow<DailyReport?>(null)
+    val dailyReport = _dailyReport.asStateFlow()
+
     private val _lowStockThreshold = MutableStateFlow(DEFAULT_LOW_STOCK_THRESHOLD)
     val lowStockThreshold = _lowStockThreshold.asStateFlow()
 
     private val _lowStock = MutableStateFlow<List<Inventory>>(emptyList())
     val lowStock = _lowStock.asStateFlow()
+
+    private val _pending = MutableStateFlow<List<PendingUserResponse>>(emptyList())
+    val pending = _pending.asStateFlow()
+
+    private val _stations = MutableStateFlow<List<Station>>(emptyList())
+    val stations = _stations.asStateFlow()
 
     private val _sessions = MutableStateFlow<List<SessionResponse>>(emptyList())
     val sessions = _sessions.asStateFlow()
@@ -76,6 +100,9 @@ class AdminHandler(
 
             loadOverview()
             loadLowStock()
+            _dailyReport.value = admin.getDailyReport(null)
+            _pending.value = users.getPending()
+            _stations.value = admin.getStations()
             _sessions.value = admin.getSessions()
             _serverInfo.value = admin.getServerInfo()
             _shopProfile.value = admin.getShopProfile()
@@ -87,6 +114,27 @@ class AdminHandler(
 
     fun refreshOverview() {
         scope.launch { loadOverview() }
+    }
+
+    /**
+     * Moves the end of day report [days] from the one showing, nothing past today
+     */
+    fun moveDailyReport(days: Int) {
+        val current = _dailyReport.value?.date?.let { LocalDate.parse(it) } ?: return
+        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val target = current.plus(DatePeriod(days = days)).let { if (it > today) today else it }
+
+        scope.launch { _dailyReport.value = admin.getDailyReport(target.toString()) }
+    }
+
+    /** Prints the end of day report that's showing */
+    fun printDailyReport(paper: PaperSize, onResult: (String?) -> Unit) {
+        val report = _dailyReport.value ?: return
+
+        scope.launch {
+            val shop = _shopProfile.value ?: admin.getShopProfile() ?: ShopProfile()
+            onResult(printDocument(PrintTemplates.dailyReport(shop, report), paper))
+        }
     }
 
     fun setLowStockThreshold(threshold: Int) {
@@ -119,6 +167,9 @@ class AdminHandler(
     /** Clears out everything, used on log out so the next user doesn't see it */
     fun clear() {
         _stats.value = null
+        _dailyReport.value = null
+        _pending.value = emptyList()
+        _stations.value = emptyList()
         _lowStock.value = emptyList()
         _sessions.value = emptyList()
         _serverInfo.value = null
@@ -172,15 +223,14 @@ class AdminHandler(
     }
 
     /**
-     * Deactivating sets access to NONE which blocks logging in and ends their session.
-     * Reactivating brings them back as RESTRICTED, edit them after to give more access.
+     * Deactivating blocks logging in and ends their sessions, reactivating keeps the access level they had
      */
     fun setUserActive(user: User, active: Boolean) {
-        val accessLevel = if (active) AccessLevel.RESTRICTED else AccessLevel.NONE
-        val message = if (active) "Reactivated ${user.username} as restricted" else "Deactivated ${user.username}"
+        val status = if (active) UserStatus.ACTIVE else UserStatus.DEACTIVATED
+        val message = if (active) "Reactivated ${user.username}" else "Deactivated ${user.username}"
 
         scope.launch {
-            report(users.update(user.withoutPassword().copy(accessLevel = accessLevel)), message) {
+            report(users.update(user.withoutPassword().copy(status = status)), message) {
                 onUsersChanged(user.identifier)
                 _sessions.value = admin.getSessions()
                 loadOverview()
@@ -198,11 +248,139 @@ class AdminHandler(
         }
     }
 
+    // ------------------------------------------ New accounts ------------------------------------------
+
+    fun refreshPending() {
+        scope.launch { _pending.value = users.getPending() }
+    }
+
+    /** Lets a requested account in. They finish setting up on their first login */
+    fun approve(user: User, accessLevel: AccessLevel, onSuccess: () -> Unit) {
+        scope.launch {
+            report(users.approve(user.identifier, accessLevel), "Approved ${user.username}") {
+                onSuccess()
+                _pending.value = users.getPending()
+                onUsersChanged(user.identifier)
+                loadOverview()
+            }
+        }
+    }
+
+    /** Turns down a request or cancels an invite */
+    fun reject(user: User) {
+        scope.launch {
+            report(users.reject(user.identifier), "Removed ${user.username}") {
+                _pending.value = users.getPending()
+                onUsersChanged(null)
+                loadOverview()
+            }
+        }
+    }
+
+    /**
+     * Makes an invite
+     * @param onCreated Gets the invite with its code, which is only shown this once
+     */
+    fun invite(request: InviteRequest, onCreated: (InviteResponse) -> Unit) {
+        scope.launch {
+            when (val result = users.invite(request)) {
+                is Result.Success -> {
+                    onCreated(result.data)
+                    _pending.value = users.getPending()
+                    onUsersChanged(result.data.user.identifier)
+                    loadOverview()
+                    loadAudit(reset = true)
+                }
+
+                is Result.Error -> notify(result.error.message)
+            }
+        }
+    }
+
+    /** New code for an invite, the old one stops working */
+    fun renewInvite(user: User, onCreated: (InviteResponse) -> Unit) {
+        scope.launch {
+            when (val result = users.renewInvite(user.identifier)) {
+                is Result.Success -> {
+                    onCreated(result.data)
+                    _pending.value = users.getPending()
+                    loadAudit(reset = true)
+                }
+
+                is Result.Error -> notify(result.error.message)
+            }
+        }
+    }
+
+    // ------------------------------------------ PINs and stations ------------------------------------------
+
+    fun unlockPin(user: User) {
+        scope.launch {
+            report(users.unlockPin(user.identifier), "Unlocked ${user.username}'s PIN") {
+                onUsersChanged(user.identifier)
+            }
+        }
+    }
+
+    /** Clears their PIN so they set a new one from their settings */
+    fun resetPin(user: User) {
+        scope.launch {
+            report(users.resetPin(user.identifier), "Cleared ${user.username}'s PIN") {
+                onUsersChanged(user.identifier)
+            }
+        }
+    }
+
+    fun refreshStations() {
+        scope.launch { _stations.value = admin.getStations() }
+    }
+
+    fun approveStation(station: Station) {
+        scope.launch {
+            report(admin.approveStation(station.identifier), "Approved ${station.name}") {
+                _stations.value = admin.getStations()
+            }
+        }
+    }
+
+    fun setKiosk(station: Station, settings: KioskSettings) {
+        val message = if (settings.enabled) "Kiosk mode on for ${station.name}" else "Kiosk mode off for ${station.name}"
+
+        scope.launch {
+            report(admin.setKiosk(station.identifier, settings), message) {
+                _stations.value = admin.getStations()
+            }
+        }
+    }
+
+    fun removeStation(station: Station) {
+        scope.launch {
+            report(admin.removeStation(station.identifier), "Removed ${station.name}") {
+                _stations.value = admin.getStations()
+                _sessions.value = admin.getSessions()
+            }
+        }
+    }
+
     // ------------------------------------------ Sessions ------------------------------------------
 
+    /** Session this device is using, so it can be labelled */
+    fun currentSessionId(): String? = remoteHandler.currentSessionId()
+
     fun revokeSession(session: SessionResponse) {
+        val device = session.deviceName.ifBlank { "a device" }
+
         scope.launch {
-            report(admin.revokeSession(session.userIdentifier), "Logged out ${session.username}") {
+            report(admin.revokeSession(session.sessionId), "Logged out ${session.username} on $device") {
+                _sessions.value = admin.getSessions()
+                loadOverview()
+            }
+        }
+    }
+
+    fun revokeAllSessions(user: User) {
+        scope.launch {
+            report(admin.revokeUserSessions(user.identifier), "Logged ${user.username} out everywhere") {
                 _sessions.value = admin.getSessions()
                 loadOverview()
             }

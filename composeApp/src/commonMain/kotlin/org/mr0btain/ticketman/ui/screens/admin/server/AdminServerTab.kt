@@ -12,11 +12,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.ui.composables.DialogTextRow
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
+import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatDuration
+import org.mr0btain.ticketman.components.utils.formatBytes
+import org.mr0btain.ticketman.ui.composables.SectionCard
+import org.mr0btain.ticketman.ui.composables.EmptyMessage
 import org.mr0btain.ticketman.ui.screens.admin.components.*
 
 /**
@@ -196,7 +202,7 @@ private fun ShopProfileCard(
         title = "Shop Profile",
         action = {
             Button(
-                enabled = shopProfile != null && profile != loaded,
+                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE,
                 onClick = { onSave(profile) }
             ) {
                 Text("Save")
@@ -261,6 +267,24 @@ private fun ShopProfileCard(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
+
+            Spacer(Modifier.padding(8.dp))
+
+            // Kept as text while typing so the field can be cleared, saved as a number
+            var repeatDays by remember(loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
+
+            OutlinedTextField(
+                modifier = Modifier.width(220.dp),
+                value = repeatDays,
+                onValueChange = { text ->
+                    repeatDays = text.filter { it.isDigit() }.take(4)
+                    repeatDays.toIntOrNull()?.let { profile = profile.copy(repeatWindowDays = it) }
+                },
+                label = { Text("Repeat Repair Warning (days)") },
+                isError = repeatDays.toIntOrNull() !in REPEAT_WINDOW_RANGE,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
         }
 
         OutlinedTextField(
@@ -273,5 +297,30 @@ private fun ShopProfileCard(
             minLines = 2,
             maxLines = 4
         )
+
+        Text(modifier = Modifier.padding(start = 8.dp, top = 4.dp), text = "Default paper for printing", fontSize = 13.sp)
+        Row(modifier = Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PaperSize.entries.forEach { paper ->
+                FilterChip(
+                    selected = profile.defaultPaper == paper,
+                    onClick = { profile = profile.copy(defaultPaper = paper) },
+                    label = { Text(paper.label) }
+                )
+            }
+        }
+
+        OutlinedTextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            value = profile.repairTerms,
+            onValueChange = { profile = profile.copy(repairTerms = it) },
+            label = { Text("Repair Terms (customers sign these at check in, leave blank to skip signing)") },
+            minLines = 4,
+            maxLines = 10
+        )
     }
 }
+
+// Days a repaired device can come back and be flagged as a repeat
+private val REPEAT_WINDOW_RANGE = 1..3650

@@ -9,7 +9,10 @@ import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.routing.configureRouting
+import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.CheckInService
+import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
@@ -42,7 +45,15 @@ fun Application.module() {
         val dataPath = path.ifBlank { appDir.toString() }
         val database = configureDatabase(dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase)
-        val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase, database.auditLogDatabase)
+        val userService = UserService(
+            database = database.userDatabase,
+            jwtService = jwtService,
+            tokenDatabase = database.tokenDatabase,
+            inviteDatabase = database.inviteDatabase,
+            stationDatabase = database.stationDatabase,
+            auditLog = database.auditLogDatabase
+        )
+        val accountService = AccountService(database.userDatabase, database.inviteDatabase, userService, jwtService, database.auditLogDatabase)
         val adminService = AdminService(
             database = database,
             serverName = environment.config.propertyOrNull("env.name")?.getString() ?: "Server",
@@ -53,7 +64,24 @@ fun Application.module() {
         configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
-        configureRouting(userService, adminService, database)
+        val invoiceService = InvoiceService(
+            invoices = database.invoiceDatabase,
+            tickets = database.ticketDatabase,
+            inventory = database.inventoryDatabase,
+            shop = database.shopDatabase,
+            auditLog = database.auditLogDatabase
+        )
+
+        val checkInService = CheckInService(
+            tickets = database.ticketDatabase,
+            customers = database.customerDatabase,
+            users = database.userDatabase,
+            invoices = database.invoiceDatabase,
+            shop = database.shopDatabase,
+            auditLog = database.auditLogDatabase
+        )
+
+        configureRouting(userService, accountService, adminService, invoiceService, checkInService, database)
 
         AppLogger.m("SERVER", "Server initialized!")
 

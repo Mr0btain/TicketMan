@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.dao.UuidEntity
 import org.jetbrains.exposed.v1.dao.UuidEntityClass
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketNumber
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -16,6 +17,14 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var device by TicketTable.device
     var status by TicketTable.status
     var priority by TicketTable.priority
+    var numberYear by TicketTable.numberYear
+    var numberSequence by TicketTable.numberSequence
+    var problem by TicketTable.problem
+    var condition by TicketTable.condition
+    var accessories by TicketTable.accessories
+    var estimateCents by TicketTable.estimateCents
+    var promisedAt by TicketTable.promisedAt
+    var pickedUpAt by TicketTable.pickedUpAt
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -25,7 +34,14 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             identifier = id.value,
             device = device,
             status = status,
-            priority = priority
+            priority = priority,
+            number = numberYear?.let { year -> numberSequence?.let { TicketNumber(year, it) } },
+            problem = problem,
+            condition = condition,
+            accessories = accessories,
+            estimateCents = estimateCents,
+            promisedAt = promisedAt,
+            pickedUpAt = pickedUpAt
         )
     }
 }

@@ -114,19 +114,45 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
     }
 
-    override fun search(query: String, limit: Int): List<SearchResult>? {
-        // TODO()
-        println("Searching for customer with: ${query}")
-        return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
+    override fun search(query: String, limit: Int): List<SearchResult>? =
+        searchCustomers(query, limit)?.map { customer ->
+            SearchResult(
+                identifier = customer.identifier,
+                text = listOf(customer.cleanName(), customer.phone).filter { it.isNotBlank() }.joinToString(" - ")
+            )
+        }
+
+    /**
+     * Customers matching any part of their name ("jane doe" works), the start of their email or id,
+     * or their phone number ignoring formatting
+     */
+    fun searchCustomers(query: String, limit: Int): List<Customer>? {
+        return appLogTryCatch<List<Customer>?>(SEARCH_TAG) {
             transaction {
-                val pattern = "${query.lowercase()}%"
+                val text = query.trim().lowercase()
+                val digits = text.filter { it.isDigit() }
+
+                // Names are stored as first:last, so spaces in the query can match the divider
+                val namePattern = "%${text.replace(' ', '%')}%"
+
+                // Phone numbers are stored however they were typed, compare digits only
+                val phoneDigits = CustomFunction(
+                    "REGEXP_REPLACE",
+                    TextColumnType(),
+                    CustomerTable.phone,
+                    stringLiteral("[^0-9]"),
+                    stringLiteral("")
+                )
+
+                val phoneMatch: Op<Boolean> = if (digits.length >= MIN_PHONE_DIGITS) phoneDigits like "%$digits%" else Op.FALSE
 
                 Pair(
                     CustomerEntity
                         .find {
-                            (CustomerTable.name.lowerCase() like pattern) or
-                                    (CustomerTable.id.castTo(VarCharColumnType()) like pattern) or
-                                    (CustomerTable.email.lowerCase() like pattern)
+                            (CustomerTable.name.lowerCase() like namePattern) or
+                                    (CustomerTable.id.castTo(VarCharColumnType()) like "$text%") or
+                                    (CustomerTable.email.lowerCase() like "$text%") or
+                                    phoneMatch
                         }
                         .orderBy(
                             CustomerTable.name to SortOrder.ASC,
@@ -134,19 +160,7 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
                             CustomerTable.id to SortOrder.ASC
                         )
                         .limit(limit)
-                        .map { customerEntity ->
-                            SearchResult(
-                                identifier = customerEntity.id.value,
-                                text = when {
-                                    customerEntity.name.startsWith(query, true) -> customerEntity.name
-                                    customerEntity.email.startsWith(query, true) -> customerEntity.email
-                                    customerEntity.id.value.toString()
-                                        .startsWith(query, true) -> customerEntity.id.value.toString()
-
-                                    else -> customerEntity.name
-                                }
-                            )
-                        },
+                        .map { customerEntity -> customerEntity.toCustomer() },
                     true
                 )
             }
@@ -349,5 +363,10 @@ open class CustomerDatabaseImpl() : Database<Customer>("CustomerDatabaseImpl") {
         }
 
         return tickets
+    }
+
+    companion object {
+        // Fewer digits than this is too short to be worth matching against phone numbers
+        private const val MIN_PHONE_DIGITS = 3
     }
 }

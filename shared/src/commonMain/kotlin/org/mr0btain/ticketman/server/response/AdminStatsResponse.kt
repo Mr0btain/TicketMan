@@ -23,6 +23,9 @@ data class AdminStatsResponse(
     val lowStockCount: Long = 0,
     val lowStockThreshold: Int = 0,
     val totalUsers: Long = 0,
+    /** Active users only */
     val usersByAccessLevel: Map<AccessLevel, Long> = emptyMap(),
+    val pendingUsers: Long = 0,
+    val deactivatedUsers: Long = 0,
     val activeSessions: Long = 0
 )

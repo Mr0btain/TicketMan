@@ -1,17 +1,28 @@
 package org.mr0btain.ticketman.components.network
 
 import io.ktor.client.engine.*
+import io.ktor.client.request.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlin.io.encoding.Base64
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.database.*
+import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
 import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.data.station.StaffMember
+import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.request.InviteSetupRequest
+import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 
@@ -43,6 +54,17 @@ class RemoteHandler(
     val inventoryRepo = InventoryRemoteRepositoryImpl(httpClient)
     val userRepo = UserRemoteRepositoryImpl(httpClient)
     val adminRepo = AdminRemoteRepository(httpClient)
+    val counterRepo = CounterRemoteRepository(httpClient)
+    val invoiceRepo = InvoiceRemoteRepository(httpClient)
+
+    /**
+     * Whether an expired session can be fixed by logging in again with the saved username and password.
+     * Kiosks turn this off so a locked counter can't quietly sign the device's owner back in
+     */
+    var credentialFallback: Boolean = true
+
+    // Base url once a server has been reached, used for routes outside the repositories
+    private var serverUrl = ""
 
     // Emits when the session can't be refreshed and the user needs to log in again
     private val _authExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -56,17 +78,20 @@ class RemoteHandler(
             // Check if we can establish a connection with this address, if success then set it.
             if (userClient.checkServerConnection(url)) {
                 userClient.changeServerUrl(url)
+                serverUrl = url.trimEnd('/')
                 customerRepo.serverUrl = url
                 ticketRepo.serverUrl = url
                 inventoryRepo.serverUrl = url
                 userRepo.serverUrl = url
                 adminRepo.serverUrl = url
+                counterRepo.serverUrl = url
+                invoiceRepo.serverUrl = url
 
                 AppLogger.m(SET_SERVER_URL_TAG, SimpleResult.SUCCESS)
 
                 // Log in with stored credentials, then drop the tokens the http client cached
                 // before login so the next request loads the new ones
-                return if (userClient.login()) {
+                return if (userClient.login() is LoginOutcome.LoggedIn) {
                     onLoggedIn()
                     ConnectionResult.LOGGED_IN
                 } else {
@@ -79,6 +104,21 @@ class RemoteHandler(
         }
 
         return ConnectionResult.UNREACHABLE
+    }
+
+    /**
+     * Session this device is logged in with, read from the access token's sid claim. Only used to label things
+     * on screen, the server does the real checks
+     */
+    fun currentSessionId(): String? {
+        val payload = localStorage.accessToken.split(".").getOrNull(1) ?: return null
+
+        return try {
+            val decoded = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL).decode(payload).decodeToString()
+            Json.parseToJsonElement(decoded).jsonObject["sid"]?.jsonPrimitive?.content
+        } catch (ex: Exception) {
+            null
+        }
     }
 
     /**
@@ -112,7 +152,7 @@ class RemoteHandler(
             AppLogger.i(REFRESH_TOKENS_TAG, "Refresh token rejected, logging in again")
         }
 
-        return if (userClient.login()) {
+        return if (credentialFallback && userClient.login() is LoginOutcome.LoggedIn) {
             AppLogger.m(REFRESH_TOKENS_TAG, SimpleResult.SUCCESS)
             getStoredToken()
         } else {
@@ -135,28 +175,75 @@ class RemoteHandler(
     /**
      * Try to log in to server with username and password
      */
-    suspend fun login(user: String, pass: String): Boolean {
+    suspend fun login(user: String, pass: String): LoginOutcome {
         val result = userClient.login(user, pass)
 
-        if (result) {
+        if (result is LoginOutcome.LoggedIn) {
             onLoggedIn()
             AppLogger.m(LOGIN_TAG, SimpleResult.SUCCESS)
         } else {
-            AppLogger.i(LOGIN_TAG, SimpleResult.FAIL)
+            AppLogger.i(LOGIN_TAG, result.toString())
         }
 
         return result
     }
 
     /**
+     * Switches who's signed in at this station. The previous person's session on this station ends
+     */
+    suspend fun pinLogin(userIdentifier: Uuid, pin: String): EmptyResult<ServerError> {
+        val station = localStorage.stationCredentials
+            ?: return Result.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
+
+        return userClient.pinLogin(station, userIdentifier, pin).also { result ->
+            if (result is Result.Success) onLoggedIn()
+        }
+    }
+
+    /** Finishes an invite, which also logs in */
+    suspend fun completeInviteSetup(username: String, request: InviteSetupRequest): EmptyResult<ServerError> =
+        userClient.completeInviteSetup(username, request).also { result ->
+            if (result is Result.Success) onLoggedIn()
+        }
+
+    /**
      * Drops the current session. The saved password is cleared too so the refresh fallback
      * doesn't log us straight back in, the username is kept for prefilling the login form
      */
     suspend fun logout() {
+        // Tell the server so this device's session ends, other devices stay logged in
+        if (serverUrl.isNotBlank() && localStorage.accessToken.isNotBlank()) {
+            networkErrorTryCatch(LOGOUT_TAG) {
+                httpClient.post { url("$serverUrl/api/auth/logout") }
+            }?.let { response -> handlePlainHttpResponse(LOGOUT_TAG, response) }
+        }
+
         localStorage.clearSession()
         localStorage.password = ""
         httpClient.authProvider<BearerAuthProvider>()?.clearToken()
         AppLogger.m(LOGOUT_TAG, SimpleResult.SUCCESS)
+    }
+
+    /**
+     * Ends this device's session but keeps the saved login, used when a kiosk locks
+     */
+    suspend fun endSession() {
+        if (serverUrl.isNotBlank() && localStorage.accessToken.isNotBlank()) {
+            networkErrorTryCatch(LOGOUT_TAG) {
+                httpClient.post { url("$serverUrl/api/auth/logout") }
+            }?.let { response -> handlePlainHttpResponse(LOGOUT_TAG, response) }
+        }
+
+        localStorage.clearSession()
+        httpClient.authProvider<BearerAuthProvider>()?.clearToken()
+    }
+
+    /** People who can PIN in at this station, empty if it isn't one */
+    suspend fun stationStaff(): Result<List<StaffMember>, ServerError> {
+        val station = localStorage.stationCredentials
+            ?: return Result.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
+
+        return userClient.stationStaff(station)
     }
 
     /**

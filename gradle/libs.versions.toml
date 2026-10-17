@@ -1,8 +1,8 @@
 [versions]
 agp = "9.1.1"
-android-compileSdk = "36"
+android-compileSdk = "37"
 android-minSdk = "24"
-android-targetSdk = "36"
+android-targetSdk = "37"
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.8.0"
 androidx-constraintlayout = "2.2.2"
@@ -28,6 +28,8 @@ exposed = "1.5.0"
 openpdf = "2.0.5"
 kotlinx-io = "0.9.1"
 ksafe = "3.3.0"
+kotlinx-datetime = "0.7.1"
+zxing = "3.5.3"
 
 [libraries]
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -107,6 +109,12 @@ kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "
 
 # Encrypted key-value storage
 ksafe = { module = "eu.anifantakis:ksafe", version.ref = "ksafe" }
+
+# Time zones and calendar dates
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+
+# QR code reader, only used in tests to check the codes we make scan
+zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 
 [plugins]
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
