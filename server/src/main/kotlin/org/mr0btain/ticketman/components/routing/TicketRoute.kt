@@ -99,6 +99,12 @@ fun Route.ticketRoute(
             }
         }
 
+        get("/signature/{identifier}") {
+            val result = call.uuidParameter("identifier")?.let { database.getSignature(it) }
+
+            if (result != null) call.respond(HttpStatusCode.OK, result) else call.respond(HttpStatusCode.NotFound)
+        }
+
         get("/get/customer/{identifier}") {
             val result = call.uuidParameter("identifier")?.let { database.getCustomer(it) }
 

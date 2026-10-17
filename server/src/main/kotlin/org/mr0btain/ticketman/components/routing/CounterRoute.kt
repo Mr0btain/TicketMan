@@ -8,8 +8,10 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.CounterDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.data.search.SearchQuery
+import org.mr0btain.ticketman.server.request.CheckInRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 
@@ -20,10 +22,19 @@ fun Route.counterRoute(
     database: CounterDatabase,
     shopDatabase: ShopDatabase,
     invoiceService: InvoiceService,
+    checkInService: CheckInService,
     userDatabase: UserDatabaseImpl
 ) {
     // Hand a ticket back: pay off its invoice, take parts from stock and close it. Needs NORMAL access
     authenticate {
+        // A device coming in: ticket, customer, tech, deposit and signature in one go
+        post("/check-in") {
+            call.respondAccount(
+                checkInService.checkIn(call.receive<CheckInRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                HttpStatusCode.Created
+            )
+        }
+
         post("/pickup") {
             call.respondAccount(
                 invoiceService.pickup(call.receive<PickupRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),

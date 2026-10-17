@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
@@ -71,7 +72,16 @@ fun Application.module() {
             auditLog = database.auditLogDatabase
         )
 
-        configureRouting(userService, accountService, adminService, invoiceService, database)
+        val checkInService = CheckInService(
+            tickets = database.ticketDatabase,
+            customers = database.customerDatabase,
+            users = database.userDatabase,
+            invoices = database.invoiceDatabase,
+            shop = database.shopDatabase,
+            auditLog = database.auditLogDatabase
+        )
+
+        configureRouting(userService, accountService, adminService, invoiceService, checkInService, database)
 
         AppLogger.m("SERVER", "Server initialized!")
 

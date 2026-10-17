@@ -23,6 +23,7 @@ import org.mr0btain.ticketman.ui.composables.SectionCard
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
 import org.mr0btain.ticketman.ui.composables.TablePriorityItem
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
+import org.mr0btain.ticketman.ui.composables.signature.SignatureView
 import org.mr0btain.ticketman.ui.screens.counter.components.*
 
 /**
@@ -199,6 +200,20 @@ fun TicketCard(
                         Text(text = entry.message, fontSize = 14.sp)
                     }
                     HorizontalDivider()
+                }
+            }
+
+            detail.signature?.let { signature ->
+                SectionCard(modifier = Modifier.width(420.dp), title = "Signature") {
+                    SignatureView(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(signature.aspectRatio.coerceIn(1f, 6f)),
+                        strokes = signature.strokes
+                    )
+
+                    Text(text = "${signature.signedName}, ${formatDateTime(signature.signedAt)}", fontSize = 13.sp)
+                    Text(text = "Taken by ${signature.takenBy}", fontSize = 12.sp)
                 }
             }
 

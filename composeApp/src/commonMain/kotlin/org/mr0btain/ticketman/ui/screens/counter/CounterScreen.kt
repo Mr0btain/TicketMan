@@ -37,6 +37,9 @@ fun CounterScreen(
     val ticket by counter.ticket.collectAsState()
     val customer by counter.customer.collectAsState()
     val priceResults by counter.priceResults.collectAsState()
+    val shop by counter.shop.collectAsState()
+    val checkInCustomer by counter.checkInCustomer.collectAsState()
+    val lastCheckIn by counter.lastCheckIn.collectAsState()
 
     val canEdit = viewModel.canEdit.collectAsState().value
     val searchFocus = remember { FocusRequester() }
@@ -61,6 +64,11 @@ fun CounterScreen(
                     Key.F2 -> {
                         counter.goHome()
                         searchFocus.requestFocus()
+                        true
+                    }
+
+                    Key.F3 -> {
+                        counter.startCheckIn()
                         true
                     }
 
@@ -112,6 +120,11 @@ fun CounterScreen(
                     textStyle = MaterialTheme.typography.titleLarge
                 )
 
+                if (canEdit) {
+                    Button(onClick = { counter.startCheckIn() }) { Text("Check In (F3)") }
+                    OutlinedButton(onClick = { counter.startNewCustomer() }) { Text("New Customer") }
+                }
+
                 OutlinedButton(onClick = { counter.openPriceCheck() }) { Text("Price Check (F4)") }
 
                 if (!canEdit) {
@@ -155,7 +168,12 @@ fun CounterScreen(
                             CustomerCard(
                                 detail = detail,
                                 onTicketClick = { counter.openTicket(it) },
-                                onBack = { counter.goHome() }
+                                onBack = { counter.goHome() },
+                                actions = {
+                                    if (canEdit) {
+                                        Button(onClick = { counter.startCheckIn(detail.customer) }) { Text("Check In a Device") }
+                                    }
+                                }
                             )
                         }
 
@@ -163,6 +181,37 @@ fun CounterScreen(
                             results = priceResults,
                             onSearch = { counter.searchPrices(it) },
                             onBack = { counter.goHome() }
+                        )
+
+                        CounterView.CHECK_IN -> CheckInWizard(
+                            startingCustomer = checkInCustomer,
+                            terms = shop.repairTerms,
+                            onSearchCustomers = { counter.searchCustomers(it) },
+                            onAddCustomer = { customer, onResult -> counter.addCustomer(customer, onResult) },
+                            onSearchTechnicians = { counter.searchTechnicians(it) },
+                            onRepeatCheck = { customer, device, exclude -> counter.repeatCheck(customer, device, exclude) },
+                            onOpenTicket = { counter.openTicket(it) },
+                            onSubmit = { request, onResult -> counter.submitCheckIn(request, onResult) },
+                            onCancel = { counter.goHome() }
+                        )
+
+                        CounterView.CHECKED_IN -> lastCheckIn?.let { result ->
+                            CheckedInView(
+                                result = result,
+                                onOpenTicket = { counter.openTicket(result.ticket.identifier) },
+                                onCheckInAnother = { counter.startCheckIn() },
+                                onDone = { counter.goHome() }
+                            )
+                        }
+
+                        CounterView.NEW_CUSTOMER -> NewCustomerScreen(
+                            onSave = { customer, onResult ->
+                                counter.addCustomer(customer) { saved, problem ->
+                                    onResult(problem)
+                                    saved?.let { counter.openCustomer(it.identifier) }
+                                }
+                            },
+                            onCancel = { counter.goHome() }
                         )
                     }
                 }

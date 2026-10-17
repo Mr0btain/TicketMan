@@ -18,7 +18,9 @@ data class ShopProfile(
     val taxRate: String = "",
     val invoiceFooter: String = "",
     /** A device back within this many days of its last repair gets flagged at check in */
-    val repeatWindowDays: Int = DEFAULT_REPEAT_WINDOW_DAYS
+    val repeatWindowDays: Int = DEFAULT_REPEAT_WINDOW_DAYS,
+    /** What customers agree to when they sign at check in, blank skips the signature */
+    val repairTerms: String = ""
 ) {
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90

@@ -23,6 +23,7 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
+import org.mr0btain.ticketman.components.database.tables.ticket.TicketSignatureTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHistoryTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.user.UserEntity
@@ -36,6 +37,7 @@ import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
+import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusChange
@@ -68,6 +70,7 @@ class TicketDatabaseImpl(
     private val SET_CUSTOMER_TAG = "$tag:SetCustomer"
     private val SET_USER_TAG = "$tag:SetUser"
     private val SUMMARIZE_TAG = "$tag:Summarize"
+    private val SIGNATURE_TAG = "$tag:Signature"
     private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
     private val GET_USER_TAG = "$tag:GetUser"
     private val UPDATE_DEVICE_TAG = "$tag:UpdateDevice"
@@ -252,6 +255,33 @@ class TicketDatabaseImpl(
             true
         }
     }
+
+    /** Saves the check in signature, replacing any the ticket had */
+    fun setSignature(identifier: Uuid, signature: TicketSignature): Boolean =
+        appLogTryCatch<Boolean>(SIGNATURE_TAG) {
+            transaction {
+                TicketSignatureTable.deleteWhere { TicketSignatureTable.ticket eq identifier }
+                TicketSignatureTable.insert { row ->
+                    row[TicketSignatureTable.ticket] = identifier
+                    row[TicketSignatureTable.signature] = signature
+                }
+
+                Pair(true, true)
+            }
+        } ?: false
+
+    fun getSignature(identifier: Uuid): TicketSignature? =
+        appLogTryCatch<TicketSignature?>(SIGNATURE_TAG) {
+            transaction {
+                val signature = TicketSignatureTable
+                    .selectAll()
+                    .where { TicketSignatureTable.ticket eq identifier }
+                    .firstOrNull()
+                    ?.get(TicketSignatureTable.signature)
+
+                Pair(signature, true)
+            }
+        }
 
     /** Closes a ticket as picked up at [time] */
     fun markPickedUp(identifier: Uuid, time: Long): Boolean {

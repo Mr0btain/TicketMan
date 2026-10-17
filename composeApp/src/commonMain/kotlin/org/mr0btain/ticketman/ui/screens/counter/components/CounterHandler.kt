@@ -8,16 +8,24 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatus
+import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.server.request.CheckInRequest
+import org.mr0btain.ticketman.server.request.RepeatCheckRequest
+import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import kotlin.uuid.Uuid
@@ -27,7 +35,10 @@ enum class CounterView {
     HOME,
     TICKET,
     CUSTOMER,
-    PRICE_CHECK
+    PRICE_CHECK,
+    CHECK_IN,
+    CHECKED_IN,
+    NEW_CUSTOMER
 }
 
 /** Everything the ticket card shows */
@@ -37,7 +48,8 @@ data class TicketDetail(
     val technician: EntityReference?,
     val notes: List<Note>,
     val history: List<TicketStatusChange>,
-    val invoice: Invoice?
+    val invoice: Invoice?,
+    val signature: TicketSignature?
 )
 
 data class CustomerDetail(
@@ -82,6 +94,17 @@ class CounterHandler(
     private val _priceResults = MutableStateFlow<List<Inventory>>(emptyList())
     val priceResults = _priceResults.asStateFlow()
 
+    private val _shop = MutableStateFlow(ShopProfile())
+    /** Terms customers sign at check in, loaded with the queue */
+    val shop = _shop.asStateFlow()
+
+    // Customer to start a check in with, when it's started from their card
+    private val _checkInCustomer = MutableStateFlow<Customer?>(null)
+    val checkInCustomer = _checkInCustomer.asStateFlow()
+
+    private val _lastCheckIn = MutableStateFlow<CheckInResponse?>(null)
+    val lastCheckIn = _lastCheckIn.asStateFlow()
+
     private var searchJob: Job? = null
     private var priceJob: Job? = null
 
@@ -113,6 +136,7 @@ class CounterHandler(
     fun refreshQueue() {
         scope.launch {
             remoteHandler.counterRepo.queue(RECENT_LIMIT)?.let { _queue.value = it }
+            remoteHandler.adminRepo.getShopProfile()?.let { _shop.value = it }
         }
     }
 
@@ -168,7 +192,8 @@ class CounterHandler(
             technician = repo.getUser(identifier),
             notes = repo.getNotes(identifier),
             history = repo.getStatusHistory(identifier),
-            invoice = remoteHandler.invoiceRepo.getForTicket(identifier)
+            invoice = remoteHandler.invoiceRepo.getForTicket(identifier),
+            signature = repo.getSignature(identifier)
         )
     }
 
@@ -203,6 +228,70 @@ class CounterHandler(
         }
     }
 
+    // ------------------------------------------ Check in ------------------------------------------
+
+    /** Opens the check in wizard, starting with [customer] if it came from their card */
+    fun startCheckIn(customer: Customer? = null) {
+        if (!canEdit()) return
+
+        _checkInCustomer.value = customer
+        _view.value = CounterView.CHECK_IN
+    }
+
+    fun startNewCustomer() {
+        if (!canEdit()) return
+        _view.value = CounterView.NEW_CUSTOMER
+    }
+
+    /** Customers for the check in wizard's lookup */
+    suspend fun searchCustomers(text: String): List<Customer> =
+        if (text.isBlank()) emptyList() else remoteHandler.counterRepo.search(text.trim(), SEARCH_LIMIT).customers
+
+    /** Staff for picking a technician */
+    suspend fun searchTechnicians(text: String): List<SearchResult> =
+        remoteHandler.userRepo.search(text.trim(), SEARCH_LIMIT)
+
+    /** Earlier repairs of this device for the customer, for the repeat warning */
+    suspend fun repeatCheck(customer: Uuid, device: Device, excludeTicket: Uuid): List<TicketSummary> =
+        remoteHandler.counterRepo.repeatCheck(RepeatCheckRequest(customer, device, excludeTicket))
+
+    /**
+     * Adds a customer
+     * @param onResult Gets the saved customer, or null and what went wrong
+     */
+    fun addCustomer(customer: Customer, onResult: (Customer?, String?) -> Unit) {
+        if (!canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.add(customer)) {
+                is Result.Success -> onResult(customer, null)
+                is Result.Error -> onResult(null, result.error.message)
+            }
+        }
+    }
+
+    /**
+     * Sends a finished check in
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun submitCheckIn(request: CheckInRequest, onResult: (String?) -> Unit) {
+        if (!canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.counterRepo.checkIn(request)) {
+                is Result.Success -> {
+                    _lastCheckIn.value = result.data
+                    _checkInCustomer.value = null
+                    _view.value = CounterView.CHECKED_IN
+                    refreshQueue()
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
     // ------------------------------------------ Price check ------------------------------------------
 
     fun searchPrices(text: String) {
@@ -232,6 +321,8 @@ class CounterHandler(
         _ticket.value = null
         _customer.value = null
         _priceResults.value = emptyList()
+        _checkInCustomer.value = null
+        _lastCheckIn.value = null
     }
 
     private fun notify(message: String) {

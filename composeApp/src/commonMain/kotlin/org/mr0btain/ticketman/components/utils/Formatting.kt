@@ -1,7 +1,12 @@
 package org.mr0btain.ticketman.components.utils
 
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -37,6 +42,18 @@ fun formatDay(millis: Long): String {
         }
     }
 }
+
+/**
+ * Epoch millis for 5pm local time [days] from today, used for promised dates
+ */
+fun promiseTimeInDays(days: Int): Long {
+    val today = Clock.System.now().toLocalDateTime(zone).date
+    val day = today.plus(DatePeriod(days = days))
+
+    return LocalDateTime(day, LocalTime(PROMISE_HOUR, 0)).toInstant(zone).toEpochMilliseconds()
+}
+
+private const val PROMISE_HOUR = 17
 
 /** Whether the time falls on a day before today */
 fun isBeforeToday(millis: Long): Boolean =

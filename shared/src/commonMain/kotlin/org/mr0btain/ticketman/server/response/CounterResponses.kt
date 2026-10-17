@@ -3,6 +3,8 @@ package org.mr0btain.ticketman.server.response
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.ticket.Ticket
 
 /**
  * Results for the counter's search bar. Tickets include ones belonging to the customers that matched
@@ -11,6 +13,13 @@ import org.mr0btain.ticketman.data.customer.Customer
 data class CounterSearchResponse(
     val tickets: List<TicketSummary> = emptyList(),
     val customers: List<Customer> = emptyList()
+)
+
+/** A checked in ticket with its number, and its invoice if a deposit was taken */
+@Serializable
+data class CheckInResponse(
+    val ticket: Ticket,
+    val invoice: Invoice? = null
 )
 
 /**

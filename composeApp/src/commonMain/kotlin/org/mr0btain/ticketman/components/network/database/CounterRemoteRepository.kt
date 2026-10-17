@@ -13,9 +13,11 @@ import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.request.CheckInRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
+import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import kotlin.uuid.Uuid
@@ -32,6 +34,7 @@ class CounterRemoteRepository(
     private val QUEUE_TAG = "$TAG:Queue"
     private val REPEAT_TAG = "$TAG:RepeatCheck"
     private val PICKUP_TAG = "$TAG:Pickup"
+    private val CHECK_IN_TAG = "$TAG:CheckIn"
 
     private var baseUrl = ""
 
@@ -67,6 +70,21 @@ class CounterRemoteRepository(
 
         handleHttpResponse<CounterQueueResponse>(QUEUE_TAG, response).onSuccess { return it }
         return null
+    }
+
+    /** Checks a device in: ticket, customer, tech, deposit and signature all at once */
+    suspend fun checkIn(request: CheckInRequest): Result<CheckInResponse, ServerError> {
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkErrorTryCatch(CHECK_IN_TAG) {
+            client.post {
+                url("$baseUrl/check-in")
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
+
+        return handleDataHttpResponse(CHECK_IN_TAG, response)
     }
 
     /**

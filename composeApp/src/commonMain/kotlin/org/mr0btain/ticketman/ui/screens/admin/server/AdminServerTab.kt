@@ -296,6 +296,17 @@ private fun ShopProfileCard(
             minLines = 2,
             maxLines = 4
         )
+
+        OutlinedTextField(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(8.dp),
+            value = profile.repairTerms,
+            onValueChange = { profile = profile.copy(repairTerms = it) },
+            label = { Text("Repair Terms (customers sign these at check in, leave blank to skip signing)") },
+            minLines = 4,
+            maxLines = 10
+        )
     }
 }
 

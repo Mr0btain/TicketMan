@@ -3,6 +3,8 @@ package org.mr0btain.ticketman.server.request
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
+import org.mr0btain.ticketman.data.ticket.SignatureInput
+import org.mr0btain.ticketman.data.ticket.Ticket
 import kotlin.uuid.Uuid
 
 /** Replaces an open invoice's lines and discount, totals are worked out by the server */
@@ -17,6 +19,21 @@ data class PaymentRequest(
     val method: PaymentMethod,
     val amountCents: Long,
     val note: String = ""
+)
+
+/**
+ * Checks a device in, all at once so a failure can't leave a ticket half made
+ * @param ticket The new ticket, its number is given by the server
+ * @param technicianIdentifier Who it's assigned to, if anyone yet
+ * @param deposit Money taken now, goes on the ticket's invoice
+ */
+@Serializable
+data class CheckInRequest(
+    val ticket: Ticket,
+    val customerIdentifier: Uuid,
+    val technicianIdentifier: Uuid? = null,
+    val deposit: PaymentRequest? = null,
+    val signature: SignatureInput? = null
 )
 
 /**

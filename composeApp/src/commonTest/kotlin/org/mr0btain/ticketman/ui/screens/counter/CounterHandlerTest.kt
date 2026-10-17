@@ -17,10 +17,13 @@ import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.server.request.CheckInRequest
+import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterView
 import kotlin.test.*
+import kotlin.uuid.Uuid
 
 class CounterHandlerTest {
     private val ticket = Ticket(number = TicketNumber(2026, 42))
@@ -34,6 +37,7 @@ class CounterHandlerTest {
             "/" -> respond("", HttpStatusCode.OK)
             "/api/counter/search" -> respond(Json.encodeToString(CounterSearchResponse(tickets = listOf(TicketSummary(ticket)))), HttpStatusCode.OK, jsonHeaders)
             "/api/data/ticket/get" -> respond(Json.encodeToString(ticket), HttpStatusCode.OK, jsonHeaders)
+            "/api/counter/check-in" -> respond(Json.encodeToString(CheckInResponse(ticket)), HttpStatusCode.Created, jsonHeaders)
             "/api/data/ticket/get/notes/${ticket.identifier}", "/api/data/ticket/get/history/${ticket.identifier}" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
             else -> respond("", HttpStatusCode.NotFound)
         }
@@ -113,5 +117,32 @@ class CounterHandlerTest {
     @Test
     fun doneReadsAsReadyForPickup() {
         assertEquals("Ready for pickup", CounterHandler.statusLabel(TicketStatusType.DONE))
+    }
+
+    @Test
+    fun finishedCheckInShowsTheNewNumber() = runTest {
+        val counter = handler(canEdit = true)
+        var error: String? = "not called"
+
+        counter.startCheckIn()
+        assertEquals(CounterView.CHECK_IN, counter.view.value)
+
+        counter.submitCheckIn(CheckInRequest(Ticket(), Uuid.random())) { error = it }
+        settle { counter.view.value == CounterView.CHECKED_IN }
+
+        assertNull(error)
+        assertEquals("26-00000042", counter.lastCheckIn.value?.ticket?.label)
+    }
+
+    @Test
+    fun viewOnlyUsersCantCheckIn() = runTest {
+        val counter = handler(canEdit = false)
+
+        counter.startCheckIn()
+        counter.submitCheckIn(CheckInRequest(Ticket(), Uuid.random())) {}
+        advanceUntilIdle()
+
+        assertEquals(CounterView.HOME, counter.view.value)
+        assertTrue(requests.isEmpty())
     }
 }

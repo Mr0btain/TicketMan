@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.database.tables.note.NoteTable
 import org.mr0btain.ticketman.components.database.tables.shop.ShopTable
 import org.mr0btain.ticketman.components.database.tables.station.StationTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketNoteTable
+import org.mr0btain.ticketman.components.database.tables.ticket.TicketSignatureTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHistoryTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
@@ -69,6 +70,7 @@ class LocalDatabase (
         TicketTable,
         TicketNoteTable,
         TicketStatusHistoryTable,
+        TicketSignatureTable,
         InventoryTable,
         InventoryNoteTable,
         InventoryImageTable,
