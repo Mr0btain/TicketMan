@@ -5,7 +5,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.CustomerCache
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
@@ -23,9 +27,11 @@ import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import kotlin.uuid.Uuid
 
@@ -51,6 +57,7 @@ class MainViewModel(
         viewModelScope.launch {
             remoteHandler.authExpired.collect {
                 _loginState.value = LoginState.LOGGED_OUT
+                _currentUser.value = null
                 _showLogin.value = true
             }
         }
@@ -420,9 +427,12 @@ class MainViewModel(
 
     val userSeed: UserSeed = UserSeed()
 
-    /** Sets selected user and adds it to the cache */
-    fun setSelectedUser(identifier: Uuid) {
-        if (userSeed.identifier == identifier) return
+    /**
+     * Sets selected user and adds it to the cache
+     * @param force Reload even if it's already selected, used after the user was changed
+     */
+    fun setSelectedUser(identifier: Uuid, force: Boolean = false) {
+        if (!force && userSeed.identifier == identifier) return
 
         viewModelScope.launch {
             val cached = userCache.get(identifier)?.let { (user, notes) ->
@@ -444,6 +454,32 @@ class MainViewModel(
     suspend fun searchUsers(query: String) = coroutineScope {
         remoteHandler.userRepo.search(query, _searchLimit.value)
     }
+
+    /** Drops stale copies of a changed user and reloads the list, [identifier] is null when the user is gone */
+    private fun onUsersChanged(identifier: Uuid?) {
+        viewModelScope.launch {
+            if (identifier != null) {
+                userCache.remove(identifier)
+                if (userSeed.identifier == identifier) setSelectedUser(identifier, force = true)
+
+                // Admins can edit themselves, keep what we show for the current user in step
+                if (identifier == _currentUser.value?.identifier) loadCurrentUser()
+            } else {
+                userSeed.clear()
+            }
+
+            userPager?.refreshCurrentData()
+        }
+    }
+
+    /** ----------------------------------------------ADMIN------------------------------------------------------------------- */
+
+    val admin = AdminHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        snackBarHost = snackBarHost,
+        onUsersChanged = { identifier -> onUsersChanged(identifier) }
+    )
 
     /** ----------------------------------------------UI------------------------------------------------------------------- */
 
@@ -469,6 +505,19 @@ class MainViewModel(
     private val _loginState: MutableStateFlow<LoginState> = MutableStateFlow(LoginState.LOGGED_OUT)
     val loginState = _loginState.asStateFlow()
 
+    // Who is logged in, null when logged out
+    private val _currentUser: MutableStateFlow<User?> = MutableStateFlow(null)
+    val currentUser = _currentUser.asStateFlow()
+
+    /** Whether the logged in user can use the admin screen. The server checks this too, this just hides things */
+    val isAdmin: StateFlow<Boolean> = _currentUser
+        .map { user -> user?.accessLevel?.meets(AccessLevel.ADMIN) == true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
+    private suspend fun loadCurrentUser() {
+        _currentUser.value = remoteHandler.userRepo.getMe()
+    }
+
     // Whether the server at the current url could be reached
     private val _serverConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val serverConnected = _serverConnected.asStateFlow()
@@ -490,6 +539,7 @@ class MainViewModel(
             if (remoteHandler.login(user.trim(), pass)) {
                 _loginState.value = LoginState.LOGGED_IN
                 _showLogin.value = false
+                loadCurrentUser()
                 refreshPagers()
             } else {
                 _loginState.value = LoginState.FAILED
@@ -502,6 +552,8 @@ class MainViewModel(
         viewModelScope.launch {
             remoteHandler.logout()
             _loginState.value = LoginState.LOGGED_OUT
+            _currentUser.value = null
+            admin.clear()
 
             // Drop anything pulled while logged in
             customerSeed.clear()
@@ -512,14 +564,16 @@ class MainViewModel(
         }
     }
 
-    private fun handleConnectionResult(result: ConnectionResult) {
+    private suspend fun handleConnectionResult(result: ConnectionResult) {
         _serverConnected.value = result != ConnectionResult.UNREACHABLE
 
         if (result == ConnectionResult.LOGGED_IN) {
             _loginState.value = LoginState.LOGGED_IN
             _showLogin.value = false
+            loadCurrentUser()
         } else {
             _loginState.value = LoginState.LOGGED_OUT
+            _currentUser.value = null
         }
     }
 

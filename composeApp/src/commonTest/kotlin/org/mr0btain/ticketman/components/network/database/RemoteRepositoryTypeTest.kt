@@ -8,6 +8,8 @@ import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketPriority
+import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.user.User
 import kotlin.test.*
 
@@ -29,7 +31,8 @@ class RemoteRepositoryTypeTest {
     @Test
     fun listTypesDecode() {
         assertListRoundTrips(listOf(Customer(name = "a"), Customer(name = "b")))
-        assertListRoundTrips(listOf(Ticket()))
+        // Fixed times, the defaults are Clock.now() and get re-made on decode since defaults aren't encoded
+        assertListRoundTrips(listOf(Ticket(status = TicketStatus(time = 1), priority = TicketPriority(time = 1))))
         assertListRoundTrips(listOf(Inventory(name = "part")))
         assertListRoundTrips(listOf(User(username = "user")))
     }

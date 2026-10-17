@@ -16,6 +16,8 @@ class TokenDatabase() {
     private val ADD_TAG = "$TAG:Add"
     private val UPDATE_TAG = "$TAG:Update"
     private val REMOVE_TAG = "$TAG:Remove"
+    private val GET_ALL_TAG = "$TAG:GetAll"
+    private val COUNT_TAG = "$TAG:Count"
 
     fun findById(identifier: String): RefreshToken? {
         var found: RefreshToken? = null
@@ -108,5 +110,43 @@ class TokenDatabase() {
         }
 
         return true
+    }
+
+    /** Every stored refresh token, one per logged in user */
+    fun getAll(): List<RefreshToken> {
+        var found: List<RefreshToken> = emptyList()
+
+        try {
+            transaction {
+                found = TokenTable.selectAll().map { item ->
+                    RefreshToken(
+                        identifier = item[identifier],
+                        token = item[token]
+                    )
+                }
+            }
+
+            AppLogger.m(GET_ALL_TAG, SimpleResult.SUCCESS)
+        } catch (ex: Exception) {
+            AppLogger.e(GET_ALL_TAG, SimpleResult.FAIL, ex)
+        }
+
+        return found
+    }
+
+    fun count(): Long {
+        var count = 0L
+
+        try {
+            transaction {
+                count = TokenTable.selectAll().count()
+            }
+
+            AppLogger.m(COUNT_TAG, SimpleResult.SUCCESS)
+        } catch (ex: Exception) {
+            AppLogger.e(COUNT_TAG, SimpleResult.FAIL, ex)
+        }
+
+        return count
     }
 }

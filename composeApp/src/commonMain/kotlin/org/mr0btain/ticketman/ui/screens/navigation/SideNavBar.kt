@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.jetbrains.compose.resources.painterResource
@@ -44,7 +45,11 @@ fun SideAppNav(
     val iconOuterPadding = 4.dp
 
     // Selected tab/ screen
-    var selectedTab by remember { mutableIntStateOf(initialDestination.index) }
+    var clickedTab by remember { mutableIntStateOf(initialDestination.index) }
+
+    // Follow the nav stack so screens that navigate on their own keep the tab in step
+    val currentRoute = navHostController.currentBackStackEntryAsState().value?.destination?.route
+    val selectedTab = Destination.entries.firstOrNull { it.route == currentRoute }?.index ?: clickedTab
 
     // Sidebar visibility
     var isSideBarVisible by remember { mutableStateOf(true) }
@@ -110,18 +115,23 @@ fun SideAppNav(
                                 Box(
                                     modifier = Modifier.height(iconSize * (destinations.size + 1))
                                 ) {
+                                    // Destinations can be hidden (like admin), so find the selected one's position in the list
+                                    val sortedDestinations = destinations.sortedBy { it.destination.index }
+
                                     TabColumn(
                                         modifier = Modifier.width(iconSize + 4.dp),
-                                        selectedTabIndex = selectedTab
+                                        selectedTabIndex = sortedDestinations
+                                            .indexOfFirst { it.destination.index == selectedTab }
+                                            .coerceAtLeast(0)
                                     ) {
-                                        destinations.sortedBy { it.destination.index }.forEach { navigationItem ->
+                                        sortedDestinations.forEach { navigationItem ->
                                             Tab(
                                                 modifier = Modifier.wrapContentSize(),
                                                 selected = selectedTab == navigationItem.destination.index,
                                                 onClick = {
                                                     coroutineScope.launch {
                                                         navHostController.navigate(navigationItem.destination.route)
-                                                        selectedTab = navigationItem.destination.index
+                                                        clickedTab = navigationItem.destination.index
                                                     }
                                                 },
                                                 icon = {

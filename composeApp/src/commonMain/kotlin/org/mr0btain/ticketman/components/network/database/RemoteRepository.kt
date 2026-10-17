@@ -6,6 +6,8 @@ import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.util.reflect.*
+import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.handlePlainHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
@@ -15,7 +17,10 @@ import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.error.EmptyResult
+import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
+import org.mr0btain.ticketman.server.NetworkError
 import kotlin.uuid.Uuid
 
 /**
@@ -52,16 +57,18 @@ abstract class RemoteRepository<T: MainItem>(
             field = if (value.isBlank()) "" else "${value.trimEnd('/')}/$route"
         }
 
-    suspend fun add(data: T) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(ADD_TAG) {
-                client.post {
-                    url("$serverUrl/add")
-                    contentType(ContentType.Application.Json)
-                    setBody(data, itemType)
-                }
-            }?.let { response -> handlePlainHttpResponse(ADD_TAG, response) }
+    suspend fun add(data: T): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(ADD_TAG) {
+            client.post {
+                url("$serverUrl/add")
+                contentType(ContentType.Application.Json)
+                setBody(data, itemType)
+            }
         }
+
+        return handleActionHttpResponse(ADD_TAG, response)
     }
 
     // TODO: Setup a way to send images/large data transfers.
@@ -185,12 +192,14 @@ abstract class RemoteRepository<T: MainItem>(
         return emptyList()
     }
 
-    suspend fun remove(identifier: Uuid) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(REMOVE_TAG) {
-                client.delete { url("$serverUrl/remove/$identifier") }
-            }?.let { response -> handlePlainHttpResponse(REMOVE_TAG, response) }
+    suspend fun remove(identifier: Uuid): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(REMOVE_TAG) {
+            client.delete { url("$serverUrl/remove/$identifier") }
         }
+
+        return handleActionHttpResponse(REMOVE_TAG, response)
     }
 
     suspend fun removeNote(identifier: Uuid) {
@@ -228,15 +237,20 @@ abstract class RemoteRepository<T: MainItem>(
         return emptyList()
     }
 
-    suspend fun update(data: T) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(UPDATE_TAG) {
-                client.post {
-                    url("$serverUrl/update")
-                    contentType(ContentType.Application.Json)
-                    setBody(data, itemType)
-                }
-            }?.let { response -> handlePlainHttpResponse(ADD_TAG, response) }
+    suspend fun update(data: T): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(UPDATE_TAG) {
+            client.post {
+                url("$serverUrl/update")
+                contentType(ContentType.Application.Json)
+                setBody(data, itemType)
+            }
         }
+
+        return handleActionHttpResponse(UPDATE_TAG, response)
     }
+
+    protected val noServerError: EmptyResult<ServerError>
+        get() = Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 }

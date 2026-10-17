@@ -1,9 +1,12 @@
 package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.interfaces.DecodedJWT
+import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.RefreshToken
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
@@ -12,37 +15,67 @@ import kotlin.uuid.Uuid
 class UserService(
     private val database: UserDatabaseImpl,
     private val jwtService: JwtService,
-    private val tokenDatabase: TokenDatabase
+    private val tokenDatabase: TokenDatabase,
+    private val auditLog: AuditLogDatabase
 ) {
     fun authenticate(loginRequest: LoginRequest): AuthResponse? {
-        val foundUser = database.getByUsername(loginRequest.username)
+        val foundUser = verifyCredentials(loginRequest)
 
-        // Check if user was found and process request
-        return if (foundUser != null && foundUser.password == loginRequest.password) {
-            val refreshToken = jwtService.createRefreshToken(foundUser.identifier.toString())
-            val accessToken = jwtService.createAccessToken(foundUser.identifier.toString())
+        if (foundUser == null) {
+            auditLog.log(null, AuditAction.LOGIN_FAILED, "user", details = "Failed login", actorName = loginRequest.username)
+            return null
+        }
 
-            // Check if we should update or add new token
-            if (tokenDatabase.findById(foundUser.identifier.toString()) != null) {
-                if (!tokenDatabase.update(RefreshToken(foundUser.identifier.toString(), refreshToken))) {
-                    return null
-                }
-            } else {
-                if (!tokenDatabase.add(RefreshToken(foundUser.identifier.toString(), refreshToken))) return null
+        // New session on every login, so tokens from an older login stop working
+        val sessionId = Uuid.random().toString()
+        val refreshToken = jwtService.createRefreshToken(foundUser.identifier.toString(), sessionId)
+        val accessToken = jwtService.createAccessToken(foundUser.identifier.toString(), sessionId)
+
+        // Check if we should update or add new token
+        if (tokenDatabase.findById(foundUser.identifier.toString()) != null) {
+            if (!tokenDatabase.update(RefreshToken(foundUser.identifier.toString(), refreshToken))) {
+                return null
             }
+        } else {
+            if (!tokenDatabase.add(RefreshToken(foundUser.identifier.toString(), refreshToken))) return null
+        }
 
-            // Respond with tokens
-            AuthResponse(
-                id = foundUser.identifier,
-                accessToken = accessToken,
-                refreshToken = refreshToken
-            )
-        } else null
+        auditLog.log(foundUser.identifier, AuditAction.LOGIN, "user", foundUser.identifier.toString())
+
+        // Respond with tokens
+        return AuthResponse(
+            id = foundUser.identifier,
+            accessToken = accessToken,
+            refreshToken = refreshToken
+        )
     }
 
-    // TODO: Really fix this
-    fun authenticateUser(loginRequest: LoginRequest): User? {
-        return database.getByUsername(loginRequest.username)
+    /**
+     * Checks credentials without starting a session
+     */
+    fun authenticateUser(loginRequest: LoginRequest): User? =
+        verifyCredentials(loginRequest)
+
+    /**
+     * Finds the user and checks their password. Deactivated users (NONE access) can't log in.
+     * Passwords stored before hashing was added get hashed on their first good login.
+     */
+    private fun verifyCredentials(loginRequest: LoginRequest): User? {
+        val foundUser = database.getByUsername(loginRequest.username)
+
+        if (foundUser == null) {
+            PasswordHasher.verifyDummy(loginRequest.password)
+            return null
+        }
+
+        if (!PasswordHasher.verify(loginRequest.password, foundUser.password)) return null
+        if (foundUser.accessLevel == AccessLevel.NONE) return null
+
+        if (!PasswordHasher.isHashed(foundUser.password)) {
+            database.updatePassword(foundUser.identifier, loginRequest.password)
+        }
+
+        return foundUser
     }
 
     fun refreshToken(token: String): String? {
@@ -53,8 +86,15 @@ class UserService(
             val foundUser = database.getById(Uuid.parse(refreshToken.identifier))
             val idFromRefreshToken = decodedRefreshToken.getClaim("identifier").asString()
 
-            if (foundUser != null && idFromRefreshToken == foundUser.identifier.toString())
-                jwtService.createAccessToken(refreshToken.identifier)
+            if (
+                foundUser != null &&
+                foundUser.accessLevel != AccessLevel.NONE &&
+                idFromRefreshToken == foundUser.identifier.toString()
+            )
+                jwtService.createAccessToken(
+                    refreshToken.identifier,
+                    decodedRefreshToken.getClaim(JwtService.SESSION_CLAIM).asString() ?: Uuid.random().toString()
+                )
             else null
         } else null
     }

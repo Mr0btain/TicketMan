@@ -7,14 +7,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.logging.AppLogger
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.name_divider_character
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -57,7 +56,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         get() = Address(street, city, state, zip)
 
     val customer: Customer
-        get() = Customer(identifier, _name.joinToString(Res.string.name_divider_character.toString()), address, email, phone)
+        get() = Customer(identifier, joinName(_name), address, email, phone)
 
     fun changeName(newName: List<String>) {
         if (_name != newName) {
@@ -190,7 +189,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
     override fun markClean() {
         savedState = State(
             identifier,
-            name.joinToString(Res.string.name_divider_character.toString()),
+            joinName(name),
             street,
             city,
             state,

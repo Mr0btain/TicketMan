@@ -4,5 +4,9 @@ enum class AccessLevel(val level: Int) {
     RESTRICTED(0),
     NORMAL(1),
     ADMIN(2),
-    NONE(9)
+    NONE(9);
+
+    /** Whether this level is allowed in somewhere that needs [minimum]. NONE is a deactivated user so it never is */
+    fun meets(minimum: AccessLevel): Boolean =
+        this != NONE && level >= minimum.level
 }

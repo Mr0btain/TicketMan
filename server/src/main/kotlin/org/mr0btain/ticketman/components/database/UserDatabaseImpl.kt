@@ -7,10 +7,16 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserEntity
+import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
+import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
+import org.mr0btain.ticketman.components.service.PasswordHasher
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
@@ -30,6 +36,8 @@ import kotlin.uuid.Uuid
 class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     private val GET_TICKETS_TAG = "$tag:GetTickets"
     private val ADD_TICKET_TAG = "$tag:AddTicket"
+    private val UPDATE_PASSWORD_TAG = "$tag:UpdatePassword"
+    private val COUNT_BY_ACCESS_TAG = "$tag:CountByAccess"
 
     fun getAdmin(): User? {
         var result: User? = null
@@ -79,7 +87,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
         appLogTryCatch(GET_BY_ID_TAG) {
             transaction {
                 UserEntity
-                    .searchQuery(UserTable.username eq username)
+                    .searchQuery(UserTable.username eq username.lowercase())
                     .firstOrNull()?.let { queryResult ->
                         result = User(
                             identifier = queryResult[UserTable.id].value,
@@ -144,7 +152,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                     // Insert into database
                     UserEntity.new(item.identifier) {
                         username = item.username.lowercase()
-                        password = item.password
+                        password = PasswordHasher.hashIfNeeded(item.password)
                         name = item.name.lowercase()
                         email = item.email.lowercase()
                         phone = item.phone
@@ -162,6 +170,12 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
             var result = false
             transaction {
                 UserEntity.findById(identifier)?.let { userEntity ->
+                    // Join rows reference the user, so they have to go first. Tickets stay, they just lose the link
+                    val notes = userEntity.notes.toList()
+                    UserNoteTable.deleteWhere { UserNoteTable.user eq identifier }
+                    UserTicketTable.deleteWhere { UserTicketTable.user eq identifier }
+                    notes.forEach { noteEntity -> deleteNoteEntity(noteEntity) }
+
                     userEntity.delete()
                     result = true
                 } ?: AppLogger.i(REMOVE_TAG, UserError.NOT_FOUND)
@@ -208,7 +222,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                 // Insert into database
                 UserEntity.new(data.identifier) {
                     username = data.username.lowercase()
-                    password = data.password
+                    password = PasswordHasher.hashIfNeeded(data.password)
                     name = data.name.lowercase()
                     email = data.email.lowercase()
                     phone = data.phone
@@ -229,18 +243,60 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                     .findById(data.identifier)
                     ?.apply {
                         username = data.username.lowercase()
-                        password = data.password
+                        // Clients never get the password back, so a blank one means leave it alone
+                        if (data.password.isNotBlank()) password = PasswordHasher.hashIfNeeded(data.password)
                         name = data.name.lowercase()
                         email = data.email.lowercase()
                         phone = data.phone
                         access = data.accessLevel
 
                         result = true
-                    } ?: AppLogger.i(UPDATE_TAG, NoteError.NOT_FOUND)
+                    } ?: AppLogger.i(UPDATE_TAG, UserError.NOT_FOUND)
             }
 
             result
         }
+    }
+
+    /**
+     * Replaces a user's password
+     * @return Whether the user was found
+     */
+    fun updatePassword(identifier: Uuid, newPassword: String): Boolean {
+        var result = false
+
+        appLogTryCatch(UPDATE_PASSWORD_TAG) {
+            transaction {
+                UserEntity.findById(identifier)?.let { userEntity ->
+                    userEntity.password = PasswordHasher.hash(newPassword)
+                    result = true
+                } ?: AppLogger.i(UPDATE_PASSWORD_TAG, UserError.NOT_FOUND)
+            }
+
+            result
+        }
+
+        return result
+    }
+
+    /** Number of users with this access level */
+    fun countByAccessLevel(accessLevel: AccessLevel): Long {
+        var count = 0L
+
+        appLogTryCatch(COUNT_BY_ACCESS_TAG) {
+            transaction {
+                count = UserTable.selectAll().where { UserTable.access eq accessLevel }.count()
+            }
+
+            true
+        }
+
+        return count
+    }
+
+    private fun deleteNoteEntity(noteEntity: NoteEntity) {
+        noteEntity.images.forEach { imageEntity -> imageEntity.delete() }
+        noteEntity.delete()
     }
 
     override fun addNote(identifier: Uuid, note: Note) {

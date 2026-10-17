@@ -25,7 +25,7 @@ Use `./gradlew` (Git Bash) or `.\gradlew.bat` (PowerShell).
 
 There is no lint task configured. Test coverage is minimal (server only). `testApplication` doesn't load `application.yaml`, so server tests use the helpers in `server/src/test/.../TestServer.kt`: `createTestDataDir()`, `configureTestServer(dataDir)` (supplies `env.dataPath` and `jwt.*` via `MapApplicationConfig`), and `cleanupTestDataDir(dataDir)` in `@AfterTest` (shuts H2 down, then deletes the dir). `AuthTest.kt` shows the login → bearer request → refresh flow.
 
-Server config lives in `server/src/main/resources/application.yaml`, overridable by env vars: `PORT`, `SECRET` (JWT secret), `NAME`, `DATA_PATH` (where the H2 DB is created; falls back to the platform `AppDir`). `Application.module()` contains a `generateTestData` flag that seeds the DB with mock tickets/customers/inventory/users.
+Server config lives in `server/src/main/resources/application.yaml`, overridable by env vars: `PORT`, `SECRET` (JWT secret), `NAME`, `DATA_PATH` (where the H2 DB is created; falls back to the platform `AppDir`), `ADMIN_PASSWORD` (password for the `admin` user created on start when no admin exists; a random one is logged if unset). `Application.module()` contains a `generateTestData` flag that seeds the DB via `seedTestData()`; on a server started with `-Pdevelopment` admins can also seed from the admin screen.
 
 ## Modules
 
@@ -45,18 +45,18 @@ Each main entity (Customer, Ticket, Inventory, User) extends `MainItem` (shared)
 1. `shared/.../data/<entity>/` — serializable model
 2. `server/.../database/tables/<entity>/` — Exposed DAO tables/entities (plus `<Entity>NoteTable`, join tables), registered in `LocalDatabase.initDatabase()`'s `SchemaUtils.create(...)`
 3. `server/.../database/<Entity>DatabaseImpl.kt` — extends abstract `Database<T : MainItem>` (CRUD, paging, notes, images, search)
-4. `server/.../routing/<Entity>Route.kt` — mounted under `/api/data/<entity>` (users under `/api/user`, auth under `/api/auth`) in `Routing.kt`
+4. `server/.../routing/<Entity>Route.kt` — mounted under `/api/data/<entity>` (users under `/api/user`, auth under `/api/auth`, admin dashboard under `/api/admin`, shop profile under `/api/shop`) in `Routing.kt`
 5. `composeApp/.../network/database/<Entity>RemoteRepositoryImpl.kt` — extends abstract `RemoteRepository<T>`, whose route paths (`/add`, `/fetch`, `/get`, `/update`, `/remove/{id}`, `/search`, `/get/notes/{id}`, ...) must match the server route
 6. `composeApp/.../data/<entity>/` — client-side `*Cache` and `*Seed` (mock data)
 
 ### Server
-`Application.module()` → `configureDatabase(path)` builds a `LocalDatabase` (H2 file DB at `<path>/server/database/`) exposing one `*DatabaseImpl` per entity plus `TokenDatabase`. `JwtService`/`UserService` handle login and access/refresh tokens. `plugins/Security.kt` registers three JWT auth providers keyed to `AccessLevel`: default (`NORMAL`), `"restricted"`, and `"admin"`; routes wrap handlers in `authenticate { }` / `authenticate("admin") { }`. `routing/Helpers.kt#getIdentifierFromToken()` extracts the calling user's UUID from the JWT. Server-side X25519/Ed25519 encryption lives in `encryption/ServerEncryptionHandler.kt` (the client-side counterpart is currently commented out).
+`Application.module()` → `configureDatabase(path)` builds a `LocalDatabase` (H2 file DB at `<path>/server/database/`) exposing one `*DatabaseImpl` per entity plus `TokenDatabase`. `JwtService`/`UserService` handle login and access/refresh tokens. Passwords are PBKDF2-hashed by `PasswordHasher` inside `UserDatabaseImpl` (legacy plain-text passwords are upgraded on login) and blanked with `User.withoutPassword()` before leaving the server. Tokens carry a `sid` claim; an access token is only valid while its user's stored refresh token has the same `sid`, so revoking a session or logging in again cuts off old tokens. `AccessLevel.meets()` is the access check (`NONE` = deactivated, never passes). Write routes log to `AuditLogDatabase` via `call.audit(...)`. `plugins/Security.kt` registers three JWT auth providers keyed to `AccessLevel`: default (`NORMAL`), `"restricted"`, and `"admin"`; routes wrap handlers in `authenticate { }` / `authenticate("admin") { }`. `routing/Helpers.kt#getIdentifierFromToken()` extracts the calling user's UUID from the JWT. Server-side X25519/Ed25519 encryption lives in `encryption/ServerEncryptionHandler.kt` (the client-side counterpart is currently commented out).
 
 ### Client
 - DI: Koin, started in each platform entry point via `initKoin()` with `viewModelModule` and `dataModule`.
-- `MainViewModel` is the app-lifetime state holder: owns the `RemoteHandler`, per-entity caches and `OffsetPager`s, and settings.
+- `MainViewModel` is the app-lifetime state holder: owns the `RemoteHandler`, per-entity caches and `OffsetPager`s, settings, the logged-in `currentUser`/`isAdmin`, and an `AdminHandler` (`ui/screens/admin/components/`) holding admin screen state.
 - `RemoteHandler` builds a Ktor client (with bearer-token auth/refresh using `LocalStorage`) and holds one remote repository per entity; `setUrl()` verifies the server is reachable and propagates the base URL to every repo. Repositories no-op when `serverUrl` is blank.
-- `LocalStorage` is currently an in-memory stub (hard-coded dev credentials) — not real persistence.
+- `LocalStorage` persists settings/tokens through a `KeyValueStore` (KSafe-backed; `InMemoryKeyValueStore` in tests).
 - UI: `ui/screens/main/expanded/` (desktop/wide layouts, Panel → ListPane + InfoPane per entity) vs `ui/screens/main/mobile/` (only customer started), chosen by window size class. Navigation in `ui/screens/navigation/`.
 - Platform specifics go through `expect`/`actual` (`getHttpEngine`, `IsDebug`, `InitAppDir`, `Pdf`, `VerticalScrollBar`, `AppLogger`).
 

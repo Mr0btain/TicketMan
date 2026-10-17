@@ -6,12 +6,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
-import ticketman.composeapp.generated.resources.Res
-import ticketman.composeapp.generated.resources.name_divider_character
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -36,6 +35,10 @@ class UserSeed: DataSeed("UserSeed") {
     val lastName: String
         get() = _name.last()
 
+    /** Seed as a user, the password is blank unless one was set on a new user */
+    val user: User
+        get() = User(identifier, username, password, joinName(_name), email, phone, accessLevel)
+
     fun changeUsername(new: String) {
         if (username != new) {
             username = new
@@ -51,7 +54,7 @@ class UserSeed: DataSeed("UserSeed") {
     }
 
     fun changeName(new: List<String>) {
-        if (name.isNotEmpty() && name != _name) {
+        if (new.isNotEmpty() && new != _name.toList()) {
             _name.clear()
             _name.addAll(new)
             _changedFields.add(ChangedField.NAME)
@@ -88,7 +91,11 @@ class UserSeed: DataSeed("UserSeed") {
         email = user.email
         phone = user.phone
         accessLevel = user.accessLevel
+        _notes.clear()
         _notes.addAll(notes)
+
+        isNew = false
+        markClean()
     }
 
     override fun clear() {
@@ -107,7 +114,7 @@ class UserSeed: DataSeed("UserSeed") {
     }
 
     override fun markClean() {
-        savedState = State(identifier, username, password, name.joinToString(Res.string.name_divider_character.toString()), email, phone, accessLevel).hashCode()
+        savedState = State(identifier, username, password, joinName(name), email, phone, accessLevel).hashCode()
         _changedFields.clear()
     }
 

@@ -6,7 +6,11 @@ import io.ktor.server.request.*
 import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
+import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SyncRequest
@@ -14,7 +18,8 @@ import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(
-    database: InventoryDatabaseImpl
+    database: InventoryDatabaseImpl,
+    auditLog: AuditLogDatabase
 ) {
     val TAG = "InventoryRoute"
     val GET_TAG = "$TAG:Get"
@@ -22,6 +27,7 @@ fun Route.inventoryRoute(
     val DELETE_TAG = "$TAG:Delete"
     val UPDATE_TAG = "$TAG:Update"
     val SEARCH_TAG = "$TAG:Search"
+    val ENTITY_TYPE = "inventory"
 
     authenticate {
         post("/get") {
@@ -55,9 +61,9 @@ fun Route.inventoryRoute(
 
     authenticate {
         post("/search") {
-            val request = call.receive<String>()
+            val request = call.receive<SearchQuery>()
 
-            val result = database.search(request)
+            val result = database.search(request.query, request.limit)
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
@@ -71,14 +77,22 @@ fun Route.inventoryRoute(
     // Adding new
     authenticate {
         post("/add") {
-            database.add(call.receive())
+            val received = call.receive<Inventory>()
+
+            database.add(received)
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier, received.name)
+            call.respond(HttpStatusCode.Created)
         }
     }
 
     // Update
     authenticate {
         post("/update") {
-            database.update(call.receive())
+            val received = call.receive<Inventory>()
+
+            database.update(received)
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
+            call.respond(HttpStatusCode.Accepted)
         }
     }
 
@@ -93,6 +107,7 @@ fun Route.inventoryRoute(
             }
 
             database.remove(Uuid.parse(identifier))
+            call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
             call.respond(HttpStatusCode.Accepted)
         }
     }
