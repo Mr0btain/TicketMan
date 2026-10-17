@@ -22,6 +22,7 @@ import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.request.StationRegistrationRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
 import org.mr0btain.ticketman.server.response.StationRegistrationResponse
@@ -46,6 +47,7 @@ class AdminRemoteRepository(
     private val GET_SHOP_TAG = "$TAG:GetShop"
     private val UPDATE_SHOP_TAG = "$TAG:UpdateShop"
     private val STATIONS_TAG = "$TAG:Stations"
+    private val DAILY_REPORT_TAG = "$TAG:DailyReport"
 
     private var baseUrl = ""
 
@@ -61,6 +63,10 @@ class AdminRemoteRepository(
 
     suspend fun getStats(lowStockThreshold: Int, recentLimit: Int): AdminStatsResponse? =
         getJson(STATS_TAG, "$adminUrl/stats?lowStock=$lowStockThreshold&recent=$recentLimit")
+
+    /** End of day numbers, for today when [date] (yyyy-mm-dd) is null */
+    suspend fun getDailyReport(date: String?): DailyReport? =
+        getJson(DAILY_REPORT_TAG, "$adminUrl/report/daily" + (date?.let { "?date=$it" } ?: ""))
 
     suspend fun getLowStock(threshold: Int, limit: Int): List<Inventory> =
         getJson(LOW_STOCK_TAG, "$adminUrl/inventory/low-stock?threshold=$threshold&limit=$limit") ?: emptyList()

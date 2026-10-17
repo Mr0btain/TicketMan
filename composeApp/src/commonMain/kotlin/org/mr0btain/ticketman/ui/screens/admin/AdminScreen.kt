@@ -13,6 +13,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.dialog.SimpleConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
@@ -79,6 +80,7 @@ private fun AdminContent(
 
     val isLoading by admin.isLoading.collectAsState()
     val stats by admin.stats.collectAsState()
+    val dailyReport by admin.dailyReport.collectAsState()
     val lowStock by admin.lowStock.collectAsState()
     val lowStockThreshold by admin.lowStockThreshold.collectAsState()
     val sessions by admin.sessions.collectAsState()
@@ -229,6 +231,10 @@ private fun AdminContent(
         when (selectedTab) {
             AdminTab.OVERVIEW -> AdminOverviewTab(
                 stats = stats,
+                dailyReport = dailyReport,
+                defaultPaper = shopProfile?.defaultPaper ?: PaperSize.RECEIPT_80MM,
+                onMoveReport = { admin.moveDailyReport(it) },
+                onPrintReport = { paper, onResult -> admin.printDailyReport(paper, onResult) },
                 onTicketClick = { identifier ->
                     viewModel.setSelectedTicket(identifier)
                     viewModel.changeMainTabIndex(TICKET_TAB)

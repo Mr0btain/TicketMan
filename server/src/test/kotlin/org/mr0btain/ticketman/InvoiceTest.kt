@@ -24,6 +24,8 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.*
 import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.server.response.DailyReport
+import java.time.LocalDate
 import java.time.Year
 import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.test.*
@@ -326,5 +328,44 @@ class InvoiceTest {
         assertEquals(HttpStatusCode.OK, client.get("/api/invoice/ticket/${ticket.identifier}") { bearerAuth(clerkToken) }.status)
         assertEquals(HttpStatusCode.Unauthorized, postJson("/api/invoice/${invoice.identifier}/payments", json.encodeToString(PaymentRequest(PaymentMethod.CASH, 100)), clerkToken).status)
         assertEquals(HttpStatusCode.Unauthorized, postJson("/api/counter/pickup", json.encodeToString(PickupRequest(ticket.identifier)), clerkToken).status)
+    }
+
+    // ------------------------------------------ End of day ------------------------------------------
+
+    @Test
+    fun dailyReportAddsUpTheDay() = testApplication {
+        setup()
+
+        // One picked up with a card deposit and cash at pickup, one still in
+        val done = newTicket()
+        val waiting = newTicket()
+        val invoice = invoiceFor(done)
+        setCharges(invoice, listOf(Charge(type = ChargeType.LABOR, description = "Repair", unitPriceCents = 5_000)))
+        postJson("/api/invoice/${invoice.identifier}/payments", json.encodeToString(PaymentRequest(PaymentMethod.CARD, 2_000)))
+        pickup(done, PaymentRequest(PaymentMethod.CASH, 3_000))
+
+        val response = client.get("/api/admin/report/daily") { bearerAuth(adminToken) }
+        assertEquals(HttpStatusCode.OK, response.status)
+
+        val report = json.decodeFromString<DailyReport>(response.bodyAsText())
+        assertEquals(LocalDate.now().toString(), report.date)
+        assertEquals(mapOf(PaymentMethod.CARD to 2_000L, PaymentMethod.CASH to 3_000L), report.takenByMethod)
+        assertEquals(5_000, report.takenCents)
+        assertEquals(2, report.paymentCount)
+        assertEquals(5_000, report.salesCents)
+        assertEquals(1, report.invoicesPaid)
+        assertEquals(2, report.ticketsCheckedIn)
+        assertEquals(1, report.ticketsPickedUp)
+        assertNotNull(waiting)
+
+        // Another day is empty
+        val yesterday = json.decodeFromString<DailyReport>(
+            client.get("/api/admin/report/daily?date=${LocalDate.now().minusDays(1)}") { bearerAuth(adminToken) }.bodyAsText()
+        )
+        assertEquals(0, yesterday.takenCents)
+        assertEquals(0, yesterday.ticketsCheckedIn)
+
+        assertEquals(HttpStatusCode.BadRequest, client.get("/api/admin/report/daily?date=yesterday") { bearerAuth(adminToken) }.status)
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/api/admin/report/daily") { bearerAuth(token) }.status)
     }
 }

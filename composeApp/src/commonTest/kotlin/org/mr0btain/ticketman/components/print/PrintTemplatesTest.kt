@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.*
+import org.mr0btain.ticketman.server.response.DailyReport
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -79,5 +80,27 @@ class PrintTemplatesTest {
         assertTrue("<polyline" in receipt)
         assertTrue("Thanks &lt;3" in letter)
         assertFalse("Thanks <3" in letter)
+    }
+
+    @Test
+    fun dailyReportListsMoneyByMethodAndTicketCounts() {
+        val report = DailyReport(
+            date = "2026-10-17",
+            takenByMethod = mapOf(PaymentMethod.CARD to 2_000L, PaymentMethod.CASH to 3_000L),
+            paymentCount = 2,
+            salesCents = 5_000,
+            invoicesPaid = 1,
+            ticketsCheckedIn = 2,
+            ticketsPickedUp = 1,
+            overdueNow = 3
+        )
+
+        val rows = PrintTemplates.dailyReport(shop, report).blocks.filterIsInstance<PrintBlock.Amounts>().flatMap { it.rows }
+
+        assertTrue(AmountRow("Card", "$20.00") in rows)
+        assertTrue(AmountRow("Cash", "$30.00") in rows)
+        assertTrue(AmountRow("Total taken (2 payments)", "$50.00", bold = true) in rows)
+        assertTrue(AmountRow("Overdue now", "3") in rows)
+        assertFalse(rows.any { it.label == "Check" }, "Methods with nothing taken are left off")
     }
 }

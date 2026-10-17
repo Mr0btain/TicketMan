@@ -1,6 +1,10 @@
 package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -8,17 +12,24 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
+import org.mr0btain.ticketman.components.database.tables.invoice.InvoicePaymentTable
+import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.invoice.InvoiceStatus
+import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.DailyReport
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.uuid.ExperimentalUuidApi
@@ -32,6 +43,7 @@ class StatsDatabase {
     private val TAG = "StatsDatabase"
     private val GET_STATS_TAG = "$TAG:GetStats"
     private val GET_LOW_STOCK_TAG = "$TAG:GetLowStock"
+    private val DAILY_REPORT_TAG = "$TAG:DailyReport"
 
     /**
      * Builds the admin overview numbers
@@ -92,6 +104,50 @@ class StatsDatabase {
                 )
 
                 Pair(stats, true)
+            }
+        }
+    }
+
+    /**
+     * Money taken and work done on [date], in [zone]. The overdue and waiting counts are as of right now
+     */
+    fun dailyReport(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): DailyReport? {
+        val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
+        val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+        val startOfToday = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
+
+        return appLogTryCatch<DailyReport?>(DAILY_REPORT_TAG) {
+            transaction {
+                val payments = InvoicePaymentTable
+                    .select(InvoicePaymentTable.method, InvoicePaymentTable.amountCents)
+                    .where { (InvoicePaymentTable.receivedAt greaterEq start) and (InvoicePaymentTable.receivedAt less end) }
+                    .map { PaymentMethod.valueOf(it[InvoicePaymentTable.method]) to it[InvoicePaymentTable.amountCents] }
+
+                val paidInvoices = InvoiceTable
+                    .select(InvoiceTable.totalCents, InvoiceTable.taxCents)
+                    .where {
+                        (InvoiceTable.status eq InvoiceStatus.PAID.name) and
+                            (InvoiceTable.paidAt greaterEq start) and (InvoiceTable.paidAt less end)
+                    }
+                    .map { it[InvoiceTable.totalCents] to it[InvoiceTable.taxCents] }
+
+                // Check in time is in the ticket's identifier, the rest are json, so these are sorted out here
+                val tickets = TicketEntity.all().map { it.toTicket() }
+
+                val report = DailyReport(
+                    date = date.toString(),
+                    takenByMethod = payments.groupBy({ it.first }, { it.second }).mapValues { (_, amounts) -> amounts.sum() },
+                    paymentCount = payments.size,
+                    salesCents = paidInvoices.sumOf { it.first },
+                    taxCents = paidInvoices.sumOf { it.second },
+                    invoicesPaid = paidInvoices.size,
+                    ticketsCheckedIn = tickets.count { it.identifier.timestampMillis() in start until end },
+                    ticketsPickedUp = tickets.count { ticket -> ticket.pickedUpAt?.let { it in start until end } == true },
+                    overdueNow = tickets.count { ticket -> ticket.status.status.isOpen && ticket.promisedAt?.let { it < startOfToday } == true },
+                    waitingForPickupNow = tickets.count { it.status.status == TicketStatusType.DONE }
+                )
+
+                Pair(report, true)
             }
         }
     }

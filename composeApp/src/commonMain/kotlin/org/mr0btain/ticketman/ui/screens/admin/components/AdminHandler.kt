@@ -5,12 +5,20 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.datetime.DatePeriod
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.toLocalDateTime
 import org.mr0btain.ticketman.components.data.saveFile
+import org.mr0btain.ticketman.components.print.PrintTemplates
+import org.mr0btain.ticketman.components.print.printDocument
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
@@ -24,6 +32,7 @@ import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
 import kotlin.time.Clock
@@ -51,6 +60,9 @@ class AdminHandler(
 
     private val _stats = MutableStateFlow<AdminStatsResponse?>(null)
     val stats = _stats.asStateFlow()
+
+    private val _dailyReport = MutableStateFlow<DailyReport?>(null)
+    val dailyReport = _dailyReport.asStateFlow()
 
     private val _lowStockThreshold = MutableStateFlow(DEFAULT_LOW_STOCK_THRESHOLD)
     val lowStockThreshold = _lowStockThreshold.asStateFlow()
@@ -88,6 +100,7 @@ class AdminHandler(
 
             loadOverview()
             loadLowStock()
+            _dailyReport.value = admin.getDailyReport(null)
             _pending.value = users.getPending()
             _stations.value = admin.getStations()
             _sessions.value = admin.getSessions()
@@ -101,6 +114,27 @@ class AdminHandler(
 
     fun refreshOverview() {
         scope.launch { loadOverview() }
+    }
+
+    /**
+     * Moves the end of day report [days] from the one showing, nothing past today
+     */
+    fun moveDailyReport(days: Int) {
+        val current = _dailyReport.value?.date?.let { LocalDate.parse(it) } ?: return
+        val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+        val target = current.plus(DatePeriod(days = days)).let { if (it > today) today else it }
+
+        scope.launch { _dailyReport.value = admin.getDailyReport(target.toString()) }
+    }
+
+    /** Prints the end of day report that's showing */
+    fun printDailyReport(paper: PaperSize, onResult: (String?) -> Unit) {
+        val report = _dailyReport.value ?: return
+
+        scope.launch {
+            val shop = _shopProfile.value ?: admin.getShopProfile() ?: ShopProfile()
+            onResult(printDocument(PrintTemplates.dailyReport(shop, report), paper))
+        }
     }
 
     fun setLowStockThreshold(threshold: Int) {
@@ -133,6 +167,7 @@ class AdminHandler(
     /** Clears out everything, used on log out so the next user doesn't see it */
     fun clear() {
         _stats.value = null
+        _dailyReport.value = null
         _pending.value = emptyList()
         _stations.value = emptyList()
         _lowStock.value = emptyList()

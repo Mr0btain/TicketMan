@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SeedRequest
+import java.time.LocalDate
 import kotlin.time.Clock
 
 /**
@@ -52,6 +53,26 @@ fun Route.adminRoute(
                 call.respond(HttpStatusCode.InternalServerError)
                 AppLogger.i(STATS_TAG, "Couldn't build stats")
             }
+        }
+
+        // End of day numbers, ?date=yyyy-mm-dd or today
+        get("/report/daily") {
+            val date = call.queryParameters["date"]?.let {
+                try {
+                    LocalDate.parse(it)
+                } catch (ex: Exception) {
+                    null
+                }
+            }
+
+            if (call.queryParameters["date"] != null && date == null) {
+                call.respond(HttpStatusCode.BadRequest, "Date has to look like 2026-10-17")
+                return@get
+            }
+
+            val report = database.statsDatabase.dailyReport(date ?: LocalDate.now())
+
+            if (report != null) call.respond(HttpStatusCode.OK, report) else call.respond(HttpStatusCode.InternalServerError)
         }
 
         get("/inventory/low-stock") {

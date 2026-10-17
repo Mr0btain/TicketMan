@@ -17,12 +17,18 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.invoice.PaymentMethod
+import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.DailyReport
+import org.mr0btain.ticketman.ui.screens.counter.PrintButton
 import org.mr0btain.ticketman.ui.composables.TablePriorityItem
 import org.mr0btain.ticketman.ui.composables.TableStatusItem
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
@@ -42,6 +48,10 @@ import kotlin.uuid.Uuid
 @Composable
 fun AdminOverviewTab(
     stats: AdminStatsResponse?,
+    dailyReport: DailyReport?,
+    defaultPaper: PaperSize,
+    onMoveReport: (Int) -> Unit,
+    onPrintReport: (PaperSize, (String?) -> Unit) -> Unit,
     onTicketClick: (Uuid) -> Unit,
     onLowStockClick: () -> Unit
 ) {
@@ -93,6 +103,9 @@ fun AdminOverviewTab(
                 caption = "${stats.activeSessions} logged in"
             )
         }
+
+        // ------------------------------------------ End of day ------------------------------------------
+        dailyReport?.let { report -> DailyReportCard(report, defaultPaper, onMoveReport, onPrintReport) }
 
         // ------------------------------------------ Breakdowns ------------------------------------------
         FlowRow {
@@ -247,6 +260,42 @@ private fun TicketRow(
                 priority = ticket.priority,
                 textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
             )
+        }
+    }
+}
+
+@Composable
+private fun DailyReportCard(
+    report: DailyReport,
+    defaultPaper: PaperSize,
+    onMove: (Int) -> Unit,
+    onPrint: (PaperSize, (String?) -> Unit) -> Unit
+) {
+    SectionCard(
+        modifier = Modifier.widthIn(max = 1100.dp),
+        title = "End of Day - ${report.date}",
+        action = {
+            TextButton(onClick = { onMove(-1) }) { Text("< Day before") }
+            TextButton(onClick = { onMove(1) }) { Text("Day after >") }
+            PrintButton(
+                templates = listOf(PrintTemplate.RECEIPT),
+                defaultPaper = defaultPaper,
+                onPrint = { _, paper, onResult -> onPrint(paper, onResult) }
+            )
+        }
+    ) {
+        FlowRow {
+            StatCard(label = "Taken", value = Money.format(report.takenCents), icon = Res.drawable.dollar_sign, caption = "${report.paymentCount} payments")
+
+            PaymentMethod.entries.filter { (report.takenByMethod[it] ?: 0) > 0 }.forEach { method ->
+                StatCard(label = formatEnumName(method.name), value = Money.format(report.takenByMethod[method] ?: 0), icon = Res.drawable.credit_card)
+            }
+
+            StatCard(label = "Sales", value = Money.format(report.salesCents), icon = Res.drawable.file_text, caption = "${report.invoicesPaid} invoices paid")
+            StatCard(label = "Checked In", value = report.ticketsCheckedIn.toString(), icon = Res.drawable.log_in)
+            StatCard(label = "Picked Up", value = report.ticketsPickedUp.toString(), icon = Res.drawable.log_out)
+            StatCard(label = "Waiting Now", value = report.waitingForPickupNow.toString(), icon = Res.drawable.clock)
+            StatCard(label = "Overdue Now", value = report.overdueNow.toString(), icon = Res.drawable.alert_circle, highlight = report.overdueNow > 0)
         }
     }
 }

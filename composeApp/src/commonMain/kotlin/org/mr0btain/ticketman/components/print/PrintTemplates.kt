@@ -6,11 +6,13 @@ import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.time.timestampMillis
+import org.mr0btain.ticketman.server.response.DailyReport
 
 /** What can be printed from the counter */
 enum class PrintTemplate(val label: String) {
@@ -104,6 +106,46 @@ object PrintTemplates {
                 ticket.promisedAt?.let { PrintBlock.Text("Due ${formatDate(it)}", small = true, centered = true) }
             )
         )
+
+    /**
+     * The end of day summary for closing up
+     */
+    fun dailyReport(shop: ShopProfile, report: DailyReport): PrintDocument {
+        val taken = PaymentMethod.entries
+            .filter { (report.takenByMethod[it] ?: 0) > 0 }
+            .map { AmountRow(formatEnumName(it.name), Money.format(report.takenByMethod[it] ?: 0)) }
+
+        val blocks = shopHeader(shop) + listOf(
+            PrintBlock.Divider,
+            PrintBlock.Heading("End of Day"),
+            PrintBlock.Text(report.date, centered = true),
+            PrintBlock.Divider,
+            PrintBlock.Text("Money taken", bold = true),
+            PrintBlock.Amounts(taken.ifEmpty { listOf(AmountRow("Nothing taken", Money.format(0))) }),
+            PrintBlock.Amounts(listOf(AmountRow("Total taken (${report.paymentCount} payments)", Money.format(report.takenCents), bold = true))),
+            PrintBlock.Gap,
+            PrintBlock.Text("Sales", bold = true),
+            PrintBlock.Amounts(
+                listOf(
+                    AmountRow("Invoices paid", report.invoicesPaid.toString()),
+                    AmountRow("Sales", Money.format(report.salesCents)),
+                    AmountRow("Tax in sales", Money.format(report.taxCents))
+                )
+            ),
+            PrintBlock.Gap,
+            PrintBlock.Text("Tickets", bold = true),
+            PrintBlock.Amounts(
+                listOf(
+                    AmountRow("Checked in", report.ticketsCheckedIn.toString()),
+                    AmountRow("Picked up", report.ticketsPickedUp.toString()),
+                    AmountRow("Waiting for pickup now", report.waitingForPickupNow.toString()),
+                    AmountRow("Overdue now", report.overdueNow.toString())
+                )
+            )
+        )
+
+        return PrintDocument("End of day ${report.date}", blocks)
+    }
 
     private fun shopHeader(shop: ShopProfile): List<PrintBlock> {
         val cityLine = listOf(shop.city, shop.state, shop.zip).filter { it.isNotBlank() }.joinToString(" ")
