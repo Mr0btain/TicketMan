@@ -2,22 +2,15 @@ package org.mr0btain.ticketman.ui.screens.admin.overview
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.print.PrintTemplate
+import org.mr0btain.ticketman.components.utils.formatEnumName
+import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.money.Money
@@ -28,23 +21,36 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.DailyReport
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
+import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.data.TmCountBar
+import org.mr0btain.ticketman.ui.kit.data.TmStatTile
+import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
+import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.feedback.label
+import org.mr0btain.ticketman.ui.kit.feedback.tone
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.screens.admin.components.label
 import org.mr0btain.ticketman.ui.screens.counter.PrintButton
-import org.mr0btain.ticketman.ui.composables.TablePriorityItem
-import org.mr0btain.ticketman.ui.composables.TableStatusItem
-import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.components.utils.formatEnumName
-import org.mr0btain.ticketman.ui.composables.SectionCard
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.*
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import ticketman.composeapp.generated.resources.*
 import kotlin.uuid.Uuid
+
+/** Width of a stat tile, they wrap onto new rows */
+private val TILE_WIDTH = 200.dp
+
+/** Width of the breakdown panels */
+private val PANEL_WIDTH = 360.dp
 
 /**
  * Overview numbers for the shop
  * @param onTicketClick Opens a ticket on the main screen
  * @param onLowStockClick Jumps to the low stock tab
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminOverviewTab(
     stats: AdminStatsResponse?,
@@ -55,215 +61,148 @@ fun AdminOverviewTab(
     onTicketClick: (Uuid) -> Unit,
     onLowStockClick: () -> Unit
 ) {
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
+
     if (stats == null) {
-        EmptyMessage("No stats loaded yet. Make sure you're connected and logged in as an admin, then hit Refresh.")
+        TmEmptyState(
+            icon = Res.drawable.bar_chart_2,
+            title = "No numbers yet",
+            message = "Make sure you're connected and logged in as an admin, then refresh."
+        )
         return
     }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(8.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
         // ------------------------------------------ Headline numbers ------------------------------------------
-        FlowRow {
-            StatCard(
-                label = "Open Tickets",
-                value = stats.openTickets.toString(),
-                icon = Res.drawable.tag,
-                caption = "${stats.totalTickets} total"
-            )
-
-            StatCard(
-                label = "New This Week",
-                value = stats.ticketsCreatedLastWeek.toString(),
-                icon = Res.drawable.trending_up,
-                caption = "Tickets in the last 7 days"
-            )
-
-            StatCard(
-                label = "Customers",
-                value = stats.totalCustomers.toString(),
-                icon = Res.drawable.users
-            )
-
-            StatCard(
-                label = "Low Stock",
+        TileRow {
+            TmStatTile(modifier = Modifier.width(TILE_WIDTH), label = "Open tickets", value = stats.openTickets.toString(), icon = Res.drawable.tag, caption = "${stats.totalTickets} total")
+            TmStatTile(modifier = Modifier.width(TILE_WIDTH), label = "New this week", value = stats.ticketsCreatedLastWeek.toString(), icon = Res.drawable.trending_up, caption = "Tickets in the last 7 days")
+            TmStatTile(modifier = Modifier.width(TILE_WIDTH), label = "Customers", value = stats.totalCustomers.toString(), icon = Res.drawable.users)
+            TmStatTile(
+                modifier = Modifier.width(TILE_WIDTH),
+                label = "Low stock",
                 value = stats.lowStockCount.toString(),
                 icon = Res.drawable.alert_triangle,
                 caption = "At or below ${stats.lowStockThreshold} of ${stats.totalInventory} items",
-                highlight = stats.lowStockCount > 0
+                attention = stats.lowStockCount > 0,
+                onClick = onLowStockClick
             )
-
-            StatCard(
-                label = "Users",
-                value = stats.totalUsers.toString(),
-                icon = Res.drawable.user,
-                caption = "${stats.activeSessions} logged in"
-            )
+            TmStatTile(modifier = Modifier.width(TILE_WIDTH), label = "Users", value = stats.totalUsers.toString(), icon = Res.drawable.user, caption = "${stats.activeSessions} logged in")
         }
 
         // ------------------------------------------ End of day ------------------------------------------
         dailyReport?.let { report -> DailyReportCard(report, defaultPaper, onMoveReport, onPrintReport) }
 
         // ------------------------------------------ Breakdowns ------------------------------------------
-        FlowRow {
-            SectionCard(
-                modifier = Modifier.width(360.dp),
-                title = "Tickets by Status"
-            ) {
-                TicketStatusType.entries.forEach { status ->
-                    CountBar(
-                        label = formatEnumName(status.name),
-                        count = stats.ticketsByStatus[status] ?: 0,
-                        total = stats.totalTickets,
-                        color = when (status) {
-                            TicketStatusType.IN_PROGRESS -> CustomMaterialColors.inProgress
-                            TicketStatusType.ON_HOLD -> MaterialTheme.colorScheme.error
-                            TicketStatusType.DONE -> CustomMaterialColors.success
-                            TicketStatusType.PICKED_UP -> MaterialTheme.colorScheme.secondary
-                        }
-                    )
+        TileRow {
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Tickets by status", icon = Res.drawable.pie_chart) {
+                Column {
+                    TicketStatusType.entries.forEach { status ->
+                        TmCountBar(
+                            label = status.label,
+                            count = stats.ticketsByStatus[status] ?: 0,
+                            total = stats.totalTickets,
+                            color = colors.tone(status).color
+                        )
+                    }
                 }
             }
 
-            SectionCard(
-                modifier = Modifier.width(360.dp),
-                title = "Open Tickets by Priority"
-            ) {
-                TicketPriorityType.entries.forEach { priority ->
-                    CountBar(
-                        label = formatEnumName(priority.name),
-                        count = stats.ticketsByPriority[priority] ?: 0,
-                        total = stats.openTickets,
-                        color = when (priority) {
-                            TicketPriorityType.LOW -> MaterialTheme.colorScheme.secondary
-                            TicketPriorityType.NORMAL -> MaterialTheme.colorScheme.primary
-                            else -> MaterialTheme.colorScheme.error
-                        }
-                    )
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Open tickets by priority", icon = Res.drawable.flag) {
+                Column {
+                    TicketPriorityType.entries.forEach { priority ->
+                        TmCountBar(
+                            label = formatEnumName(priority.name),
+                            count = stats.ticketsByPriority[priority] ?: 0,
+                            total = stats.openTickets,
+                            color = colors.tone(priority).color
+                        )
+                    }
                 }
             }
 
-            SectionCard(
-                modifier = Modifier.width(360.dp),
-                title = "Users by Access"
-            ) {
-                listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN).forEach { level ->
-                    CountBar(
-                        label = level.label,
-                        count = stats.usersByAccessLevel[level] ?: 0,
-                        total = stats.totalUsers
-                    )
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Users by access", icon = Res.drawable.shield) {
+                Column {
+                    listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN).forEach { level ->
+                        TmCountBar(label = level.label, count = stats.usersByAccessLevel[level] ?: 0, total = stats.totalUsers, color = colors.tone(level).color)
+                    }
+                    TmCountBar(label = "Pending", count = stats.pendingUsers, total = stats.totalUsers, color = colors.warning.color)
+                    TmCountBar(label = "Deactivated", count = stats.deactivatedUsers, total = stats.totalUsers, color = colors.danger.color)
                 }
-
-                CountBar(
-                    label = "Pending",
-                    count = stats.pendingUsers,
-                    total = stats.totalUsers,
-                    color = CustomMaterialColors.inProgress
-                )
-
-                CountBar(
-                    label = "Deactivated",
-                    count = stats.deactivatedUsers,
-                    total = stats.totalUsers,
-                    color = MaterialTheme.colorScheme.error
-                )
             }
         }
 
         // ------------------------------------------ Tickets ------------------------------------------
-        FlowRow {
-            SectionCard(
-                modifier = Modifier.width(360.dp),
-                title = "Oldest Open Ticket"
-            ) {
+        TileRow {
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Oldest open ticket", icon = Res.drawable.clock) {
                 val oldest = stats.oldestOpenTicket
 
                 if (oldest == null) {
-                    EmptyMessage("No open tickets")
+                    Text(text = "No open tickets", style = TmTheme.typography.body, color = colors.textMuted)
                 } else {
-                    TicketRow(oldest, onClick = { onTicketClick(oldest.identifier) })
+                    OverviewTicketRow(oldest, onClick = { onTicketClick(oldest.identifier) })
 
                     Text(
-                        modifier = Modifier.padding(top = 4.dp),
                         text = "Open for ${formatTimeAgo(oldest.identifier.timestampMillis()).removeSuffix(" ago")}",
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.error
+                        style = TmTheme.typography.body,
+                        color = colors.danger.color
                     )
                 }
 
                 if (stats.lowStockCount > 0) {
-                    Spacer(Modifier.padding(8.dp))
-
-                    TextButton(onClick = onLowStockClick) {
-                        Text("View ${stats.lowStockCount} low stock items")
-                    }
+                    TmButton(text = "Show ${stats.lowStockCount} low stock items", onClick = onLowStockClick, variant = TmButtonVariant.SECONDARY)
                 }
             }
 
-            SectionCard(
-                modifier = Modifier.width(560.dp),
-                title = "Recent Tickets"
-            ) {
+            TmPanel(modifier = Modifier.widthIn(min = 420.dp, max = 640.dp), title = "Recent tickets", icon = Res.drawable.tool) {
                 if (stats.recentTickets.isEmpty()) {
-                    EmptyMessage("No tickets yet")
-                } else {
+                    Text(text = "No tickets yet", style = TmTheme.typography.body, color = colors.textMuted)
+                }
+
+                Column {
                     stats.recentTickets.forEach { ticket ->
-                        TicketRow(ticket, onClick = { onTicketClick(ticket.identifier) })
+                        OverviewTicketRow(ticket, onClick = { onTicketClick(ticket.identifier) })
                     }
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TileRow(content: @Composable () -> Unit) {
+    FlowRow(
+        horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md),
+        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
+    ) { content() }
 }
 
 @Composable
-private fun TicketRow(
+private fun OverviewTicketRow(
     ticket: Ticket,
     onClick: () -> Unit
 ) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 2.dp),
+    TmListRow(
+        title = ticket.device.toString().ifBlank { "Unknown device" },
+        subtitle = formatTimeAgo(ticket.identifier.timestampMillis()),
         onClick = onClick,
-        shape = RoundedCornerShape(6.dp),
-        color = Color.Transparent
-    ) {
-        Row(
-            modifier = Modifier.padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                modifier = Modifier.weight(1f),
-                text = ticket.device.toString().ifBlank { "Unknown device" },
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Text(
-                text = formatTimeAgo(ticket.identifier.timestampMillis()),
-                fontSize = 12.sp
-            )
-
-            TableStatusItem(
-                status = ticket.status,
-                textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
-            )
-
-            TablePriorityItem(
-                priority = ticket.priority,
-                textStyle = TextStyle.Default.copy(fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimary)
-            )
+        trailing = {
+            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
+                StatusBadge(ticket.status.status)
+                PriorityBadge(ticket.priority.priority)
+            }
         }
-    }
+    )
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DailyReportCard(
     report: DailyReport,
@@ -271,12 +210,14 @@ private fun DailyReportCard(
     onMove: (Int) -> Unit,
     onPrint: (PaperSize, (String?) -> Unit) -> Unit
 ) {
-    SectionCard(
-        modifier = Modifier.widthIn(max = 1100.dp),
-        title = "End of Day - ${report.date}",
-        action = {
-            TextButton(onClick = { onMove(-1) }) { Text("< Day before") }
-            TextButton(onClick = { onMove(1) }) { Text("Day after >") }
+    TmPanel(
+        modifier = Modifier.fillMaxWidth(),
+        title = "End of day",
+        subtitle = report.date.toString(),
+        icon = Res.drawable.calendar,
+        actions = {
+            TmIconButton(icon = Res.drawable.chevron_left, contentDescription = "Day before", onClick = { onMove(-1) })
+            TmIconButton(icon = Res.drawable.chevron_right, contentDescription = "Day after", onClick = { onMove(1) })
             PrintButton(
                 templates = listOf(PrintTemplate.RECEIPT),
                 defaultPaper = defaultPaper,
@@ -284,18 +225,25 @@ private fun DailyReportCard(
             )
         }
     ) {
-        FlowRow {
-            StatCard(label = "Taken", value = Money.format(report.takenCents), icon = Res.drawable.dollar_sign, caption = "${report.paymentCount} payments")
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md),
+            verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md),
+            itemVerticalAlignment = Alignment.Top
+        ) {
+            // Tiles share the row so a busy day shrinks them instead of wrapping one onto its own line
+            val tile = Modifier.widthIn(min = 150.dp).weight(1f)
+
+            TmStatTile(modifier = tile, label = "Taken", value = Money.format(report.takenCents), icon = Res.drawable.dollar_sign, caption = "${report.paymentCount} payments")
 
             PaymentMethod.entries.filter { (report.takenByMethod[it] ?: 0) > 0 }.forEach { method ->
-                StatCard(label = formatEnumName(method.name), value = Money.format(report.takenByMethod[method] ?: 0), icon = Res.drawable.credit_card)
+                TmStatTile(modifier = tile, label = formatEnumName(method.name), value = Money.format(report.takenByMethod[method] ?: 0), icon = Res.drawable.credit_card)
             }
 
-            StatCard(label = "Sales", value = Money.format(report.salesCents), icon = Res.drawable.file_text, caption = "${report.invoicesPaid} invoices paid")
-            StatCard(label = "Checked In", value = report.ticketsCheckedIn.toString(), icon = Res.drawable.log_in)
-            StatCard(label = "Picked Up", value = report.ticketsPickedUp.toString(), icon = Res.drawable.log_out)
-            StatCard(label = "Waiting Now", value = report.waitingForPickupNow.toString(), icon = Res.drawable.clock)
-            StatCard(label = "Overdue Now", value = report.overdueNow.toString(), icon = Res.drawable.alert_circle, highlight = report.overdueNow > 0)
+            TmStatTile(modifier = tile, label = "Sales", value = Money.format(report.salesCents), icon = Res.drawable.file_text, caption = "${report.invoicesPaid} invoices paid")
+            TmStatTile(modifier = tile, label = "Checked in", value = report.ticketsCheckedIn.toString(), icon = Res.drawable.log_in)
+            TmStatTile(modifier = tile, label = "Picked up", value = report.ticketsPickedUp.toString(), icon = Res.drawable.log_out)
+            TmStatTile(modifier = tile, label = "Waiting now", value = report.waitingForPickupNow.toString(), icon = Res.drawable.clock)
+            TmStatTile(modifier = tile, label = "Overdue now", value = report.overdueNow.toString(), icon = Res.drawable.alert_circle, attention = report.overdueNow > 0)
         }
     }
 }

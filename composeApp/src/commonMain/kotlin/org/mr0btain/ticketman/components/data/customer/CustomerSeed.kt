@@ -167,6 +167,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         _tickets.addAll(tickets)
 
         markClean() // Mark clean
+        isNew = false
     }
 
     override fun clear() {

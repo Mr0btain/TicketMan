@@ -1,32 +1,54 @@
 package org.mr0btain.ticketman.ui.screens.invoice
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
-import org.mr0btain.ticketman.data.money.Money
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
+import org.mr0btain.ticketman.ui.kit.containers.TmLazyColumn
+import org.mr0btain.ticketman.ui.kit.data.MoneyText
+import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.data.TmColumn
+import org.mr0btain.ticketman.ui.kit.data.TmTableHeader
+import org.mr0btain.ticketman.ui.kit.data.TmTableRow
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.file_text
+import ticketman.composeapp.generated.resources.refresh_cw
 import kotlin.uuid.Uuid
+
+private val COLUMNS = listOf(
+    TmColumn("Invoice", width = 172.dp),
+    TmColumn("Created", weight = 1f),
+    TmColumn("Status", width = 96.dp),
+    TmColumn("Total", width = 104.dp, end = true),
+    TmColumn("Paid", width = 104.dp, end = true),
+    TmColumn("Balance", width = 104.dp, end = true),
+    TmColumn("", width = 72.dp, end = true)
+)
 
 /**
  * Every invoice, newest first. Clicking one opens its ticket at the counter, admins can void them
  * @param onOpenTicket Shows the invoice's ticket on the counter screen
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun InvoiceScreen(
     viewModel: MainViewModel,
@@ -37,6 +59,8 @@ fun InvoiceScreen(
     val endReached by counter.invoicesEndReached.collectAsState()
     val loginState by viewModel.loginState.collectAsState()
     val isAdmin by viewModel.isAdmin.collectAsState()
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
 
     var voiding by remember { mutableStateOf<Invoice?>(null) }
 
@@ -45,85 +69,79 @@ fun InvoiceScreen(
     }
 
     voiding?.let { invoice ->
-        AlertDialog(
-            onDismissRequest = { voiding = null },
-            title = { Text("Void ${invoice.label}?") },
-            text = {
-                Text(
-                    if (invoice.status == InvoiceStatus.PAID) "Its parts go back into stock. The ticket stays picked up and the money isn't refunded automatically."
-                    else "It can't be used again."
-                )
+        TmConfirmDialog(
+            title = "Void ${invoice.label}?",
+            message = if (invoice.status == InvoiceStatus.PAID) "Its parts go back into stock. The ticket stays picked up and the money isn't refunded automatically."
+                else "It can't be used again.",
+            confirmText = "Void invoice",
+            destructive = true,
+            onConfirm = {
+                counter.voidInvoice(invoice)
+                voiding = null
             },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        counter.voidInvoice(invoice)
-                        voiding = null
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) { Text("Void") }
-            },
-            dismissButton = { OutlinedButton(onClick = { voiding = null }) { Text("Cancel") } }
+            onDismissRequest = { voiding = null }
         )
     }
 
-    Surface(
-        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.secondaryContainer
-        else MaterialTheme.colorScheme.background
-    ) {
-        Column(Modifier.fillMaxSize().padding(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(modifier = Modifier.weight(1f), text = "Invoices", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                OutlinedButton(onClick = { counter.loadInvoices(reset = true) }) { Text("Refresh") }
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+        TmPageHeader(
+            title = "Invoices",
+            subtitle = "Newest first, click one to open its ticket at the counter",
+            onBack = null,
+            actions = {
+                TmButton(
+                    text = "Refresh",
+                    onClick = { counter.loadInvoices(reset = true) },
+                    variant = TmButtonVariant.SECONDARY,
+                    leadingIcon = Res.drawable.refresh_cw
+                )
             }
+        )
 
+        TmSurface(Modifier.fillMaxSize()) {
             if (invoices.isEmpty()) {
-                EmptyMessage(if (loginState == LoginState.LOGGED_IN) "No invoices yet" else "Log in to see invoices")
-                return@Column
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    TmEmptyState(
+                        icon = Res.drawable.file_text,
+                        title = if (loginState == LoginState.LOGGED_IN) "No invoices yet" else "Log in to see invoices",
+                        message = if (loginState == LoginState.LOGGED_IN) "Invoices are made when a deposit is taken or a ticket is picked up." else null
+                    )
+                }
+                return@TmSurface
             }
 
-            Row(Modifier.padding(horizontal = 8.dp, vertical = 4.dp)) {
-                listOf("Invoice" to 170, "Created" to 150, "Status" to 90, "Total" to 100, "Paid" to 100, "Balance" to 100)
-                    .forEach { (label, width) -> Text(modifier = Modifier.width(width.dp), text = label, fontWeight = FontWeight.SemiBold) }
-            }
+            Column(Modifier.padding(spacing.sm)) {
+                TmTableHeader(COLUMNS)
 
-            HorizontalDivider()
-
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(invoices, key = { it.identifier }) { invoice ->
-                    Surface(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 1.dp),
-                        onClick = { onOpenTicket(invoice.ticketIdentifier) },
-                        shape = RoundedCornerShape(6.dp),
-                        color = Color.Transparent
-                    ) {
-                        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(modifier = Modifier.width(170.dp), text = invoice.label, fontWeight = FontWeight.SemiBold)
-                            Text(modifier = Modifier.width(150.dp), text = formatDateTime(invoice.createdAt), fontSize = 13.sp)
-                            Text(
-                                modifier = Modifier.width(90.dp),
-                                text = formatEnumName(invoice.status.name),
-                                color = when (invoice.status) {
-                                    InvoiceStatus.PAID -> CustomMaterialColors.success
-                                    InvoiceStatus.VOID -> MaterialTheme.colorScheme.error
-                                    InvoiceStatus.OPEN -> CustomMaterialColors.inProgress
+                TmLazyColumn(Modifier.fillMaxSize()) {
+                    items(invoices, key = { it.identifier }) { invoice ->
+                        TmTableRow(COLUMNS, onClick = { onOpenTicket(invoice.ticketIdentifier) }) { column ->
+                            when (column) {
+                                0 -> TicketIdText(invoice.label)
+                                1 -> Text(formatDateTime(invoice.createdAt), style = TmTheme.typography.body, color = colors.textMuted)
+                                2 -> TmBadge(
+                                    text = formatEnumName(invoice.status.name),
+                                    tone = when (invoice.status) {
+                                        InvoiceStatus.PAID -> colors.success
+                                        InvoiceStatus.VOID -> colors.danger
+                                        InvoiceStatus.OPEN -> colors.warning
+                                    }
+                                )
+                                3 -> MoneyText(invoice.totalCents)
+                                4 -> MoneyText(invoice.paidCents, color = colors.textMuted)
+                                5 -> MoneyText(invoice.balanceCents, color = if (invoice.balanceCents > 0) colors.danger.color else colors.text)
+                                6 -> if (isAdmin && invoice.status != InvoiceStatus.VOID) {
+                                    TmButton(text = "Void", onClick = { voiding = invoice }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                                 }
-                            )
-                            Text(modifier = Modifier.width(100.dp), text = Money.format(invoice.totalCents))
-                            Text(modifier = Modifier.width(100.dp), text = Money.format(invoice.paidCents))
-                            Text(modifier = Modifier.width(100.dp), text = Money.format(invoice.balanceCents))
-
-                            if (isAdmin && invoice.status != InvoiceStatus.VOID) {
-                                TextButton(onClick = { voiding = invoice }) { Text("Void") }
                             }
                         }
                     }
-                }
 
-                item {
-                    Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.Center) {
-                        if (endReached) Text("That's all of them", fontSize = 12.sp)
-                        else OutlinedButton(onClick = { counter.loadInvoices(reset = false) }) { Text("Load More") }
+                    item {
+                        Box(Modifier.fillMaxWidth().padding(spacing.md), contentAlignment = Alignment.Center) {
+                            if (endReached) Text("That's all of them", style = TmTheme.typography.caption, color = colors.textFaint)
+                            else TmButton(text = "Load older invoices", onClick = { counter.loadInvoices(reset = false) }, variant = TmButtonVariant.SECONDARY)
+                        }
                     }
                 }
             }

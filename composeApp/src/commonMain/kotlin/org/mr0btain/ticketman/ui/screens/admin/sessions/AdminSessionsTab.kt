@@ -3,21 +3,27 @@ package org.mr0btain.ticketman.ui.screens.admin.sessions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import org.mr0btain.ticketman.server.response.SessionKind
-import org.mr0btain.ticketman.server.response.SessionResponse
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.ui.composables.SectionCard
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.*
+import org.mr0btain.ticketman.server.response.SessionKind
+import org.mr0btain.ticketman.server.response.SessionResponse
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.feedback.AccessBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.key
+import ticketman.composeapp.generated.resources.lock
+import ticketman.composeapp.generated.resources.monitor
 import kotlin.uuid.Uuid
 
 /**
@@ -32,26 +38,23 @@ fun AdminSessionsTab(
     onRevoke: (SessionResponse) -> Unit
 ) {
     val byUser = sessions.groupBy { it.userIdentifier }
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(8.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
-        SectionCard(
+        TmPanel(
             modifier = Modifier.widthIn(max = 900.dp),
-            title = "Logged In Devices (${sessions.size})"
+            title = "Logged in devices",
+            subtitle = "Each device has its own session, logging one out leaves the user's other devices alone",
+            icon = Res.drawable.monitor
         ) {
-            Text(
-                text = "Each device a user logs in on has its own session. Logging one out doesn't affect their other devices.",
-                fontSize = 13.sp
-            )
-
-            Spacer(Modifier.padding(4.dp))
-
             if (sessions.isEmpty()) {
-                EmptyMessage("Nobody is logged in")
+                TmEmptyState(icon = Res.drawable.lock, title = "Nobody is logged in")
             }
 
             byUser.values.forEach { userSessions ->
@@ -59,58 +62,38 @@ fun AdminSessionsTab(
                 val isSelf = first.userIdentifier == currentUserIdentifier
 
                 Row(
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = first.username + if (isSelf) " (you)" else "",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-
-                    Spacer(Modifier.padding(4.dp))
-
-                    AccessLevelChip(first.accessLevel)
+                    Text(text = first.username + if (isSelf) " (you)" else "", style = TmTheme.typography.subtitle, color = colors.text)
+                    AccessBadge(first.accessLevel)
                 }
 
-                userSessions.forEach { session ->
-                    val isThisDevice = session.sessionId == currentSessionId
+                Column {
+                    userSessions.forEach { session ->
+                        val isThisDevice = session.sessionId == currentSessionId
 
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(start = 12.dp, top = 4.dp, bottom = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(
-                                text = session.deviceName.ifBlank { "Unnamed device" } + if (isThisDevice) " (this device)" else "",
-                                fontSize = 14.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-
-                            Text(
-                                text = listOfNotNull(
-                                    if (session.kind == SessionKind.PIN) "PIN" else "Password",
-                                    session.createdAt?.let { "logged in ${formatTimeAgo(it)}" },
-                                    session.lastUsedAt?.let { "last active ${formatTimeAgo(it)}" },
-                                    session.expiresAt?.let { "expires ${formatDateTime(it)}" }
-                                ).joinToString(" - "),
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        OutlinedButton(
-                            enabled = !isThisDevice,
-                            onClick = { onRevoke(session) }
-                        ) {
-                            Text("Log Out")
-                        }
+                        TmListRow(
+                            title = session.deviceName.ifBlank { "Unnamed device" } + if (isThisDevice) " (this device)" else "",
+                            subtitle = listOfNotNull(
+                                if (session.kind == SessionKind.PIN) "PIN" else "Password",
+                                session.createdAt?.let { "logged in ${formatTimeAgo(it)}" },
+                                session.lastUsedAt?.let { "last active ${formatTimeAgo(it)}" },
+                                session.expiresAt?.let { "expires ${formatDateTime(it)}" }
+                            ).joinToString(", "),
+                            icon = if (session.kind == SessionKind.PIN) Res.drawable.key else Res.drawable.monitor,
+                            trailing = {
+                                TmButton(
+                                    text = "Log out",
+                                    enabled = !isThisDevice,
+                                    variant = TmButtonVariant.SECONDARY,
+                                    size = TmControlSize.SMALL,
+                                    onClick = { onRevoke(session) }
+                                )
+                            }
+                        )
                     }
                 }
-
-                HorizontalDivider(Modifier.padding(top = 4.dp))
             }
         }
     }

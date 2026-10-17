@@ -1,22 +1,24 @@
 package org.mr0btain.ticketman.ui.screens.settings.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
+import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.data.user.PinRules
-import org.mr0btain.ticketman.ui.composables.PinTextField
-import org.mr0btain.ticketman.components.utils.formatDateTime
-import org.mr0btain.ticketman.ui.screens.login.components.PasswordTextField
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
+import org.mr0btain.ticketman.ui.kit.inputs.TmPinField
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 
 /**
  * Changes your own station PIN. Asks for your password so someone at an unlocked screen can't do it
@@ -43,59 +45,46 @@ fun ChangePinDialog(
         else -> null
     }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(10.dp), shadowElevation = 4.dp) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .width(380.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(text = "Change PIN", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+    TmDialog(
+        title = "Change PIN",
+        description = "Used to sign in at counter stations.",
+        onDismissRequest = onDismiss,
+        maxWidth = 420.dp,
+        actions = {
+            TmButtonRow(
+                confirmText = "Save PIN",
+                confirmEnabled = problem == null,
+                loading = saving,
+                onCancel = onDismiss,
+                onConfirm = {
+                    saving = true
+                    serverError = null
+                    onSave(password, pin) { error ->
+                        saving = false
+                        serverError = error
+                        if (error == null) onDismiss()
+                    }
+                }
+            )
+        }
+    ) {
+        TmPasswordField(value = password, onValueChange = { password = it }, label = "Your password")
 
-                PasswordTextField(
-                    modifier = Modifier.padding(top = 8.dp),
-                    text = password,
-                    labelText = "Your Password",
-                    onTextChanged = { password = it }
-                )
-
-                PinTextField(value = pin, label = "New PIN", onValueChange = { pin = it })
-                PinTextField(
+        TmFieldPair(
+            { TmPinField(modifier = it, value = pin, onValueChange = { v -> pin = v }, label = "New PIN") },
+            {
+                TmPinField(
+                    modifier = it,
                     value = confirmPin,
+                    onValueChange = { v -> confirmPin = v },
                     label = "Confirm PIN",
-                    isError = confirmPin.length == PinRules.LENGTH && confirmPin != pin,
-                    onValueChange = { confirmPin = it }
+                    error = if (confirmPin.length == PinRules.LENGTH && confirmPin != pin) "PINs don't match" else null
                 )
-
-                (serverError ?: problem.takeIf { pin.isNotEmpty() })?.let { message ->
-                    Text(
-                        modifier = Modifier.padding(top = 8.dp),
-                        text = message,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-
-                Spacer(Modifier.padding(8.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedButton(onClick = onDismiss) { Text("Cancel") }
-
-                    Button(
-                        enabled = problem == null && !saving,
-                        onClick = {
-                            saving = true
-                            serverError = null
-                            onSave(password, pin) { error ->
-                                saving = false
-                                serverError = error
-                                if (error == null) onDismiss()
-                            }
-                        }
-                    ) { Text("Save") }
-                }
             }
+        )
+
+        (serverError ?: problem.takeIf { pin.isNotEmpty() })?.let { message ->
+            TmNotice(text = message, kind = if (serverError != null) TmNoticeKind.ERROR else TmNoticeKind.WARNING)
         }
     }
 }
@@ -122,80 +111,63 @@ fun StationDialog(
     var registering by remember { mutableStateOf(false) }
     var serverError by remember { mutableStateOf<String?>(null) }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(shape = RoundedCornerShape(10.dp), shadowElevation = 4.dp) {
-            Column(
-                modifier = Modifier
-                    .padding(24.dp)
-                    .width(420.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(text = "Counter Station", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-
-                Text(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 13.sp,
-                    text = when (station?.status) {
-                        null -> "Make this device a station so staff can sign in with their PIN. An admin has to approve it first."
-                        StationStatus.PENDING -> "Registered as \"${station.name}\" and waiting for an admin to approve it."
-                        StationStatus.APPROVED -> "\"${station.name}\" was approved" +
-                            (station.approvedBy?.let { " by $it" } ?: "") +
-                            (station.approvedAt?.let { " on ${formatDateTime(it)}" } ?: "") + ". Staff can PIN in here."
-                    }
-                )
-
-                OutlinedTextField(
-                    modifier = Modifier.fillMaxWidth(),
-                    value = name,
-                    onValueChange = { name = it },
-                    label = { Text("Station Name") },
-                    singleLine = true
-                )
-
-                if (station != null) {
-                    Text(
-                        modifier = Modifier.padding(top = 4.dp),
-                        text = "Registering again needs a new approval.",
-                        fontSize = 12.sp
-                    )
+    TmDialog(
+        title = "Counter station",
+        description = when (station?.status) {
+            null -> "Make this device a station so staff can sign in with their PIN. An admin has to approve it first."
+            StationStatus.PENDING -> "Registered as \"${station.name}\" and waiting for an admin to approve it."
+            StationStatus.APPROVED -> "\"${station.name}\" was approved" +
+                (station.approvedBy?.let { " by $it" } ?: "") +
+                (station.approvedAt?.let { " on ${formatDateTime(it)}" } ?: "") + ". Staff can PIN in here."
+        },
+        onDismissRequest = onDismiss,
+        maxWidth = 460.dp,
+        actions = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                if (station?.status == StationStatus.PENDING) {
+                    TmButton(text = "Check again", onClick = onRefresh, variant = TmButtonVariant.GHOST)
                 }
 
-                // An admin left kiosk mode on this device, let them put it back
-                if (station?.kioskEnabled == true && !kioskActive) {
-                    Text(modifier = Modifier.padding(top = 8.dp), text = "Kiosk mode is on for this station but was left on this device.", fontSize = 13.sp)
-                    Button(onClick = {
-                        onResumeKiosk()
-                        onDismiss()
-                    }) { Text("Go Back to Kiosk Mode") }
-                }
+                Spacer(Modifier.weight(1f))
 
-                serverError?.let {
-                    Text(modifier = Modifier.padding(top = 8.dp), text = it, fontSize = 13.sp, color = MaterialTheme.colorScheme.error)
-                }
-
-                Spacer(Modifier.padding(8.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    OutlinedButton(onClick = onDismiss) { Text("Close") }
-
-                    if (station?.status == StationStatus.PENDING) {
-                        OutlinedButton(onClick = onRefresh) { Text("Check Again") }
-                    }
-
-                    Button(
-                        enabled = name.isNotBlank() && !registering,
-                        onClick = {
-                            registering = true
-                            serverError = null
-                            onRegister(name) { error ->
-                                registering = false
-                                serverError = error
-                            }
+                TmButton(text = "Close", onClick = onDismiss, variant = TmButtonVariant.GHOST)
+                TmButton(
+                    text = if (station == null) "Register station" else "Register again",
+                    enabled = name.isNotBlank(),
+                    loading = registering,
+                    onClick = {
+                        registering = true
+                        serverError = null
+                        onRegister(name) { error ->
+                            registering = false
+                            serverError = error
                         }
-                    ) { Text(if (station == null) "Register" else "Register Again") }
-                }
+                    }
+                )
             }
         }
+    ) {
+        TmTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = name,
+            onValueChange = { name = it },
+            label = "Station name",
+            supportingText = if (station != null) "Registering again needs a new approval." else null
+        )
+
+        // An admin left kiosk mode on this device, let them put it back
+        if (station?.kioskEnabled == true && !kioskActive) {
+            TmNotice(kind = TmNoticeKind.WARNING, text = "Kiosk mode is on for this station but was left on this device.")
+            TmButton(
+                text = "Go back to kiosk mode",
+                variant = TmButtonVariant.SECONDARY,
+                onClick = {
+                    onResumeKiosk()
+                    onDismiss()
+                }
+            )
+        }
+
+        serverError?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
     }
 }

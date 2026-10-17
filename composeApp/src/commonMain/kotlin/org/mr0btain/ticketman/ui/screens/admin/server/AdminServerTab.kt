@@ -5,30 +5,43 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import org.mr0btain.ticketman.components.utils.formatBytes
+import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatDuration
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
-import org.mr0btain.ticketman.ui.composables.DialogTextRow
-import org.mr0btain.ticketman.ui.composables.SimpleTextItem
-import org.mr0btain.ticketman.components.utils.formatDateTime
-import org.mr0btain.ticketman.components.utils.formatDuration
-import org.mr0btain.ticketman.components.utils.formatBytes
-import org.mr0btain.ticketman.ui.composables.SectionCard
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.*
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.database
+import ticketman.composeapp.generated.resources.download
+import ticketman.composeapp.generated.resources.home
+import ticketman.composeapp.generated.resources.server
+import ticketman.composeapp.generated.resources.zap
+
+/** Width of the panels in the left column */
+private val SIDE_WIDTH = 420.dp
 
 /**
  * Server details, the shop profile, backups and dev tools
  * @param isBusy Disables the buttons that kick off long running work
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminServerTab(
     serverInfo: ServerInfoResponse?,
@@ -39,14 +52,18 @@ fun AdminServerTab(
     onBackup: () -> Unit,
     onSeed: (SeedRequest) -> Unit
 ) {
+    val spacing = TmTheme.spacing
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(8.dp)
     ) {
-        FlowRow {
-            Column {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(spacing.md),
+            verticalArrangement = Arrangement.spacedBy(spacing.md)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
                 ServerInfoCard(serverInfo, serverUrl)
 
                 BackupCard(isBusy, onBackup)
@@ -67,37 +84,31 @@ private fun ServerInfoCard(
     serverInfo: ServerInfoResponse?,
     serverUrl: String
 ) {
-    SectionCard(
-        modifier = Modifier.width(420.dp),
-        title = "Server"
-    ) {
-        SimpleTextItem("Address", serverUrl.ifBlank { "-" })
+    TmPanel(modifier = Modifier.width(SIDE_WIDTH), title = "Server", icon = Res.drawable.server) {
+        KeyValueRow(label = "Address", value = serverUrl.ifBlank { "Not set" })
 
         if (serverInfo == null) {
-            EmptyMessage("Couldn't load server info")
-            return@SectionCard
+            TmNotice(text = "Couldn't load server info. Check the connection, then refresh.", kind = TmNoticeKind.ERROR)
+            return@TmPanel
         }
 
-        SimpleTextItem("Name", serverInfo.name)
-        SimpleTextItem("Version", serverInfo.version)
-        SimpleTextItem("Uptime", formatDuration(serverInfo.uptimeMillis))
-        SimpleTextItem("Started", formatDateTime(serverInfo.startedAt))
-        SimpleTextItem("Database size", formatBytes(serverInfo.databaseSizeBytes))
-        SimpleTextItem("Java", serverInfo.javaVersion)
-        SimpleTextItem("OS", serverInfo.operatingSystem)
-        SimpleTextItem("Mode", if (serverInfo.developmentMode) "Development" else "Production")
+        Column {
+            KeyValueRow(label = "Name", value = serverInfo.name)
+            KeyValueRow(label = "Version", value = serverInfo.version, numeric = true)
+            KeyValueRow(label = "Uptime", value = formatDuration(serverInfo.uptimeMillis))
+            KeyValueRow(label = "Started", value = formatDateTime(serverInfo.startedAt))
+            KeyValueRow(label = "Database size", value = formatBytes(serverInfo.databaseSizeBytes))
+            KeyValueRow(label = "Java", value = serverInfo.javaVersion)
+            KeyValueRow(label = "OS", value = serverInfo.operatingSystem)
+            KeyValueRow(label = "Mode", value = if (serverInfo.developmentMode) "Development" else "Production")
+        }
 
-        Spacer(Modifier.padding(4.dp))
-
-        Text(text = "Data folder", fontSize = 12.sp)
-        SelectableText(serverInfo.dataPath)
-    }
-}
-
-@Composable
-private fun SelectableText(text: String) {
-    SelectionContainer {
-        Text(text = text, fontSize = 13.sp)
+        Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
+            Text(text = "Data folder", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+            SelectionContainer {
+                Text(text = serverInfo.dataPath, style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+            }
+        }
     }
 }
 
@@ -106,23 +117,13 @@ private fun BackupCard(
     isBusy: Boolean,
     onBackup: () -> Unit
 ) {
-    SectionCard(
-        modifier = Modifier.width(420.dp),
-        title = "Backup"
+    TmPanel(
+        modifier = Modifier.width(SIDE_WIDTH),
+        title = "Backup",
+        subtitle = "A zip of the whole database. It has customer details in it, so keep it somewhere safe.",
+        icon = Res.drawable.database
     ) {
-        Text(
-            text = "Downloads a zip of the whole database. Keep it somewhere safe, it has customer details in it.",
-            fontSize = 13.sp
-        )
-
-        Spacer(Modifier.padding(8.dp))
-
-        Button(
-            enabled = !isBusy,
-            onClick = onBackup
-        ) {
-            Text("Download Backup")
-        }
+        TmButton(text = "Download backup", enabled = !isBusy, onClick = onBackup, leadingIcon = Res.drawable.download)
     }
 }
 
@@ -141,33 +142,27 @@ private fun SeedCard(
         .takeIf { counts -> counts.all { it != null } }
         ?.let { (t, c, i, u) -> SeedRequest(tickets = t!!, customers = c!!, inventory = i!!, users = u!!) }
 
-    SectionCard(
-        modifier = Modifier.width(420.dp),
-        title = "Mock Data"
+    TmPanel(
+        modifier = Modifier.width(SIDE_WIDTH),
+        title = "Mock data",
+        subtitle = "Development server only. Adds random tickets, customers, inventory and users.",
+        icon = Res.drawable.zap
     ) {
-        Text(
-            text = "Development server only. Adds random tickets, customers, inventory and users.",
-            fontSize = 13.sp
+        TmFieldPair(
+            { CountField("Tickets", tickets, it) { v -> tickets = v } },
+            { CountField("Customers", customers, it) { v -> customers = v } }
+        )
+        TmFieldPair(
+            { CountField("Inventory", inventory, it) { v -> inventory = v } },
+            { CountField("Users", users, it) { v -> users = v } }
         )
 
-        Row {
-            CountField("Tickets", tickets, Modifier.weight(1f)) { tickets = it }
-            CountField("Customers", customers, Modifier.weight(1f)) { customers = it }
-        }
-
-        Row {
-            CountField("Inventory", inventory, Modifier.weight(1f)) { inventory = it }
-            CountField("Users", users, Modifier.weight(1f)) { users = it }
-        }
-
-        Spacer(Modifier.padding(4.dp))
-
-        OutlinedButton(
+        TmButton(
+            text = "Add mock data",
+            variant = TmButtonVariant.SECONDARY,
             enabled = !isBusy && request != null,
             onClick = { request?.let(onSeed) }
-        ) {
-            Text("Add Mock Data")
-        }
+        )
     }
 }
 
@@ -178,12 +173,12 @@ private fun CountField(
     modifier: Modifier,
     onValueChange: (String) -> Unit
 ) {
-    OutlinedTextField(
-        modifier = modifier.padding(4.dp),
+    TmTextField(
+        modifier = modifier,
         value = value,
         onValueChange = { text -> onValueChange(text.filter { it.isDigit() }.take(4)) },
-        label = { Text(label) },
-        singleLine = true,
+        label = label,
+        textStyle = TmTheme.typography.numeric,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
     )
 }
@@ -196,128 +191,97 @@ private fun ShopProfileCard(
     // Edits are kept here until saved, and reset when a new profile comes from the server
     val loaded = shopProfile ?: ShopProfile()
     var profile by remember(loaded) { mutableStateOf(loaded) }
+    // Kept as text while typing so the field can be cleared, saved as a number
+    var repeatDays by remember(loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
+    val spacing = TmTheme.spacing
 
-    SectionCard(
+    TmPanel(
         modifier = Modifier.width(560.dp),
-        title = "Shop Profile",
-        action = {
-            Button(
+        title = "Shop profile",
+        subtitle = "Shown on invoices and anything else customers see",
+        icon = Res.drawable.home,
+        actions = {
+            TmButton(
+                text = "Save profile",
                 enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE,
                 onClick = { onSave(profile) }
-            ) {
-                Text("Save")
-            }
+            )
         }
     ) {
-        Text(
-            text = "Shown on invoices and anything else customers see.",
-            fontSize = 13.sp
-        )
-
         if (shopProfile == null) {
-            EmptyMessage("Couldn't load the shop profile")
-            return@SectionCard
+            TmNotice(text = "Couldn't load the shop profile. Check the connection, then refresh.", kind = TmNoticeKind.ERROR)
+            return@TmPanel
         }
 
-        DialogTextRow(
-            firstLabel = "Shop Name",
-            firstValue = profile.name,
-            onFirstValueChange = { profile = profile.copy(name = it) },
-            secondLabel = "Phone",
-            secondValue = profile.phone,
-            onSecondValueChange = { profile = profile.copy(phone = it) }
+        TmFieldPair(
+            { TmTextField(modifier = it, value = profile.name, onValueChange = { v -> profile = profile.copy(name = v) }, label = "Shop name") },
+            { TmTextField(modifier = it, value = profile.phone, onValueChange = { v -> profile = profile.copy(phone = v) }, label = "Phone") }
         )
-
-        DialogTextRow(
-            firstLabel = "Email",
-            firstValue = profile.email,
-            onFirstValueChange = { profile = profile.copy(email = it) },
-            secondLabel = "Website",
-            secondValue = profile.website,
-            onSecondValueChange = { profile = profile.copy(website = it) }
+        TmFieldPair(
+            { TmTextField(modifier = it, value = profile.email, onValueChange = { v -> profile = profile.copy(email = v) }, label = "Email") },
+            { TmTextField(modifier = it, value = profile.website, onValueChange = { v -> profile = profile.copy(website = v) }, label = "Website") }
         )
-
-        DialogTextRow(
-            firstLabel = "Street",
-            firstValue = profile.street,
-            onFirstValueChange = { profile = profile.copy(street = it) },
-            secondLabel = "City",
-            secondValue = profile.city,
-            onSecondValueChange = { profile = profile.copy(city = it) }
-        )
-
-        DialogTextRow(
-            firstLabel = "State",
-            firstValue = profile.state,
-            onFirstValueChange = { profile = profile.copy(state = it) },
-            secondLabel = "Zip",
-            secondValue = profile.zip,
-            onSecondValueChange = { profile = profile.copy(zip = it) }
-        )
-
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedTextField(
-                modifier = Modifier.width(160.dp),
-                value = profile.taxRate,
-                onValueChange = { text -> profile = profile.copy(taxRate = text.filter { it.isDigit() || it == '.' }.take(6)) },
-                label = { Text("Tax Rate %") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
-            )
-
-            Spacer(Modifier.padding(8.dp))
-
-            // Kept as text while typing so the field can be cleared, saved as a number
-            var repeatDays by remember(loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
-
-            OutlinedTextField(
-                modifier = Modifier.width(220.dp),
-                value = repeatDays,
-                onValueChange = { text ->
-                    repeatDays = text.filter { it.isDigit() }.take(4)
-                    repeatDays.toIntOrNull()?.let { profile = profile.copy(repeatWindowDays = it) }
-                },
-                label = { Text("Repeat Repair Warning (days)") },
-                isError = repeatDays.toIntOrNull() !in REPEAT_WINDOW_RANGE,
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = profile.street, onValueChange = { profile = profile.copy(street = it) }, label = "Street")
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+            TmTextField(modifier = Modifier.weight(2f), value = profile.city, onValueChange = { profile = profile.copy(city = it) }, label = "City")
+            TmTextField(modifier = Modifier.weight(1f), value = profile.state, onValueChange = { profile = profile.copy(state = it) }, label = "State")
+            TmTextField(modifier = Modifier.weight(1f), value = profile.zip, onValueChange = { profile = profile.copy(zip = it) }, label = "Zip")
         }
 
-        OutlinedTextField(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
-            value = profile.invoiceFooter,
-            onValueChange = { profile = profile.copy(invoiceFooter = it) },
-            label = { Text("Invoice Footer") },
-            minLines = 2,
-            maxLines = 4
-        )
-
-        Text(modifier = Modifier.padding(start = 8.dp, top = 4.dp), text = "Default paper for printing", fontSize = 13.sp)
-        Row(modifier = Modifier.padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PaperSize.entries.forEach { paper ->
-                FilterChip(
-                    selected = profile.defaultPaper == paper,
-                    onClick = { profile = profile.copy(defaultPaper = paper) },
-                    label = { Text(paper.label) }
+        TmFieldPair(
+            {
+                TmTextField(
+                    modifier = it,
+                    value = profile.taxRate,
+                    onValueChange = { text -> profile = profile.copy(taxRate = text.filter { c -> c.isDigit() || c == '.' }.take(6)) },
+                    label = "Tax rate",
+                    supportingText = "Percent, like 7.5",
+                    textStyle = TmTheme.typography.numeric,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                )
+            },
+            {
+                TmTextField(
+                    modifier = it,
+                    value = repeatDays,
+                    onValueChange = { text ->
+                        repeatDays = text.filter { c -> c.isDigit() }.take(4)
+                        repeatDays.toIntOrNull()?.let { days -> profile = profile.copy(repeatWindowDays = days) }
+                    },
+                    label = "Repeat repair warning",
+                    supportingText = "Days after pickup a device counts as a repeat",
+                    error = if (repeatDays.toIntOrNull() in REPEAT_WINDOW_RANGE) null else "Use 1 to 3650 days",
+                    textStyle = TmTheme.typography.numeric,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
             }
-        }
+        )
 
-        OutlinedTextField(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp),
+        TmTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = profile.invoiceFooter,
+            onValueChange = { profile = profile.copy(invoiceFooter = it) },
+            label = "Invoice footer",
+            singleLine = false,
+            minLines = 2
+        )
+
+        TmSegmented(
+            label = "Default paper for printing",
+            options = PaperSize.entries,
+            selected = profile.defaultPaper,
+            onSelect = { profile = profile.copy(defaultPaper = it) },
+            optionLabel = { it.label }
+        )
+
+        TmTextField(
+            modifier = Modifier.fillMaxWidth(),
             value = profile.repairTerms,
             onValueChange = { profile = profile.copy(repairTerms = it) },
-            label = { Text("Repair Terms (customers sign these at check in, leave blank to skip signing)") },
-            minLines = 4,
-            maxLines = 10
+            label = "Repair terms",
+            supportingText = "Customers sign these at check in. Leave blank to skip signing.",
+            singleLine = false,
+            minLines = 4
         )
     }
 }

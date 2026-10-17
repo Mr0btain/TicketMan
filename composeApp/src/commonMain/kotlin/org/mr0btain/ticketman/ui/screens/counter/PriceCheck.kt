@@ -1,22 +1,27 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.money.Money
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.composables.SectionCard
+import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.data.MoneyText
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.search.TmSearchField
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.package_icon
+import ticketman.composeapp.generated.resources.tag
 
 /**
  * Look up what a part costs and whether it's in stock
@@ -29,66 +34,59 @@ fun PriceCheck(
 ) {
     var query by remember { mutableStateOf("") }
     val focus = remember { FocusRequester() }
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            OutlinedButton(onClick = onBack) { Text("Back") }
-            Text(text = "Price Check", fontSize = 28.sp, fontWeight = FontWeight.Bold)
-        }
+        TmPageHeader(title = "Price check", onBack = onBack)
 
-        OutlinedTextField(
+        TmSearchField(
             modifier = Modifier
-                .padding(horizontal = 8.dp)
-                .widthIn(max = 600.dp)
+                .widthIn(max = 640.dp)
                 .fillMaxWidth()
                 .focusRequester(focus),
-            value = query,
-            onValueChange = {
+            query = query,
+            onQueryChange = {
                 query = it
                 onSearch(it)
             },
-            label = { Text("Part name or description") },
-            singleLine = true
+            placeholder = "Part name or description",
+            size = TmControlSize.LARGE
         )
 
-        SectionCard(modifier = Modifier.widthIn(max = 800.dp), title = "Parts (${results.size})") {
-            if (results.isEmpty()) EmptyMessage(if (query.isBlank()) "Type to search" else "Nothing matches")
+        if (results.isEmpty()) {
+            TmEmptyState(
+                modifier = Modifier.widthIn(max = 640.dp),
+                icon = Res.drawable.tag,
+                title = if (query.isBlank()) "Type to look up a part" else "No parts match",
+                message = if (query.isBlank()) null else "Check the spelling or try part of the name."
+            )
+            return@Column
+        }
 
-            results.forEach { item ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(text = item.name, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                        if (item.description.isNotBlank()) {
-                            Text(text = item.description, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        TmPanel(modifier = Modifier.widthIn(max = 800.dp), title = "Parts", subtitle = "${results.size} found", icon = Res.drawable.package_icon) {
+            Column {
+                results.forEach { item ->
+                    TmListRow(
+                        title = item.name,
+                        subtitle = item.description.ifBlank { null },
+                        trailing = {
+                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
+                                TmBadge(
+                                    text = stockText(item.stock),
+                                    tone = if (item.stock <= 0) colors.danger else colors.neutral,
+                                    dot = item.stock <= 0
+                                )
+                                MoneyText(item.priceCents, Modifier.widthIn(min = 96.dp), style = TmTheme.typography.numericLarge)
+                            }
                         }
-                    }
-
-                    Text(
-                        modifier = Modifier.width(120.dp),
-                        text = when {
-                            item.stock == Int.MAX_VALUE -> "Not tracked"
-                            item.stock <= 0 -> "Out of stock"
-                            else -> "${item.stock} in stock"
-                        },
-                        fontSize = 13.sp,
-                        color = if (item.stock <= 0) MaterialTheme.colorScheme.error else LocalContentColor.current
                     )
-
-                    Text(text = Money.format(item.priceCents), fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
-
-                HorizontalDivider()
             }
         }
     }

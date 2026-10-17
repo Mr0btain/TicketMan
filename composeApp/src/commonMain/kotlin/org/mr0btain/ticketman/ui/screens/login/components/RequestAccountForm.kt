@@ -1,17 +1,18 @@
 package org.mr0btain.ticketman.ui.screens.login.components
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountRequest
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 
 /** Matches the server's minimum */
 const val MIN_PASSWORD_LENGTH = 8
@@ -46,128 +47,67 @@ fun RequestAccountForm(
         }
 
     Column(
-        modifier = modifier.width(420.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
     ) {
-        Text(
-            text = "Request an Account",
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
-
-        Text(
-            modifier = Modifier.padding(vertical = 8.dp),
-            text = "An admin will look it over. Once approved, log in with this username and password to finish setting up.",
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center
-        )
-
-        OutlinedTextField(
+        TmTextField(
             modifier = Modifier.fillMaxWidth(),
             value = username,
             onValueChange = { username = it.trim().lowercase() },
-            label = { Text("Username") },
-            singleLine = true
+            label = "Username"
         )
 
-        Row {
-            OutlinedTextField(
-                modifier = Modifier.weight(1f).padding(end = 4.dp),
-                value = firstName,
-                onValueChange = { firstName = it },
-                label = { Text("First Name") },
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                modifier = Modifier.weight(1f).padding(start = 4.dp),
-                value = lastName,
-                onValueChange = { lastName = it },
-                label = { Text("Last Name") },
-                singleLine = true
-            )
-        }
-
-        Row {
-            OutlinedTextField(
-                modifier = Modifier.weight(1f).padding(end = 4.dp),
-                value = email,
-                onValueChange = { email = it },
-                label = { Text("Email") },
-                singleLine = true
-            )
-
-            OutlinedTextField(
-                modifier = Modifier.weight(1f).padding(start = 4.dp),
-                value = phone,
-                onValueChange = { phone = it },
-                label = { Text("Phone") },
-                singleLine = true
-            )
-        }
-
-        PasswordTextField(
-            modifier = Modifier.padding(top = 8.dp),
-            text = password,
-            labelText = "Password",
-            validateStrengthPassword = true,
-            onTextChanged = { password = it }
+        TmFieldPair(
+            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
+            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
         )
 
-        PasswordTextField(
-            text = confirmPassword,
-            labelText = "Confirm Password",
-            hasError = confirmPassword.isNotEmpty() && confirmPassword != password,
-            onTextChanged = { confirmPassword = it }
+        TmFieldPair(
+            { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
+            { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") }
+        )
+
+        TmPasswordField(value = password, onValueChange = { password = it }, showStrength = true)
+
+        TmPasswordField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = "Confirm password",
+            error = if (confirmPassword.isNotEmpty() && confirmPassword != password) "Passwords don't match" else null
         )
 
         // Only nag once they've started filling it in
         val shownError = serverError ?: problem.takeIf { username.isNotEmpty() || password.isNotEmpty() }
-
         if (shownError != null) {
-            Text(
-                modifier = Modifier.padding(top = 8.dp),
-                text = shownError,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.error,
-                textAlign = TextAlign.Center
-            )
+            TmNotice(text = shownError, kind = if (serverError != null) TmNoticeKind.ERROR else TmNoticeKind.WARNING)
         }
 
-        Spacer(Modifier.padding(8.dp))
+        TmButtonRow(
+            cancelText = "Back",
+            confirmText = "Send request",
+            confirmEnabled = problem == null,
+            loading = submitting,
+            onCancel = onBack,
+            onConfirm = {
+                submitting = true
+                serverError = null
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            OutlinedButton(onClick = onBack) {
-                Text("Back")
-            }
+                val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
 
-            Button(
-                enabled = problem == null && !submitting,
-                onClick = {
-                    submitting = true
-                    serverError = null
-
-                    val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
-                    onSubmit(
-                        AccountRequest(
-                            username = username,
-                            password = password,
-                            name = joinName(name).lowercase(),
-                            email = email.trim(),
-                            phone = phone.trim()
-                        )
-                    ) { error ->
-                        submitting = false
-                        serverError = error
-                        if (error == null) onBack()
-                    }
+                onSubmit(
+                    AccountRequest(
+                        username = username,
+                        password = password,
+                        name = joinName(name).lowercase(),
+                        email = email.trim(),
+                        phone = phone.trim()
+                    )
+                ) { error ->
+                    submitting = false
+                    serverError = error
+                    if (error == null) onBack()
                 }
-            ) {
-                Text("Send Request")
             }
-        }
+        )
     }
 }

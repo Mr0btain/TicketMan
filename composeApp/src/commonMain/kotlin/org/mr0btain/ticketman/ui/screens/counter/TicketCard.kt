@@ -1,37 +1,56 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatDay
+import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.composables.SectionCard
-import org.mr0btain.ticketman.ui.composables.SimpleTextItem
-import org.mr0btain.ticketman.ui.composables.TablePriorityItem
-import org.mr0btain.ticketman.ui.composables.TableStatusItem
-import org.mr0btain.ticketman.ui.composables.signature.SignatureView
+import org.mr0btain.ticketman.ui.kit.inputs.SignatureView
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.MoneyText
+import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
+import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmDot
+import org.mr0btain.ticketman.ui.kit.feedback.tone
+import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.components.*
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.clock
+import ticketman.composeapp.generated.resources.edit_3
+import ticketman.composeapp.generated.resources.file_text
+import ticketman.composeapp.generated.resources.message_square
+import ticketman.composeapp.generated.resources.smartphone
+import ticketman.composeapp.generated.resources.user
+
+/** Width of the detail panels, they wrap onto new rows on narrow windows */
+private val PANEL_WIDTH = 400.dp
 
 /**
  * Everything about one ticket, with quick status buttons for staff that can make changes
  * @param canEdit Restricted users see the card but none of the buttons that change things
  * @param extraActions Room for buttons added by later screens, like pickup
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TicketCard(
     detail: TicketDetail,
@@ -45,181 +64,178 @@ fun TicketCard(
 ) {
     val ticket = detail.ticket
     var note by remember(ticket.identifier) { mutableStateOf("") }
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
         // ------------------------------------------ Header ------------------------------------------
-        Row(
-            modifier = Modifier.padding(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            OutlinedButton(onClick = onBack) { Text("Back") }
-
-            Spacer(Modifier.padding(8.dp))
-
-            Text(text = ticket.label, fontSize = 34.sp, fontWeight = FontWeight.Bold)
-
-            Spacer(Modifier.padding(8.dp))
-
-            TableStatusItem(
-                status = ticket.status,
-                textStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
-            )
-
-            TablePriorityItem(
-                priority = ticket.priority,
-                textStyle = TextStyle.Default.copy(fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimary)
-            )
-
-            Spacer(Modifier.weight(1f))
-
-            // Anyone can print, restricted users included
-            printAction()
-
-            Spacer(Modifier.padding(8.dp))
-
-            Text(
-                text = "In ${formatTimeAgo(ticket.identifier.timestampMillis()).removeSuffix(" ago")}",
-                fontSize = 14.sp
-            )
-        }
+        TmPageHeader(
+            title = ticket.label,
+            subtitle = "${ticket.device.toString().ifBlank { "Unknown device" }}, " +
+                    "in ${formatTimeAgo(ticket.identifier.timestampMillis()).removeSuffix(" ago")}",
+            onBack = onBack,
+            titleContent = {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
+                    TicketIdText(number = ticket.label, style = TmTheme.typography.numericDisplay)
+                    StatusBadge(ticket.status.status)
+                    PriorityBadge(ticket.priority.priority)
+                    if (ticket.isOverdue) TmBadge(text = "Overdue", tone = colors.danger, solid = true)
+                }
+            },
+            // Anyone can print, restricted users included. Staff who can edit get it beside the other actions
+            actions = { if (!canEdit || ticket.isClosed) printAction() }
+        )
 
         // ------------------------------------------ Quick actions ------------------------------------------
         if (canEdit && !ticket.isClosed) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
+                horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                verticalAlignment = Alignment.Bottom
             ) {
-                TicketStatusType.selectable.forEach { status ->
-                    val current = ticket.status.status == status
+                TmSegmented(
+                    label = "Status",
+                    options = TicketStatusType.selectable,
+                    selected = ticket.status.status,
+                    onSelect = { if (it != ticket.status.status) onStatusChange(it) },
+                    optionLabel = { CounterHandler.statusLabel(it) }
+                )
 
-                    if (current) {
-                        Button(onClick = {}, enabled = false) { Text(CounterHandler.statusLabel(status)) }
-                    } else {
-                        OutlinedButton(onClick = { onStatusChange(status) }) { Text(CounterHandler.statusLabel(status)) }
-                    }
-                }
+                Spacer(Modifier.weight(1f))
 
+                printAction()
                 extraActions()
             }
         } else if (!canEdit) {
-            Text(modifier = Modifier.padding(horizontal = 12.dp), text = "View only", fontSize = 13.sp)
+            TmBadge(text = "View only", tone = colors.neutral)
         }
 
         // ------------------------------------------ Details ------------------------------------------
-        FlowRow {
-            SectionCard(modifier = Modifier.width(420.dp), title = "Device") {
-                Text(text = ticket.device.toString().ifBlank { "Unknown device" }, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                if (ticket.device.serial.isNotBlank()) SimpleTextItem("Serial", ticket.device.serial)
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(spacing.md),
+            verticalArrangement = Arrangement.spacedBy(spacing.md)
+        ) {
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Device", icon = Res.drawable.smartphone) {
+                Text(text = ticket.device.toString().ifBlank { "Unknown device" }, style = TmTheme.typography.subtitle, color = colors.text)
+                if (ticket.device.serial.isNotBlank()) KeyValueRow(label = "Serial", value = ticket.device.serial, numeric = true)
 
-                FieldLabel("Problem")
-                Text(text = ticket.problem.ifBlank { "-" })
+                DetailBlock("Problem", ticket.problem.ifBlank { "Not written down" })
+                if (ticket.condition.isNotBlank()) DetailBlock("Condition", ticket.condition)
+                if (ticket.accessories.isNotBlank()) DetailBlock("Left with it", ticket.accessories)
 
-                if (ticket.condition.isNotBlank()) {
-                    FieldLabel("Condition")
-                    Text(text = ticket.condition)
-                }
+                TmDivider()
 
-                if (ticket.accessories.isNotBlank()) {
-                    FieldLabel("Left with it")
-                    Text(text = ticket.accessories)
-                }
-
-                FieldLabel("Dates")
-                SimpleTextItem("Checked in", formatDateTime(ticket.identifier.timestampMillis()))
-                ticket.promisedAt?.let { promised ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(text = "Promised:", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                        Text(
-                            text = formatDay(promised) + if (ticket.isOverdue) " (overdue)" else "",
-                            fontSize = 16.sp,
-                            color = if (ticket.isOverdue) MaterialTheme.colorScheme.error else Color.Unspecified
-                        )
+                Column {
+                    KeyValueRow(label = "Checked in", value = formatDateTime(ticket.identifier.timestampMillis()))
+                    ticket.promisedAt?.let { promised ->
+                        KeyValueRow(label = "Promised") {
+                            Text(
+                                text = formatDay(promised),
+                                style = TmTheme.typography.body,
+                                color = if (ticket.isOverdue) colors.danger.color else colors.text
+                            )
+                        }
                     }
+                    ticket.pickedUpAt?.let { KeyValueRow(label = "Picked up", value = formatDateTime(it)) }
+                    ticket.estimateCents?.let { KeyValueRow(label = "Estimate") { MoneyText(it) } }
                 }
-                ticket.pickedUpAt?.let { SimpleTextItem("Picked up", formatDateTime(it)) }
-                ticket.estimateCents?.let { SimpleTextItem("Estimate", Money.format(it)) }
             }
 
-            SectionCard(modifier = Modifier.width(360.dp), title = "Customer") {
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Customer", icon = Res.drawable.user) {
                 val customer = detail.customer
 
                 if (customer == null) {
-                    EmptyMessage("No customer on this ticket")
+                    Text(text = "No customer on this ticket", style = TmTheme.typography.body, color = colors.textMuted)
                 } else {
-                    TextButton(onClick = onCustomerClick, contentPadding = PaddingValues(0.dp)) {
-                        Text(text = customer.cleanName(), fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(modifier = Modifier.weight(1f), text = customer.cleanName(), style = TmTheme.typography.subtitle, color = colors.text)
+                        TmButton(text = "Open", onClick = onCustomerClick, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                     }
-                    if (customer.phone.isNotBlank()) SimpleTextItem("Phone", customer.phone)
-                    if (customer.email.isNotBlank()) SimpleTextItem("Email", customer.email)
+                    Column {
+                        if (customer.phone.isNotBlank()) KeyValueRow(label = "Phone", value = customer.phone)
+                        if (customer.email.isNotBlank()) KeyValueRow(label = "Email", value = customer.email)
+                    }
                 }
 
-                FieldLabel("Technician")
-                Text(text = detail.technician?.text?.let { cleanName(it) } ?: "Not assigned")
+                KeyValueRow(label = "Technician", value = detail.technician?.text?.let { cleanName(it) } ?: "Not assigned")
+            }
 
-                FieldLabel("Invoice")
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Invoice", icon = Res.drawable.file_text) {
                 val invoice = detail.invoice
-                if (invoice == null) {
-                    Text(text = "None yet")
-                } else {
-                    SimpleTextItem(invoice.label, invoice.status.name.lowercase().replaceFirstChar { it.titlecase() })
 
-                    invoice.charges.forEach { charge ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(text = "${formatQuantity(charge.quantity)} x ${charge.description}", fontSize = 13.sp)
-                            Text(text = Money.format(charge.totalCents), fontSize = 13.sp)
+                if (invoice == null) {
+                    Text(text = "No invoice yet, one is made at check in or pickup", style = TmTheme.typography.body, color = colors.textMuted)
+                } else {
+                    KeyValueRow(label = invoice.label) {
+                        TmBadge(text = formatEnumName(invoice.status.name), tone = colors.neutral, dot = false)
+                    }
+
+                    Column {
+                        invoice.charges.forEach { charge ->
+                            KeyValueRow(label = "${formatQuantity(charge.quantity)} x ${charge.description}") { MoneyText(charge.totalCents) }
                         }
                     }
 
-                    SimpleTextItem("Total", Money.format(invoice.totalCents))
-                    SimpleTextItem("Paid", Money.format(invoice.paidCents))
-                    SimpleTextItem("Balance", Money.format(invoice.balanceCents))
+                    TmDivider()
+
+                    Column {
+                        KeyValueRow(label = "Total") { MoneyText(invoice.totalCents) }
+                        KeyValueRow(label = "Paid") { MoneyText(invoice.paidCents) }
+                        KeyValueRow(label = "Balance") { MoneyText(invoice.balanceCents, style = TmTheme.typography.numericLarge) }
+                    }
                 }
             }
-        }
 
-        // ------------------------------------------ History and notes ------------------------------------------
-        FlowRow {
-            SectionCard(modifier = Modifier.width(420.dp), title = "Notes (${detail.notes.size})") {
+            // ------------------------------------------ Notes, signature, history ------------------------------------------
+            TmPanel(
+                modifier = Modifier.width(PANEL_WIDTH),
+                title = "Notes",
+                subtitle = if (detail.notes.isEmpty()) "None yet" else "${detail.notes.size} notes",
+                icon = Res.drawable.message_square
+            ) {
                 if (canEdit && !ticket.isClosed) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.Bottom) {
+                        TmTextField(
                             modifier = Modifier.weight(1f),
                             value = note,
                             onValueChange = { note = it },
-                            label = { Text("Add a note") },
-                            maxLines = 3
+                            placeholder = "Add a note",
+                            singleLine = false
                         )
 
-                        Spacer(Modifier.padding(4.dp))
-
-                        Button(
+                        TmButton(
+                            text = "Add",
                             enabled = note.isNotBlank(),
+                            variant = TmButtonVariant.SECONDARY,
                             onClick = {
                                 onAddNote(note)
                                 note = ""
                             }
-                        ) { Text("Add") }
+                        )
                     }
                 }
 
-                if (detail.notes.isEmpty()) EmptyMessage("No notes")
-
-                detail.notes.reversed().forEach { entry ->
-                    Column(Modifier.padding(vertical = 4.dp)) {
-                        Text(text = entry.author.ifBlank { "Unknown" }, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                        Text(text = entry.message, fontSize = 14.sp)
+                Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    detail.notes.reversed().forEach { entry ->
+                        Column {
+                            Text(text = entry.author.ifBlank { "Unknown" }, style = TmTheme.typography.caption, color = colors.textMuted)
+                            Text(text = entry.message, style = TmTheme.typography.body, color = colors.text)
+                        }
                     }
-                    HorizontalDivider()
                 }
             }
 
             detail.signature?.let { signature ->
-                SectionCard(modifier = Modifier.width(420.dp), title = "Signature") {
+                TmPanel(
+                    modifier = Modifier.width(PANEL_WIDTH),
+                    title = "Signature",
+                    subtitle = "${signature.signedName}, ${formatDateTime(signature.signedAt)}",
+                    icon = Res.drawable.edit_3
+                ) {
                     SignatureView(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -227,24 +243,35 @@ fun TicketCard(
                         strokes = signature.strokes
                     )
 
-                    Text(text = "${signature.signedName}, ${formatDateTime(signature.signedAt)}", fontSize = 13.sp)
-                    Text(text = "Taken by ${signature.takenBy}", fontSize = 12.sp)
+                    Text(text = "Taken by ${signature.takenBy}", style = TmTheme.typography.caption, color = colors.textMuted)
                 }
             }
 
-            SectionCard(modifier = Modifier.width(360.dp), title = "History") {
-                if (detail.history.isEmpty()) EmptyMessage("No status changes recorded")
+            TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "History", icon = Res.drawable.clock) {
+                if (detail.history.isEmpty()) {
+                    Text(text = "No status changes recorded", style = TmTheme.typography.body, color = colors.textMuted)
+                }
 
-                detail.history.reversed().forEach { change ->
-                    Row(
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(text = CounterHandler.statusLabel(change.status), fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                        Text(text = "${change.changedBy} - ${formatDateTime(change.time)}", fontSize = 12.sp)
+                Column {
+                    detail.history.reversed().forEach { change ->
+                        KeyValueRow(label = "${change.changedBy}, ${formatDateTime(change.time)}") {
+                            Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                                TmDot(colors.tone(change.status).color)
+                                Text(text = CounterHandler.statusLabel(change.status), style = TmTheme.typography.label, color = colors.text)
+                            }
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+/** A label with a paragraph under it, for longer ticket fields */
+@Composable
+private fun DetailBlock(label: String, text: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
+        Text(text = label, style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+        Text(text = text, style = TmTheme.typography.body, color = TmTheme.colors.text)
     }
 }

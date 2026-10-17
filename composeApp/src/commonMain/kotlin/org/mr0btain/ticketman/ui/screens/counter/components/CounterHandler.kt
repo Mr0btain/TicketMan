@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.ui.screens.counter.components
 
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
+import org.mr0btain.ticketman.ui.kit.feedback.label
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -527,11 +528,6 @@ class CounterHandler(
         private const val INVOICE_PAGE_SIZE = 50
 
         /** DONE reads better as "Ready for pickup" at the counter */
-        fun statusLabel(status: TicketStatusType): String = when (status) {
-            TicketStatusType.IN_PROGRESS -> "In progress"
-            TicketStatusType.ON_HOLD -> "On hold"
-            TicketStatusType.DONE -> "Ready for pickup"
-            TicketStatusType.PICKED_UP -> "Picked up"
-        }
+        fun statusLabel(status: TicketStatusType): String = status.label
     }
 }

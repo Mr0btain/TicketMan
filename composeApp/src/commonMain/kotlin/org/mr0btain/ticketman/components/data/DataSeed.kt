@@ -93,6 +93,11 @@ abstract class DataSeed(tag: String) {
     fun getNote(identifier: Uuid): Note? =
         _notes.firstOrNull { it.identifier == identifier }
 
+    /** Adds [note], or replaces the one with the same identifier if it's already here */
+    fun saveNote(note: Note) {
+        if (getNote(note.identifier) != null) updateNote(note) else addNote(note)
+    }
+
     /**
     Essentially just replaces the old note with this one.
      */

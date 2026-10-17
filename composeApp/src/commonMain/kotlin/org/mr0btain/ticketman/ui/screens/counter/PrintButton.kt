@@ -1,13 +1,18 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.data.shop.PaperSize
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.printer
 
 /**
  * Print button that asks which slip and which paper, starting on the shop's default paper
@@ -19,11 +24,18 @@ fun PrintButton(
     label: String = "Print",
     templates: List<PrintTemplate>,
     defaultPaper: PaperSize,
+    size: TmControlSize = TmControlSize.MEDIUM,
     onPrint: (PrintTemplate, PaperSize, (String?) -> Unit) -> Unit
 ) {
     var open by remember { mutableStateOf(false) }
 
-    OutlinedButton(onClick = { open = true }) { Text(label) }
+    TmButton(
+        text = label,
+        onClick = { open = true },
+        variant = TmButtonVariant.SECONDARY,
+        size = size,
+        leadingIcon = Res.drawable.printer
+    )
 
     if (!open) return
 
@@ -32,34 +44,15 @@ fun PrintButton(
     var printing by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    AlertDialog(
+    TmDialog(
+        title = "Print",
         onDismissRequest = { open = false },
-        title = { Text("Print") },
-        text = {
-            Column {
-                if (templates.size > 1) {
-                    Text("What to print")
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        templates.forEach { each ->
-                            FilterChip(selected = template == each, onClick = { template = each }, label = { Text(each.label) })
-                        }
-                    }
-                }
-
-                Text(modifier = Modifier.padding(top = 8.dp), text = "Paper")
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    PaperSize.entries.forEach { each ->
-                        FilterChip(selected = paper == each, onClick = { paper = each }, label = { Text(each.label) })
-                    }
-                }
-
-                error?.let { Text(modifier = Modifier.padding(top = 8.dp), text = it, color = MaterialTheme.colorScheme.error, fontSize = 13.sp) }
-            }
-        },
-        confirmButton = {
-            Button(
-                enabled = !printing,
-                onClick = {
+        actions = {
+            TmButtonRow(
+                confirmText = "Print ${template.label.lowercase()}",
+                loading = printing,
+                onCancel = { open = false },
+                onConfirm = {
                     printing = true
                     error = null
                     onPrint(template, paper) { problem ->
@@ -68,8 +61,27 @@ fun PrintButton(
                         if (problem == null) open = false
                     }
                 }
-            ) { Text("Print") }
-        },
-        dismissButton = { OutlinedButton(onClick = { open = false }) { Text("Cancel") } }
-    )
+            )
+        }
+    ) {
+        if (templates.size > 1) {
+            TmSegmented(
+                label = "What to print",
+                options = templates,
+                selected = template,
+                onSelect = { template = it },
+                optionLabel = { it.label }
+            )
+        }
+
+        TmSegmented(
+            label = "Paper",
+            options = PaperSize.entries,
+            selected = paper,
+            onSelect = { paper = it },
+            optionLabel = { it.label }
+        )
+
+        error?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
+    }
 }

@@ -1,363 +1,160 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.ui.composables.ConfirmCancelButtons
-import org.mr0btain.ticketman.ui.composables.CustomSurface
-import org.mr0btain.ticketman.ui.composables.DialogTextRow
-import org.mr0btain.ticketman.ui.composables.note.NoteBlock
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import org.mr0btain.ticketman.ui.composables.shared.AddItemLabel
-import org.mr0btain.ticketman.ui.composables.shared.ChipList
-import org.mr0btain.ticketman.ui.composables.shared.ChipPhoneList
-import org.mr0btain.ticketman.ui.composables.shared.ChipTicketList
-import org.mr0btain.ticketman.ui.dialog.AddBasicSubItemDialog
+import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
+import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.plus
+import ticketman.composeapp.generated.resources.x
 import kotlin.uuid.Uuid
 
 // TODO: Add ability to assign already existing tickets to customer.
+/**
+ * Adds or edits a customer. Most changes go straight onto [seed], the name is applied when saved
+ * @param onContinue Saves the seed
+ */
 @Composable
 fun CustomerDialog(
-    modifier: Modifier = Modifier,
     seed: CustomerSeed,
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
     onImageClick: (Uuid) -> Unit
 ) {
-    val TAG = "CustomerDialog"
+    if (!isVisible) return
 
-    if (isVisible) {
-        // For deleting item dialog
-        var showConfirmDeleteScreen by remember { mutableStateOf(false) }
+    var ticketToRemove by remember { mutableStateOf<Uuid?>(null) }
+    var showNoteDialog by remember { mutableStateOf(false) }
+    val noteSeed = remember { NoteSeed() }
 
-        // TODO: Could combine this with adding an item, and have one when statement
-        var dataType by remember { mutableStateOf(DataType.NONE) }
+    var firstName by remember { mutableStateOf(seed.firstName) }
+    var lastName by remember { mutableStateOf(seed.lastName) }
+    val spacing = TmTheme.spacing
 
-        // Might be a better way of doing this, for now just send it like this
-        var itemToDelete by remember { mutableStateOf("") }
+    EditNoteDialog(
+        seed = noteSeed,
+        label = if (noteSeed.message.isBlank()) "Add note" else "Edit note",
+        isVisible = showNoteDialog,
+        onConfirm = { seed.saveNote(noteSeed.note) },
+        onDismissRequest = {
+            noteSeed.clear()
+            showNoteDialog = false
+        }
+    )
 
-        // For adding a basic sub item
-        var itemToAdd by remember { mutableStateOf(DataType.NONE) }
-        var showAddBasicSubItemDialog by remember { mutableStateOf(false) }
+    ConfirmDeleteDialog(
+        dataType = DataType.TICKET,
+        isVisible = ticketToRemove != null,
+        onConfirm = {
+            ticketToRemove?.let { seed.deleteTicket(it) }
+            ticketToRemove = null
+        },
+        onCancel = { ticketToRemove = null }
+    )
 
-        // For adding note dialog
-        var showNoteDialog by remember { mutableStateOf(false) }
-        val noteSeed = remember { NoteSeed() }
+    TmDialog(
+        title = if (seed.isNew) "New customer" else "Edit ${seed.name.joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }.trim()}",
+        onDismissRequest = onDismiss,
+        maxWidth = 640.dp,
+        dismissOnOutsideClick = false,
+        actions = {
+            TmButtonRow(
+                confirmText = if (seed.isNew) "Add customer" else "Save customer",
+                confirmEnabled = firstName.isNotBlank(),
+                onCancel = onDismiss,
+                onConfirm = {
+                    // Name is only applied on save so a half typed name doesn't flicker into the list
+                    if (firstName != seed.firstName || lastName != seed.lastName) {
+                        seed.changeName(listOf(firstName, lastName))
+                    }
 
-        var firstName by remember { mutableStateOf(seed.firstName) }
-        var lastName by remember { mutableStateOf(seed.lastName) }
-
-        // Add Note dialog
-        EditNoteDialog(
-            seed = noteSeed,
-            onConfirm = {
-                /*
-                scope.launch {
-                    val foundNote = notes.firstOrNull { it.note.identifier == result.note.identifier }
-
-                    // Check if note exists, if so remove old data
-                    if (foundNote != null) notes.remove(foundNote)
-
-                    // Insert new note
-                    notes.add(result)
-
-                    noteSeedData = null
-
-                    showNoteDialog = false
+                    onContinue()
+                    onDismiss()
                 }
-                 */
-            },
-            isVisible = showNoteDialog,
-            onDismissRequest = {
-                showNoteDialog = false
-            }
+            )
+        }
+    ) {
+        TmSectionLabel("Name")
+        TmFieldPair(
+            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
+            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
         )
 
-        // Add basic item dialog
-        // TODO: Redo this
-        AddBasicSubItemDialog(
-            subItemType = itemToAdd,
-            isVisible = showAddBasicSubItemDialog,
-            onConfirm = { item ->
-                if (item.isNotBlank()) {
-                    when (itemToAdd) {
-                        DataType.EMAIL -> {
-                            // Add item to list
-                            seed.changeEmail(item)
-                        }
-                        DataType.PHONE -> {
-                            // Add item to list
-                            seed.changePhone(item)
-                        }
-                        else -> {}
-                    }
-                }
-            },
-            onDismissRequest = {
-                showAddBasicSubItemDialog = false
-                itemToAdd = DataType.NONE
-            }
+        TmSectionLabel("Contact")
+        TmFieldPair(
+            { TmTextField(modifier = it, value = seed.phone, onValueChange = { v -> seed.changePhone(v) }, label = "Phone") },
+            { TmTextField(modifier = it, value = seed.email, onValueChange = { v -> seed.changeEmail(v) }, label = "Email") }
         )
 
-        // Delete item dialog
-        ConfirmDeleteDialog(
-            dataType = dataType,
-            isVisible = showConfirmDeleteScreen && dataType != DataType.NONE,
-            onConfirm = {
-                try {
-                    when (dataType) {
-                        DataType.TICKET -> seed.deleteTicket(Uuid.parse(itemToDelete))
-                        DataType.EMAIL -> seed.changeEmail("")
-                        DataType.PHONE -> seed.changePhone("")
-                        DataType.NOTE -> seed.deleteNote(Uuid.parse(itemToDelete))
-                        else -> {} // Do Nothing
-                    }
-                } catch (ex: Exception) {
-                    AppLogger.i(TAG, "Error removing item! : $itemToDelete")
-                    ex.printStackTrace()
-                }
+        TmSectionLabel("Address")
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = seed.street, onValueChange = { seed.changeStreet(it) }, label = "Street")
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+            TmTextField(modifier = Modifier.weight(2f), value = seed.city, onValueChange = { seed.changeCity(it) }, label = "City")
+            TmTextField(modifier = Modifier.weight(1f), value = seed.state, onValueChange = { seed.changeState(it) }, label = "State")
+            TmTextField(modifier = Modifier.weight(1f), value = seed.zip, onValueChange = { seed.changeZip(it) }, label = "Zip")
+        }
 
-                dataType = DataType.NONE
-                itemToDelete = ""
-                showConfirmDeleteScreen = false
-            },
-            onCancel = {
-                dataType = DataType.NONE
-                showConfirmDeleteScreen = false
-            }
-        )
-
-        Dialog(
-            onDismissRequest = { onDismiss() }
-        ) {
-            CustomSurface(
-                modifier = modifier
-                    .height(600.dp)
-                    .width(600.dp)
-            ) {
-                Column(
-                    modifier = Modifier.padding(32.dp)
-                ) {
-                    // -------------------------------------------- Header ----------------------------------------------------
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            modifier = Modifier.padding(4.dp),
-                            text = if (seed.name.isEmpty()) {
-                                "Add Customer"
-                            } else "Edit Customer: ${seed.name}",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 26.sp,
-                            maxLines = 1
-                        )
-                    }
-
-                    HorizontalDivider()
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    // -------------------------------------------- Content ----------------------------------------------------
-                    PlatformLazyColumn(
-                        modifier = Modifier
-                            .width(500.dp)
-                            .height(400.dp),
-                        isVisible = true
-                    ) {
-                        item {
-                            // ------------------------- Name -------------------------------
-                            Text(
-                                text = "Name",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 18.sp
+        if (seed.tickets.isNotEmpty()) {
+            TmSectionLabel("Tickets")
+            Column {
+                seed.tickets.forEach { ticket ->
+                    TmListRow(
+                        title = ticket.device.toString().ifBlank { "Unknown device" },
+                        leading = { TicketIdText(ticket.label, Modifier.width(104.dp)) },
+                        trailing = {
+                            TmIconButton(
+                                icon = Res.drawable.x,
+                                contentDescription = "Remove ticket from customer",
+                                onClick = { ticketToRemove = ticket.identifier },
+                                size = TmControlSize.SMALL
                             )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            DialogTextRow(
-                                modifier = Modifier,
-                                firstLabel = "First",
-                                firstValue = seed.firstName,
-                                onFirstValueChange = { firstName = it },
-                                secondLabel = "Last",
-                                secondValue = seed.lastName,
-                                onSecondValueChange = { lastName = it }
-                            )
-
-                            Spacer(Modifier.padding(8.dp))
-
-                            // ------------------------- Address -------------------------------
-                            Text(
-                                text = "Address",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 18.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            Column(
-                                verticalArrangement = Arrangement.SpaceBetween,
-                                horizontalAlignment = Alignment.CenterHorizontally
-                            ) {
-                                DialogTextRow(
-                                    modifier = Modifier,
-                                    firstLabel = "Street",
-                                    firstValue = seed.street,
-                                    onFirstValueChange = { seed.changeStreet(it) },
-                                    secondLabel = "City",
-                                    secondValue = seed.city,
-                                    onSecondValueChange = { seed.changeCity(it) }
-                                )
-
-                                DialogTextRow(
-                                    modifier = Modifier,
-                                    firstLabel = "State",
-                                    firstValue = seed.state,
-                                    onFirstValueChange = { seed.changeState(it) },
-                                    secondLabel = "Zip",
-                                    secondValue = seed.zip,
-                                    onSecondValueChange = { seed.changeZip(it) }
-                                )
-                            }
-
-                            Spacer(Modifier.padding(8.dp))
-
-                            // ------------------------- ContactInfo -------------------------------
-                            Text(
-                                text = "Contact Info",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 18.sp
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            AddItemLabel("Email") {
-                                itemToAdd = DataType.EMAIL
-                                showAddBasicSubItemDialog = true
-                            }
-
-                            // Email list
-                            ChipList(
-                                modifier = Modifier,
-                                items = listOf(seed.email),
-                                onEditClick = {
-                                    // TODO: Finish this
-                                },
-                                onDeleteClick = { item ->
-                                    // Set data type so we know what were looking to delete
-                                    dataType = DataType.EMAIL
-
-                                    // Set item data so we know which item to delete
-                                    itemToDelete = item
-
-                                    // Popup dialog
-                                    showConfirmDeleteScreen = true
-                                }
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            AddItemLabel("Phone") {
-                                itemToAdd = DataType.PHONE
-                                showAddBasicSubItemDialog = true
-                            }
-
-                            // Phone List
-                            ChipPhoneList(
-                                modifier = Modifier,
-                                items = listOf(seed.phone),
-                                onEditClick = {},
-                                onDeleteClick = { item ->
-                                    // Set data type so we know what were looking to delete
-                                    dataType = DataType.PHONE
-
-                                    // Set item data so we know which item to delete
-                                    itemToDelete = item
-
-                                    // Popup dialog
-                                    showConfirmDeleteScreen = true
-                                }
-                            )
-
-                            AddItemLabel("Tickets") {
-                                // TODO
-                            }
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            // ------------------------- Ticket list -------------------------------
-                            ChipTicketList(
-                                tickets = seed.tickets.map { it.identifier },
-                                onDeleteClick = { item ->
-                                    // Set data type so we know what were looking to delete
-                                    dataType = DataType.TICKET
-
-                                    // Set item data so we know which item to delete
-                                    itemToDelete = item.toString()
-
-                                    // Popup dialog
-                                    showConfirmDeleteScreen = true
-                                },
-                                onTicketClick = {
-                                    // TODO
-                                }
-                            )
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            // ------------------------- Notes -------------------------------
-                            AddItemLabel("Notes") {
-                                noteSeed.clear()
-                                showNoteDialog = true
-                            }
-
-                            Spacer(Modifier.padding(4.dp))
-
-                            NoteBlock(
-                                notes = seed.notes,
-                                editable = true,
-                                onImageClick = onImageClick,
-                                onEditClick = { note ->
-                                    noteSeed.setNote(note)
-                                    showNoteDialog = true
-                                }
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.padding(8.dp))
-
-                    // -------------------------------------------- Confirm Cancel buttons ----------------------------------------------------
-                    ConfirmCancelButtons(
-                        modifier = Modifier.fillMaxWidth(),
-                        onCancelClick = { onDismiss() },
-                        onConfirmClick = {
-                            // Update first and last names if they've changed
-                            if (firstName != seed.firstName || lastName != seed.lastName) {
-                                   seed.changeName(listOf(firstName, lastName))
-                            }
-
-                            onContinue()
-                            onDismiss()
                         }
                     )
                 }
             }
         }
+
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { TmSectionLabel("Notes") }
+            TmButton(
+                text = "Add note",
+                variant = TmButtonVariant.SECONDARY,
+                size = TmControlSize.SMALL,
+                leadingIcon = Res.drawable.plus,
+                onClick = {
+                    noteSeed.clear()
+                    showNoteDialog = true
+                }
+            )
+        }
+
+        NoteBlock(
+            notes = seed.notes,
+            editable = true,
+            onImageClick = onImageClick,
+            onEditClick = { note ->
+                noteSeed.setNote(note)
+                showNoteDialog = true
+            }
+        )
     }
 }

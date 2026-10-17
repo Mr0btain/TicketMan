@@ -4,20 +4,34 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.money.Money
-import org.mr0btain.ticketman.ui.composables.EmptyMessage
-import org.mr0btain.ticketman.ui.composables.SectionCard
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.data.MoneyText
+import org.mr0btain.ticketman.ui.kit.data.TmColumn
+import org.mr0btain.ticketman.ui.kit.data.TmTableHeader
+import org.mr0btain.ticketman.ui.kit.data.TmTableRow
+import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.check_circle
+import ticketman.composeapp.generated.resources.package_icon
 import kotlin.uuid.Uuid
+
+private val COLUMNS = listOf(
+    TmColumn("Name"),
+    TmColumn("Stock", width = 64.dp, end = true),
+    TmColumn("Cost", width = 96.dp, end = true),
+    TmColumn("Price", width = 96.dp, end = true)
+)
 
 /**
  * Inventory that's running out
@@ -31,80 +45,61 @@ fun AdminLowStockTab(
     onItemClick: (Uuid) -> Unit
 ) {
     var thresholdText by remember(threshold) { mutableStateOf(threshold.toString()) }
+    val colors = TmTheme.colors
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(8.dp)
     ) {
-        SectionCard(
+        TmPanel(
             modifier = Modifier.widthIn(max = 900.dp),
-            title = "Low Stock (${items.size})",
-            action = {
-                OutlinedTextField(
-                    modifier = Modifier.width(140.dp),
+            title = "Low stock",
+            subtitle = "${items.size} items at or below $threshold, click one to open it",
+            icon = Res.drawable.package_icon,
+            actions = {
+                TmTextField(
+                    modifier = Modifier.width(100.dp),
                     value = thresholdText,
-                    onValueChange = { text ->
-                        thresholdText = text.filter { it.isDigit() }.take(5)
-                    },
-                    label = { Text("Threshold") },
-                    singleLine = true,
+                    onValueChange = { text -> thresholdText = text.filter { it.isDigit() }.take(5) },
+                    placeholder = "Threshold",
+                    textStyle = TmTheme.typography.numeric,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
 
-                Spacer(Modifier.padding(4.dp))
-
-                Button(
+                TmButton(
+                    text = "Set threshold",
+                    variant = TmButtonVariant.SECONDARY,
                     enabled = thresholdText.toIntOrNull()?.let { it != threshold } == true,
                     onClick = { thresholdText.toIntOrNull()?.let(onThresholdChange) }
-                ) {
-                    Text("Apply")
-                }
+                )
             }
         ) {
             if (items.isEmpty()) {
-                EmptyMessage("Nothing is at or below $threshold in stock")
-            } else {
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                    Text("Name", Modifier.weight(1f), fontWeight = FontWeight.SemiBold)
-                    Text("Stock", Modifier.width(80.dp), fontWeight = FontWeight.SemiBold)
-                    Text("Cost", Modifier.width(90.dp), fontWeight = FontWeight.SemiBold)
-                    Text("Price", Modifier.width(90.dp), fontWeight = FontWeight.SemiBold)
-                    Spacer(Modifier.width(80.dp))
-                }
-
-                HorizontalDivider()
+                TmEmptyState(icon = Res.drawable.check_circle, title = "Nothing is running low", message = "No item has $threshold or fewer in stock.")
+                return@TmPanel
             }
 
-            items.forEach { item ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text(item.name, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        if (item.description.isNotBlank()) {
-                            Text(item.description, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Column {
+                TmTableHeader(COLUMNS)
+
+                items.forEach { item ->
+                    TmTableRow(COLUMNS, onClick = { onItemClick(item.identifier) }) { column ->
+                        when (column) {
+                            0 -> Column {
+                                Text(item.name, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (item.description.isNotBlank()) {
+                                    Text(item.description, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            1 -> Text(
+                                text = item.stock.toString(),
+                                style = TmTheme.typography.numeric,
+                                color = if (item.stock <= 0) colors.danger.color else colors.warning.color
+                            )
+                            2 -> MoneyText(item.costCents)
+                            3 -> MoneyText(item.priceCents)
                         }
-                    }
-
-                    Text(
-                        modifier = Modifier.width(80.dp),
-                        text = item.stock.toString(),
-                        fontWeight = FontWeight.Bold,
-                        color = if (item.stock <= 0) MaterialTheme.colorScheme.error else LocalContentColor.current
-                    )
-                    Text(Money.format(item.costCents), Modifier.width(90.dp))
-                    Text(Money.format(item.priceCents), Modifier.width(90.dp))
-
-                    TextButton(
-                        modifier = Modifier.width(80.dp),
-                        onClick = { onItemClick(item.identifier) }
-                    ) {
-                        Text("Open")
                     }
                 }
             }

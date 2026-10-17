@@ -1,24 +1,20 @@
 package org.mr0btain.ticketman.ui.screens.login
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.user.PinRules
-import org.mr0btain.ticketman.ui.composables.PinTextField
 import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
 import org.mr0btain.ticketman.ui.screens.login.components.MIN_PASSWORD_LENGTH
-import org.mr0btain.ticketman.ui.screens.login.components.PasswordTextField
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
+import org.mr0btain.ticketman.ui.kit.inputs.TmPinField
+import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 
 /**
  * First login setup. Can't be clicked away, only finished or cancelled
@@ -60,144 +56,72 @@ fun AccountSetupDialog(
         else -> null
     }
 
-    Dialog(
+    TmDialog(
+        title = "Welcome, $username",
+        description = if (isInvite) "Finish setting up your account by choosing a password and checking your details."
+            else "Your account was approved. Check your details to finish setting up.",
+        // Can't be clicked away, only finished or cancelled
         onDismissRequest = {},
-        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false)
+        dismissOnOutsideClick = false,
+        maxWidth = 500.dp,
+        actions = {
+            TmButtonRow(
+                cancelText = if (isInvite) "Cancel" else "Log out",
+                confirmText = "Finish setup",
+                confirmEnabled = problem == null,
+                loading = submitting,
+                onCancel = onCancel,
+                onConfirm = {
+                    submitting = true
+                    serverError = null
+
+                    val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
+
+                    onFinish(joinName(name).lowercase(), email.trim(), phone.trim(), password, pin) { error ->
+                        submitting = false
+                        serverError = error
+                    }
+                }
+            )
+        }
     ) {
-        Surface(
-            shape = RoundedCornerShape(10.dp),
-            shadowElevation = 10.dp,
-            color = MaterialTheme.colorScheme.secondaryContainer
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(32.dp)
-                    .width(440.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = "Welcome, $username",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold
+        TmFieldPair(
+            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
+            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
+        )
+        TmFieldPair(
+            { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
+            { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") }
+        )
+
+        TmPasswordField(
+            value = password,
+            onValueChange = { password = it },
+            label = if (isInvite) "Password" else "New password (optional)",
+            showStrength = true
+        )
+        TmPasswordField(
+            value = confirmPassword,
+            onValueChange = { confirmPassword = it },
+            label = "Confirm password",
+            error = if (confirmPassword.isNotEmpty() && confirmPassword != password) "Passwords don't match" else null
+        )
+
+        TmFieldPair(
+            { TmPinField(modifier = it, value = pin, onValueChange = { v -> pin = v }, label = "PIN for the counter") },
+            {
+                TmPinField(
+                    modifier = it,
+                    value = confirmPin,
+                    onValueChange = { v -> confirmPin = v },
+                    label = "Confirm PIN",
+                    error = if (confirmPin.length == PinRules.LENGTH && confirmPin != pin) "PINs don't match" else null
                 )
-
-                Text(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    text = if (isInvite) "Finish setting up your account by choosing a password and checking your details."
-                        else "Your account was approved. Check your details to finish setting up.",
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                Row {
-                    OutlinedTextField(
-                        modifier = Modifier.weight(1f).padding(end = 4.dp),
-                        value = firstName,
-                        onValueChange = { firstName = it },
-                        label = { Text("First Name") },
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        modifier = Modifier.weight(1f).padding(start = 4.dp),
-                        value = lastName,
-                        onValueChange = { lastName = it },
-                        label = { Text("Last Name") },
-                        singleLine = true
-                    )
-                }
-
-                Row {
-                    OutlinedTextField(
-                        modifier = Modifier.weight(1f).padding(end = 4.dp),
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email") },
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        modifier = Modifier.weight(1f).padding(start = 4.dp),
-                        value = phone,
-                        onValueChange = { phone = it },
-                        label = { Text("Phone") },
-                        singleLine = true
-                    )
-                }
-
-                PasswordTextField(
-                    modifier = Modifier.padding(top = 8.dp),
-                    text = password,
-                    labelText = if (isInvite) "Password" else "New Password (optional)",
-                    validateStrengthPassword = true,
-                    onTextChanged = { password = it }
-                )
-
-                PasswordTextField(
-                    text = confirmPassword,
-                    labelText = "Confirm Password",
-                    hasError = confirmPassword.isNotEmpty() && confirmPassword != password,
-                    onTextChanged = { confirmPassword = it }
-                )
-
-                Text(
-                    modifier = Modifier.padding(top = 12.dp),
-                    text = "Pick a ${PinRules.LENGTH} digit PIN for signing in at the counter.",
-                    fontSize = 13.sp
-                )
-
-                Row {
-                    PinTextField(
-                        modifier = Modifier.weight(1f).padding(end = 4.dp),
-                        value = pin,
-                        label = "PIN",
-                        onValueChange = { pin = it }
-                    )
-
-                    PinTextField(
-                        modifier = Modifier.weight(1f).padding(start = 4.dp),
-                        value = confirmPin,
-                        label = "Confirm PIN",
-                        isError = confirmPin.length == PinRules.LENGTH && confirmPin != pin,
-                        onValueChange = { confirmPin = it }
-                    )
-                }
-
-                (serverError ?: problem)?.let { message ->
-                    Text(
-                        modifier = Modifier.padding(top = 8.dp),
-                        text = message,
-                        fontSize = 13.sp,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
-                    )
-                }
-
-                Spacer(Modifier.padding(8.dp))
-
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    OutlinedButton(onClick = onCancel) {
-                        Text(if (isInvite) "Cancel" else "Log Out")
-                    }
-
-                    Button(
-                        enabled = problem == null && !submitting,
-                        onClick = {
-                            submitting = true
-                            serverError = null
-
-                            val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
-                            onFinish(joinName(name).lowercase(), email.trim(), phone.trim(), password, pin) { error ->
-                                submitting = false
-                                serverError = error
-                            }
-                        }
-                    ) {
-                        Text("Finish Setup")
-                    }
-                }
             }
+        )
+
+        (serverError ?: problem)?.let { message ->
+            TmNotice(text = message, kind = if (serverError != null) TmNoticeKind.ERROR else TmNoticeKind.WARNING)
         }
     }
 }

@@ -1,206 +1,59 @@
 package org.mr0btain.ticketman.ui.screens.main.expanded.customer
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.CoroutineScope
+import androidx.compose.ui.text.style.TextOverflow
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.ui.composables.TableCardTextItem
-import org.mr0btain.ticketman.ui.composables.TableDivider
-import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
-import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
+import org.mr0btain.ticketman.ui.kit.data.TmColumn
+import org.mr0btain.ticketman.ui.kit.data.TmTableRow
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsList
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.users
 import kotlin.uuid.Uuid
+
+private val COLUMNS = listOf(
+    TmColumn("Name", weight = 1.2f),
+    TmColumn("Phone", weight = 0.9f),
+    TmColumn("Email", weight = 1.2f),
+    TmColumn("Street", weight = 1f)
+)
 
 @Composable
 fun CustomerListPane(
-    modifier: Modifier = Modifier,
     customerList: List<Customer>,
     onClick: (Uuid) -> Unit,
     selectedId: Uuid,
-    lazyListState: LazyListState,
-    scope: CoroutineScope
+    lazyListState: LazyListState
 ) {
-    // Column widths
-    val nameColumnWidth = 200.dp
-    val addressColumnWidth = 200.dp
-    val contactColumnWidth = 240.dp
+    val colors = TmTheme.colors
 
-    Surface(
-        modifier = modifier
-            .wrapContentSize()
-            .padding(8.dp),
-        shape = RoundedCornerShape(10.dp),
-        shadowElevation = 4.dp,
-        color = if (CustomMaterialColors.darkMode) MaterialTheme.colorScheme.surfaceBright else MaterialTheme.colorScheme.surface
+    RecordsList(
+        columns = COLUMNS,
+        state = lazyListState,
+        isEmpty = customerList.isEmpty(),
+        emptyTitle = "No customers yet",
+        emptyIcon = Res.drawable.users,
+        emptyMessage = "Add one with New customer, or check you're connected."
     ) {
-        Column(
-            modifier = Modifier
-                .wrapContentSize()
-                .padding(start = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Row(
-                modifier = Modifier
-                    .height(46.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(Modifier.padding(16.dp))
-
-                CustomerHeaderBox(
-                    label = "Name",
-                    width = nameColumnWidth
-                )
-
-                Spacer(Modifier.padding(11.dp))
-
-                CustomerHeaderBox(
-                    label = "Address",
-                    width = addressColumnWidth
-                )
-
-                Spacer(Modifier.padding(11.dp))
-
-                CustomerHeaderBox(
-                    label = "Contact",
-                    width = contactColumnWidth,
-                    dividerEnable = false
-                )
-            }
-
-            HorizontalDivider(modifier = Modifier.width(680.dp))
-
-            PlatformLazyColumn(
-                modifier = Modifier
-                    .width(700.dp),
-                state = lazyListState,
-                scope = scope,
-                isVisible = customerList.isNotEmpty()
-            ) {
-                itemsIndexed(
-                    items = customerList,
-                    key = { _, customer -> customer.identifier }
-                ) { index, customer ->
-                    CustomerTableItem(
-                        customer = customer,
-                        selected = customer.identifier == selectedId,
-                        color = if (!CustomMaterialColors.darkMode) {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface
-                        } else {
-                            if (index % 2 == 0) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.secondaryContainer
-                        },
-                        nameWidth = nameColumnWidth,
-                        addressWidth = addressColumnWidth,
-                        contactWidth = contactColumnWidth,
-                        onClick = onClick
-                    )
+        items(customerList, key = { it.identifier }) { customer ->
+            TmTableRow(COLUMNS, selected = customer.identifier == selectedId, onClick = { onClick(customer.identifier) }) { column ->
+                val (text, primary) = when (column) {
+                    0 -> customer.cleanName() to true
+                    1 -> customer.phone to false
+                    2 -> customer.email to false
+                    else -> customer.address.street to false
                 }
-            }
-        }
-    }
-}
 
-@Composable
-private fun CustomerHeaderBox(
-    modifier: Modifier = Modifier,
-    label: String,
-    width: Dp,
-    dividerEnable: Boolean = true
-) {
-    Row(
-        modifier.width(width),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = label,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
-        )
-
-        if (dividerEnable) {
-            VerticalDivider(Modifier.height(42.dp), thickness = 3.dp, color = MaterialTheme.colorScheme.secondary)
-        }
-    }
-}
-
-// TODO: Make onclick go to customer details screen when its done. or a popup?
-// TODO: Make icon reflect if there is a ticket not completed?
-
-@Composable
-private fun CustomerTableItem(
-    modifier: Modifier = Modifier,
-    onClick: (Uuid) -> Unit,
-    selected: Boolean,
-    color: Color = MaterialTheme.colorScheme.surface,
-    customer: Customer,
-    nameWidth: Dp,
-    addressWidth: Dp,
-    contactWidth: Dp,
-    showEmail: Boolean = true
-) {
-    Surface(
-        modifier = modifier
-            .padding(2.dp)
-            .clickable(
-                onClick = { onClick(customer.identifier) }
-            ),
-        shape = RoundedCornerShape(8.dp),
-        shadowElevation = 4.dp,
-        color = color,
-        border = if (selected) BorderStroke(2.dp, MaterialTheme.colorScheme.primary) else BorderStroke(0.dp, Color.Transparent)
-    ) {
-        Row(
-            modifier = Modifier.padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Box(
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .width(nameWidth - 4.dp)
-            ) {
-                TableCardTextItem(customer.cleanName())
-            }
-
-            TableDivider()
-
-            Box(
-                modifier = Modifier
-                    .padding(start = 4.dp)
-                    .width(addressWidth - 6.dp)
-            ) {
-                TableCardTextItem(customer.address.street)
-            }
-
-            TableDivider()
-
-            if (showEmail) {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 4.dp)
-                        .width(contactWidth - 8.dp)
-                ) {
-                    TableCardTextItem(customer.email)
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .padding(start = 4.dp)
-                        .width(contactWidth - 6.dp)
-                ) {
-                    TableCardTextItem(customer.phone)
-                }
+                Text(
+                    text = text,
+                    style = if (primary) TmTheme.typography.label else TmTheme.typography.body,
+                    color = if (primary) colors.text else colors.textMuted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

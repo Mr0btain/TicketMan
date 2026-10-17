@@ -9,7 +9,10 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _password: String = ""
     private var _accessToken: String = ""
     private var _refreshToken: String = ""
-    private var _darkMode: Boolean = false
+    private var _darkMode: Boolean = DEFAULT_DARK_MODE
+    private var _themeId: String = ""
+    private var _fontId: String = ""
+    private var _reduceTransparency: Boolean = false
     private var _serverUrl: String = ""
     private var _rememberLogin: Boolean = DEFAULT_REMEMBER_LOGIN
     private var _defaultTab: Int = DEFAULT_TAB
@@ -52,6 +55,30 @@ class LocalStorage(private val store: KeyValueStore) {
         set(value) {
             _darkMode = value
             store.putString(DARK_MODE_KEY, value.toString())
+        }
+
+    /** Id of the picked ui kit palette, blank uses the default */
+    var themeId: String
+        get() = _themeId
+        set(value) {
+            _themeId = value
+            store.putString(THEME_ID_KEY, value)
+        }
+
+    /** Id of the picked ui kit font, blank uses the default */
+    var fontId: String
+        get() = _fontId
+        set(value) {
+            _fontId = value
+            store.putString(FONT_ID_KEY, value)
+        }
+
+    /** Draws glass layers as solid surfaces */
+    var reduceTransparency: Boolean
+        get() = _reduceTransparency
+        set(value) {
+            _reduceTransparency = value
+            store.putString(REDUCE_TRANSPARENCY_KEY, value.toString())
         }
 
     var serverUrl: String
@@ -136,7 +163,10 @@ class LocalStorage(private val store: KeyValueStore) {
         _refreshToken = store.getString(REFRESH_TOKEN_KEY, "")
         _username = store.getString(USERNAME_KEY, "")
         _password = store.getString(PASSWORD_KEY, "")
-        _darkMode = getBoolean(DARK_MODE_KEY, false)
+        _darkMode = getBoolean(DARK_MODE_KEY, DEFAULT_DARK_MODE)
+        _themeId = store.getString(THEME_ID_KEY, "")
+        _fontId = store.getString(FONT_ID_KEY, "")
+        _reduceTransparency = getBoolean(REDUCE_TRANSPARENCY_KEY, false)
         _serverUrl = store.getString(SERVER_URL_KEY, "")
         _rememberLogin = getBoolean(REMEMBER_LOGIN_KEY, DEFAULT_REMEMBER_LOGIN)
         _defaultTab = getInt(DEFAULT_TAB_KEY, DEFAULT_TAB)
@@ -182,6 +212,7 @@ class LocalStorage(private val store: KeyValueStore) {
 
     companion object {
         const val DEFAULT_REMEMBER_LOGIN = true
+        const val DEFAULT_DARK_MODE = true
         const val DEFAULT_TAB = 0
         const val DEFAULT_PAGE_SIZE = 20
         const val DEFAULT_SEARCH_LIMIT = 20
@@ -192,6 +223,9 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val USERNAME_KEY = "username"
         private const val PASSWORD_KEY = "password"
         private const val DARK_MODE_KEY = "dark_mode"
+        private const val THEME_ID_KEY = "theme_id"
+        private const val FONT_ID_KEY = "font_id"
+        private const val REDUCE_TRANSPARENCY_KEY = "reduce_transparency"
         private const val SERVER_URL_KEY = "server_url"
         private const val REMEMBER_LOGIN_KEY = "remember_login"
         private const val DEFAULT_TAB_KEY = "default_tab"
