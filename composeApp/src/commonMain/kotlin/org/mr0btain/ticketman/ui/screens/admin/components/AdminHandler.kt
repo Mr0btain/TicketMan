@@ -9,10 +9,10 @@ import org.mr0btain.ticketman.components.data.saveFile
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.data.audit.AuditEntry
-import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.logging.AppLogger
@@ -172,15 +172,14 @@ class AdminHandler(
     }
 
     /**
-     * Deactivating sets access to NONE which blocks logging in and ends their session.
-     * Reactivating brings them back as RESTRICTED, edit them after to give more access.
+     * Deactivating blocks logging in and ends their sessions, reactivating keeps the access level they had
      */
     fun setUserActive(user: User, active: Boolean) {
-        val accessLevel = if (active) AccessLevel.RESTRICTED else AccessLevel.NONE
-        val message = if (active) "Reactivated ${user.username} as restricted" else "Deactivated ${user.username}"
+        val status = if (active) UserStatus.ACTIVE else UserStatus.DEACTIVATED
+        val message = if (active) "Reactivated ${user.username}" else "Deactivated ${user.username}"
 
         scope.launch {
-            report(users.update(user.withoutPassword().copy(accessLevel = accessLevel)), message) {
+            report(users.update(user.withoutPassword().copy(status = status)), message) {
                 onUsersChanged(user.identifier)
                 _sessions.value = admin.getSessions()
                 loadOverview()
@@ -200,9 +199,23 @@ class AdminHandler(
 
     // ------------------------------------------ Sessions ------------------------------------------
 
+    /** Session this device is using, so it can be labelled */
+    fun currentSessionId(): String? = remoteHandler.currentSessionId()
+
     fun revokeSession(session: SessionResponse) {
+        val device = session.deviceName.ifBlank { "a device" }
+
         scope.launch {
-            report(admin.revokeSession(session.userIdentifier), "Logged out ${session.username}") {
+            report(admin.revokeSession(session.sessionId), "Logged out ${session.username} on $device") {
+                _sessions.value = admin.getSessions()
+                loadOverview()
+            }
+        }
+    }
+
+    fun revokeAllSessions(user: User) {
+        scope.launch {
+            report(admin.revokeUserSessions(user.identifier), "Logged ${user.username} out everywhere") {
                 _sessions.value = admin.getSessions()
                 loadOverview()
             }

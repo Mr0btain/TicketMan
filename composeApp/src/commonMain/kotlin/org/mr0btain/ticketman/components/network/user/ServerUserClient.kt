@@ -64,7 +64,7 @@ class ServerUserClient(
                 userHttpClient.post {
                     url("$serverUrl/api/auth")
                     contentType(ContentType.Application.Json)
-                    setBody(LoginRequest(username, password))
+                    setBody(LoginRequest(username, password, localStorage.deviceId, localStorage.deviceName))
                 }
             }?.let { response -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response) }
                 ?.onSuccess { authResponse ->

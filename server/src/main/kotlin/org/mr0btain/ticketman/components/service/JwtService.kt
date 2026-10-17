@@ -84,7 +84,7 @@ class JwtService(
         return foundUser?.let {
             if (
                 audienceMatches(credential) &&
-                foundUser.accessLevel.meets(minAccessLevel) &&
+                foundUser.canAccess(minAccessLevel) &&
                 isFromCurrentSession(id, credential)
             ) {
                 JWTPrincipal(credential.payload)
@@ -92,17 +92,12 @@ class JwtService(
         }
     }
 
-    // Checks the access token came from the refresh token that's stored for this user
+    // Checks the token's session is still stored and belongs to this user
     private fun isFromCurrentSession(id: String, credential: JWTCredential): Boolean {
-        val session = tokenDatabase.findById(id) ?: return false
+        val sessionId = credential.payload.getClaim(SESSION_CLAIM).asString() ?: return false
+        val session = tokenDatabase.findBySessionId(sessionId) ?: return false
 
-        val sessionId = try {
-            JWT.decode(session.token).getClaim(SESSION_CLAIM).asString()
-        } catch (ex: Exception) {
-            null
-        } ?: return true // Sessions from before tokens had a session id
-
-        return credential.payload.getClaim(SESSION_CLAIM).asString() == sessionId
+        return session.userIdentifier == id
     }
 
     /**

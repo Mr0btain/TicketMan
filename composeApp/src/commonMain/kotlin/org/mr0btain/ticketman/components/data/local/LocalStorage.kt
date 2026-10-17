@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.components.data.local
 
+import org.mr0btain.ticketman.getPlatform
+import kotlin.uuid.Uuid
+
 class LocalStorage(private val store: KeyValueStore) {
     private var _username: String = ""
     private var _password: String = ""
@@ -12,6 +15,8 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _pageSize: Int = DEFAULT_PAGE_SIZE
     private var _searchLimit: Int = DEFAULT_SEARCH_LIMIT
     private var _cacheSize: Int = DEFAULT_CACHE_SIZE
+    private var _deviceId: String = ""
+    private var _deviceName: String = ""
 
     var username: String
         get() = _username
@@ -95,6 +100,25 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(CACHE_SIZE_KEY, value.toString())
         }
 
+    /** Made the first time it's needed and kept, lets the server tell this device's session apart from the user's others */
+    val deviceId: String
+        get() {
+            if (_deviceId.isBlank()) {
+                _deviceId = Uuid.random().toString()
+                store.putString(DEVICE_ID_KEY, _deviceId)
+            }
+
+            return _deviceId
+        }
+
+    /** What admins see for this device in the session list */
+    var deviceName: String
+        get() = _deviceName
+        set(value) {
+            _deviceName = value.trim().ifBlank { defaultDeviceName() }
+            store.putString(DEVICE_NAME_KEY, _deviceName)
+        }
+
     // Initialize by pulling stored values
     init {
         _accessToken = store.getString(ACCESS_TOKEN_KEY, "")
@@ -108,7 +132,12 @@ class LocalStorage(private val store: KeyValueStore) {
         _pageSize = getInt(PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE)
         _searchLimit = getInt(SEARCH_LIMIT_KEY, DEFAULT_SEARCH_LIMIT)
         _cacheSize = getInt(CACHE_SIZE_KEY, DEFAULT_CACHE_SIZE)
+
+        _deviceId = store.getString(DEVICE_ID_KEY, "")
+        _deviceName = store.getString(DEVICE_NAME_KEY, "").ifBlank { defaultDeviceName() }
     }
+
+    private fun defaultDeviceName(): String = getPlatform().name
 
     private fun getBoolean(key: String, defaultValue: Boolean): Boolean =
         store.getString(key, "").toBooleanStrictOrNull() ?: defaultValue
@@ -158,5 +187,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val PAGE_SIZE_KEY = "page_size"
         private const val SEARCH_LIMIT_KEY = "search_limit"
         private const val CACHE_SIZE_KEY = "cache_size"
+        private const val DEVICE_ID_KEY = "device_id"
+        private const val DEVICE_NAME_KEY = "device_name"
     }
 }

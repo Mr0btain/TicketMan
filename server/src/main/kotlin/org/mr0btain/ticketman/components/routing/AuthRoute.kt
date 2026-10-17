@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -42,6 +43,19 @@ fun Route.authRoute(
             call.respond(HttpStatusCode.Accepted, user.accessLevel)
 
         } ?: call.respond(HttpStatusCode.Unauthorized) // Respond with 401 if authentication fails
+    }
+
+    // Ends the calling device's session
+    authenticate("restricted") {
+        post("/logout") {
+            val sessionId = call.getSessionIdFromToken()
+
+            if (sessionId != null && userService.logout(sessionId)) {
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
     }
 
     // Get Tokens

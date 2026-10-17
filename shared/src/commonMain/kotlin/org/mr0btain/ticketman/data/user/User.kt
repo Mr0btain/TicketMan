@@ -19,8 +19,13 @@ data class User(
     val name: String = "",
     val email: String = "",
     val phone: String = "",
-    val accessLevel: AccessLevel = AccessLevel.NONE
+    val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
+    val status: UserStatus = UserStatus.ACTIVE
 ): MainItem() {
+    /** Active with a real access level, the only kind of user that can do anything */
+    fun canAccess(minimum: AccessLevel): Boolean =
+        status == UserStatus.ACTIVE && accessLevel.meets(minimum)
+
     fun cleanName(): String {
         return name.split(":").joinToString(" ") { n ->
             n.replaceFirstChar { it.titlecase() }

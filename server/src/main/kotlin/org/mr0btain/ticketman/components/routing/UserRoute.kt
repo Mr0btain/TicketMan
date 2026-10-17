@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.response.UserResponse
@@ -42,9 +43,9 @@ fun Route.userRoute(
     val SEARCH_TAG = "$TAG:Search"
     val ENTITY_TYPE = "user"
 
-    /** Whether taking [target]'s admin away would leave the server with no admins */
+    /** Whether taking [target]'s admin away would leave the server with no active admins */
     fun isLastAdmin(target: User): Boolean =
-        target.accessLevel == AccessLevel.ADMIN && database.countByAccessLevel(AccessLevel.ADMIN) <= 1
+        target.canAccess(AccessLevel.ADMIN) && database.countActiveAdmins() <= 1
 
     // Logged in user, any active access level can see themselves
     authenticate("restricted") {
@@ -121,8 +122,13 @@ fun Route.userRoute(
                     AppLogger.i(ADD_TAG, "${user.username} already exists")
                 }
 
+                user.accessLevel == AccessLevel.NONE -> {
+                    call.respond(HttpStatusCode.BadRequest, "Pick an access level")
+                }
+
                 else -> {
-                    database.add(user)
+                    // Users made by an admin are ready to go
+                    database.add(user.copy(status = UserStatus.ACTIVE))
                     call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, user.identifier, "Added ${user.username} as ${user.accessLevel}")
                     call.respond(HttpStatusCode.Created, UserResponse(user.identifier, user.accessLevel))
                 }
@@ -146,23 +152,37 @@ fun Route.userRoute(
                     call.respond(HttpStatusCode.Conflict, "Username is already taken")
                 }
 
-                user.accessLevel != AccessLevel.ADMIN && call.getIdentifierFromToken() == user.identifier -> {
-                    call.respond(HttpStatusCode.Conflict, "You can't remove your own admin access")
+                user.accessLevel == AccessLevel.NONE -> {
+                    call.respond(HttpStatusCode.BadRequest, "Deactivate users with their status instead")
                 }
 
-                user.accessLevel != AccessLevel.ADMIN && isLastAdmin(existing) -> {
+                // Pending users are approved through their own route
+                user.status == UserStatus.PENDING && existing.status != UserStatus.PENDING -> {
+                    call.respond(HttpStatusCode.BadRequest, "Users can't be set back to pending")
+                }
+
+                call.getIdentifierFromToken() == user.identifier &&
+                    (user.accessLevel != existing.accessLevel || user.status != existing.status) -> {
+                    call.respond(HttpStatusCode.Conflict, "You can't change your own access or status")
+                }
+
+                !user.canAccess(AccessLevel.ADMIN) && isLastAdmin(existing) -> {
                     call.respond(HttpStatusCode.Conflict, "There has to be at least one admin")
                 }
 
                 else -> {
-                    database.update(user.withoutPassword())
+                    // Pending users stay pending until approved
+                    val saved = if (existing.status == UserStatus.PENDING) user.copy(status = UserStatus.PENDING) else user
+                    database.update(saved.withoutPassword())
 
-                    // Deactivating should also end their session
-                    if (user.accessLevel == AccessLevel.NONE) tokenDatabase.remove(user.identifier.toString())
+                    // Deactivating should also end their sessions
+                    if (saved.status != UserStatus.ACTIVE) tokenDatabase.removeAllForUser(user.identifier.toString())
 
-                    val details = if (existing.accessLevel != user.accessLevel) {
-                        "Access ${existing.accessLevel} -> ${user.accessLevel}"
-                    } else "Updated details"
+                    val details = when {
+                        existing.status != saved.status -> "Status ${existing.status} -> ${saved.status}"
+                        existing.accessLevel != saved.accessLevel -> "Access ${existing.accessLevel} -> ${saved.accessLevel}"
+                        else -> "Updated details"
+                    }
 
                     call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, user.identifier, "${user.username}: $details")
                     call.respond(HttpStatusCode.Accepted)
@@ -186,8 +206,8 @@ fun Route.userRoute(
                 !database.updatePassword(identifier, request.password) -> call.respond(HttpStatusCode.NotFound)
 
                 else -> {
-                    // Keep the admin's own session alive when they change their own password
-                    if (call.getIdentifierFromToken() != identifier) tokenDatabase.remove(identifier.toString())
+                    // Log them out everywhere, except the session making the change if they changed their own
+                    tokenDatabase.removeAllForUser(identifier.toString(), keepSessionId = call.getSessionIdFromToken())
 
                     call.audit(auditLog, AuditAction.PASSWORD_RESET, ENTITY_TYPE, identifier)
                     call.respond(HttpStatusCode.Accepted)
@@ -229,7 +249,7 @@ fun Route.userRoute(
                 isLastAdmin(existing) -> call.respond(HttpStatusCode.Conflict, "There has to be at least one admin")
 
                 else -> {
-                    tokenDatabase.remove(identifier.toString())
+                    tokenDatabase.removeAllForUser(identifier.toString())
                     database.remove(identifier)
 
                     call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier, "Removed ${existing.username}")

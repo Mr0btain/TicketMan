@@ -18,14 +18,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.user.UserSeed
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
-import org.mr0btain.ticketman.ui.screens.admin.components.AccessLevelChip
+import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
 import org.mr0btain.ticketman.ui.screens.admin.components.EmptyMessage
 import org.mr0btain.ticketman.ui.screens.admin.components.formatDateTime
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
@@ -48,6 +48,7 @@ fun AdminUsersTab(
     onEdit: () -> Unit,
     onResetPassword: () -> Unit,
     onSetActive: (Boolean) -> Unit,
+    onLogOutEverywhere: () -> Unit,
     onDelete: () -> Unit
 ) {
     Column(
@@ -79,7 +80,8 @@ fun AdminUsersTab(
                 isSelf = seed.identifier == currentUserIdentifier,
                 onEdit = onEdit,
                 onResetPassword = onResetPassword,
-                onSetActive = onSetActive
+                onSetActive = onSetActive,
+                onLogOutEverywhere = onLogOutEverywhere
             )
         }
     }
@@ -158,7 +160,7 @@ private fun UserListPane(
                         ) {
                             CellText(user.username, usernameWidth)
                             CellText(user.cleanName(), nameWidth)
-                            Box(Modifier.width(accessWidth)) { AccessLevelChip(user.accessLevel) }
+                            Box(Modifier.width(accessWidth)) { UserStateChip(user) }
                             CellText(user.email, emailWidth)
                         }
                     }
@@ -174,7 +176,8 @@ private fun UserInfoPane(
     isSelf: Boolean,
     onEdit: () -> Unit,
     onResetPassword: () -> Unit,
-    onSetActive: (Boolean) -> Unit
+    onSetActive: (Boolean) -> Unit,
+    onLogOutEverywhere: () -> Unit
 ) {
     CustomSurface(
         modifier = Modifier
@@ -190,7 +193,7 @@ private fun UserInfoPane(
             }
 
             val user = seed.user
-            val isActive = user.accessLevel != AccessLevel.NONE
+            val isActive = user.status == UserStatus.ACTIVE
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
@@ -202,7 +205,7 @@ private fun UserInfoPane(
                     overflow = TextOverflow.Ellipsis
                 )
 
-                AccessLevelChip(user.accessLevel)
+                UserStateChip(user)
             }
 
             if (isSelf) Text(text = "This is you", fontSize = 12.sp)
@@ -224,6 +227,15 @@ private fun UserInfoPane(
             ) {
                 Button(onClick = onEdit) { Text("Edit") }
                 OutlinedButton(onClick = onResetPassword) { Text("Reset Password") }
+            }
+
+            Spacer(Modifier.padding(4.dp))
+
+            OutlinedButton(
+                modifier = Modifier.fillMaxWidth(),
+                onClick = onLogOutEverywhere
+            ) {
+                Text("Log Out Everywhere")
             }
 
             Spacer(Modifier.padding(4.dp))

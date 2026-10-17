@@ -133,13 +133,27 @@ fun AdminOverviewTab(
                 modifier = Modifier.width(360.dp),
                 title = "Users by Access"
             ) {
-                AccessLevel.entries.forEach { level ->
+                listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN).forEach { level ->
                     CountBar(
                         label = level.label,
                         count = stats.usersByAccessLevel[level] ?: 0,
                         total = stats.totalUsers
                     )
                 }
+
+                CountBar(
+                    label = "Pending",
+                    count = stats.pendingUsers,
+                    total = stats.totalUsers,
+                    color = CustomMaterialColors.inProgress
+                )
+
+                CountBar(
+                    label = "Deactivated",
+                    count = stats.deactivatedUsers,
+                    total = stats.totalUsers,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         }
 

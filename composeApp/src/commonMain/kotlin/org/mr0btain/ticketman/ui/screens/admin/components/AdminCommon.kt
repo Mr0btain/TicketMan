@@ -15,6 +15,8 @@ import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import kotlin.time.Clock
@@ -231,6 +233,28 @@ fun AccessLevelChip(accessLevel: AccessLevel) {
             color = MaterialTheme.colorScheme.onPrimary,
             maxLines = 1
         )
+    }
+}
+
+/** Shows a user's access, or their status when they aren't active */
+@Composable
+fun UserStateChip(user: User) {
+    when (user.status) {
+        UserStatus.ACTIVE -> AccessLevelChip(user.accessLevel)
+
+        else -> Surface(
+            shape = RoundedCornerShape(4.dp),
+            color = if (user.status == UserStatus.PENDING) CustomMaterialColors.inProgress else MaterialTheme.colorScheme.error
+        ) {
+            Text(
+                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                text = formatEnumName(user.status.name),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onPrimary,
+                maxLines = 1
+            )
+        }
     }
 }
 

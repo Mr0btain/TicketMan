@@ -1,10 +1,15 @@
 package org.mr0btain.ticketman.components.network
 
 import io.ktor.client.engine.*
+import io.ktor.client.request.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlin.io.encoding.Base64
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.database.*
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
@@ -45,6 +50,9 @@ class RemoteHandler(
     val adminRepo = AdminRemoteRepository(httpClient)
     val counterRepo = CounterRemoteRepository(httpClient)
 
+    // Base url once a server has been reached, used for routes outside the repositories
+    private var serverUrl = ""
+
     // Emits when the session can't be refreshed and the user needs to log in again
     private val _authExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val authExpired = _authExpired.asSharedFlow()
@@ -57,6 +65,7 @@ class RemoteHandler(
             // Check if we can establish a connection with this address, if success then set it.
             if (userClient.checkServerConnection(url)) {
                 userClient.changeServerUrl(url)
+                serverUrl = url.trimEnd('/')
                 customerRepo.serverUrl = url
                 ticketRepo.serverUrl = url
                 inventoryRepo.serverUrl = url
@@ -81,6 +90,21 @@ class RemoteHandler(
         }
 
         return ConnectionResult.UNREACHABLE
+    }
+
+    /**
+     * Session this device is logged in with, read from the access token's sid claim. Only used to label things
+     * on screen, the server does the real checks
+     */
+    fun currentSessionId(): String? {
+        val payload = localStorage.accessToken.split(".").getOrNull(1) ?: return null
+
+        return try {
+            val decoded = Base64.UrlSafe.withPadding(Base64.PaddingOption.ABSENT_OPTIONAL).decode(payload).decodeToString()
+            Json.parseToJsonElement(decoded).jsonObject["sid"]?.jsonPrimitive?.content
+        } catch (ex: Exception) {
+            null
+        }
     }
 
     /**
@@ -155,6 +179,13 @@ class RemoteHandler(
      * doesn't log us straight back in, the username is kept for prefilling the login form
      */
     suspend fun logout() {
+        // Tell the server so this device's session ends, other devices stay logged in
+        if (serverUrl.isNotBlank() && localStorage.accessToken.isNotBlank()) {
+            networkErrorTryCatch(LOGOUT_TAG) {
+                httpClient.post { url("$serverUrl/api/auth/logout") }
+            }?.let { response -> handlePlainHttpResponse(LOGOUT_TAG, response) }
+        }
+
         localStorage.clearSession()
         localStorage.password = ""
         httpClient.authProvider<BearerAuthProvider>()?.clearToken()

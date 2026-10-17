@@ -124,4 +124,21 @@ class LocalStorageTest {
         assertEquals("", localStorage.password)
         assertEquals(mapOf("access_token" to "access"), store.values)
     }
+
+    @Test
+    fun deviceIdIsMadeOnceAndKept() {
+        val id = localStorage.deviceId
+
+        assertTrue(id.isNotBlank())
+        assertEquals(id, LocalStorage(store).deviceId)
+    }
+
+    @Test
+    fun blankDeviceNameFallsBackToThePlatform() {
+        localStorage.deviceName = "Front Counter"
+        assertEquals("Front Counter", LocalStorage(store).deviceName)
+
+        localStorage.deviceName = "  "
+        assertTrue(localStorage.deviceName.isNotBlank())
+    }
 }

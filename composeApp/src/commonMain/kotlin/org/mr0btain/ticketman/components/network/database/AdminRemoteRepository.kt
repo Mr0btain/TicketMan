@@ -62,11 +62,23 @@ class AdminRemoteRepository(
     suspend fun getSessions(): List<SessionResponse> =
         getJson(SESSIONS_TAG, "$adminUrl/sessions") ?: emptyList()
 
-    suspend fun revokeSession(userIdentifier: Uuid): EmptyResult<ServerError> {
+    /** Logs out one device */
+    suspend fun revokeSession(sessionId: String): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkErrorTryCatch(REVOKE_SESSION_TAG) {
-            client.delete { url("$adminUrl/sessions/$userIdentifier") }
+            client.delete { url("$adminUrl/sessions/$sessionId") }
+        }
+
+        return handleActionHttpResponse(REVOKE_SESSION_TAG, response)
+    }
+
+    /** Logs a user out of every device */
+    suspend fun revokeUserSessions(userIdentifier: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(REVOKE_SESSION_TAG) {
+            client.delete { url("$adminUrl/sessions/user/$userIdentifier") }
         }
 
         return handleActionHttpResponse(REVOKE_SESSION_TAG, response)

@@ -7,6 +7,7 @@ import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -20,6 +21,7 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var email by UserTable.email
     var phone by UserTable.phone
     var access by UserTable.access
+    var status by UserTable.status
 
     // For notes
     var notes by NoteEntity via UserNoteTable
@@ -35,7 +37,8 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             name = name,
             email = email,
             phone = phone,
-            accessLevel = access
+            accessLevel = access,
+            status = UserStatus.entries.firstOrNull { it.name == status } ?: UserStatus.ACTIVE
         )
     }
 

@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.audit.AuditLogTable
@@ -20,6 +21,7 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import java.io.File
@@ -78,7 +80,8 @@ class LocalDatabase (
      * Only these are checked since H2 can't list columns for the "user" table (it's a reserved word).
      */
     private val migratedTables = arrayOf(
-        TicketTable
+        TicketTable,
+        TokenTable
     )
 
     /**
@@ -92,6 +95,8 @@ class LocalDatabase (
             // New columns all have defaults or are nullable so they can be added to existing rows
             SchemaUtils.addMissingColumnsStatements(*migratedTables).forEach { statement -> exec(statement) }
 
+            addUserColumns()
+
             // Indexes on existing tables aren't added by the above
             exec(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.NUMBER_INDEX} " +
@@ -102,6 +107,23 @@ class LocalDatabase (
         }
 
         ticketDatabase.backfillNumbers()
+        userDatabase.migrateDeactivatedUsers()
+        tokenDatabase.clearLegacySessions()
+    }
+
+    /**
+     * Adds columns the user table gained since release. Done by hand because H2 can't list the columns of a
+     * table named "user", which Exposed needs for addMissingColumnsStatements
+     */
+    private fun JdbcTransaction.addUserColumns() {
+        listOf(
+            UserTable.status to "DEFAULT '${UserStatus.ACTIVE.name}' NOT NULL"
+        ).forEach { (column, constraints) ->
+            exec(
+                "ALTER TABLE ${identity(UserTable)} ADD COLUMN IF NOT EXISTS " +
+                    "${identity(column)} ${column.columnType.sqlType()} $constraints"
+            )
+        }
     }
 
     /** Total size of the database files on disk */

@@ -39,6 +39,7 @@ fun SettingsScreen(
     val pageSize = viewModel.pageSize.collectAsState()
     val searchLimit = viewModel.searchLimit.collectAsState()
     val cacheSize = viewModel.cacheSize.collectAsState()
+    val deviceName = viewModel.deviceName.collectAsState()
 
     // Names of the main screen tabs, in tab index order
     val tabNames = listOf("Customers", "Tickets", "Inventory")
@@ -97,6 +98,18 @@ fun SettingsScreen(
                             AppLogger.e(CHECK_URL_TAG, SimpleResult.FAIL, ex)
                             false
                         }
+                    },
+                    type = SettingType.TEXT
+                ),
+                SettingItem(
+                    icon = painterResource(Res.drawable.monitor),
+                    description = "Name admins see for this device, used from the next login",
+                    label = "Device Name",
+                    enabled = true,
+                    initialState = deviceName.value,
+                    onClick = { name ->
+                        viewModel.setDeviceName(name as? String ?: "")
+                        true
                     },
                     type = SettingType.TEXT
                 ),

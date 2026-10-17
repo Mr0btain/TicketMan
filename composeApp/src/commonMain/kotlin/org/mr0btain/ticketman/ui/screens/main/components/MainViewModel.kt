@@ -542,7 +542,7 @@ class MainViewModel(
 
     /** Whether the logged in user can use the admin screen. The server checks this too, this just hides things */
     val isAdmin: StateFlow<Boolean> = _currentUser
-        .map { user -> user?.accessLevel?.meets(AccessLevel.ADMIN) == true }
+        .map { user -> user?.canAccess(AccessLevel.ADMIN) == true }
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private suspend fun loadCurrentUser() {
@@ -630,6 +630,16 @@ class MainViewModel(
 
     private val _cacheSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_CACHE_SIZE)
     val cacheSize = _cacheSize.asStateFlow()
+
+    // Name shown to admins in the session list, sent at login
+    private val _deviceName: MutableStateFlow<String> = MutableStateFlow(localStorage.deviceName)
+    val deviceName = _deviceName.asStateFlow()
+
+    /** Takes effect on the next login */
+    fun setDeviceName(name: String) {
+        localStorage.deviceName = name
+        _deviceName.value = localStorage.deviceName
+    }
 
     private val _scrollBarsOnBottom: MutableStateFlow<Boolean> = MutableStateFlow(true)
     val scrollBarsOnBottom = _scrollBarsOnBottom.asStateFlow()

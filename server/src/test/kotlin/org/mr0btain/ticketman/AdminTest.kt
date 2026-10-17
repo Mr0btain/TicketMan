@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
@@ -124,7 +125,7 @@ class AdminTest {
         val users = setup()
         val employeeToken = token(employee)
 
-        users.update(employee.copy(password = "", accessLevel = AccessLevel.NONE))
+        users.update(employee.copy(password = "", status = UserStatus.DEACTIVATED))
 
         assertEquals(HttpStatusCode.Unauthorized, login(employee.username, employee.password).status)
         assertEquals(
@@ -287,13 +288,14 @@ class AdminTest {
 
         val sessions = json.decodeFromString<List<SessionResponse>>(get("/api/admin/sessions", adminToken).bodyAsText())
         assertEquals(setOf(admin.identifier, employee.identifier), sessions.map { it.userIdentifier }.toSet())
-        assertTrue(sessions.all { it.issuedAt != null && it.expiresAt != null })
+        assertTrue(sessions.all { it.createdAt != null && it.expiresAt != null })
 
-        assertEquals(HttpStatusCode.Accepted, delete("/api/admin/sessions/${employee.identifier}", adminToken).status)
+        val employeeSession = sessions.single { it.userIdentifier == employee.identifier }.sessionId
+        assertEquals(HttpStatusCode.Accepted, delete("/api/admin/sessions/$employeeSession", adminToken).status)
 
         // Revoked access token stops working straight away
         assertEquals(HttpStatusCode.Unauthorized, get("/api/user/me", employeeToken).status)
-        assertEquals(HttpStatusCode.NotFound, delete("/api/admin/sessions/${employee.identifier}", adminToken).status)
+        assertEquals(HttpStatusCode.NotFound, delete("/api/admin/sessions/$employeeSession", adminToken).status)
     }
 
     @Test

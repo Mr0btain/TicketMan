@@ -222,12 +222,14 @@ private fun AdminContent(
                 },
                 onResetPassword = { if (!userSeed.isNew) showResetPasswordDialog = true },
                 onSetActive = { active -> admin.setUserActive(userSeed.user, active) },
+                onLogOutEverywhere = { admin.revokeAllSessions(userSeed.user) },
                 onDelete = { if (!userSeed.isNew) showDeleteDialog = true }
             )
 
             AdminTab.SESSIONS -> AdminSessionsTab(
                 sessions = sessions,
                 currentUserIdentifier = currentUser?.identifier,
+                currentSessionId = admin.currentSessionId(),
                 onRevoke = { session -> admin.revokeSession(session) }
             )
 

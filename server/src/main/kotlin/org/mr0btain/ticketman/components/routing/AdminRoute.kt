@@ -70,24 +70,33 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.OK, adminService.getSessions())
         }
 
-        // Log a user out by dropping their refresh token, their access tokens stop working with it
-        delete("/sessions/{identifier}") {
-            val identifier = call.uuidParameter("identifier")
+        // Log out one device. Its access tokens stop working with it
+        delete("/sessions/{sessionId}") {
+            val session = call.parameters["sessionId"]?.let { database.tokenDatabase.findBySessionId(it) }
 
-            if (identifier == null) {
-                call.respond(HttpStatusCode.BadRequest)
-                return@delete
-            }
-
-            if (database.tokenDatabase.findById(identifier.toString()) == null) {
+            if (session == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            database.tokenDatabase.remove(identifier.toString())
-            call.audit(auditLog, AuditAction.SESSION_REVOKE, "user", identifier)
+            database.tokenDatabase.remove(session.sessionId)
+            call.audit(auditLog, AuditAction.SESSION_REVOKE, "user", session.userIdentifier, "Logged out ${session.deviceName.ifBlank { "a device" }}")
             call.respond(HttpStatusCode.Accepted)
-            AppLogger.m(SESSIONS_TAG, "$identifier session revoked")
+            AppLogger.m(SESSIONS_TAG, "${session.sessionId} session revoked")
+        }
+
+        // Log a user out of every device
+        delete("/sessions/user/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null || database.userDatabase.getById(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@delete
+            }
+
+            database.tokenDatabase.removeAllForUser(identifier.toString())
+            call.audit(auditLog, AuditAction.SESSION_REVOKE, "user", identifier, "Logged out everywhere")
+            call.respond(HttpStatusCode.Accepted)
         }
 
         get("/server") {

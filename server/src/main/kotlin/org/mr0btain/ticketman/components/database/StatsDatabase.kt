@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import kotlin.time.Clock
@@ -61,8 +62,10 @@ class StatsDatabase {
                     .map { it.toTicket() }
 
                 val users = UserTable
-                    .select(UserTable.access)
-                    .map { row -> row[UserTable.access] }
+                    .select(UserTable.access, UserTable.status)
+                    .map { row -> row[UserTable.access] to row[UserTable.status] }
+
+                val activeLevels = users.filter { (_, status) -> status == UserStatus.ACTIVE.name }.map { (level, _) -> level }
 
                 val stats = AdminStatsResponse(
                     totalTickets = tickets.size.toLong(),
@@ -81,7 +84,10 @@ class StatsDatabase {
                     lowStockCount = InventoryTable.selectAll().where { InventoryTable.stock lessEq lowStockThreshold }.count(),
                     lowStockThreshold = lowStockThreshold,
                     totalUsers = users.size.toLong(),
-                    usersByAccessLevel = AccessLevel.entries.associateWith { level -> users.count { it == level }.toLong() },
+                    usersByAccessLevel = listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN)
+                        .associateWith { level -> activeLevels.count { it == level }.toLong() },
+                    pendingUsers = users.count { (_, status) -> status == UserStatus.PENDING.name }.toLong(),
+                    deactivatedUsers = users.count { (_, status) -> status == UserStatus.DEACTIVATED.name }.toLong(),
                     activeSessions = activeSessions
                 )
 
