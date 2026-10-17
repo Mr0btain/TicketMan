@@ -37,7 +37,7 @@ fun TextEditDialog(
     val focusRequester = remember { FocusRequester() }
     var isError by remember { mutableStateOf(false) }
 
-    var textFieldValueState by remember {
+    var textFieldValueState by remember(value) {
         mutableStateOf(
             TextFieldValue(
                 text =value,

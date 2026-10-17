@@ -34,6 +34,14 @@ fun SettingsScreen(
 
     val darkMode = viewModel.darkMode.collectAsState()
     val serverUrl = viewModel.serverUrl.collectAsState()
+    val rememberLogin = viewModel.rememberLogin.collectAsState()
+    val defaultTab = viewModel.defaultTab.collectAsState()
+    val pageSize = viewModel.pageSize.collectAsState()
+    val searchLimit = viewModel.searchLimit.collectAsState()
+    val cacheSize = viewModel.cacheSize.collectAsState()
+
+    // Names of the main screen tabs, in tab index order
+    val tabNames = listOf("Customers", "Tickets", "Inventory")
 
     val textStyle = MaterialTheme.typography.bodyMedium
     val childTextStyle = MaterialTheme.typography.bodySmall
@@ -43,7 +51,32 @@ fun SettingsScreen(
             label = stringResource(Res.string.settings_first_group),
             textStyle = textStyle,
             childTextStyle = childTextStyle,
-            items = listOf()
+            items = listOf(
+                SettingItem(
+                    icon = if (rememberLogin.value) painterResource(Res.drawable.lock) else painterResource(Res.drawable.unlock),
+                    description = "Save username and password after logging in",
+                    label = "Remember Login",
+                    enabled = true,
+                    initialState = rememberLogin.value,
+                    onClick = {
+                        viewModel.toggleRememberLogin()
+                        true
+                    },
+                    type = SettingType.SWITCH
+                ),
+                SettingItem(
+                    icon = painterResource(Res.drawable.home),
+                    description = "Main screen tab shown on start",
+                    label = "Start Tab",
+                    enabled = true,
+                    initialState = tabNames.getOrElse(defaultTab.value) { "" },
+                    onClick = {
+                        viewModel.setDefaultTab(defaultTab.value + 1)
+                        true
+                    },
+                    type = SettingType.CLICKABLE_TEXT
+                )
+            )
         ),
         SettingItemGroup(
             label = stringResource(Res.string.settings_second_group),
@@ -64,6 +97,48 @@ fun SettingsScreen(
                             AppLogger.e(CHECK_URL_TAG, SimpleResult.FAIL, ex)
                             false
                         }
+                    },
+                    type = SettingType.TEXT
+                ),
+                SettingItem(
+                    icon = painterResource(Res.drawable.list),
+                    description = "Number of items loaded per page " +
+                            "(${MainViewModel.PAGE_SIZE_RANGE.first}-${MainViewModel.PAGE_SIZE_RANGE.last})",
+                    label = "Page Size",
+                    enabled = true,
+                    initialState = pageSize.value.toString(),
+                    onClick = { value ->
+                        (value as? String)?.trim()?.toIntOrNull()
+                            ?.takeIf { it in MainViewModel.PAGE_SIZE_RANGE }
+                            ?.let { viewModel.setPageSize(it); true } ?: false
+                    },
+                    type = SettingType.TEXT
+                ),
+                SettingItem(
+                    icon = painterResource(Res.drawable.search),
+                    description = "Max number of search results " +
+                            "(${MainViewModel.SEARCH_LIMIT_RANGE.first}-${MainViewModel.SEARCH_LIMIT_RANGE.last})",
+                    label = "Search Result Limit",
+                    enabled = true,
+                    initialState = searchLimit.value.toString(),
+                    onClick = { value ->
+                        (value as? String)?.trim()?.toIntOrNull()
+                            ?.takeIf { it in MainViewModel.SEARCH_LIMIT_RANGE }
+                            ?.let { viewModel.setSearchLimit(it); true } ?: false
+                    },
+                    type = SettingType.TEXT
+                ),
+                SettingItem(
+                    icon = painterResource(Res.drawable.database),
+                    description = "Max items kept in each cache, applies on restart " +
+                            "(${MainViewModel.CACHE_SIZE_RANGE.first}-${MainViewModel.CACHE_SIZE_RANGE.last})",
+                    label = "Cache Size",
+                    enabled = true,
+                    initialState = cacheSize.value.toString(),
+                    onClick = { value ->
+                        (value as? String)?.trim()?.toIntOrNull()
+                            ?.takeIf { it in MainViewModel.CACHE_SIZE_RANGE }
+                            ?.let { viewModel.setCacheSize(it); true } ?: false
                     },
                     type = SettingType.TEXT
                 )

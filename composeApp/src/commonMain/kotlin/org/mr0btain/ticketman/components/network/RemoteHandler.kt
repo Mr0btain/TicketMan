@@ -3,6 +3,8 @@ package org.mr0btain.ticketman.components.network
 import io.ktor.client.engine.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.database.*
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
@@ -23,6 +25,8 @@ class RemoteHandler(
     private val TAG = "ServerHandler"
     private val SET_SERVER_URL_TAG = "$TAG:SetServerUrl"
     private val REFRESH_TOKENS_TAG = "$TAG:RefreshTokens"
+    private val LOGIN_TAG = "$TAG:Login"
+    private val LOGOUT_TAG = "$TAG:Logout"
     val userClient = ServerUserClient(createUserHttpClient(engine), localStorage)
 
     private val httpClient = createRemoteHttpClient(
@@ -38,11 +42,15 @@ class RemoteHandler(
     val ticketRepo = TicketRemoteRepositoryImpl(httpClient)
     val inventoryRepo = InventoryRemoteRepositoryImpl(httpClient)
     val userRepo = UserRemoteRepositoryImpl(httpClient)
-    
+
+    // Emits when the session can't be refreshed and the user needs to log in again
+    private val _authExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val authExpired = _authExpired.asSharedFlow()
+
     /**
-     * Sets url to the server in all clients
+     * Sets url to the server in all clients and tries to log in with the stored credentials
      */
-    suspend fun setUrl(url: String) {
+    suspend fun setUrl(url: String): ConnectionResult {
         if (url.isNotBlank()) {
             // Check if we can establish a connection with this address, if success then set it.
             if (userClient.checkServerConnection(url)) {
@@ -56,15 +64,19 @@ class RemoteHandler(
 
                 // Log in with stored credentials, then drop the tokens the http client cached
                 // before login so the next request loads the new ones
-                if (userClient.login()) {
-                    httpClient.authProvider<BearerAuthProvider>()?.clearToken()
+                return if (userClient.login()) {
+                    onLoggedIn()
+                    ConnectionResult.LOGGED_IN
                 } else {
                     AppLogger.i(SET_SERVER_URL_TAG, "Connected but login failed")
+                    ConnectionResult.CONNECTED
                 }
             }
         } else {
             AppLogger.m(SET_SERVER_URL_TAG, "FAIL: Url is empty")
         }
+
+        return ConnectionResult.UNREACHABLE
     }
 
     /**
@@ -103,6 +115,10 @@ class RemoteHandler(
             getStoredToken()
         } else {
             AppLogger.i(REFRESH_TOKENS_TAG, SimpleResult.FAIL)
+
+            // Drop the dead tokens and let whoever is listening know we need a fresh login
+            localStorage.clearSession()
+            _authExpired.tryEmit(Unit)
             null
         }
     }
@@ -117,5 +133,34 @@ class RemoteHandler(
     /**
      * Try to log in to server with username and password
      */
-    suspend fun login(user: String, pass: String) = userClient.login(user, pass)
+    suspend fun login(user: String, pass: String): Boolean {
+        val result = userClient.login(user, pass)
+
+        if (result) {
+            onLoggedIn()
+            AppLogger.m(LOGIN_TAG, SimpleResult.SUCCESS)
+        } else {
+            AppLogger.i(LOGIN_TAG, SimpleResult.FAIL)
+        }
+
+        return result
+    }
+
+    /**
+     * Drops the current session. The saved password is cleared too so the refresh fallback
+     * doesn't log us straight back in, the username is kept for prefilling the login form
+     */
+    suspend fun logout() {
+        localStorage.clearSession()
+        localStorage.password = ""
+        httpClient.authProvider<BearerAuthProvider>()?.clearToken()
+        AppLogger.m(LOGOUT_TAG, SimpleResult.SUCCESS)
+    }
+
+    /**
+     * Drop the tokens the http client cached before login so the next request loads the new ones
+     */
+    private fun onLoggedIn() {
+        httpClient.authProvider<BearerAuthProvider>()?.clearToken()
+    }
 }

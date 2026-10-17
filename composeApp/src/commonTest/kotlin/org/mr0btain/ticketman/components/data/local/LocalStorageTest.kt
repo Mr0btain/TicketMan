@@ -28,7 +28,7 @@ class LocalStorageTest {
         localStorage.accessToken = "new"
 
         localStorage.refreshToken = "old"
-        localStorage.accessToken = "new"
+        localStorage.refreshToken = "new"
 
         assertEquals("new", localStorage.accessToken)
         assertEquals("new", localStorage.refreshToken)
@@ -71,5 +71,57 @@ class LocalStorageTest {
         localStorage.clearSession()
 
         assertEquals(mapOf("other" to "value"), store.values)
+    }
+
+    @Test
+    fun settingsDefaultWhenMissing() {
+        assertEquals(LocalStorage.DEFAULT_REMEMBER_LOGIN, localStorage.rememberLogin)
+        assertEquals(LocalStorage.DEFAULT_TAB, localStorage.defaultTab)
+        assertEquals(LocalStorage.DEFAULT_PAGE_SIZE, localStorage.pageSize)
+        assertEquals(LocalStorage.DEFAULT_SEARCH_LIMIT, localStorage.searchLimit)
+        assertEquals(LocalStorage.DEFAULT_CACHE_SIZE, localStorage.cacheSize)
+    }
+
+    @Test
+    fun settingsPersistAcrossInstances() {
+        localStorage.rememberLogin = false
+        localStorage.defaultTab = 2
+        localStorage.pageSize = 50
+        localStorage.searchLimit = 10
+        localStorage.cacheSize = 75
+
+        val reloaded = LocalStorage(store)
+
+        assertFalse(reloaded.rememberLogin)
+        assertEquals(2, reloaded.defaultTab)
+        assertEquals(50, reloaded.pageSize)
+        assertEquals(10, reloaded.searchLimit)
+        assertEquals(75, reloaded.cacheSize)
+    }
+
+    @Test
+    fun invalidStoredSettingsFallBackToDefaults() {
+        store.putString("remember_login", "maybe")
+        store.putString("page_size", "lots")
+        store.putString("search_limit", "")
+
+        val reloaded = LocalStorage(store)
+
+        assertEquals(LocalStorage.DEFAULT_REMEMBER_LOGIN, reloaded.rememberLogin)
+        assertEquals(LocalStorage.DEFAULT_PAGE_SIZE, reloaded.pageSize)
+        assertEquals(LocalStorage.DEFAULT_SEARCH_LIMIT, reloaded.searchLimit)
+    }
+
+    @Test
+    fun clearCredentialsOnlyRemovesCredentialKeys() = runTest {
+        localStorage.username = "user"
+        localStorage.password = "pass"
+        localStorage.accessToken = "access"
+
+        localStorage.clearCredentials()
+
+        assertEquals("", localStorage.username)
+        assertEquals("", localStorage.password)
+        assertEquals(mapOf("access_token" to "access"), store.values)
     }
 }

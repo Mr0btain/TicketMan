@@ -120,7 +120,7 @@ fun App() {
             LoginPopup(
                 modifier = Modifier.padding(24.dp),
                 viewModel = mainViewModel,
-                onDismiss = { mainViewModel.changeShowLogin(!shouldShowLogin.value) },
+                onDismiss = { mainViewModel.changeShowLogin(false) },
                 coroutineScope = mainScope
             )
         }

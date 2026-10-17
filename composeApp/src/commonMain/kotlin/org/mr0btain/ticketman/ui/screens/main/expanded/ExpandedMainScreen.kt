@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.ui.composables.image.ImagePopup
 import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
 import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerPanel
@@ -35,6 +36,7 @@ fun ExpandedMainScreen(
 ) {
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
+    val loginState = viewModel.loginState.collectAsState()
 
     // User stuff
     //val userPagedItems = viewModel.userPager?.items?.collectAsState()
@@ -258,11 +260,19 @@ fun ExpandedMainScreen(
                         Text("Reload")
                     }
 
-                    // TODO: Make this only work if not logged in or hide if logged in
-                    Button(
-                        onClick = { viewModel.changeShowLogin(true) }
-                    ) {
-                        Text("Log In")
+                    if (loginState.value == LoginState.LOGGED_IN) {
+                        Button(
+                            onClick = { viewModel.logout() }
+                        ) {
+                            Text("Log Out")
+                        }
+                    } else {
+                        Button(
+                            onClick = { viewModel.changeShowLogin(true) },
+                            enabled = loginState.value != LoginState.LOADING
+                        ) {
+                            Text("Log In")
+                        }
                     }
                 }
             }
