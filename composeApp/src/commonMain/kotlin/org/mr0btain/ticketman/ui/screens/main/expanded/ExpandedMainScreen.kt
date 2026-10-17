@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -59,7 +60,8 @@ fun ExpandedMainScreen(
     val ticketSeed = viewModel.ticketSeed
     val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
     val ticketLazyListState = rememberLazyListState()
-    var selectedTicketPanel by remember { mutableIntStateOf(0) }
+    val ticketScope by viewModel.ticketScope.collectAsState()
+    val scope = rememberCoroutineScope()
 
     // Handler for ticket pager
     offsetPagerHandler(viewModel.ticketPager, ticketLazyListState)
@@ -239,13 +241,17 @@ fun ExpandedMainScreen(
                 },
                 onEditTicket = { if (!ticketSeed.isNew) showTicketDialog = true },
                 onSelectedTicketChange = { id -> viewModel.setSelectedTicket(id) },
-                onSelectedPanelChange = { selectedTicketPanel = it },
+                onTicketScopeChange = { newScope ->
+                    viewModel.setTicketScope(newScope)
+                    // The new list is a different set of tickets, so start it from the top
+                    scope.launch { ticketLazyListState.scrollToItem(0) }
+                },
                 onSearchQuery = { viewModel.searchTickets(it) },
                 onDeleteTicket = {
                     dataType = DataType.TICKET
                     showConfirmDeleteDialog = true
                 },
-                selectedPanel = selectedTicketPanel,
+                ticketScope = ticketScope,
                 ticketListState = ticketLazyListState,
                 onImageClick = { id -> showNoteImages(ticketSeed.notes, id) }
             )

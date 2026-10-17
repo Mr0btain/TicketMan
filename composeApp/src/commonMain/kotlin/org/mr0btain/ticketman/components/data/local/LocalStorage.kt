@@ -13,6 +13,7 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _themeId: String = ""
     private var _fontId: String = ""
     private var _reduceTransparency: Boolean = false
+    private var _ticketScope: String = ""
     private var _serverUrl: String = ""
     private var _rememberLogin: Boolean = DEFAULT_REMEMBER_LOGIN
     private var _defaultTab: Int = DEFAULT_TAB
@@ -79,6 +80,14 @@ class LocalStorage(private val store: KeyValueStore) {
         set(value) {
             _reduceTransparency = value
             store.putString(REDUCE_TRANSPARENCY_KEY, value.toString())
+        }
+
+    /** Name of the main screen's picked [org.mr0btain.ticketman.components.data.ticket.TicketScope], blank uses the default */
+    var ticketScope: String
+        get() = _ticketScope
+        set(value) {
+            _ticketScope = value
+            store.putString(TICKET_SCOPE_KEY, value)
         }
 
     var serverUrl: String
@@ -167,6 +176,7 @@ class LocalStorage(private val store: KeyValueStore) {
         _themeId = store.getString(THEME_ID_KEY, "")
         _fontId = store.getString(FONT_ID_KEY, "")
         _reduceTransparency = getBoolean(REDUCE_TRANSPARENCY_KEY, false)
+        _ticketScope = store.getString(TICKET_SCOPE_KEY, "")
         _serverUrl = store.getString(SERVER_URL_KEY, "")
         _rememberLogin = getBoolean(REMEMBER_LOGIN_KEY, DEFAULT_REMEMBER_LOGIN)
         _defaultTab = getInt(DEFAULT_TAB_KEY, DEFAULT_TAB)
@@ -226,6 +236,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val THEME_ID_KEY = "theme_id"
         private const val FONT_ID_KEY = "font_id"
         private const val REDUCE_TRANSPARENCY_KEY = "reduce_transparency"
+        private const val TICKET_SCOPE_KEY = "ticket_scope"
         private const val SERVER_URL_KEY = "server_url"
         private const val REMEMBER_LOGIN_KEY = "remember_login"
         private const val DEFAULT_TAB_KEY = "default_tab"

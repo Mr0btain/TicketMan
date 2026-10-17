@@ -27,6 +27,7 @@ fun Route.ticketRoute(
     val TAG = "TicketRoute"
     val GET_TAG = "$TAG:Get"
     val FETCH_TAG = "$TAG:Fetch"
+    val FETCH_MINE_TAG = "$TAG:FetchMine"
     val SEARCH_TAG = "$TAG:Search"
     val HISTORY_TAG = "$TAG:History"
     val NUMBER_TAG = "$TAG:Number"
@@ -58,6 +59,20 @@ fun Route.ticketRoute(
             } else {
                 call.respond(HttpStatusCode.NotFound)
                 AppLogger.m(FETCH_TAG, "$request not found")
+            }
+        }
+
+        // Tickets assigned to the caller, who comes from the token so nobody can list someone else's
+        post("/fetch/mine") {
+            val request = call.receive<PagedRequest>()
+
+            val result = call.getIdentifierFromToken()?.let { database.getPagedItemsForUser(it, request) }
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(FETCH_MINE_TAG, "$request not found")
             }
         }
 

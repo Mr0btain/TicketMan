@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -324,8 +325,8 @@ class ScreenRenderTest {
         bothModes("records-tickets") {
             Shell("Main") {
                 TicketPanel(
-                    selectedPanel = 1,
-                    onSelectedPanelChange = {},
+                    ticketScope = TicketScope.ALL,
+                    onTicketScopeChange = {},
                     seed = ticketSeed,
                     ticketList = listOf(iphone, pixel, thinkpad, ps5),
                     onAddNewTicket = {},

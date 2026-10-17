@@ -96,18 +96,21 @@ abstract class RemoteRepository<T: MainItem>(
         }
     }
 
-    suspend fun fetch(offset: Long, limit: Int): List<T> {
+    suspend fun fetch(offset: Long, limit: Int): List<T> = fetchPage(FETCH_TAG, "fetch", offset, limit)
+
+    /** A page from one of the route's paged endpoints, empty on any failure */
+    protected suspend fun fetchPage(tag: String, path: String, offset: Long, limit: Int): List<T> {
         if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(FETCH_TAG) {
+            val response = networkErrorTryCatch(tag) {
                 client.post {
-                    url("$serverUrl/fetch")
+                    url("$serverUrl/$path")
                     contentType(ContentType.Application.Json)
                     setBody(PagedRequest(offset,limit))
                 }
             }
 
             if (response != null) {
-                val result = handleHttpResponse<List<T>>(FETCH_TAG, response, listType)
+                val result = handleHttpResponse<List<T>>(tag, response, listType)
 
                 result.onSuccess {
                     return it

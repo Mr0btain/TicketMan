@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
+import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
@@ -88,6 +89,7 @@ class MainViewModel(
             _palette.value = TmPalettes.byId(localStorage.themeId)
             _font.value = TmFonts.byId(localStorage.fontId)
             _reduceTransparency.value = localStorage.reduceTransparency
+            _ticketScope.value = TicketScope.byName(localStorage.ticketScope)
             _serverUrl.value = localStorage.serverUrl
             _rememberLogin.value = localStorage.rememberLogin
             _defaultTab.value = localStorage.defaultTab
@@ -136,10 +138,11 @@ class MainViewModel(
             coroutineScope = viewModelScope,
             config = config,
             fetch = { page, pageSize ->
-                remoteHandler.ticketRepo.fetch(
-                    offset = (page * pageSize).toLong(),
-                    limit = pageSize
-                )
+                val offset = (page * pageSize).toLong()
+                when (_ticketScope.value) {
+                    TicketScope.MINE -> remoteHandler.ticketRepo.fetchMine(offset = offset, limit = pageSize)
+                    TicketScope.ALL -> remoteHandler.ticketRepo.fetch(offset = offset, limit = pageSize)
+                }
             }
         )
 
@@ -298,6 +301,18 @@ class MainViewModel(
     val ticketCache = TicketCache(maxCacheSize)
 
     var ticketPager: OffsetPager<Ticket>? = null
+
+    private val _ticketScope = MutableStateFlow(TicketScope.DEFAULT)
+    val ticketScope = _ticketScope.asStateFlow()
+
+    /** Switches the ticket list between the user's tickets and everyone's, and reloads it */
+    fun setTicketScope(scope: TicketScope) {
+        if (_ticketScope.value == scope) return
+
+        _ticketScope.value = scope
+        localStorage.ticketScope = scope.name
+        viewModelScope.launch { ticketPager?.refresh() }
+    }
 
     val ticketSeed: TicketSeed = TicketSeed()
 

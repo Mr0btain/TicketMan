@@ -6,6 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.kit.data.TicketIdText
 import org.mr0btain.ticketman.ui.kit.data.TmColumn
@@ -25,10 +26,10 @@ private val COLUMNS = listOf(
     TmColumn("Status", width = 136.dp)
 )
 
-// TODO: When we switch from all tickets to my tickets we need to not scroll to the item if it doesn't exist
 @Composable
 fun TicketListPane(
     ticketList: List<Ticket>,
+    ticketScope: TicketScope,
     selectedTicket: Uuid,
     onClick: (Uuid) -> Unit,
     state: LazyListState
@@ -37,9 +38,12 @@ fun TicketListPane(
         columns = COLUMNS,
         state = state,
         isEmpty = ticketList.isEmpty(),
-        emptyTitle = "No tickets yet",
+        emptyTitle = if (ticketScope == TicketScope.MINE) "No tickets assigned to you" else "No tickets yet",
         emptyIcon = Res.drawable.tool,
-        emptyMessage = "Devices checked in at the counter show up here."
+        emptyMessage = if (ticketScope == TicketScope.MINE)
+            "Tickets show up here once you're picked as the technician. Switch to All tickets to see everyone's."
+        else
+            "Devices checked in at the counter show up here."
     ) {
         items(ticketList, key = { it.identifier }) { ticket ->
             TmTableRow(COLUMNS, selected = ticket.identifier == selectedTicket, onClick = { onClick(ticket.identifier) }) { column ->

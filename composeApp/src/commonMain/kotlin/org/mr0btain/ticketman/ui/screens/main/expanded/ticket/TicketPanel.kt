@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.ui.screens.main.expanded.ticket
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
+import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -16,12 +17,12 @@ import kotlin.uuid.Uuid
 
 /**
  * Tickets: search and add on top, the list, and the picked ticket's details
- * @param selectedPanel 0 for my tickets, 1 for all of them
+ * @param ticketScope Whether the list shows the user's tickets or everyone's
  */
 @Composable
 fun TicketPanel(
-    selectedPanel: Int,
-    onSelectedPanelChange: (Int) -> Unit,
+    ticketScope: TicketScope,
+    onTicketScopeChange: (TicketScope) -> Unit,
     seed: TicketSeed,
     ticketList: List<Ticket>,
     onAddNewTicket: () -> Unit,
@@ -43,10 +44,10 @@ fun TicketPanel(
                 canDelete = !seed.isNew,
                 extras = {
                     TmSegmented(
-                        options = listOf(0, 1),
-                        selected = selectedPanel,
-                        onSelect = onSelectedPanelChange,
-                        optionLabel = { if (it == 0) "My tickets" else "All tickets" },
+                        options = TicketScope.entries,
+                        selected = ticketScope,
+                        onSelect = onTicketScopeChange,
+                        optionLabel = { it.label },
                         size = TmControlSize.MEDIUM
                     )
                 }
@@ -55,6 +56,7 @@ fun TicketPanel(
         list = {
             TicketListPane(
                 ticketList = ticketList,
+                ticketScope = ticketScope,
                 selectedTicket = seed.ticket.identifier,
                 onClick = onSelectedTicketChange,
                 state = ticketListState

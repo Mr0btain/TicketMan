@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
@@ -247,5 +248,37 @@ class TicketTest {
         assertFalse(TicketStatusType.DONE.isOpen)
         assertFalse(TicketStatusType.PICKED_UP.isOpen)
         assertFalse(TicketStatusType.PICKED_UP in TicketStatusType.selectable)
+    }
+
+    @Test
+    fun fetchMineOnlyReturnsTheCallersTicketsNewestFirst() = testApplication {
+        val token = setup()
+        val other = User(username = "other", password = "other_pass", accessLevel = AccessLevel.NORMAL)
+        val users = UserDatabaseImpl()
+        users.add(other)
+        val techId = users.getByUsername(tech.username)!!.identifier
+        val otherId = users.getByUsername(other.username)!!.identifier
+
+        val tickets = TicketDatabaseImpl()
+        val mine = List(3) { addTicket(token, Ticket()) }
+        val theirs = addTicket(token, Ticket())
+        addTicket(token, Ticket()) // Nobody's
+        mine.forEach { tickets.setUser(it.identifier, techId) }
+        tickets.setUser(theirs.identifier, otherId)
+
+        suspend fun fetchMine(offset: Long, limit: Int): List<Ticket> {
+            val response = client.post("/api/data/ticket/fetch/mine") {
+                contentType(ContentType.Application.Json)
+                bearerAuth(token)
+                setBody(json.encodeToString(PagedRequest(offset, limit)))
+            }
+            assertEquals(HttpStatusCode.OK, response.status)
+            return json.decodeFromString(response.bodyAsText())
+        }
+
+        val newestFirst = mine.reversed().map { it.identifier }
+        assertEquals(newestFirst, fetchMine(0, 10).map { it.identifier })
+        assertEquals(newestFirst.take(2), fetchMine(0, 2).map { it.identifier })
+        assertEquals(newestFirst.drop(2), fetchMine(2, 2).map { it.identifier })
     }
 }
