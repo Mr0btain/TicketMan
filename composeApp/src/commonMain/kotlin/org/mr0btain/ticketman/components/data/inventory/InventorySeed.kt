@@ -7,6 +7,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shared.Note
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -19,6 +20,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         private set
     var stock: Int by mutableStateOf(0)
         private set
+    // In dollars for editing, saved as cents
     var cost: Double by mutableStateOf(0.0)
         private set
     var price: Double by mutableStateOf(0.0)
@@ -29,8 +31,8 @@ class InventorySeed: DataSeed("InventorySeed") {
         name = name,
         description = description,
         stock = stock,
-        cost = cost.toString(),
-        price = price.toString()
+        costCents = Money.fromDollars(cost),
+        priceCents = Money.fromDollars(price)
     )
 
     // --- Initial setting up with data ---
@@ -42,8 +44,8 @@ class InventorySeed: DataSeed("InventorySeed") {
         name = data.name
         description = data.description
         stock = data.stock
-        cost = data.cost.toDoubleOrNull() ?: 0.0
-        price = data.price.toDoubleOrNull() ?: 0.0
+        cost = Money.toDollars(data.costCents)
+        price = Money.toDollars(data.priceCents)
 
         setNotes(notes)
 

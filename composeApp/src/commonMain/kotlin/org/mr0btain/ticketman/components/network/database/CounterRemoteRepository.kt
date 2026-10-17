@@ -3,14 +3,22 @@ package org.mr0btain.ticketman.components.network.database
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
+import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.counter.TicketSummary
+import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.search.SearchQuery
+import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
+import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.request.PaymentRequest
+import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
+import kotlin.uuid.Uuid
 
 /**
  * Client for the counter's lookups under /api/counter
@@ -23,6 +31,7 @@ class CounterRemoteRepository(
     private val SEARCH_TAG = "$TAG:Search"
     private val QUEUE_TAG = "$TAG:Queue"
     private val REPEAT_TAG = "$TAG:RepeatCheck"
+    private val PICKUP_TAG = "$TAG:Pickup"
 
     private var baseUrl = ""
 
@@ -58,6 +67,24 @@ class CounterRemoteRepository(
 
         handleHttpResponse<CounterQueueResponse>(QUEUE_TAG, response).onSuccess { return it }
         return null
+    }
+
+    /**
+     * Hands a ticket back: takes the payments, pays off its invoice and closes the ticket.
+     * Refused with what's still owed if the payments don't cover it
+     */
+    suspend fun pickup(ticketIdentifier: Uuid, payments: List<PaymentRequest>): Result<Invoice, ServerError> {
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkErrorTryCatch(PICKUP_TAG) {
+            client.post {
+                url("$baseUrl/pickup")
+                contentType(ContentType.Application.Json)
+                setBody(PickupRequest(ticketIdentifier, payments))
+            }
+        }
+
+        return handleDataHttpResponse(PICKUP_TAG, response)
     }
 
     /** Earlier repairs on this device for the customer, newest first */

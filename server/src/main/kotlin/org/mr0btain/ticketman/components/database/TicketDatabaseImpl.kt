@@ -253,6 +253,22 @@ class TicketDatabaseImpl(
         }
     }
 
+    /** Closes a ticket as picked up at [time] */
+    fun markPickedUp(identifier: Uuid, time: Long): Boolean {
+        return appLogTryCatch<Boolean>(UPDATE_STATUS_TAG) {
+            transaction {
+                val ticket = TicketEntity.findById(identifier)
+
+                ticket?.apply {
+                    status = TicketStatus(TicketStatusType.PICKED_UP, time)
+                    pickedUpAt = time
+                }
+
+                Pair(ticket != null, ticket != null)
+            }
+        } ?: false
+    }
+
     fun getByNumber(number: TicketNumber): Ticket? {
         return appLogTryCatch<Ticket?>(GET_BY_NUMBER_TAG) {
             transaction {

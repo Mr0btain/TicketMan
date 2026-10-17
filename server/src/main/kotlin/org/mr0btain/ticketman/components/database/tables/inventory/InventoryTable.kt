@@ -6,6 +6,10 @@ object InventoryTable : UuidTable("inventory") {
     val name = text("name")
     val description = text("description")
     val stock = integer("stock")
-    val cost = varchar("cost", 100)
-    val price = varchar("price", 100)
+    // Prices as typed text from before money was stored in cents, moved into the cents columns on start
+    val legacyCost = varchar("cost", 100).default("")
+    val legacyPrice = varchar("price", 100).default("")
+
+    val costCents = long("cost_cents").default(0)
+    val priceCents = long("price_cents").default(0)
 }

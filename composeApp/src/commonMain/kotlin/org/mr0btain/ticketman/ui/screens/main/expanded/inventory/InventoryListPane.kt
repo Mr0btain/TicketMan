@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.TableCardTextItem
 import org.mr0btain.ticketman.ui.composables.TableDivider
@@ -226,7 +227,7 @@ private fun InventoryTableItem(
                     .width(priceColumnWidth + sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableCardTextItem(inventoryItem.price)
+                TableCardTextItem(Money.format(inventoryItem.priceCents))
             }
 
             TableDivider()
@@ -238,7 +239,7 @@ private fun InventoryTableItem(
                     .width(costColumnWidth + sizeAdjust.dp),
                 contentAlignment = Alignment.Center
             ) {
-                TableCardTextItem(inventoryItem.cost)
+                TableCardTextItem(Money.format(inventoryItem.costCents))
             }
         }
     }

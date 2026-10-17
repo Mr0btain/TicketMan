@@ -9,6 +9,7 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 
@@ -16,6 +17,7 @@ fun Application.configureRouting(
     userService: UserService,
     accountService: AccountService,
     adminService: AdminService,
+    invoiceService: InvoiceService,
     localDatabase: LocalDatabase
 ) {
     install(StatusPages) {
@@ -59,7 +61,17 @@ fun Application.configureRouting(
         route("/api/counter") {
             counterRoute(
                 database = localDatabase.counterDatabase,
-                shopDatabase = localDatabase.shopDatabase
+                shopDatabase = localDatabase.shopDatabase,
+                invoiceService = invoiceService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route("/api/invoice") {
+            invoiceRoute(
+                database = localDatabase.invoiceDatabase,
+                service = invoiceService,
+                userDatabase = localDatabase.userDatabase
             )
         }
 

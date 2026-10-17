@@ -7,7 +7,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.CounterDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.data.search.SearchQuery
+import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 
 /**
@@ -15,8 +18,20 @@ import org.mr0btain.ticketman.server.request.RepeatCheckRequest
  */
 fun Route.counterRoute(
     database: CounterDatabase,
-    shopDatabase: ShopDatabase
+    shopDatabase: ShopDatabase,
+    invoiceService: InvoiceService,
+    userDatabase: UserDatabaseImpl
 ) {
+    // Hand a ticket back: pay off its invoice, take parts from stock and close it. Needs NORMAL access
+    authenticate {
+        post("/pickup") {
+            call.respondAccount(
+                invoiceService.pickup(call.receive<PickupRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                HttpStatusCode.OK
+            )
+        }
+    }
+
     authenticate("restricted") {
         // Search tickets and customers at once
         post("/search") {

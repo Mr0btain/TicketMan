@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.data.inventory.AccessLevel
@@ -62,7 +63,15 @@ fun Application.module() {
         configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
-        configureRouting(userService, accountService, adminService, database)
+        val invoiceService = InvoiceService(
+            invoices = database.invoiceDatabase,
+            tickets = database.ticketDatabase,
+            inventory = database.inventoryDatabase,
+            shop = database.shopDatabase,
+            auditLog = database.auditLogDatabase
+        )
+
+        configureRouting(userService, accountService, adminService, invoiceService, database)
 
         AppLogger.m("SERVER", "Server initialized!")
 

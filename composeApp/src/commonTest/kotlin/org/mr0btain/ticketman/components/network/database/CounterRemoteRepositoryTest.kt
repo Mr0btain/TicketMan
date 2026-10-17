@@ -7,10 +7,12 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import kotlin.test.*
@@ -32,6 +34,7 @@ class CounterRemoteRepositoryTest {
             "/api/counter/search" -> respond("""{"tickets":[],"customers":[]}""", HttpStatusCode.OK, jsonHeaders)
             "/api/counter/repeat-check" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
             "/api/data/ticket/add" -> respond(Json.encodeToString(created), HttpStatusCode.Created, jsonHeaders)
+            "/api/counter/pickup" -> respond("$12.00 is still owed on INV-26-00000001", HttpStatusCode.Conflict)
             else -> respond("[]", HttpStatusCode.OK, jsonHeaders)
         }
     }
@@ -88,6 +91,41 @@ class CounterRemoteRepositoryTest {
                 "POST /api/data/ticket/get/notes/$id",
                 "POST /api/data/customer/add/ticket/$id",
                 "GET /api/data/customer/get/tickets/$id"
+            ),
+            requests
+        )
+    }
+
+    @Test
+    fun pickupPassesOnWhatsStillOwed() = runTest {
+        val result = counter.pickup(Uuid.random(), listOf(PaymentRequest(PaymentMethod.CASH, 100)))
+
+        assertIs<Result.Error<*>>(result)
+        assertEquals("$12.00 is still owed on INV-26-00000001", (result as Result.Error).error.message)
+    }
+
+    @Test
+    fun invoiceRoutes() = runTest {
+        val invoices = InvoiceRemoteRepository(client).apply { serverUrl = "http://localhost" }
+        val id = Uuid.parse("00000000-0000-7000-8000-000000000001")
+
+        invoices.getForTicket(id)
+        invoices.openForTicket(id)
+        invoices.update(id, emptyList(), 0)
+        invoices.addPayment(id, PaymentRequest(PaymentMethod.CARD, 500))
+        invoices.removePayment(id, id)
+        invoices.void(id)
+        invoices.fetch(0, 10)
+
+        assertEquals(
+            listOf(
+                "GET /api/invoice/ticket/$id",
+                "POST /api/invoice/ticket/$id",
+                "POST /api/invoice/$id/update",
+                "POST /api/invoice/$id/payments",
+                "DELETE /api/invoice/$id/payments/$id",
+                "POST /api/invoice/$id/void",
+                "POST /api/invoice/fetch"
             ),
             requests
         )

@@ -54,6 +54,7 @@ class RemoteHandler(
     val userRepo = UserRemoteRepositoryImpl(httpClient)
     val adminRepo = AdminRemoteRepository(httpClient)
     val counterRepo = CounterRemoteRepository(httpClient)
+    val invoiceRepo = InvoiceRemoteRepository(httpClient)
 
     // Base url once a server has been reached, used for routes outside the repositories
     private var serverUrl = ""
@@ -77,6 +78,7 @@ class RemoteHandler(
                 userRepo.serverUrl = url
                 adminRepo.serverUrl = url
                 counterRepo.serverUrl = url
+                invoiceRepo.serverUrl = url
 
                 AppLogger.m(SET_SERVER_URL_TAG, SimpleResult.SUCCESS)
 

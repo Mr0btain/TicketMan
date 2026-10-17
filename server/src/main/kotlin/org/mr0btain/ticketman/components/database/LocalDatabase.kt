@@ -10,6 +10,9 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.components.database.tables.image.ImageTable
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryImageTable
+import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceChargeTable
+import org.mr0btain.ticketman.components.database.tables.invoice.InvoicePaymentTable
+import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceTable
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryNoteTable
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.components.database.tables.note.NoteImageTable
@@ -56,6 +59,7 @@ class LocalDatabase (
     val counterDatabase = CounterDatabase(ticketDatabase, customerDatabase)
     val inviteDatabase = InviteDatabase()
     val stationDatabase = StationDatabase()
+    val invoiceDatabase = InvoiceDatabase()
 
     // Every table, in an order where references come before the tables that use them
     private val tables = arrayOf(
@@ -78,7 +82,10 @@ class LocalDatabase (
         ShopTable,
         AuditLogTable,
         InviteTable,
-        StationTable
+        StationTable,
+        InvoiceTable,
+        InvoiceChargeTable,
+        InvoicePaymentTable
     )
 
     /**
@@ -87,7 +94,8 @@ class LocalDatabase (
      */
     private val migratedTables = arrayOf(
         TicketTable,
-        TokenTable
+        TokenTable,
+        InventoryTable
     )
 
     /**
@@ -115,6 +123,7 @@ class LocalDatabase (
         ticketDatabase.backfillNumbers()
         userDatabase.migrateDeactivatedUsers()
         tokenDatabase.clearLegacySessions()
+        inventoryDatabase.migrateLegacyPrices()
     }
 
     /**
