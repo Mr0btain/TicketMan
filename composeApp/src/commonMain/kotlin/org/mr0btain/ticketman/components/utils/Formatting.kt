@@ -98,3 +98,7 @@ fun formatBytes(bytes: Long): String {
 /** Enum names like IN_PROGRESS as "In progress" */
 fun formatEnumName(name: String): String =
     name.lowercase().replace('_', ' ').replaceFirstChar { it.titlecase() }
+
+/** Quantities like 2 or 1.5, whole numbers without the .0 */
+fun formatQuantity(quantity: Double): String =
+    if (quantity % 1.0 == 0.0) quantity.toLong().toString() else quantity.toString()

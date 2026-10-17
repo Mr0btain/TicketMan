@@ -34,7 +34,7 @@ fun SearchResults(
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
                 text = "Search by ticket number, phone number, customer name, email or device.\n\n" +
-                    "F2 search  -  F3 check in  -  F4 price check  -  Esc back",
+                    "F2 search  -  F3 check in  -  F4 price check  -  F5 pick up the open ticket  -  Esc back",
                 fontSize = 16.sp,
                 textAlign = TextAlign.Center
             )

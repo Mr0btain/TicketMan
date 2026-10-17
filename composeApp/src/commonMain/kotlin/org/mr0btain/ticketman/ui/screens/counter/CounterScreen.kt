@@ -40,6 +40,8 @@ fun CounterScreen(
     val shop by counter.shop.collectAsState()
     val checkInCustomer by counter.checkInCustomer.collectAsState()
     val lastCheckIn by counter.lastCheckIn.collectAsState()
+    val pickup by counter.pickup.collectAsState()
+    val lastPickup by counter.lastPickup.collectAsState()
 
     val canEdit = viewModel.canEdit.collectAsState().value
     val searchFocus = remember { FocusRequester() }
@@ -74,6 +76,12 @@ fun CounterScreen(
 
                     Key.F4 -> {
                         counter.openPriceCheck()
+                        true
+                    }
+
+                    // Picks up whichever ticket is open
+                    Key.F5 -> {
+                        if (view == CounterView.TICKET) ticket?.let { counter.startPickup(it.ticket.identifier) }
                         true
                     }
 
@@ -160,7 +168,11 @@ fun CounterScreen(
                                 onStatusChange = { counter.setTicketStatus(it) },
                                 onAddNote = { counter.addTicketNote(it) },
                                 onCustomerClick = { detail.customer?.let { counter.openCustomer(it.identifier) } },
-                                onBack = { counter.goHome() }
+                                onBack = { counter.goHome() },
+                                extraActions = {
+                                    Spacer(Modifier.padding(8.dp))
+                                    Button(onClick = { counter.startPickup(detail.ticket.identifier) }) { Text("Pick Up (F5)") }
+                                }
                             )
                         }
 
@@ -200,6 +212,24 @@ fun CounterScreen(
                                 result = result,
                                 onOpenTicket = { counter.openTicket(result.ticket.identifier) },
                                 onCheckInAnother = { counter.startCheckIn() },
+                                onDone = { counter.goHome() }
+                            )
+                        }
+
+                        CounterView.PICKUP -> pickup?.let { detail ->
+                            PickupScreen(
+                                detail = detail,
+                                onSearchParts = { counter.searchParts(it) },
+                                onSave = { charges, discount, onResult -> counter.saveCharges(charges, discount, onResult) },
+                                onRemovePayment = { counter.removePayment(it) },
+                                onFinish = { charges, discount, payments, onResult -> counter.finishPickup(charges, discount, payments, onResult) },
+                                onBack = { counter.openTicket(detail.ticket.identifier) }
+                            )
+                        }
+
+                        CounterView.PICKED_UP -> lastPickup?.let { invoice ->
+                            PickedUpView(
+                                invoice = invoice,
                                 onDone = { counter.goHome() }
                             )
                         }

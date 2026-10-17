@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatDay
+import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
@@ -160,6 +161,14 @@ fun TicketCard(
                     Text(text = "None yet")
                 } else {
                     SimpleTextItem(invoice.label, invoice.status.name.lowercase().replaceFirstChar { it.titlecase() })
+
+                    invoice.charges.forEach { charge ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(text = "${formatQuantity(charge.quantity)} x ${charge.description}", fontSize = 13.sp)
+                            Text(text = Money.format(charge.totalCents), fontSize = 13.sp)
+                        }
+                    }
+
                     SimpleTextItem("Total", Money.format(invoice.totalCents))
                     SimpleTextItem("Paid", Money.format(invoice.paidCents))
                     SimpleTextItem("Balance", Money.format(invoice.balanceCents))

@@ -55,7 +55,11 @@ fun NavigationHost(
 
         composable(Destination.INVOICE.route) {
             InvoiceScreen(
-                viewModel = mainViewModel
+                viewModel = mainViewModel,
+                onOpenTicket = { identifier ->
+                    mainViewModel.counter.openTicket(identifier)
+                    navHostController.navigate(Destination.DASHBOARD.route)
+                }
             )
         }
 

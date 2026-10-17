@@ -11,7 +11,9 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
@@ -24,6 +26,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.server.request.CheckInRequest
+import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
@@ -38,7 +41,9 @@ enum class CounterView {
     PRICE_CHECK,
     CHECK_IN,
     CHECKED_IN,
-    NEW_CUSTOMER
+    NEW_CUSTOMER,
+    PICKUP,
+    PICKED_UP
 }
 
 /** Everything the ticket card shows */
@@ -104,6 +109,21 @@ class CounterHandler(
 
     private val _lastCheckIn = MutableStateFlow<CheckInResponse?>(null)
     val lastCheckIn = _lastCheckIn.asStateFlow()
+
+    // Ticket and invoice being picked up
+    private val _pickup = MutableStateFlow<TicketDetail?>(null)
+    val pickup = _pickup.asStateFlow()
+
+    // Invoice list, newest first
+    private val _invoices = MutableStateFlow<List<Invoice>>(emptyList())
+    val invoices = _invoices.asStateFlow()
+
+    private val _invoicesEndReached = MutableStateFlow(false)
+    val invoicesEndReached = _invoicesEndReached.asStateFlow()
+
+    // The paid invoice from the last pickup, for the done screen
+    private val _lastPickup = MutableStateFlow<Invoice?>(null)
+    val lastPickup = _lastPickup.asStateFlow()
 
     private var searchJob: Job? = null
     private var priceJob: Job? = null
@@ -292,6 +312,141 @@ class CounterHandler(
         }
     }
 
+    // ------------------------------------------ Pickup ------------------------------------------
+
+    /** Opens pickup for a ticket, making its invoice if it doesn't have one */
+    fun startPickup(ticketIdentifier: Uuid) {
+        if (!canEdit()) return
+
+        scope.launch {
+            val detail = loadTicket(ticketIdentifier) ?: run {
+                notify("Couldn't load that ticket")
+                return@launch
+            }
+
+            if (detail.ticket.status.status == TicketStatusType.PICKED_UP) {
+                notify("Ticket ${detail.ticket.label} was already picked up")
+                return@launch
+            }
+
+            when (val invoice = remoteHandler.invoiceRepo.openForTicket(ticketIdentifier)) {
+                is Result.Success -> {
+                    _pickup.value = detail.copy(invoice = invoice.data)
+                    _view.value = CounterView.PICKUP
+                }
+
+                is Result.Error -> notify(invoice.error.message)
+            }
+        }
+    }
+
+    /** Parts for adding to an invoice */
+    suspend fun searchParts(text: String): List<Inventory> {
+        if (text.isBlank()) return emptyList()
+
+        val inventory = remoteHandler.inventoryRepo
+        return inventory.search(text.trim(), SEARCH_LIMIT).mapNotNull { inventory.get(it.identifier) }
+    }
+
+    /**
+     * Saves the invoice's lines so the server works out the totals
+     * @param onResult Gets null when saved, otherwise what went wrong
+     */
+    fun saveCharges(charges: List<Charge>, discountCents: Long, onResult: (String?) -> Unit) {
+        val invoice = _pickup.value?.invoice ?: return
+        if (!canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.invoiceRepo.update(invoice.identifier, charges, discountCents)) {
+                is Result.Success -> {
+                    _pickup.value = _pickup.value?.copy(invoice = result.data)
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** Takes a deposit or other payment off the open invoice */
+    fun removePayment(payment: Payment) {
+        val invoice = _pickup.value?.invoice ?: return
+        if (!canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.invoiceRepo.removePayment(invoice.identifier, payment.identifier)) {
+                is Result.Success -> _pickup.value = _pickup.value?.copy(invoice = result.data)
+                is Result.Error -> notify(result.error.message)
+            }
+        }
+    }
+
+    /**
+     * Finishes the pickup. Unsaved line changes are saved first so the server checks the right total
+     * @param onResult Gets null when the ticket is picked up, otherwise what went wrong
+     */
+    fun finishPickup(charges: List<Charge>, discountCents: Long, payments: List<PaymentRequest>, onResult: (String?) -> Unit) {
+        val detail = _pickup.value ?: return
+        val invoice = detail.invoice ?: return
+        if (!canEdit()) return
+
+        scope.launch {
+            if (charges != invoice.charges || discountCents != invoice.discountCents) {
+                val saved = remoteHandler.invoiceRepo.update(invoice.identifier, charges, discountCents)
+
+                if (saved is Result.Error) {
+                    onResult(saved.error.message)
+                    return@launch
+                }
+            }
+
+            when (val result = remoteHandler.counterRepo.pickup(detail.ticket.identifier, payments)) {
+                is Result.Success -> {
+                    _lastPickup.value = result.data
+                    _pickup.value = null
+                    _view.value = CounterView.PICKED_UP
+                    refreshQueue()
+                    onResult(null)
+                }
+
+                is Result.Error -> {
+                    // Totals may have changed when saving, show them
+                    remoteHandler.invoiceRepo.getForTicket(detail.ticket.identifier)?.let { latest ->
+                        _pickup.value = _pickup.value?.copy(invoice = latest)
+                    }
+                    onResult(result.error.message)
+                }
+            }
+        }
+    }
+
+    // ------------------------------------------ Invoice list ------------------------------------------
+
+    /** Loads the invoice list, from the start or the next page */
+    fun loadInvoices(reset: Boolean) {
+        scope.launch {
+            val offset = if (reset) 0L else _invoices.value.size.toLong()
+            val page = remoteHandler.invoiceRepo.fetch(offset, INVOICE_PAGE_SIZE)
+
+            _invoices.value = if (reset) page else _invoices.value + page
+            _invoicesEndReached.value = page.size < INVOICE_PAGE_SIZE
+        }
+    }
+
+    /** Admin only, the server refuses anyone else */
+    fun voidInvoice(invoice: Invoice) {
+        scope.launch {
+            when (val result = remoteHandler.invoiceRepo.void(invoice.identifier)) {
+                is Result.Success -> {
+                    notify("Voided ${invoice.label}")
+                    _invoices.value = _invoices.value.map { if (it.identifier == invoice.identifier) result.data else it }
+                }
+
+                is Result.Error -> notify(result.error.message)
+            }
+        }
+    }
+
     // ------------------------------------------ Price check ------------------------------------------
 
     fun searchPrices(text: String) {
@@ -323,6 +478,10 @@ class CounterHandler(
         _priceResults.value = emptyList()
         _checkInCustomer.value = null
         _lastCheckIn.value = null
+        _pickup.value = null
+        _lastPickup.value = null
+        _invoices.value = emptyList()
+        _invoicesEndReached.value = false
     }
 
     private fun notify(message: String) {
@@ -333,6 +492,7 @@ class CounterHandler(
         private const val SEARCH_DELAY_MILLIS = 300L
         private const val SEARCH_LIMIT = 20
         private const val RECENT_LIMIT = 10
+        private const val INVOICE_PAGE_SIZE = 50
 
         /** DONE reads better as "Ready for pickup" at the counter */
         fun statusLabel(status: TicketStatusType): String = when (status) {
