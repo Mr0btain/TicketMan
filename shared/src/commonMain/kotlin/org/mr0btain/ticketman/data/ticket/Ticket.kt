@@ -15,10 +15,28 @@ data class Ticket(
     val device: Device = Device("", ""),
     val status: TicketStatus = TicketStatus(TicketStatusType.IN_PROGRESS, Clock.System.now().toEpochMilliseconds()),
     val priority: TicketPriority = TicketPriority(TicketPriorityType.LOW, Clock.System.now().toEpochMilliseconds()),
-): MainItem(), SubItem
+    /** Given out by the server when the ticket is added, null until then */
+    val number: TicketNumber? = null,
+    /** What the customer says is wrong */
+    val problem: String = "",
+    /** Damage or wear noted at check in */
+    val condition: String = "",
+    /** Anything left with the device, like a charger or case */
+    val accessories: String = "",
+    /** Quoted price in cents */
+    val estimateCents: Long? = null,
+    /** Epoch millis the customer was told it'd be ready */
+    val promisedAt: Long? = null,
+    /** Epoch millis it was picked up, only set by a pickup */
+    val pickedUpAt: Long? = null,
+): MainItem(), SubItem {
+    /** Number if it has one, otherwise the start of the identifier */
+    val label: String
+        get() = number?.toString() ?: identifier.toString().substringBefore("-")
+}
 
 fun randomTicketStatus(): TicketStatus {
-    val values = TicketStatusType.entries.toTypedArray()
+    val values = TicketStatusType.selectable.toTypedArray()
 
     return TicketStatus(values[Random.nextInt(values.size)])
 }

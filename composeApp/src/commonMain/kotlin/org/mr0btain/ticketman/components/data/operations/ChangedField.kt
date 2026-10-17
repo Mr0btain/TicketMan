@@ -28,5 +28,10 @@ enum class ChangedField {
     MESSAGE,
     USERNAME,
     PASSWORD,
-    ACCESS_LEVEL
+    ACCESS_LEVEL,
+    PROBLEM,
+    CONDITION,
+    ACCESSORIES,
+    ESTIMATE,
+    PROMISED
 }

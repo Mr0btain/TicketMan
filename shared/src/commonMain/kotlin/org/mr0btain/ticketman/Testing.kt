@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.data.ticket.randomTicketPriority
 import org.mr0btain.ticketman.data.ticket.randomTicketStatus
 import org.mr0btain.ticketman.data.user.User
 import kotlin.random.Random
+import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -215,9 +216,13 @@ fun generateRandomTicket(): Pair<Ticket, List<Note>> {
 
     return Pair(
         Ticket(
-            device = Device(manufacturer, model),
+            device = Device(manufacturer, model, serial = "SN${Random.nextInt(100_000, 999_999)}"),
             status = randomTicketStatus(),
-            priority = randomTicketPriority()
+            priority = randomTicketPriority(),
+            problem = noteMessages.random(),
+            accessories = listOf("", "Charger", "Case", "Charger and case").random(),
+            estimateCents = Random.nextLong(30, 400) * 100,
+            promisedAt = Clock.System.now().toEpochMilliseconds() + Random.nextLong(-3, 10) * 86_400_000L
         ),
         notes
     )

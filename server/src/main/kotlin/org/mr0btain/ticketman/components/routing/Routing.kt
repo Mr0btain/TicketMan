@@ -70,6 +70,7 @@ fun Application.configureRouting(
         route("/api/data/ticket") {
             ticketRoute(
                 database = localDatabase.ticketDatabase,
+                userDatabase = localDatabase.userDatabase,
                 auditLog = localDatabase.auditLogDatabase
             )
         }

@@ -8,10 +8,12 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SyncRequest
 import org.mr0btain.ticketman.server.response.SyncResponse
@@ -19,6 +21,7 @@ import kotlin.uuid.Uuid
 
 fun Route.ticketRoute(
     database: TicketDatabaseImpl,
+    userDatabase: UserDatabaseImpl,
     auditLog: AuditLogDatabase
 ) {
     val TAG = "TicketRoute"
@@ -27,6 +30,8 @@ fun Route.ticketRoute(
     val DELETE_TAG = "$TAG:Delete"
     val UPDATE_TAG = "$TAG:Update"
     val SEARCH_TAG = "$TAG:Search"
+    val HISTORY_TAG = "$TAG:History"
+    val NUMBER_TAG = "$TAG:Number"
     val ENTITY_TYPE = "ticket"
 
     authenticate {
@@ -74,14 +79,51 @@ fun Route.ticketRoute(
         }
     }
 
-    // Adding new
+    // Look up by the number on a claim slip, like 26-00000042
+    authenticate {
+        get("/number/{number}") {
+            val number = call.parameters["number"]?.let { TicketNumber.parse(it) }
+            val result = number?.let { database.getByNumber(it) }
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(NUMBER_TAG, "${call.parameters["number"]} not found")
+            }
+        }
+    }
+
+    authenticate {
+        get("/get/history/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val result = identifier?.let { database.getStatusHistory(it) }
+
+            if (result != null) {
+                call.respond(HttpStatusCode.OK, result)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+                AppLogger.m(HISTORY_TAG, "$identifier not found")
+            }
+        }
+    }
+
+    // Adding new, responds with the saved ticket so the caller gets its number
     authenticate {
         post("/add") {
             val received = call.receive<Ticket>()
 
             database.add(received)
-            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier)
-            call.respond(HttpStatusCode.Created)
+            val saved = database.getById(received.identifier)
+
+            if (saved == null) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
+
+            database.recordStatusChange(saved.identifier, saved.status.status, call.username(userDatabase))
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, saved.identifier, "Ticket ${saved.label}")
+            call.respond(HttpStatusCode.Created, saved)
         }
     }
 
@@ -89,9 +131,20 @@ fun Route.ticketRoute(
     authenticate {
         post("/update") {
             val received = call.receive<Ticket>()
+            val existing = database.getById(received.identifier)
+
+            if (existing == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
 
             database.update(received)
-            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, "Status ${received.status.status}")
+
+            if (existing.status.status != received.status.status) {
+                database.recordStatusChange(received.identifier, received.status.status, call.username(userDatabase))
+            }
+
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, "Ticket ${existing.label}: status ${received.status.status}")
             call.respond(HttpStatusCode.Accepted)
         }
     }

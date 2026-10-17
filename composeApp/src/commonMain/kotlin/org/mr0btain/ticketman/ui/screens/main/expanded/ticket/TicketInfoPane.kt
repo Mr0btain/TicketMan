@@ -57,7 +57,7 @@ fun TicketInfoPane(
                         Text(
                             modifier = Modifier
                                 .padding(4.dp),
-                            text = "Details for: ${seed.identifier.toString().split("-").first()}",
+                            text = "Details for: ${seed.ticket.label}",
                             fontSize = 26.sp,
                             fontWeight = FontWeight.SemiBold
                         )

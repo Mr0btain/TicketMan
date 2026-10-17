@@ -105,6 +105,7 @@ fun AdminOverviewTab(
                             TicketStatusType.IN_PROGRESS -> CustomMaterialColors.inProgress
                             TicketStatusType.ON_HOLD -> MaterialTheme.colorScheme.error
                             TicketStatusType.DONE -> CustomMaterialColors.success
+                            TicketStatusType.PICKED_UP -> MaterialTheme.colorScheme.secondary
                         }
                     )
                 }

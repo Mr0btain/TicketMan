@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.database.tables.note.NoteImageTable
 import org.mr0btain.ticketman.components.database.tables.note.NoteTable
 import org.mr0btain.ticketman.components.database.tables.shop.ShopTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketNoteTable
+import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHistoryTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
@@ -49,37 +50,57 @@ class LocalDatabase (
     val shopDatabase = ShopDatabase()
     val statsDatabase = StatsDatabase()
 
+    // Every table, in an order where references come before the tables that use them
+    private val tables = arrayOf(
+        CustomerTable,
+        CustomerNoteTable,
+        CustomerTicketTable,
+        TicketTable,
+        TicketNoteTable,
+        TicketStatusHistoryTable,
+        InventoryTable,
+        InventoryNoteTable,
+        InventoryImageTable,
+        UserTable,
+        UserNoteTable,
+        UserTicketTable,
+        NoteTable,
+        NoteImageTable,
+        ImageTable,
+        TokenTable,
+        ShopTable,
+        AuditLogTable
+    )
+
     /**
-     * Creates tables if they don't exist essentially. Idk if we even need this if we could just straight call creat everytime. ohh well.
+     * Tables that have gained columns since they were first released. Add a table here when giving it a new column.
+     * Only these are checked since H2 can't list columns for the "user" table (it's a reserved word).
+     */
+    private val migratedTables = arrayOf(
+        TicketTable
+    )
+
+    /**
+     * Creates missing tables, adds columns that newer versions brought in, then runs data fixes.
+     * Safe to run on every start.
      */
     fun initDatabase() {
         transaction {
-            val databaseList = SchemaUtils.listDatabases()
+            SchemaUtils.create(*tables)
 
-            if (databaseList.isEmpty() || databaseList.size != 14) {
-                SchemaUtils.create(
-                    CustomerTable,
-                    CustomerNoteTable,
-                    CustomerTicketTable,
-                    TicketTable,
-                    TicketNoteTable,
-                    InventoryTable,
-                    InventoryNoteTable,
-                    InventoryImageTable,
-                    UserTable,
-                    UserNoteTable,
-                    UserTicketTable,
-                    NoteTable,
-                    NoteImageTable,
-                    ImageTable,
-                    TokenTable,
-                    ShopTable,
-                    AuditLogTable
-                )
-            }
+            // New columns all have defaults or are nullable so they can be added to existing rows
+            SchemaUtils.addMissingColumnsStatements(*migratedTables).forEach { statement -> exec(statement) }
+
+            // Indexes on existing tables aren't added by the above
+            exec(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.NUMBER_INDEX} " +
+                    "ON ${TicketTable.tableName} (${TicketTable.numberYear.name}, ${TicketTable.numberSequence.name})"
+            )
 
             AppLogger.m(INIT_TAG, SimpleResult.SUCCESS)
         }
+
+        ticketDatabase.backfillNumbers()
     }
 
     /** Total size of the database files on disk */

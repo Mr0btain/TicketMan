@@ -46,7 +46,7 @@ class StatsDatabase {
                     .select(TicketTable.id, TicketTable.status, TicketTable.priority)
                     .map { row -> Triple(row[TicketTable.id].value, row[TicketTable.status].status, row[TicketTable.priority].priority) }
 
-                val openTickets = tickets.filter { (_, status, _) -> status != TicketStatusType.DONE }
+                val openTickets = tickets.filter { (_, status, _) -> status.isOpen }
                 val weekAgo = (Clock.System.now() - 7.days).toEpochMilliseconds()
 
                 // Identifiers are v7 so their embedded time is when the ticket was made
