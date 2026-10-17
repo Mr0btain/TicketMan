@@ -23,14 +23,17 @@ import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.network.ConnectionResult
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.database.RemoteRepository
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import kotlin.uuid.Uuid
@@ -169,42 +172,57 @@ class MainViewModel(
 
     val customerSeed: CustomerSeed = CustomerSeed()
 
+    /** Saves the customer seed: the customer, its notes, and any tickets linked to it */
     fun handleCustomerChanges() {
         // If we haven't made any changes, then just return
         if (!customerSeed.isDirty) return
 
+        val customer = customerSeed.customer
+        val notes = customerSeed.notes.toList()
+        val tickets = customerSeed.tickets.toList()
+        val changed = customerSeed.getChangedFields().toSet()
+        val isNew = customerSeed.isNew
+
         viewModelScope.launch {
-            // Check if it's new or not
-            if (customerSeed.isNew) {
-                // Insert customer
-                remoteHandler.customerRepo.add(customerSeed.customer)
+            val repo = remoteHandler.customerRepo
 
-                // Add notes
-                customerSeed.notes.forEach { note ->
-                    remoteHandler.customerRepo.addNote( customerSeed.identifier, note)
-                }
+            val saved = if (isNew) repo.add(customer) else {
+                // Notes and tickets are saved on their own, only send the customer if something else changed
+                if ((changed - setOf(ChangedField.NOTE, ChangedField.TICKET)).isNotEmpty()) repo.update(customer)
+                else Result.Success(Unit)
+            }
 
+            if (saved is Result.Error) {
+                snackBarHost.showSnackbar("Customer not saved: ${saved.error.message}")
+                return@launch
+            }
 
-                // TODO: Setup way to check if these tickets are new or not.
-                // Right now we assume these tickets have already been inserted into the database. Here we just link them
-                // in the customer side
-                // Link tickets
-                customerSeed.tickets.forEach { ticket ->
-                    remoteHandler.customerRepo.addTicket(customerSeed.identifier, ticket.identifier)
-                }
-            } else { // Else handle changes
-                customerSeed.getChangedFields().forEach { changedField ->
-                    when (changedField) {
-                        ChangedField.NOTE -> {} // TODO
-                        ChangedField.TICKET -> {} // TODO
+            if (isNew || ChangedField.NOTE in changed) syncNotes(customer.identifier, notes, repo)
 
-                        else -> {
-                            // TODO: setup update
-                        }
-                    }
+            // Tickets can be linked here, unlinking happens by giving the ticket to another customer
+            if (isNew || ChangedField.TICKET in changed) {
+                val linked = repo.getTickets(customer.identifier).map { it.identifier }.toSet()
+                tickets.filter { it.identifier !in linked }.forEach { ticket ->
+                    repo.addTicket(customer.identifier, ticket.identifier)
                 }
             }
+
+            customerCache.remove(customer.identifier)
+            setSelectedCustomer(customer.identifier)
+            customerPager?.refreshCurrentData()
         }
+    }
+
+    /**
+     * Makes the server's notes match [notes], adding new ones and removing ones that were deleted
+     */
+    private suspend fun syncNotes(identifier: Uuid, notes: List<Note>, repo: RemoteRepository<*>) {
+        val existing = repo.getNotes(identifier)
+        val existingIds = existing.map { it.identifier }.toSet()
+        val keptIds = notes.map { it.identifier }.toSet()
+
+        notes.filter { it.identifier !in existingIds }.forEach { note -> repo.addNote(identifier, note) }
+        existing.filter { it.identifier !in keptIds }.forEach { note -> repo.removeNote(note.identifier) }
     }
 
     /** Sets the selected customer and inserts the data into the cache */
@@ -293,38 +311,51 @@ class MainViewModel(
         }
     }
 
+    /** Saves the ticket seed: the ticket, its notes, and who it belongs to and is assigned to */
     fun handleTicketChange() {
         // If no changes, then return
         if (!ticketSeed.isDirty) return
 
+        val ticket = ticketSeed.ticket
+        val notes = ticketSeed.notes.toList()
+        val customer = ticketSeed.customer
+        val user = ticketSeed.user
+        val changed = ticketSeed.getChangedFields().toSet()
+        val isNew = ticketSeed.isNew
+
         viewModelScope.launch {
-            if (ticketSeed.isNew) {
-                remoteHandler.ticketRepo.add(ticketSeed.ticket)
+            val repo = remoteHandler.ticketRepo
 
-                ticketSeed.notes.forEach { note ->
-                    remoteHandler.ticketRepo.addNote(ticketSeed.identifier, note)
+            if (isNew) {
+                // Created through create so the seed picks up the number the server gave it
+                when (val created = repo.create(ticket)) {
+                    is Result.Error -> {
+                        snackBarHost.showSnackbar("Ticket not saved: ${created.error.message}")
+                        return@launch
+                    }
+
+                    is Result.Success -> ticketSeed.setTicket(created.data, notes, customer, user)
+                }
+            } else {
+                val linkFields = setOf(ChangedField.NOTE, ChangedField.CUSTOMER, ChangedField.USER)
+
+                if ((changed - linkFields).isNotEmpty()) {
+                    val updated = repo.update(ticket)
+
+                    if (updated is Result.Error) {
+                        snackBarHost.showSnackbar("Ticket not saved: ${updated.error.message}")
+                        return@launch
+                    }
                 }
             }
 
-            ticketSeed.getChangedFields().forEach { changedField ->
-                when (changedField) {
-                    ChangedField.NOTE -> {}
-                    ChangedField.CUSTOMER -> {
-                       ticketSeed.customer?.identifier?.let { customerId ->
-                           remoteHandler.ticketRepo.setUser(ticketSeed.identifier, customerId)
-                       }
-                    }
-                    ChangedField.USER -> {
-                        ticketSeed.user?.identifier?.let { userId ->
-                            remoteHandler.ticketRepo.setUser(ticketSeed.identifier, userId)
-                        }
-                    }
+            if (isNew || ChangedField.NOTE in changed) syncNotes(ticket.identifier, notes, repo)
+            if (customer != null && (isNew || ChangedField.CUSTOMER in changed)) repo.setCustomer(ticket.identifier, customer.identifier)
+            if (user != null && (isNew || ChangedField.USER in changed)) repo.setUser(ticket.identifier, user.identifier)
 
-                    else -> {
-                        // TODO: Prolly just update?
-                    }
-                }
-            }
+            ticketCache.remove(ticket.identifier)
+            setSelectedTicket(ticket.identifier)
+            ticketPager?.refreshCurrentData()
         }
     }
 

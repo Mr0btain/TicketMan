@@ -43,6 +43,7 @@ class RemoteHandler(
     val inventoryRepo = InventoryRemoteRepositoryImpl(httpClient)
     val userRepo = UserRemoteRepositoryImpl(httpClient)
     val adminRepo = AdminRemoteRepository(httpClient)
+    val counterRepo = CounterRemoteRepository(httpClient)
 
     // Emits when the session can't be refreshed and the user needs to log in again
     private val _authExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
@@ -61,6 +62,7 @@ class RemoteHandler(
                 inventoryRepo.serverUrl = url
                 userRepo.serverUrl = url
                 adminRepo.serverUrl = url
+                counterRepo.serverUrl = url
 
                 AppLogger.m(SET_SERVER_URL_TAG, SimpleResult.SUCCESS)
 

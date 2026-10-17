@@ -53,6 +53,13 @@ fun Application.configureRouting(
             )
         }
 
+        route("/api/counter") {
+            counterRoute(
+                database = localDatabase.counterDatabase,
+                shopDatabase = localDatabase.shopDatabase
+            )
+        }
+
         route("/api/shop") {
             shopRoute(
                 database = localDatabase.shopDatabase,
@@ -63,6 +70,9 @@ fun Application.configureRouting(
         route("/api/data/customer") {
             customerRoute(
                 database = localDatabase.customerDatabase,
+                ticketDatabase = localDatabase.ticketDatabase,
+                counterDatabase = localDatabase.counterDatabase,
+                userDatabase = localDatabase.userDatabase,
                 auditLog = localDatabase.auditLogDatabase
             )
         }
@@ -78,6 +88,7 @@ fun Application.configureRouting(
         route("/api/data/inventory") {
             inventoryRoute(
                 database = localDatabase.inventoryDatabase,
+                userDatabase = localDatabase.userDatabase,
                 auditLog = localDatabase.auditLogDatabase
             )
         }

@@ -7,12 +7,14 @@ import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.like
 import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -26,6 +28,7 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.user.UserEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
+import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
@@ -38,7 +41,9 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
+import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.TicketError
+import org.mr0btain.ticketman.error.UserError
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
 import java.time.Instant
@@ -60,6 +65,9 @@ class TicketDatabaseImpl(
     private val GET_BY_NUMBER_TAG = "$tag:GetByNumber"
     private val STATUS_HISTORY_TAG = "$tag:StatusHistory"
     private val RECORD_STATUS_TAG = "$tag:RecordStatus"
+    private val SET_CUSTOMER_TAG = "$tag:SetCustomer"
+    private val SET_USER_TAG = "$tag:SetUser"
+    private val SUMMARIZE_TAG = "$tag:Summarize"
     private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
     private val GET_USER_TAG = "$tag:GetUser"
     private val UPDATE_DEVICE_TAG = "$tag:UpdateDevice"
@@ -140,8 +148,20 @@ class TicketDatabaseImpl(
         }
     }
 
-    override fun search(query: String, limit: Int): List<SearchResult>? {
-        return appLogTryCatch<List<SearchResult>?>(SEARCH_TAG) {
+    override fun search(query: String, limit: Int): List<SearchResult>? =
+        searchTickets(query, limit)?.map { ticket ->
+            SearchResult(
+                identifier = ticket.identifier,
+                text = "${ticket.label} ${ticket.device}".trim()
+            )
+        }
+
+    /**
+     * Tickets matching a number ("26-42" exact, "42" any year), part of the id, device make/model/serial or problem.
+     * Newest number first
+     */
+    fun searchTickets(query: String, limit: Int): List<Ticket>? {
+        return appLogTryCatch<List<Ticket>?>(SEARCH_TAG) {
             transaction {
                 val text = query.trim().lowercase()
                 val contains = "%$text%"
@@ -161,14 +181,7 @@ class TicketDatabaseImpl(
                     }
                     .orderBy(TicketTable.numberYear to SortOrder.DESC, TicketTable.numberSequence to SortOrder.DESC)
                     .limit(limit)
-                    .map { ticketEntity ->
-                        val ticket = ticketEntity.toTicket()
-
-                        SearchResult(
-                            identifier = ticket.identifier,
-                            text = "${ticket.label} ${ticket.device}".trim()
-                        )
-                    },
+                    .map { ticketEntity -> ticketEntity.toTicket() },
                     true
                     )
             }
@@ -406,6 +419,95 @@ class TicketDatabaseImpl(
         }
 
         return result
+    }
+
+    /**
+     * Links a ticket to a customer, replacing any customer it had
+     * @return Whether both exist
+     */
+    fun setCustomer(ticketId: Uuid, customerId: Uuid): Boolean {
+        return appLogTryCatch<Boolean>(SET_CUSTOMER_TAG) {
+            transaction {
+                val ticket = TicketEntity.findById(ticketId)
+                val customer = CustomerEntity.findById(customerId)
+
+                when {
+                    ticket == null -> AppLogger.i(SET_CUSTOMER_TAG, TicketError.NOT_FOUND)
+                    customer == null -> AppLogger.i(SET_CUSTOMER_TAG, CustomerError.NOT_FOUND)
+                    else -> {
+                        CustomerTicketTable.deleteWhere { CustomerTicketTable.ticket eq ticketId }
+                        CustomerTicketTable.insert { row ->
+                            row[CustomerTicketTable.customer] = customerId
+                            row[CustomerTicketTable.ticket] = ticketId
+                        }
+                    }
+                }
+
+                val linked = ticket != null && customer != null
+                Pair(linked, linked)
+            }
+        } ?: false
+    }
+
+    /**
+     * Assigns a ticket to a tech, replacing whoever had it
+     * @return Whether both exist
+     */
+    fun setUser(ticketId: Uuid, userId: Uuid): Boolean {
+        return appLogTryCatch<Boolean>(SET_USER_TAG) {
+            transaction {
+                val ticket = TicketEntity.findById(ticketId)
+                val user = UserEntity.findById(userId)
+
+                when {
+                    ticket == null -> AppLogger.i(SET_USER_TAG, TicketError.NOT_FOUND)
+                    user == null -> AppLogger.i(SET_USER_TAG, UserError.NOT_FOUND)
+                    else -> {
+                        UserTicketTable.deleteWhere { UserTicketTable.ticket eq ticketId }
+                        UserTicketTable.insert { row ->
+                            row[UserTicketTable.user] = userId
+                            row[UserTicketTable.ticket] = ticketId
+                        }
+                    }
+                }
+
+                val linked = ticket != null && user != null
+                Pair(linked, linked)
+            }
+        } ?: false
+    }
+
+    /**
+     * Adds each ticket's customer and tech, looked up in two queries rather than two per ticket
+     */
+    fun summarize(tickets: List<Ticket>): List<TicketSummary> {
+        if (tickets.isEmpty()) return emptyList()
+
+        return appLogTryCatch<List<TicketSummary>>(SUMMARIZE_TAG) {
+            transaction {
+                val identifiers = tickets.map { it.identifier }
+
+                val customers = (CustomerTable innerJoin CustomerTicketTable)
+                    .select(CustomerTicketTable.ticket, CustomerTable.id, CustomerTable.name)
+                    .where { CustomerTicketTable.ticket inList identifiers }
+                    .associate { row ->
+                        row[CustomerTicketTable.ticket].value to EntityReference(row[CustomerTable.id].value, row[CustomerTable.name])
+                    }
+
+                val users = (UserTable innerJoin UserTicketTable)
+                    .select(UserTicketTable.ticket, UserTable.id, UserTable.name)
+                    .where { UserTicketTable.ticket inList identifiers }
+                    .associate { row ->
+                        row[UserTicketTable.ticket].value to EntityReference(row[UserTable.id].value, row[UserTable.name])
+                    }
+
+                val summaries = tickets.map { ticket ->
+                    TicketSummary(ticket, customers[ticket.identifier], users[ticket.identifier])
+                }
+
+                Pair(summaries, true)
+            }
+        } ?: tickets.map { TicketSummary(it) }
     }
 
     fun getUser(ticketId: Uuid): EntityReference? {

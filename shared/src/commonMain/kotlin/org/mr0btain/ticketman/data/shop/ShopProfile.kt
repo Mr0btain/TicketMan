@@ -16,5 +16,11 @@ data class ShopProfile(
     val email: String = "",
     val website: String = "",
     val taxRate: String = "",
-    val invoiceFooter: String = ""
-)
+    val invoiceFooter: String = "",
+    /** A device back within this many days of its last repair gets flagged at check in */
+    val repeatWindowDays: Int = DEFAULT_REPEAT_WINDOW_DAYS
+) {
+    companion object {
+        const val DEFAULT_REPEAT_WINDOW_DAYS = 90
+    }
+}

@@ -49,6 +49,7 @@ class LocalDatabase (
     val auditLogDatabase = AuditLogDatabase(userDatabase)
     val shopDatabase = ShopDatabase()
     val statsDatabase = StatsDatabase()
+    val counterDatabase = CounterDatabase(ticketDatabase, customerDatabase)
 
     // Every table, in an order where references come before the tables that use them
     private val tables = arrayOf(

@@ -31,6 +31,11 @@ fun Route.shopRoute(
         post("/update") {
             val profile = call.receive<ShopProfile>()
 
+            if (profile.repeatWindowDays !in 1..3650) {
+                call.respond(HttpStatusCode.BadRequest, "Repeat warning must be between 1 and 3650 days")
+                return@post
+            }
+
             if (database.update(profile)) {
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "shop", details = "Updated shop profile")
                 call.respond(HttpStatusCode.Accepted)

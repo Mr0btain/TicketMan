@@ -196,7 +196,7 @@ private fun ShopProfileCard(
         title = "Shop Profile",
         action = {
             Button(
-                enabled = shopProfile != null && profile != loaded,
+                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE,
                 onClick = { onSave(profile) }
             ) {
                 Text("Save")
@@ -261,6 +261,24 @@ private fun ShopProfileCard(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
             )
+
+            Spacer(Modifier.padding(8.dp))
+
+            // Kept as text while typing so the field can be cleared, saved as a number
+            var repeatDays by remember(loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
+
+            OutlinedTextField(
+                modifier = Modifier.width(220.dp),
+                value = repeatDays,
+                onValueChange = { text ->
+                    repeatDays = text.filter { it.isDigit() }.take(4)
+                    repeatDays.toIntOrNull()?.let { profile = profile.copy(repeatWindowDays = it) }
+                },
+                label = { Text("Repeat Repair Warning (days)") },
+                isError = repeatDays.toIntOrNull() !in REPEAT_WINDOW_RANGE,
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
         }
 
         OutlinedTextField(
@@ -275,3 +293,6 @@ private fun ShopProfileCard(
         )
     }
 }
+
+// Days a repaired device can come back and be flagged as a repeat
+private val REPEAT_WINDOW_RANGE = 1..3650

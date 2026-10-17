@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchQuery
@@ -19,6 +20,7 @@ import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(
     database: InventoryDatabaseImpl,
+    userDatabase: UserDatabaseImpl,
     auditLog: AuditLogDatabase
 ) {
     val TAG = "InventoryRoute"
@@ -29,7 +31,7 @@ fun Route.inventoryRoute(
     val SEARCH_TAG = "$TAG:Search"
     val ENTITY_TYPE = "inventory"
 
-    authenticate {
+    authenticate("restricted") {
         post("/get") {
             val request = call.receive<Uuid>()
 
@@ -44,7 +46,7 @@ fun Route.inventoryRoute(
         }
     }
 
-    authenticate {
+    authenticate("restricted") {
         post("/fetch") {
             val request = call.receive<PagedRequest>()
 
@@ -59,7 +61,7 @@ fun Route.inventoryRoute(
         }
     }
 
-    authenticate {
+    authenticate("restricted") {
         post("/search") {
             val request = call.receive<SearchQuery>()
 
@@ -111,4 +113,6 @@ fun Route.inventoryRoute(
             call.respond(HttpStatusCode.Accepted)
         }
     }
+
+    noteRoutes(database, userDatabase, auditLog, ENTITY_TYPE)
 }
