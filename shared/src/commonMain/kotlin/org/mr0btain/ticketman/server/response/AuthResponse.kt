@@ -7,5 +7,8 @@ import kotlin.uuid.Uuid
 data class AuthResponse(
     val id: Uuid?,
     val accessToken: String?,
-    val refreshToken: String?
+    val refreshToken: String?,
+    val status: LoginStatus = LoginStatus.OK,
+    /** Only for [LoginStatus.INVITE_SETUP] */
+    val setupToken: String? = null
 )

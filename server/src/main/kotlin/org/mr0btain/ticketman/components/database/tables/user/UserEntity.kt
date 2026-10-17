@@ -22,6 +22,7 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var phone by UserTable.phone
     var access by UserTable.access
     var status by UserTable.status
+    var needsSetup by UserTable.needsSetup
 
     // For notes
     var notes by NoteEntity via UserNoteTable
@@ -38,7 +39,8 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             email = email,
             phone = phone,
             accessLevel = access,
-            status = UserStatus.entries.firstOrNull { it.name == status } ?: UserStatus.ACTIVE
+            status = UserStatus.entries.firstOrNull { it.name == status } ?: UserStatus.ACTIVE,
+            needsSetup = needsSetup
         )
     }
 

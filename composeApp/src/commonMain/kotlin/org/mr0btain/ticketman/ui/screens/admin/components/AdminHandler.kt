@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.components.data.saveFile
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.data.audit.AuditEntry
+import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
@@ -16,7 +17,10 @@ import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
+import org.mr0btain.ticketman.server.response.InviteResponse
+import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
@@ -52,6 +56,9 @@ class AdminHandler(
     private val _lowStock = MutableStateFlow<List<Inventory>>(emptyList())
     val lowStock = _lowStock.asStateFlow()
 
+    private val _pending = MutableStateFlow<List<PendingUserResponse>>(emptyList())
+    val pending = _pending.asStateFlow()
+
     private val _sessions = MutableStateFlow<List<SessionResponse>>(emptyList())
     val sessions = _sessions.asStateFlow()
 
@@ -76,6 +83,7 @@ class AdminHandler(
 
             loadOverview()
             loadLowStock()
+            _pending.value = users.getPending()
             _sessions.value = admin.getSessions()
             _serverInfo.value = admin.getServerInfo()
             _shopProfile.value = admin.getShopProfile()
@@ -119,6 +127,7 @@ class AdminHandler(
     /** Clears out everything, used on log out so the next user doesn't see it */
     fun clear() {
         _stats.value = null
+        _pending.value = emptyList()
         _lowStock.value = emptyList()
         _sessions.value = emptyList()
         _serverInfo.value = null
@@ -193,6 +202,70 @@ class AdminHandler(
                 onUsersChanged(null)
                 _sessions.value = admin.getSessions()
                 loadOverview()
+            }
+        }
+    }
+
+    // ------------------------------------------ New accounts ------------------------------------------
+
+    fun refreshPending() {
+        scope.launch { _pending.value = users.getPending() }
+    }
+
+    /** Lets a requested account in. They finish setting up on their first login */
+    fun approve(user: User, accessLevel: AccessLevel, onSuccess: () -> Unit) {
+        scope.launch {
+            report(users.approve(user.identifier, accessLevel), "Approved ${user.username}") {
+                onSuccess()
+                _pending.value = users.getPending()
+                onUsersChanged(user.identifier)
+                loadOverview()
+            }
+        }
+    }
+
+    /** Turns down a request or cancels an invite */
+    fun reject(user: User) {
+        scope.launch {
+            report(users.reject(user.identifier), "Removed ${user.username}") {
+                _pending.value = users.getPending()
+                onUsersChanged(null)
+                loadOverview()
+            }
+        }
+    }
+
+    /**
+     * Makes an invite
+     * @param onCreated Gets the invite with its code, which is only shown this once
+     */
+    fun invite(request: InviteRequest, onCreated: (InviteResponse) -> Unit) {
+        scope.launch {
+            when (val result = users.invite(request)) {
+                is Result.Success -> {
+                    onCreated(result.data)
+                    _pending.value = users.getPending()
+                    onUsersChanged(result.data.user.identifier)
+                    loadOverview()
+                    loadAudit(reset = true)
+                }
+
+                is Result.Error -> notify(result.error.message)
+            }
+        }
+    }
+
+    /** New code for an invite, the old one stops working */
+    fun renewInvite(user: User, onCreated: (InviteResponse) -> Unit) {
+        scope.launch {
+            when (val result = users.renewInvite(user.identifier)) {
+                is Result.Success -> {
+                    onCreated(result.data)
+                    _pending.value = users.getPending()
+                    loadAudit(reset = true)
+                }
+
+                is Result.Error -> notify(result.error.message)
             }
         }
     }

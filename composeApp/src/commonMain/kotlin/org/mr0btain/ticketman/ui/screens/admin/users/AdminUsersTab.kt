@@ -5,7 +5,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.composables.SimpleTextItem
@@ -37,6 +40,11 @@ import kotlin.uuid.Uuid
  */
 @Composable
 fun AdminUsersTab(
+    pending: List<PendingUserResponse>,
+    onInvite: () -> Unit,
+    onApprove: (User) -> Unit,
+    onReject: (User) -> Unit,
+    onRenewInvite: (User) -> Unit,
     userList: List<User>,
     seed: UserSeed,
     currentUserIdentifier: Uuid?,
@@ -52,8 +60,18 @@ fun AdminUsersTab(
     onDelete: () -> Unit
 ) {
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
     ) {
+        PendingUsersCard(
+            pending = pending,
+            onInvite = onInvite,
+            onApprove = onApprove,
+            onReject = onReject,
+            onRenew = onRenewInvite
+        )
+
         PanelTopBar(
             label = "User",
             onSearchClick = onSelect,

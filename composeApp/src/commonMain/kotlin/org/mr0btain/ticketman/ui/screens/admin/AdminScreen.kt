@@ -20,7 +20,11 @@ import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
+import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
+import org.mr0btain.ticketman.ui.screens.admin.users.ApproveDialog
+import org.mr0btain.ticketman.ui.screens.admin.users.InviteCodeDialog
+import org.mr0btain.ticketman.ui.screens.admin.users.InviteDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.ResetPasswordDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.UserDialog
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
@@ -76,6 +80,7 @@ private fun AdminContent(
     val lowStock by admin.lowStock.collectAsState()
     val lowStockThreshold by admin.lowStockThreshold.collectAsState()
     val sessions by admin.sessions.collectAsState()
+    val pending by admin.pending.collectAsState()
     val serverInfo by admin.serverInfo.collectAsState()
     val shopProfile by admin.shopProfile.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
@@ -94,6 +99,33 @@ private fun AdminContent(
     var isNewUser by remember { mutableStateOf(false) }
     var showResetPasswordDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+
+    // New account dialogs
+    var showInviteDialog by remember { mutableStateOf(false) }
+    var approving by remember { mutableStateOf<User?>(null) }
+    var shownInvite by remember { mutableStateOf<InviteResponse?>(null) }
+
+    InviteDialog(
+        isVisible = showInviteDialog,
+        onDismiss = { showInviteDialog = false },
+        onInvite = { request ->
+            admin.invite(request) { invite ->
+                showInviteDialog = false
+                shownInvite = invite
+            }
+        }
+    )
+
+    ApproveDialog(
+        user = approving,
+        onDismiss = { approving = null },
+        onApprove = { level -> approving?.let { user -> admin.approve(user, level) { approving = null } } }
+    )
+
+    InviteCodeDialog(
+        invite = shownInvite,
+        onDismiss = { shownInvite = null }
+    )
 
     // Fresh numbers whenever the screen is opened
     LaunchedEffect(Unit) {
@@ -203,6 +235,11 @@ private fun AdminContent(
             )
 
             AdminTab.USERS -> AdminUsersTab(
+                pending = pending,
+                onInvite = { showInviteDialog = true },
+                onApprove = { user -> approving = user },
+                onReject = { user -> admin.reject(user) },
+                onRenewInvite = { user -> admin.renewInvite(user) { invite -> shownInvite = invite } },
                 userList = users?.value ?: emptyList(),
                 seed = userSeed,
                 currentUserIdentifier = currentUser?.identifier,

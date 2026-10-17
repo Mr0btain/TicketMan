@@ -16,4 +16,5 @@ object UserTable : UuidTable("user") {
 
     // Added after release. "user" is reserved in H2 so these are added by LocalDatabase.addUserColumns
     val status = text("status").default(UserStatus.ACTIVE.name)
+    val needsSetup = bool("needs_setup").default(false)
 }

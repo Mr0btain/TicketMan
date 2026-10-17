@@ -8,10 +8,12 @@ import io.ktor.server.auth.jwt.*
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.UserStatus
 import kotlin.time.Clock
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaInstant
 import kotlin.uuid.Uuid
@@ -58,6 +60,31 @@ class JwtService(
     }
 
     /**
+     * Short lived token handed out when an invite code is used, it can only be spent on finishing the invite
+     */
+    @OptIn(ExperimentalTime::class)
+    fun createSetupToken(identifier: String): String =
+        JWT
+            .create()
+            .withAudience(audience)
+            .withIssuer(issuer)
+            .withClaim("identifier", identifier)
+            .withClaim(PURPOSE_CLAIM, SETUP_PURPOSE)
+            .withExpiresAt(Clock.System.now().plus(SETUP_TOKEN_LIFETIME).toJavaInstant())
+            .sign(Algorithm.HMAC256(secret))
+
+    /** User the setup token was made for, null if it's not a valid, unexpired setup token */
+    fun verifySetupToken(token: String): Uuid? = try {
+        val decoded = jwtVerifier.verify(token)
+
+        if (decoded.getClaim(PURPOSE_CLAIM).asString() == SETUP_PURPOSE) {
+            decoded.getClaim("identifier").asString()?.let { Uuid.parseOrNull(it) }
+        } else null
+    } catch (ex: Exception) {
+        null
+    }
+
+    /**
      * Generates an access token
      */
 
@@ -85,6 +112,25 @@ class JwtService(
             if (
                 audienceMatches(credential) &&
                 foundUser.canAccess(minAccessLevel) &&
+                isFromCurrentSession(id, credential)
+            ) {
+                JWTPrincipal(credential.payload)
+            } else null
+        }
+    }
+
+    /**
+     * Lets in any active user, including ones that haven't finished first login setup. Only for the setup route
+     * and the few routes they need around it
+     */
+    fun setupValidator(credential: JWTCredential): JWTPrincipal? {
+        val id = extractId(credential)
+        val foundUser = id?.let { userDatabase.getById(Uuid.parse(it)) }
+
+        return foundUser?.let {
+            if (
+                audienceMatches(credential) &&
+                foundUser.status == UserStatus.ACTIVE &&
                 isFromCurrentSession(id, credential)
             ) {
                 JWTPrincipal(credential.payload)
@@ -121,5 +167,8 @@ class JwtService(
 
     companion object {
         const val SESSION_CLAIM = "sid"
+        private const val PURPOSE_CLAIM = "purpose"
+        private const val SETUP_PURPOSE = "invite-setup"
+        private val SETUP_TOKEN_LIFETIME = 30.minutes
     }
 }

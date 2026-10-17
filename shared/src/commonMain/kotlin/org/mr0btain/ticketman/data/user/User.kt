@@ -20,11 +20,13 @@ data class User(
     val email: String = "",
     val phone: String = "",
     val accessLevel: AccessLevel = AccessLevel.RESTRICTED,
-    val status: UserStatus = UserStatus.ACTIVE
+    val status: UserStatus = UserStatus.ACTIVE,
+    /** Approved but hasn't finished first login setup, can't do anything else until they do */
+    val needsSetup: Boolean = false
 ): MainItem() {
-    /** Active with a real access level, the only kind of user that can do anything */
+    /** Active, set up, with a real access level. The only kind of user that can do anything */
     fun canAccess(minimum: AccessLevel): Boolean =
-        status == UserStatus.ACTIVE && accessLevel.meets(minimum)
+        status == UserStatus.ACTIVE && !needsSetup && accessLevel.meets(minimum)
 
     fun cleanName(): String {
         return name.split(":").joinToString(" ") { n ->

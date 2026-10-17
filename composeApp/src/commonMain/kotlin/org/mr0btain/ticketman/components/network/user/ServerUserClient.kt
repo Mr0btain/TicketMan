@@ -5,16 +5,23 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.components.network.handleActionHttpResponse
+import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.request.AccountRequest
+import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.server.response.LoginStatus
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -37,6 +44,8 @@ class ServerUserClient(
         private const val REFRESH_TOKEN_TAG = "$TAG:RefreshTokens"
         private const val CHECK_SERVER_CONNECTION_TAG = "$TAG:CheckServerConnection"
         private const val CHECK_SERVER_CONNECTION_URL_TAG = "$TAG:CheckServerConnectionURL"
+        private const val REQUEST_ACCOUNT_TAG = "$TAG:RequestAccount"
+        private const val INVITE_SETUP_TAG = "$TAG:InviteSetup"
     }
 
     private var serverUrl = ""
@@ -50,13 +59,13 @@ class ServerUserClient(
     }
 
     /**
-     * Log in to server using supplied credentials
+     * Log in to server using supplied credentials. An invite's setup code can go in place of the password
      */
-    suspend fun login(username: String = localStorage.username, password: String = localStorage.password): Boolean {
+    suspend fun login(username: String = localStorage.username, password: String = localStorage.password): LoginOutcome {
         // Nothing to log in with, this happens when credentials aren't remembered
         if (username.isBlank() || password.isBlank()) {
             AppLogger.i(LOGIN_TAG, "FAIL: Missing credentials")
-            return false
+            return LoginOutcome.Failed
         }
 
         if (checkServerConnection()) {
@@ -68,25 +77,72 @@ class ServerUserClient(
                 }
             }?.let { response -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response) }
                 ?.onSuccess { authResponse ->
-                    println(authResponse)
-                    if (authResponse.refreshToken != null && authResponse.accessToken != null) {
-                        localStorage.accessToken = authResponse.accessToken!!
-                        localStorage.refreshToken = authResponse.refreshToken!!
+                    when (authResponse.status) {
+                        LoginStatus.PENDING_APPROVAL -> return LoginOutcome.PendingApproval
 
-                        // Only keep credentials around if the user wants them remembered
-                        if (localStorage.rememberLogin) {
-                            localStorage.username = username
-                            localStorage.password = password
+                        LoginStatus.INVITE_SETUP -> authResponse.setupToken?.let { token ->
+                            return LoginOutcome.InviteSetup(username, token)
                         }
 
-                        return true
+                        LoginStatus.OK, LoginStatus.NEEDS_SETUP -> if (storeSession(authResponse, username, password)) {
+                            return LoginOutcome.LoggedIn(needsSetup = authResponse.status == LoginStatus.NEEDS_SETUP)
+                        }
                     }
                 }
 
             AppLogger.i(LOGIN_TAG, "FAIL")
         }
 
-        return false
+        return LoginOutcome.Failed
+    }
+
+    // Keeps the tokens, and the credentials if they should be remembered
+    private fun storeSession(authResponse: AuthResponse, username: String, password: String): Boolean {
+        val access = authResponse.accessToken ?: return false
+        val refresh = authResponse.refreshToken ?: return false
+
+        localStorage.accessToken = access
+        localStorage.refreshToken = refresh
+
+        // Only keep credentials around if the user wants them remembered
+        if (localStorage.rememberLogin) {
+            localStorage.username = username
+            localStorage.password = password
+        }
+
+        return true
+    }
+
+    /** Asks for an account, an admin has to approve it before it can be used */
+    suspend fun requestAccount(request: AccountRequest): EmptyResult<ServerError> {
+        val response = networkErrorTryCatch(REQUEST_ACCOUNT_TAG) {
+            userHttpClient.post {
+                url("$serverUrl/api/auth/request-account")
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
+
+        return handleActionHttpResponse(REQUEST_ACCOUNT_TAG, response)
+    }
+
+    /**
+     * Finishes an invite and logs in with the new password
+     */
+    suspend fun completeInviteSetup(username: String, request: InviteSetupRequest): EmptyResult<ServerError> {
+        val response = networkErrorTryCatch(INVITE_SETUP_TAG) {
+            userHttpClient.post {
+                url("$serverUrl/api/auth/setup/invite")
+                contentType(ContentType.Application.Json)
+                setBody(request.copy(deviceId = localStorage.deviceId, deviceName = localStorage.deviceName))
+            }
+        }
+
+        return when (val result = handleDataHttpResponse<AuthResponse>(INVITE_SETUP_TAG, response)) {
+            is Result.Success -> if (storeSession(result.data, username, request.password)) Result.Success(Unit)
+                else Result.Error(ServerError(NetworkError.UNKNOWN))
+            is Result.Error -> result
+        }
     }
 
     /**

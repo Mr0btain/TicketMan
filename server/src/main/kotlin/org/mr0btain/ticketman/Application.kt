@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.routing.configureRouting
+import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
@@ -42,7 +43,8 @@ fun Application.module() {
         val dataPath = path.ifBlank { appDir.toString() }
         val database = configureDatabase(dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase)
-        val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase, database.auditLogDatabase)
+        val userService = UserService(database.userDatabase, jwtService, database.tokenDatabase, database.inviteDatabase, database.auditLogDatabase)
+        val accountService = AccountService(database.userDatabase, database.inviteDatabase, userService, jwtService, database.auditLogDatabase)
         val adminService = AdminService(
             database = database,
             serverName = environment.config.propertyOrNull("env.name")?.getString() ?: "Server",
@@ -53,7 +55,7 @@ fun Application.module() {
         configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
-        configureRouting(userService, adminService, database)
+        configureRouting(userService, accountService, adminService, database)
 
         AppLogger.m("SERVER", "Server initialized!")
 

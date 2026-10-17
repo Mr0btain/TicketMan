@@ -13,6 +13,7 @@ import androidx.navigation.compose.rememberNavController
 import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.KoinContext
 import org.koin.compose.viewmodel.koinViewModel
+import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.BottomNavigationDrawer
@@ -75,6 +76,9 @@ fun App() {
     // Should we show login popup or not
     val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
+    // First login setup that has to be finished
+    val accountSetup = mainViewModel.accountSetup.collectAsState()
+
     val initialDestination = Destination.MAIN
 
     // Admin screen is only listed for admins
@@ -118,6 +122,16 @@ fun App() {
         darkTheme = mainViewModel.darkMode.collectAsState(false).value
     ) {
         println("Platform: ${getPlatform().name}")
+
+        accountSetup.value?.let { setup ->
+            AccountSetupDialog(
+                setup = setup,
+                onFinish = { name, email, phone, password, onResult ->
+                    mainViewModel.completeAccountSetup(name, email, phone, password, onResult)
+                },
+                onCancel = { mainViewModel.cancelAccountSetup() }
+            )
+        }
 
         if (shouldShowLogin.value) {
             LoginPopup(

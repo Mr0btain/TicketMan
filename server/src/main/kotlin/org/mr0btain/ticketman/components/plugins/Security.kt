@@ -44,6 +44,20 @@ fun Application.configureSecurity(
             }
         }
 
+        // Any active user, including ones still doing first login setup
+        jwt("setup") {
+            realm = jwtService.realm
+            verifier(jwtService.jwtVerifier)
+
+            validate { credential ->
+                jwtService.setupValidator(credential)
+            }
+
+            challenge { defaultScheme, realm ->
+                call.respond(HttpStatusCode.Unauthorized, "Bad Token or Unauthorized")
+            }
+        }
+
         // ADMIN Access level
         jwt("admin") {
             realm = jwtService.realm

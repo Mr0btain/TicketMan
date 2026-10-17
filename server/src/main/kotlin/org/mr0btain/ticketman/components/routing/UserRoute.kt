@@ -8,12 +8,18 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.service.AccountResult
+import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
+import org.mr0btain.ticketman.data.user.UsernameRules
+import org.mr0btain.ticketman.server.request.AccountSetupRequest
+import org.mr0btain.ticketman.server.request.ApproveRequest
+import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.response.UserResponse
@@ -30,6 +36,7 @@ import kotlin.uuid.Uuid
 fun Route.userRoute(
     database: UserDatabaseImpl,
     tokenDatabase: TokenDatabase,
+    accountService: AccountService,
     auditLog: AuditLogDatabase
 ) {
     val TAG = "UserRoute"
@@ -47,8 +54,20 @@ fun Route.userRoute(
     fun isLastAdmin(target: User): Boolean =
         target.canAccess(AccessLevel.ADMIN) && database.countActiveAdmins() <= 1
 
-    // Logged in user, any active access level can see themselves
-    authenticate("restricted") {
+    // Logged in user, also reachable while finishing first login setup
+    authenticate("setup") {
+        // First login after an approved request
+        post("/setup") {
+            val identifier = call.getIdentifierFromToken()
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.Unauthorized)
+                return@post
+            }
+
+            call.respondAccount(accountService.completeSetup(identifier, call.receive<AccountSetupRequest>()))
+        }
+
         get("/me") {
             val identifier = call.getIdentifierFromToken()
             val result = identifier?.let { database.getById(it) }
@@ -107,6 +126,56 @@ fun Route.userRoute(
         }
     }
 
+    // ------------------------------------------ New accounts ------------------------------------------
+
+    authenticate("admin") {
+        // Requests and invites waiting on someone
+        get("/pending") {
+            call.respond(HttpStatusCode.OK, accountService.pending())
+        }
+
+        post("/approve/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            call.respondAccount(accountService.approve(identifier, call.receive<ApproveRequest>().accessLevel, call.getIdentifierFromToken()))
+        }
+
+        // Turns down a request or cancels an invite
+        delete("/reject/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@delete
+            }
+
+            call.respondAccount(accountService.reject(identifier, call.getIdentifierFromToken()))
+        }
+
+        post("/invite") {
+            call.respondAccount(
+                accountService.invite(call.receive<InviteRequest>(), call.getIdentifierFromToken(), call.username(database)),
+                success = HttpStatusCode.Created
+            )
+        }
+
+        post("/invite/{identifier}/renew") {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            call.respondAccount(accountService.renewInvite(identifier, call.getIdentifierFromToken(), call.username(database)))
+        }
+    }
+
     // Add a new user, the password comes in plain and gets hashed by the database
     authenticate("admin") {
         post("/add") {
@@ -115,6 +184,10 @@ fun Route.userRoute(
             when {
                 user.username.isBlank() || user.password.isBlank() -> {
                     call.respond(HttpStatusCode.BadRequest, "Username and password are required")
+                }
+
+                UsernameRules.problem(user.username) != null -> {
+                    call.respond(HttpStatusCode.BadRequest, UsernameRules.problem(user.username)!!)
                 }
 
                 database.getByUsername(user.username) != null -> {
@@ -258,5 +331,20 @@ fun Route.userRoute(
                 }
             }
         }
+    }
+}
+
+/**
+ * Sends back an account action's result. Reified so the body has a real type to serialize, Unit sends no body
+ */
+suspend inline fun <reified T : Any> RoutingCall.respondAccount(
+    result: AccountResult<T>,
+    success: HttpStatusCode = HttpStatusCode.Accepted
+) {
+    when (result) {
+        is AccountResult.Done -> if (result.value is Unit) respond(success) else respond(success, result.value)
+        is AccountResult.Invalid -> respond(HttpStatusCode.BadRequest, result.message)
+        is AccountResult.Conflict -> respond(HttpStatusCode.Conflict, result.message)
+        AccountResult.NotFound -> respond(HttpStatusCode.NotFound)
     }
 }

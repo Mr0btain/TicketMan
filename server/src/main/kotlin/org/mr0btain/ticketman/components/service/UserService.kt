@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.interfaces.DecodedJWT
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.database.InviteDatabase
 import org.mr0btain.ticketman.components.database.StoredSession
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
@@ -10,30 +11,76 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.server.response.LoginStatus
 import org.mr0btain.ticketman.server.response.SessionKind
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
+
+/** What came of a login attempt */
+sealed interface LoginResult {
+    data class Success(val response: AuthResponse) : LoginResult
+    data object Failed : LoginResult
+
+    /** Right password, but the account request hasn't been approved */
+    data object PendingApproval : LoginResult
+
+    /** Used an invite code, [response] carries the setup token */
+    data class InviteSetup(val response: AuthResponse) : LoginResult
+}
 
 class UserService(
     private val database: UserDatabaseImpl,
     private val jwtService: JwtService,
     private val tokenDatabase: TokenDatabase,
+    private val inviteDatabase: InviteDatabase,
     private val auditLog: AuditLogDatabase
 ) {
-    fun authenticate(loginRequest: LoginRequest): AuthResponse? {
+    /**
+     * Logs in with a password, or with an invite's setup code in place of the password
+     */
+    fun authenticate(loginRequest: LoginRequest): LoginResult {
+        val pending = database.getByUsername(loginRequest.username)?.takeIf { it.status == UserStatus.PENDING }
+
+        if (pending != null) return pendingLogin(pending, loginRequest)
+
         val foundUser = verifyCredentials(loginRequest)
 
         if (foundUser == null) {
             auditLog.log(null, AuditAction.LOGIN_FAILED, "user", details = "Failed login", actorName = loginRequest.username)
-            return null
+            return LoginResult.Failed
         }
 
         val response = startSession(foundUser, loginRequest.deviceId, loginRequest.deviceName, SessionKind.PASSWORD)
-            ?: return null
+            ?: return LoginResult.Failed
 
         auditLog.log(foundUser.identifier, AuditAction.LOGIN, "user", foundUser.identifier.toString(), loginRequest.deviceName)
 
-        return response
+        return LoginResult.Success(
+            if (foundUser.needsSetup) response.copy(status = LoginStatus.NEEDS_SETUP) else response
+        )
+    }
+
+    // Invited users log in with their code, requested accounts with the password they asked with
+    private fun pendingLogin(user: User, loginRequest: LoginRequest): LoginResult {
+        if (inviteDatabase.exists(user.identifier)) {
+            if (!inviteDatabase.check(user.identifier, loginRequest.password)) {
+                auditLog.log(null, AuditAction.LOGIN_FAILED, "user", details = "Bad or expired setup code", actorName = user.username)
+                return LoginResult.Failed
+            }
+
+            return LoginResult.InviteSetup(
+                AuthResponse(
+                    id = user.identifier,
+                    accessToken = null,
+                    refreshToken = null,
+                    status = LoginStatus.INVITE_SETUP,
+                    setupToken = jwtService.createSetupToken(user.identifier.toString())
+                )
+            )
+        }
+
+        return if (PasswordHasher.verify(loginRequest.password, user.password)) LoginResult.PendingApproval
+        else LoginResult.Failed
     }
 
     /**

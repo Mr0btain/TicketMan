@@ -35,6 +35,11 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
+import org.mr0btain.ticketman.components.network.user.LoginOutcome
+import org.mr0btain.ticketman.server.request.AccountRequest
+import org.mr0btain.ticketman.server.request.AccountSetupRequest
+import org.mr0btain.ticketman.server.request.InviteSetupRequest
+import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import kotlin.uuid.Uuid
 
@@ -546,7 +551,79 @@ class MainViewModel(
         .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private suspend fun loadCurrentUser() {
-        _currentUser.value = remoteHandler.userRepo.getMe()
+        val user = remoteHandler.userRepo.getMe()
+        _currentUser.value = user
+
+        // Approved but not set up yet, they have to finish before anything else
+        if (user?.needsSetup == true) _accountSetup.value = AccountSetup.Approved(user)
+    }
+
+    // Shown on the login form, like when an account is still waiting for approval
+    private val _loginMessage: MutableStateFlow<String?> = MutableStateFlow(null)
+    val loginMessage = _loginMessage.asStateFlow()
+
+    // First login setup waiting to be finished, null when there isn't one
+    private val _accountSetup: MutableStateFlow<AccountSetup?> = MutableStateFlow(null)
+    val accountSetup = _accountSetup.asStateFlow()
+
+    /**
+     * Asks for an account from the login screen
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun requestAccount(request: AccountRequest, onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            when (val result = remoteHandler.userClient.requestAccount(request)) {
+                is Result.Success -> {
+                    _loginMessage.value = "Request sent. An admin has to approve it before you can log in."
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /**
+     * Finishes whichever setup is waiting
+     * @param password Required for invites, optional for approved requests
+     * @param onResult Gets null when it went through, otherwise what went wrong
+     */
+    fun completeAccountSetup(name: String, email: String, phone: String, password: String, onResult: (String?) -> Unit) {
+        val setup = _accountSetup.value ?: return
+
+        viewModelScope.launch {
+            val result = when (setup) {
+                is AccountSetup.Approved -> remoteHandler.userRepo.completeSetup(
+                    AccountSetupRequest(name = name, email = email, phone = phone, password = password)
+                )
+
+                is AccountSetup.Invite -> remoteHandler.completeInviteSetup(
+                    setup.username,
+                    InviteSetupRequest(setup.setupToken, password = password, name = name, email = email, phone = phone)
+                )
+            }
+
+            when (result) {
+                is Result.Success -> {
+                    _accountSetup.value = null
+                    _loginState.value = LoginState.LOGGED_IN
+                    _loginMessage.value = null
+                    loadCurrentUser()
+                    refreshPagers()
+                    onResult(null)
+                }
+
+                is Result.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** Backs out of setup, logging out if they were logged in for it */
+    fun cancelAccountSetup() {
+        val setup = _accountSetup.value
+        _accountSetup.value = null
+
+        if (setup is AccountSetup.Approved) logout()
     }
 
     // Whether the server at the current url could be reached
@@ -567,13 +644,31 @@ class MainViewModel(
         _loginState.value = LoginState.LOADING
 
         viewModelScope.launch {
-            if (remoteHandler.login(user.trim(), pass)) {
-                _loginState.value = LoginState.LOGGED_IN
-                _showLogin.value = false
-                loadCurrentUser()
-                refreshPagers()
-            } else {
-                _loginState.value = LoginState.FAILED
+            _loginMessage.value = null
+
+            when (val outcome = remoteHandler.login(user.trim(), pass)) {
+                is LoginOutcome.LoggedIn -> {
+                    _loginState.value = LoginState.LOGGED_IN
+                    _showLogin.value = false
+                    loadCurrentUser()
+                    if (!outcome.needsSetup) refreshPagers()
+                }
+
+                LoginOutcome.PendingApproval -> {
+                    _loginState.value = LoginState.LOGGED_OUT
+                    _loginMessage.value = "Your account is waiting for an admin to approve it."
+                }
+
+                is LoginOutcome.InviteSetup -> {
+                    _loginState.value = LoginState.LOGGED_OUT
+                    _showLogin.value = false
+                    _accountSetup.value = AccountSetup.Invite(outcome.username, outcome.setupToken)
+                }
+
+                LoginOutcome.Failed -> {
+                    _loginState.value = LoginState.FAILED
+                    _loginMessage.value = "Wrong username, password or setup code."
+                }
             }
         }
     }

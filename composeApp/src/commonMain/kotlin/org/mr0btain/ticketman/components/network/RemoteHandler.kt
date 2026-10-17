@@ -12,11 +12,14 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.database.*
+import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
 import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 
@@ -77,7 +80,7 @@ class RemoteHandler(
 
                 // Log in with stored credentials, then drop the tokens the http client cached
                 // before login so the next request loads the new ones
-                return if (userClient.login()) {
+                return if (userClient.login() is LoginOutcome.LoggedIn) {
                     onLoggedIn()
                     ConnectionResult.LOGGED_IN
                 } else {
@@ -138,7 +141,7 @@ class RemoteHandler(
             AppLogger.i(REFRESH_TOKENS_TAG, "Refresh token rejected, logging in again")
         }
 
-        return if (userClient.login()) {
+        return if (userClient.login() is LoginOutcome.LoggedIn) {
             AppLogger.m(REFRESH_TOKENS_TAG, SimpleResult.SUCCESS)
             getStoredToken()
         } else {
@@ -161,18 +164,24 @@ class RemoteHandler(
     /**
      * Try to log in to server with username and password
      */
-    suspend fun login(user: String, pass: String): Boolean {
+    suspend fun login(user: String, pass: String): LoginOutcome {
         val result = userClient.login(user, pass)
 
-        if (result) {
+        if (result is LoginOutcome.LoggedIn) {
             onLoggedIn()
             AppLogger.m(LOGIN_TAG, SimpleResult.SUCCESS)
         } else {
-            AppLogger.i(LOGIN_TAG, SimpleResult.FAIL)
+            AppLogger.i(LOGIN_TAG, result.toString())
         }
 
         return result
     }
+
+    /** Finishes an invite, which also logs in */
+    suspend fun completeInviteSetup(username: String, request: InviteSetupRequest): EmptyResult<ServerError> =
+        userClient.completeInviteSetup(username, request).also { result ->
+            if (result is Result.Success) onLoggedIn()
+        }
 
     /**
      * Drops the current session. The saved password is cleared too so the refresh fallback

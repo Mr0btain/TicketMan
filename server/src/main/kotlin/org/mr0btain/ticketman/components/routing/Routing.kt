@@ -7,12 +7,14 @@ import io.ktor.server.plugins.statuspages.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
+import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 
 fun Application.configureRouting(
     userService: UserService,
+    accountService: AccountService,
     adminService: AdminService,
     localDatabase: LocalDatabase
 ) {
@@ -35,13 +37,14 @@ fun Application.configureRouting(
         }
 
         route("/api/auth") {
-            authRoute(userService)
+            authRoute(userService, accountService)
         }
 
         route("/api/user") {
             userRoute(
                 database = localDatabase.userDatabase,
                 tokenDatabase = localDatabase.tokenDatabase,
+                accountService = accountService,
                 auditLog = localDatabase.auditLogDatabase
             )
         }

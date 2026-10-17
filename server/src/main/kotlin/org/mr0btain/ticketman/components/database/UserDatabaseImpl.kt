@@ -42,6 +42,8 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
     private val UPDATE_PASSWORD_TAG = "$tag:UpdatePassword"
     private val COUNT_BY_ACCESS_TAG = "$tag:CountByAccess"
     private val MIGRATE_TAG = "$tag:MigrateDeactivated"
+    private val SET_STATE_TAG = "$tag:SetState"
+    private val GET_PENDING_TAG = "$tag:GetPending"
 
     /** Any active admin, null when there are none */
     fun getAdmin(): User? {
@@ -144,6 +146,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                         phone = item.phone
                         access = item.accessLevel
                         status = item.status.name
+                        needsSetup = item.needsSetup
                     }
                 }
 
@@ -215,6 +218,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
                     phone = data.phone
                     access = data.accessLevel
                     status = data.status.name
+                    needsSetup = data.needsSetup
                 }
 
                 true
@@ -263,6 +267,48 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
             }
 
             result
+        }
+
+        return result
+    }
+
+    /**
+     * Changes a user's status, access level and whether they need setup in one go. Used by approving and setup,
+     * since a normal update leaves setup alone
+     * @return Whether the user was found
+     */
+    fun setState(identifier: Uuid, status: UserStatus, accessLevel: AccessLevel? = null, needsSetup: Boolean) : Boolean {
+        var result = false
+
+        appLogTryCatch(SET_STATE_TAG) {
+            transaction {
+                UserEntity.findById(identifier)?.let { userEntity ->
+                    userEntity.status = status.name
+                    accessLevel?.let { userEntity.access = it }
+                    userEntity.needsSetup = needsSetup
+                    result = true
+                } ?: AppLogger.i(SET_STATE_TAG, UserError.NOT_FOUND)
+            }
+
+            result
+        }
+
+        return result
+    }
+
+    /** Users waiting on approval or an invite */
+    fun getPending(): List<User> {
+        var result: List<User> = emptyList()
+
+        appLogTryCatch(GET_PENDING_TAG) {
+            transaction {
+                result = UserEntity
+                    .find { UserTable.status eq UserStatus.PENDING.name }
+                    .orderBy(UserTable.id to SortOrder.ASC)
+                    .map { it.toUser() }
+            }
+
+            true
         }
 
         return result

@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHist
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
+import org.mr0btain.ticketman.components.database.tables.user.InviteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.logging.AppLogger
@@ -52,6 +53,7 @@ class LocalDatabase (
     val shopDatabase = ShopDatabase()
     val statsDatabase = StatsDatabase()
     val counterDatabase = CounterDatabase(ticketDatabase, customerDatabase)
+    val inviteDatabase = InviteDatabase()
 
     // Every table, in an order where references come before the tables that use them
     private val tables = arrayOf(
@@ -72,7 +74,8 @@ class LocalDatabase (
         ImageTable,
         TokenTable,
         ShopTable,
-        AuditLogTable
+        AuditLogTable,
+        InviteTable
     )
 
     /**
@@ -117,7 +120,8 @@ class LocalDatabase (
      */
     private fun JdbcTransaction.addUserColumns() {
         listOf(
-            UserTable.status to "DEFAULT '${UserStatus.ACTIVE.name}' NOT NULL"
+            UserTable.status to "DEFAULT '${UserStatus.ACTIVE.name}' NOT NULL",
+            UserTable.needsSetup to "DEFAULT FALSE NOT NULL"
         ).forEach { (column, constraints) ->
             exec(
                 "ALTER TABLE ${identity(UserTable)} ADD COLUMN IF NOT EXISTS " +
