@@ -13,10 +13,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.ui.screens.admin.components.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.SectionCard
-import org.mr0btain.ticketman.ui.screens.admin.components.formatDateTime
-import org.mr0btain.ticketman.ui.screens.admin.components.formatTimeAgo
+import org.mr0btain.ticketman.ui.composables.EmptyMessage
+import org.mr0btain.ticketman.ui.composables.SectionCard
+import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 
 /**

@@ -36,6 +36,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
+import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
@@ -509,6 +510,15 @@ class MainViewModel(
         }
     }
 
+    /** ----------------------------------------------COUNTER------------------------------------------------------------------- */
+
+    val counter = CounterHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        snackBarHost = snackBarHost,
+        canEdit = { _currentUser.value?.canAccess(AccessLevel.NORMAL) == true }
+    )
+
     /** ----------------------------------------------ADMIN------------------------------------------------------------------- */
 
     val admin = AdminHandler(
@@ -545,6 +555,11 @@ class MainViewModel(
     // Who is logged in, null when logged out
     private val _currentUser: MutableStateFlow<User?> = MutableStateFlow(null)
     val currentUser = _currentUser.asStateFlow()
+
+    /** Whether the logged in user can change things, restricted users can only look. The server checks this too */
+    val canEdit: StateFlow<Boolean> = _currentUser
+        .map { user -> user?.canAccess(AccessLevel.NORMAL) == true }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     /** Whether the logged in user can use the admin screen. The server checks this too, this just hides things */
     val isAdmin: StateFlow<Boolean> = _currentUser
@@ -734,6 +749,7 @@ class MainViewModel(
             _loginState.value = LoginState.LOGGED_OUT
             _currentUser.value = null
             admin.clear()
+            counter.clear()
 
             // Drop anything pulled while logged in
             customerSeed.clear()

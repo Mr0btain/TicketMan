@@ -94,6 +94,9 @@ kotlin {
 
             // Encrypted key-value storage
             implementation(libs.ksafe)
+
+            // Local dates and times for display
+            implementation(libs.kotlinx.datetime)
         }
 
         commonTest.dependencies {

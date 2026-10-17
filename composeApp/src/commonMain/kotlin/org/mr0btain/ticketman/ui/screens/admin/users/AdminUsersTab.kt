@@ -29,8 +29,8 @@ import org.mr0btain.ticketman.ui.composables.SimpleTextItem
 import org.mr0btain.ticketman.ui.composables.scrollbar.PlatformLazyColumn
 import org.mr0btain.ticketman.ui.composables.shared.PanelTopBar
 import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
-import org.mr0btain.ticketman.ui.screens.admin.components.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.formatDateTime
+import org.mr0btain.ticketman.ui.composables.EmptyMessage
+import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
 import kotlin.uuid.Uuid
 

@@ -28,6 +28,7 @@ exposed = "1.5.0"
 openpdf = "2.0.5"
 kotlinx-io = "0.9.1"
 ksafe = "3.3.0"
+kotlinx-datetime = "0.7.1"
 
 [libraries]
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
@@ -107,6 +108,9 @@ kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "
 
 # Encrypted key-value storage
 ksafe = { module = "eu.anifantakis:ksafe", version.ref = "ksafe" }
+
+# Time zones and calendar dates
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 
 [plugins]
 kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }

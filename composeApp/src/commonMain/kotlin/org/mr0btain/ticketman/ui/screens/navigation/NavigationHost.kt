@@ -14,7 +14,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
-import org.mr0btain.ticketman.ui.screens.dashboard.DashboardScreen
+import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
 import org.mr0btain.ticketman.ui.screens.invoice.InvoiceScreen
 import org.mr0btain.ticketman.ui.screens.login.LoginScreen
 import org.mr0btain.ticketman.ui.screens.main.MainScreen
@@ -48,9 +48,8 @@ fun NavigationHost(
         }
 
         composable(Destination.DASHBOARD.route) {
-            DashboardScreen(
-                viewModel = mainViewModel,
-                snackBarState = snackBarState
+            CounterScreen(
+                viewModel = mainViewModel
             )
         }
 

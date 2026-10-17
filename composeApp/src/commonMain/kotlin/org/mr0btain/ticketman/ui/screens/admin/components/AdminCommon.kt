@@ -14,61 +14,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.composables.CustomSurface
 import org.mr0btain.ticketman.ui.theme.CustomMaterialColors
-import kotlin.time.Clock
-import kotlin.time.Instant
 
 // Shared pieces for the admin screen tabs
-
-// ------------------------------------------ Formatting ------------------------------------------
-
-/** Epoch millis as "2026-10-17 14:03 UTC" */
-fun formatDateTime(millis: Long): String =
-    Instant.fromEpochMilliseconds(millis).toString().take(16).replace('T', ' ') + " UTC"
-
-/** How long ago, like "5m ago" */
-fun formatTimeAgo(millis: Long, now: Long = Clock.System.now().toEpochMilliseconds()): String {
-    val seconds = (now - millis) / 1000
-
-    return when {
-        seconds < 60 -> "just now"
-        seconds < 3_600 -> "${seconds / 60}m ago"
-        seconds < 86_400 -> "${seconds / 3_600}h ago"
-        else -> "${seconds / 86_400}d ago"
-    }
-}
-
-/** Length of time, like "3d 4h" */
-fun formatDuration(millis: Long): String {
-    val minutes = millis / 60_000
-    val hours = minutes / 60
-    val days = hours / 24
-
-    return when {
-        days > 0 -> "${days}d ${hours % 24}h"
-        hours > 0 -> "${hours}h ${minutes % 60}m"
-        else -> "${minutes}m"
-    }
-}
-
-fun formatBytes(bytes: Long): String {
-    val kb = bytes / 1024.0
-    val mb = kb / 1024.0
-
-    return when {
-        mb >= 1 -> "${(mb * 10).toLong() / 10.0} MB"
-        kb >= 1 -> "${(kb * 10).toLong() / 10.0} KB"
-        else -> "$bytes B"
-    }
-}
-
-/** Enum names like IN_PROGRESS as "In progress" */
-fun formatEnumName(name: String): String =
-    name.lowercase().replace('_', ' ').replaceFirstChar { it.titlecase() }
 
 val AccessLevel.label: String
     get() = if (this == AccessLevel.NONE) "Deactivated" else formatEnumName(name)
@@ -131,43 +84,6 @@ fun StatCard(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-    }
-}
-
-/** Card with a title for grouping things on a tab */
-@Composable
-fun SectionCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    action: @Composable RowScope.() -> Unit = {},
-    content: @Composable ColumnScope.() -> Unit
-) {
-    CustomSurface(
-        modifier = modifier.padding(8.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = title,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically, content = action)
-            }
-
-            Spacer(Modifier.padding(4.dp))
-            HorizontalDivider()
-            Spacer(Modifier.padding(4.dp))
-
-            content()
         }
     }
 }
@@ -303,18 +219,5 @@ fun AccessLevelDropDown(
                 )
             }
         }
-    }
-}
-
-/** Shown in place of a list when there's nothing in it */
-@Composable
-fun EmptyMessage(text: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(text = text, fontSize = 14.sp)
     }
 }

@@ -92,7 +92,7 @@ fun App() {
             destination = Destination.ADMIN
         ) else null,
         NavigationItem(
-            title = "Dashboard",
+            title = "Counter",
             icon = painterResource(Res.drawable.monitor),
             destination = Destination.DASHBOARD
         ),

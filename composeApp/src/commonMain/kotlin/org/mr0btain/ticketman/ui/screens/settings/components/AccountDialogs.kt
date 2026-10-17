@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.ui.composables.PinTextField
-import org.mr0btain.ticketman.ui.screens.admin.components.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.ui.screens.login.components.PasswordTextField
 
 /**

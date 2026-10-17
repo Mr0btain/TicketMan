@@ -15,8 +15,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.money.Money
-import org.mr0btain.ticketman.ui.screens.admin.components.EmptyMessage
-import org.mr0btain.ticketman.ui.screens.admin.components.SectionCard
+import org.mr0btain.ticketman.ui.composables.EmptyMessage
+import org.mr0btain.ticketman.ui.composables.SectionCard
 import kotlin.uuid.Uuid
 
 /**
