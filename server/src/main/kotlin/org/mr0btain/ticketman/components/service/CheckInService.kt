@@ -36,6 +36,8 @@ class CheckInService(
     fun checkIn(request: CheckInRequest, takenBy: String, actor: Uuid?): AccountResult<CheckInResponse> {
         val ticket = request.ticket
 
+        // Check in time is read from the identifier, so it has to be a time based (version 7) one
+        if (ticket.identifier.toByteArray()[6].toInt() ushr 4 != 7) return AccountResult.Invalid("Ticket identifier has to be a version 7 UUID")
         if (tickets.getById(ticket.identifier) != null) return AccountResult.Conflict("That ticket already exists")
         if (customers.getById(request.customerIdentifier) == null) return AccountResult.Invalid("Pick a customer")
         if (ticket.device.manufacturer.isBlank() && ticket.device.model.isBlank()) return AccountResult.Invalid("Enter the device")

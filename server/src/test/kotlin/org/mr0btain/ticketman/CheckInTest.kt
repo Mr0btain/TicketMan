@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import kotlin.test.*
+import kotlin.uuid.Uuid
 
 /**
  * Checking devices in at the counter
@@ -142,7 +143,10 @@ class CheckInTest {
         val offPad = request(signature = signature.copy(strokes = listOf(listOf(SignaturePoint(0f, 0f), SignaturePoint(2f, 0f)))))
         val alreadyDone = request(ticket = Ticket(device = Device("Dell", "XPS"), problem = "x", status = TicketStatus(TicketStatusType.DONE)))
 
-        listOf(blankDevice, noProblem, noCustomer, restrictedTech, freeDeposit, blankSignature, unnamedSignature, offPad, alreadyDone).forEach {
+        // Check in time comes from the identifier, a random (version 4) one would have none
+        val randomIdentifier = request(ticket = Ticket(identifier = Uuid.random(), device = Device("Dell", "XPS"), problem = "x"))
+
+        listOf(blankDevice, noProblem, noCustomer, restrictedTech, freeDeposit, blankSignature, unnamedSignature, offPad, alreadyDone, randomIdentifier).forEach {
             assertEquals(HttpStatusCode.BadRequest, checkIn(it).status, "Should refuse $it")
             assertNull(TicketDatabaseImpl().getById(it.ticket.identifier))
         }
