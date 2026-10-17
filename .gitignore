@@ -8,3 +8,5 @@ local.properties
 build/reports/problems/problems-report.html
 shared/build/kotlinProjectStructureMetadata/kotlin-project-structure-metadata.json
 /shared/build/
+/androidApp/build/
+/build/
