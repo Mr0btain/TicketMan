@@ -5,8 +5,8 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 
-class InventoryCache(maxSize: Int): CustomCache<InventoryCache.InventoryData>(maxSize, "InventoryCache") {
-    suspend fun put(
+class InventoryCache(maxSize: Int): CustomCache<InventoryCache.InventoryData>(maxSize) {
+    fun put(
         inventory: Inventory,
         notes: List<Note> = emptyList(),
         images: List<StoredImage> = emptyList()

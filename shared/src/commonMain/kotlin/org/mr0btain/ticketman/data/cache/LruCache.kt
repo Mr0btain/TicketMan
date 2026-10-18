@@ -12,14 +12,15 @@ package org.mr0btain.ticketman.data.cache
  *
  * Lookups, insertions, removals, and LRU eviction are all O(1) operations.
  *
+ * Not thread safe: even [get] reorders entries. The client only touches its caches from the main thread.
+ *
  * @param K the type of keys maintained by this cache.
  * @param V the type of values maintained by this cache.
  * @param maxSize the maximum number of entries the cache can contain.
  */
 class LruCache<K, V>(
-    private val maxSize: Int,
-    tag: String
-) : MutableMap<K, V>, Cache(tag) {
+    private val maxSize: Int
+) {
 
     init {
         require(maxSize > 0) {
@@ -66,7 +67,7 @@ class LruCache<K, V>(
     /**
      * Returns the current number of entries in the cache.
      */
-    override val size: Int
+    val size: Int
         get() = map.size
 
     /**
@@ -77,7 +78,7 @@ class LruCache<K, V>(
      * @param key the key whose value should be retrieved.
      * @return the value associated with [key], or null if the key is not present.
      */
-    override fun get(key: K): V? {
+    operator fun get(key: K): V? {
         val node = map[key] ?: return null
 
         moveToTail(node)
@@ -99,7 +100,7 @@ class LruCache<K, V>(
      * @return the previous value associated with [key], or null if the key
      *         did not previously exist.
      */
-    override fun put(key: K, value: V): V? {
+    fun put(key: K, value: V): V? {
         val existing = map[key]
 
         if (existing != null) {
@@ -128,7 +129,7 @@ class LruCache<K, V>(
      * @return the value that was associated with [key], or null if the key
      *         was not present.
      */
-    override fun remove(key: K): V? {
+    fun remove(key: K): V? {
         val node = map.remove(key) ?: return null
 
         unlink(node)
@@ -139,7 +140,7 @@ class LruCache<K, V>(
     /**
      * Removes all entries from the cache and resets its LRU ordering.
      */
-    override fun clear() {
+    fun clear() {
         map.clear()
         head = null
         tail = null
@@ -152,76 +153,8 @@ class LruCache<K, V>(
      *
      * @param key the key to search for.
      */
-    override fun containsKey(key: K): Boolean =
+    fun containsKey(key: K): Boolean =
         map.containsKey(key)
-
-    /**
-     * Returns true if at least one entry in the cache contains [value].
-     *
-     * @param value the value to search for.
-     */
-    override fun containsValue(value: V): Boolean =
-        map.values.any { it.value == value }
-
-    /**
-     * Returns true if the cache contains no entries.
-     */
-    override fun isEmpty(): Boolean =
-        map.isEmpty()
-
-    /**
-     * Returns the set of keys currently stored in the cache.
-     */
-    override val keys: MutableSet<K>
-        get() = map.keys
-
-    /**
-     * Returns the collection of values currently stored in the cache.
-     */
-    override val values: MutableCollection<V>
-        get() = map.values.mapTo(mutableListOf()) { it.value }
-
-    /**
-     * Returns the entries currently stored in the cache.
-     */
-    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
-        get() = map.values
-            .mapTo(mutableSetOf()) { node ->
-                object : MutableMap.MutableEntry<K, V> {
-
-                    override val key: K
-                        get() = node.key
-
-                    override val value: V
-                        get() = node.value
-
-                    /**
-                     * Updates the value stored by this entry.
-                     *
-                     * @param newValue the new value to associate with the key.
-                     * @return the previous value.
-                     */
-                    override fun setValue(newValue: V): V {
-                        val old = node.value
-                        node.value = newValue
-                        return old
-                    }
-                }
-            }
-
-    /**
-     * Adds all entries from [from] to the cache.
-     *
-     * Entries are added in the iteration order of [from]. Each entry becomes
-     * the most recently used entry when it is added.
-     *
-     * @param from the map whose entries should be added.
-     */
-    override fun putAll(from: Map<out K, V>) {
-        from.forEach { (key, value) ->
-            put(key, value)
-        }
-    }
 
     /**
      * Adds [node] to the end of the linked list, making it the

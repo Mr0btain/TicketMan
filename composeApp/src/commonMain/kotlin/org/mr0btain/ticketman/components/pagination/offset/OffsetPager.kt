@@ -25,7 +25,6 @@ class OffsetPager<Value>(
     config: OffsetPagerConfig = OffsetPagerConfig(),
     private val fetch: suspend (page: Int, pageSize: Int) -> List<Value>
 ) {
-    private val CACHE_TAG = "$tag:Cache"
     private val LOAD_NEXT_TAG = "$tag:LoadNext"
     private val LOAD_PREVIOUS_TAG = "$tag:LoadPrevious"
     private val REFRESH_TAG = "$tag:Refresh"
@@ -36,7 +35,7 @@ class OffsetPager<Value>(
         private set
 
     /** Cache for holding pages that may be requested again, this helps save on hits to a database. */
-    private val cache = LruCache<Int, List<Value>>(config.cacheSize, CACHE_TAG)
+    private val cache = LruCache<Int, List<Value>>(config.cacheSize)
 
     // Loaded pages in order, items is rebuilt from this every time it changes
     private val deque = ArrayDeque<List<Value>>()
