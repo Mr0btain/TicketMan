@@ -146,8 +146,9 @@ Some columns hold shared classes as JSON (`json<Device>("device", ...)`), which 
 rows still read after a field is removed.
 
 Foreign keys on note and link tables use `ReferenceOption.CASCADE`, so deleting a ticket removes its join rows.
-Photos on a deleted record's notes are no longer referenced, so the [sweep](../operations.md#the-hourly-sweep) marks
-them deleted and clears them up.
+The notes themselves don't cascade, so each `remove` takes the record's notes first, deletes the record, then
+deletes the notes with the base class's `deleteNotes()`, which marks their photos deleted. An inventory item's own
+photos are marked deleted too. The [sweep](../operations.md#the-hourly-sweep) clears the files up a day later.
 
 ## Gotchas
 
@@ -156,8 +157,8 @@ them deleted and clears them up.
 - **`DB_CLOSE_DELAY=-1`** keeps H2 open until the process ends. Tests have to run `SHUTDOWN` themselves before
   deleting a data folder, which `cleanupTestDataDir()` in the server tests does.
 - **`removeImage(id)` doesn't check the owner.** Unlike notes, it marks any photo with that id deleted.
-- **Deleting a customer, ticket or inventory item leaves its notes behind.** The join rows cascade away but the
-  `NoteTable` rows stay, unreachable. `UserDatabase.remove` is the only one that deletes its notes too.
+- **Take the notes before deleting the record.** Once the record is gone its join rows are too, and
+  `entity.notes` comes back empty. A new record type's `remove` follows the same order.
 
 ## See also
 

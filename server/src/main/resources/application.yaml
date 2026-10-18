@@ -12,6 +12,23 @@ jwt:
     realm: "TicketMan Server"
     secret: "$SECRET:ojSNROVNOnwerowNEOIFOIonwerowNEOIFOIonwerowNEOIFOIo"
 
+# HTTPS listens next to plain HTTP. The certificate is made in <DATA_PATH>/server/tls/ on first start unless
+# SSL_KEYSTORE points at a PKCS12 file. SSL_PORT=0 turns HTTPS off
+tls:
+    port: "$SSL_PORT:8443"
+    # on, redirect (to HTTPS) or off
+    httpMode: "$HTTP_MODE:on"
+    keyStore: "$SSL_KEYSTORE:"
+    keyStorePassword: "$SSL_KEYSTORE_PASSWORD:"
+    keyAlias: "$SSL_KEY_ALIAS:"
+    # Only when it isn't the same as the keystore password
+    privateKeyPassword: "$SSL_KEY_PASSWORD:"
+
+# Only used in development mode, for the web client's dev server. Comma separated hosts like localhost:8080,
+# blank allows any
+cors:
+    hosts: "$CORS_HOSTS:"
+
 env:
     name: "$NAME:Server"
     dataPath: "$DATA_PATH:"

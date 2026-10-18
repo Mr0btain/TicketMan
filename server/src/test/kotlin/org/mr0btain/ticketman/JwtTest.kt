@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import java.time.Instant
 import kotlin.test.*
@@ -39,14 +40,22 @@ class JwtTest {
         return login(tech)
     }
 
-    private suspend fun ApplicationTestBuilder.login(user: User): String {
+    private suspend fun ApplicationTestBuilder.login(user: User): String = loginTokens(user).accessToken!!
+
+    private suspend fun ApplicationTestBuilder.loginTokens(user: User): AuthResponse {
         val response = client.post("/api/auth") {
             contentType(ContentType.Application.Json)
             setBody(json.encodeToString(LoginRequest(user.username, user.password)))
         }
 
-        return json.decodeFromString<AuthResponse>(response.bodyAsText()).accessToken!!
+        return json.decodeFromString<AuthResponse>(response.bodyAsText())
     }
+
+    private suspend fun ApplicationTestBuilder.refresh(token: String) =
+        client.post("/api/auth/refresh") {
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(RefreshTokenRequest(token)))
+        }.status
 
     /** A token like the server's, with the parts a test wants changed */
     private fun token(
@@ -54,12 +63,14 @@ class JwtTest {
         sessionId: String?,
         expiresAt: Instant = Instant.now().plusSeconds(600),
         secret: String = "test-secret",
-        audience: String = "test-audience"
+        audience: String = "test-audience",
+        type: String? = JwtService.ACCESS_TYPE
     ): String = JWT.create()
         .withAudience(audience)
         .withIssuer("http://localhost")
         .withClaim("identifier", identifier)
         .apply { if (sessionId != null) withClaim(JwtService.SESSION_CLAIM, sessionId) }
+        .apply { if (type != null) withClaim(JwtService.TYPE_CLAIM, type) }
         .withExpiresAt(expiresAt)
         .sign(Algorithm.HMAC256(secret))
 
@@ -124,5 +135,26 @@ class JwtTest {
         UserDatabase().remove(tech.identifier)
 
         assertEquals(HttpStatusCode.Unauthorized, status(access))
+    }
+
+    @Test
+    fun aRefreshTokenCantBeUsedAsAnAccessToken() = testApplication {
+        setup()
+        val tokens = loginTokens(other)
+
+        assertEquals(HttpStatusCode.OK, status(tokens.accessToken!!))
+        assertEquals(HttpStatusCode.Unauthorized, status(tokens.refreshToken!!))
+        // Nor one from before the type claim, for a live session
+        assertEquals(HttpStatusCode.Unauthorized, status(token(sessionId = sessionOf(tokens.accessToken!!), type = null)))
+        assertEquals(HttpStatusCode.Unauthorized, status(token(sessionId = sessionOf(tokens.accessToken!!), type = JwtService.REFRESH_TYPE)))
+    }
+
+    @Test
+    fun anAccessTokenCantBeRefreshed() = testApplication {
+        setup()
+        val tokens = loginTokens(other)
+
+        assertEquals(HttpStatusCode.Unauthorized, refresh(tokens.accessToken!!))
+        assertEquals(HttpStatusCode.Accepted, refresh(tokens.refreshToken!!))
     }
 }

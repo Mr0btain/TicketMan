@@ -1,6 +1,8 @@
  package org.mr0btain.ticketman
 
 import io.ktor.server.application.*
+import io.ktor.server.config.*
+import io.ktor.server.engine.*
 import io.ktor.server.netty.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -10,6 +12,8 @@ import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
+import org.mr0btain.ticketman.components.plugins.configureCors
+import org.mr0btain.ticketman.components.plugins.configureHttps
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.plugins.configureTransfers
@@ -23,10 +27,14 @@ import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
+import org.mr0btain.ticketman.components.tls.HttpMode
+import org.mr0btain.ticketman.components.tls.ServerTls
+import org.mr0btain.ticketman.components.tls.TlsSettings
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SeedRequest
+import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.util.AppDir
 import java.io.File
 import java.security.SecureRandom
@@ -39,13 +47,59 @@ import java.util.Base64
  */
 
 fun main(args: Array<String>) {
-    EngineMain.main(args)
+    createServer(args).start(wait = true)
+}
+
+/**
+ * Netty's `EngineMain` set up, plus an HTTPS connector on `tls.port` when it's on. Done here rather than in
+ * application.yaml's `ktor.security` because the certificate may have to be made first
+ */
+fun createServer(args: Array<String>): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
+    val commandLine = CommandLineConfig(args)
+    val config = commandLine.environment.config
+    val settings = TlsSettings.from(config)
+    val dataPath = resolveDataPath(config)
+
+    val certificate = when {
+        !settings.enabled -> null
+        // Nowhere to keep a made certificate. module() says why there's no data folder
+        settings.keyStorePath.isBlank() && dataPath.isBlank() -> null
+        else -> ServerTls.load(settings, dataPath)
+    }
+
+    if (certificate != null) {
+        AppLogger.m("SERVER:Https", "HTTPS on port ${settings.httpsPort}, plain HTTP is ${settings.httpMode.name.lowercase()}")
+        AppLogger.m("SERVER:Https", "Certificate fingerprint (devices are asked to check this): ${certificate.fingerprint}")
+    }
+
+    return EmbeddedServer(commandLine.rootConfig, Netty) {
+        takeFrom(commandLine.engineConfig)
+
+        if (certificate != null) {
+            val host = connectors.firstOrNull()?.host ?: "0.0.0.0"
+            if (settings.httpMode == HttpMode.OFF) connectors.clear()
+
+            sslConnector(
+                keyStore = certificate.keyStore,
+                keyAlias = certificate.alias,
+                keyStorePassword = { certificate.keyStorePassword.toCharArray() },
+                privateKeyPassword = { certificate.privateKeyPassword.toCharArray() }
+            ) {
+                this.host = host
+                port = settings.httpsPort
+            }
+        }
+    }
+}
+
+/** `DATA_PATH`, falling back to the platform folder only when it isn't set, so that isn't made for nothing */
+fun resolveDataPath(config: ApplicationConfig): String {
+    val path = config.propertyOrNull("env.dataPath")?.getString().orEmpty()
+    return path.ifBlank { AppDir().path?.toString().orEmpty() }
 }
 
 fun Application.module() {
-    val path = this.environment.config.property("env.dataPath").getString()
-    // Only fall back to the platform folder when DATA_PATH isn't set, so it isn't made for nothing
-    val dataPath = path.ifBlank { AppDir().path?.toString().orEmpty() }
+    val dataPath = resolveDataPath(environment.config)
 
     if (dataPath.isBlank()) {
         AppLogger.e("SERVER", "No DATA_PATH set and no app data folder found, so there's nowhere to keep data")
@@ -65,17 +119,21 @@ fun Application.module() {
             auditLog = database.auditLogDatabase
         )
         val accountService = AccountService(database.userDatabase, database.inviteDatabase, userService, jwtService, database.auditLogDatabase)
+        val tls = TlsSettings.from(environment.config)
         val adminService = AdminService(
             database = database,
             serverName = environment.config.propertyOrNull("env.name")?.getString() ?: "Server",
             dataPath = dataPath,
-            developmentMode = developmentMode
+            developmentMode = developmentMode,
+            certificate = certificateInfo(tls, dataPath)
         )
 
         configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
         configureTransfers()
+        configureHttps(tls)
+        configureCors(environment.config.propertyOrNull("cors.hosts")?.getString().orEmpty())
         val invoiceService = InvoiceService(
             invoices = database.invoiceDatabase,
             tickets = database.ticketDatabase,
@@ -130,6 +188,18 @@ fun Application.module() {
                 request = SeedRequest(tickets = 1000, customers = 400, inventory = 100, users = 25)
             )
         }
+    }
+}
+
+/** The certificate createServer() started HTTPS with, for the admin screen. Read again since it's already made */
+private fun certificateInfo(settings: TlsSettings, dataPath: String): ServerCertificateInfo? {
+    if (!settings.enabled) return null
+
+    return try {
+        ServerTls.load(settings, dataPath).info(settings)
+    } catch (ex: Exception) {
+        AppLogger.e("SERVER:Https", "Couldn't read the HTTPS certificate", ex)
+        null
     }
 }
 

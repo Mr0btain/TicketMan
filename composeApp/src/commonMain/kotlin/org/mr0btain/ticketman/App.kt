@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
+import org.mr0btain.ticketman.ui.screens.login.ServerTrustDialog
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.PhoneAppShell
 import org.mr0btain.ticketman.ui.screens.navigation.WideAppShell
@@ -58,6 +59,9 @@ fun App() {
 
     // First login setup that has to be finished
     val accountSetup = mainViewModel.session.accountSetup.collectAsState()
+
+    // A server with its own certificate has to be checked before this device talks to it
+    val untrustedCertificate = mainViewModel.session.untrustedCertificate.collectAsState()
 
     // Approved stations with kiosk mode show only the counter, signed into by PIN
     val kioskActive = mainViewModel.kiosk.active.collectAsState()
@@ -112,6 +116,15 @@ fun App() {
                 LoginPopup(
                     viewModel = mainViewModel,
                     onDismiss = { mainViewModel.session.changeShowLogin(false) }
+                )
+            }
+
+            // Over the login popup, which can't get anywhere until the server is trusted
+            untrustedCertificate.value?.let { certificate ->
+                ServerTrustDialog(
+                    certificate = certificate,
+                    onTrust = { mainViewModel.session.trustServerCertificate() },
+                    onDismiss = { mainViewModel.session.dismissServerCertificate() }
                 )
             }
 

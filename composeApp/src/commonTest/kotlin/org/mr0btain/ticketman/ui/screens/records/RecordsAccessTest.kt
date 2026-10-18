@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.records
 
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -27,6 +29,7 @@ class RecordsAccessTest {
         requests += "${request.method.value} ${request.url.encodedPath}"
 
         when (request.url.encodedPath) {
+            SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
             else -> respond("", HttpStatusCode.Accepted)
         }

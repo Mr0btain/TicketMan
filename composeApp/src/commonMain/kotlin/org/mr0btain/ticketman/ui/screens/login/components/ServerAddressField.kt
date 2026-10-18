@@ -37,7 +37,7 @@ fun ServerAddressField(
             value = address,
             onValueChange = { address = it },
             label = stringResource(Res.string.server_address_string),
-            placeholder = "192.168.1.20:8080",
+            placeholder = "192.168.1.20:8443",
             leadingIcon = Res.drawable.server,
             size = TmControlSize.LARGE,
             error = if (error) "Couldn't reach a server there. Check the address and that the server is running." else null,

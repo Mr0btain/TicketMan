@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.network.normalizeServerAddress
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.ui.kit.theme.TmFont
 import org.mr0btain.ticketman.ui.kit.theme.TmFonts
@@ -98,10 +99,18 @@ class SettingsHandler(
         localStorage.reduceTransparency = value
     }
 
+    /** Saves the address as typed, an address with no `http://` or `https://` is taken to mean HTTPS */
     fun setServerUrl(url: String) {
+        val address = normalizeServerAddress(url)
+        _serverUrl.value = address
+        localStorage.serverUrl = address
+        onServerUrlChanged(address)
+    }
+
+    /** Saves the address already connected to, without connecting again */
+    fun rememberServerUrl(url: String) {
         _serverUrl.value = url
         localStorage.serverUrl = url
-        onServerUrlChanged(url)
     }
 
     fun toggleRememberLogin() {

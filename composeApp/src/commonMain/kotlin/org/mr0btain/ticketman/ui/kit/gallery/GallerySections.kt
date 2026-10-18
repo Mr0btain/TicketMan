@@ -46,6 +46,7 @@ import org.mr0btain.ticketman.ui.kit.navigation.TmStepper
 import org.mr0btain.ticketman.ui.kit.containers.TmDialogSurface
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.containers.TmScrollColumn
 import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.images.TmImagePager
@@ -441,6 +442,15 @@ private fun ListsSection() {
                     onClick = { selected = index },
                     trailing = { Text("${index + 1} open", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted) }
                 )
+            }
+        }
+
+        TmDivider()
+
+        Text("Scroll column, for panels that might not fit", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+        TmScrollColumn(modifier = Modifier.fillMaxWidth().height(96.dp)) {
+            listOf("Problem", "Condition", "Left with it", "Promised", "Estimate", "Technician").forEach { label ->
+                Text(label, style = TmTheme.typography.body, color = TmTheme.colors.text)
             }
         }
 

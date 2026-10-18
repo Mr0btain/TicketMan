@@ -26,7 +26,9 @@ flowchart TD
 | `image/ImageRemoteRepository.kt` | Photo uploads and URLs |
 | `Helpers.kt` | `networkRequest`, `networkErrorTryCatch`, `handleHttpResponse`, `handleActionHttpResponse`, `handleDataHttpResponse`, `networkErrorFor` |
 | `ServerError.kt`, `ConnectionResult.kt` | Error and connection result types |
-| `HttpEngine.kt` | `expect fun getHttpEngine()` |
+| `HttpEngine.kt` | `expect fun getHttpEngine(trust)` |
+| `ServerTrust.kt`, `ServerAddress.kt` | Which self-made server certificates are trusted; how typed addresses are read |
+| `jvmSharedMain/.../PinningTrustManager.kt` | The certificate and host name checks the desktop and Android engine use |
 | `transfer/` | Streaming big uploads and downloads, see [Transfers and photos](transfers-and-photos.md) |
 
 ## Two HTTP clients
@@ -42,17 +44,60 @@ flowchart TD
   - **JSON** with `ignoreUnknownKeys`,
   - **logging** of headers only, with `Authorization` hidden. Logging bodies would buffer every photo and backup.
 
-Both are built on the engine from `getHttpEngine()` (OkHttp on desktop), passed into `MainViewModel`.
+Both are built on the engine from `getHttpEngine(trust)`: OkHttp on desktop and Android, Ktor's Js engine on web.
+`MainViewModel` makes it, unless a test passes in a mock engine.
+
+## Server addresses
+
+`SettingsHandler.setServerUrl` saves addresses through `normalizeServerAddress`: with no `http://` or `https://`,
+an address means HTTPS. Addresses saved before HTTPS had no scheme and always went out as plain HTTP, so
+`LocalStorage` adds `http://` to them once when it loads (`migrateSavedServerAddress`) and they keep working.
+`SessionHandler.connectionSecure` is false on `http://`, and the admin Server tab shows a **Not secure** badge.
+
+On web, with no address saved, `MainViewModel` tries `defaultServerAddress()` (the page's origin) and saves it if a
+server answers there.
 
 ## Connecting
 
 `SessionHandler.connect(url)`, called on start with the saved server address and whenever it's changed in Settings,
 calls `RemoteHandler.setUrl(url)`:
 
-1. `GET <url>/` must answer. If it doesn't, the result is `UNREACHABLE` and nothing else changes.
+1. `GET <url>/api/ping` must answer `TicketMan`. Servers from before `/api/ping` answer 404, and then `GET <url>/`
+   counts if it isn't a web page (so the web client's dev server isn't taken for a server). If neither works, the
+   result is `UNREACHABLE`, or `UNTRUSTED` when the server's certificate was refused (below). Nothing else changes.
 2. Every repository's `serverUrl` is set. Until then it's blank, and every repository call returns straight away
    with a "No server set" error instead of hitting a relative URL.
 3. It tries to log in with the saved username and password. The result is `LOGGED_IN` or `CONNECTED`.
+
+## Trusting a server's certificate
+
+A server usually makes its own certificate (see [Running a server](../operations.md#https)), which no authority
+vouches for. On desktop and Android the engine trusts it the first time someone checks it, then only that
+certificate from that address. It's the same idea as SSH remembering a host's key.
+
+```mermaid
+flowchart TD
+    H[TLS handshake] --> P{Fingerprint trusted<br/>for this host:port?}
+    P -- yes --> OK[Connect]
+    P -- no --> S{System trusts it?}
+    S -- yes --> OK
+    S -- no --> R["ServerTrust.refuse()<br/>setUrl returns UNTRUSTED"]
+    R --> D["ServerTrustDialog shows the fingerprint"]
+    D -- "It matches" --> T["ServerTrust.trust(), saved in LocalStorage,<br/>then connect again"]
+```
+
+- `PinningTrustManager` accepts what the system's trust store accepts, so a real certificate just works, plus the
+  one fingerprint (SHA-256 of the certificate) `ServerTrust` holds for that `host:port`. Anything else is passed to
+  `ServerTrust.refuse()` and the handshake fails.
+- `PinningHostnameVerifier` runs OkHttp's usual name check, and lets a trusted fingerprint through even when the
+  certificate doesn't list the name the server was reached by.
+- `SessionHandler.untrustedCertificate` is the refused certificate for the current server, and `App` shows
+  `ServerTrustDialog` for it, above the login popup. The dialog shows the fingerprint in two lines to read off
+  against the admin Server tab or the server's log. A **changed** certificate (a different one from an address
+  trusted before) gets a warning, since it can mean something is pretending to be the server.
+- **Don't connect** leaves the server unconnected and doesn't ask about that certificate again until the app
+  restarts. **It matches, connect** saves the fingerprint (`trusted_certificates` in `LocalStorage`) and connects again.
+- On web the browser does all of this itself, and nothing here runs.
 
 After connecting, `SessionHandler` reloads the current user (`GET /api/user/me`) and the device's station, and
 `MainViewModel` refreshes the record lists.
@@ -145,13 +190,15 @@ See [Request lifecycle](../architecture/request-lifecycle.md) for what each help
 
 Repositories and handlers are tested in `composeApp/src/commonTest` with Ktor's `MockEngine`: build a
 `RemoteHandler` on a `MockEngine` that answers the routes under test, and an `InMemoryKeyValueStore` for
-`LocalStorage`.
+`LocalStorage`. The mock has to answer `SERVER_PING_PATH` with `SERVER_PING_BODY`, or connecting fails.
+`PinnedHttpsTest` (desktopTest) runs a real HTTPS server with a self-made certificate against the OkHttp engine.
 
 ## Gotchas
 
 - **Route strings aren't checked against the server.** Rename a route on one side and the other still compiles.
 - **Repositories keep their own copy of the server URL.** `setUrl` sets each one by name, so a new repository must be
   added to that list as well as constructed in `RemoteHandler`.
+- **Trust is per `host:port`.** The same server reached by its IP address and by its name is asked about twice.
 - **A login with credentials not remembered can't be refreshed by password.** Once the refresh token is refused the
   user has to log in again.
 

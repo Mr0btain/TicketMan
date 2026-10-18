@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin
 
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -38,6 +40,7 @@ class AdminHandlerTest {
         val body = (request.body as? TextContent)?.text ?: ""
 
         when {
+            path == SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             path == "/" -> respond("", HttpStatusCode.OK)
             path.endsWith("/audit/fetch") -> {
                 auditOffsets += Regex("\"offset\":(\\d+)").find(body)!!.groupValues[1].toLong()

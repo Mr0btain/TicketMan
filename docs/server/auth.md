@@ -41,6 +41,18 @@ sequenceDiagram
 | Pending user with an invite, right setup code | No tokens, `status = INVITE_SETUP` and a 30 minute `setupToken` |
 | Pending account request, right password | No tokens, `status = PENDING_APPROVAL` |
 | Anything else | `401`, and a `LOGIN_FAILED` audit entry |
+| Too many wrong tries | `429`, see below |
+
+### Wrong password limit
+
+`POST /api/auth` and `/api/auth/user` count failed logins in memory, in two `RequestLimiter`s in `AuthRoute.kt`:
+20 per address and 10 per username, each over 15 minutes. Once either is used up the route answers `429` before
+checking the password, so even the right password waits until the oldest failure is 15 minutes old. Good logins
+never count. The client shows `NetworkError.TOO_MANY_REQUESTS` ("Too many tries, wait a moment and try again").
+
+A username's count is shared by every address, so someone on the network can keep a user locked out of password
+login by guessing at it. PIN login and existing sessions aren't affected, and the counts reset when the server
+restarts.
 
 A username that doesn't exist still runs a dummy hash check, so the response takes as long as a wrong password and
 can't be used to find out which usernames exist.
@@ -57,11 +69,17 @@ Both tokens are HMAC-SHA256 JWTs signed with `jwt.secret`, carrying:
 | `aud`, `iss` | `jwt.audience`, `jwt.issuer` from config |
 | `identifier` | The user's id |
 | `sid` | The session id, shared by the refresh token and every access token made from it |
+| `typ` | `access` or `refresh` (`JwtService.ACCESS_TYPE`, `REFRESH_TYPE`) |
 | `exp` | Access: 1 hour. Refresh: 365 days, or 12 hours for a PIN session |
 
 The client sends the access token as `Authorization: Bearer ...`. When it gets a `401`, it posts the refresh token
 to `/api/auth/refresh`, which checks that the token verifies, is the one stored for its session, and belongs to an
 active user, then returns a new access token for the same session. The refresh token itself isn't replaced.
+
+Every auth provider only lets in tokens with `typ = access`, so a refresh token can't be used as a bearer token,
+and `/api/auth/refresh` refuses access tokens. Tokens made before `typ` was added have none: old access tokens are
+refused (the client refreshes and gets a typed one), and old refresh tokens still refresh because they match their
+stored session.
 
 Invite setup tokens are separate: they carry a `purpose = invite-setup` claim and no `sid`, so they fail every auth
 provider and can only be spent on `/api/auth/setup/invite`.
@@ -131,12 +149,8 @@ same hasher is used for passwords, PINs, invite codes and station secrets.
 
 ## Known gaps
 
-- **Refresh tokens work as access tokens.** Nothing marks a token as one kind or the other, and the validators only
-  check the signature, audience, user and session. A refresh token sent as a bearer token is accepted for as long
-  as it lives (a year for a password session), so the short access token lifetime doesn't limit much if a refresh
-  token leaks. Ending the session still cuts it off. A `typ` claim checked by the validators would close this.
-- **No limit on password attempts.** Only account requests are rate limited (5 an hour per address). PINs have
-  their own lockout.
+- **Login limits are per server run.** The wrong password counts live in memory, so restarting the server clears
+  them. Behind a reverse proxy every request comes from the proxy's address, so all devices share one address count.
 - **Refresh tokens aren't rotated.** The same one is used for the whole session.
 - **The `SECRET` default is public.** The server logs an error on start when `SECRET` isn't set. See
   [Configuration](../configuration.md#secret).

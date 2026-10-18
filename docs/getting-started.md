@@ -21,7 +21,8 @@ dependencies and takes a while.
 PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
 ```
 
-- `PORT` defaults to 8080.
+- `PORT` defaults to 8080. HTTPS listens on `SSL_PORT`, 8443 by default, with a certificate the server makes in
+  `DATA_PATH` the first time. Clients ask you to check its fingerprint (printed in the log) before trusting it.
 - `DATA_PATH` is where the database and photos go. Leave it out and the server uses the platform's app data
   folder (`~/.local/share/TicketMan` on Linux), which is probably not what you want for a scratch server.
 - `ADMIN_PASSWORD` sets the password of the `admin` user made on first start. Without it a random password is
@@ -61,8 +62,12 @@ run configuration.
 ./gradlew :composeApp:wasmJsBrowserDevelopmentRun
 ```
 
-This starts a webpack dev server and opens the app in the browser. The web app doesn't start yet (see
-[Platforms](client/platforms.md#known-gaps)), and see the gotchas below too.
+This starts a webpack dev server and opens the app in the browser, with hot reload. Point it at a server started
+with `-Pdevelopment` (so it allows the dev server's origin, see [Configuration](configuration.md#development-mode))
+on another `PORT`, using the server's `http://` address: the browser hasn't been told to trust the server's own
+certificate. To try the web client the way a shop gets it, served by the server itself, run
+`./gradlew :server:run -PwithWeb` and open `https://localhost:8443` (see
+[Running a server](operations.md#web-client)).
 
 ### Android
 
@@ -123,10 +128,8 @@ change, and the sessions list. It stops at the first response it didn't expect.
 
 ## Gotchas
 
-- **The web client can't reach the server from another origin.** The server doesn't install Ktor's CORS plugin, so
-  the browser's preflight request gets `405` and the call is blocked. The web dev server and the Ktor server run on
-  different ports, which counts as a different origin. Until CORS is added, the web client only works behind a
-  proxy that serves both from one origin.
+- **The web dev server only works with a development server.** CORS is only on with `-Pdevelopment`, so a server
+  started without it blocks the dev server's requests.
 - **Port 8080 is the default for both the server and the web dev server.** Give the server another `PORT` when
   running both.
 - **Server tests don't read `application.yaml`.** They use the helpers in `server/src/test/.../TestServer.kt`

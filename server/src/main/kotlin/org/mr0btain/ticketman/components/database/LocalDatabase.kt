@@ -2,7 +2,10 @@ package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.audit.AuditLogTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTable
@@ -39,6 +42,7 @@ class LocalDatabase (
     private val TAG = "ServerDatabase"
     private val INIT_TAG = "$TAG:Init"
     private val BACKUP_TAG = "$TAG:Backup"
+    private val DETACHED_NOTES_TAG = "$TAG:RemoveDetachedNotes"
 
     /** Folder holding the H2 files */
     val databaseDirectory = File("$appDir/database")
@@ -133,6 +137,32 @@ class LocalDatabase (
         userDatabase.migrateDeactivatedUsers()
         tokenDatabase.clearLegacySessions()
         inventoryDatabase.migrateLegacyPrices()
+        removeDetachedNotes()
+    }
+
+    /**
+     * Deletes notes no record links to, left by removing customers, tickets and items before removing took their
+     * notes along. Their photos are picked up by the next image sweep
+     */
+    private fun removeDetachedNotes() {
+        try {
+            val removed = transaction {
+                val attached = buildSet {
+                    addAll(CustomerNoteTable.select(CustomerNoteTable.note).map { it[CustomerNoteTable.note].value })
+                    addAll(TicketNoteTable.select(TicketNoteTable.note).map { it[TicketNoteTable.note].value })
+                    addAll(InventoryNoteTable.select(InventoryNoteTable.note).map { it[InventoryNoteTable.note].value })
+                    addAll(UserNoteTable.select(UserNoteTable.note).map { it[UserNoteTable.note].value })
+                }
+                val detached = NoteTable.select(NoteTable.id).map { it[NoteTable.id].value }.filter { it !in attached }
+
+                detached.chunked(500).forEach { ids -> NoteTable.deleteWhere { NoteTable.id inList ids } }
+                detached.size
+            }
+
+            if (removed > 0) AppLogger.m(DETACHED_NOTES_TAG, "Removed $removed notes with no record")
+        } catch (ex: Exception) {
+            AppLogger.e(DETACHED_NOTES_TAG, SimpleResult.FAIL, ex)
+        }
     }
 
     /**

@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.service
 import com.auth0.jwt.JWT
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
 import kotlin.time.Clock
@@ -17,7 +18,8 @@ class AdminService(
     private val database: LocalDatabase,
     private val serverName: String,
     private val dataPath: String,
-    private val developmentMode: Boolean
+    private val developmentMode: Boolean,
+    private val certificate: ServerCertificateInfo? = null
 ) {
     private val TAG = "AdminService"
     private val SESSIONS_TAG = "$TAG:Sessions"
@@ -66,7 +68,8 @@ class AdminService(
             imagesSizeBytes = database.imageStore.sizeOnDisk(),
             javaVersion = System.getProperty("java.version") ?: "",
             operatingSystem = "${System.getProperty("os.name")} ${System.getProperty("os.version")}",
-            developmentMode = developmentMode
+            developmentMode = developmentMode,
+            certificate = certificate
         )
     }
 

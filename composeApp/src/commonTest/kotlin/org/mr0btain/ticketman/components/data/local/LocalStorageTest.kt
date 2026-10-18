@@ -10,6 +10,13 @@ class LocalStorageTest {
     private val localStorage = LocalStorage(store)
 
     @Test
+    fun savedPasswordKeepsItsSpaces() {
+        localStorage.password = " pass word "
+
+        assertEquals(" pass word ", LocalStorage(store).password)
+    }
+
+    @Test
     fun tokensDefaultToEmpty() {
         assertEquals("", localStorage.accessToken)
         assertEquals("", localStorage.refreshToken)

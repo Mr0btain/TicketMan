@@ -42,10 +42,11 @@ class JwtService(
     /**
      * Generates a token given a UUID and a duration
      * @param sessionId Shared by a login's refresh token and every access token made from it
+     * @param type [ACCESS_TYPE] or [REFRESH_TYPE], so one can't be used as the other
      */
 
     @OptIn(ExperimentalTime::class)
-    fun createJwtToken(identifier: String, expiresIn: Duration, sessionId: String): String {
+    private fun createJwtToken(identifier: String, expiresIn: Duration, sessionId: String, type: String): String {
         val now = Clock.System.now()
 
         return JWT
@@ -54,6 +55,7 @@ class JwtService(
             .withIssuer(issuer)
             .withClaim("identifier", identifier)
             .withClaim(SESSION_CLAIM, sessionId)
+            .withClaim(TYPE_CLAIM, type)
             .withIssuedAt(now.toJavaInstant())
             .withExpiresAt(now.plus(expiresIn).toJavaInstant())
             .sign(Algorithm.HMAC256(secret))
@@ -89,17 +91,18 @@ class JwtService(
      */
 
     fun createAccessToken(identifier: String, sessionId: String): String =
-        createJwtToken(identifier, 1.hours, sessionId)
+        createJwtToken(identifier, 1.hours, sessionId, ACCESS_TYPE)
 
     /**
      * Generates a refresh token
      */
 
     fun createRefreshToken(identifier: String, sessionId: String, lifetime: Duration = 365.days): String =
-        createJwtToken(identifier, lifetime, sessionId)
+        createJwtToken(identifier, lifetime, sessionId, REFRESH_TYPE)
 
     /**
      * Verify credentials along with access level to verify if its legit and allowed.
+     * Only access tokens get in, a refresh token can only be spent on /api/auth/refresh.
      * The token also has to belong to the user's current session, so revoking a session or logging in
      * again cuts off older access tokens right away
      */
@@ -111,6 +114,7 @@ class JwtService(
         return foundUser?.let {
             if (
                 audienceMatches(credential) &&
+                isAccessToken(credential) &&
                 foundUser.canAccess(minAccessLevel) &&
                 isFromCurrentSession(id, credential)
             ) {
@@ -130,6 +134,7 @@ class JwtService(
         return foundUser?.let {
             if (
                 audienceMatches(credential) &&
+                isAccessToken(credential) &&
                 foundUser.status == UserStatus.ACTIVE &&
                 isFromCurrentSession(id, credential)
             ) {
@@ -137,6 +142,10 @@ class JwtService(
             } else null
         }
     }
+
+    // Tokens from before the type claim have none and are refused, the client refreshes and gets a typed one
+    private fun isAccessToken(credential: JWTCredential): Boolean =
+        credential.payload.getClaim(TYPE_CLAIM).asString() == ACCESS_TYPE
 
     // Checks the token's session is still stored and belongs to this user
     private fun isFromCurrentSession(id: String, credential: JWTCredential): Boolean {
@@ -167,6 +176,9 @@ class JwtService(
 
     companion object {
         const val SESSION_CLAIM = "sid"
+        const val TYPE_CLAIM = "typ"
+        const val ACCESS_TYPE = "access"
+        const val REFRESH_TYPE = "refresh"
         private const val PURPOSE_CLAIM = "purpose"
         private const val SETUP_PURPOSE = "invite-setup"
         private val SETUP_TOKEN_LIFETIME = 30.minutes

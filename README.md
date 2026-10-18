@@ -34,13 +34,13 @@ On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:P
 | Kiosk mode: PIN login on approved stations, idle lock | Done |
 | Admin: overview, users and account requests, sessions, stations, audit log, low stock, backup and restore | Done |
 | Themes (Bench, Copper, Mono), fonts, light and dark, reduce transparency | Done |
-| HTTPS between client and server | Not yet. Put the server behind a TLS proxy for now |
+| HTTPS between client and server | Done. The server makes its own certificate and devices check its fingerprint once, or it uses one you supply ([details](docs/operations.md#https)) |
 
 | Platform | Status |
 |----------|--------|
 | Desktop (Linux, Windows, macOS) | Main target, most complete |
-| Web (Wasm) | Builds, but doesn't start yet: its HTTP engine is a `TODO()` ([details](docs/client/platforms.md#known-gaps)) |
-| Android | Builds, but doesn't start yet, for the same reason |
+| Web (Wasm) | Served by the server when built with `-PwithWeb` ([details](docs/operations.md#web-client)). Not yet tried in a browser |
+| Android | Compiles, not yet tried on a device ([details](docs/client/platforms.md#known-gaps)) |
 | iOS | Not wired up, the targets are commented out |
 
 ## Documentation

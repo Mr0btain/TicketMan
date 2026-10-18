@@ -8,8 +8,10 @@ page says where, and what happens on the server behind it.
 
 1. Start the server with `SECRET` and `DATA_PATH` set, and `ADMIN_PASSWORD` if you want to choose the first password
    (see [Configuration](configuration.md)).
-2. Watch the log for `Responding at http://0.0.0.0:<port>`, and for the `admin` user's password if you didn't set one.
-3. Point a client at the server (Settings > Server and data) and log in as `admin`.
+2. Watch the log for `Responding at https://0.0.0.0:8443`, the certificate fingerprint, and the `admin` user's
+   password if you didn't set one.
+3. Point a client at the server (Settings > Server and data), like `192.168.1.20:8443`. It asks you to check the
+   certificate's fingerprint against the one in the log (see [HTTPS](#https)), then log in as `admin`.
 4. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
    paper size). Tax and everything printed come from it, so do this before taking money.
 5. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
@@ -28,6 +30,7 @@ server/
 │       ├── original.jpg
 │       ├── display.jpg
 │       └── thumb.jpg
+├── tls/                       The certificate the server made for HTTPS, and its keystore password
 ├── backups/                   Backups waiting to be downloaded, removed once their link runs out
 ├── restore/                   An uploaded backup waiting for the next restart
 └── pre-restore-<time>/        What a restore replaced, kept so it can be undone by hand
@@ -38,6 +41,62 @@ details (owner, size, hash, status) are in the database.
 
 Don't edit or delete files in here while the server is running. H2 holds the database open, and the photo
 folders are managed by the sweep below.
+
+## HTTPS
+
+The server listens for HTTPS on `SSL_PORT` (8443) next to plain HTTP on `PORT` (8080). Devices should use the
+HTTPS one, since passwords, tokens and backup links can be read off the network over plain HTTP.
+
+### The certificate
+
+With no `SSL_KEYSTORE` set, the server makes its own certificate on first start and keeps it in `server/tls/`. It
+lasts ten years and lists `localhost`, the machine's name and its IPv4 addresses. No authority vouches for it, so
+every device is asked once whether to trust it:
+
+- **Desktop and Android** show the certificate's fingerprint and ask. Compare it with the one in the server's log
+  (`Certificate fingerprint ...`) or on the admin screen's **Server** tab, and trust it if they match. After that the
+  device only accepts that certificate from that address, and warns if it ever changes.
+- **Browsers** show their usual warning page. Open the server's address, check the certificate the browser shows,
+  and accept it.
+
+To use a certificate of your own, like one from Let's Encrypt for a real domain or from a local CA such as
+`mkcert` that's installed on every device, put it in a PKCS12 file and set `SSL_KEYSTORE` and
+`SSL_KEYSTORE_PASSWORD` (see [Configuration](configuration.md#https)). Devices that trust its authority connect
+without being asked. A PEM certificate and key can be converted with:
+
+```bash
+openssl pkcs12 -export -in fullchain.pem -inkey privkey.pem -out ticketman.p12 -name ticketman
+```
+
+A supplied keystore that can't be read stops the server, rather than quietly serving a different certificate.
+
+### Changing the certificate
+
+Every device that trusted the old certificate will warn that it changed, so do it on purpose and tell staff to
+expect it. To make a new one, stop the server, delete `server/tls/` and start it again. Moving the server to a new
+machine without copying `server/tls/` does the same, since backups don't include it.
+
+### Plain HTTP
+
+`HTTP_MODE` sets what the HTTP port does: `on` (the default, so devices saved with an `http://` address keep
+working), `redirect` (sends everything to HTTPS) or `off`. Move every device to its `https://` address before
+switching to `redirect`, because a redirected POST arrives as a GET and fails. Devices saved before HTTPS existed
+keep `http://` until their address is changed in Settings.
+
+## Web client
+
+A server built with `-PwithWeb` serves the web client at `/`, on the same address as the API:
+
+```bash
+./gradlew :server:run -PwithWeb          # or :server:buildFatJar -PwithWeb for a jar to deploy
+```
+
+Staff then open `https://<server>:8443` in a browser, accept the certificate once, and log in. There's no address
+to type, since the page is already on the server. The build gzips the big files (the `.wasm` ones are about 15 MB,
+4 MB gzipped), and browsers check for a new version on each load, which costs a 304 when nothing changed.
+
+Without `-PwithWeb` the server has no web client and `/` is a plain up check. The Wasm build takes a few minutes,
+which is why it's left out by default.
 
 ## Staff accounts
 
@@ -144,7 +203,8 @@ short of restoring a backup.
 
 ## Known gaps
 
-- No HTTPS. The server speaks plain HTTP, so put it behind a TLS proxy if it's reachable outside the shop network.
+- The made certificate isn't renewed. It lasts ten years, and replacing it makes every device ask again.
+- `server/tls/` isn't in backups, so a server restored on a new machine makes a new certificate.
 - No scheduled backups. They're made by hand from the admin screen.
 - `pre-restore-*` folders and `restore/failed-*.zip` files pile up until removed by hand.
 

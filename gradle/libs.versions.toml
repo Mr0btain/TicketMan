@@ -60,6 +60,8 @@ ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negoti
 ktor-client-logging = { module = "io.ktor:ktor-client-logging", version.ref = "ktor" }
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
 ktor-client-mock = { module = "io.ktor:ktor-client-mock", version.ref = "ktor" }
+ktor-client-js = { module = "io.ktor:ktor-client-js", version.ref = "ktor" }
+ktor-network-tls-certificates = { module = "io.ktor:ktor-network-tls-certificates", version.ref = "ktor" }
 
 # Ktor server
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
@@ -75,6 +77,8 @@ ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
 ktor-server-partial-content = { module = "io.ktor:ktor-server-partial-content", version.ref = "ktor" }
 ktor-server-conditional-headers = { module = "io.ktor:ktor-server-conditional-headers", version.ref = "ktor" }
+ktor-server-http-redirect = { module = "io.ktor:ktor-server-http-redirect", version.ref = "ktor" }
+ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
 
 # Navigation
 compose-navigation = { group = "compose", module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "compose-navigation" }
@@ -161,7 +165,10 @@ ktorServer = [
     "ktor-server-auth",
     "ktor-server-auth-jwt",
     "ktor-server-partial-content",
-    "ktor-server-conditional-headers"
+    "ktor-server-conditional-headers",
+    "ktor-server-http-redirect",
+    "ktor-server-cors",
+    "ktor-network-tls-certificates"
 ]
 ktorServerTesting = [
     "ktor-serverTestHost",

@@ -14,5 +14,7 @@ data class ServerInfoResponse(
     val imagesSizeBytes: Long = 0,
     val javaVersion: String,
     val operatingSystem: String,
-    val developmentMode: Boolean
+    val developmentMode: Boolean,
+    /** Null when HTTPS is off */
+    val certificate: ServerCertificateInfo? = null
 )

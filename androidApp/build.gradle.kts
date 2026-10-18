@@ -18,9 +18,6 @@ kotlin {
         implementation(projects.composeApp)
         implementation(libs.androidx.activity.compose)
         implementation(compose.preview)
-
-        // ktor
-        implementation(libs.ktor.client.okhttp)
     }
 }
 

@@ -10,6 +10,8 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.image.ImageClient
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.ServerTrust
+import org.mr0btain.ticketman.components.network.defaultServerAddress
 import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
@@ -30,7 +32,8 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 class MainViewModel(
     val snackBarHost: SnackbarHostState,
     private val localStorage: LocalStorage,
-    engine: HttpClientEngine = getHttpEngine()
+    /** Tests pass a mock engine, the app uses the platform's */
+    engine: HttpClientEngine? = null
 ) : ViewModel() {
     fun init() {
         // When the session can't be refreshed, ask the user to log in again
@@ -46,8 +49,12 @@ class MainViewModel(
             tickets.load()
             _selectedMainTabIndex.value = localStorage.defaultTab
 
-            // Set url in all our handlers and log in with any stored credentials
-            session.connect(localStorage.serverUrl)
+            // Set url in all our handlers and log in with any stored credentials. With nothing saved, the web
+            // client tries the server it was loaded from and keeps that address if a server answers there
+            val savedUrl = localStorage.serverUrl
+            val url = savedUrl.ifBlank { defaultServerAddress() }
+            session.connect(url)
+            if (savedUrl.isBlank() && session.serverConnected.value) settings.rememberServerUrl(url)
 
             // Pagers don't load themselves, so do the first load now that we're connected
             refreshPagers()
@@ -56,9 +63,12 @@ class MainViewModel(
 
     /** ----------------------------------------------REMOTE------------------------------------------------------------------- */
 
+    private val trust = ServerTrust(localStorage)
+
     val remoteHandler = RemoteHandler(
-        engine = engine,
-        localStorage = localStorage
+        engine = engine ?: getHttpEngine(trust),
+        localStorage = localStorage,
+        trust = trust
     )
 
     /** Uploads photos and finds where they're fetched from, handed to screens through LocalImageClient */

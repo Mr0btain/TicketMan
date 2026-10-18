@@ -1,5 +1,7 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.targets.js.webpack.KotlinWebpackConfig
 
@@ -58,6 +60,16 @@ kotlin {
             }
         }
         binaries.executable()
+    }
+
+    // Desktop and Android both use OkHttp, so the code that checks a server's certificate is shared between them
+    @OptIn(ExperimentalKotlinGradlePluginApi::class)
+    applyDefaultHierarchyTemplate {
+        common {
+            group("jvmShared") {
+                withCompilations { it.platformType == KotlinPlatformType.jvm || it.platformType == KotlinPlatformType.androidJvm }
+            }
+        }
     }
 
     sourceSets {
@@ -125,7 +137,20 @@ kotlin {
             dependencies {
                 // Reads back the QR codes we make
                 implementation(libs.zxing.core)
+
+                // Self-signed certificates for a real HTTPS server to connect to
+                implementation(libs.ktor.network.tls.certificates)
             }
+        }
+
+        val jvmSharedMain by getting {
+            dependencies {
+                implementation(libs.ktor.client.okhttp)
+            }
+        }
+
+        wasmJsMain.dependencies {
+            implementation(libs.ktor.client.js)
         }
 
         desktopMain.dependencies {
@@ -158,7 +183,7 @@ compose.desktop {
         }
 
         tasks.withType<JavaExec>().configureEach {
-            systemProperty("syncSphereDebug", System.getProperty("syncSphereDebug"))
+            systemProperty("ticketmanDebug", System.getProperty("ticketmanDebug"))
         }
 
     }

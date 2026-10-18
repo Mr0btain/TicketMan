@@ -7,6 +7,7 @@ import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -15,12 +16,15 @@ import io.github.vinceglb.filekit.dialogs.FileKitType
 import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
 import io.github.vinceglb.filekit.name
 import org.mr0btain.ticketman.components.utils.formatBytes
+import org.mr0btain.ticketman.components.network.isSecureServerAddress
 import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatDay
 import org.mr0btain.ticketman.components.utils.formatDuration
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.PendingRestore
+import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.ui.screens.admin.components.BackupProgress
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
@@ -29,6 +33,8 @@ import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.TmProgressBar
@@ -99,7 +105,13 @@ private fun ServerInfoCard(
     serverUrl: String
 ) {
     TmPanel(modifier = Modifier.width(SIDE_WIDTH), title = "Server", icon = Res.drawable.server) {
-        TmKeyValueRow(label = "Address", value = serverUrl.ifBlank { "Not set" })
+        TmKeyValueRow(label = "Address") {
+            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                // Passwords and tokens go over the network readable on plain HTTP
+                if (!isSecureServerAddress(serverUrl)) TmBadge(text = "Not secure", tone = TmTheme.colors.warning)
+                Text(text = serverUrl.ifBlank { "Not set" }, style = TmTheme.typography.body, color = TmTheme.colors.text)
+            }
+        }
 
         if (serverInfo == null) {
             TmNotice(text = "Couldn't load server info. Check the connection, then refresh.", kind = TmNoticeKind.ERROR)
@@ -122,6 +134,44 @@ private fun ServerInfoCard(
             Text(text = "Data folder", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
             SelectionContainer {
                 Text(text = serverInfo.dataPath, style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+            }
+        }
+
+        TmDivider()
+        CertificateRows(serverInfo.certificate)
+    }
+}
+
+/** HTTPS settings and the certificate's fingerprint, which devices ask staff to check before trusting the server */
+@Composable
+private fun CertificateRows(certificate: ServerCertificateInfo?) {
+    if (certificate == null) {
+        TmKeyValueRow(label = "HTTPS", value = "Off")
+        return
+    }
+
+    Column {
+        TmKeyValueRow(label = "HTTPS port", value = certificate.httpsPort.toString(), numeric = true)
+        TmKeyValueRow(
+            label = "Plain HTTP",
+            value = when (certificate.httpMode) {
+                "redirect" -> "Sent to HTTPS"
+                "off" -> "Off"
+                else -> "On"
+            }
+        )
+        TmKeyValueRow(label = "Certificate", value = if (certificate.generated) "Made by the server" else "Supplied")
+        TmKeyValueRow(label = "Expires", value = formatDay(certificate.expiresAt))
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
+        Text(text = "Fingerprint", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+        SelectionContainer {
+            Column {
+                // Split the same way as on the device asking, so the two can be read off line by line
+                certificate.fingerprint.split(":").chunked(16).forEach { line ->
+                    Text(text = line.joinToString(":"), style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+                }
             }
         }
     }

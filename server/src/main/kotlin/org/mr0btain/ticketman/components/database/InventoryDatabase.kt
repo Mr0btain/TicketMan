@@ -59,7 +59,10 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
             val inventoryEntity = InventoryEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(REMOVE_TAG, InventoryError.NOT_FOUND) }
 
+            val notes = inventoryEntity.notes.toList()
+            markImagesDeleted(inventoryEntity.images)
             inventoryEntity.delete()
+            deleteNotes(notes)
             true
         }
 

@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.kiosk
 
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
@@ -31,6 +33,7 @@ class KioskHandlerTest {
         requests += "${request.method.value} ${request.url.encodedPath}"
 
         when (request.url.encodedPath) {
+            SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
             "/api/auth/pin" -> respond("""{"id":null,"accessToken":"pin","refreshToken":"pin-refresh"}""", HttpStatusCode.Accepted, jsonHeaders)
             "/api/auth/station/staff" -> respond("""[{"identifier":"${member.identifier}","username":"tech","name":"terry:tech"}]""", HttpStatusCode.OK, jsonHeaders)

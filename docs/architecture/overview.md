@@ -18,13 +18,14 @@ flowchart LR
         R --> DB[Database classes]
         S --> DB
     end
-    D & W & A -- "JSON over HTTP, JWT bearer tokens" --> R
+    D & W & A -- "JSON over HTTPS, JWT bearer tokens" --> R
     DB --> H2[(H2 file database)]
     S --> F[(Photos, backups on disk)]
 ```
 
 There is one server per shop. Every client device (counter PCs, a tablet, a kiosk) connects to it by URL, and the
-server is the only thing that touches the database. Clients keep only a cache of what they've loaded, plus
+server is the only thing that touches the database. The server can also serve the web client itself, so a browser
+only needs the server's address. Clients keep only a cache of what they've loaded, plus
 settings and login tokens.
 
 ## Modules
@@ -123,9 +124,10 @@ the shared model, the server table and database class, the route, the client rep
 ## Known gaps
 
 - iOS targets are commented out, so `iosApp` doesn't build.
-- Android and web build but don't start: `getHttpEngine()` and `isDebug()` are still `TODO()` there. See
+- Android and web compile but haven't been run end to end on a device or in a browser yet. See
   [Platforms](../client/platforms.md#known-gaps).
-- The server speaks plain HTTP. Put it behind a TLS proxy if it's reachable outside the shop network.
+- Plain HTTP is still on next to HTTPS by default, so older saved addresses keep working. See
+  [Running a server](../operations.md#plain-http).
 - A few parts predate the current patterns: some databases use `appLogTryCatch` and `transaction` rather than
   `dbQuery`/`dbWrite`, and some `TODO` comments describe ideas that were never started.
 

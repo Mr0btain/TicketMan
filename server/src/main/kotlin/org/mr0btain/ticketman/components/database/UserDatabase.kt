@@ -12,7 +12,6 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
-import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
@@ -98,7 +97,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             val notes = userEntity.notes.toList()
             UserNoteTable.deleteWhere { UserNoteTable.user eq identifier }
             UserTicketTable.deleteWhere { UserTicketTable.user eq identifier }
-            notes.forEach { noteEntity -> deleteNoteEntity(noteEntity) }
+            deleteNotes(notes)
 
             userEntity.delete()
             true
@@ -298,11 +297,6 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
         dbQuery(COUNT_BY_ACCESS_TAG) {
             UserTable.selectAll().where { UserTable.access eq accessLevel }.count()
         } ?: 0L
-
-    private fun deleteNoteEntity(noteEntity: NoteEntity) {
-        markImagesDeleted(noteEntity.images)
-        noteEntity.delete()
-    }
 
     override val noteLinkColumn = UserNoteTable.note
 

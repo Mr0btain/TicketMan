@@ -63,8 +63,9 @@ used without asking the server. See [Transfers and photos](transfers-and-photos.
 
 - **The password is stored** (encrypted by KSafe) when Remember login is on, so the client can log back in when a
   refresh token is refused. Turn Remember login off on shared devices.
-- **Values are trimmed when saved**, including the password. A password with a space at either end is saved
-  without it, and logging back in with the saved one then fails.
+- **Values are trimmed when saved, except the password.** Tokens, the username and the server address lose
+  spaces at either end; the password is saved exactly as typed. Passwords saved by older versions were trimmed, so
+  one with a space at either end fails to log back in once, and is saved correctly when typed again.
 - **Clearing app data loses the device id and station credentials.** The device then looks new to the server: old
   sessions stay listed until removed, and the station has to be registered and approved again.
 

@@ -1,3 +1,5 @@
+import java.util.zip.GZIPOutputStream
+
 plugins {
     alias(libs.plugins.kotlinJvm)
     alias(libs.plugins.ktor)
@@ -30,4 +32,30 @@ dependencies {
 
     // Photo resizing
     implementation(libs.thumbnailator)
+}
+// -PwithWeb builds the web client into the server, which then serves it at /. Off by default because the Wasm
+// build is slow. The big files get a gzipped copy next to them, which the server sends to browsers that accept it
+if (project.hasProperty("withWeb")) {
+    val webClient = tasks.register<Sync>("webClient") {
+        dependsOn(":composeApp:wasmJsBrowserDistribution")
+        from(project(":composeApp").layout.buildDirectory.dir("dist/wasmJs/productionExecutable")) {
+            // Only for debugging the client, and big
+            exclude("**/*.map")
+        }
+        into(layout.buildDirectory.dir("webClient"))
+
+        doLast {
+            destinationDir.walkTopDown()
+                .filter { it.isFile && it.extension in setOf("wasm", "js", "mjs", "html", "css", "json") }
+                .forEach { file ->
+                    GZIPOutputStream(File(file.path + ".gz").outputStream()).use { out ->
+                        file.inputStream().use { it.copyTo(out) }
+                    }
+                }
+        }
+    }
+
+    tasks.processResources {
+        from(webClient) { into("web") }
+    }
 }

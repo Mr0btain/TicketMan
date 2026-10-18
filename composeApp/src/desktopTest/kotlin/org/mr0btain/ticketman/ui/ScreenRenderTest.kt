@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.components.network.UntrustedCertificate
+import org.mr0btain.ticketman.ui.screens.login.ServerTrustDialog
 import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -188,9 +190,9 @@ class ScreenRenderTest {
         return File(outputDir, "$name-${if (dark) "dark" else "light"}.png").apply { writeBytes(bytes) }
     }
 
-    private fun bothModes(name: String, content: @Composable () -> Unit) {
+    private fun bothModes(name: String, height: Int = 900, content: @Composable () -> Unit) {
         listOf(true, false).forEach { dark ->
-            val file = render(name, dark, content = content)
+            val file = render(name, dark, height = height, content = content)
             assertTrue(file.length() > 0, "${file.name} should have been drawn")
         }
     }
@@ -198,7 +200,14 @@ class ScreenRenderTest {
     // ------------------------------------------ Screens ------------------------------------------
 
     @Test
-    fun counterTicket() = bothModes("counter-ticket") {
+    fun counterTicket() = bothModes("counter-ticket") { CounterTicket() }
+
+    /** A short window, where the ticket's panels scroll under the header */
+    @Test
+    fun counterTicketShort() = bothModes("counter-ticket-short", height = 640) { CounterTicket() }
+
+    @Composable
+    private fun CounterTicket() {
         Shell("Counter") {
             Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
@@ -273,6 +282,24 @@ class ScreenRenderTest {
                 onUnlock = { _, _, _ -> },
                 onExit = { _, _, _ -> }
             )
+        }
+    }
+
+    /** Asking to trust a server's own certificate, the first time and after it changed */
+    @Test
+    fun serverTrust() {
+        val fingerprint = (0 until 32).joinToString(":") { ((it * 37 + 11) % 256).toString(16).padStart(2, '0').uppercase() }
+
+        listOf(null, "AA:BB").forEach { before ->
+            bothModes(if (before == null) "server-trust" else "server-trust-changed") {
+                Shell("Records") {
+                    ServerTrustDialog(
+                        certificate = UntrustedCertificate("192.168.1.20:8443", fingerprint, "CN=TicketMan server", before),
+                        onTrust = {},
+                        onDismiss = {}
+                    )
+                }
+            }
         }
     }
 

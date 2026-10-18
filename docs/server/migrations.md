@@ -21,6 +21,7 @@ ticketDatabase.backfillNumbers()       // 5. data fixes
 userDatabase.migrateDeactivatedUsers()
 tokenDatabase.clearLegacySessions()
 inventoryDatabase.migrateLegacyPrices()
+removeDetachedNotes()
 ```
 
 Steps 1 to 4 run in one transaction. The data fixes run after, each in its own.
@@ -112,6 +113,7 @@ already fixed database, they should find nothing to do.
 | `UserDatabase.migrateDeactivatedUsers()` | Users deactivated the old way (`AccessLevel.NONE`) become `DEACTIVATED` with `RESTRICTED` access |
 | `TokenDatabase.clearLegacySessions()` | Drops sessions from before sessions had ids. Those users just log in again |
 | `InventoryDatabase.migrateLegacyPrices()` | Text prices into cents, as above |
+| `LocalDatabase.removeDetachedNotes()` | Deletes notes no record links to, left by deleting customers, tickets and items before `remove` took their notes. The next sweep marks their photos deleted |
 
 Add a new one by writing the method on the right database class and calling it after the others.
 

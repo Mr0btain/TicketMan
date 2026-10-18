@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
+import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.plugins.*
 import io.ktor.server.request.*
@@ -26,6 +27,7 @@ import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.LoginStatus
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
 
 /**
  * Authorization routes
@@ -41,9 +43,13 @@ fun Route.authRoute(
 ) {
     // Anyone can ask for an account, so cap how often one address can
     val requestLimiter = RequestLimiter(maxAttempts = 5, window = 1.hours)
+    // Wrong passwords are capped per address, and per username so many addresses can't share the guessing
+    val loginLimiter = LoginLimiter()
 
     post {
         val received = call.receive<LoginRequest>()
+
+        if (loginLimiter.refuse(call, received.username)) return@post
 
         when (val result = userService.authenticate(received)) {
             is LoginResult.Success -> call.respond(HttpStatusCode.Accepted, result.response)
@@ -55,7 +61,10 @@ fun Route.authRoute(
                 AuthResponse(id = null, accessToken = null, refreshToken = null, status = LoginStatus.PENDING_APPROVAL)
             )
 
-            LoginResult.Failed -> call.respond(HttpStatusCode.Unauthorized)
+            LoginResult.Failed -> {
+                loginLimiter.failed(call, received.username)
+                call.respond(HttpStatusCode.Unauthorized)
+            }
         }
     }
 
@@ -64,12 +73,18 @@ fun Route.authRoute(
         // Receive request body and parse it into a LoginRequest
         val request = call.receive<LoginRequest>()
 
+        if (loginLimiter.refuse(call, request.username)) return@post
+
         userService.authenticateUser(request)?.let { user ->
 
             // Respond with HTTP 202 Accepted if authentication and key update are successful
             call.respond(HttpStatusCode.Accepted, user.accessLevel)
 
-        } ?: call.respond(HttpStatusCode.Unauthorized) // Respond with 401 if authentication fails
+        } ?: run {
+            // Respond with 401 if authentication fails
+            loginLimiter.failed(call, request.username)
+            call.respond(HttpStatusCode.Unauthorized)
+        }
     }
 
     // Asking for an account from the login screen, it waits for an admin
@@ -158,4 +173,29 @@ fun Route.authRoute(
             call.respond(HttpStatusCode.Accepted, RefreshTokenResponse(newToken))
         } ?: call.respond(HttpStatusCode.Unauthorized)
     }
+}
+
+/**
+ * Caps wrong password logins. Only failures count, so staff logging in all day never hit it.
+ * A limited username is refused even with the right password until its window passes
+ */
+private class LoginLimiter {
+    private val byAddress = RequestLimiter(maxAttempts = 20, window = 15.minutes)
+    private val byUsername = RequestLimiter(maxAttempts = 10, window = 15.minutes)
+
+    /** Answers 429 and returns true when this address or username has had too many wrong tries */
+    suspend fun refuse(call: ApplicationCall, username: String): Boolean {
+        if (!byAddress.isLimited(call.address()) && !byUsername.isLimited(username.key())) return false
+
+        call.respond(HttpStatusCode.TooManyRequests, "Too many wrong logins, try again in a few minutes")
+        return true
+    }
+
+    fun failed(call: ApplicationCall, username: String) {
+        byAddress.record(call.address())
+        byUsername.record(username.key())
+    }
+
+    private fun ApplicationCall.address() = request.origin.remoteHost
+    private fun String.key() = trim().lowercase()
 }

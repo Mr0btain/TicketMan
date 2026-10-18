@@ -57,7 +57,9 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
             val customerEntity = CustomerEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(REMOVE_TAG, CustomerError.NOT_FOUND) }
 
+            val notes = customerEntity.notes.toList()
             customerEntity.delete()
+            deleteNotes(notes)
             true
         }
 

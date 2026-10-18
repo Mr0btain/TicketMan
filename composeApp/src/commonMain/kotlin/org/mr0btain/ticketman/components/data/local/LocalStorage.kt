@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.data.local
 
+import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.network.migrateSavedServerAddress
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.getPlatform
 import kotlin.uuid.Uuid
@@ -34,7 +36,7 @@ class LocalStorage(private val store: KeyValueStore) {
         get() = _password
         set(value) {
             _password = value
-            store.putString(PASSWORD_KEY, value.trim())
+            store.putString(PASSWORD_KEY, value)
         }
 
     var accessToken: String
@@ -95,6 +97,17 @@ class LocalStorage(private val store: KeyValueStore) {
         set(value) {
             _serverUrl = value
             store.putString(SERVER_URL_KEY, value.trim())
+        }
+
+    /** Fingerprints of self-made server certificates this device was told to trust, by `host:port` */
+    var trustedCertificates: Map<String, String>
+        get() = try {
+            Json.decodeFromString<Map<String, String>>(store.getString(TRUSTED_CERTIFICATES_KEY, "").ifBlank { "{}" })
+        } catch (ex: Exception) {
+            emptyMap()
+        }
+        set(value) {
+            store.putString(TRUSTED_CERTIFICATES_KEY, Json.encodeToString(value))
         }
 
     /** Whether the username and password should be saved after a successful login */
@@ -177,7 +190,9 @@ class LocalStorage(private val store: KeyValueStore) {
         _fontId = store.getString(FONT_ID_KEY, "")
         _reduceTransparency = getBoolean(REDUCE_TRANSPARENCY_KEY, false)
         _ticketScope = store.getString(TICKET_SCOPE_KEY, "")
-        _serverUrl = store.getString(SERVER_URL_KEY, "")
+        val savedUrl = store.getString(SERVER_URL_KEY, "")
+        _serverUrl = migrateSavedServerAddress(savedUrl)
+        if (_serverUrl != savedUrl) store.putString(SERVER_URL_KEY, _serverUrl)
         _rememberLogin = getBoolean(REMEMBER_LOGIN_KEY, DEFAULT_REMEMBER_LOGIN)
         _defaultTab = getInt(DEFAULT_TAB_KEY, DEFAULT_TAB)
         _pageSize = getInt(PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE)
@@ -238,6 +253,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val REDUCE_TRANSPARENCY_KEY = "reduce_transparency"
         private const val TICKET_SCOPE_KEY = "ticket_scope"
         private const val SERVER_URL_KEY = "server_url"
+        private const val TRUSTED_CERTIFICATES_KEY = "trusted_certificates"
         private const val REMEMBER_LOGIN_KEY = "remember_login"
         private const val DEFAULT_TAB_KEY = "default_tab"
         private const val PAGE_SIZE_KEY = "page_size"

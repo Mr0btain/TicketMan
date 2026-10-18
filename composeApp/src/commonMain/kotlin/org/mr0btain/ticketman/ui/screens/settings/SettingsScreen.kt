@@ -113,7 +113,7 @@ fun SettingsScreen(
             items = listOf(
                 SettingItem(
                     icon = painterResource(Res.drawable.server),
-                    description = "Where the server is, like 192.168.1.20:8080",
+                    description = "Where the server is, like 192.168.1.20:8443. Uses HTTPS unless it starts with http://",
                     label = "Server address",
                     enabled = true,
                     initialState = serverUrl.value,

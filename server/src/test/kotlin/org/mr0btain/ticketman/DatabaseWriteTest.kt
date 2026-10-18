@@ -6,9 +6,16 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.mr0btain.ticketman.components.database.CustomerDatabase
+import org.mr0btain.ticketman.components.database.InventoryDatabase
+import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
+import org.mr0btain.ticketman.components.database.tables.note.NoteTable
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
@@ -108,5 +115,65 @@ class DatabaseWriteTest {
 
         assertEquals(HttpStatusCode.Accepted, add().status)
         assertEquals(HttpStatusCode.InternalServerError, add().status)
+    }
+
+    @Test
+    fun removingARecordTakesItsNotes() = testApplication {
+        setup()
+        val customers = CustomerDatabase()
+        val tickets = TicketDatabase()
+        val inventory = InventoryDatabase()
+        val customer = Customer(name = "Jane")
+        val ticket = Ticket()
+        val item = Inventory(name = "Screen")
+
+        assertTrue(customers.add(customer))
+        assertTrue(tickets.add(ticket))
+        assertTrue(inventory.add(item))
+        assertTrue(customers.addNote(customer.identifier, Note(author = "tech", message = "customer")))
+        assertTrue(tickets.addNote(ticket.identifier, Note(author = "tech", message = "ticket")))
+        assertTrue(inventory.addNote(item.identifier, Note(author = "tech", message = "item")))
+
+        fun noteCount() = transaction { NoteTable.selectAll().count() }
+        assertEquals(3, noteCount())
+
+        assertTrue(customers.remove(customer.identifier))
+        assertEquals(2, noteCount())
+        assertTrue(tickets.remove(ticket.identifier))
+        assertEquals(1, noteCount())
+        assertTrue(inventory.remove(item.identifier))
+        assertEquals(0, noteCount())
+    }
+
+    @Test
+    fun notesLeftBehindAreRemovedOnStart() {
+        testApplication {
+            setup()
+            val customer = Customer(name = "Jane")
+            CustomerDatabase().apply {
+                assertTrue(add(customer))
+                assertTrue(addNote(customer.identifier, Note(author = "tech", message = "kept")))
+            }
+            // Like a record deleted before remove took its notes
+            transaction { NoteEntity.new { author = "tech"; message = "detached" } }
+
+            shutDownDatabase()
+        }
+
+        testApplication {
+            configureTestServer(dataDir)
+            startApplication()
+
+            val messages = transaction { NoteTable.selectAll().map { it[NoteTable.message] } }
+            assertEquals(listOf("kept"), messages)
+        }
+    }
+
+    private fun shutDownDatabase() {
+        try {
+            transaction { exec("SHUTDOWN") }
+        } catch (_: Exception) {
+            // Committing after SHUTDOWN fails, the database is closed either way
+        }
     }
 }

@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.records
 
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -30,6 +32,7 @@ class UserRecordsTest {
         val path = request.url.encodedPath
 
         when {
+            path == SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             path == "/" -> respond("", HttpStatusCode.OK)
             path.startsWith("/api/user/get/notes/") -> respond(Json.encodeToString(serverNotes.toList()), HttpStatusCode.OK, jsonHeaders)
             path.startsWith("/api/user/add/note/") || path.startsWith("/api/user/update/note/") ||

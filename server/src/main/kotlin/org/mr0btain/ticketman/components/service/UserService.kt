@@ -207,6 +207,8 @@ class UserService(
 
     fun refreshToken(token: String): String? {
         val decoded = decodeJWT(token) ?: return null
+        // Refresh tokens from before the type claim have none, they still match their stored session below
+        if (decoded.getClaim(JwtService.TYPE_CLAIM).asString() == JwtService.ACCESS_TYPE) return null
         val session = tokenDatabase.findByToken(token) ?: return null
 
         if (!jwtService.audienceMatches(decoded.audience.first())) return null

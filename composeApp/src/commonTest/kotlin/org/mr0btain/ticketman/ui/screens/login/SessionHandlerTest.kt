@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.login
 
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
@@ -34,6 +36,7 @@ class SessionHandlerTest {
         if (!reachable) throw IOException("Server is down")
 
         when (request.url.encodedPath) {
+            SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
             "/api/auth" -> respond(loginBody, loginStatus, jsonHeaders)
             "/api/user/me" -> respond(Json.encodeToString(me), HttpStatusCode.OK, jsonHeaders)

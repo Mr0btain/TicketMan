@@ -20,8 +20,9 @@ In `composeApp` (`composeApp/src/commonMain/.../`):
 
 | Declaration | File | Desktop | Android | Web |
 |-------------|------|---------|---------|-----|
-| `getHttpEngine()` | `components/network/HttpEngine.kt` | OkHttp | **`TODO()`** | **`TODO()`** |
-| `BuildConfigImpl.isDebug()` | `components/debug/IsDebug.kt` | `-DsyncSphereDebug=true` system property | **`TODO()`** | **`TODO()`** |
+| `getHttpEngine(trust)` | `components/network/HttpEngine.kt` | OkHttp that checks certificates with `ServerTrust` (shared, `jvmSharedMain`) | Same as desktop | Ktor's Js engine, the browser checks certificates |
+| `defaultServerAddress()` | `components/network/DefaultServerAddress.kt` | Blank (shared, `jvmSharedMain`) | Blank | The page's own origin |
+| `BuildConfigImpl.isDebug()` | `components/debug/IsDebug.kt` | `-DticketmanDebug=true` system property | The app is debuggable (a debug build) | The page came from `localhost` |
 | `platformModule` | `components/injection/PlatformModule.kt` | `KSafe` | `KSafe` with the app `Context` | `KSafe` |
 | `initAppDir()` | `components/injection/InitAppDir.kt` | `AppDir()` | `AppDir(context)` | `AppDir()` |
 | `printDocument(document, paper)` | `components/print/PrintDocument.kt` | Java2D `PrinterJob` | `WebView` + `PrintManager` | Hidden iframe |
@@ -39,23 +40,33 @@ In `shared` (see [DTOs, caches and platform helpers](../shared/dtos-and-platform
 
 1. Declare it in `commonMain` in `<Name>.kt`, with a KDoc saying what each platform should do.
 2. Add `<Name>.desktop.kt`, `<Name>.android.kt` and `<Name>.wasmJs.kt` beside it in each source set, same package.
+   When desktop and Android do the same thing, one `<Name>.jvmShared.kt` in `jvmSharedMain` covers both.
 3. Add a row to the table above.
+
+`jvmSharedMain` is a source set that desktop and Android both build from, added in `composeApp/build.gradle.kts`
+with `applyDefaultHierarchyTemplate { group("jvmShared") }`. It holds the OkHttp engine and the certificate checks
+in `PinningTrustManager.kt`, and OkHttp is a dependency there.
 
 Calls in `composeApp` always bind to `composeApp`'s own `actual`s at compile time. An `actual` has to live in the
 same module as its `expect`, so `androidApp` can't supply one.
 
+## Android
+
+The manifest asks for `INTERNET` and allows plain HTTP (`usesCleartextTraffic`), since a server can still be
+reached on its HTTP port. Remove that once servers redirect HTTP to HTTPS everywhere.
+
+## Web
+
+A real server serves the web client itself (see [Running a server](../operations.md#web-client)), so the page and
+the API share one address. With no address saved, the web client tries the origin it was loaded from and keeps it
+if a TicketMan server answers there. Logs go to the browser console.
+
 ## Known gaps
 
-- **Android and web don't start.** `MainViewModel` gets its engine from `getHttpEngine()`, and `App()` calls
-  `BuildConfigImpl().isDebug()`. Both are `TODO()` in `composeApp`'s Android and Wasm source sets, so the view model
-  and `App()` throw `NotImplementedError` as soon as they're reached. Desktop is unaffected. Fixing it means OkHttp
-  (Android) and the Js engine (web) in `getHttpEngine()`, and a real `isDebug()`.
-- **Stale files in `androidApp`.** `androidApp/src/main/kotlin/.../components/` and `ui/composables/` hold older
-  copies of `getHttpEngine` (OkHttp), `isDebug`, `initAppDir` and a scrollbar. They predate moving these into
-  `composeApp`, and `composeApp` doesn't use them. Move what's useful into `composeApp/src/androidMain` and delete
-  the rest.
-- **The debug flag is named after an old project.** The desktop debug switch is the `syncSphereDebug` system
-  property, passed through by `composeApp/build.gradle.kts`. With it set, the nav shows the component gallery.
+- **Android and web haven't been run end to end yet.** Both compile, and the web client is served by a real server,
+  but neither has been opened on a device or in a browser while these docs were written.
+- **`androidApp` needs compileSdk 37** (FileKit 0.16 requires it). Building the APK also needs an AAPT2 that runs
+  on the build machine: Gradle downloads the x86 Linux one, which fails on ARM Linux.
 - **iOS** source sets exist but the targets are commented out.
 
 ## See also

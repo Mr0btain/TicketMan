@@ -5,7 +5,11 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.service.RequestLimiter
+import org.mr0btain.ticketman.components.database.UserDatabase
+import org.mr0btain.ticketman.data.user.AccessLevel
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.AccountRequest
+import org.mr0btain.ticketman.server.request.LoginRequest
 import kotlin.test.*
 import kotlin.time.Duration.Companion.minutes
 
@@ -58,6 +62,55 @@ class RequestLimiterTest {
             }
 
             assertEquals(List(5) { HttpStatusCode.Accepted } + HttpStatusCode.TooManyRequests, statuses)
+        } finally {
+            cleanupTestDataDir(dataDir)
+        }
+    }
+
+    @Test
+    fun checkingDoesntCountAsAnAttempt() {
+        repeat(10) { assertFalse(limiter.isLimited("10.0.0.1")) }
+
+        repeat(3) { limiter.record("10.0.0.1") }
+        assertTrue(limiter.isLimited("10.0.0.1"))
+
+        clock += 10.minutes.inWholeMilliseconds + 1
+        assertFalse(limiter.isLimited("10.0.0.1"))
+    }
+
+    @Test
+    fun wrongPasswordsAreCappedPerUsername() = testApplication {
+        val dataDir = createTestDataDir()
+
+        try {
+            configureTestServer(dataDir)
+            startApplication()
+            val tech = User(username = "tech", password = "tech_pass", accessLevel = AccessLevel.NORMAL)
+            UserDatabase().add(tech)
+
+            suspend fun login(username: String, password: String) = client.post("/api/auth") {
+                contentType(ContentType.Application.Json)
+                setBody(Json.encodeToString(LoginRequest(username, password)))
+            }.status
+
+            // Good logins never count
+            repeat(15) { assertEquals(HttpStatusCode.Accepted, login("tech", "tech_pass")) }
+
+            repeat(10) { assertEquals(HttpStatusCode.Unauthorized, login("Tech", "guess$it")) }
+
+            // Now even the right password waits, on both login routes
+            assertEquals(HttpStatusCode.TooManyRequests, login("tech", "tech_pass"))
+            assertEquals(
+                HttpStatusCode.TooManyRequests,
+                client.post("/api/auth/user") {
+                    contentType(ContentType.Application.Json)
+                    setBody(Json.encodeToString(LoginRequest("tech", "tech_pass")))
+                }.status
+            )
+
+            // The same address can still get 10 more wrong tries on another name before it's capped too
+            repeat(10) { assertEquals(HttpStatusCode.Unauthorized, login("nobody", "guess$it")) }
+            assertEquals(HttpStatusCode.TooManyRequests, login("someone", "guess"))
         } finally {
             cleanupTestDataDir(dataDir)
         }

@@ -16,6 +16,8 @@ import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 
 fun Application.configureRouting(
     userService: UserService,
@@ -38,11 +40,20 @@ fun Application.configureRouting(
         // Static plugin. Try to access `/static/index.html`
         staticResources("/static", "static")
 
-        // Just a callback to tell client the server is up
-        route("/") {
-            get {
-                call.respond(HttpStatusCode.OK)
-                AppLogger.m("ROUTE.CHECK", "Client hit")
+        // Tells clients the server is up, and that it's this app
+        get(SERVER_PING_PATH) {
+            call.respondText(SERVER_PING_BODY)
+        }
+
+        // The web client when it's built in. Otherwise "/" is the up check clients used before /api/ping
+        if (webClientBundled()) {
+            webRoute()
+        } else {
+            route("/") {
+                get {
+                    call.respond(HttpStatusCode.OK)
+                    AppLogger.m("ROUTE.CHECK", "Client hit")
+                }
             }
         }
 

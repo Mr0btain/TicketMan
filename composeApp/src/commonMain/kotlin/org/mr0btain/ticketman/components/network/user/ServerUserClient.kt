@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.network.user
 
 import io.ktor.client.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.RemoteHandler
@@ -28,6 +29,8 @@ import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.LoginStatus
 import org.mr0btain.ticketman.server.response.RefreshTokenResponse
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -47,7 +50,6 @@ class ServerUserClient(
         private const val CHANGE_SERVER_TAG = "$TAG:ChangeServer"
         private const val CHECK_CREDENTIALS_TAG = "$TAG:CheckCredentials"
         private const val REFRESH_TOKEN_TAG = "$TAG:RefreshTokens"
-        private const val CHECK_SERVER_CONNECTION_TAG = "$TAG:CheckServerConnection"
         private const val CHECK_SERVER_CONNECTION_URL_TAG = "$TAG:CheckServerConnectionURL"
         private const val REQUEST_ACCOUNT_TAG = "$TAG:RequestAccount"
         private const val INVITE_SETUP_TAG = "$TAG:InviteSetup"
@@ -262,28 +264,22 @@ class ServerUserClient(
     /**
      * Checks the connection with the stored server url
      */
-    suspend fun checkServerConnection(): Boolean {
-        return if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_TAG) {
-                userHttpClient.get("${serverUrl}/")
-            }
-
-            if (response != null && response.status == HttpStatusCode.OK) {
-                true
-            } else false
-        } else false
-    }
+    suspend fun checkServerConnection(): Boolean = checkServerConnection(serverUrl)
 
     /**
-     * Checks the connection with a specific server url
+     * Whether a TicketMan server answers at [url]. Asks `/api/ping`, then `/` for servers older than that. Only a
+     * reply that isn't a web page counts from `/`, so the web client's dev server isn't mistaken for one
      */
     suspend fun checkServerConnection(url: String): Boolean {
-        return if (url.isNotBlank()) {
-            val response = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) {
-                userHttpClient.get("$url/")
-            }
+        if (url.isBlank()) return false
+        val base = url.trimEnd('/')
 
-            response != null && response.status == HttpStatusCode.OK
-        } else false
+        val ping = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base$SERVER_PING_PATH") }
+            ?: return false
+        if (ping.status == HttpStatusCode.OK) return ping.bodyAsText().trim() == SERVER_PING_BODY
+        if (ping.status != HttpStatusCode.NotFound) return false
+
+        val root = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base/") } ?: return false
+        return root.status == HttpStatusCode.OK && root.contentType()?.match(ContentType.Text.Html) != true
     }
 }

@@ -5,12 +5,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.ConnectionResult
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.UntrustedCertificate
+import org.mr0btain.ticketman.components.network.isSecureServerAddress
+import org.mr0btain.ticketman.components.network.trustAddressOf
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -66,6 +70,27 @@ class SessionHandler(
     private val _serverConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val serverConnected = _serverConnected.asStateFlow()
 
+    // The address connected to last, so trusting its certificate can try it again
+    private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
+
+    /** False when the server is reached over plain HTTP, where passwords and tokens can be read on the network */
+    val connectionSecure: StateFlow<Boolean> = _serverUrl
+        .map { isSecureServerAddress(it) }
+        .stateIn(scope, SharingStarted.Eagerly, true)
+
+    // Certificates someone chose not to trust, so they aren't asked again until the app restarts
+    private val dismissedCertificates: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet())
+
+    /**
+     * The certificate the current server answered with, when this device doesn't trust it yet and nobody has
+     * turned it down. Null otherwise
+     */
+    val untrustedCertificate: StateFlow<UntrustedCertificate?> = combine(
+        remoteHandler.trust.refused, _serverUrl, dismissedCertificates
+    ) { refused, url, dismissed ->
+        refused?.takeIf { it.address == trustAddressOf(url) && it.fingerprint !in dismissed }
+    }.stateIn(scope, SharingStarted.Eagerly, null)
+
     // This device's station record, null when it isn't one
     private val _station: MutableStateFlow<Station?> = MutableStateFlow(null)
     val station = _station.asStateFlow()
@@ -96,9 +121,10 @@ class SessionHandler(
 
     /** Points every repository at [url] and logs in with any stored credentials */
     suspend fun connect(url: String) {
+        _serverUrl.value = url
         val result = remoteHandler.setUrl(url)
 
-        _serverConnected.value = result != ConnectionResult.UNREACHABLE
+        _serverConnected.value = result == ConnectionResult.CONNECTED || result == ConnectionResult.LOGGED_IN
 
         if (result == ConnectionResult.LOGGED_IN) {
             _loginState.value = LoginState.LOGGED_IN
@@ -110,7 +136,20 @@ class SessionHandler(
         }
 
         // Station status only needs a reachable server, not a login
-        if (result != ConnectionResult.UNREACHABLE) refreshStation()
+        if (_serverConnected.value) refreshStation()
+    }
+
+    /** Trusts the certificate in [untrustedCertificate] for this server from now on, then connects again */
+    fun trustServerCertificate() {
+        val certificate = untrustedCertificate.value ?: return
+        remoteHandler.trust.trust(certificate)
+        changeServer(_serverUrl.value)
+    }
+
+    /** Leaves the server unconnected, and stops asking about this certificate until the app restarts */
+    fun dismissServerCertificate() {
+        val certificate = untrustedCertificate.value ?: return
+        dismissedCertificates.value += certificate.fingerprint
     }
 
     /** Pulls the logged in user again, like after they were changed */

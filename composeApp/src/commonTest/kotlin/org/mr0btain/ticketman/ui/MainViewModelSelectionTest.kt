@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.client.request.*
@@ -37,6 +39,7 @@ class MainViewModelSelectionTest {
 
     private val engine = MockEngine { request ->
         when (request.url.encodedPath) {
+            SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
             "/api/data/customer/get" -> {
                 val body = (request.body as TextContent).text

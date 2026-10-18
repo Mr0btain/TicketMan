@@ -124,7 +124,9 @@ class TicketDatabase(
             val ticketEntity = TicketEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(REMOVE_TAG, TicketError.NOT_FOUND) }
 
+            val notes = ticketEntity.notes.toList()
             ticketEntity.delete()
+            deleteNotes(notes)
             true
         }
 

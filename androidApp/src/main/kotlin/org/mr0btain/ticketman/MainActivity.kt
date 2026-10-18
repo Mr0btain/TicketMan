@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman
 
-import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,16 +16,9 @@ import org.mr0btain.ticketman.components.print.AndroidPrintHost
 import org.mr0btain.ticketman.ui.AppWindow
 
 class MainActivity : ComponentActivity() {
-    companion object {
-        lateinit var appContext: Context
-        private set
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        //ContextUtils.setContext(context = this)
-        appContext = applicationContext
         AndroidPrintHost.attach(this)
 
         setContent {

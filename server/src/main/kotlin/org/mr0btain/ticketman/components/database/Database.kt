@@ -190,11 +190,20 @@ abstract class Database<T : MainItem>(protected val tag: String) {
             val noteEntity = findOwnNote(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(REMOVE_NOTE_TAG, NoteError.NOT_FOUND) }
 
-            markImagesDeleted(noteEntity.images)
-            noteEntity.delete()
-
+            deleteNotes(listOf(noteEntity))
             true
         }
+
+    /**
+     * Deletes notes and marks their images deleted. Must run inside a transaction. When removing an item, take its
+     * notes before deleting it: the join rows go with the item, the notes don't
+     */
+    protected fun deleteNotes(notes: Iterable<NoteEntity>) {
+        notes.forEach { noteEntity ->
+            markImagesDeleted(noteEntity.images)
+            noteEntity.delete()
+        }
+    }
 
     /**
      * Removes an item from the database

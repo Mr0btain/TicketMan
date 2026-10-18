@@ -32,7 +32,9 @@ import org.mr0btain.ticketman.logging.SimpleResult
  */
 class RemoteHandler(
     engine: HttpClientEngine,
-    private val localStorage: LocalStorage
+    private val localStorage: LocalStorage,
+    /** Self-made server certificates this device trusts. Has to be the one [engine] was built with */
+    val trust: ServerTrust = ServerTrust(localStorage)
 ) {
     private val TAG = "ServerHandler"
     private val SET_SERVER_URL_TAG = "$TAG:SetServerUrl"
@@ -78,6 +80,8 @@ class RemoteHandler(
      */
     suspend fun setUrl(url: String): ConnectionResult {
         if (url.isNotBlank()) {
+            trust.clearRefused()
+
             // Check if we can establish a connection with this address, if success then set it.
             if (userClient.checkServerConnection(url)) {
                 userClient.changeServerUrl(url)
@@ -102,6 +106,12 @@ class RemoteHandler(
                     AppLogger.i(SET_SERVER_URL_TAG, "Connected but login failed")
                     ConnectionResult.CONNECTED
                 }
+            }
+            // Reached, but its certificate needs someone to check it first
+            val refused = trust.refused.value
+            if (refused != null && refused.address == trustAddressOf(url)) {
+                AppLogger.i(SET_SERVER_URL_TAG, "Certificate for ${refused.address} isn't trusted yet")
+                return ConnectionResult.UNTRUSTED
             }
         } else {
             AppLogger.m(SET_SERVER_URL_TAG, "FAIL: Url is empty")
