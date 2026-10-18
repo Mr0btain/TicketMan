@@ -124,7 +124,9 @@ class TicketDatabase(
             val ticketEntity = TicketEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(REMOVE_TAG, TicketError.NOT_FOUND) }
 
+            // The technician link has no cascade, so it goes first or the delete fails
             val notes = ticketEntity.notes.toList()
+            UserTicketTable.deleteWhere { UserTicketTable.ticket eq identifier }
             ticketEntity.delete()
             deleteNotes(notes)
             true

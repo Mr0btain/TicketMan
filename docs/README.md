@@ -44,12 +44,48 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Printing](client/printing.md): print documents, templates, each platform's printer
 - [Platforms](client/platforms.md): entry points, every `expect`/`actual`, what's unfinished
 
-## Still to come
+## UI
 
-The API reference, the UI kit and screens, testing and how-to guides. [PLAN.md](PLAN.md) lists every planned page and
-which ones are done.
+- [UI kit](ui/kit.md): theme tokens, palettes and fonts, glass versus solid, every component, the gallery
+- [Kit rules](ui/kit-rules.md): what `UiKitRulesTest` checks, and adding a component, theme or font
+- [App shell and navigation](ui/screens/navigation.md): the shells, destinations, adding a screen
+- [Records screen](ui/screens/records.md): the shared records layout, dialogs, view only
+- [Counter screen](ui/screens/counter.md): views, shortcuts, check-in wizard, pickup
+- [Kiosk](ui/screens/kiosk.md): the lock screen, PIN pad, idle lock, leaving kiosk mode
+- [Admin screen](ui/screens/admin.md): every tab and what it's backed by
+- [Settings screen](ui/screens/settings.md): what each setting does, adding one
+- [Login](ui/screens/login.md): connecting, trusting a server, logging in, first login setup
+
+## API reference
+
+- [Overview](api/README.md): auth providers, bodies, status codes, and the script that checks these pages
+- [Auth](api/auth.md), [Users](api/user.md), [Admin](api/admin.md), [Counter](api/counter.md),
+  [Invoices](api/invoice.md), [Stations](api/station.md), [Shop profile](api/shop.md), [Photos](api/image.md)
+- [Customers](api/customer.md), [Tickets](api/ticket.md), [Inventory](api/inventory.md), [Notes](api/notes.md)
+
+## Testing
+
+- [Testing](testing.md): server test helpers and pitfalls, `MockEngine`, coroutines in client tests, render tests,
+  the end to end script
+
+## How-to guides
+
+- [Add a field to a record](how-to/add-a-field.md): every layer, with `Customer.company` as the example
+- [Add a record type](how-to/add-an-entity.md): a new entity end to end, and the lists that have to learn about it
+- [Add an API route](how-to/add-a-route.md): database call, route, client repository, handler, tests, docs
+- [Add a database column](how-to/add-a-column.md): so existing databases get it too
+- [Add a UI kit component](how-to/add-a-kit-component.md): in the kit, in the gallery, then on the screen
+- [Add a theme or font](how-to/add-a-theme-or-font.md): a palette or interface font, and what to check
+- [Add platform-specific code](how-to/add-a-platform-actual.md): an `expect` and its `actual`s
+- [Add a printout](how-to/add-a-printable-document.md): a new slip or report
+
+## Decisions
+
+- [Decisions](decisions.md): why H2, per device sessions, photo deletion waiting a day, cents, client-made ids,
+  the UI kit rules and other choices, with what each costs
 
 ## About these docs
 
-[STYLE.md](STYLE.md) covers how pages are written and the template new pages start from.
+[STYLE.md](STYLE.md) covers how pages are written, the template new pages start from, and how they're kept
+current. [PLAN.md](PLAN.md) lists every page.
 [`CLAUDE.md`](../CLAUDE.md) at the repo root is a dense summary of the same ground, kept for AI assistants.

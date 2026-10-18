@@ -1,0 +1,82 @@
+# Customers API
+
+`/api/data/customer`, from [`CustomerRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/CustomerRoute.kt).
+Anyone logged in can look; Normal access changes. The client's `CustomerRemoteRepository` calls these, through the
+shared paths in `RemoteRepository` (see [Entity layers](../architecture/entity-layers.md)). A customer's notes are on
+the [Notes](notes.md#customers) page.
+
+## Reading
+
+### `POST /api/data/customer/get`
+
+**Auth:** restricted
+
+- **Body:** the customer's id. **`200`** `Customer`. **`404`** no such customer.
+
+### `POST /api/data/customer/fetch`
+
+**Auth:** restricted
+
+A page of customers, by name.
+
+- **Body:** `PagedRequest`. **`200`** a list of `Customer`.
+
+### `POST /api/data/customer/search`
+
+**Auth:** restricted
+
+Customers matching any part of their name ("jane doe" works), the start of their email or id, or their phone
+number ignoring formatting.
+
+- **Body:** `SearchQuery`. **`200`** a list of `SearchResult`, the text being the name and phone.
+
+### `GET /api/data/customer/get/tickets/{identifier}`
+
+**Auth:** restricted
+
+The customer's tickets, newest first.
+
+- **`200`** a list of `Ticket`. **`404`** no such customer.
+
+## Changing
+
+### `POST /api/data/customer/add`
+
+**Auth:** normal
+
+- **Body:** `Customer`, with an id the client made. **`202`** no body. **`500`** not saved, including when that id
+  is already taken.
+
+### `POST /api/data/customer/update`
+
+**Auth:** normal
+
+Replaces the customer's details.
+
+- **Body:** `Customer`. **`202`** saved. **`404`** no such customer.
+
+### `DELETE /api/data/customer/remove/{identifier}`
+
+**Auth:** normal
+
+Deletes the customer and their notes; the note photos are cleared up by the next sweep. Their tickets stay, with
+no customer.
+
+- **`202`** deleted. **`404`** no such customer.
+
+### `POST /api/data/customer/add/ticket/{identifier}`
+
+**Auth:** normal
+
+Links a ticket to this customer, in place of any customer it had.
+
+- **Body:** the ticket's id. **`202`** linked. **`404`** no such customer or ticket.
+
+The same link can be made from the ticket's side with
+[`POST /api/data/ticket/set/customer/{identifier}`](ticket.md#post-apidataticketsetcustomeridentifier).
+
+## See also
+
+- [Notes API](notes.md#customers)
+- [Records screen](../ui/screens/records.md)
+- [Domain models](../shared/domain-models.md)

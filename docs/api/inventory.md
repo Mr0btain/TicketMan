@@ -1,0 +1,93 @@
+# Inventory API
+
+`/api/data/inventory`, from [`InventoryRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/InventoryRoute.kt).
+Parts and anything else the shop stocks. Anyone logged in can look; Normal access changes. Stock is guarded more
+than the other fields: `/update` leaves it alone, it's changed by hand only through `/set/stock`, and otherwise only
+by pickups and voids (see [Stock counts](../server/counter.md#stock-counts)). An item's notes are on the
+[Notes](notes.md#inventory) page.
+
+A `stock` of `Int.MAX_VALUE` (2147483647) means the item's stock isn't tracked.
+
+## Reading
+
+### `POST /api/data/inventory/get`
+
+**Auth:** restricted
+
+- **Body:** the item's id. **`200`** `Inventory`. **`404`** no such item.
+
+### `POST /api/data/inventory/fetch`
+
+**Auth:** restricted
+
+A page of items, by name.
+
+- **Body:** `PagedRequest`. **`200`** a list of `Inventory`.
+
+### `POST /api/data/inventory/search`
+
+**Auth:** restricted
+
+Items whose name or description contains the query, or whose id starts with it.
+
+- **Body:** `SearchQuery`. **`200`** a list of `SearchResult`.
+
+### `GET /api/data/inventory/get/images/{identifier}`
+
+**Auth:** restricted
+
+The item's own photos (not its notes' photos).
+
+- **`200`** a list of `StoredImage`. **`404`** no such item.
+
+## Changing
+
+### `POST /api/data/inventory/add`
+
+**Auth:** normal
+
+- **Body:** `Inventory`, with an id the client made. **`201`** no body.
+- **`400`** `Stock can't be below zero`. **`500`** not saved.
+
+### `POST /api/data/inventory/update`
+
+**Auth:** normal
+
+Replaces everything but the stock count, which is kept as it is on the server whatever is sent.
+
+- **Body:** `Inventory`. **`202`** saved. **`404`** no such item.
+
+### `POST /api/data/inventory/set/stock/{identifier}`
+
+**Auth:** normal
+
+Sets the stock count by hand, only if it's still what the client last saw, so a pickup in between isn't lost.
+
+- **Body:** `StockChangeRequest { from, to }`. Use `Int.MAX_VALUE` for "not tracked", either way.
+- **`202`** saved. **`400`** `to` below zero. **`404`** no such item.
+- **`409`** the count isn't `from` any more: `Stock changed to 3 since this was opened, check the count and try
+  again`.
+
+### `POST /api/data/inventory/set/images/{identifier}`
+
+**Auth:** normal
+
+Sets the item's photos as a whole list. Photos just uploaded (`PENDING`) are linked; ones the item had that aren't
+in the list are marked deleted. Ids that are neither are ignored. Descriptions and tags are taken from the list.
+
+- **Body:** a list of `StoredImage`. **`202`** saved. **`404`** no such item.
+
+### `DELETE /api/data/inventory/remove/{identifier}`
+
+**Auth:** normal
+
+Deletes the item, its notes and its photos (marked deleted, cleared by the next sweep). Invoice lines that used it
+keep their copy of its name and price.
+
+- **`202`** deleted. **`404`** no such item.
+
+## See also
+
+- [Notes API](notes.md#inventory)
+- [Photos API](image.md)
+- [Counter: check-in, invoices and pickup](../server/counter.md#stock-counts)

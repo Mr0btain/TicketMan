@@ -99,7 +99,10 @@ To only check that the shared code compiles for Android, without the app: `./gra
 There's no lint task.
 
 `composeApp:desktopTest` includes `UiKitRulesTest`, which fails if a screen outside `ui/kit` hard codes a color,
-font size or shape, or uses a Material component. See [CLAUDE.md](../CLAUDE.md) under UI kit for the rules.
+font size or shape, or uses a Material component. See [Kit rules](ui/kit-rules.md).
+
+[Testing](testing.md) covers how to write tests: the server test helpers, `MockEngine` for client tests, and what
+trips people up in each.
 
 ### Look at UI changes without running the app
 

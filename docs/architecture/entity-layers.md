@@ -81,8 +81,8 @@ Exposed table objects in
 it's the only place that mapping lives.
 
 New tables have to be listed in `LocalDatabase.tables`, in an order where a table comes after the tables it
-references. A table that gains a column later also goes in `migratedTables`; see the known gaps below and
-[CLAUDE.md](../../CLAUDE.md) under Migrations until the migrations page is written.
+references. A table that gains a column later also goes in `migratedTables`; see
+[Migrations](../server/migrations.md).
 
 Column names that are SQL reserved words break H2. That's why `condition` is stored as `device_condition`.
 
@@ -216,3 +216,5 @@ it. A save drops the ticket from the cache so the next open pulls it fresh.
 
 - [Overview](overview.md)
 - [Request lifecycle](request-lifecycle.md)
+- [Add a field to a record](../how-to/add-a-field.md)
+- [Add a record type](../how-to/add-an-entity.md)

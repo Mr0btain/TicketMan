@@ -55,6 +55,7 @@ class AdminService(
         }.sortedByDescending { it.lastUsedAt ?: 0 }
     }
 
+    /** What the admin screen's Server tab shows: name, version, uptime, data sizes, Java and OS, mode and certificate */
     fun getServerInfo(): ServerInfoResponse {
         val now = Clock.System.now().toEpochMilliseconds()
 

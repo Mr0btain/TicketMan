@@ -122,9 +122,14 @@ class InventoryRecords(
         }
     }
 
+    /** Items matching [query], at most the search limit setting */
     suspend fun search(query: String) =
         remoteHandler.inventoryRepo.search(query, searchLimit())
 
+    /**
+     * Deletes the record if it's the one selected, then clears the selection and reloads the list. Does nothing for
+     * people who can only look
+     */
     fun remove(identifier: Uuid) {
         if (!canEdit()) return
 

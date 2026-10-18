@@ -149,7 +149,8 @@ read only:
 
 - **The tax rate isn't locked at check-in.** An invoice made at check-in takes the rate then, but the next charge
   update reads the shop's current rate. See [Money](../shared/money.md#gotchas).
-- **A throw inside check-in or pickup reaches the client as a `500`** with the exception text, from `StatusPages`.
+- **A throw inside check-in or pickup reaches the client as a `500`** from `StatusPages`, rolling the whole thing
+  back. The exception is in the server's log, not the response.
   Check-in holds the numbering locks so it doesn't race itself, see [Numbering](numbering.md#inside-an-outer-transaction).
 
 ## See also

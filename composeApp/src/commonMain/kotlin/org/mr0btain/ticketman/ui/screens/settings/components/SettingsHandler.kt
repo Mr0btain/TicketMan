@@ -113,6 +113,7 @@ class SettingsHandler(
         localStorage.serverUrl = url
     }
 
+    /** Turns remembering the username and password on or off. Turning it off forgets what was saved */
     fun toggleRememberLogin() {
         val value = !_rememberLogin.value
         _rememberLogin.value = value
@@ -131,6 +132,7 @@ class SettingsHandler(
         localStorage.defaultTab = value
     }
 
+    /** Sets how many records load per page, clamped to [PAGE_SIZE_RANGE], and reloads the lists */
     fun setPageSize(size: Int) {
         val value = size.coerceIn(PAGE_SIZE_RANGE)
         _pageSize.value = value
@@ -138,6 +140,7 @@ class SettingsHandler(
         onPageSizeChanged(value)
     }
 
+    /** Sets the most search results to ask for, clamped to [SEARCH_LIMIT_RANGE] */
     fun setSearchLimit(limit: Int) {
         val value = limit.coerceIn(SEARCH_LIMIT_RANGE)
         _searchLimit.value = value

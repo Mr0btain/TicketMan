@@ -74,3 +74,4 @@ if a TicketMan server answers there. Logs go to the browser console.
 - [Overview](../architecture/overview.md)
 - [Transfers and photos](transfers-and-photos.md)
 - [Printing](printing.md)
+- [Add platform-specific code](../how-to/add-a-platform-actual.md)

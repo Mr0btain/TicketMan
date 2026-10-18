@@ -54,19 +54,19 @@ Audience: developers working on TicketMan. There is no guide for shop staff.
 - [x] `server/audit-log.md`: what gets logged and how
 
 ### 4d. API reference (one page per route file, checked against the routes with a script)
-- [ ] `api/README.md`: conventions (auth providers, status codes, bodies)
-- [ ] `api/auth.md`
-- [ ] `api/user.md`
-- [ ] `api/admin.md`
-- [ ] `api/counter.md`
-- [ ] `api/invoice.md`
-- [ ] `api/station.md`
-- [ ] `api/shop.md`
-- [ ] `api/image.md`
-- [ ] `api/customer.md`
-- [ ] `api/ticket.md`
-- [ ] `api/inventory.md`
-- [ ] `api/notes.md`
+- [x] `api/README.md`: conventions (auth providers, status codes, bodies)
+- [x] `api/auth.md`
+- [x] `api/user.md`
+- [x] `api/admin.md`
+- [x] `api/counter.md`
+- [x] `api/invoice.md`
+- [x] `api/station.md`
+- [x] `api/shop.md`
+- [x] `api/image.md`
+- [x] `api/customer.md`
+- [x] `api/ticket.md`
+- [x] `api/inventory.md`
+- [x] `api/notes.md`
 
 ## Phase 5: Client core
 
@@ -80,34 +80,35 @@ Audience: developers working on TicketMan. There is no guide for shop staff.
 
 ## Phase 6: UI
 
-- [ ] `ui/kit.md`: theme tokens, palettes and fonts, glass versus solid, component catalog with gallery images
-- [ ] `ui/kit-rules.md`: what `UiKitRulesTest` checks and why
-- [ ] `ui/screens/navigation.md`
-- [ ] `ui/screens/records.md`
-- [ ] `ui/screens/counter.md`
-- [ ] `ui/screens/kiosk.md`
-- [ ] `ui/screens/admin.md`
-- [ ] `ui/screens/settings.md`
-- [ ] `ui/screens/login.md`
+- [x] `ui/kit.md`: theme tokens, palettes and fonts, glass versus solid, component catalog with gallery images
+- [x] `ui/kit-rules.md`: what `UiKitRulesTest` checks and why
+- [x] `ui/screens/navigation.md`
+- [x] `ui/screens/records.md`
+- [x] `ui/screens/counter.md`
+- [x] `ui/screens/kiosk.md`
+- [x] `ui/screens/admin.md`
+- [x] `ui/screens/settings.md`
+- [x] `ui/screens/login.md`
 
 ## Phase 7: Testing
 
-- [ ] `testing.md`: server test helpers and their pitfalls, `MockEngine`, render tests, the end to end script
+- [x] `testing.md`: server test helpers and their pitfalls, `MockEngine`, render tests, the end to end script
 
 ## Phase 8: How-to guides
 
-- [ ] `how-to/add-a-field.md`
-- [ ] `how-to/add-an-entity.md`
-- [ ] `how-to/add-a-route.md`
-- [ ] `how-to/add-a-column.md`
-- [ ] `how-to/add-a-kit-component.md`
-- [ ] `how-to/add-a-theme-or-font.md`
-- [ ] `how-to/add-a-platform-actual.md`
-- [ ] `how-to/add-a-printable-document.md`
+- [x] `how-to/add-a-field.md`
+- [x] `how-to/add-an-entity.md`
+- [x] `how-to/add-a-route.md`
+- [x] `how-to/add-a-column.md`
+- [x] `how-to/add-a-kit-component.md`
+- [x] `how-to/add-a-theme-or-font.md`
+- [x] `how-to/add-a-platform-actual.md`
+- [x] `how-to/add-a-printable-document.md`
 
 ## Phase 9: Code comments and upkeep
 
-- [ ] KDoc on the base classes (`Database`, `RemoteRepository`), the services and the handlers
-- [ ] Dokka (optional): generated API site from the KDoc
-- [ ] "Docs updated?" item on the PR checklist
-- [ ] `decisions.md`: why H2, why per device sessions, why photo deletion waits a day, and other choices
+- [x] KDoc on the base classes (`Database`, `RemoteRepository`), the services and the handlers
+- [ ] Dokka (optional): generated API site from the KDoc. Not set up: it adds a Gradle plugin to every module, and
+      the pages in `docs/` plus KDoc in the IDE cover it for now
+- [x] "Docs updated?" item on the PR checklist
+- [x] `decisions.md`: why H2, why per device sessions, why photo deletion waits a day, and other choices

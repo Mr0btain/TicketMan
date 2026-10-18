@@ -132,3 +132,4 @@ Add a new one by writing the method on the right database class and calling it a
 
 - [Database layer](database.md)
 - [Numbering](numbering.md)
+- [Add a database column](../how-to/add-a-column.md)

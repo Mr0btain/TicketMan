@@ -153,6 +153,7 @@ class AdminHandler(
         }
     }
 
+    /** Changes what counts as low stock and reloads the list and overview. Kept until the app closes, not saved */
     fun setLowStockThreshold(threshold: Int) {
         _lowStockThreshold.value = threshold.coerceIn(LOW_STOCK_RANGE)
 
@@ -177,6 +178,7 @@ class AdminHandler(
         scope.launch { loadAudit(reset = true) }
     }
 
+    /** Loads the next page of the audit log, unless the last one was the end */
     fun loadMoreAudit() {
         if (_auditEndReached.value) return
 
@@ -233,6 +235,7 @@ class AdminHandler(
         }
     }
 
+    /** Sets a new password for [user]. The server logs them out of their other devices */
     fun resetPassword(user: User, password: String, onSuccess: () -> Unit) {
         scope.launch {
             report(users.resetPassword(user.identifier, password), "Password changed for ${user.username}") {
@@ -258,6 +261,7 @@ class AdminHandler(
         }
     }
 
+    /** Deletes [user] for good, with their sessions and staff notes. Deactivating keeps their history instead */
     fun deleteUser(user: User) {
         scope.launch {
             report(users.remove(user.identifier), "Deleted ${user.username}") {
@@ -334,6 +338,7 @@ class AdminHandler(
 
     // ------------------------------------------ PINs and stations ------------------------------------------
 
+    /** Unlocks a PIN locked by wrong tries, keeping the PIN */
     fun unlockPin(user: User) {
         scope.launch {
             report(users.unlockPin(user.identifier), "Unlocked ${user.username}'s PIN") {
@@ -363,6 +368,7 @@ class AdminHandler(
         }
     }
 
+    /** Turns kiosk mode on or off for a station. The device follows the next time it checks its station */
     fun setKiosk(station: Station, settings: KioskSettings) {
         val message = if (settings.enabled) "Kiosk mode on for ${station.name}" else "Kiosk mode off for ${station.name}"
 
@@ -373,6 +379,7 @@ class AdminHandler(
         }
     }
 
+    /** Removes a station, which also signs out whoever is PINned in there */
     fun removeStation(station: Station) {
         scope.launch {
             report(admin.removeStation(station.identifier), "Removed ${station.name}") {
@@ -387,6 +394,7 @@ class AdminHandler(
     /** Session this device is using, so it can be labelled */
     fun currentSessionId(): String? = remoteHandler.currentSessionId()
 
+    /** Logs one device out. Its tokens stop working straight away */
     fun revokeSession(session: SessionResponse) {
         val device = session.deviceName.ifBlank { "a device" }
 
@@ -398,6 +406,7 @@ class AdminHandler(
         }
     }
 
+    /** Logs [user] out of every device */
     fun revokeAllSessions(user: User) {
         scope.launch {
             report(admin.revokeUserSessions(user.identifier), "Logged ${user.username} out everywhere") {
@@ -409,6 +418,7 @@ class AdminHandler(
 
     // ------------------------------------------ Server and data ------------------------------------------
 
+    /** Saves the shop profile, used on invoices, slips and at check-in */
     fun saveShopProfile(profile: ShopProfile) {
         scope.launch {
             report(admin.updateShopProfile(profile), "Shop profile saved") {

@@ -49,6 +49,10 @@ sealed interface PinLoginResult {
     data object Locked : PinLoginResult
 }
 
+/**
+ * Logging in and out: password and invite code logins, PIN logins at a station, starting a session per device,
+ * and swapping a refresh token for a new access token. Account requests, invites and setup are in AccountService
+ */
 class UserService(
     private val database: UserDatabase,
     private val jwtService: JwtService,

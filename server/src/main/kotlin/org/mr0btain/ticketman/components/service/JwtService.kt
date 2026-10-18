@@ -18,6 +18,12 @@ import kotlin.time.ExperimentalTime
 import kotlin.time.toJavaInstant
 import kotlin.uuid.Uuid
 
+/**
+ * Makes and checks the server's JWTs: access tokens (an hour), refresh tokens (a year, or 12 hours for a PIN
+ * session) and invite setup tokens (30 minutes). Every login token carries the user's identifier, its session
+ * id (`sid`) and its kind (`typ`), and is only good while that session is stored in TokenTable.
+ * [customValidator] and [setupValidator] are what the auth providers in Security.kt call
+ */
 class JwtService(
     private val application: Application,
     private val userDatabase: UserDatabase,

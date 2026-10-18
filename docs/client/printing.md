@@ -90,3 +90,4 @@ so no QR library is needed on any platform.
 
 - [Platforms](platforms.md)
 - [Counter (server)](../server/counter.md)
+- [Add a printout](../how-to/add-a-printable-document.md)

@@ -158,6 +158,7 @@ class CounterHandler(
 
     fun clearSearch() = setQuery("")
 
+    /** Reloads the queue, and the shop profile with it so new terms and paper sizes show up */
     fun refreshQueue() {
         scope.launch {
             remoteHandler.counterRepo.queue(RECENT_LIMIT)?.let { _queue.value = it }
@@ -185,6 +186,7 @@ class CounterHandler(
         }
     }
 
+    /** Loads a customer with their tickets and shows them */
     fun openCustomer(identifier: Uuid) {
         scope.launch {
             val customer = remoteHandler.customerRepo.get(identifier)
@@ -242,6 +244,7 @@ class CounterHandler(
         }
     }
 
+    /** Adds a text note to the open ticket straight away, signed by whoever is signed in, then reloads it */
     fun addTicketNote(message: String) {
         val detail = _ticket.value ?: return
         if (!canEdit() || message.isBlank()) return
@@ -265,6 +268,7 @@ class CounterHandler(
         _view.value = CounterView.CHECK_IN
     }
 
+    /** Opens the quick add customer screen */
     fun startNewCustomer() {
         if (!canEdit()) return
         _view.value = CounterView.NEW_CUSTOMER
@@ -484,6 +488,7 @@ class CounterHandler(
 
     // ------------------------------------------ Price check ------------------------------------------
 
+    /** Looks up inventory for the price check, waiting for a pause in typing like the main search */
     fun searchPrices(text: String) {
         priceJob?.cancel()
 

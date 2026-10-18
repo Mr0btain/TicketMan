@@ -20,7 +20,17 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * Base Database class to inherit from for managing a table of MainItem data type.
+ * Base class for each record type's database (customers, tickets, inventory, users): the operations every one has,
+ * so the routes and the shared note routes can treat them alike.
+ *
+ * Subclasses implement the abstract members over their own Exposed tables. Reads go through `dbQuery` (the value,
+ * or null if it failed) and writes through `dbWrite` (whether it happened, false when the record isn't there),
+ * so a route can answer 404 or 500 from the result. Inside an outer transaction, like check-in, they let a throw
+ * through so the whole thing rolls back.
+ *
+ * Notes live in the shared NoteTable, linked to their record through a join table. Updating and removing a note
+ * is done here for every type, checked against [noteLinkColumn]; a subclass's [remove] takes its notes with it
+ * through [deleteNotes].
  * @param tag Tag used for logging. Example: TAG:AddAll will be printed in console
  */
 @Suppress("PropertyName")

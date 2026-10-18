@@ -69,6 +69,7 @@ class InvoiceService(
         return AccountResult.Done(saved)
     }
 
+    /** Takes a payment back off an open invoice, for one entered by mistake */
     fun removePayment(identifier: Uuid, paymentIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Payments on a ${invoice.status.name.lowercase()} invoice can't be removed")

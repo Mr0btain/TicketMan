@@ -94,6 +94,7 @@ class ImageService(
         return if (file.isFile) Pair(file, record.sha256.ifBlank { identifier.toString() }) else null
     }
 
+    /** A photo's details, null if there's no such photo or it's been deleted */
     fun get(identifier: Uuid): StoredImage? = database.getServable(identifier)?.image
 
     /**

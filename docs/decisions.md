@@ -1,0 +1,201 @@
+# Decisions
+
+Why some things are the way they are. Each entry says what was chosen, the reasons the code and these docs give
+for it, what it costs, and what would make it worth looking at again. Read this before "fixing" one of them, and
+add an entry when you make a choice the next person might want to undo.
+
+## The server
+
+### H2, embedded, one file
+
+**Chosen:** the database is H2 running inside the server process, in `<dataPath>/server/database/`, through
+Exposed.
+
+**Why:** a repair shop runs one server on one machine, often with nobody to look after a database service. An
+embedded database means one thing to install and start, and backups are H2's online `BACKUP` into a zip while the
+server keeps running.
+
+**Costs:** H2 has its quirks: reserved words break column names (`condition` is stored as `device_condition`), it
+can't list the `user` table's columns, so they're added by hand, and files can't be swapped under a running
+server, so restoring needs a restart. One process means no second server for the same shop.
+
+**Revisit if:** a shop needs more than one server on the same data, or a managed database is available anyway.
+
+### Photos on disk, metadata in the database
+
+**Chosen:** photo bytes live in `ImageStore` folders (`<dataPath>/server/images/`), with only their details in
+`ImageTable`. Paths are built from the photo's id, never from anything the client sends.
+
+**Why:** the database stays small and quick to back up, photos can be served straight from files with caching
+headers, and a backup can leave them out.
+
+**Costs:** two things to keep in step, which is what the delayed deletion below is for.
+
+### Photo deletion waits a day
+
+**Chosen:** a dropped photo is only marked `DELETED`. The hourly sweep removes files a day later, along with
+uploads that were never linked to anything.
+
+**Why:** a backup copies the database first and the photo folders after. Because no file disappears within a day
+of being dropped, every photo the copied database points at is still there when the folders are copied, so the
+backup is consistent without stopping the server. It also gives a just-uploaded photo time to be saved onto its
+note before it counts as abandoned.
+
+**Costs:** deleted photos use disk space for a day. Code must never delete photo files directly: mark the row
+and let the sweep do it.
+
+**Revisit if:** backups start pausing writes, or photos move to a store with its own snapshots.
+
+### One session per device
+
+**Chosen:** each login is a row in `TokenTable` keyed by the client's device id. Tokens carry the session id, and
+an access token only works while its session row exists.
+
+**Why:** an admin can see every logged in device and log out just one, and logging in again on the same device
+replaces its session instead of piling up. Ending a session cuts it off on the device's next request, not when
+its token would have run out.
+
+**Costs:** every authenticated request looks the session up. A device that logs in without a device id (old
+clients, scripts) adds a new session every time.
+
+### Refresh tokens last a year and aren't rotated
+
+**Chosen:** a password session's refresh token lasts 365 days and stays the same for the whole session. PIN
+sessions last 12 hours.
+
+**Why:** a shop's own computers should stay signed in, and the per-device session above means any one can still
+be ended from the admin screen. Tokens are typed (`typ`), so a refresh token can't be used as an access token.
+
+**Costs:** a stolen refresh token works until its session is ended or it expires. Rotation would shorten that.
+
+**Revisit if:** the server is reachable from outside the shop.
+
+### Its own certificate, pinned by the devices
+
+**Chosen:** without a supplied certificate the server makes one, once, kept in `<dataPath>/server/tls/` for ten
+years. Desktop and Android ask staff to check its fingerprint the first time, then trust exactly that
+certificate for that address.
+
+**Why:** most shops have no domain name for a box in the back room, so a public certificate isn't an option, and
+plain HTTP sends passwords readable on the network. Pinning gives encryption with one check by a person.
+
+**Costs:** replacing the certificate makes every device ask again, a restored server on a new machine makes a new
+one (the `tls/` folder isn't in backups), and web users get the browser's own warning instead of the app's.
+
+### Money in cents, totals from one place
+
+**Chosen:** every amount is a `Long` of cents. Invoice totals are worked out only by `InvoiceMath` in `shared`,
+which the server uses to store them and the client uses to preview them.
+
+**Why:** no rounding drift from floating point, and the pickup screen shows exactly what the server will charge.
+
+**Costs:** inventory prices were text once, and moved to cents with a data fix (`migrateLegacyPrices`); any new
+money field has to follow the pattern.
+
+### Pickup is the only way to close a ticket
+
+**Chosen:** only `POST /api/counter/pickup` sets `PICKED_UP`, and it pays the invoice, takes the parts from
+stock and closes the ticket in one transaction. A picked up ticket's status can't change.
+
+**Why:** a closed ticket always has a paid invoice and stock that matches what left the shop. Letting a plain
+ticket update close it would skip both.
+
+**Costs:** fixing a mistaken pickup means voiding the invoice (an admin), which puts the parts back but leaves the
+ticket closed.
+
+### Locks in the server process
+
+**Chosen:** ticket and invoice numbering, and every invoice change, run under JVM `synchronized` locks, with a
+unique index behind the numbers.
+
+**Why:** with one server process, a lock is the simplest way to stop two counters handing out the same number or
+both picking up the same ticket.
+
+**Costs:** it only works with one server process, which H2 already requires. An outer transaction that adds a
+ticket or invoice has to hold the locks until it commits.
+
+### In-memory rate limits
+
+**Chosen:** account requests and wrong password logins are counted in memory per address and per username.
+
+**Why:** simple, and nothing to clean up in the database.
+
+**Costs:** a restart clears the counts. Behind a reverse proxy every request has the proxy's address. A
+username's limit can be used to keep that user out of password login for a while.
+
+## The client
+
+### Client-made ids
+
+**Chosen:** records get a version 7 UUID when the client makes them, not when the server saves them. Its
+timestamp is the record's creation time; there's no separate "created" column.
+
+**Why:** a new record has its final id before it's saved, so notes and photos can be attached to it straight away,
+and the same request sent twice can be recognised (check-in refuses a ticket id that already exists).
+
+**Costs:** the server has to check ids are version 7 where the time matters (check-in does), and a client with a
+wrong clock makes records with the wrong creation time.
+
+### One Compose Multiplatform client
+
+**Chosen:** desktop, Android and web share one Compose codebase, with `expect`/`actual` for what differs.
+
+**Why:** one UI to build and fix. Desktop is the main target, since a counter PC is where the app mostly runs.
+
+**Costs:** Android and web compile but haven't been run end to end, and some things are weaker there (web reads
+uploads whole; Android's full screen can be swiped away).
+
+### Handlers on one view model
+
+**Chosen:** `MainViewModel` lives as long as the app and owns a handler per area, connected by callbacks.
+
+**Why:** leaving a screen and coming back keeps its search, selection and open ticket, and handlers can be tested
+without the UI, on a `MockEngine`.
+
+**Costs:** everything loads up front, and the biggest handlers (`CounterHandler`, `AdminHandler`) are over 500
+lines. New areas should get smaller handlers of their own.
+
+### A UI kit enforced by a test
+
+**Chosen:** all styling lives in `ui/kit`, and `UiKitRulesTest` fails if a screen hard codes a color, size or
+shape or uses a Material component.
+
+**Why:** themes, light mode and fonts only work if every screen takes its look from the kit, and a test catches
+the screen that doesn't before a person has to.
+
+**Costs:** something new means a kit component and a gallery entry first. The test is a text search, so it can
+be fooled.
+
+### Glass only for floating layers
+
+**Chosen:** blurred glass is for the nav, bars, dialogs and menus; cards and lists are solid. Reduce
+transparency turns it all solid.
+
+**Why:** blur behind text makes it harder to read and costs drawing time on every frame.
+
+## The API
+
+### Reads that are `POST`
+
+**Chosen:** the older record routes read with `POST` (`/get`, `/fetch`, `/search`), with the id or query in the
+body. Newer routes use `GET` with path and query parameters.
+
+**Why:** the older routes came first and the client calls them by those names. Changing them means changing both
+sides together.
+
+**Revisit if:** the routes are versioned, at which point the reads could move to `GET`.
+
+### Client and server updated together
+
+**Chosen:** there's no API versioning. The server refuses fields it doesn't know; the client ignores fields it
+doesn't know.
+
+**Why:** a shop runs one server and its own few devices, updated together.
+
+**Costs:** a new field has to reach the server before any client sends it.
+
+## See also
+
+- [Architecture overview](architecture/overview.md)
+- [Running a server](operations.md)
+- [Authentication and sessions](server/auth.md)

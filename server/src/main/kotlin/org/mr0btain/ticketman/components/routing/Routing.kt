@@ -2,8 +2,9 @@ package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
 import io.ktor.server.application.*
-import io.ktor.server.http.content.*
+import io.ktor.server.plugins.*
 import io.ktor.server.plugins.statuspages.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
@@ -31,15 +32,20 @@ fun Application.configureRouting(
     localDatabase: LocalDatabase
 ) {
     install(StatusPages) {
+        // A body that isn't valid JSON, has a field this server doesn't know, or is missing one. The details stay
+        // in the log, the caller gets a plain reason
+        exception<BadRequestException> { call, cause ->
+            AppLogger.i(BAD_REQUEST_TAG, "${call.request.httpMethod.value} ${call.request.path()}: ${cause.rootMessage()}")
+            call.respondText(text = BAD_REQUEST_MESSAGE, status = HttpStatusCode.BadRequest)
+        }
+
         exception<Throwable> { call, cause ->
-            call.respondText(text = "500: $cause", status = HttpStatusCode.InternalServerError)
+            AppLogger.e(SERVER_ERROR_TAG, "${call.request.httpMethod.value} ${call.request.path()}", cause)
+            call.respondText(text = SERVER_ERROR_MESSAGE, status = HttpStatusCode.InternalServerError)
         }
     }
 
     routing {
-        // Static plugin. Try to access `/static/index.html`
-        staticResources("/static", "static")
-
         // Tells clients the server is up, and that it's this app
         get(SERVER_PING_PATH) {
             call.respondText(SERVER_PING_BODY)
@@ -146,3 +152,16 @@ fun Application.configureRouting(
         }
     }
 }
+
+private const val BAD_REQUEST_TAG = "ROUTE:BadRequest"
+private const val SERVER_ERROR_TAG = "ROUTE:ServerError"
+
+/** Sent for a body the route couldn't read, shown to whoever made the request */
+const val BAD_REQUEST_MESSAGE = "The server couldn't read that request"
+
+/** Sent when a route throws. What went wrong is in the server's log, not the response */
+const val SERVER_ERROR_MESSAGE = "Something went wrong on the server"
+
+// Ktor wraps the serializer's message ("Field 'password' is required") a couple of levels down
+private fun Throwable.rootMessage(): String =
+    generateSequence(this) { it.cause }.last().message ?: toString()

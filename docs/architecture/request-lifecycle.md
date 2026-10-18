@@ -196,8 +196,9 @@ user is told which part didn't work.
 - The client never throws out of a network call (apart from cancellation). Exceptions stop in `networkRequest`, and failures travel as
   `Result.Error` carrying something that implements `Error`, which always has a readable `message`.
 - The server never throws out of a database call either. `dbQuery`/`dbWrite` turn failures into `null`/`false`,
-  and routes turn those into `404` or `500`. A throw that escapes a route anyway is caught by `StatusPages` and
-  sent as a `500`.
+  and routes turn those into `404` or `500`. A throw that escapes a route anyway is caught by `StatusPages`: a body
+  that couldn't be read is a `400`, anything else a `500`, with the details only in the server's log
+  (see [API reference](../api/README.md#gotchas)).
 - Inside an outer transaction the server does let throws through, on purpose, so the whole transaction rolls back.
 
 ## Gotchas

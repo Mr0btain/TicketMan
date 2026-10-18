@@ -122,13 +122,19 @@ class CustomerRecords(
         }
     }
 
+    /** A customer from the cache, or the server if it isn't cached. Null if neither has it */
     suspend fun get(identifier: Uuid): Customer? =
         cache.get(identifier)?.customer
             ?: remoteHandler.customerRepo.get(identifier)
 
+    /** Customers matching [query], at most the search limit setting */
     suspend fun search(query: String) =
         remoteHandler.customerRepo.search(query, searchLimit())
 
+    /**
+     * Deletes the record if it's the one selected, then clears the selection and reloads the list. Does nothing for
+     * people who can only look
+     */
     fun remove(identifier: Uuid) {
         if (!canEdit()) return
 

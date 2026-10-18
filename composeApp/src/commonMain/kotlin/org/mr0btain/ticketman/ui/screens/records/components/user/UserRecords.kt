@@ -131,6 +131,7 @@ class UserRecords(
         }
     }
 
+    /** Users matching [query], at most the search limit setting */
     suspend fun search(query: String) =
         remoteHandler.userRepo.search(query, searchLimit())
 

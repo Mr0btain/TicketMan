@@ -15,27 +15,37 @@ import kotlin.uuid.Uuid
 
 /**
  * A record being looked at or edited. What changed is worked out by comparing its fields against a snapshot taken
- * when it was loaded or saved, so changing something back to how it was counts as unchanged
+ * when it was loaded or saved, so changing something back to how it was counts as unchanged.
+ *
+ * Each field is Compose state, so screens update as it changes. A subclass holds its record's fields with a
+ * change function for each, lists them in [fields], loads a record with a set function that ends in [markClean],
+ * and builds the record back up for saving. Notes and photos are kept here and count towards [isDirty] too; they
+ * only reach the server when the record is saved.
+ * @param tag Logging tag
  */
 @Suppress("PropertyName")
 abstract class DataSeed(tag: String) {
     protected val DELETE_NOTE_TAG = "$tag:DELETE_NOTE"
     protected val UPDATE_NOTE_TAG = "$tag:UPDATE_NOTE"
 
+    /** The record's identifier. A new record gets its final one here, before it's ever saved */
     @OptIn(ExperimentalUuidApi::class)
     var identifier: Uuid by mutableStateOf(Uuid.generateV7())
         protected set
 
-    // Photos of the record itself, as opposed to photos on its notes
     protected val _images = mutableStateListOf<StoredImage>()
+    /** Photos of the record itself, as opposed to photos on its notes. Only inventory items have them */
     val images: List<StoredImage> = _images
 
+    /** True until a saved record is loaded into it, so saving adds rather than updates */
     var isNew: Boolean by mutableStateOf(true)
         protected set
 
     protected var _notes = mutableStateListOf<Note>()
+    /** The record's notes, including ones added or changed here that haven't been saved yet */
     val notes: List<Note> = _notes
 
+    /** When the record was made, read from its identifier */
     val time: Instant
         get() = identifier.createdAt()
 
@@ -65,7 +75,7 @@ abstract class DataSeed(tag: String) {
         return now.keys.filter { now[it] != saved[it] }
     }
 
-    // Reset all fields
+    /** Empties every field and starts a new record with a new identifier, clean */
     abstract fun clear()
 
     /** Takes the fields as they are now as the saved state */
@@ -73,6 +83,7 @@ abstract class DataSeed(tag: String) {
         saved = snapshot()
     }
 
+    /** Replaces the notes. Only changes state if they differ, so it doesn't redraw for nothing */
     fun setNotes(newNotes: List<Note>) {
         if (_notes.toList() != newNotes) {
             _notes.clear()
@@ -80,6 +91,7 @@ abstract class DataSeed(tag: String) {
         }
     }
 
+    /** Replaces the record's own photos, in the order given */
     fun setImages(newImages: List<StoredImage>) {
         if (_images.toList() != newImages) {
             _images.clear()
@@ -87,19 +99,23 @@ abstract class DataSeed(tag: String) {
         }
     }
 
+    /** Adds a photo that was just uploaded, unless it's already here */
     fun addImage(image: StoredImage) {
         if (_images.none { it.identifier == image.identifier }) setImages(_images + image)
     }
 
+    /** Drops a photo. The server marks it deleted when the record is saved */
     @OptIn(ExperimentalUuidApi::class)
     fun removeImage(identifier: Uuid) {
         setImages(_images.filter { it.identifier != identifier })
     }
 
+    /** Adds a note, unless the same one is already here */
     fun addNote(newNote: Note) {
         if (!_notes.contains(newNote)) _notes.add(newNote)
     }
 
+    /** Drops a note. The server deletes it when the record is saved */
     fun deleteNote(identifier: Uuid) {
         val index = _notes.indexOfFirst { it.identifier == identifier }
 
@@ -107,9 +123,7 @@ abstract class DataSeed(tag: String) {
         else AppLogger.m(DELETE_NOTE_TAG, "Note not found")
     }
 
-    /**
-     * Gets the note for the specified id if it exists.
-     */
+    /** The note with this identifier, if it's here */
     fun getNote(identifier: Uuid): Note? =
         _notes.firstOrNull { it.identifier == identifier }
 
@@ -126,5 +140,6 @@ abstract class DataSeed(tag: String) {
         else AppLogger.m(UPDATE_NOTE_TAG, "Note not found")
     }
 
+    /** For logging, with the fields spelled out */
     abstract override fun toString(): String
 }

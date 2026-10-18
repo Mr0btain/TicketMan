@@ -24,6 +24,7 @@ object PasswordHasher {
     // Checked against when a user isn't found so a missing username takes as long as a wrong password
     private val dummyHash by lazy { hash("dummy-password") }
 
+    /** A new salted PBKDF2 hash, stored as `pbkdf2$<iterations>$<salt>$<hash>` */
     fun hash(password: String): String {
         val salt = ByteArray(SALT_LENGTH_BYTES).also { random.nextBytes(it) }
         val hash = derive(password, salt, ITERATIONS)
@@ -35,6 +36,7 @@ object PasswordHasher {
     fun hashIfNeeded(password: String): String =
         if (isHashed(password)) password else hash(password)
 
+    /** Whether [stored] is one of our hashes, rather than a password saved before hashing was added */
     fun isHashed(stored: String): Boolean =
         stored.startsWith("$PREFIX$") && stored.split("$").size == 4
 

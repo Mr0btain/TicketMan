@@ -15,7 +15,6 @@ import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureCors
 import org.mr0btain.ticketman.components.plugins.configureHttps
 import org.mr0btain.ticketman.components.plugins.configureSecurity
-import org.mr0btain.ticketman.components.plugins.configureSerialization
 import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
@@ -128,7 +127,6 @@ fun Application.module() {
             certificate = certificateInfo(tls, dataPath)
         )
 
-        configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
         configureTransfers()

@@ -281,4 +281,27 @@ class TicketTest {
         assertEquals(newestFirst.take(2), fetchMine(0, 2).map { it.identifier })
         assertEquals(newestFirst.drop(2), fetchMine(2, 2).map { it.identifier })
     }
+
+    @Test
+    fun aTicketWithATechnicianCanBeDeleted() = testApplication {
+        val token = setup()
+        val ticket = addTicket(token, Ticket(device = Device("Apple", "iPhone 13"), problem = "Cracked screen"))
+
+        val assigned = client.post("/api/data/ticket/set/user/${ticket.identifier}") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(token)
+            setBody(json.encodeToString(tech.identifier))
+        }
+        assertEquals(HttpStatusCode.Accepted, assigned.status)
+
+        val removed = client.delete("/api/data/ticket/remove/${ticket.identifier}") { bearerAuth(token) }
+        assertEquals(HttpStatusCode.Accepted, removed.status)
+
+        val after = client.post("/api/data/ticket/get") {
+            contentType(ContentType.Application.Json)
+            bearerAuth(token)
+            setBody(json.encodeToString(ticket.identifier))
+        }
+        assertEquals(HttpStatusCode.NotFound, after.status)
+    }
 }

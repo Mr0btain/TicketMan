@@ -35,6 +35,10 @@ class MainViewModel(
     /** Tests pass a mock engine, the app uses the platform's */
     engine: HttpClientEngine? = null
 ) : ViewModel() {
+    /**
+     * Starts the app once the view model is built: follows expired sessions, loads the saved settings and connects
+     * to the saved server. Called by initMainViewModel, not by screens
+     */
     fun init() {
         // When the session can't be refreshed, ask the user to log in again
         viewModelScope.launch {
@@ -93,6 +97,7 @@ class MainViewModel(
 
     val users = UserRecords(remoteHandler, viewModelScope, snackBarHost, { session.isAdminNow() }, pagerConfig, cacheSize, searchLimit)
 
+    /** Reloads every record list from the start, after logging in or when the page size changes */
     fun refreshPagers() {
         viewModelScope.launch {
             customers.pager.refresh()
@@ -177,7 +182,7 @@ class MainViewModel(
     private val _selectedMainTabIndex: MutableStateFlow<Int> = MutableStateFlow(0)
     val selectedMainTabIndex = _selectedMainTabIndex.asStateFlow()
 
-    // To update the main tab index
+    /** Switches the records screen to Customers (0), Tickets (1) or Inventory (2) */
     fun changeMainTabIndex(update: Int) {
         _selectedMainTabIndex.value = update
     }
