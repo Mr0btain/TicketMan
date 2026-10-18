@@ -1,7 +1,5 @@
 package org.mr0btain.ticketman.components.network.database
 
-import androidx.compose.ui.graphics.ImageBitmap
-import io.github.vinceglb.filekit.dialogs.compose.util.encodeToByteArray
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -42,8 +40,8 @@ abstract class RemoteRepository<T: MainItem>(
     protected val FETCH_TAG = "$tag:Fetch"
     protected val SEARCH_TAG = "$tag:Fetch"
     protected val ADD_TAG = "$tag:Add"
-    protected val ADD_IMAGE_TAG = "$tag:AddImage"
     protected val ADD_NOTE_TAG = "$tag:AddNote"
+    protected val UPDATE_NOTE_TAG = "$tag:UpdateNote"
     protected val UPDATE_TAG = "$tag:Update"
     protected val REMOVE_TAG = "$tag:Remove"
     protected val REMOVE_NOTE_TAG = "$tag:RemoveNote"
@@ -71,16 +69,16 @@ abstract class RemoteRepository<T: MainItem>(
         return handleActionHttpResponse(ADD_TAG, response)
     }
 
-    // TODO: Setup a way to send images/large data transfers.
-    suspend fun addImage(identifier: Uuid, image: ImageBitmap) {
+    /** Replaces a note's text and photos. Its photos must have been uploaded first */
+    suspend fun updateNote(note: Note) {
         if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(ADD_IMAGE_TAG) {
+            networkErrorTryCatch(UPDATE_NOTE_TAG) {
                 client.post {
-                    url("$serverUrl/add/image")
+                    url("$serverUrl/update/note/${note.identifier}")
                     contentType(ContentType.Application.Json)
-                    setBody(image.encodeToByteArray())
+                    setBody(note)
                 }
-            }?.let { response -> handlePlainHttpResponse(ADD_IMAGE_TAG, response) }
+            }?.let { response -> handlePlainHttpResponse(UPDATE_NOTE_TAG, response) }
         }
     }
 

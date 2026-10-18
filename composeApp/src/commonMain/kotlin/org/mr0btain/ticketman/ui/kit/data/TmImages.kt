@@ -31,10 +31,12 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_left
 import ticketman.composeapp.generated.resources.chevron_right
 import ticketman.composeapp.generated.resources.image
+import ticketman.composeapp.generated.resources.trash_2
 
 /**
  * Photos side by side, swiped or stepped through with the arrows. Photos still loading show a placeholder
  * @param clickEnabled Lets a photo be clicked, usually to open it full size
+ * @param onRemove Shows a remove button on the photo in view, null for none
  */
 @Composable
 fun ImagePager(
@@ -42,7 +44,8 @@ fun ImagePager(
     storedImages: List<StoredImage>,
     onImageClick: () -> Unit = {},
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    clickEnabled: Boolean = true
+    clickEnabled: Boolean = true,
+    onRemove: ((StoredImage) -> Unit)? = null
 ) {
     val pagerState = rememberPagerState(pageCount = { storedImages.size })
     val bitmaps = remember { mutableStateMapOf<StoredImage, ImageBitmap>() }
@@ -93,6 +96,18 @@ fun ImagePager(
                         )
                     }
                 }
+            }
+        }
+
+        if (onRemove != null) {
+            storedImages.getOrNull(pagerState.currentPage)?.let { image ->
+                TmIconButton(
+                    modifier = Modifier.align(Alignment.TopEnd),
+                    icon = Res.drawable.trash_2,
+                    contentDescription = "Remove photo",
+                    variant = TmButtonVariant.SECONDARY,
+                    onClick = { onRemove(image) }
+                )
             }
         }
 

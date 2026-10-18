@@ -4,12 +4,14 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.rememberNavController
 import org.mr0btain.ticketman.components.debug.BuildConfigImpl
 import org.koin.compose.viewmodel.koinViewModel
+import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
@@ -77,66 +79,69 @@ fun App() {
         if (isDebug) NavigationItem("Components", Res.drawable.layers, Destination.GALLERY) else null
     )
 
-    TmTheme(
-        palette = mainViewModel.palette.collectAsState().value,
-        font = mainViewModel.font.collectAsState().value,
-        darkTheme = mainViewModel.darkMode.collectAsState().value,
-        reduceTransparency = mainViewModel.reduceTransparency.collectAsState().value
-    ) {
-        println("Platform: ${getPlatform().name}")
+    // Photos anywhere below can upload and load through the server
+    CompositionLocalProvider(LocalImageClient provides mainViewModel.imageClient) {
+        TmTheme(
+            palette = mainViewModel.palette.collectAsState().value,
+            font = mainViewModel.font.collectAsState().value,
+            darkTheme = mainViewModel.darkMode.collectAsState().value,
+            reduceTransparency = mainViewModel.reduceTransparency.collectAsState().value
+        ) {
+            println("Platform: ${getPlatform().name}")
 
-        if (kioskActive.value) {
-            KioskShell(mainViewModel)
-            return@TmTheme
-        }
+            if (kioskActive.value) {
+                KioskShell(mainViewModel)
+                return@TmTheme
+            }
 
-        accountSetup.value?.let { setup ->
-            AccountSetupDialog(
-                setup = setup,
-                onFinish = { name, email, phone, password, pin, onResult ->
-                    mainViewModel.completeAccountSetup(name, email, phone, password, pin, onResult)
-                },
-                onCancel = { mainViewModel.cancelAccountSetup() }
-            )
-        }
+            accountSetup.value?.let { setup ->
+                AccountSetupDialog(
+                    setup = setup,
+                    onFinish = { name, email, phone, password, pin, onResult ->
+                        mainViewModel.completeAccountSetup(name, email, phone, password, pin, onResult)
+                    },
+                    onCancel = { mainViewModel.cancelAccountSetup() }
+                )
+            }
 
-        if (shouldShowLogin.value) {
-            LoginPopup(
-                viewModel = mainViewModel,
-                onDismiss = { mainViewModel.changeShowLogin(false) }
-            )
-        }
+            if (shouldShowLogin.value) {
+                LoginPopup(
+                    viewModel = mainViewModel,
+                    onDismiss = { mainViewModel.changeShowLogin(false) }
+                )
+            }
 
-        val host: @Composable () -> Unit = {
-            NavigationHost(
-                navHostController = navigator,
-                coroutineScope = mainScope,
-                mainViewModel = mainViewModel,
-                snackBarState = snackBarHostState,
-                initialDestination = initialDestination
-            )
-        }
+            val host: @Composable () -> Unit = {
+                NavigationHost(
+                    navHostController = navigator,
+                    coroutineScope = mainScope,
+                    mainViewModel = mainViewModel,
+                    snackBarState = snackBarHostState,
+                    initialDestination = initialDestination
+                )
+            }
 
-        // Desktop always gets the rail, phones and tablets go by window width
-        val wide = getPlatform().name.contains("Java") ||
-                calculateWindowSizeClass().widthSizeClass == WindowWidthSizeClass.Expanded
+            // Desktop always gets the rail, phones and tablets go by window width
+            val wide = getPlatform().name.contains("Java") ||
+                    calculateWindowSizeClass().widthSizeClass == WindowWidthSizeClass.Expanded
 
-        if (wide) {
-            WideAppShell(
-                navHostController = navigator,
-                destinations = navDestination,
-                snackBarState = snackBarHostState,
-                user = currentUser.value,
-                onLogin = { mainViewModel.changeShowLogin(true) },
-                onLogout = { mainViewModel.logout() },
-                onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
-            ) { host() }
-        } else {
-            PhoneAppShell(
-                navHostController = navigator,
-                destinations = navDestination,
-                snackBarState = snackBarHostState
-            ) { host() }
+            if (wide) {
+                WideAppShell(
+                    navHostController = navigator,
+                    destinations = navDestination,
+                    snackBarState = snackBarHostState,
+                    user = currentUser.value,
+                    onLogin = { mainViewModel.changeShowLogin(true) },
+                    onLogout = { mainViewModel.logout() },
+                    onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
+                ) { host() }
+            } else {
+                PhoneAppShell(
+                    navHostController = navigator,
+                    destinations = navDestination,
+                    snackBarState = snackBarHostState
+                ) { host() }
+            }
         }
     }
 }

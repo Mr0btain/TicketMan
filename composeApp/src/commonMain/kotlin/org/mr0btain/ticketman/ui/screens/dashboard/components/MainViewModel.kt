@@ -26,6 +26,7 @@ import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.network.ConnectionResult
+import org.mr0btain.ticketman.components.image.ImageClient
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.database.RemoteRepository
 import org.mr0btain.ticketman.components.network.getHttpEngine
@@ -139,6 +140,9 @@ class MainViewModel(
         localStorage = localStorage
     )
 
+    /** Uploads photos and finds where they're fetched from, handed to screens through LocalImageClient */
+    val imageClient = ImageClient(remoteHandler.imageRepo)
+
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
     val customerCache: CustomerCache = CustomerCache(maxCacheSize)
@@ -198,14 +202,21 @@ class MainViewModel(
     }
 
     /**
-     * Makes the server's notes match [notes], adding new ones and removing ones that were deleted
+     * Makes the server's notes match [notes]: adds new ones, updates edited ones and removes ones that were deleted
      */
     private suspend fun syncNotes(identifier: Uuid, notes: List<Note>, repo: RemoteRepository<*>) {
         val existing = repo.getNotes(identifier)
-        val existingIds = existing.map { it.identifier }.toSet()
+        val existingById = existing.associateBy { it.identifier }
         val keptIds = notes.map { it.identifier }.toSet()
 
-        notes.filter { it.identifier !in existingIds }.forEach { note -> repo.addNote(identifier, note) }
+        notes.forEach { note ->
+            val saved = existingById[note.identifier]
+
+            when {
+                saved == null -> repo.addNote(identifier, note)
+                saved != note -> repo.updateNote(note)
+            }
+        }
         existing.filter { it.identifier !in keptIds }.forEach { note -> repo.removeNote(note.identifier) }
     }
 
@@ -426,10 +437,6 @@ class MainViewModel(
         viewModelScope.launch {
             if (inventorySeed.isNew) {
                 remoteHandler.inventoryRepo.add(inventorySeed.inventory)
-
-                inventorySeed.images.forEach { image ->
-                    remoteHandler.inventoryRepo.addImage(inventorySeed.identifier, image)
-                }
 
                 inventorySeed.notes.forEach { note ->
                     remoteHandler.inventoryRepo.addNote(inventorySeed.identifier, note)

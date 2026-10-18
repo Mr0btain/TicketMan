@@ -217,12 +217,25 @@ fun TmLoading(
     }
 }
 
-/** Thin bar that runs while something loads with no known end, like a search */
+/**
+ * Thin bar for something loading. Runs on its own when [progress] is null (no known end, like a search),
+ * otherwise fills to [progress], 0 to 1, like an upload
+ */
 @Composable
-fun TmProgressBar(modifier: Modifier = Modifier) {
-    LinearProgressIndicator(
-        modifier = modifier.fillMaxWidth().height(3.dp),
-        color = TmTheme.colors.accent.color,
-        trackColor = TmTheme.colors.hairline
-    )
+fun TmProgressBar(modifier: Modifier = Modifier, progress: Float? = null) {
+    if (progress == null) {
+        LinearProgressIndicator(
+            modifier = modifier.fillMaxWidth().height(3.dp),
+            color = TmTheme.colors.accent.color,
+            trackColor = TmTheme.colors.hairline
+        )
+    } else {
+        LinearProgressIndicator(
+            progress = { progress.coerceIn(0f, 1f) },
+            modifier = modifier.fillMaxWidth().height(3.dp),
+            color = TmTheme.colors.accent.color,
+            trackColor = TmTheme.colors.hairline,
+            drawStopIndicator = {}
+        )
+    }
 }
