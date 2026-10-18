@@ -51,7 +51,7 @@ import ticketman.composeapp.generated.resources.upload
 import ticketman.composeapp.generated.resources.zap
 
 /** Width of the panels in the left column */
-private val SIDE_WIDTH = 420.dp
+private val SIDE_WIDTH = 440.dp
 
 /**
  * Server details, the shop profile, backups and dev tools
