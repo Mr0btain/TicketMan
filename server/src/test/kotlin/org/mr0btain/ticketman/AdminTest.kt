@@ -18,12 +18,18 @@ import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.server.response.BackupManifest
+import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
+import java.io.ByteArrayInputStream
+import java.security.MessageDigest
+import java.util.zip.ZipInputStream
 import kotlin.test.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -299,21 +305,72 @@ class AdminTest {
     }
 
     @Test
-    fun serverInfoAndBackup() = testApplication {
+    fun serverInfo() = testApplication {
         setup()
         val adminToken = token(admin)
 
         val info = json.decodeFromString<ServerInfoResponse>(get("/api/admin/server", adminToken).bodyAsText())
         assertTrue(info.databaseSizeBytes > 0)
         assertTrue(info.developmentMode)
+    }
 
-        val backup = get("/api/admin/backup", adminToken)
-        assertEquals(HttpStatusCode.OK, backup.status)
-        assertEquals(ContentType.Application.Zip, backup.contentType()?.withoutParameters())
+    @Test
+    fun backupIsBuiltThenDownloadedWithItsLink() = testApplication {
+        setup()
+        val adminToken = token(admin)
 
-        // Zip files start with PK
-        val bytes = backup.readRawBytes()
-        assertTrue(bytes.size > 4 && bytes[0] == 'P'.code.toByte() && bytes[1] == 'K'.code.toByte())
+        val response = post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), adminToken)
+        assertEquals(HttpStatusCode.Created, response.status)
+        val ticket = json.decodeFromString<BackupTicket>(response.bodyAsText())
+        assertFalse(ticket.includesImages)
+        assertTrue(ticket.fileName.endsWith("-database.zip"))
+
+        // No login needed, the token is the key
+        val download = client.get(ticket.downloadPath)
+        assertEquals(HttpStatusCode.OK, download.status)
+        assertTrue(download.headers[HttpHeaders.ContentDisposition].orEmpty().contains(ticket.fileName))
+
+        val bytes = download.readRawBytes()
+        assertEquals(ticket.sizeBytes, bytes.size.toLong())
+        assertEquals(ticket.sha256, MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) })
+
+        val entries = zipEntries(bytes)
+        assertEquals(setOf(BackupManifest.FILE_NAME, BackupManifest.DATABASE_FILE), entries.keys)
+        val manifest = json.decodeFromString<BackupManifest>(entries.getValue(BackupManifest.FILE_NAME).decodeToString())
+        assertFalse(manifest.includesImages)
+        // The database copy is H2's own zip
+        assertTrue(entries.getValue(BackupManifest.DATABASE_FILE).take(2) == listOf('P'.code.toByte(), 'K'.code.toByte()))
+
+        // A dropped download can pick up where it left off
+        val rest = client.get(ticket.downloadPath) { header(HttpHeaders.Range, "bytes=10-") }
+        assertEquals(HttpStatusCode.PartialContent, rest.status)
+        assertEquals(bytes.size - 10, rest.readRawBytes().size)
+    }
+
+    @Test
+    fun backupLinksNeedTheRightTokenAndAnAdmin() = testApplication {
+        setup()
+
+        val employeeAttempt = post("/api/admin/backup", json.encodeToString(BackupRequest()), token(employee))
+        assertEquals(HttpStatusCode.Forbidden.value / 100, employeeAttempt.status.value / 100)
+
+        val ticket = json.decodeFromString<BackupTicket>(
+            post("/api/admin/backup", json.encodeToString(BackupRequest()), token(admin)).bodyAsText()
+        )
+        val withoutToken = ticket.downloadPath.substringBefore('?')
+
+        assertEquals(HttpStatusCode.NotFound, client.get(withoutToken).status)
+        assertEquals(HttpStatusCode.NotFound, client.get("$withoutToken?token=guess").status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/admin/backup/download/nope?token=guess").status)
+    }
+
+    private fun zipEntries(bytes: ByteArray): Map<String, ByteArray> = buildMap {
+        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                put(entry.name, zip.readBytes())
+            }
+        }
     }
 
     @Test

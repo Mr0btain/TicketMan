@@ -85,6 +85,7 @@ private fun AdminContent(
     val pending by admin.pending.collectAsState()
     val stations by admin.stations.collectAsState()
     val serverInfo by admin.serverInfo.collectAsState()
+    val backupProgress by admin.backupProgress.collectAsState()
     val shopProfile by admin.shopProfile.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
     val auditEndReached by admin.auditEndReached.collectAsState()
@@ -277,8 +278,9 @@ private fun AdminContent(
                 serverUrl = serverUrl,
                 shopProfile = shopProfile,
                 isBusy = isLoading,
+                backupProgress = backupProgress,
                 onSaveShopProfile = { admin.saveShopProfile(it) },
-                onBackup = { admin.downloadBackup() },
+                onBackup = { includeImages -> admin.downloadBackup(includeImages) },
                 onSeed = { request -> admin.seed(request, onSuccess = { viewModel.refreshPagers() }) }
             )
 

@@ -18,13 +18,17 @@ import org.mr0btain.ticketman.data.inventory.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.server.response.BackupManifest
+import org.mr0btain.ticketman.server.response.BackupTicket
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.util.zip.ZipInputStream
 import javax.imageio.ImageIO
 import kotlin.test.*
 import kotlin.time.Duration.Companion.hours
@@ -41,6 +45,7 @@ class ImageTest {
 
     private val tech = User(username = "tech", password = "tech_pass", accessLevel = AccessLevel.NORMAL)
     private val viewer = User(username = "viewer", password = "viewer_pass", accessLevel = AccessLevel.RESTRICTED)
+    private val owner = User(username = "owner", password = "owner_pass", accessLevel = AccessLevel.ADMIN)
 
     @AfterTest
     fun cleanup() = cleanupTestDataDir(dataDir)
@@ -296,6 +301,34 @@ class ImageTest {
             HttpStatusCode.NotFound,
             post("/api/data/inventory/set/images/${Uuid.generateV7()}", "[]", token).status
         )
+    }
+
+    // ------------------------------------------ Backups ------------------------------------------
+
+    @Test
+    fun backupCarriesLivePhotosButNotDeletedOnes() = testApplication {
+        setup()
+        UserDatabaseImpl().add(owner)
+        val token = token(tech)
+        val customer = newCustomer(token)
+        val kept = uploadImage(token)
+        val dropped = uploadImage(token)
+
+        val note = Note(message = "Photos", images = listOf(kept, dropped))
+        post("/api/data/customer/add/note/$customer", json.encodeToString(note), token)
+        post("/api/data/customer/update/note/${note.identifier}", json.encodeToString(note.copy(images = listOf(kept))), token)
+
+        val ticket = json.decodeFromString<BackupTicket>(
+            post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = true)), token(owner)).bodyAsText()
+        )
+        val names = ZipInputStream(ByteArrayInputStream(client.get(ticket.downloadPath).readRawBytes())).use { zip ->
+            generateSequence { zip.nextEntry }.map { it.name }.toList()
+        }
+
+        val keptFolder = "images/${kept.identifier.toString().take(2)}/${kept.identifier}"
+        assertTrue(ImageVariant.entries.all { "$keptFolder/${it.path}.jpg" in names }, names.toString())
+        assertTrue(names.none { dropped.identifier.toString() in it })
+        assertTrue(BackupManifest.DATABASE_FILE in names)
     }
 
     // ------------------------------------------ Sweeping ------------------------------------------

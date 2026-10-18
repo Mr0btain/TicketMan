@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
@@ -26,6 +27,7 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.util.AppDir
+import java.io.File
 import java.security.SecureRandom
 import java.util.Base64
 
@@ -88,13 +90,21 @@ fun Application.module() {
         )
 
         val imageService = ImageService(database.imageDatabase, database.imageStore)
+        val backupService = BackupService(
+            database = database,
+            images = database.imageDatabase,
+            imageStore = database.imageStore,
+            backupsFolder = File(database.databaseDirectory.parentFile, "backups")
+        )
 
-        configureRouting(userService, accountService, adminService, invoiceService, checkInService, imageService, database)
+        configureRouting(userService, accountService, adminService, invoiceService, checkInService, imageService, backupService, database)
 
-        // Clears out photos deleted or never saved a day ago. Stops with the application
+        // Clears out photos deleted or never saved a day ago, and backups whose link has run out. Stops with
+        // the application
         launch(Dispatchers.IO) {
             while (isActive) {
                 imageService.sweep()
+                backupService.sweep()
                 delay(ImageService.SWEEP_INTERVAL)
             }
         }

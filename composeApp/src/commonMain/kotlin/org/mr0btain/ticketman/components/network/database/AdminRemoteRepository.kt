@@ -19,9 +19,11 @@ import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.request.StationRegistrationRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
@@ -155,23 +157,27 @@ class AdminRemoteRepository(
     suspend fun getServerInfo(): ServerInfoResponse? =
         getJson(SERVER_INFO_TAG, "$adminUrl/server")
 
-    /** Zip of the server's database */
-    suspend fun downloadBackup(): Result<ByteArray, ServerError> {
+    /**
+     * Has the server build a backup archive. Can take minutes with lots of photos, so there's no overall timeout
+     * @param includeImages Photos too, off for a quick database only copy
+     */
+    suspend fun prepareBackup(includeImages: Boolean): Result<BackupTicket, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkErrorTryCatch(BACKUP_TAG) {
-            client.get { url("$adminUrl/backup") }
-        }
-
-        return when {
-            response == null -> Result.Error(ServerError(NetworkError.NO_INTERNET))
-            response.status.isSuccess() -> Result.Success(response.readRawBytes())
-            else -> {
-                val failed = handleActionHttpResponse(BACKUP_TAG, response) as? Result.Error
-                Result.Error(failed?.error ?: ServerError(NetworkError.UNKNOWN))
+            client.post {
+                url("$adminUrl/backup")
+                contentType(ContentType.Application.Json)
+                setBody(BackupRequest(includeImages))
+                transferTimeout()
             }
         }
+
+        return handleDataHttpResponse(BACKUP_TAG, response)
     }
+
+    /** Full url a prepared backup downloads from */
+    fun backupDownloadUrl(ticket: BackupTicket): String = "$baseUrl${ticket.downloadPath}"
 
     suspend fun seed(request: SeedRequest): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError

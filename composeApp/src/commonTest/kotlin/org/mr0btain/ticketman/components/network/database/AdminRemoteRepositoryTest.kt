@@ -2,17 +2,22 @@ package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
+import kotlinx.io.Buffer
+import kotlinx.io.readByteArray
 import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.network.transfer.downloadTo
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.BackupTicket
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -22,6 +27,17 @@ import kotlin.uuid.Uuid
 class AdminRemoteRepositoryTest {
     private val requests = mutableListOf<String>()
 
+    private val backupBytes = ByteArray(300_000) { (it % 251).toByte() }
+    private val backupTicket = BackupTicket(
+        id = "b1",
+        fileName = "ticketman-backup-1.zip",
+        sizeBytes = backupBytes.size.toLong(),
+        sha256 = "",
+        downloadPath = "/api/admin/backup/download/b1?token=t",
+        expiresAt = 0,
+        includesImages = false
+    )
+
     private val json = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
     private val engine = MockEngine { request ->
@@ -29,7 +45,8 @@ class AdminRemoteRepositoryTest {
 
         when (request.url.encodedPath) {
             "/api/admin/stats" -> respond(Json.encodeToString(AdminStatsResponse(openTickets = 3, totalTickets = 5)), HttpStatusCode.OK, json)
-            "/api/admin/backup" -> respond(byteArrayOf(80, 75, 3, 4), HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/zip"))
+            "/api/admin/backup" -> respond(Json.encodeToString(backupTicket), HttpStatusCode.Created, json)
+            "/api/admin/backup/download/b1" -> respond(backupBytes, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/zip"))
             "/api/admin/seed" -> respond("Seeding is only allowed in development mode", HttpStatusCode.Forbidden)
             "/api/shop" -> respond(Json.encodeToString(ShopProfile(name = "Shop")), HttpStatusCode.OK, json)
             "/api/user/me" -> respond(Json.encodeToString(User(username = "me")), HttpStatusCode.OK, json)
@@ -40,6 +57,7 @@ class AdminRemoteRepositoryTest {
 
     private val client = HttpClient(engine) {
         install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
+        install(HttpTimeout)
     }
 
     private val admin = AdminRemoteRepository(client).apply { serverUrl = "http://localhost/" }
@@ -54,11 +72,30 @@ class AdminRemoteRepositoryTest {
     }
 
     @Test
-    fun backupReturnsTheBytes() = runTest {
-        val result = admin.downloadBackup()
+    fun backupIsPreparedThenStreamedToAFile() = runTest {
+        val prepared = admin.prepareBackup(includeImages = false)
 
-        assertIs<Result.Success<ByteArray>>(result)
-        assertContentEquals(byteArrayOf(80, 75, 3, 4), result.data)
+        assertIs<Result.Success<BackupTicket>>(prepared)
+        assertEquals("POST /api/admin/backup", requests.single())
+        assertEquals("http://localhost/api/admin/backup/download/b1?token=t", admin.backupDownloadUrl(prepared.data))
+
+        val file = Buffer()
+        val progress = mutableListOf<Long>()
+        val downloaded = client.downloadTo(admin.backupDownloadUrl(prepared.data), backupBytes.size.toLong(), { file }) { received, _ ->
+            progress += received
+        }
+
+        assertEquals(Result.Success(backupBytes.size.toLong()), downloaded)
+        assertContentEquals(backupBytes, file.readByteArray())
+        // Written as it arrived, not all at the end
+        assertTrue(progress.size > 1, "$progress")
+    }
+
+    @Test
+    fun shortDownloadsFail() = runTest {
+        val downloaded = client.downloadTo("http://localhost/api/admin/backup/download/b1", backupBytes.size + 1L, { Buffer() })
+
+        assertIs<Result.Error<*>>(downloaded)
     }
 
     @Test

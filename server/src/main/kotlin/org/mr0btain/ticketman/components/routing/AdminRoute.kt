@@ -8,12 +8,14 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
 import java.time.LocalDate
 import kotlin.time.Clock
@@ -23,7 +25,8 @@ import kotlin.time.Clock
  */
 fun Route.adminRoute(
     database: LocalDatabase,
-    adminService: AdminService
+    adminService: AdminService,
+    backupService: BackupService
 ) {
     val TAG = "AdminRoute"
     val STATS_TAG = "$TAG:Stats"
@@ -34,6 +37,25 @@ fun Route.adminRoute(
     val AUDIT_TAG = "$TAG:Audit"
 
     val auditLog = database.auditLogDatabase
+
+    // The token in the link is the login here, so a browser can download it directly. Range requests work, so
+    // a dropped download can carry on
+    get("/backup/download/{id}") {
+        val found = call.parameters["id"]?.let { backupService.fileFor(it, call.request.queryParameters["token"]) }
+
+        if (found == null) {
+            call.respond(HttpStatusCode.NotFound)
+            return@get
+        }
+
+        val (file, fileName) = found
+        call.response.header(
+            HttpHeaders.ContentDisposition,
+            ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, fileName).toString()
+        )
+        call.response.header(HttpHeaders.CacheControl, "no-store")
+        call.respondFile(file)
+    }
 
     authenticate("admin") {
         // Overview numbers
@@ -185,24 +207,20 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.OK, adminService.getServerInfo())
         }
 
-        // Zip of the database
-        get("/backup") {
-            val bytes = adminService.createBackup()
+        // Builds a backup archive on the server and returns a link to download it from. Can take a while
+        post("/backup") {
+            val request = call.receive<BackupRequest>()
+            val ticket = backupService.prepare(request.includeImages)
 
-            if (bytes == null) {
-                call.respond(HttpStatusCode.InternalServerError)
+            if (ticket == null) {
+                call.respondText("The backup couldn't be made, check the server log", status = HttpStatusCode.InternalServerError)
                 AppLogger.i(BACKUP_TAG, "Backup failed")
-                return@get
+                return@post
             }
 
-            val fileName = "ticketman-backup-${Clock.System.now().toEpochMilliseconds()}.zip"
-
-            call.audit(auditLog, AuditAction.BACKUP, "database", details = "${bytes.size} bytes")
-            call.response.header(
-                HttpHeaders.ContentDisposition,
-                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, fileName).toString()
-            )
-            call.respondBytes(bytes, ContentType.Application.Zip)
+            val contents = if (ticket.includesImages) "database and photos" else "database only"
+            call.audit(auditLog, AuditAction.BACKUP, "database", details = "$contents, ${ticket.sizeBytes} bytes")
+            call.respond(HttpStatusCode.Created, ticket)
         }
 
         // Mock data, only on servers started in development mode

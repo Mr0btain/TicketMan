@@ -96,6 +96,9 @@ kotlin {
             implementation(libs.coil.compose)
             implementation(libs.coil.network.ktor3)
 
+            // Streaming big downloads to a file
+            implementation(libs.kotlinx.io)
+
             // Encrypted key-value storage
             implementation(libs.ksafe)
 

@@ -3,10 +3,8 @@ package org.mr0btain.ticketman.components.service
 import com.auth0.jwt.JWT
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
-import java.io.File
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -23,7 +21,6 @@ class AdminService(
 ) {
     private val TAG = "AdminService"
     private val SESSIONS_TAG = "$TAG:Sessions"
-    private val BACKUP_TAG = "$TAG:Backup"
 
     private val startedAt = Clock.System.now().toEpochMilliseconds()
 
@@ -66,29 +63,11 @@ class AdminService(
             uptimeMillis = now - startedAt,
             dataPath = dataPath,
             databaseSizeBytes = database.sizeOnDisk(),
+            imagesSizeBytes = database.imageStore.sizeOnDisk(),
             javaVersion = System.getProperty("java.version") ?: "",
             operatingSystem = "${System.getProperty("os.name")} ${System.getProperty("os.version")}",
             developmentMode = developmentMode
         )
-    }
-
-    /**
-     * Makes a zip backup of the database and hands back its bytes
-     */
-    fun createBackup(): ByteArray? {
-        val file = File.createTempFile("ticketman-backup", ".zip")
-
-        return try {
-            // H2 won't write over an existing file
-            file.delete()
-
-            if (database.backupTo(file)) file.readBytes() else null
-        } catch (ex: Exception) {
-            AppLogger.e(BACKUP_TAG, SimpleResult.FAIL, ex)
-            null
-        } finally {
-            file.delete()
-        }
     }
 
     companion object {

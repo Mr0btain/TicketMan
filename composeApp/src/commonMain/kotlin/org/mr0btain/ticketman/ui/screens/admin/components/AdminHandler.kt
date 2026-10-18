@@ -10,7 +10,9 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
-import org.mr0btain.ticketman.components.data.saveFile
+import org.mr0btain.ticketman.components.network.transfer.DownloadOutcome
+import org.mr0btain.ticketman.components.network.transfer.saveDownload
+import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.components.print.PrintTemplates
 import org.mr0btain.ticketman.components.print.printDocument
 import org.mr0btain.ticketman.components.network.RemoteHandler
@@ -57,6 +59,10 @@ class AdminHandler(
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
+
+    // Where a backup is up to, null when none is running
+    private val _backupProgress = MutableStateFlow<BackupProgress?>(null)
+    val backupProgress = _backupProgress.asStateFlow()
 
     private val _stats = MutableStateFlow<AdminStatsResponse?>(null)
     val stats = _stats.asStateFlow()
@@ -397,26 +403,48 @@ class AdminHandler(
         }
     }
 
-    /** Pulls a backup from the server and asks where to save it */
-    fun downloadBackup() {
+    /**
+     * Has the server build a backup, then streams it to a file picked here (or hands it to the browser)
+     * @param includeImages Photos too, off for a quick database only copy
+     */
+    fun downloadBackup(includeImages: Boolean) {
         scope.launch {
             _isLoading.value = true
+            _backupProgress.value = BackupProgress("Building the backup on the server")
 
-            when (val result = admin.downloadBackup()) {
+            when (val prepared = admin.prepareBackup(includeImages)) {
+                is Result.Error -> notify("Backup failed: ${prepared.error.message}")
+
                 is Result.Success -> {
-                    val name = "ticketman-backup-${Clock.System.now().toEpochMilliseconds()}"
+                    val ticket = prepared.data
+                    _backupProgress.value = BackupProgress("Downloading ${formatBytes(ticket.sizeBytes)}", 0f)
 
-                    if (saveFile(result.data, name, "zip")) {
-                        notify("Backup saved")
-                    } else {
-                        AppLogger.i(BACKUP_TAG, "Not saved")
-                        notify("Backup wasn't saved")
+                    val outcome = saveDownload(
+                        client = remoteHandler.httpClient,
+                        url = admin.backupDownloadUrl(ticket),
+                        fileName = ticket.fileName,
+                        expectedBytes = ticket.sizeBytes
+                    ) { received, total ->
+                        val size = total ?: ticket.sizeBytes
+                        _backupProgress.value = BackupProgress(
+                            text = "Downloading ${formatBytes(received)} of ${formatBytes(size)}",
+                            fraction = if (size > 0) received.toFloat() / size else null
+                        )
+                    }
+
+                    when (outcome) {
+                        is DownloadOutcome.Saved -> notify("Backup saved (${formatBytes(outcome.bytes)})")
+                        DownloadOutcome.HandedToBrowser -> notify("Backup downloading in the browser")
+                        DownloadOutcome.Cancelled -> {
+                            AppLogger.i(BACKUP_TAG, "Not saved")
+                            notify("Backup wasn't saved")
+                        }
+                        is DownloadOutcome.Failed -> notify("Backup download failed: ${outcome.error.message}")
                     }
                 }
-
-                is Result.Error -> notify("Backup failed: ${result.error.message}")
             }
 
+            _backupProgress.value = null
             _isLoading.value = false
         }
     }
@@ -464,3 +492,12 @@ class AdminHandler(
         private const val AUDIT_PAGE_SIZE = 50
     }
 }
+
+/**
+ * A running backup, for the backup card
+ * @param fraction 0 to 1 once the download size is known, null while the server builds it
+ */
+data class BackupProgress(
+    val text: String,
+    val fraction: Float? = null
+)
