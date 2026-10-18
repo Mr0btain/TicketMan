@@ -90,5 +90,5 @@ All shared UI lives in `composeApp/src/commonMain/.../ui/kit/`, prefixed `Tm`: `
 
 ### Conventions
 - Logging uses `AppLogger.{e,d,i,m}(tag, message)` with hierarchical string tags declared as constants at the top of each class, e.g. `"$TAG:GetById"`. Follow this pattern in new code.
-- Errors: wrap risky calls in `appLogTryCatch(TAG) { ... }` (server/shared) or `networkErrorTryCatch(TAG) { ... }` (client network), and return `Result`/`SimpleResult` rather than throwing.
-- Server DB access is inside Exposed `transaction { }` blocks.
+- Errors: wrap risky calls in `networkErrorTryCatch(TAG) { ... }` (client network) or `appLogTryCatch(TAG) { ... }` (shared), and return `Result`/`SimpleResult` rather than throwing. Every error enum implements `Error` (which carries a readable `message`), so any of them can go in a `Result`.
+- Server DB access goes through `dbQuery(TAG) { ... }` (returns the value, null on failure) and `dbWrite(TAG) { ... }` (returns whether it happened; the block returns false when the row isn't there) in `database/DbCall.kt`. Write methods return that `Boolean` and routes answer 404/500 from it instead of always 202. Inside an outer `transaction { }` (check-in, pickup) they let throws through, so the whole thing rolls back. Some newer databases still use `appLogTryCatch` + `transaction`.

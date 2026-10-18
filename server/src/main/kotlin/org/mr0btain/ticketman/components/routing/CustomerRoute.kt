@@ -94,7 +94,10 @@ fun Route.customerRoute(
         post("/add") {
             val received = call.receive<Customer>()
 
-            database.add(received)
+            if (!database.add(received)) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
 
             call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier, received.cleanName())
             call.respond(HttpStatusCode.Accepted)
@@ -108,7 +111,11 @@ fun Route.customerRoute(
                 return@post
             }
 
-            database.update(received)
+            if (!database.update(received)) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
+
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.cleanName())
             call.respond(HttpStatusCode.Accepted)
         }
@@ -116,10 +123,9 @@ fun Route.customerRoute(
         delete("/remove/{identifier}") {
             val identifier = call.uuidParameter("identifier")
 
-            if (identifier == null) {
+            if (identifier == null || !database.remove(identifier)) {
                 call.respond(HttpStatusCode.NotFound)
             } else {
-                database.remove(identifier)
                 call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
                 call.respond(HttpStatusCode.Accepted)
             }

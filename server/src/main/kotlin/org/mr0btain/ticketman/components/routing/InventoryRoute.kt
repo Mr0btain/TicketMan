@@ -105,7 +105,11 @@ fun Route.inventoryRoute(
         post("/add") {
             val received = call.receive<Inventory>()
 
-            database.add(received)
+            if (!database.add(received)) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
+
             call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Created)
         }
@@ -116,7 +120,11 @@ fun Route.inventoryRoute(
         post("/update") {
             val received = call.receive<Inventory>()
 
-            database.update(received)
+            if (!database.update(received)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)
         }
@@ -125,14 +133,13 @@ fun Route.inventoryRoute(
     // Remove
     authenticate {
         delete("/remove/{identifier}") {
-            val identifier = call.parameters["identifier"]
+            val identifier = call.uuidParameter("identifier")
 
-            if (identifier == null) {
+            if (identifier == null || !database.remove(identifier)) {
                 call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            database.remove(Uuid.parse(identifier))
             call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
             call.respond(HttpStatusCode.Accepted)
         }

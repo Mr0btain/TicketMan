@@ -9,14 +9,12 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceChargeTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoicePaymentTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceTable
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.shared.PagedRequest
-import org.mr0btain.ticketman.error.appLogTryCatch
 import java.time.Year
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
@@ -41,144 +39,118 @@ class InvoiceDatabase(
     private val PAGED_TAG = "$TAG:Paged"
 
     fun getById(identifier: Uuid): Invoice? =
-        appLogTryCatch<Invoice?>(GET_TAG) {
-            transaction {
-                val invoice = InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
-                Pair(invoice, invoice != null)
-            }
+        dbQuery(GET_TAG) {
+            InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
         }
 
     fun getByTicket(ticketIdentifier: Uuid): Invoice? =
-        appLogTryCatch<Invoice?>(GET_TAG) {
-            transaction {
-                val invoice = InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull()?.toInvoice()
-                Pair(invoice, true)
-            }
+        dbQuery(GET_TAG) {
+            InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull()?.toInvoice()
         }
 
     /**
      * The ticket's invoice, made empty and OPEN if it doesn't have one yet
      */
     fun getOrCreate(ticketIdentifier: Uuid, customerIdentifier: Uuid?, taxRateBasisPoints: Int): Invoice? =
-        appLogTryCatch<Invoice?>(CREATE_TAG) {
-            // Numbers are handed out one at a time like ticket numbers
-            synchronized(NUMBER_LOCK) {
-                transaction {
-                    InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull()?.let {
-                        return@transaction Pair(it.toInvoice(), true)
-                    }
-
-                    val year = currentYear()
-                    val max = InvoiceTable.numberSequence.max()
-                    val sequence = (InvoiceTable.select(max).where { InvoiceTable.numberYear eq year }.singleOrNull()?.get(max) ?: 0L) + 1
-                    val identifier = Uuid.generateV7()
-
-                    InvoiceTable.insert { row ->
-                        row[InvoiceTable.id] = identifier
-                        row[InvoiceTable.numberYear] = year
-                        row[InvoiceTable.numberSequence] = sequence
-                        row[InvoiceTable.ticket] = ticketIdentifier
-                        row[InvoiceTable.customer] = customerIdentifier?.toString()
-                        row[InvoiceTable.status] = InvoiceStatus.OPEN.name
-                        row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
-                        row[InvoiceTable.createdAt] = Clock.System.now().toEpochMilliseconds()
-                    }
-
-                    Pair(InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.single().toInvoice(), true)
+        // Numbers are handed out one at a time like ticket numbers
+        synchronized(NUMBER_LOCK) {
+            dbQuery(CREATE_TAG) {
+                InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull()?.let {
+                    return@dbQuery it.toInvoice()
                 }
+
+                val year = currentYear()
+                val max = InvoiceTable.numberSequence.max()
+                val sequence = (InvoiceTable.select(max).where { InvoiceTable.numberYear eq year }.singleOrNull()?.get(max) ?: 0L) + 1
+                val identifier = Uuid.generateV7()
+
+                InvoiceTable.insert { row ->
+                    row[InvoiceTable.id] = identifier
+                    row[InvoiceTable.numberYear] = year
+                    row[InvoiceTable.numberSequence] = sequence
+                    row[InvoiceTable.ticket] = ticketIdentifier
+                    row[InvoiceTable.customer] = customerIdentifier?.toString()
+                    row[InvoiceTable.status] = InvoiceStatus.OPEN.name
+                    row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
+                    row[InvoiceTable.createdAt] = Clock.System.now().toEpochMilliseconds()
+                }
+
+                InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.single().toInvoice()
             }
         }
 
     /** Replaces the charges and discount and saves the worked out totals */
     fun setCharges(identifier: Uuid, charges: List<Charge>, discountCents: Long, taxRateBasisPoints: Int): Invoice? =
-        appLogTryCatch<Invoice?>(SET_CHARGES_TAG) {
-            transaction {
-                InvoiceChargeTable.deleteWhere { InvoiceChargeTable.invoice eq identifier }
+        dbQuery(SET_CHARGES_TAG) {
+            InvoiceChargeTable.deleteWhere { InvoiceChargeTable.invoice eq identifier }
 
-                charges.forEachIndexed { index, charge ->
-                    InvoiceChargeTable.insert { row ->
-                        row[InvoiceChargeTable.id] = charge.identifier
-                        row[InvoiceChargeTable.invoice] = identifier
-                        row[InvoiceChargeTable.position] = index
-                        row[InvoiceChargeTable.type] = charge.type.name
-                        row[InvoiceChargeTable.description] = charge.description
-                        row[InvoiceChargeTable.quantity] = charge.quantity
-                        row[InvoiceChargeTable.unitPriceCents] = charge.unitPriceCents
-                        row[InvoiceChargeTable.inventory] = charge.inventoryIdentifier?.toString()
-                        row[InvoiceChargeTable.taxable] = charge.taxable
-                    }
+            charges.forEachIndexed { index, charge ->
+                InvoiceChargeTable.insert { row ->
+                    row[InvoiceChargeTable.id] = charge.identifier
+                    row[InvoiceChargeTable.invoice] = identifier
+                    row[InvoiceChargeTable.position] = index
+                    row[InvoiceChargeTable.type] = charge.type.name
+                    row[InvoiceChargeTable.description] = charge.description
+                    row[InvoiceChargeTable.quantity] = charge.quantity
+                    row[InvoiceChargeTable.unitPriceCents] = charge.unitPriceCents
+                    row[InvoiceChargeTable.inventory] = charge.inventoryIdentifier?.toString()
+                    row[InvoiceChargeTable.taxable] = charge.taxable
                 }
-
-                val totals = InvoiceMath.totals(charges, discountCents, taxRateBasisPoints)
-
-                InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row ->
-                    row[InvoiceTable.discountCents] = totals.discountCents
-                    row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
-                    row[subtotalCents] = totals.subtotalCents
-                    row[taxCents] = totals.taxCents
-                    row[totalCents] = totals.totalCents
-                }
-
-                val invoice = InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
-                Pair(invoice, invoice != null)
             }
+
+            val totals = InvoiceMath.totals(charges, discountCents, taxRateBasisPoints)
+
+            InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row ->
+                row[InvoiceTable.discountCents] = totals.discountCents
+                row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
+                row[subtotalCents] = totals.subtotalCents
+                row[taxCents] = totals.taxCents
+                row[totalCents] = totals.totalCents
+            }
+
+            InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
         }
 
     fun addPayment(identifier: Uuid, payment: Payment): Invoice? =
-        appLogTryCatch<Invoice?>(PAYMENT_TAG) {
-            transaction {
-                InvoicePaymentTable.insert { row ->
-                    row[InvoicePaymentTable.id] = payment.identifier
-                    row[InvoicePaymentTable.invoice] = identifier
-                    row[InvoicePaymentTable.method] = payment.method.name
-                    row[InvoicePaymentTable.amountCents] = payment.amountCents
-                    row[InvoicePaymentTable.receivedAt] = payment.receivedAt
-                    row[InvoicePaymentTable.receivedBy] = payment.receivedBy
-                    row[InvoicePaymentTable.note] = payment.note
-                }
-
-                val invoice = InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
-                Pair(invoice, invoice != null)
+        dbQuery(PAYMENT_TAG) {
+            InvoicePaymentTable.insert { row ->
+                row[InvoicePaymentTable.id] = payment.identifier
+                row[InvoicePaymentTable.invoice] = identifier
+                row[InvoicePaymentTable.method] = payment.method.name
+                row[InvoicePaymentTable.amountCents] = payment.amountCents
+                row[InvoicePaymentTable.receivedAt] = payment.receivedAt
+                row[InvoicePaymentTable.receivedBy] = payment.receivedBy
+                row[InvoicePaymentTable.note] = payment.note
             }
+
+            InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
         }
 
     /** @return Whether the payment was on this invoice */
     fun removePayment(identifier: Uuid, paymentIdentifier: Uuid): Boolean =
-        appLogTryCatch<Boolean>(PAYMENT_TAG) {
-            transaction {
-                val removed = InvoicePaymentTable.deleteWhere {
-                    (InvoicePaymentTable.id eq paymentIdentifier) and (InvoicePaymentTable.invoice eq identifier)
-                } > 0
-
-                Pair(removed, removed)
-            }
-        } ?: false
+        dbWrite(PAYMENT_TAG) {
+            InvoicePaymentTable.deleteWhere {
+                (InvoicePaymentTable.id eq paymentIdentifier) and (InvoicePaymentTable.invoice eq identifier)
+            } > 0
+        }
 
     fun setStatus(identifier: Uuid, status: InvoiceStatus, paidAt: Long? = null): Boolean =
-        appLogTryCatch<Boolean>(STATUS_TAG) {
-            transaction {
-                val updated = InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row ->
-                    row[InvoiceTable.status] = status.name
-                    if (paidAt != null) row[InvoiceTable.paidAt] = paidAt
-                } > 0
-
-                Pair(updated, updated)
-            }
-        } ?: false
+        dbWrite(STATUS_TAG) {
+            InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row ->
+                row[InvoiceTable.status] = status.name
+                if (paidAt != null) row[InvoiceTable.paidAt] = paidAt
+            } > 0
+        }
 
     /** Newest first */
     fun getPagedItems(request: PagedRequest): List<Invoice> =
-        appLogTryCatch<List<Invoice>>(PAGED_TAG) {
-            transaction {
-                val invoices = InvoiceTable
-                    .selectAll()
-                    .orderBy(InvoiceTable.numberYear to SortOrder.DESC, InvoiceTable.numberSequence to SortOrder.DESC)
-                    .offset(request.offset)
-                    .limit(request.itemsPerPage)
-                    .map { it.toInvoice() }
-
-                Pair(invoices, true)
-            }
+        dbQuery(PAGED_TAG) {
+            InvoiceTable
+                .selectAll()
+                .orderBy(InvoiceTable.numberYear to SortOrder.DESC, InvoiceTable.numberSequence to SortOrder.DESC)
+                .offset(request.offset)
+                .limit(request.itemsPerPage)
+                .map { it.toInvoice() }
         }.orEmpty()
 
     // Must be called inside a transaction

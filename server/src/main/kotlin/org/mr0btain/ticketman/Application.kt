@@ -145,7 +145,7 @@ private fun ensureAdminExists(database: LocalDatabase, password: String) {
         ByteArray(12).also { SecureRandom().nextBytes(it) }.let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
     }
 
-    database.userDatabase.add(
+    val created = database.userDatabase.add(
         User(
             username = username,
             password = adminPassword,
@@ -153,6 +153,11 @@ private fun ensureAdminExists(database: LocalDatabase, password: String) {
             accessLevel = AccessLevel.ADMIN
         )
     )
+
+    if (!created) {
+        AppLogger.e(TAG, "No admin found and one couldn't be created")
+        return
+    }
 
     if (password.isBlank()) {
         AppLogger.m(TAG, "No admin found, created \"$username\" with password: $adminPassword  (change it from the admin screen)")

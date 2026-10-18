@@ -54,9 +54,7 @@ fun Route.noteRoutes(
             val received = call.receive<Note>()
             val note = received.copy(author = received.author.ifBlank { call.username(userDatabase) })
 
-            database.addNote(identifier, note)
-
-            if (database.getNotes(identifier)?.any { it.identifier == note.identifier } == true) {
+            if (database.addNote(identifier, note)) {
                 call.audit(auditLog, AuditAction.CREATE, "$entityType note", identifier, note.message.take(80))
                 call.respond(HttpStatusCode.Created, note)
             } else {
@@ -92,7 +90,11 @@ fun Route.noteRoutes(
                 return@delete
             }
 
-            database.removeNote(identifier)
+            if (!database.removeNote(identifier)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@delete
+            }
+
             call.audit(auditLog, AuditAction.DELETE, "$entityType note", identifier)
             call.respond(HttpStatusCode.Accepted)
         }
