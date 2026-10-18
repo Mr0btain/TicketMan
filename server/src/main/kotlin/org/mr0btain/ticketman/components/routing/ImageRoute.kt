@@ -37,8 +37,16 @@ fun Route.imageRoute(
     authenticate {
         // Multipart with the file in "image" and optionally a "description"
         post("/upload") {
-            val multipart = call.receiveMultipart(formFieldLimit = ImageLimits.MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES)
+            // Refused before reading a byte when the client says up front it's too big
+            if ((call.request.contentLength() ?: 0) > ImageLimits.MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES) {
+                call.respondText(ImageError.TOO_LARGE.message, status = HttpStatusCode.PayloadTooLarge)
+                return@post
+            }
+
+            // Ktor's parser reads ahead, so its limit has room to spare and ours in receive() is the one that trips
+            val multipart = call.receiveMultipart(formFieldLimit = ImageLimits.MAX_UPLOAD_BYTES * 2)
             var upload: File? = null
+            var receiving: File? = null
             var description = ""
             var tooLarge = false
 
@@ -50,7 +58,7 @@ fun Route.imageRoute(
                                 description = part.value
 
                             part is PartData.FileItem && part.name == ImageLimits.UPLOAD_FIELD && upload == null && !tooLarge -> {
-                                val target = service.newUploadFile()
+                                val target = service.newUploadFile().also { receiving = it }
 
                                 if (service.receive(part.provider(), target) == null) {
                                     target.delete()
@@ -58,6 +66,8 @@ fun Route.imageRoute(
                                 } else {
                                     upload = target
                                 }
+
+                                receiving = null
                             }
                         }
                     } finally {
@@ -65,8 +75,9 @@ fun Route.imageRoute(
                     }
                 }
             } catch (ex: Exception) {
-                // Ktor's own limit, or the client going away mid upload
+                // The client going away mid upload, or the rest of an oversized one being skipped
                 AppLogger.i(UPLOAD_TAG, "Upload cut short: ${ex.message}")
+                receiving?.delete()
                 upload?.delete()
                 upload = null
             }

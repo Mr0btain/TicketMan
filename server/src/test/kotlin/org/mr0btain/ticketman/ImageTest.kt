@@ -5,6 +5,7 @@ import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.ImageDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
@@ -199,6 +200,26 @@ class ImageTest {
             upload(token, ByteArray((ImageLimits.MAX_UPLOAD_BYTES + 1).toInt())).status
         )
         // Nothing was left behind in the temp folder
+        assertTrue(File(dataDir.toFile(), "server/images/.tmp").listFiles().orEmpty().isEmpty())
+    }
+
+    @Test
+    fun oversizedUploadWithNoLengthUpFrontIsRefusedAndCleanedUp() = testApplication {
+        setup()
+        val token = token(tech)
+        val bytes = ByteArray((ImageLimits.MAX_UPLOAD_BYTES + 2 * 1024 * 1024).toInt())
+
+        // A streamed body has no Content-Length, so the size is only found while reading
+        val response = client.post("/api/image/upload") {
+            bearerAuth(token)
+            setBody(MultiPartFormDataContent(formData {
+                append(ImageLimits.UPLOAD_FIELD, ChannelProvider { ByteReadChannel(bytes) }, Headers.build {
+                    append(HttpHeaders.ContentDisposition, "filename=\"huge.jpg\"")
+                })
+            }))
+        }
+
+        assertEquals(HttpStatusCode.PayloadTooLarge, response.status)
         assertTrue(File(dataDir.toFile(), "server/images/.tmp").listFiles().orEmpty().isEmpty())
     }
 
