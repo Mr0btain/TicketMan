@@ -1,8 +1,9 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.ticket
+package org.mr0btain.ticketman.ui.screens.dashboard.components.ticket
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
@@ -13,8 +14,8 @@ import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.components.cleanName
-import org.mr0btain.ticketman.ui.screens.main.expanded.DetailSection
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordDetail
+import org.mr0btain.ticketman.ui.screens.dashboard.components.DetailSection
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordDetail
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.tag
 import kotlin.uuid.Uuid
@@ -54,7 +55,7 @@ fun TicketInfoPane(
 
         if (ticket.problem.isNotBlank()) {
             DetailSection("Problem") {
-                androidx.compose.material3.Text(text = ticket.problem, style = TmTheme.typography.body, color = TmTheme.colors.text)
+                Text(text = ticket.problem, style = TmTheme.typography.body, color = TmTheme.colors.text)
             }
         }
 

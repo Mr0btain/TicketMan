@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.ui.screens.login.components.LoginField
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.RequestAccountForm
 import org.mr0btain.ticketman.ui.screens.login.components.ServerAddressField
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.login_text
 

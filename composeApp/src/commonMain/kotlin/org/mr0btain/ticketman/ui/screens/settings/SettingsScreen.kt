@@ -17,7 +17,7 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.ui.kit.containers.TmLazyColumn
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.ChangePinDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem

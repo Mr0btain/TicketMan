@@ -13,15 +13,15 @@ import org.mr0btain.ticketman.ui.kit.gallery.KitGallery
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
 import org.mr0btain.ticketman.ui.screens.invoice.InvoiceScreen
-import org.mr0btain.ticketman.ui.screens.main.MainScreen
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.dashboard.DashboardScreen
+import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
 
 @Composable
 fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
-    initialDestination: Destination = Destination.MAIN,
+    initialDestination: Destination = Destination.DASHBOARD,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
     snackBarState: SnackbarHostState
@@ -36,11 +36,11 @@ fun NavigationHost(
                 viewModel = mainViewModel,
                 snackBarState = snackBarState,
                 coroutineScope = coroutineScope,
-                onNavigateToMain = { navHostController.navigate(Destination.MAIN.route) }
+                onNavigateToMain = { navHostController.navigate(Destination.DASHBOARD.route) }
             )
         }
 
-        composable(Destination.DASHBOARD.route) {
+        composable(Destination.COUNTER.route) {
             CounterScreen(
                 viewModel = mainViewModel
             )
@@ -51,13 +51,13 @@ fun NavigationHost(
                 viewModel = mainViewModel,
                 onOpenTicket = { identifier ->
                     mainViewModel.counter.openTicket(identifier)
-                    navHostController.navigate(Destination.DASHBOARD.route)
+                    navHostController.navigate(Destination.COUNTER.route)
                 }
             )
         }
 
-        composable(Destination.MAIN.route) {
-            MainScreen(viewModel = mainViewModel)
+        composable(Destination.DASHBOARD.route) {
+            DashboardScreen(viewModel = mainViewModel)
         }
 
         composable(Destination.SETTINGS.route) {

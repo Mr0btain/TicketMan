@@ -16,34 +16,31 @@ import androidx.compose.runtime.snapshotFlow
  */
 @Composable
 fun <Value>offsetPagerHandler(
-    offsetPager: OffsetPager<Value>?,
+    offsetPager: OffsetPager<Value>,
     lazyListState: LazyListState
 ) {
     // Previous index
     var previousIndex by remember(lazyListState) { mutableStateOf(lazyListState.firstVisibleItemIndex) }
 
-    LaunchedEffect(lazyListState) {
+    LaunchedEffect(lazyListState, offsetPager) {
         snapshotFlow { lazyListState.firstVisibleItemIndex to lazyListState.layoutInfo.totalItemsCount }
             .collect { (firstVisible, totalCount) ->
-                // If offset pager isn't null, check if we need to load
-                offsetPager?.let { pager ->
-                    // Last visible item index
-                    val lastVisible = firstVisible + lazyListState.layoutInfo.visibleItemsInfo.size
+                // Last visible item index
+                val lastVisible = firstVisible + lazyListState.layoutInfo.visibleItemsInfo.size
 
-                    // Check if we've scrolled enough to move to the next item
-                    if (previousIndex != lazyListState.firstVisibleItemIndex) {
-                        if (previousIndex > lazyListState.firstVisibleItemIndex) {
-                            // Scrolling up
-                            if (lastVisible <= pager.config.prefetchDistance) pager.loadPrevious()
-                        } else {
-                            // Scrolling down
-                            if (lastVisible >= totalCount - pager.config.prefetchDistance) pager.loadNext()
-                        }
+                // Check if we've scrolled enough to move to the next item
+                if (previousIndex != lazyListState.firstVisibleItemIndex) {
+                    if (previousIndex > lazyListState.firstVisibleItemIndex) {
+                        // Scrolling up
+                        if (lastVisible <= offsetPager.config.prefetchDistance) offsetPager.loadPrevious()
+                    } else {
+                        // Scrolling down
+                        if (lastVisible >= totalCount - offsetPager.config.prefetchDistance) offsetPager.loadNext()
                     }
-
-                    // Set previous index to current
-                    previousIndex = lazyListState.firstVisibleItemIndex
                 }
+
+                // Set previous index to current
+                previousIndex = lazyListState.firstVisibleItemIndex
             }
     }
 }

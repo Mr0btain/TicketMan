@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded
+package org.mr0btain.ticketman.ui.screens.dashboard
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -18,36 +18,30 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
-import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerDialog
-import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerPanel
-import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryDialog
-import org.mr0btain.ticketman.ui.screens.main.expanded.inventory.InventoryPanel
-import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketDialog
-import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.customer.CustomerDialog
+import org.mr0btain.ticketman.ui.screens.dashboard.components.customer.CustomerPanel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.inventory.InventoryDialog
+import org.mr0btain.ticketman.ui.screens.dashboard.components.inventory.InventoryPanel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.ticket.TicketDialog
+import org.mr0btain.ticketman.ui.screens.dashboard.components.ticket.TicketPanel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.refresh_cw
 import kotlin.uuid.Uuid
 
-// TODO: When hitting confirm on any edit we hit the database even if changes haven't occurred
-// TODO: Maybe move allot of these states and their seed values to viewmodel and move dialogs to App.kt if we use them in many screens
-
 @Composable
-fun ExpandedMainScreen(
+fun DashboardScreen(
     viewModel: MainViewModel
 ) {
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
     val loginState = viewModel.loginState.collectAsState()
 
-    // User stuff
-    //val userPagedItems = viewModel.userPager?.items?.collectAsState()
-    //val userLazyListState = rememberLazyListState()
-
     // For customer panel
     val customerSeed = viewModel.customerSeed
-    val customerPagedItems = viewModel.customerPager?.items?.collectAsState()
+    val customerPagedItems = viewModel.customerPager.items.collectAsState()
     val customerLazyListState = rememberLazyListState()
+    val pendingCustomer by viewModel.customerSelection.pending.collectAsState()
 
     // Handler for the customer pager
     offsetPagerHandler(viewModel.customerPager, customerLazyListState)
@@ -58,8 +52,9 @@ fun ExpandedMainScreen(
 
     // For ticket panel
     val ticketSeed = viewModel.ticketSeed
-    val ticketPagedItems =  viewModel.ticketPager?.items?.collectAsState()
+    val ticketPagedItems = viewModel.ticketPager.items.collectAsState()
     val ticketLazyListState = rememberLazyListState()
+    val pendingTicket by viewModel.ticketSelection.pending.collectAsState()
     val ticketScope by viewModel.ticketScope.collectAsState()
     val scope = rememberCoroutineScope()
 
@@ -71,8 +66,9 @@ fun ExpandedMainScreen(
 
     // For Inventory panel
     val inventorySeed = viewModel.inventorySeed
-    val inventoryPagedItems = viewModel.inventoryPager?.items?.collectAsState()
+    val inventoryPagedItems = viewModel.inventoryPager.items.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
+    val pendingInventory by viewModel.inventorySelection.pending.collectAsState()
 
     // Handler for inventory pager
     offsetPagerHandler(viewModel.inventoryPager, inventoryLazyListState)
@@ -108,7 +104,7 @@ fun ExpandedMainScreen(
             showCustomerDialog = false
             // Reset seed data
             viewModel.setSelectedCustomer(customerSeed.identifier)
-                    },
+        },
         onContinue = { viewModel.handleCustomerChanges() }
     )
 
@@ -122,7 +118,7 @@ fun ExpandedMainScreen(
 
             // Reset seed data
             viewModel.setSelectedTicket(ticketSeed.identifier)
-                    },
+        },
         onCustomerSearchQuery = { query -> viewModel.searchCustomers(query) },
         onUserSearchQuery = { query -> viewModel.searchUsers(query) }
     )
@@ -136,7 +132,7 @@ fun ExpandedMainScreen(
 
             // Reset seed data
             viewModel.setSelectedInventory(inventorySeed.identifier)
-                    },
+        },
         onContinue = {
             // TODO: Not yet implemented
         },
@@ -211,7 +207,7 @@ fun ExpandedMainScreen(
         when (tabIndex.value) {
             0 -> CustomerPanel(
                 onAddCustomer = {
-                    customerSeed.clear()
+                    viewModel.clearSelectedCustomer()
                     showCustomerDialog = true
                 },
                 onEditCustomer = { showCustomerDialog = true },
@@ -227,16 +223,18 @@ fun ExpandedMainScreen(
                 },
                 onImageClick = { id -> showNoteImages(customerSeed.notes, id) },
                 seed = customerSeed,
-                customerList = customerPagedItems?.value ?: emptyList(),
+                pendingId = pendingCustomer,
+                customerList = customerPagedItems.value,
                 customerLazyListState = customerLazyListState
             )
 
             // TODO: Finish user implementation
             1 -> TicketPanel(
-                ticketList = ticketPagedItems?.value ?: emptyList(),
+                ticketList = ticketPagedItems.value,
                 seed = ticketSeed,
+                pendingId = pendingTicket,
                 onAddNewTicket = {
-                    ticketSeed.clear()
+                    viewModel.clearSelectedTicket()
                     showTicketDialog = true
                 },
                 onEditTicket = { if (!ticketSeed.isNew) showTicketDialog = true },
@@ -257,12 +255,13 @@ fun ExpandedMainScreen(
             )
 
             2 -> InventoryPanel(
-                inventoryList = inventoryPagedItems?.value ?: emptyList(),
+                inventoryList = inventoryPagedItems.value,
                 selectedInventory = inventorySeed,
+                pendingId = pendingInventory,
                 onSelectedInventoryChange = { id -> viewModel.setSelectedInventory(id) },
                 onSearchQuery = { viewModel.searchInventory(it) },
                 onAddInventory = {
-                    inventorySeed.clear()
+                    viewModel.clearSelectedInventory()
                     showInventoryDialog = true
                 },
                 onEditInventory = { showInventoryDialog = true },

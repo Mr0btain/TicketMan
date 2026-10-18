@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
+package org.mr0btain.ticketman.ui.screens.dashboard.components.inventory
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
@@ -6,7 +6,7 @@ import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.screens.shared.PanelTopBar
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsLayout
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsLayout
 import kotlin.uuid.Uuid
 
 // TODO: Setup setting reorder on stock hitting a certain amount. Like a popup on login or when it happens?
@@ -16,6 +16,7 @@ import kotlin.uuid.Uuid
 fun InventoryPanel(
     inventoryList: List<Inventory>,
     selectedInventory: InventorySeed,
+    pendingId: Uuid? = null,
     onSelectedInventoryChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onAddInventory: () -> Unit,
@@ -37,7 +38,7 @@ fun InventoryPanel(
         list = {
             InventoryListPane(
                 inventoryList = inventoryList,
-                selected = selectedInventory.inventory.identifier,
+                selected = pendingId ?: selectedInventory.identifier,
                 onClick = onSelectedInventoryChange,
                 state = inventoryListState
             )

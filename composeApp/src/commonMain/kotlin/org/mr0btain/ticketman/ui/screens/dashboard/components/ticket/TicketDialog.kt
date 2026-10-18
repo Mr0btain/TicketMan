@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.ticket
+package org.mr0btain.ticketman.ui.screens.dashboard.components.ticket
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*

@@ -31,7 +31,7 @@ import org.mr0btain.ticketman.ui.screens.admin.users.InviteDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.ResetPasswordDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.UserDialog
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.refresh_cw
 import ticketman.composeapp.generated.resources.shield
@@ -76,6 +76,7 @@ private fun AdminContent(
     var selectedTab by rememberSaveable { mutableStateOf(AdminTab.OVERVIEW) }
 
     val isLoading by admin.isLoading.collectAsState()
+    val pendingUser by viewModel.userSelection.pending.collectAsState()
     val stats by admin.stats.collectAsState()
     val dailyReport by admin.dailyReport.collectAsState()
     val lowStock by admin.lowStock.collectAsState()
@@ -92,7 +93,7 @@ private fun AdminContent(
 
     // Users list uses the same pager as everywhere else
     val userSeed = viewModel.userSeed
-    val users = viewModel.userPager?.items?.collectAsState()
+    val users = viewModel.userPager.items.collectAsState()
     val userListState = rememberLazyListState()
     offsetPagerHandler(viewModel.userPager, userListState)
 
@@ -132,7 +133,7 @@ private fun AdminContent(
     // Fresh numbers whenever the screen is opened
     LaunchedEffect(Unit) {
         admin.refreshAll()
-        viewModel.userPager?.refresh()
+        viewModel.userPager.refresh()
     }
 
     UserDialog(
@@ -221,8 +222,9 @@ private fun AdminContent(
                 onApprove = { user -> approving = user },
                 onReject = { user -> admin.reject(user) },
                 onRenewInvite = { user -> admin.renewInvite(user) { invite -> shownInvite = invite } },
-                userList = users?.value ?: emptyList(),
+                userList = users.value,
                 seed = userSeed,
+                pendingId = pendingUser,
                 currentUserIdentifier = currentUser?.identifier,
                 listState = userListState,
                 onSelect = { identifier -> viewModel.setSelectedUser(identifier) },

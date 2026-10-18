@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.customer
+package org.mr0btain.ticketman.ui.screens.dashboard.components.customer
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.width
@@ -13,8 +13,8 @@ import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TicketIdText
 import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
-import org.mr0btain.ticketman.ui.screens.main.expanded.DetailSection
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordDetail
+import org.mr0btain.ticketman.ui.screens.dashboard.components.DetailSection
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordDetail
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.user
 import kotlin.uuid.Uuid

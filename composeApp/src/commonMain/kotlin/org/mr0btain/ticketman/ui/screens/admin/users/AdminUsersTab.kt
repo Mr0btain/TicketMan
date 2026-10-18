@@ -24,10 +24,10 @@ import org.mr0btain.ticketman.ui.kit.data.TmTableRow
 import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
-import org.mr0btain.ticketman.ui.screens.main.expanded.DetailSection
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordDetail
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsLayout
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsList
+import org.mr0btain.ticketman.ui.screens.dashboard.components.DetailSection
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordDetail
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsLayout
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsList
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.user
 import ticketman.composeapp.generated.resources.users
@@ -53,6 +53,7 @@ fun AdminUsersTab(
     onRenewInvite: (User) -> Unit,
     userList: List<User>,
     seed: UserSeed,
+    pendingId: Uuid? = null,
     currentUserIdentifier: Uuid?,
     listState: LazyListState,
     onSelect: (Uuid) -> Unit,
@@ -93,7 +94,7 @@ fun AdminUsersTab(
                 list = {
                     UserListPane(
                         userList = userList,
-                        selected = if (seed.isNew) null else seed.identifier,
+                        selected = pendingId ?: if (seed.isNew) null else seed.identifier,
                         onClick = onSelect,
                         state = listState
                     )

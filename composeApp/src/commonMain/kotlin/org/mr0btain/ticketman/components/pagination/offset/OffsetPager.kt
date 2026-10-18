@@ -1,14 +1,11 @@
 package org.mr0btain.ticketman.components.pagination.offset
 
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
 import org.mr0btain.ticketman.data.cache.LruCache
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.logging.AppLogger
@@ -16,16 +13,16 @@ import org.mr0btain.ticketman.logging.AppLogger
 /**
  * Custom offset pager. We needed more control over the pager state so we can handle jumping to items that may
  * be pretty far down the list. It's easier to handle when we have full control over the pager itself.
- * Doesn't load anything on creation, call [refresh] to do the first load.
- * @param coroutineScope Coroutine scope for suspend functions
+ * Doesn't load anything on creation, call [refresh] to do the first load. One pager lives as long as its owner,
+ * change the page size with [setPageSize] and empty it with [clear] instead of building a new one, so anything
+ * already collecting [items] keeps getting updates.
  * @param config OffsetPagerConfig that defines the parameters of the pager
  * @param fetch Function used to fetch the items
  */
 @Suppress("PrivatePropertyName")
 class OffsetPager<Value>(
     tag: String,
-    coroutineScope: CoroutineScope,
-    val config: OffsetPagerConfig = OffsetPagerConfig(),
+    config: OffsetPagerConfig = OffsetPagerConfig(),
     private val fetch: suspend (page: Int, pageSize: Int) -> List<Value>
 ) {
     private val CACHE_TAG = "$tag:Cache"
@@ -34,15 +31,20 @@ class OffsetPager<Value>(
     private val REFRESH_TAG = "$tag:Refresh"
     private val TRIM_TAG = "$tag:Trim"
 
+    /** Parameters of the pager, change the page size with [setPageSize] */
+    var config: OffsetPagerConfig = config
+        private set
+
     /** Cache for holding pages that may be requested again, this helps save on hits to a database. */
     private val cache = LruCache<Int, List<Value>>(config.cacheSize, CACHE_TAG)
 
-    // Mutable state list of pages, we can manage this nicely, and it should update items as this is changed
-    private val deque = mutableStateListOf<List<Value>>()
+    // Loaded pages in order, items is rebuilt from this every time it changes
+    private val deque = ArrayDeque<List<Value>>()
 
-    /** Flattened items as a StateFlow for UI */
-    val items: StateFlow<List<Value>> = snapshotFlow { deque.flatten() }
-        .stateIn(coroutineScope, SharingStarted.Companion.Eagerly, emptyList())
+    private val _items = MutableStateFlow<List<Value>>(emptyList())
+
+    /** Flattened items for UI */
+    val items: StateFlow<List<Value>> = _items.asStateFlow()
 
     /** Whether we are loading or not */
     var isLoading by mutableStateOf(false)
@@ -53,7 +55,7 @@ class OffsetPager<Value>(
         private set
 
     // The max number of pages
-    private val maxPages = config.maxSize / config.pageSize
+    private val maxPages get() = config.maxSize / config.pageSize
 
     // Keeping track of the first page in the list and the last
     private var firstPage: Int = 0
@@ -63,14 +65,34 @@ class OffsetPager<Value>(
     private var reachedStart = false
     private var reachedEnd = false
 
+    /** Changes how many items a page holds. Loaded pages were fetched with the old size, so this empties the pager */
+    fun setPageSize(pageSize: Int) {
+        if (pageSize == config.pageSize) return
+
+        config = config.copy(pageSize = pageSize)
+        clear()
+    }
+
+    /** Drops every loaded and cached page, nothing is shown until the next [refresh] */
+    fun clear() {
+        deque.clear()
+        cache.clear()
+        firstPage = 0
+        lastPage = 0
+        reachedStart = false
+        reachedEnd = false
+        publish()
+    }
+
     /** Clears and refreshes the pager data */
     suspend fun refresh() {
         if (isRefreshing) return
 
         isRefreshing = true
 
-        // Clear deque
-        deque.clear()
+        // Start over from the first page, the data may have changed since anything was cached
+        clear()
+        reachedStart = true
 
         // Fetch data
         (0..<config.initialLoadSize).forEach { page ->
@@ -81,8 +103,6 @@ class OffsetPager<Value>(
                 loadNext()
         }
 
-        reachedStart = true
-        reachedEnd = false
         isRefreshing = false
 
         AppLogger.m(REFRESH_TAG, SimpleResult.SUCCESS)
@@ -97,14 +117,16 @@ class OffsetPager<Value>(
         // Clear queue and cache
         deque.clear()
         cache.clear()
+        reachedEnd = false
 
         // Reset last page so we increment correctly.
-        lastPage = firstPage
+        val start = firstPage
+        lastPage = start
 
         // Fetch data
-        (firstPage..<config.initialLoadSize).forEach { page ->
-            if (page == firstPage)
-                load(page = firstPage, append = true, prepend = false)
+        (start..<start + config.initialLoadSize).forEach { page ->
+            if (page == start)
+                load(page = start, append = true, prepend = false)
             else
                 loadNext()
         }
@@ -134,6 +156,11 @@ class OffsetPager<Value>(
             append = false,
             prepend = true
         )
+    }
+
+    // Pushes the loaded pages out to the UI
+    private fun publish() {
+        _items.value = deque.flatten()
     }
 
     /** Checks and trims Deque if needed */
@@ -170,6 +197,8 @@ class OffsetPager<Value>(
     ) {
         isLoading = true
 
+        val tag = if (append) LOAD_NEXT_TAG else LOAD_PREVIOUS_TAG
+
         try {
             // Check if we had the item in cache, if not fetch it and insert into cache
             val result = cache.get(page)
@@ -179,7 +208,7 @@ class OffsetPager<Value>(
             when {
                 append -> {
                     // Insert into deque
-                    deque.add(result) //addLast(result)
+                    deque.addLast(result)
 
                     // Set last page upon success
                     lastPage = page
@@ -193,7 +222,7 @@ class OffsetPager<Value>(
 
                 prepend -> {
                     // Insert into deque
-                    deque.add(0, result) //addFirst(result)
+                    deque.addFirst(result)
 
                     // Set first page upon success
                     firstPage = page
@@ -205,18 +234,14 @@ class OffsetPager<Value>(
                     trimDeque(append = false, prepend = true)
                 }
             }
+
+            publish()
+
+            AppLogger.m(tag, SimpleResult.SUCCESS)
         } catch (ex: Exception) {
-            if (append)
-                AppLogger.e(LOAD_NEXT_TAG, SimpleResult.FAIL, ex)
-            else
-                AppLogger.e(LOAD_PREVIOUS_TAG, SimpleResult.FAIL,ex)
+            AppLogger.e(tag, SimpleResult.FAIL, ex)
         } finally {
             isLoading = false
-
-            if (append)
-                AppLogger.m(LOAD_NEXT_TAG, SimpleResult.SUCCESS)
-            else
-                AppLogger.m(LOAD_PREVIOUS_TAG, SimpleResult.SUCCESS)
         }
     }
 }

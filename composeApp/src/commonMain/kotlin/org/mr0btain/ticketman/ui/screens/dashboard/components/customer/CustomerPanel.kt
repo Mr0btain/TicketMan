@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.customer
+package org.mr0btain.ticketman.ui.screens.dashboard.components.customer
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.screens.shared.PanelTopBar
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsLayout
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsLayout
 import kotlin.uuid.Uuid
 
 /** Customers: search and add on top, the list, and the picked customer's details */
@@ -15,6 +15,7 @@ import kotlin.uuid.Uuid
 fun CustomerPanel(
     customerList: List<Customer>,
     seed: CustomerSeed,
+    pendingId: Uuid? = null,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
     onCustomerSelectionChange: (Uuid) -> Unit,
@@ -38,7 +39,7 @@ fun CustomerPanel(
         list = {
             CustomerListPane(
                 customerList = customerList,
-                selectedId = seed.customer.identifier,
+                selectedId = pendingId ?: seed.identifier,
                 lazyListState = customerLazyListState,
                 onClick = onCustomerSelectionChange
             )

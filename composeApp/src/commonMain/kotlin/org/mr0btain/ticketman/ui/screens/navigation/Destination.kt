@@ -8,9 +8,9 @@ package org.mr0btain.ticketman.ui.screens.navigation
 
 enum class Destination(val route: String, val index: Int) {
     ADMIN("Admin", 0),
-    DASHBOARD("Dash", 1),
+    COUNTER("Counter", 1),
     INVOICE("Invoice", 2),
-    MAIN("Main", 4),
+    DASHBOARD("Dash", 4),
     SETTINGS("Settings", 5),
 
     /** UI kit component gallery, listed in debug builds and opened from Settings */

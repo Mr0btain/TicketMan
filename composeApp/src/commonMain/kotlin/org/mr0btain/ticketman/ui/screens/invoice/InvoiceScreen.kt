@@ -28,7 +28,7 @@ import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.file_text
 import ticketman.composeapp.generated.resources.refresh_cw

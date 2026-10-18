@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded
+package org.mr0btain.ticketman.ui.screens.dashboard.components
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope

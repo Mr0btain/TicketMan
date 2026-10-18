@@ -23,7 +23,6 @@ import org.mr0btain.ticketman.util.AppDir
 import java.security.SecureRandom
 import java.util.Base64
 
-// TODO: Setup way for admin to change access levels for things individually
 // TODO: Should also setup some sort of timeout for session tokens. So after so much time we clear them?
 
 /**
@@ -38,7 +37,7 @@ fun Application.module() {
     val path = this.environment.config.property("env.dataPath").getString()
     val appDir = AppDir().path
 
-    println("AppDir: $appDir")
+    AppLogger.m("SERVER", "Path for Files: $appDir")
 
     // Check path dir
     if (path.isNotBlank() || appDir != null) {

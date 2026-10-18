@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.ticket
+package org.mr0btain.ticketman.ui.screens.dashboard.components.ticket
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.screens.shared.PanelTopBar
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsLayout
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsLayout
 import kotlin.uuid.Uuid
 
 // TODO: Add hours worked/ inventory items to a list of expense and charges
@@ -24,6 +24,7 @@ fun TicketPanel(
     ticketScope: TicketScope,
     onTicketScopeChange: (TicketScope) -> Unit,
     seed: TicketSeed,
+    pendingId: Uuid? = null,
     ticketList: List<Ticket>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
@@ -57,7 +58,7 @@ fun TicketPanel(
             TicketListPane(
                 ticketList = ticketList,
                 ticketScope = ticketScope,
-                selectedTicket = seed.ticket.identifier,
+                selectedTicket = pendingId ?: seed.identifier,
                 onClick = onSelectedTicketChange,
                 state = ticketListState
             )

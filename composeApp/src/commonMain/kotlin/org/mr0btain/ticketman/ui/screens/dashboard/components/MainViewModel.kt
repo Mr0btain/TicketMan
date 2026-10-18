@@ -1,8 +1,10 @@
-package org.mr0btain.ticketman.ui.screens.main.components
+package org.mr0btain.ticketman.ui.screens.dashboard.components
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.ktor.client.engine.HttpClientEngine
+import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -15,6 +17,7 @@ import org.mr0btain.ticketman.components.data.customer.CustomerCache
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.data.inventory.InventoryCache
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
+import org.mr0btain.ticketman.components.data.RecordSelection
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.data.ticket.TicketCache
@@ -59,7 +62,8 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 class MainViewModel(
     val snackBarHost: SnackbarHostState,
-    private val localStorage: LocalStorage
+    private val localStorage: LocalStorage,
+    engine: HttpClientEngine = getHttpEngine()
 ) : ViewModel() {
     private val TAG = "MainViewModel"
     private val INIT_TAG = "$TAG:Init"
@@ -85,6 +89,7 @@ class MainViewModel(
 
         viewModelScope.launch {
             // Pull saved settings
+            // TODO: Maybe we could move this to a handler or something as its getting kind of large
             _darkMode.value = localStorage.darkMode
             _palette.value = TmPalettes.byId(localStorage.themeId)
             _font.value = TmFonts.byId(localStorage.fontId)
@@ -101,9 +106,6 @@ class MainViewModel(
             // Set url in all our handlers and log in with any stored credentials
             handleConnectionResult(remoteHandler.setUrl(localStorage.serverUrl))
 
-            // Initialize pagers
-            buildPagers()
-
             // Pagers don't load themselves, so do the first load now that we're connected
             refreshPagers()
         }
@@ -117,73 +119,23 @@ class MainViewModel(
     // Max size of cache. Caches are built with the view model, so changes apply on next start
     val maxCacheSize = localStorage.cacheSize
 
-    /** (Re)builds all the pagers using the current page size */
-    private fun buildPagers() {
-        val config = OffsetPagerConfig(pageSize = _pageSize.value)
-
-        customerPager = OffsetPager(
-            tag = CUSTOMER_PAGER_TAG,
-            coroutineScope = viewModelScope,
-            config = config,
-            fetch = { page, pageSize ->
-                remoteHandler.customerRepo.fetch(
-                    offset = (page * pageSize).toLong(),
-                    limit = pageSize
-                )
-            }
-        )
-
-        ticketPager = OffsetPager(
-            tag = TICKET_PAGER_TAG,
-            coroutineScope = viewModelScope,
-            config = config,
-            fetch = { page, pageSize ->
-                val offset = (page * pageSize).toLong()
-                when (_ticketScope.value) {
-                    TicketScope.MINE -> remoteHandler.ticketRepo.fetchMine(offset = offset, limit = pageSize)
-                    TicketScope.ALL -> remoteHandler.ticketRepo.fetch(offset = offset, limit = pageSize)
-                }
-            }
-        )
-
-        inventoryPager = OffsetPager(
-            tag = INVENTORY_PAGER_TAG,
-            coroutineScope = viewModelScope,
-            config = config,
-            fetch = { page, pageSize ->
-                remoteHandler.inventoryRepo.fetch(
-                    offset = (page * pageSize).toLong(),
-                    limit = pageSize
-                )
-            }
-        )
-
-        userPager = OffsetPager(
-            tag = USER_PAGER_TAG,
-            coroutineScope = viewModelScope,
-            config = config,
-            fetch = { page, pageSize ->
-                remoteHandler.userRepo.fetch(
-                    offset = (page * pageSize).toLong(),
-                    limit = pageSize
-                )
-            }
-        )
-    }
+    // Every pager is built once with the saved page size and lives as long as the view model, so screens can
+    // collect their items right away and keep getting updates after logins, refreshes and page size changes
+    private val pagerConfig = OffsetPagerConfig(pageSize = localStorage.pageSize)
 
     fun refreshPagers() {
         viewModelScope.launch {
-            customerPager?.refresh()
-            ticketPager?.refresh()
-            userPager?.refresh()
-            inventoryPager?.refresh()
+            customerPager.refresh()
+            ticketPager.refresh()
+            userPager.refresh()
+            inventoryPager.refresh()
         }
     }
 
     /** ----------------------------------------------REMOTE------------------------------------------------------------------- */
 
     val remoteHandler = RemoteHandler(
-        engine = getHttpEngine(),
+        engine = engine,
         localStorage = localStorage
     )
 
@@ -191,7 +143,16 @@ class MainViewModel(
 
     val customerCache: CustomerCache = CustomerCache(maxCacheSize)
 
-    var customerPager: OffsetPager<Customer>? = null
+    val customerPager = OffsetPager<Customer>(
+        tag = CUSTOMER_PAGER_TAG,
+        config = pagerConfig,
+        fetch = { page, pageSize ->
+            remoteHandler.customerRepo.fetch(
+                offset = (page * pageSize).toLong(),
+                limit = pageSize
+            )
+        }
+    )
 
     val customerSeed: CustomerSeed = CustomerSeed()
 
@@ -232,7 +193,7 @@ class MainViewModel(
 
             customerCache.remove(customer.identifier)
             setSelectedCustomer(customer.identifier)
-            customerPager?.refreshCurrentData()
+            customerPager.refreshCurrentData()
         }
     }
 
@@ -248,32 +209,32 @@ class MainViewModel(
         existing.filter { it.identifier !in keptIds }.forEach { note -> repo.removeNote(note.identifier) }
     }
 
+    /** Customer being loaded after a click, the list highlights it until it's in the seed */
+    val customerSelection = RecordSelection(viewModelScope)
+
     /** Sets the selected customer and inserts the data into the cache */
     fun setSelectedCustomer(identifier: Uuid) {
-        viewModelScope.launch {
-            // Get customer from cache if we can and set the values
-            val cached = customerCache.get(identifier)?.let { (customer, notes, tickets) ->
-                customerSeed.setCustomer(
-                    customer = customer,
-                    notes = notes,
-                    tickets = tickets
-                )
-            }
+        if (customerSelection.pending.value == identifier) return
 
-            // Else if we didn't have it in cache, pull it and add it to cache
-            if (cached == null) {
-                remoteHandler.customerRepo.get(identifier)?.let { customer ->
-                    val notes = remoteHandler.customerRepo.getNotes(identifier)
-                    val tickets = remoteHandler.customerRepo.getTickets(identifier)
+        customerSelection.select(identifier) {
+            // Get customer from cache if we can, else pull it and add it to cache
+            val (customer, notes, tickets) = customerCache.get(identifier) ?: coroutineScope {
+                val notes = async { remoteHandler.customerRepo.getNotes(identifier) }
+                val tickets = async { remoteHandler.customerRepo.getTickets(identifier) }
+                val customer = remoteHandler.customerRepo.get(identifier) ?: return@coroutineScope null
 
-                    // Set selected
-                    customerSeed.setCustomer(customer, notes, tickets)
+                CustomerCache.CustomersData(customer, notes.await(), tickets.await())
+                    .also { customerCache.put(it.customer, it.notes, it.tickets) }
+            } ?: return@select null
 
-                    // Add to cache
-                    customerCache.put(customer, notes, tickets)
-                }
-            }
+            return@select { customerSeed.setCustomer(customer, notes, tickets) }
         }
+    }
+
+    /** Empties the customer seed for a new one, dropping any customer still loading */
+    fun clearSelectedCustomer() {
+        customerSelection.cancel()
+        customerSeed.clear()
     }
 
     suspend fun getCustomer(identifier: Uuid): Customer? =
@@ -287,11 +248,11 @@ class MainViewModel(
     fun removeCustomer(identifier: Uuid) {
         viewModelScope.launch {
             if (customerSeed.identifier == identifier) {
-                customerSeed.clear()
+                clearSelectedCustomer()
                 remoteHandler.customerRepo.remove(identifier)
 
                 // Refresh pager data
-                customerPager?.refreshCurrentData()
+                customerPager.refreshCurrentData()
             }
         }
     }
@@ -300,7 +261,17 @@ class MainViewModel(
 
     val ticketCache = TicketCache(maxCacheSize)
 
-    var ticketPager: OffsetPager<Ticket>? = null
+    val ticketPager = OffsetPager<Ticket>(
+        tag = TICKET_PAGER_TAG,
+        config = pagerConfig,
+        fetch = { page, pageSize ->
+            val offset = (page * pageSize).toLong()
+            when (_ticketScope.value) {
+                TicketScope.MINE -> remoteHandler.ticketRepo.fetchMine(offset = offset, limit = pageSize)
+                TicketScope.ALL -> remoteHandler.ticketRepo.fetch(offset = offset, limit = pageSize)
+            }
+        }
+    )
 
     private val _ticketScope = MutableStateFlow(TicketScope.DEFAULT)
     val ticketScope = _ticketScope.asStateFlow()
@@ -311,39 +282,38 @@ class MainViewModel(
 
         _ticketScope.value = scope
         localStorage.ticketScope = scope.name
-        viewModelScope.launch { ticketPager?.refresh() }
+        viewModelScope.launch { ticketPager.refresh() }
     }
 
     val ticketSeed: TicketSeed = TicketSeed()
 
     /** Sets selected ticket and adds it to the cache */
+    /** Ticket being loaded after a click, the list highlights it until it's in the seed */
+    val ticketSelection = RecordSelection(viewModelScope)
+
     fun setSelectedTicket(identifier: Uuid) {
-        viewModelScope.launch {
-            val cached = ticketCache.get(identifier)?.let { (ticket, notes, customer, user) ->
-                ticketSeed.setTicket(
-                    ticket = ticket,
-                    notes = notes,
-                    customerId = customer,
-                    userId = user
-                )
-            }
+        if (ticketSelection.pending.value == identifier) return
 
+        ticketSelection.select(identifier) {
             // If cache didn't have ticket, pull it and add to cache
-            if (cached == null) {
-                remoteHandler.ticketRepo.get(identifier)?.let { ticket ->
-                    // Get notes
-                    val notes = remoteHandler.ticketRepo.getNotes(identifier)
-                    val customer = remoteHandler.ticketRepo.getCustomer(identifier)
-                    val user = remoteHandler.ticketRepo.getUser(identifier)
+            val (ticket, notes, customer, user) = ticketCache.get(identifier) ?: coroutineScope {
+                val notes = async { remoteHandler.ticketRepo.getNotes(identifier) }
+                val customer = async { remoteHandler.ticketRepo.getCustomer(identifier) }
+                val user = async { remoteHandler.ticketRepo.getUser(identifier) }
+                val ticket = remoteHandler.ticketRepo.get(identifier) ?: return@coroutineScope null
 
-                    // Set seed data
-                    ticketSeed.setTicket(ticket, notes, customer, user)
+                TicketCache.TicketData(ticket, notes.await(), customer.await(), user.await())
+                    .also { ticketCache.put(it.ticket, it.notes, it.customer, it.user) }
+            } ?: return@select null
 
-                    // Insert into cache
-                    ticketCache.put(ticket, notes, customer, user)
-                }
-            }
+            return@select { ticketSeed.setTicket(ticket, notes, customer, user) }
         }
+    }
+
+    /** Empties the ticket seed for a new one, dropping any ticket still loading */
+    fun clearSelectedTicket() {
+        ticketSelection.cancel()
+        ticketSeed.clear()
     }
 
     /** Saves the ticket seed: the ticket, its notes, and who it belongs to and is assigned to */
@@ -390,7 +360,7 @@ class MainViewModel(
 
             ticketCache.remove(ticket.identifier)
             setSelectedTicket(ticket.identifier)
-            ticketPager?.refreshCurrentData()
+            ticketPager.refreshCurrentData()
         }
     }
 
@@ -401,9 +371,9 @@ class MainViewModel(
     fun removeTicket(identifier: Uuid) {
         viewModelScope.launch {
             if (ticketSeed.identifier == identifier) {
-                ticketSeed.clear()
+                clearSelectedTicket()
                 remoteHandler.ticketRepo.remove(identifier)
-                ticketPager?.refreshCurrentData()
+                ticketPager.refreshCurrentData()
             }
         }
     }
@@ -412,26 +382,42 @@ class MainViewModel(
 
     val inventoryCache = InventoryCache(maxCacheSize)
 
-    var inventoryPager: OffsetPager<Inventory>? = null
+    val inventoryPager = OffsetPager<Inventory>(
+        tag = INVENTORY_PAGER_TAG,
+        config = pagerConfig,
+        fetch = { page, pageSize ->
+            remoteHandler.inventoryRepo.fetch(
+                offset = (page * pageSize).toLong(),
+                limit = pageSize
+            )
+        }
+    )
 
     val inventorySeed: InventorySeed = InventorySeed()
 
+    /** Inventory being loaded after a click, the list highlights it until it's in the seed */
+    val inventorySelection = RecordSelection(viewModelScope)
+
     fun setSelectedInventory(identifier: Uuid) {
-        viewModelScope.launch {
-           val cached = inventoryCache.get(identifier)?.let { (inventory, notes) ->
-               inventorySeed.setInitial(inventory, notes)
-           }
+        if (inventorySelection.pending.value == identifier) return
 
-            if (cached == null) {
-                remoteHandler.inventoryRepo.get(identifier)?.let { inventory ->
-                    val notes = remoteHandler.inventoryRepo.getNotes(identifier)
+        inventorySelection.select(identifier) {
+            val (inventory, notes) = inventoryCache.get(identifier) ?: coroutineScope {
+                val notes = async { remoteHandler.inventoryRepo.getNotes(identifier) }
+                val inventory = remoteHandler.inventoryRepo.get(identifier) ?: return@coroutineScope null
 
-                    inventorySeed.setInitial(inventory, notes)
+                InventoryCache.InventoryData(inventory, notes.await())
+                    .also { inventoryCache.put(it.inventory, it.notes) }
+            } ?: return@select null
 
-                    inventoryCache.put(inventory, notes)
-                }
-            }
+            return@select { inventorySeed.setInitial(inventory, notes) }
         }
+    }
+
+    /** Empties the inventory seed for a new item, dropping any item still loading */
+    fun clearSelectedInventory() {
+        inventorySelection.cancel()
+        inventorySeed.clear()
     }
 
     fun handleInventoryChange() {
@@ -478,9 +464,9 @@ class MainViewModel(
     fun removeInventory(identifier: Uuid) {
         viewModelScope.launch {
             if (inventorySeed.identifier == identifier) {
-                inventorySeed.clear()
+                clearSelectedInventory()
                 remoteHandler.inventoryRepo.remove(identifier)
-                inventoryPager?.refreshCurrentData()
+                inventoryPager.refreshCurrentData()
             }
         }
     }
@@ -489,7 +475,16 @@ class MainViewModel(
 
     val userCache: UserCache = UserCache(maxCacheSize)
 
-    var userPager: OffsetPager<User>? = null
+    val userPager = OffsetPager<User>(
+        tag = USER_PAGER_TAG,
+        config = pagerConfig,
+        fetch = { page, pageSize ->
+            remoteHandler.userRepo.fetch(
+                offset = (page * pageSize).toLong(),
+                limit = pageSize
+            )
+        }
+    )
 
     val userSeed: UserSeed = UserSeed()
 
@@ -497,24 +492,29 @@ class MainViewModel(
      * Sets selected user and adds it to the cache
      * @param force Reload even if it's already selected, used after the user was changed
      */
+    /** User being loaded after a click, the list highlights it until it's in the seed */
+    val userSelection = RecordSelection(viewModelScope)
+
     fun setSelectedUser(identifier: Uuid, force: Boolean = false) {
-        if (!force && userSeed.identifier == identifier) return
+        if (!force && (userSeed.identifier == identifier || userSelection.pending.value == identifier)) return
 
-        viewModelScope.launch {
-            val cached = userCache.get(identifier)?.let { (user, notes) ->
-                userSeed.setUser(user, notes)
-            }
+        userSelection.select(identifier) {
+            val (user, notes) = userCache.get(identifier) ?: coroutineScope {
+                val notes = async { remoteHandler.userRepo.getNotes(identifier) }
+                val user = remoteHandler.userRepo.get(identifier) ?: return@coroutineScope null
 
-            if (cached == null) {
-                remoteHandler.userRepo.get(identifier)?.let { user ->
-                    val notes = remoteHandler.userRepo.getNotes(identifier)
+                UserCache.UserData(user, notes.await(), emptyList())
+                    .also { userCache.put(it.user, it.notes) }
+            } ?: return@select null
 
-                    userSeed.setUser(user, notes)
-
-                    userCache.put(user, notes)
-                }
-            }
+            return@select { userSeed.setUser(user, notes) }
         }
+    }
+
+    /** Empties the user seed, dropping any user still loading */
+    fun clearSelectedUser() {
+        userSelection.cancel()
+        userSeed.clear()
     }
 
     suspend fun searchUsers(query: String) = coroutineScope {
@@ -531,10 +531,10 @@ class MainViewModel(
                 // Admins can edit themselves, keep what we show for the current user in step
                 if (identifier == _currentUser.value?.identifier) loadCurrentUser()
             } else {
-                userSeed.clear()
+                clearSelectedUser()
             }
 
-            userPager?.refreshCurrentData()
+            userPager.refreshCurrentData()
         }
     }
 
@@ -798,11 +798,14 @@ class MainViewModel(
             counter.clear()
 
             // Drop anything pulled while logged in
-            customerSeed.clear()
-            ticketSeed.clear()
-            inventorySeed.clear()
-            userSeed.clear()
-            buildPagers()
+            clearSelectedCustomer()
+            clearSelectedTicket()
+            clearSelectedInventory()
+            clearSelectedUser()
+            customerPager.clear()
+            ticketPager.clear()
+            inventoryPager.clear()
+            userPager.clear()
         }
     }
 
@@ -922,8 +925,11 @@ class MainViewModel(
         _pageSize.value = value
         localStorage.pageSize = value
 
-        // Pagers hold their config, so rebuild them with the new size
-        buildPagers()
+        // Loaded pages were fetched with the old size, so reload them with the new one
+        customerPager.setPageSize(value)
+        ticketPager.setPageSize(value)
+        inventoryPager.setPageSize(value)
+        userPager.setPageSize(value)
         refreshPagers()
     }
 

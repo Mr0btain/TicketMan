@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.inventory
+package org.mr0btain.ticketman.ui.screens.dashboard.components.inventory
 
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
@@ -11,7 +11,7 @@ import org.mr0btain.ticketman.ui.kit.data.MoneyText
 import org.mr0btain.ticketman.ui.kit.data.TmColumn
 import org.mr0btain.ticketman.ui.kit.data.TmTableRow
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.screens.main.expanded.RecordsList
+import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsList
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.package_icon
 import kotlin.uuid.Uuid

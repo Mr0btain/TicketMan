@@ -1,7 +1,8 @@
-package org.mr0btain.ticketman.ui.screens.main.expanded.customer
+package org.mr0btain.ticketman.ui.screens.dashboard.components.customer
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
@@ -133,7 +134,7 @@ fun CustomerDialog(
             }
         }
 
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) { TmSectionLabel("Notes") }
             TmButton(
                 text = "Add note",

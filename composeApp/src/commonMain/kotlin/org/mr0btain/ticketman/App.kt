@@ -13,7 +13,7 @@ import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
-import org.mr0btain.ticketman.ui.screens.main.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.PhoneAppShell
 import org.mr0btain.ticketman.ui.screens.navigation.WideAppShell
 import org.mr0btain.ticketman.ui.screens.navigation.navigateTo
@@ -29,27 +29,11 @@ import ticketman.composeapp.generated.resources.layers
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
 
-// TODO: Work on UI for mobile size screens
-
 // TODO: Make option to import database data from file?
-
-// TODO: Kiosk/POS Screen
-// TODO: Setup way to set local as server, or ask upon new creation so we can setup correct access to user IF its a local setup.
 // TODO: All main data classes have the ability to have images of their own. We should set that up
 
-// TODO: Add a way to load database data after view model init.
-
-// TODO: Make a better way to refresh data in pager when item is deleted.
-
-// TODO: Finish User database stuff.
-// TODO: Fix search bars in dialogs for ticket and others if needed. Currently search bars grab
 // the focus upon opening dialog.
-
-// TODO: When we hit confirm on a dialog make sure we check and dont hit database ?? dont remem what this is for
-
 // TODO: Update name in dialogs and such to handle middle names
-
-// TODO: Make editing dialogs so that we have a viewing dialog and an edit dialog with an option to switch between the two
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -66,12 +50,6 @@ fun App() {
     // Main scope to use with coroutines
     val mainScope = rememberCoroutineScope()
 
-    // Generate some mock data and add it to the database
-    //mainViewModel.fillDatabaseWithTestData()
-
-    // Current employee info
-    //val currentEmployee = mainViewModel.dataHandler.userDataHandler.current.collectAsState()
-
     // Should we show login popup or not
     val shouldShowLogin = mainViewModel.showLogin.collectAsState()
 
@@ -81,7 +59,7 @@ fun App() {
     // Approved stations with kiosk mode show only the counter, signed into by PIN
     val kioskActive = mainViewModel.kiosk.active.collectAsState()
 
-    val initialDestination = Destination.MAIN
+    val initialDestination = Destination.DASHBOARD
 
     // Admin screen is only listed for admins
     val isAdmin = mainViewModel.isAdmin.collectAsState()
@@ -91,11 +69,10 @@ fun App() {
 
     // Logging in happens from the bottom of the nav rail, so the old login screen isn't listed
     val navDestination = listOfNotNull(
-        if (isAdmin.value) NavigationItem("Admin", Res.drawable.archive, Destination.ADMIN) else null,
-        NavigationItem("Counter", Res.drawable.monitor, Destination.DASHBOARD),
-        NavigationItem("Invoices", Res.drawable.file_text, Destination.INVOICE),
-        NavigationItem("Main", Res.drawable.home, Destination.MAIN),
+        NavigationItem("Dashboard", Res.drawable.home, Destination.DASHBOARD),
+        NavigationItem("Counter", Res.drawable.monitor, Destination.COUNTER),
         NavigationItem("Settings", Res.drawable.settings, Destination.SETTINGS),
+        if (isAdmin.value) NavigationItem("Admin", Res.drawable.archive, Destination.ADMIN) else null,
         // Component gallery is for working on the ui kit, so only listed in debug builds
         if (isDebug) NavigationItem("Components", Res.drawable.layers, Destination.GALLERY) else null
     )

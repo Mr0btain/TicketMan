@@ -60,8 +60,8 @@ import org.mr0btain.ticketman.ui.screens.counter.QueuePanel
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
 import org.mr0btain.ticketman.ui.screens.kiosk.LockScreen
-import org.mr0btain.ticketman.ui.screens.main.expanded.customer.CustomerPanel
-import org.mr0btain.ticketman.ui.screens.main.expanded.ticket.TicketPanel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.customer.CustomerPanel
+import org.mr0btain.ticketman.ui.screens.dashboard.components.ticket.TicketPanel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.file_text
