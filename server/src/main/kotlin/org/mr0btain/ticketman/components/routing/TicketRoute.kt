@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.Uuid
@@ -140,6 +141,11 @@ fun Route.ticketRoute(
         post("/add") {
             val received = call.receive<Ticket>()
 
+            if (received.status.status == TicketStatusType.PICKED_UP) {
+                call.respond(HttpStatusCode.BadRequest, "New tickets can't start picked up")
+                return@post
+            }
+
             val saved = received.takeIf { database.add(it) }?.let { database.getById(it.identifier) }
 
             if (saved == null) {
@@ -159,6 +165,19 @@ fun Route.ticketRoute(
             if (existing == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@post
+            }
+
+            // Pickup pays the invoice and takes the parts, so it only happens at the counter, and a picked up ticket stays closed
+            if (existing.status.status != received.status.status) {
+                if (existing.status.status == TicketStatusType.PICKED_UP) {
+                    call.respond(HttpStatusCode.Conflict, "Ticket ${existing.label} was picked up, its status can't change")
+                    return@post
+                }
+
+                if (received.status.status == TicketStatusType.PICKED_UP) {
+                    call.respond(HttpStatusCode.Conflict, "Pick tickets up at the counter, so the invoice gets paid")
+                    return@post
+                }
             }
 
             if (!database.update(received)) {

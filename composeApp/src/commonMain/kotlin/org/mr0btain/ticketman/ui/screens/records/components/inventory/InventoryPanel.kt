@@ -21,6 +21,7 @@ fun InventoryPanel(
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
+    canEdit: Boolean = true,
     onDeleteInventory: () -> Unit,
     onImageClick: (page: Int) -> Unit,
     onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
@@ -34,7 +35,8 @@ fun InventoryPanel(
                 onSearchQuery = onSearchQuery,
                 onAddClick = onAddInventory,
                 onDeleteClick = onDeleteInventory,
-                canDelete = !selectedInventory.isNew
+                canDelete = !selectedInventory.isNew,
+                canChange = canEdit
             )
         },
         list = {
@@ -49,6 +51,7 @@ fun InventoryPanel(
             InventoryInfoPane(
                 inventoryData = selectedInventory,
                 onEditClick = onEditInventory,
+                canEdit = canEdit,
                 onImageClick = onImageClick,
                 onNoteImageClick = onNoteImageClick
             )

@@ -9,10 +9,10 @@ enum class NetworkError(override val message: String) : Error {
     FORBIDDEN("The server doesn't allow that"),
     NOT_FOUND("Not found on the server"),
     CONFLICT("That conflicts with existing data"),
-    TOO_MANY_REQUESTS("Something went wrong"),
+    TOO_MANY_REQUESTS("Too many tries, wait a moment and try again"),
     NO_INTERNET("Couldn't reach the server"),
-    PAYLOAD_TOO_LARGE("Something went wrong"),
+    PAYLOAD_TOO_LARGE("That's too big to send"),
     SERVER_ERROR("The server had an error"),
-    SERIALIZATION("Something went wrong"),
+    SERIALIZATION("The server sent something the app couldn't read"),
     UNKNOWN("Something went wrong");
 }

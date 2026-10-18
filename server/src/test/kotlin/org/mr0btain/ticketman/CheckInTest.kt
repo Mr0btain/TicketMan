@@ -4,6 +4,10 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
@@ -85,6 +89,35 @@ class CheckInTest {
 
     private suspend fun ApplicationTestBuilder.checkIn(request: CheckInRequest, as_: String = token) =
         post("/api/counter/check-in", json.encodeToString(request), as_)
+
+    @Test
+    fun checkInsAtTheSameMomentGetTheirOwnNumbers() = testApplication {
+        setup()
+
+        // Deposits too, so each one makes a numbered invoice as well
+        val responses = coroutineScope {
+            (1..8).map { async(Dispatchers.IO) { checkIn(request(deposit = PaymentRequest(PaymentMethod.CASH, 1_000))) } }.awaitAll()
+        }
+
+        assertEquals(List(8) { HttpStatusCode.Created }, responses.map { it.status })
+
+        val results = responses.map { json.decodeFromString<CheckInResponse>(it.bodyAsText()) }
+        assertEquals(8, results.map { it.ticket.number }.toSet().size)
+        assertEquals(8, results.map { it.invoice!!.number }.toSet().size)
+    }
+
+    @Test
+    fun theSameCheckInSentTwiceAtOnceIsOnlyMadeOnce() = testApplication {
+        setup()
+        val same = request()
+
+        val statuses = coroutineScope {
+            (1..4).map { async(Dispatchers.IO) { checkIn(same).status } }.awaitAll()
+        }
+
+        assertEquals(1, statuses.count { it == HttpStatusCode.Created })
+        assertEquals(3, statuses.count { it == HttpStatusCode.Conflict })
+    }
 
     @Test
     fun checkInMakesTheTicketWithEverythingAttached() = testApplication {

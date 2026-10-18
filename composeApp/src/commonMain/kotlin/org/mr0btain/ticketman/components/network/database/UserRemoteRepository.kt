@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
@@ -60,7 +61,7 @@ class UserRemoteRepository(
     suspend fun resetPassword(identifier: Uuid, password: String): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(RESET_PASSWORD_TAG) {
+        val response = networkRequest(RESET_PASSWORD_TAG) {
             client.post {
                 url("$serverUrl/password/$identifier")
                 contentType(ContentType.Application.Json)
@@ -75,7 +76,7 @@ class UserRemoteRepository(
     suspend fun setOwnPin(currentPassword: String, pin: String): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(PIN_TAG) {
+        val response = networkRequest(PIN_TAG) {
             client.post {
                 url("$serverUrl/me/pin")
                 contentType(ContentType.Application.Json)
@@ -90,7 +91,7 @@ class UserRemoteRepository(
     suspend fun unlockPin(identifier: Uuid): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(PIN_TAG) {
+        val response = networkRequest(PIN_TAG) {
             client.post { url("$serverUrl/pin/$identifier/unlock") }
         }
 
@@ -101,7 +102,7 @@ class UserRemoteRepository(
     suspend fun resetPin(identifier: Uuid): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(PIN_TAG) {
+        val response = networkRequest(PIN_TAG) {
             client.delete { url("$serverUrl/pin/$identifier") }
         }
 
@@ -112,7 +113,7 @@ class UserRemoteRepository(
     suspend fun completeSetup(request: AccountSetupRequest): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(SETUP_TAG) {
+        val response = networkRequest(SETUP_TAG) {
             client.post {
                 url("$serverUrl/setup")
                 contentType(ContentType.Application.Json)
@@ -138,7 +139,7 @@ class UserRemoteRepository(
     suspend fun approve(identifier: Uuid, accessLevel: AccessLevel): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(APPROVE_TAG) {
+        val response = networkRequest(APPROVE_TAG) {
             client.post {
                 url("$serverUrl/approve/$identifier")
                 contentType(ContentType.Application.Json)
@@ -153,7 +154,7 @@ class UserRemoteRepository(
     suspend fun reject(identifier: Uuid): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(REJECT_TAG) {
+        val response = networkRequest(REJECT_TAG) {
             client.delete { url("$serverUrl/reject/$identifier") }
         }
 
@@ -163,7 +164,7 @@ class UserRemoteRepository(
     suspend fun invite(request: InviteRequest): Result<InviteResponse, ServerError> {
         if (serverUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(INVITE_TAG) {
+        val response = networkRequest(INVITE_TAG) {
             client.post {
                 url("$serverUrl/invite")
                 contentType(ContentType.Application.Json)
@@ -178,7 +179,7 @@ class UserRemoteRepository(
     suspend fun renewInvite(identifier: Uuid): Result<InviteResponse, ServerError> {
         if (serverUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(INVITE_TAG) {
+        val response = networkRequest(INVITE_TAG) {
             client.post { url("$serverUrl/invite/$identifier/renew") }
         }
 

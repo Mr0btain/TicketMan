@@ -12,11 +12,15 @@ actual class AppDir {
     actual val path = when (currentPlatform) {
             Platform.Linux -> {
                 AppLogger.m(TAG, "Linux OS")
-                val env = System.getenv("XDG_DATA_HOME") ?: System.getenv("HOME") ?: ""
+                // XDG_DATA_HOME is already the data folder (usually ~/.local/share), HOME needs it added
+                val xdgDataHome = System.getenv("XDG_DATA_HOME").orEmpty()
+                val home = System.getenv("HOME").orEmpty()
 
-                if (env.isBlank()) {
-                    null
-                } else Path("$env/.local/share/$appId")
+                when {
+                    xdgDataHome.isNotBlank() -> Path("$xdgDataHome/$appId")
+                    home.isNotBlank() -> Path("$home/.local/share/$appId")
+                    else -> null
+                }
             }
 
         // TODO: Test this

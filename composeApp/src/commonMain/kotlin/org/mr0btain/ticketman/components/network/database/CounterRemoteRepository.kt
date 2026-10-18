@@ -7,6 +7,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.search.SearchQuery
@@ -76,7 +77,7 @@ class CounterRemoteRepository(
     suspend fun checkIn(request: CheckInRequest): Result<CheckInResponse, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(CHECK_IN_TAG) {
+        val response = networkRequest(CHECK_IN_TAG) {
             client.post {
                 url("$baseUrl/check-in")
                 contentType(ContentType.Application.Json)
@@ -94,7 +95,7 @@ class CounterRemoteRepository(
     suspend fun pickup(ticketIdentifier: Uuid, payments: List<PaymentRequest>): Result<Invoice, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(PICKUP_TAG) {
+        val response = networkRequest(PICKUP_TAG) {
             client.post {
                 url("$baseUrl/pickup")
                 contentType(ContentType.Application.Json)

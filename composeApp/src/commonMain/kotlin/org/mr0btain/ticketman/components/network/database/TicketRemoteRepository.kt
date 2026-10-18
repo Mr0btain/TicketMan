@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -47,7 +48,7 @@ class TicketRemoteRepository(
     suspend fun create(ticket: Ticket): Result<Ticket, ServerError> {
         if (serverUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(CREATE_TAG) {
+        val response = networkRequest(CREATE_TAG) {
             client.post {
                 url("$serverUrl/add")
                 contentType(ContentType.Application.Json)

@@ -18,6 +18,7 @@ fun CustomerPanel(
     pendingId: Uuid? = null,
     onAddCustomer: () -> Unit,
     onEditCustomer: () -> Unit,
+    canEdit: Boolean = true,
     onCustomerSelectionChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteCustomer: () -> Unit,
@@ -33,7 +34,8 @@ fun CustomerPanel(
                 onSearchQuery = onSearchQuery,
                 onAddClick = onAddCustomer,
                 onDeleteClick = onDeleteCustomer,
-                canDelete = !seed.isNew
+                canDelete = !seed.isNew,
+                canChange = canEdit
             )
         },
         list = {
@@ -48,6 +50,7 @@ fun CustomerPanel(
             CustomerInfoPane(
                 selectedCustomer = seed,
                 onEditClick = onEditCustomer,
+                canEdit = canEdit,
                 onTicketClick = onTicketClick,
                 onImageClick = onImageClick
             )

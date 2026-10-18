@@ -75,11 +75,11 @@ class MainViewModel(
 
     private val searchLimit = { settings.searchLimit.value }
 
-    val customers = CustomerRecords(remoteHandler, viewModelScope, snackBarHost, pagerConfig, cacheSize, searchLimit)
+    val customers = CustomerRecords(remoteHandler, viewModelScope, snackBarHost, { session.canEditNow() }, pagerConfig, cacheSize, searchLimit)
 
-    val tickets = TicketRecords(remoteHandler, localStorage, viewModelScope, snackBarHost, pagerConfig, cacheSize, searchLimit)
+    val tickets = TicketRecords(remoteHandler, localStorage, viewModelScope, snackBarHost, { session.canEditNow() }, pagerConfig, cacheSize, searchLimit)
 
-    val inventory = InventoryRecords(remoteHandler, viewModelScope, snackBarHost, pagerConfig, cacheSize, searchLimit)
+    val inventory = InventoryRecords(remoteHandler, viewModelScope, snackBarHost, { session.canEditNow() }, pagerConfig, cacheSize, searchLimit)
 
     val users = UserRecords(remoteHandler, viewModelScope, snackBarHost, { session.isAdminNow() }, pagerConfig, cacheSize, searchLimit)
 

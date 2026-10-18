@@ -1,33 +1,49 @@
-# Ticket Man
-Ticket Managing app built for repair shops or really any kind of shop that would use tickets to manage things. The goal is to get it working on every platform we can. I've been working on this off and on to really learn kotlin and compose. Allot of the older stuff is really not great implementation but it does work at the moment. As I go I'll update older sections to a more normal or simplier way.
+# TicketMan
 
-## Platform Status'
+A ticket tracking app for repair shops, or any shop that runs its work through tickets. Staff check devices in at
+the counter, track the repair, take payment at pickup and keep customer, inventory and photo records along the way.
 
-### Multiplatform
+It's a Kotlin Multiplatform project: a Compose Multiplatform client talking over HTTP to a Ktor server that keeps
+everything in an H2 database. I started it to learn Kotlin and Compose, so some older parts are rougher than newer
+ones and get tidied as I go.
 
-- [x] Server-Client Communication
-- [ ] Server-Client Encryption
-- [ ] Image Storage
-- [ ] Large data transfer between client and server
+![The counter screen showing a ticket, its invoice and the queue](docs/images/counter.png)
 
-### Desktop/Tablet
+## Quick start
 
-- [x] Customer UI
-- [x] Ticket UI
-- [x] Inventory UI
-- [ ] Admin UI
-- [ ] Kiosk UI
+You need JDK 17 or newer (21 is what it's developed on). Gradle comes with the repo.
 
-### Android &* IOS
+```bash
+# Start a server on port 8098 that keeps its data in /tmp/tm, with admin / admin_pass as the first login
+PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
 
-- [ ] Customer UI
-- [ ] Ticket UI
-- [ ] Inventory UI
-- [ ] Admin UI
-- [ ] Kiosk UI
+# In another terminal, start the desktop client and connect it to http://localhost:8098
+./gradlew :composeApp:run
+```
 
-### Server
+On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:PORT = "8098"` and so on first.
 
-- [x] Database
-- [x] API Routes
-- [x] User Creation/Handling
+[Getting started](docs/getting-started.md) covers the other targets, tests and hot reload.
+
+## What works
+
+| Area | Status |
+|------|--------|
+| Customers, tickets, inventory and users, with notes and photos | Done |
+| Counter: check-in with signature and deposit, queue, pickup and payment, invoices, printed claim slips, receipts, device tags and daily reports | Done |
+| Kiosk mode: PIN login on approved stations, idle lock | Done |
+| Admin: overview, users and account requests, sessions, stations, audit log, low stock, backup and restore | Done |
+| Themes (Bench, Copper, Mono), fonts, light and dark, reduce transparency | Done |
+| HTTPS between client and server | Not yet. Put the server behind a TLS proxy for now |
+
+| Platform | Status |
+|----------|--------|
+| Desktop (Linux, Windows, macOS) | Main target, most complete |
+| Web (Wasm) | Builds, but doesn't start yet: its HTTP engine is a `TODO()` ([details](docs/client/platforms.md#known-gaps)) |
+| Android | Builds, but doesn't start yet, for the same reason |
+| iOS | Not wired up, the targets are commented out |
+
+## Documentation
+
+Developer docs are in [`docs/`](docs/README.md): how the code is organized, how a request travels from the UI to the
+database, configuration, running a server and more. [`docs/PLAN.md`](docs/PLAN.md) tracks which pages are written.

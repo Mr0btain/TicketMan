@@ -43,7 +43,7 @@ class InvoiceService(
     }
 
     /** Replaces an open invoice's lines and discount. Uses the shop's current tax rate */
-    fun update(identifier: Uuid, request: InvoiceUpdateRequest, actor: Uuid?): AccountResult<Invoice> {
+    fun update(identifier: Uuid, request: InvoiceUpdateRequest, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()} and can't be changed")
 
@@ -58,7 +58,7 @@ class InvoiceService(
     }
 
     /** Takes a payment, like a deposit at check in */
-    fun addPayment(identifier: Uuid, request: PaymentRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> {
+    fun addPayment(identifier: Uuid, request: PaymentRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}")
         if (request.amountCents <= 0) return AccountResult.Invalid("Payment has to be more than zero")
@@ -69,7 +69,7 @@ class InvoiceService(
         return AccountResult.Done(saved)
     }
 
-    fun removePayment(identifier: Uuid, paymentIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
+    fun removePayment(identifier: Uuid, paymentIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Payments on a ${invoice.status.name.lowercase()} invoice can't be removed")
         if (!invoices.removePayment(identifier, paymentIdentifier)) return AccountResult.NotFound
@@ -80,9 +80,10 @@ class InvoiceService(
 
     /**
      * Hands the ticket back. Everything happens together or not at all: the payments are taken, the invoice has to
-     * end up paid in full, parts come out of stock and the ticket is closed
+     * end up paid in full, parts come out of stock and the ticket is closed. A part without enough in stock stops
+     * the pickup, so the count gets fixed instead of going below zero
      */
-    fun pickup(request: PickupRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> {
+    fun pickup(request: PickupRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val ticket = tickets.getById(request.ticketIdentifier) ?: return AccountResult.NotFound
         if (ticket.status.status == TicketStatusType.PICKED_UP) return AccountResult.Conflict("Ticket ${ticket.label} was already picked up")
         if (request.payments.any { it.amountCents <= 0 }) return AccountResult.Invalid("Payments have to be more than zero")
@@ -98,14 +99,20 @@ class InvoiceService(
         val owed = invoice.balanceCents - paying
         if (owed > 0) return AccountResult.Conflict("${Money.format(owed)} is still owed on ${invoice.label}")
 
+        val parts = partsUsed(invoice)
+        parts.forEach { (identifier, quantity) ->
+            val item = inventory.getById(identifier) ?: return@forEach
+            if (item.stock != Int.MAX_VALUE && item.stock < quantity) {
+                return AccountResult.Conflict("Only ${item.stock} of ${item.name.ifBlank { "an item" }} in stock, fix the count in Inventory first")
+            }
+        }
+
         val now = Clock.System.now().toEpochMilliseconds()
 
         transaction {
             request.payments.forEach { payment -> invoices.addPayment(invoice.identifier, payment.toPayment(receivedBy)) }
 
-            invoice.charges
-                .filter { it.type == ChargeType.PART }
-                .forEach { charge -> charge.inventoryIdentifier?.let { inventory.adjustStock(it, charge.quantity.roundToLong().toInt()) } }
+            parts.forEach { (identifier, quantity) -> inventory.adjustStock(identifier, quantity) }
 
             invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
             tickets.markPickedUp(ticket.identifier, now)
@@ -119,15 +126,13 @@ class InvoiceService(
     /**
      * Cancels an invoice. A paid one puts its parts back in stock. The ticket stays as it is
      */
-    fun void(identifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
+    fun void(identifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status == InvoiceStatus.VOID) return AccountResult.Conflict("Invoice ${invoice.label} is already void")
 
         transaction {
             if (invoice.status == InvoiceStatus.PAID) {
-                invoice.charges
-                    .filter { it.type == ChargeType.PART }
-                    .forEach { charge -> charge.inventoryIdentifier?.let { inventory.adjustStock(it, -charge.quantity.roundToLong().toInt()) } }
+                partsUsed(invoice).forEach { (identifier, quantity) -> inventory.adjustStock(identifier, -quantity) }
             }
 
             invoices.setStatus(identifier, InvoiceStatus.VOID)
@@ -136,6 +141,13 @@ class InvoiceService(
         auditLog.log(actor, AuditAction.DELETE, "invoice", identifier.toString(), "Voided ${invoice.label}")
         return AccountResult.Done(invoices.getById(identifier)!!)
     }
+
+    // How many of each stocked item the invoice's part lines use, added up when one is on several lines
+    private fun partsUsed(invoice: Invoice): Map<Uuid, Int> =
+        invoice.charges
+            .filter { it.type == ChargeType.PART && it.inventoryIdentifier != null }
+            .groupBy { it.inventoryIdentifier!! }
+            .mapValues { (_, charges) -> charges.sumOf { it.quantity.roundToLong().toInt() } }
 
     // Tax rate from the shop profile, nothing if it's blank or not a number
     private fun taxRate(): Int = Money.percentToBasisPoints(shop.get().taxRate) ?: 0
@@ -164,4 +176,12 @@ class InvoiceService(
             receivedBy = receivedBy,
             note = note.trim()
         )
+
+    companion object {
+        /**
+         * Changes that check an invoice's state and then change it run one at a time, so two pickups of the same
+         * ticket can't both pass the checks before either is saved
+         */
+        private val CHANGE_LOCK = Any()
+    }
 }

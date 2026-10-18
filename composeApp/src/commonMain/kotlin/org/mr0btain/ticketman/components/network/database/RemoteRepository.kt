@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.search.SearchResult
@@ -60,7 +61,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun add(data: T): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(ADD_TAG) {
+        val response = networkRequest(ADD_TAG) {
             client.post {
                 url("$serverUrl/add")
                 contentType(ContentType.Application.Json)
@@ -75,7 +76,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun updateNote(note: Note): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(UPDATE_NOTE_TAG) {
+        val response = networkRequest(UPDATE_NOTE_TAG) {
             client.post {
                 url("$serverUrl/update/note/${note.identifier}")
                 contentType(ContentType.Application.Json)
@@ -89,7 +90,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun addNote(identifier: Uuid, note: Note): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(ADD_NOTE_TAG) {
+        val response = networkRequest(ADD_NOTE_TAG) {
             client.post {
                 url("$serverUrl/add/note/$identifier")
                 contentType(ContentType.Application.Json)
@@ -168,7 +169,7 @@ abstract class RemoteRepository<T: MainItem>(
     protected suspend fun setEntity(tag: String, entityId: Uuid, url: String): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(tag) {
+        val response = networkRequest(tag) {
             client.post {
                 url(url)
                 contentType(ContentType.Application.Json)
@@ -204,7 +205,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun remove(identifier: Uuid): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(REMOVE_TAG) {
+        val response = networkRequest(REMOVE_TAG) {
             client.delete { url("$serverUrl/remove/$identifier") }
         }
 
@@ -214,7 +215,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun removeNote(identifier: Uuid): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(REMOVE_NOTE_TAG) {
+        val response = networkRequest(REMOVE_NOTE_TAG) {
             client.delete { url("$serverUrl/remove/note/$identifier") }
         }
 
@@ -246,7 +247,7 @@ abstract class RemoteRepository<T: MainItem>(
     suspend fun update(data: T): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(UPDATE_TAG) {
+        val response = networkRequest(UPDATE_TAG) {
             client.post {
                 url("$serverUrl/update")
                 contentType(ContentType.Application.Json)

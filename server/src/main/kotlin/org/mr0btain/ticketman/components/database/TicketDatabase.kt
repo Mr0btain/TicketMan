@@ -172,6 +172,12 @@ class TicketDatabase(
             }
         }
 
+    /**
+     * Runs [block] holding the numbering lock, for an outer transaction that adds a ticket. It has to be held until
+     * that transaction commits: until then nobody else can see the new number, so they'd be handed it again
+     */
+    fun <T> whileNumbering(block: () -> T): T = synchronized(NUMBER_LOCK, block)
+
     // Must be called inside a transaction while holding NUMBER_LOCK
     private fun insertTicket(data: Ticket) {
         val year = currentYear()
@@ -302,9 +308,12 @@ class TicketDatabase(
             val item = TicketEntity.findById(data.identifier)
                 ?: return@dbWrite false.also { AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND) }
 
-            // Number and pick up time are owned by the server, so they aren't taken from the client
+            // Number and pick up time are owned by the server, so they aren't taken from the client. Neither is a
+            // picked up status: only pickup sets it, and once set it stays, even if the client sent an older status
             item.device = data.device
-            item.status = data.status
+            if (item.status.status != TicketStatusType.PICKED_UP && data.status.status != TicketStatusType.PICKED_UP) {
+                item.status = data.status
+            }
             item.priority = data.priority
             item.problem = data.problem
             item.condition = data.condition

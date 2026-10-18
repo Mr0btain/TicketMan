@@ -86,6 +86,7 @@ fun RecordsList(
 /**
  * Details of the picked record: a title row with an edit button, then [content] scrolling under it
  * @param emptyTitle Shown in place of the details when nothing is picked
+ * @param canEdit False hides the edit button, for people who can only look
  */
 @Composable
 fun RecordDetail(
@@ -95,6 +96,7 @@ fun RecordDetail(
     isEmpty: Boolean,
     emptyTitle: String,
     onEdit: () -> Unit,
+    canEdit: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
     if (isEmpty) {
@@ -109,7 +111,9 @@ fun RecordDetail(
             title = title,
             subtitle = subtitle,
             icon = icon,
-            actions = { TmButton(text = "Edit", onClick = onEdit, variant = TmButtonVariant.SECONDARY, leadingIcon = Res.drawable.edit_2) }
+            actions = {
+                if (canEdit) TmButton(text = "Edit", onClick = onEdit, variant = TmButtonVariant.SECONDARY, leadingIcon = Res.drawable.edit_2)
+            }
         )
 
         TmDivider()

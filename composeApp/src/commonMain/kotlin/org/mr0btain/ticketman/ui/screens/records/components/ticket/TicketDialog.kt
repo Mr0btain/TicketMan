@@ -123,7 +123,8 @@ fun TicketDialog(
                 TmDropdown(
                     modifier = it,
                     label = "Status",
-                    options = TicketStatusType.selectable,
+                    // A picked up ticket is closed, the server won't change its status
+                    options = if (seed.status.status == TicketStatusType.PICKED_UP) listOf(TicketStatusType.PICKED_UP) else TicketStatusType.selectable,
                     selected = seed.status.status,
                     onSelect = { status -> seed.changeStatus(TicketStatus(status)) },
                     optionLabel = { status -> status.label },

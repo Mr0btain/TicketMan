@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -99,6 +100,6 @@ class InvoiceRemoteRepository(
     private suspend fun change(request: suspend () -> HttpResponse): Result<Invoice, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        return handleDataHttpResponse(CHANGE_TAG, networkErrorTryCatch(CHANGE_TAG) { request() })
+        return handleDataHttpResponse(CHANGE_TAG, networkRequest(CHANGE_TAG) { request() })
     }
 }

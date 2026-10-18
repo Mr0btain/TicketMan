@@ -49,6 +49,12 @@ class InvoiceDatabase(
         }
 
     /**
+     * Runs [block] holding the numbering lock, for an outer transaction that makes an invoice, see
+     * [TicketDatabase.whileNumbering]
+     */
+    fun <T> whileNumbering(block: () -> T): T = synchronized(NUMBER_LOCK, block)
+
+    /**
      * The ticket's invoice, made empty and OPEN if it doesn't have one yet
      */
     fun getOrCreate(ticketIdentifier: Uuid, customerIdentifier: Uuid?, taxRateBasisPoints: Int): Invoice? =

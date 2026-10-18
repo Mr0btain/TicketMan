@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.search.TmSearchBar
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
@@ -31,6 +32,7 @@ private val COMPACT_WIDTH = 720.dp
  * @param onSearchClick Called with the record picked from the search results
  * @param onSearchQuery Runs a search
  * @param canDelete Turns the delete button off when nothing is selected
+ * @param canChange False for people who can only look: no add or delete, a "View only" badge instead
  * @param extras Goes between the search and the buttons, like a filter
  */
 @Composable
@@ -41,6 +43,7 @@ fun TmPanelTopBar(
     onAddClick: () -> Unit,
     onDeleteClick: () -> Unit,
     canDelete: Boolean = true,
+    canChange: Boolean = true,
     extras: @Composable RowScope.() -> Unit = {}
 ) {
     val name = label.lowercase()
@@ -66,7 +69,9 @@ fun TmPanelTopBar(
                 Spacer(Modifier.weight(1f))
             }
 
-            if (compact) {
+            if (!canChange) {
+                TmBadge(text = "View only", tone = TmTheme.colors.neutral)
+            } else if (compact) {
                 TmIconButton(icon = Res.drawable.trash_2, contentDescription = "Delete $name", onClick = onDeleteClick, enabled = canDelete)
                 TmIconButton(icon = Res.drawable.plus, contentDescription = "New $name", onClick = onAddClick, variant = TmButtonVariant.PRIMARY)
             } else {

@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import kotlin.test.*
@@ -64,7 +65,7 @@ class ServerUserClientTest {
 
     @Test
     fun loginWithBlankCredentialsSkipsRequest() = runTest {
-        assertEquals(LoginOutcome.Failed, client.login("", ""))
+        assertEquals(LoginOutcome.Failed(NetworkError.UNAUTHORIZED), client.login("", ""))
         assertTrue(requests.isEmpty())
     }
 

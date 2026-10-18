@@ -757,6 +757,16 @@ private fun NavigationSection() {
             onAddClick = {},
             onDeleteClick = {}
         )
+
+        // What a restricted user sees
+        TmPanelTopBar(
+            label = "Customer",
+            onSearchClick = {},
+            onSearchQuery = { query -> sampleCustomers.filter { it.text.contains(query, ignoreCase = true) } },
+            onAddClick = {},
+            onDeleteClick = {},
+            canChange = false
+        )
     }
 }
 

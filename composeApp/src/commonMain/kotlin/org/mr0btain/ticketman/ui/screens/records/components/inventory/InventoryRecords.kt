@@ -19,6 +19,7 @@ import kotlin.uuid.Uuid
 
 /**
  * Inventory on the records screen: the list, the item being edited, and saving it with its notes and photos
+ * @param canEdit Whether the signed in user can change things, restricted users can only look
  * @param cacheSize How many opened items to keep
  * @param searchLimit Most search results to ask for
  */
@@ -27,6 +28,7 @@ class InventoryRecords(
     private val remoteHandler: RemoteHandler,
     private val scope: CoroutineScope,
     private val snackBarHost: SnackbarHostState,
+    private val canEdit: () -> Boolean,
     pagerConfig: OffsetPagerConfig,
     cacheSize: Int,
     private val searchLimit: () -> Int
@@ -77,6 +79,8 @@ class InventoryRecords(
 
     /** Saves the seed: the item, its notes and its photos */
     fun save() {
+        if (!canEdit()) return
+
         if (!seed.isDirty) return
 
         val inventory = seed.inventory
@@ -115,6 +119,8 @@ class InventoryRecords(
         remoteHandler.inventoryRepo.search(query, searchLimit())
 
     fun remove(identifier: Uuid) {
+        if (!canEdit()) return
+
         scope.launch {
             if (seed.identifier == identifier) {
                 clearSelection()

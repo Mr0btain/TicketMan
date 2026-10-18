@@ -7,6 +7,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.error.EmptyResult
@@ -43,7 +44,7 @@ class InventoryRemoteRepository(
     suspend fun setImages(identifier: Uuid, images: List<StoredImage>): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(SET_IMAGES_TAG) {
+        val response = networkRequest(SET_IMAGES_TAG) {
             client.post {
                 url("$serverUrl/set/images/$identifier")
                 contentType(ContentType.Application.Json)

@@ -8,6 +8,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
+import kotlinx.io.IOException
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.data.local.InMemoryKeyValueStore
 import org.mr0btain.ticketman.components.data.local.LocalStorage
@@ -30,7 +31,7 @@ class SessionHandlerTest {
 
     private val engine = MockEngine { request ->
         requests += "${request.method.value} ${request.url.encodedPath}"
-        if (!reachable) error("Server is down")
+        if (!reachable) throw IOException("Server is down")
 
         when (request.url.encodedPath) {
             "/" -> respond("", HttpStatusCode.OK)
@@ -150,6 +151,29 @@ class SessionHandlerTest {
 
         assertEquals("Wrong username, password or setup code.", session.loginMessage.value)
         assertEquals(0, loggedIn)
+    }
+
+    @Test
+    fun aServerThatGoesDownIsNotAWrongPassword() = runTest {
+        val session = handler()
+        reachable = false
+
+        session.login("sam", "pass")
+        settle { session.loginState.value == LoginState.FAILED }
+
+        assertEquals("Couldn't reach the server", session.loginMessage.value)
+    }
+
+    @Test
+    fun aServerErrorSaysSo() = runTest {
+        loginStatus = HttpStatusCode.InternalServerError
+        loginBody = ""
+        val session = handler()
+
+        session.login("sam", "pass")
+        settle { session.loginState.value == LoginState.FAILED }
+
+        assertEquals("The server had an error", session.loginMessage.value)
     }
 
     @Test

@@ -364,6 +364,25 @@ class ScreenRenderTest {
             }
         }
 
+        // A restricted user: no add, edit or delete
+        bothModes("records-view-only") {
+            Shell("Records") {
+                CustomerPanel(
+                    customerList = listOf(dana, marcus),
+                    seed = customerSeed,
+                    onAddCustomer = {},
+                    onEditCustomer = {},
+                    canEdit = false,
+                    onCustomerSelectionChange = {},
+                    onSearchQuery = { emptyList() },
+                    onDeleteCustomer = {},
+                    onTicketClick = {},
+                    onImageClick = { _, _ -> },
+                    customerLazyListState = rememberLazyListState()
+                )
+            }
+        }
+
         bothModes("records-tickets") {
             Shell("Records") {
                 TicketPanel(

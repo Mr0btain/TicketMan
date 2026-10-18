@@ -36,6 +36,8 @@ fun RecordsScreen(
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
     val loginState = viewModel.session.loginState.collectAsState()
+    // Restricted users can look but not change anything, so no add, edit or delete
+    val canEdit by viewModel.session.canEdit.collectAsState()
 
     // For customer panel
     val customerSeed = viewModel.customers.seed
@@ -217,6 +219,7 @@ fun RecordsScreen(
                     showCustomerDialog = true
                 },
                 onEditCustomer = { showCustomerDialog = true },
+                canEdit = canEdit,
                 onCustomerSelectionChange = { id -> viewModel.customers.select(id) },
                 onSearchQuery = { query -> viewModel.customers.search(query) },
                 onDeleteCustomer = {
@@ -225,7 +228,8 @@ fun RecordsScreen(
                 },
                 onTicketClick = { identifier ->
                     viewModel.tickets.select(identifier)
-                    showTicketDialog = true
+                    // The dialog is for editing, someone who can only look sees it on the tickets tab
+                    if (canEdit) showTicketDialog = true else viewModel.changeMainTabIndex(1)
                 },
                 onImageClick = { id, page -> showNoteImages(customerSeed.notes, id, page) },
                 seed = customerSeed,
@@ -244,6 +248,7 @@ fun RecordsScreen(
                     showTicketDialog = true
                 },
                 onEditTicket = { if (!ticketSeed.isNew) showTicketDialog = true },
+                canEdit = canEdit,
                 onSelectedTicketChange = { id -> viewModel.tickets.select(id) },
                 onTicketScopeChange = { newScope ->
                     viewModel.tickets.setListScope(newScope)
@@ -271,6 +276,7 @@ fun RecordsScreen(
                     showInventoryDialog = true
                 },
                 onEditInventory = { showInventoryDialog = true },
+                canEdit = canEdit,
                 onImageClick = { page -> showImages(inventorySeed.images, page) },
                 onNoteImageClick = { id, page -> showNoteImages(inventorySeed.notes, id, page) },
                 onDeleteInventory = {

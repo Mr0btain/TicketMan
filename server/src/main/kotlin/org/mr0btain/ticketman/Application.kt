@@ -44,13 +44,16 @@ fun main(args: Array<String>) {
 
 fun Application.module() {
     val path = this.environment.config.property("env.dataPath").getString()
-    val appDir = AppDir().path
+    // Only fall back to the platform folder when DATA_PATH isn't set, so it isn't made for nothing
+    val dataPath = path.ifBlank { AppDir().path?.toString().orEmpty() }
 
-    AppLogger.m("SERVER", "Path for Files: $appDir")
-
-    // Check path dir
-    if (path.isNotBlank() || appDir != null) {
-        val dataPath = path.ifBlank { appDir.toString() }
+    if (dataPath.isBlank()) {
+        AppLogger.e("SERVER", "No DATA_PATH set and no app data folder found, so there's nowhere to keep data")
+    } else {
+        AppLogger.m("SERVER", "Path for Files: $dataPath")
+        if (System.getenv("SECRET").isNullOrBlank()) {
+            AppLogger.e("SERVER", "SECRET isn't set, so tokens are signed with the public default in application.yaml. Set it on a real server")
+        }
         val database = configureDatabase(dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase)
         val userService = UserService(

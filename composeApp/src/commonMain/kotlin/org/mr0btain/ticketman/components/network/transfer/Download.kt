@@ -10,7 +10,7 @@ import kotlinx.io.buffered
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.database.transferTimeout
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
-import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.server.NetworkError
 
@@ -41,7 +41,7 @@ suspend fun HttpClient.downloadTo(
     openSink: () -> RawSink,
     onProgress: (received: Long, total: Long?) -> Unit = { _, _ -> }
 ): Result<Long, ServerError> {
-    val result = networkErrorTryCatch(TAG) {
+    val result = networkRequest(TAG) {
         prepareGet(url) { transferTimeout() }.execute { response ->
             if (!response.status.isSuccess()) {
                 val failed = handleActionHttpResponse(TAG, response) as? Result.Error
@@ -72,7 +72,14 @@ suspend fun HttpClient.downloadTo(
         }
     }
 
-    return result ?: Result.Error(ServerError(NetworkError.NO_INTERNET, "The download was cut off"))
+    return when (result) {
+        is Result.Success -> result.data
+        // A connection that drops part way reads as no connection, so say what that means here
+        is Result.Error -> Result.Error(
+            if (result.error == NetworkError.NO_INTERNET) ServerError(result.error, "The download was cut off")
+            else ServerError(result.error)
+        )
+    }
 }
 
 /**

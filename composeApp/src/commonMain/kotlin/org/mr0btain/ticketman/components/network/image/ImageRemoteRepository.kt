@@ -8,7 +8,7 @@ import io.ktor.http.*
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.database.transferTimeout
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
-import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -57,7 +57,7 @@ class ImageRemoteRepository(
             return Result.Error(ServerError(NetworkError.PAYLOAD_TOO_LARGE, "That photo is too big"))
         }
 
-        val response = networkErrorTryCatch(UPLOAD_TAG) {
+        val response = networkRequest(UPLOAD_TAG) {
             client.submitFormWithBinaryData(
                 url = "$imageUrl/upload",
                 formData = formData {

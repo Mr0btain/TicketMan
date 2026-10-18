@@ -24,6 +24,7 @@ import kotlin.uuid.Uuid
 fun TicketInfoPane(
     seed: TicketSeed,
     onEditClick: () -> Unit,
+    canEdit: Boolean = true,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit
 ) {
     val ticket = seed.ticket
@@ -34,7 +35,8 @@ fun TicketInfoPane(
         icon = Res.drawable.tag,
         isEmpty = seed.isNew,
         emptyTitle = "No ticket picked",
-        onEdit = onEditClick
+        onEdit = onEditClick,
+        canEdit = canEdit
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
             TmStatusBadge(ticket.status.status)

@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
@@ -152,9 +153,11 @@ class SessionHandler(
                     _accountSetup.value = AccountSetup.Invite(outcome.username, outcome.setupToken)
                 }
 
-                LoginOutcome.Failed -> {
+                is LoginOutcome.Failed -> {
                     _loginState.value = LoginState.FAILED
-                    _loginMessage.value = "Wrong username, password or setup code."
+                    _loginMessage.value = if (outcome.error == NetworkError.UNAUTHORIZED) {
+                        "Wrong username, password or setup code."
+                    } else outcome.error.message
                 }
             }
         }

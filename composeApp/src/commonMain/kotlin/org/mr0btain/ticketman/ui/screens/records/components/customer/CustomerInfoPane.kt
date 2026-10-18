@@ -23,6 +23,7 @@ import kotlin.uuid.Uuid
 fun CustomerInfoPane(
     selectedCustomer: CustomerSeed,
     onEditClick: () -> Unit,
+    canEdit: Boolean = true,
     onTicketClick: (Uuid) -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit
 ) {
@@ -34,7 +35,8 @@ fun CustomerInfoPane(
         icon = Res.drawable.user,
         isEmpty = seed.isNew,
         emptyTitle = "No customer picked",
-        onEdit = onEditClick
+        onEdit = onEditClick,
+        canEdit = canEdit
     ) {
         DetailSection("Contact") {
             Column {

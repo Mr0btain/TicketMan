@@ -28,6 +28,7 @@ fun TicketPanel(
     ticketList: List<Ticket>,
     onAddNewTicket: () -> Unit,
     onEditTicket: () -> Unit,
+    canEdit: Boolean = true,
     onSelectedTicketChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteTicket: () -> Unit,
@@ -43,6 +44,7 @@ fun TicketPanel(
                 onAddClick = onAddNewTicket,
                 onDeleteClick = onDeleteTicket,
                 canDelete = !seed.isNew,
+                canChange = canEdit,
                 extras = {
                     TmSegmented(
                         options = TicketScope.entries,
@@ -64,7 +66,7 @@ fun TicketPanel(
             )
         },
         detail = {
-            TicketInfoPane(seed = seed, onEditClick = onEditTicket, onImageClick = onImageClick)
+            TicketInfoPane(seed = seed, onEditClick = onEditTicket, canEdit = canEdit, onImageClick = onImageClick)
         }
     )
 }

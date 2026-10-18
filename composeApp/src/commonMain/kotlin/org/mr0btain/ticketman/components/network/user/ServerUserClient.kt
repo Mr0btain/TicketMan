@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
@@ -71,35 +72,42 @@ class ServerUserClient(
         // Nothing to log in with, this happens when credentials aren't remembered
         if (username.isBlank() || password.isBlank()) {
             AppLogger.i(LOGIN_TAG, "FAIL: Missing credentials")
-            return LoginOutcome.Failed
+            return LoginOutcome.Failed(NetworkError.UNAUTHORIZED)
         }
 
-        if (checkServerConnection()) {
-            networkErrorTryCatch(LOGIN_TAG) {
-                userHttpClient.post {
-                    url("$serverUrl/api/auth")
-                    contentType(ContentType.Application.Json)
-                    setBody(LoginRequest(username, password, localStorage.deviceId, localStorage.deviceName))
-                }
-            }?.let { response -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response) }
-                ?.onSuccess { authResponse ->
-                    when (authResponse.status) {
-                        LoginStatus.PENDING_APPROVAL -> return LoginOutcome.PendingApproval
+        if (serverUrl.isBlank()) return LoginOutcome.Failed(NetworkError.NO_INTERNET)
 
-                        LoginStatus.INVITE_SETUP -> authResponse.setupToken?.let { token ->
-                            return LoginOutcome.InviteSetup(username, token)
-                        }
-
-                        LoginStatus.OK, LoginStatus.NEEDS_SETUP -> if (storeSession(authResponse, username, password)) {
-                            return LoginOutcome.LoggedIn(needsSetup = authResponse.status == LoginStatus.NEEDS_SETUP)
-                        }
-                    }
-                }
-
-            AppLogger.i(LOGIN_TAG, "FAIL")
+        // The login call itself says whether the server is there, so a timeout isn't taken for a wrong password
+        val response = networkRequest(LOGIN_TAG) {
+            userHttpClient.post {
+                url("$serverUrl/api/auth")
+                contentType(ContentType.Application.Json)
+                setBody(LoginRequest(username, password, localStorage.deviceId, localStorage.deviceName))
+            }
         }
 
-        return LoginOutcome.Failed
+        val result = when (response) {
+            is Result.Error -> response
+            is Result.Success -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response.data)
+        }
+
+        result.onSuccess { authResponse ->
+            when (authResponse.status) {
+                LoginStatus.PENDING_APPROVAL -> return LoginOutcome.PendingApproval
+
+                LoginStatus.INVITE_SETUP -> authResponse.setupToken?.let { token ->
+                    return LoginOutcome.InviteSetup(username, token)
+                }
+
+                LoginStatus.OK, LoginStatus.NEEDS_SETUP -> if (storeSession(authResponse, username, password)) {
+                    return LoginOutcome.LoggedIn(needsSetup = authResponse.status == LoginStatus.NEEDS_SETUP)
+                }
+            }
+        }
+
+        AppLogger.i(LOGIN_TAG, "FAIL")
+        // Accepted but missing its tokens is a reply the app can't use
+        return LoginOutcome.Failed((result as? Result.Error)?.error ?: NetworkError.SERIALIZATION)
     }
 
     // Keeps the tokens, and the credentials if they should be remembered
@@ -124,7 +132,7 @@ class ServerUserClient(
      * a PIN isn't something to log back in with
      */
     suspend fun pinLogin(station: StationCredentials, userIdentifier: Uuid, pin: String): EmptyResult<ServerError> {
-        val response = networkErrorTryCatch(PIN_LOGIN_TAG) {
+        val response = networkRequest(PIN_LOGIN_TAG) {
             userHttpClient.post {
                 url("$serverUrl/api/auth/pin")
                 contentType(ContentType.Application.Json)
@@ -164,7 +172,7 @@ class ServerUserClient(
 
     /** People who can PIN in here */
     suspend fun stationStaff(station: StationCredentials): Result<List<StaffMember>, ServerError> {
-        val response = networkErrorTryCatch(STATION_TAG) {
+        val response = networkRequest(STATION_TAG) {
             userHttpClient.post {
                 url("$serverUrl/api/auth/station/staff")
                 contentType(ContentType.Application.Json)
@@ -177,7 +185,7 @@ class ServerUserClient(
 
     /** Asks for an account, an admin has to approve it before it can be used */
     suspend fun requestAccount(request: AccountRequest): EmptyResult<ServerError> {
-        val response = networkErrorTryCatch(REQUEST_ACCOUNT_TAG) {
+        val response = networkRequest(REQUEST_ACCOUNT_TAG) {
             userHttpClient.post {
                 url("$serverUrl/api/auth/request-account")
                 contentType(ContentType.Application.Json)
@@ -192,7 +200,7 @@ class ServerUserClient(
      * Finishes an invite and logs in with the new password
      */
     suspend fun completeInviteSetup(username: String, request: InviteSetupRequest): EmptyResult<ServerError> {
-        val response = networkErrorTryCatch(INVITE_SETUP_TAG) {
+        val response = networkRequest(INVITE_SETUP_TAG) {
             userHttpClient.post {
                 url("$serverUrl/api/auth/setup/invite")
                 contentType(ContentType.Application.Json)

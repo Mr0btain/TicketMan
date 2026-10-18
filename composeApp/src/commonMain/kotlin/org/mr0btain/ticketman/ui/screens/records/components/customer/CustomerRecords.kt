@@ -19,6 +19,7 @@ import kotlin.uuid.Uuid
 
 /**
  * Customers on the records screen: the list, the one being edited, and saving it
+ * @param canEdit Whether the signed in user can change things, restricted users can only look
  * @param cacheSize How many opened customers to keep
  * @param searchLimit Most search results to ask for
  */
@@ -27,6 +28,7 @@ class CustomerRecords(
     private val remoteHandler: RemoteHandler,
     private val scope: CoroutineScope,
     private val snackBarHost: SnackbarHostState,
+    private val canEdit: () -> Boolean,
     pagerConfig: OffsetPagerConfig,
     cacheSize: Int,
     private val searchLimit: () -> Int
@@ -77,6 +79,8 @@ class CustomerRecords(
 
     /** Saves the seed: the customer, its notes, and any tickets linked to it */
     fun save() {
+        if (!canEdit()) return
+
         // If we haven't made any changes, then just return
         if (!seed.isDirty) return
 
@@ -126,6 +130,8 @@ class CustomerRecords(
         remoteHandler.customerRepo.search(query, searchLimit())
 
     fun remove(identifier: Uuid) {
+        if (!canEdit()) return
+
         scope.launch {
             if (seed.identifier == identifier) {
                 clearSelection()

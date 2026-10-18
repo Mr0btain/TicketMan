@@ -23,6 +23,7 @@ import kotlin.uuid.Uuid
 
 /**
  * Tickets on the records screen: the list (yours or everyone's), the one being edited, and saving it
+ * @param canEdit Whether the signed in user can change things, restricted users can only look
  * @param cacheSize How many opened tickets to keep
  * @param searchLimit Most search results to ask for
  */
@@ -32,6 +33,7 @@ class TicketRecords(
     private val localStorage: LocalStorage,
     private val scope: CoroutineScope,
     private val snackBarHost: SnackbarHostState,
+    private val canEdit: () -> Boolean,
     pagerConfig: OffsetPagerConfig,
     cacheSize: Int,
     private val searchLimit: () -> Int
@@ -102,6 +104,8 @@ class TicketRecords(
 
     /** Saves the seed: the ticket, its notes, and who it belongs to and is assigned to */
     fun save() {
+        if (!canEdit()) return
+
         // If no changes, then return
         if (!seed.isDirty) return
 
@@ -160,6 +164,8 @@ class TicketRecords(
         remoteHandler.ticketRepo.search(query, searchLimit())
 
     fun remove(identifier: Uuid) {
+        if (!canEdit()) return
+
         scope.launch {
             if (seed.identifier == identifier) {
                 clearSelection()

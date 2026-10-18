@@ -30,6 +30,7 @@ import kotlin.uuid.Uuid
 fun InventoryInfoPane(
     inventoryData: InventorySeed,
     onEditClick: () -> Unit,
+    canEdit: Boolean = true,
     onImageClick: (page: Int) -> Unit = {},
     onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> }
 ) {
@@ -39,7 +40,8 @@ fun InventoryInfoPane(
         icon = Res.drawable.package_icon,
         isEmpty = inventoryData.isNew,
         emptyTitle = "No item picked",
-        onEdit = onEditClick
+        onEdit = onEditClick,
+        canEdit = canEdit
     ) {
         if (inventoryData.description.isNotBlank()) {
             DetailSection("Description") {

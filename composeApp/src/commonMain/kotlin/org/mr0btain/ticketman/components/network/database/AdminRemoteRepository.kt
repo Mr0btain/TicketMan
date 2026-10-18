@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -84,7 +85,7 @@ class AdminRemoteRepository(
     suspend fun revokeSession(sessionId: String): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(REVOKE_SESSION_TAG) {
+        val response = networkRequest(REVOKE_SESSION_TAG) {
             client.delete { url("$adminUrl/sessions/$sessionId") }
         }
 
@@ -95,7 +96,7 @@ class AdminRemoteRepository(
     suspend fun revokeUserSessions(userIdentifier: Uuid): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(REVOKE_SESSION_TAG) {
+        val response = networkRequest(REVOKE_SESSION_TAG) {
             client.delete { url("$adminUrl/sessions/user/$userIdentifier") }
         }
 
@@ -108,7 +109,7 @@ class AdminRemoteRepository(
     suspend fun approveStation(identifier: Uuid): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(STATIONS_TAG) {
+        val response = networkRequest(STATIONS_TAG) {
             client.post { url("$adminUrl/stations/$identifier/approve") }
         }
 
@@ -118,7 +119,7 @@ class AdminRemoteRepository(
     suspend fun setKiosk(identifier: Uuid, settings: KioskSettings): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(STATIONS_TAG) {
+        val response = networkRequest(STATIONS_TAG) {
             client.post {
                 url("$adminUrl/stations/$identifier/kiosk")
                 contentType(ContentType.Application.Json)
@@ -133,7 +134,7 @@ class AdminRemoteRepository(
     suspend fun removeStation(identifier: Uuid): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(STATIONS_TAG) {
+        val response = networkRequest(STATIONS_TAG) {
             client.delete { url("$adminUrl/stations/$identifier") }
         }
 
@@ -147,7 +148,7 @@ class AdminRemoteRepository(
     suspend fun registerStation(deviceId: String, name: String): Result<StationRegistrationResponse, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(STATIONS_TAG) {
+        val response = networkRequest(STATIONS_TAG) {
             client.post {
                 url("$baseUrl/api/station/register")
                 contentType(ContentType.Application.Json)
@@ -168,7 +169,7 @@ class AdminRemoteRepository(
     suspend fun prepareBackup(includeImages: Boolean): Result<BackupTicket, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(BACKUP_TAG) {
+        val response = networkRequest(BACKUP_TAG) {
             client.post {
                 url("$adminUrl/backup")
                 contentType(ContentType.Application.Json)
@@ -190,7 +191,7 @@ class AdminRemoteRepository(
     ): Result<PendingRestore, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(RESTORE_TAG) {
+        val response = networkRequest(RESTORE_TAG) {
             client.post {
                 url("$adminUrl/restore")
                 setBody(body)
@@ -219,7 +220,7 @@ class AdminRemoteRepository(
     suspend fun cancelRestore(): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(RESTORE_TAG) {
+        val response = networkRequest(RESTORE_TAG) {
             client.delete { url("$adminUrl/restore") }
         }
 
@@ -232,7 +233,7 @@ class AdminRemoteRepository(
     suspend fun seed(request: SeedRequest): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(SEED_TAG) {
+        val response = networkRequest(SEED_TAG) {
             client.post {
                 url("$adminUrl/seed")
                 contentType(ContentType.Application.Json)
@@ -268,7 +269,7 @@ class AdminRemoteRepository(
     suspend fun updateShopProfile(profile: ShopProfile): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
-        val response = networkErrorTryCatch(UPDATE_SHOP_TAG) {
+        val response = networkRequest(UPDATE_SHOP_TAG) {
             client.post {
                 url("$shopUrl/update")
                 contentType(ContentType.Application.Json)

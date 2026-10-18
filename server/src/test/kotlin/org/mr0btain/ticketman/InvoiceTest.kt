@@ -4,6 +4,10 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -19,6 +23,7 @@ import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.user.User
@@ -274,6 +279,89 @@ class InvoiceTest {
         // Can't do it twice or change a paid invoice
         assertEquals(HttpStatusCode.Conflict, pickup(ticket).status)
         assertEquals(HttpStatusCode.Conflict, setCharges(paid, listOf(Charge(description = "More", unitPriceCents = 1))).status)
+    }
+
+    @Test
+    fun pickupsAtTheSameMomentOnlyGoThroughOnce() = testApplication {
+        setup()
+        val part = Inventory(name = "Battery", stock = 10, priceCents = 3_000)
+        postJson("/api/data/inventory/add", json.encodeToString(part))
+        val ticket = newTicket()
+        val invoice = invoiceFor(ticket)
+        setCharges(invoice, listOf(Charge(type = ChargeType.PART, description = "Battery", unitPriceCents = 3_000, inventoryIdentifier = part.identifier)))
+
+        val statuses = coroutineScope {
+            (1..6).map { async(Dispatchers.IO) { pickup(ticket, PaymentRequest(PaymentMethod.CASH, 3_000)).status } }.awaitAll()
+        }
+
+        assertEquals(1, statuses.count { it == HttpStatusCode.OK })
+        assertEquals(5, statuses.count { it == HttpStatusCode.Conflict })
+
+        // Paid once and one battery taken
+        val paid = json.decodeFromString<Invoice>(client.get("/api/invoice/${invoice.identifier}") { bearerAuth(token) }.bodyAsText())
+        assertEquals(1, paid.payments.size)
+        assertEquals(9, InventoryDatabase().getById(part.identifier)!!.stock)
+    }
+
+    @Test
+    fun pickupWontTakeMoreThanIsInStock() = testApplication {
+        setup()
+        val screen = Inventory(name = "Screen", stock = 1, priceCents = 8_000)
+        postJson("/api/data/inventory/add", json.encodeToString(screen))
+        val ticket = newTicket()
+        val invoice = invoiceFor(ticket)
+        // Two lines for the same item count together
+        setCharges(
+            invoice,
+            listOf(
+                Charge(type = ChargeType.PART, description = "Screen", unitPriceCents = 8_000, inventoryIdentifier = screen.identifier),
+                Charge(type = ChargeType.PART, description = "Spare screen", unitPriceCents = 8_000, inventoryIdentifier = screen.identifier)
+            )
+        )
+
+        val response = pickup(ticket, PaymentRequest(PaymentMethod.CARD, 16_000))
+        assertEquals(HttpStatusCode.Conflict, response.status)
+        assertEquals("Only 1 of Screen in stock, fix the count in Inventory first", response.bodyAsText())
+
+        // Nothing changed
+        assertEquals(1, InventoryDatabase().getById(screen.identifier)!!.stock)
+        assertEquals(InvoiceStatus.OPEN, json.decodeFromString<Invoice>(client.get("/api/invoice/${invoice.identifier}") { bearerAuth(token) }.bodyAsText()).status)
+        assertNotEquals(TicketStatusType.PICKED_UP, TicketDatabase().getById(ticket.identifier)!!.status.status)
+
+        // Untracked stock is never short
+        val cable = Inventory(name = "Cable", priceCents = 1_000)
+        postJson("/api/data/inventory/add", json.encodeToString(cable))
+        setCharges(invoice, listOf(Charge(type = ChargeType.PART, description = "Cable", quantity = 3.0, unitPriceCents = 1_000, inventoryIdentifier = cable.identifier)))
+        assertEquals(HttpStatusCode.OK, pickup(ticket, PaymentRequest(PaymentMethod.CARD, 3_000)).status)
+    }
+
+    @Test
+    fun ticketsAreOnlyPickedUpAtTheCounter() = testApplication {
+        setup()
+        val ticket = newTicket()
+        suspend fun update(changed: Ticket) = postJson("/api/data/ticket/update", json.encodeToString(changed))
+
+        // Not through a plain update, the invoice wouldn't be paid
+        assertEquals(HttpStatusCode.Conflict, update(ticket.copy(status = TicketStatus(TicketStatusType.PICKED_UP))).status)
+        assertEquals(HttpStatusCode.BadRequest, postJson("/api/data/ticket/add", json.encodeToString(Ticket(status = TicketStatus(TicketStatusType.PICKED_UP)))).status)
+        assertNotEquals(TicketStatusType.PICKED_UP, TicketDatabase().getById(ticket.identifier)!!.status.status)
+
+        assertEquals(HttpStatusCode.OK, pickup(ticket).status)
+        val closed = TicketDatabase().getById(ticket.identifier)!!
+
+        // Once picked up it can't be reopened
+        assertEquals(HttpStatusCode.Conflict, update(closed.copy(status = TicketStatus(TicketStatusType.IN_PROGRESS))).status)
+        assertEquals(TicketStatusType.PICKED_UP, TicketDatabase().getById(ticket.identifier)!!.status.status)
+
+        // Other details can still be fixed
+        assertEquals(HttpStatusCode.Accepted, update(closed.copy(problem = "Cracked screen, fixed")).status)
+        val edited = TicketDatabase().getById(ticket.identifier)!!
+        assertEquals("Cracked screen, fixed", edited.problem)
+        assertEquals(TicketStatusType.PICKED_UP, edited.status.status)
+
+        // A save that started before the pickup still has the old status, it mustn't reopen the ticket
+        assertTrue(TicketDatabase().update(ticket.copy(problem = "Late save")))
+        assertEquals(TicketStatusType.PICKED_UP, TicketDatabase().getById(ticket.identifier)!!.status.status)
     }
 
     @Test
