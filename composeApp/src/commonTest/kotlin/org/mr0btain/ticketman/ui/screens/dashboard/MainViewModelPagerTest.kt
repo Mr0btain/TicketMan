@@ -70,9 +70,9 @@ class MainViewModelPagerTest {
         val viewModel = MainViewModel(SnackbarHostState(), localStorage, engine)
 
         // What the dashboard grabs on its first composition
-        val customerItems = viewModel.customerPager.items
-        val ticketItems = viewModel.ticketPager.items
-        val inventoryItems = viewModel.inventoryPager.items
+        val customerItems = viewModel.customers.pager.items
+        val ticketItems = viewModel.tickets.pager.items
+        val inventoryItems = viewModel.inventory.pager.items
 
         viewModel.init()
         settle { customerItems.value.isNotEmpty() && ticketItems.value.isNotEmpty() && inventoryItems.value.isNotEmpty() }
@@ -85,21 +85,21 @@ class MainViewModelPagerTest {
     @Test
     fun pageSizeChangeKeepsTheSamePagers() = runTest(dispatcher) {
         val viewModel = MainViewModel(SnackbarHostState(), localStorage, engine)
-        val pager = viewModel.customerPager
+        val pager = viewModel.customers.pager
         viewModel.init()
         settle { pager.items.value.isNotEmpty() }
 
         viewModel.settings.setPageSize(viewModel.settings.pageSize.value + 5)
         settle { pager.items.value.isNotEmpty() && !pager.isRefreshing }
 
-        assertSame(pager, viewModel.customerPager)
+        assertSame(pager, viewModel.customers.pager)
         assertEquals(customers.size, pager.items.value.size)
     }
 
     @Test
     fun loggingOutDropsLoadedRecords() = runTest(dispatcher) {
         val viewModel = MainViewModel(SnackbarHostState(), localStorage, engine)
-        val pager = viewModel.customerPager
+        val pager = viewModel.customers.pager
         viewModel.init()
         settle { pager.items.value.isNotEmpty() }
 

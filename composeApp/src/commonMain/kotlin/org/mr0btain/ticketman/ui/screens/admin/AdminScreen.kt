@@ -76,7 +76,7 @@ private fun AdminContent(
     var selectedTab by rememberSaveable { mutableStateOf(AdminTab.OVERVIEW) }
 
     val isLoading by admin.isLoading.collectAsState()
-    val pendingUser by viewModel.userSelection.pending.collectAsState()
+    val pendingUser by viewModel.users.selection.pending.collectAsState()
     val stats by admin.stats.collectAsState()
     val dailyReport by admin.dailyReport.collectAsState()
     val lowStock by admin.lowStock.collectAsState()
@@ -94,10 +94,10 @@ private fun AdminContent(
     val currentUser by viewModel.session.currentUser.collectAsState()
 
     // Users list uses the same pager as everywhere else
-    val userSeed = viewModel.userSeed
-    val users = viewModel.userPager.items.collectAsState()
+    val userSeed = viewModel.users.seed
+    val users = viewModel.users.pager.items.collectAsState()
     val userListState = rememberLazyListState()
-    offsetPagerHandler(viewModel.userPager, userListState)
+    offsetPagerHandler(viewModel.users.pager, userListState)
 
     // User dialogs
     var showUserDialog by remember { mutableStateOf(false) }
@@ -135,7 +135,7 @@ private fun AdminContent(
     // Fresh numbers whenever the screen is opened
     LaunchedEffect(Unit) {
         admin.refreshAll()
-        viewModel.userPager.refresh()
+        viewModel.users.pager.refresh()
     }
 
     UserDialog(
@@ -147,7 +147,7 @@ private fun AdminContent(
         onConfirm = { user, password ->
             admin.saveUser(user, isNewUser, password, onSuccess = {
                 showUserDialog = false
-                viewModel.setSelectedUser(user.identifier, force = true)
+                viewModel.users.select(user.identifier, force = true)
             })
         }
     )
@@ -211,7 +211,7 @@ private fun AdminContent(
                 onMoveReport = { admin.moveDailyReport(it) },
                 onPrintReport = { paper, onResult -> admin.printDailyReport(paper, onResult) },
                 onTicketClick = { identifier ->
-                    viewModel.setSelectedTicket(identifier)
+                    viewModel.tickets.select(identifier)
                     viewModel.changeMainTabIndex(TICKET_TAB)
                     onNavigateToMain()
                 },
@@ -229,8 +229,8 @@ private fun AdminContent(
                 pendingId = pendingUser,
                 currentUserIdentifier = currentUser?.identifier,
                 listState = userListState,
-                onSelect = { identifier -> viewModel.setSelectedUser(identifier) },
-                onSearchQuery = { query -> viewModel.searchUsers(query) },
+                onSelect = { identifier -> viewModel.users.select(identifier) },
+                onSearchQuery = { query -> viewModel.users.search(query) },
                 onAdd = {
                     isNewUser = true
                     showUserDialog = true
@@ -268,7 +268,7 @@ private fun AdminContent(
                 threshold = lowStockThreshold,
                 onThresholdChange = { admin.setLowStockThreshold(it) },
                 onItemClick = { identifier ->
-                    viewModel.setSelectedInventory(identifier)
+                    viewModel.inventory.select(identifier)
                     viewModel.changeMainTabIndex(INVENTORY_TAB)
                     onNavigateToMain()
                 }
