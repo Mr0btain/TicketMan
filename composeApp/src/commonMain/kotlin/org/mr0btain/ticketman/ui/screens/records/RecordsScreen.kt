@@ -155,7 +155,7 @@ fun RecordsScreen(
                 DataType.CUSTOMER -> viewModel.customers.remove(customerSeed.identifier)
                 DataType.TICKET -> viewModel.tickets.remove(ticketSeed.identifier)
                 DataType.INVENTORY -> viewModel.inventory.remove(inventorySeed.identifier)
-                DataType.USER -> TODO()
+                DataType.USER -> TODO("Only admins can edit or remove users. Not sure what we could do here")
                 else -> {
                     // Do Nothing
                 }
@@ -196,12 +196,6 @@ fun RecordsScreen(
                 tabs = listOf("Customers", "Tickets", "Inventory"),
                 selectedIndex = tabIndex.value,
                 onSelect = { viewModel.changeMainTabIndex(it) }
-            )
-
-            TmIconButton(
-                icon = Res.drawable.refresh_cw,
-                contentDescription = "Reload the lists",
-                onClick = { viewModel.refreshPagers() }
             )
         }
 
