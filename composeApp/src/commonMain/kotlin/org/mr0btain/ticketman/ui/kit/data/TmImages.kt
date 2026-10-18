@@ -12,11 +12,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -115,18 +120,19 @@ private fun ImagePlaceholder(modifier: Modifier, failed: Boolean) {
  * @param variant Size fetched, thumbnails for small strips and display for anything bigger
  * @param clickEnabled Lets a photo be clicked, usually to open it full size
  * @param onRemove Shows a remove button on the photo in view, null for none
+ * @param pagerState Pass one in to move between photos from outside, like the arrow keys in [TmImageView]
  */
 @Composable
-fun ImagePager(
+fun TmImagePager(
     modifier: Modifier = Modifier,
     storedImages: List<StoredImage>,
     variant: ImageVariant = ImageVariant.THUMB,
     onImageClick: () -> Unit = {},
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     clickEnabled: Boolean = true,
-    onRemove: ((StoredImage) -> Unit)? = null
+    onRemove: ((StoredImage) -> Unit)? = null,
+    pagerState: PagerState = rememberPagerState(pageCount = { storedImages.size })
 ) {
-    val pagerState = rememberPagerState(pageCount = { storedImages.size })
     var pageCount by remember { mutableIntStateOf(storedImages.size) }
 
     Box(modifier) {
@@ -201,11 +207,12 @@ fun ImagePager(
 }
 
 /**
- * Photos shown big over everything, clicking outside closes it. Shows the display size, with a button to fetch
+ * Photos shown big over everything, closed like any [TmFullScreenDialog]. The left and right arrow keys step
+ * through them. Shows the display size, with a button to fetch
  * the sharper original (up to 2560px) when the detail matters on a big screen
  */
 @Composable
-fun ImagePopup(
+fun TmImageView(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     isVisible: Boolean,
@@ -213,14 +220,36 @@ fun ImagePopup(
 ) {
     if (isVisible && images.isNotEmpty()) {
         var fullSize by remember { mutableStateOf(false) }
+        val pagerState = rememberPagerState(pageCount = { images.size })
+        val coroutineScope = rememberCoroutineScope()
 
-        TmFullScreenDialog(modifier = modifier, onDismiss = onDismiss) {
+        fun step(by: Int): Boolean {
+            val target = (pagerState.currentPage + by).coerceIn(0, images.size - 1)
+            if (target != pagerState.currentPage) coroutineScope.launch { pagerState.animateScrollToPage(target) }
+            return true
+        }
+
+        TmFullScreenDialog(
+            modifier = modifier,
+            onDismiss = onDismiss,
+            onKeyEvent = { event ->
+                if (event.type != KeyEventType.KeyDown) return@TmFullScreenDialog false
+
+                when (event.key) {
+                    Key.DirectionLeft -> step(-1)
+                    Key.DirectionRight -> step(1)
+                    else -> false
+                }
+            }
+        ) {
             Column(Modifier.fillMaxSize()) {
-                ImagePager(
+                TmImagePager(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     storedImages = images,
                     variant = if (fullSize) ImageVariant.ORIGINAL else ImageVariant.DISPLAY,
-                    clickEnabled = false
+                    coroutineScope = coroutineScope,
+                    clickEnabled = false,
+                    pagerState = pagerState
                 )
 
                 TmButton(

@@ -8,7 +8,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.time.createdAt
-import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
+import org.mr0btain.ticketman.ui.screens.shared.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TicketIdText
@@ -48,7 +48,7 @@ fun CustomerInfoPane(
 
         DetailSection("Tickets") {
             if (seed.tickets.isEmpty()) {
-                NoteBlock(notes = emptyList(), emptyText = "No tickets yet")
+                TmNoteBlock(notes = emptyList(), emptyText = "No tickets yet")
             }
 
             Column {
@@ -64,7 +64,7 @@ fun CustomerInfoPane(
         }
 
         DetailSection("Notes") {
-            NoteBlock(notes = seed.notes, onImageClick = onImageClick)
+            TmNoteBlock(notes = seed.notes, onImageClick = onImageClick)
         }
     }
 }

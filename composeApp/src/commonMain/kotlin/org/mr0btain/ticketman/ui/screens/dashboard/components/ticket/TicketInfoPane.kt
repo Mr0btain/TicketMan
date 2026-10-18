@@ -7,7 +7,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
-import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
+import org.mr0btain.ticketman.ui.screens.shared.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.MoneyText
 import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
@@ -60,7 +60,7 @@ fun TicketInfoPane(
         }
 
         DetailSection("Updates") {
-            NoteBlock(notes = seed.notes, onImageClick = onImageClick, emptyText = "No updates yet")
+            TmNoteBlock(notes = seed.notes, onImageClick = onImageClick, emptyText = "No updates yet")
         }
     }
 }

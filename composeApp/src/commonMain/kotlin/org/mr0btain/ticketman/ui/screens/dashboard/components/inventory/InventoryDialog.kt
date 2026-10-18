@@ -10,9 +10,9 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.data.money.Money
-import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
-import org.mr0btain.ticketman.ui.screens.shared.PhotoEditor
-import org.mr0btain.ticketman.ui.screens.shared.EditNoteDialog
+import org.mr0btain.ticketman.ui.screens.shared.TmNoteBlock
+import org.mr0btain.ticketman.ui.screens.shared.TmPhotoEditor
+import org.mr0btain.ticketman.ui.screens.shared.TmEditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -43,7 +43,7 @@ fun InventoryDialog(
     val noteSeed = remember { NoteSeed() }
     val spacing = TmTheme.spacing
 
-    EditNoteDialog(
+    TmEditNoteDialog(
         seed = noteSeed,
         label = if (noteSeed.message.isBlank()) "Add note" else "Edit note",
         isVisible = showNoteDialog,
@@ -103,7 +103,7 @@ fun InventoryDialog(
         }
 
         TmSectionLabel("Photos")
-        PhotoEditor(
+        TmPhotoEditor(
             images = seed.images,
             onAdd = { seed.addImage(it) },
             onRemove = { seed.removeImage(it.identifier) },
@@ -124,7 +124,7 @@ fun InventoryDialog(
             )
         }
 
-        NoteBlock(
+        TmNoteBlock(
             notes = seed.notes,
             editable = true,
             onEditClick = { note ->

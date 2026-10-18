@@ -8,9 +8,9 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
-import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
+import org.mr0btain.ticketman.ui.screens.shared.TmNoteBlock
 import org.mr0btain.ticketman.ui.screens.shared.ConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.screens.shared.EditNoteDialog
+import org.mr0btain.ticketman.ui.screens.shared.TmEditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -51,7 +51,7 @@ fun CustomerDialog(
     var lastName by remember { mutableStateOf(seed.lastName) }
     val spacing = TmTheme.spacing
 
-    EditNoteDialog(
+    TmEditNoteDialog(
         seed = noteSeed,
         label = if (noteSeed.message.isBlank()) "Add note" else "Edit note",
         isVisible = showNoteDialog,
@@ -148,7 +148,7 @@ fun CustomerDialog(
             )
         }
 
-        NoteBlock(
+        TmNoteBlock(
             notes = seed.notes,
             editable = true,
             onImageClick = onImageClick,

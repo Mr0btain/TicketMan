@@ -122,6 +122,9 @@ abstract class DataSeed(tag: String) {
         _notes.indexOfFirst { it.identifier == note.identifier }.also { index ->
             if (index != -1) {
                 _notes[index] = note
+
+                if (!_changedFields.contains(ChangedField.NOTE))
+                    _changedFields.add(ChangedField.NOTE)
             } else {
                 AppLogger.m(UPDATE_NOTE_TAG, "Note not found")
             }

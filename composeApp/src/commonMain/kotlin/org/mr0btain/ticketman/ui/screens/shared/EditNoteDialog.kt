@@ -12,7 +12,7 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
  * @param label Dialog title, like "Add note"
  */
 @Composable
-fun EditNoteDialog(
+fun TmEditNoteDialog(
     seed: NoteSeed,
     label: String = "",
     isVisible: Boolean,
@@ -50,7 +50,7 @@ fun EditNoteDialog(
             minLines = 3
         )
 
-        PhotoEditor(
+        TmPhotoEditor(
             images = seed.images,
             onAdd = { seed.addImage(it) },
             onRemove = { seed.deleteImage(it.identifier) },

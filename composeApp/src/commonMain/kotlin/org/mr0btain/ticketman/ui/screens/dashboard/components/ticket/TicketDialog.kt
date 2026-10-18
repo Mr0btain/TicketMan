@@ -14,8 +14,8 @@ import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
-import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
-import org.mr0btain.ticketman.ui.screens.shared.EditNoteDialog
+import org.mr0btain.ticketman.ui.screens.shared.TmNoteBlock
+import org.mr0btain.ticketman.ui.screens.shared.TmEditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -53,7 +53,7 @@ fun TicketDialog(
     val noteSeed = remember { NoteSeed() }
     val colors = TmTheme.colors
 
-    EditNoteDialog(
+    TmEditNoteDialog(
         seed = noteSeed,
         label = if (noteSeed.message.isBlank()) "Add update" else "Edit update",
         isVisible = showNoteDialog,
@@ -155,7 +155,7 @@ fun TicketDialog(
             )
         }
 
-        NoteBlock(
+        TmNoteBlock(
             notes = seed.notes,
             editable = true,
             emptyText = "No updates yet",

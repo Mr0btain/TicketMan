@@ -26,7 +26,6 @@ import kotlin.uuid.ExperimentalUuidApi
  * never linked are cleaned up a day later. Files never change once uploaded, so they're sent with a long
  * immutable cache lifetime and their hash as the ETag
  */
-@OptIn(ExperimentalUuidApi::class)
 fun Route.imageRoute(
     service: ImageService,
     auditLog: AuditLogDatabase

@@ -10,8 +10,8 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.money.Money
-import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
-import org.mr0btain.ticketman.ui.kit.data.ImagePager
+import org.mr0btain.ticketman.ui.screens.shared.TmNoteBlock
+import org.mr0btain.ticketman.ui.kit.data.TmImagePager
 import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.MoneyText
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.ui.screens.dashboard.components.DetailSection
 import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordDetail
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.package_icon
+import kotlin.uuid.Uuid
 
 /**
  * The picked item: description, pricing, photos and notes
@@ -29,7 +30,8 @@ import ticketman.composeapp.generated.resources.package_icon
 fun InventoryInfoPane(
     inventoryData: InventorySeed,
     onEditClick: () -> Unit,
-    onImageClick: () -> Unit = {}
+    onImageClick: () -> Unit = {},
+    onNoteImageClick: (Uuid) -> Unit = {}
 ) {
     RecordDetail(
         title = inventoryData.name.ifBlank { "Unnamed item" },
@@ -56,7 +58,7 @@ fun InventoryInfoPane(
 
         if (inventoryData.images.isNotEmpty()) {
             DetailSection("Photos") {
-                ImagePager(
+                TmImagePager(
                     modifier = Modifier.fillMaxWidth().height(160.dp),
                     storedImages = inventoryData.images,
                     onImageClick = onImageClick
@@ -65,7 +67,7 @@ fun InventoryInfoPane(
         }
 
         DetailSection("Notes") {
-            NoteBlock(notes = inventoryData.notes)
+            TmNoteBlock(notes = inventoryData.notes, onImageClick = onNoteImageClick)
         }
     }
 }

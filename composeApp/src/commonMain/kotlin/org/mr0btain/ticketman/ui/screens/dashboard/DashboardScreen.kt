@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.screens.shared.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
-import org.mr0btain.ticketman.ui.kit.data.ImagePopup
+import org.mr0btain.ticketman.ui.kit.data.TmImageView
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -174,7 +174,7 @@ fun DashboardScreen(
     )
 
     // For image viewing
-    ImagePopup(
+    TmImageView(
         images = imagePopupList,
         isVisible = showImagePopup,
         onDismiss = {
@@ -273,6 +273,7 @@ fun DashboardScreen(
                 },
                 onEditInventory = { showInventoryDialog = true },
                 onImageClick = { showImages(inventorySeed.images) },
+                onNoteImageClick = { id -> showNoteImages(inventorySeed.notes, id) },
                 onDeleteInventory = {
                     dataType = DataType.INVENTORY
                     showConfirmDeleteDialog = true

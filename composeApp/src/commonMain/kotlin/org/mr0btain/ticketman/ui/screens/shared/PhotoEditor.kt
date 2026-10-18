@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.data.ImagePager
+import org.mr0btain.ticketman.ui.kit.data.TmImagePager
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.TmProgressBar
@@ -31,7 +31,7 @@ import ticketman.composeapp.generated.resources.image
  * @param onUploadingChange True while photos are going up, so the dialog can hold off saving
  */
 @Composable
-fun PhotoEditor(
+fun TmPhotoEditor(
     images: List<StoredImage>,
     onAdd: (StoredImage) -> Unit,
     onRemove: (StoredImage) -> Unit,
@@ -93,7 +93,7 @@ fun PhotoEditor(
         uploadError?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR, title = "Photo not added") }
 
         if (images.isNotEmpty()) {
-            ImagePager(
+            TmImagePager(
                 modifier = Modifier.height(160.dp).fillMaxWidth(),
                 storedImages = images,
                 coroutineScope = scope,

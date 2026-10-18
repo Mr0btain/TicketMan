@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
-import org.mr0btain.ticketman.ui.kit.data.ImagePager
+import org.mr0btain.ticketman.ui.kit.data.TmImagePager
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
@@ -23,7 +23,7 @@ import kotlin.uuid.Uuid
  * @param onImageClick Gets the note's identifier when one of its photos is clicked
  */
 @Composable
-fun NoteBlock(
+fun TmNoteBlock(
     modifier: Modifier = Modifier,
     notes: List<Note>,
     editable: Boolean = false,
@@ -58,7 +58,7 @@ fun NoteBlock(
                 Text(text = note.message, style = TmTheme.typography.body, color = colors.text)
 
                 if (note.images.isNotEmpty()) {
-                    ImagePager(
+                    TmImagePager(
                         modifier = Modifier.fillMaxWidth().height(160.dp),
                         storedImages = note.images,
                         onImageClick = { onImageClick(note.identifier) }

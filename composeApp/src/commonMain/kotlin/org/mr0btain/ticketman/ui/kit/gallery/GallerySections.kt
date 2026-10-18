@@ -48,7 +48,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
-import org.mr0btain.ticketman.ui.kit.data.ImagePager
+import org.mr0btain.ticketman.ui.kit.data.TmImagePager
 import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.MoneyText
 import org.mr0btain.ticketman.ui.kit.data.TicketIdText
@@ -594,7 +594,7 @@ private fun PhotosSection() {
         }
 
         Specimen("Pager, with remove for editing") {
-            ImagePager(modifier = Modifier.fillMaxWidth().height(160.dp), storedImages = photos, onRemove = {})
+            TmImagePager(modifier = Modifier.fillMaxWidth().height(160.dp), storedImages = photos, onRemove = {})
         }
     }
 }
