@@ -4,16 +4,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.time.createdAt
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-
-// TODO: (Setup Image handling in here as well.)
 
 @Suppress("PropertyName")
 abstract class DataSeed(tag: String) {
@@ -24,8 +22,9 @@ abstract class DataSeed(tag: String) {
     var identifier: Uuid by mutableStateOf(Uuid.generateV7())
         protected set
 
-    protected val _images = mutableStateListOf<ImageBitmap>()
-    val images: List<ImageBitmap> = _images
+    // Photos of the record itself, as opposed to photos on its notes
+    protected val _images = mutableStateListOf<StoredImage>()
+    val images: List<StoredImage> = _images
 
     var isNew: Boolean by mutableStateOf(true)
         protected set
@@ -62,6 +61,24 @@ abstract class DataSeed(tag: String) {
 
             _changedFields.add(ChangedField.NOTE)
         }
+    }
+
+    fun setImages(newImages: List<StoredImage>) {
+        if (_images != newImages) {
+            _images.clear()
+            _images.addAll(newImages)
+
+            if (!_changedFields.contains(ChangedField.IMAGE)) _changedFields.add(ChangedField.IMAGE)
+        }
+    }
+
+    fun addImage(image: StoredImage) {
+        if (_images.none { it.identifier == image.identifier }) setImages(_images + image)
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    fun removeImage(identifier: Uuid) {
+        setImages(_images.filter { it.identifier != identifier })
     }
 
     fun addNote(newNote: Note) {

@@ -10,12 +10,11 @@ import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(
@@ -76,12 +75,41 @@ fun Route.inventoryRoute(
         }
     }
 
+    // Photos of the item itself
+    authenticate("restricted") {
+        get("/get/images/{identifier}") {
+            val result = call.uuidParameter("identifier")?.let { database.getImages(it) }
+
+            if (result != null) call.respond(HttpStatusCode.OK, result)
+            else call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
+    // Body is every photo the item should have, uploaded ones get linked and missing ones deleted
+    authenticate {
+        post("/set/images/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val images = call.receive<List<StoredImage>>()
+
+            if (identifier != null && database.setImages(identifier, images)) {
+                call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "${images.size} photos")
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+    }
+
     // Adding new
     authenticate {
         post("/add") {
             val received = call.receive<Inventory>()
 
-            database.add(received)
+            if (!database.add(received)) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
+
             call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Created)
         }
@@ -92,7 +120,11 @@ fun Route.inventoryRoute(
         post("/update") {
             val received = call.receive<Inventory>()
 
-            database.update(received)
+            if (!database.update(received)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)
         }
@@ -101,14 +133,13 @@ fun Route.inventoryRoute(
     // Remove
     authenticate {
         delete("/remove/{identifier}") {
-            val identifier = call.parameters["identifier"]
+            val identifier = call.uuidParameter("identifier")
 
-            if (identifier == null) {
+            if (identifier == null || !database.remove(identifier)) {
                 call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            database.remove(Uuid.parse(identifier))
             call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
             call.respond(HttpStatusCode.Accepted)
         }

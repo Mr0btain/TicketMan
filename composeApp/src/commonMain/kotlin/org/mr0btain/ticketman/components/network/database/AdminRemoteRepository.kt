@@ -1,9 +1,11 @@
 package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
+import io.ktor.client.plugins.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
@@ -19,9 +21,12 @@ import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.request.StationRegistrationRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.BackupTicket
+import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
@@ -42,6 +47,7 @@ class AdminRemoteRepository(
     private val REVOKE_SESSION_TAG = "$TAG:RevokeSession"
     private val SERVER_INFO_TAG = "$TAG:ServerInfo"
     private val BACKUP_TAG = "$TAG:Backup"
+    private val RESTORE_TAG = "$TAG:Restore"
     private val SEED_TAG = "$TAG:Seed"
     private val AUDIT_TAG = "$TAG:Audit"
     private val GET_SHOP_TAG = "$TAG:GetShop"
@@ -155,23 +161,73 @@ class AdminRemoteRepository(
     suspend fun getServerInfo(): ServerInfoResponse? =
         getJson(SERVER_INFO_TAG, "$adminUrl/server")
 
-    /** Zip of the server's database */
-    suspend fun downloadBackup(): Result<ByteArray, ServerError> {
+    /**
+     * Has the server build a backup archive. Can take minutes with lots of photos, so there's no overall timeout
+     * @param includeImages Photos too, off for a quick database only copy
+     */
+    suspend fun prepareBackup(includeImages: Boolean): Result<BackupTicket, ServerError> {
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkErrorTryCatch(BACKUP_TAG) {
-            client.get { url("$adminUrl/backup") }
-        }
-
-        return when {
-            response == null -> Result.Error(ServerError(NetworkError.NO_INTERNET))
-            response.status.isSuccess() -> Result.Success(response.readRawBytes())
-            else -> {
-                val failed = handleActionHttpResponse(BACKUP_TAG, response) as? Result.Error
-                Result.Error(failed?.error ?: ServerError(NetworkError.UNKNOWN))
+            client.post {
+                url("$adminUrl/backup")
+                contentType(ContentType.Application.Json)
+                setBody(BackupRequest(includeImages))
+                transferTimeout()
             }
         }
+
+        return handleDataHttpResponse(BACKUP_TAG, response)
     }
+
+    /**
+     * Sends a backup archive to restore from. The server checks it and keeps it until it next starts
+     * @param body The archive, see fileBody
+     */
+    suspend fun uploadRestore(
+        body: OutgoingContent,
+        onProgress: (sent: Long, total: Long?) -> Unit = { _, _ -> }
+    ): Result<PendingRestore, ServerError> {
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkErrorTryCatch(RESTORE_TAG) {
+            client.post {
+                url("$adminUrl/restore")
+                setBody(body)
+                transferTimeout()
+                onUpload { sent, total -> onProgress(sent, total) }
+            }
+        }
+
+        return handleDataHttpResponse(RESTORE_TAG, response)
+    }
+
+    /** The restore waiting for the server to restart, null if there isn't one */
+    suspend fun getPendingRestore(): PendingRestore? {
+        if (baseUrl.isBlank()) return null
+
+        val response = networkErrorTryCatch(RESTORE_TAG) {
+            client.get { url("$adminUrl/restore") }
+        } ?: return null
+
+        if (response.status == HttpStatusCode.NoContent) return null
+
+        handleHttpResponse<PendingRestore>(RESTORE_TAG, response).onSuccess { return it }
+        return null
+    }
+
+    suspend fun cancelRestore(): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(RESTORE_TAG) {
+            client.delete { url("$adminUrl/restore") }
+        }
+
+        return handleActionHttpResponse(RESTORE_TAG, response)
+    }
+
+    /** Full url a prepared backup downloads from */
+    fun backupDownloadUrl(ticket: BackupTicket): String = "$baseUrl${ticket.downloadPath}"
 
     suspend fun seed(request: SeedRequest): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError

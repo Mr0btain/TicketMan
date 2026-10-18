@@ -3,13 +3,12 @@ package org.mr0btain.ticketman.components.network.database
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.util.reflect.typeInfo
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
@@ -31,8 +30,7 @@ class UserRemoteRepositoryImpl(
     tag = "UserRemoteRepositoryImpl",
     client = client,
     route = "api/user",
-    itemType = typeInfo<User>(),
-    listType = typeInfo<List<User>>()
+    types = itemTypes<User>()
 ) {
     private val GET_ME_TAG = "$tag:GetMe"
     private val RESET_PASSWORD_TAG = "$tag:ResetPassword"

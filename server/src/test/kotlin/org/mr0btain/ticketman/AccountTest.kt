@@ -7,7 +7,7 @@ import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.InviteDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus

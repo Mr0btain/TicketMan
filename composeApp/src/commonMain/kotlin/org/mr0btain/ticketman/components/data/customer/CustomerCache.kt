@@ -5,9 +5,9 @@ import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Ticket
 
-class CustomerCache(maxSize: Int): CustomCache<CustomerCache.CustomersData>(maxSize, "CustomerCache") {
+class CustomerCache(maxSize: Int): CustomCache<CustomerCache.CustomersData>(maxSize) {
 
-    suspend fun put(
+    fun put(
         customer: Customer,
         notes: List<Note> = emptyList(),
         tickets: List<Ticket> = emptyList()

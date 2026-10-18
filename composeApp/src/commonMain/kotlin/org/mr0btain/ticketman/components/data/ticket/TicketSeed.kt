@@ -3,9 +3,9 @@ package org.mr0btain.ticketman.components.data.ticket
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Device
@@ -205,7 +205,7 @@ class TicketSeed: DataSeed("TicketSeed") {
         val customer: EntityReference? = null,
         val user: EntityReference? = null,
         val notes: List<Note> = emptyList(),
-        val images: List<ImageBitmap> = emptyList(),
+        val images: List<StoredImage> = emptyList(),
         val ticket: Ticket? = null
     )
 }

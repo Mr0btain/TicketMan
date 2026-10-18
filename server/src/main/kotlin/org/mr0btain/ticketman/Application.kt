@@ -1,25 +1,34 @@
-package org.mr0btain.ticketman
+ package org.mr0btain.ticketman
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
+import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.BackupService
+import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
+import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.util.AppDir
+import java.io.File
 import java.security.SecureRandom
 import java.util.Base64
 
@@ -63,6 +72,7 @@ fun Application.module() {
         configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
+        configureTransfers()
         val invoiceService = InvoiceService(
             invoices = database.invoiceDatabase,
             tickets = database.ticketDatabase,
@@ -80,7 +90,30 @@ fun Application.module() {
             auditLog = database.auditLogDatabase
         )
 
-        configureRouting(userService, accountService, adminService, invoiceService, checkInService, database)
+        val imageService = ImageService(database.imageDatabase, database.imageStore)
+        val backupService = BackupService(
+            database = database,
+            images = database.imageDatabase,
+            imageStore = database.imageStore,
+            backupsFolder = File(database.databaseDirectory.parentFile, "backups")
+        )
+
+        val restoreService = RestoreService(database.databaseDirectory.parentFile)
+
+        configureRouting(
+            userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
+            restoreService, database
+        )
+
+        // Clears out photos deleted or never saved a day ago, and backups whose link has run out. Stops with
+        // the application
+        launch(Dispatchers.IO) {
+            while (isActive) {
+                imageService.sweep()
+                backupService.sweep()
+                delay(ImageService.SWEEP_INTERVAL)
+            }
+        }
 
         AppLogger.m("SERVER", "Server initialized!")
 
@@ -112,7 +145,7 @@ private fun ensureAdminExists(database: LocalDatabase, password: String) {
         ByteArray(12).also { SecureRandom().nextBytes(it) }.let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
     }
 
-    database.userDatabase.add(
+    val created = database.userDatabase.add(
         User(
             username = username,
             password = adminPassword,
@@ -120,6 +153,11 @@ private fun ensureAdminExists(database: LocalDatabase, password: String) {
             accessLevel = AccessLevel.ADMIN
         )
     )
+
+    if (!created) {
+        AppLogger.e(TAG, "No admin found and one couldn't be created")
+        return
+    }
 
     if (password.isBlank()) {
         AppLogger.m(TAG, "No admin found, created \"$username\" with password: $adminPassword  (change it from the admin screen)")

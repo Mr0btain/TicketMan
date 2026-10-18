@@ -9,8 +9,8 @@ import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
-import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
-import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
+import org.mr0btain.ticketman.ui.screens.shared.ConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.screens.shared.EditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant

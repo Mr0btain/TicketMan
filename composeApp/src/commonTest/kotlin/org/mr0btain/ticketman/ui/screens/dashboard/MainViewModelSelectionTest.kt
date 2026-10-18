@@ -72,20 +72,20 @@ class MainViewModelSelectionTest {
     fun theLastClickWinsEvenWhenAnEarlierOneFinishesLater() = runTest(dispatcher) {
         val viewModel = MainViewModel(SnackbarHostState(), localStorage, engine)
         viewModel.init()
-        settle { viewModel.serverConnected.value }
+        settle { viewModel.session.serverConnected.value }
 
-        viewModel.setSelectedCustomer(slow.identifier)
-        assertEquals(slow.identifier, viewModel.customerSelection.pending.value)
+        viewModel.customers.select(slow.identifier)
+        assertEquals(slow.identifier, viewModel.customers.selection.pending.value)
 
-        viewModel.setSelectedCustomer(fast.identifier)
-        assertEquals(fast.identifier, viewModel.customerSelection.pending.value)
-        settle { viewModel.customerSeed.identifier == fast.identifier }
+        viewModel.customers.select(fast.identifier)
+        assertEquals(fast.identifier, viewModel.customers.selection.pending.value)
+        settle { viewModel.customers.seed.identifier == fast.identifier }
 
         // The slow reply lands after the fast one is already showing
         release.complete(Unit)
         settle { false }
 
-        assertEquals(fast.identifier, viewModel.customerSeed.identifier)
-        assertNull(viewModel.customerSelection.pending.value)
+        assertEquals(fast.identifier, viewModel.customers.seed.identifier)
+        assertNull(viewModel.customers.selection.pending.value)
     }
 }

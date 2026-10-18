@@ -248,7 +248,9 @@ class CounterHandler(
 
         scope.launch {
             // The server signs it with whoever is signed in
-            remoteHandler.ticketRepo.addNote(detail.ticket.identifier, Note(message = message.trim()))
+            val added = remoteHandler.ticketRepo.addNote(detail.ticket.identifier, Note(message = message.trim()))
+            if (added is Result.Error) notify("Note not saved: ${added.error.message}")
+
             reloadTicket()
         }
     }

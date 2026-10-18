@@ -22,6 +22,7 @@ fun InventoryPanel(
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
     onDeleteInventory: () -> Unit,
+    onImageClick: () -> Unit,
     inventoryListState: LazyListState
 ) {
     RecordsLayout(
@@ -44,7 +45,7 @@ fun InventoryPanel(
             )
         },
         detail = {
-            InventoryInfoPane(inventoryData = selectedInventory, onEditClick = onEditInventory)
+            InventoryInfoPane(inventoryData = selectedInventory, onEditClick = onEditInventory, onImageClick = onImageClick)
         }
     )
 }

@@ -2,7 +2,6 @@ package org.mr0btain.ticketman.data.user
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.MainItem
-import org.mr0btain.ticketman.data.inventory.AccessLevel
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 

@@ -32,7 +32,6 @@ import kotlin.time.Duration.Companion.hours
  */
 
 // TODO: Add logging
-// Get rid of encryption service for now, redo it later. For the moment just get it working.
 
 fun Route.authRoute(
     userService: UserService,

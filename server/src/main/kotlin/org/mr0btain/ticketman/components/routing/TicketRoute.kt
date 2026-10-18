@@ -140,8 +140,7 @@ fun Route.ticketRoute(
         post("/add") {
             val received = call.receive<Ticket>()
 
-            database.add(received)
-            val saved = database.getById(received.identifier)
+            val saved = received.takeIf { database.add(it) }?.let { database.getById(it.identifier) }
 
             if (saved == null) {
                 call.respond(HttpStatusCode.InternalServerError)
@@ -162,7 +161,10 @@ fun Route.ticketRoute(
                 return@post
             }
 
-            database.update(received)
+            if (!database.update(received)) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
 
             if (existing.status.status != received.status.status) {
                 database.recordStatusChange(received.identifier, received.status.status, call.username(userDatabase))
@@ -175,12 +177,11 @@ fun Route.ticketRoute(
         delete("/remove/{identifier}") {
             val identifier = call.uuidParameter("identifier")
 
-            if (identifier == null) {
+            if (identifier == null || !database.remove(identifier)) {
                 call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            database.remove(identifier)
             call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
             call.respond(HttpStatusCode.Accepted)
         }

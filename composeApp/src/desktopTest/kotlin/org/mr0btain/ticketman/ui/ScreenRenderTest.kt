@@ -22,7 +22,7 @@ import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice

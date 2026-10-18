@@ -25,7 +25,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.components.utils.formatEnumName
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
@@ -47,10 +48,12 @@ import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
+import org.mr0btain.ticketman.ui.kit.data.ImagePager
 import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.MoneyText
 import org.mr0btain.ticketman.ui.kit.data.TicketIdText
 import org.mr0btain.ticketman.ui.kit.data.TmCountBar
+import org.mr0btain.ticketman.ui.kit.data.TmImage
 import org.mr0btain.ticketman.ui.kit.data.TmStatTile
 import org.mr0btain.ticketman.ui.kit.feedback.AccessBadge
 import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
@@ -100,6 +103,7 @@ internal fun gallerySections(): List<@Composable () -> Unit> = listOf(
     { TablesSection() },
     { FeedbackSection() },
     { DataSection() },
+    { PhotosSection() },
     { DialogSection() },
     { NavigationSection() },
     { TypeSection() },
@@ -566,6 +570,32 @@ private fun DataSection() {
         KeyValueRow(label = "Invoice") { TicketIdText("INV-26-00000041") }
         KeyValueRow(label = "Refund") { MoneyText(-2500, signed = true) }
         KeyValueRow(label = "SKU", value = "SCR-IP13-BLK", numeric = true)
+    }
+}
+
+// --------------------------------------- Photos ---------------------------------------
+
+@Composable
+private fun PhotosSection() {
+    val photos = remember {
+        listOf(
+            StoredImage(description = "Cracked back glass", width = 4032, height = 3024),
+            StoredImage(description = "Water damage indicator", width = 3024, height = 4032),
+            StoredImage(description = "Serial number", width = 1600, height = 1200)
+        )
+    }
+
+    GallerySection(
+        title = "Photos",
+        description = "Loaded from the server through the cache. Here, with no server, they show their placeholder"
+    ) {
+        Specimen("Thumbnails keep the photo's shape") {
+            photos.forEach { photo -> TmImage(image = photo, modifier = Modifier.height(96.dp), keepAspectRatio = true) }
+        }
+
+        Specimen("Pager, with remove for editing") {
+            ImagePager(modifier = Modifier.fillMaxWidth().height(160.dp), storedImages = photos, onRemove = {})
+        }
     }
 }
 

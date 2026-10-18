@@ -50,7 +50,7 @@ class NoteSeed {
     private var savedState: State = State()
 
     val note: Note
-        get() = Note(identifier, author, message)
+        get() = Note(identifier, author, message, _images.toList())
 
     fun setNote(
         note: Note

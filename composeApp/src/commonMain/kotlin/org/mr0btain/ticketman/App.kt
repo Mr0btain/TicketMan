@@ -4,12 +4,15 @@ import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSiz
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.rememberNavController
 import org.mr0btain.ticketman.components.debug.BuildConfigImpl
+import coil3.compose.setSingletonImageLoaderFactory
 import org.koin.compose.viewmodel.koinViewModel
+import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
@@ -51,10 +54,10 @@ fun App() {
     val mainScope = rememberCoroutineScope()
 
     // Should we show login popup or not
-    val shouldShowLogin = mainViewModel.showLogin.collectAsState()
+    val shouldShowLogin = mainViewModel.session.showLogin.collectAsState()
 
     // First login setup that has to be finished
-    val accountSetup = mainViewModel.accountSetup.collectAsState()
+    val accountSetup = mainViewModel.session.accountSetup.collectAsState()
 
     // Approved stations with kiosk mode show only the counter, signed into by PIN
     val kioskActive = mainViewModel.kiosk.active.collectAsState()
@@ -62,8 +65,8 @@ fun App() {
     val initialDestination = Destination.DASHBOARD
 
     // Admin screen is only listed for admins
-    val isAdmin = mainViewModel.isAdmin.collectAsState()
-    val currentUser = mainViewModel.currentUser.collectAsState()
+    val isAdmin = mainViewModel.session.isAdmin.collectAsState()
+    val currentUser = mainViewModel.session.currentUser.collectAsState()
 
     val isDebug = remember { BuildConfigImpl().isDebug() }
 
@@ -77,66 +80,72 @@ fun App() {
         if (isDebug) NavigationItem("Components", Res.drawable.layers, Destination.GALLERY) else null
     )
 
-    TmTheme(
-        palette = mainViewModel.palette.collectAsState().value,
-        font = mainViewModel.font.collectAsState().value,
-        darkTheme = mainViewModel.darkMode.collectAsState().value,
-        reduceTransparency = mainViewModel.reduceTransparency.collectAsState().value
-    ) {
-        println("Platform: ${getPlatform().name}")
+    // Photos load through the app's http client so they carry the login, and are cached in memory and on disk
+    setSingletonImageLoaderFactory { context -> mainViewModel.imageClient.newImageLoader(context) }
 
-        if (kioskActive.value) {
-            KioskShell(mainViewModel)
-            return@TmTheme
-        }
+    // Photos anywhere below can upload and load through the server
+    CompositionLocalProvider(LocalImageClient provides mainViewModel.imageClient) {
+        TmTheme(
+            palette = mainViewModel.settings.palette.collectAsState().value,
+            font = mainViewModel.settings.font.collectAsState().value,
+            darkTheme = mainViewModel.settings.darkMode.collectAsState().value,
+            reduceTransparency = mainViewModel.settings.reduceTransparency.collectAsState().value
+        ) {
+            println("Platform: ${getPlatform().name}")
 
-        accountSetup.value?.let { setup ->
-            AccountSetupDialog(
-                setup = setup,
-                onFinish = { name, email, phone, password, pin, onResult ->
-                    mainViewModel.completeAccountSetup(name, email, phone, password, pin, onResult)
-                },
-                onCancel = { mainViewModel.cancelAccountSetup() }
-            )
-        }
+            if (kioskActive.value) {
+                KioskShell(mainViewModel)
+                return@TmTheme
+            }
 
-        if (shouldShowLogin.value) {
-            LoginPopup(
-                viewModel = mainViewModel,
-                onDismiss = { mainViewModel.changeShowLogin(false) }
-            )
-        }
+            accountSetup.value?.let { setup ->
+                AccountSetupDialog(
+                    setup = setup,
+                    onFinish = { name, email, phone, password, pin, onResult ->
+                        mainViewModel.session.completeAccountSetup(name, email, phone, password, pin, onResult)
+                    },
+                    onCancel = { mainViewModel.session.cancelAccountSetup() }
+                )
+            }
 
-        val host: @Composable () -> Unit = {
-            NavigationHost(
-                navHostController = navigator,
-                coroutineScope = mainScope,
-                mainViewModel = mainViewModel,
-                snackBarState = snackBarHostState,
-                initialDestination = initialDestination
-            )
-        }
+            if (shouldShowLogin.value) {
+                LoginPopup(
+                    viewModel = mainViewModel,
+                    onDismiss = { mainViewModel.session.changeShowLogin(false) }
+                )
+            }
 
-        // Desktop always gets the rail, phones and tablets go by window width
-        val wide = getPlatform().name.contains("Java") ||
-                calculateWindowSizeClass().widthSizeClass == WindowWidthSizeClass.Expanded
+            val host: @Composable () -> Unit = {
+                NavigationHost(
+                    navHostController = navigator,
+                    coroutineScope = mainScope,
+                    mainViewModel = mainViewModel,
+                    snackBarState = snackBarHostState,
+                    initialDestination = initialDestination
+                )
+            }
 
-        if (wide) {
-            WideAppShell(
-                navHostController = navigator,
-                destinations = navDestination,
-                snackBarState = snackBarHostState,
-                user = currentUser.value,
-                onLogin = { mainViewModel.changeShowLogin(true) },
-                onLogout = { mainViewModel.logout() },
-                onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
-            ) { host() }
-        } else {
-            PhoneAppShell(
-                navHostController = navigator,
-                destinations = navDestination,
-                snackBarState = snackBarHostState
-            ) { host() }
+            // Desktop always gets the rail, phones and tablets go by window width
+            val wide = getPlatform().name.contains("Java") ||
+                    calculateWindowSizeClass().widthSizeClass == WindowWidthSizeClass.Expanded
+
+            if (wide) {
+                WideAppShell(
+                    navHostController = navigator,
+                    destinations = navDestination,
+                    snackBarState = snackBarHostState,
+                    user = currentUser.value,
+                    onLogin = { mainViewModel.session.changeShowLogin(true) },
+                    onLogout = { mainViewModel.session.logout() },
+                    onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
+                ) { host() }
+            } else {
+                PhoneAppShell(
+                    navHostController = navigator,
+                    destinations = navDestination,
+                    snackBarState = snackBarHostState
+                ) { host() }
+            }
         }
     }
 }

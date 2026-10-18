@@ -1,26 +1,22 @@
 package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.error.Error
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.ImageError
 import org.mr0btain.ticketman.error.NoteError
-import org.mr0btain.ticketman.logging.SimpleResult
-import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-// TODO: Add a way to remove images from disk as well
-
 /**
- * Base dDatabase class to inherit from for managing a table of MainItem data type.
+ * Base Database class to inherit from for managing a table of MainItem data type.
  * @param tag Tag used for logging. Example: TAG:AddAll will be printed in console
  */
 @Suppress("PropertyName")
@@ -32,14 +28,11 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     protected val REMOVE_TAG = "$tag:Remove"
     protected val ADD_TAG = "$tag:Add"
     protected val UPDATE_TAG = "$tag:Update"
-    protected val INSERT_NOTE_TAG = "$tag:InsertNote"
     protected val ADD_NOTE_TAG = "$tag:AddNote"
     protected val GET_NOTES_TAG = "$tag:GetNotes"
     protected val REMOVE_NOTE_TAG = "$tag:RemoveNote"
     protected val ADD_IMAGE_TO_NOTE_TAG = "$tag:AddImageToNote"
     protected val UPDATE_NOTE_TAG = "$tag:UpdateNote"
-    protected val INSERT_IMAGE_TAG = "$tag:AddImage"
-    protected val UPDATE_IMAGE_TAG = "$tag:UpdateImage"
     protected val REMOVE_IMAGE_TAG = "$tag:RemoveImage"
     protected val COUNT_TAG = "$tag:Count"
     protected val SEARCH_TAG = "$tag:Search"
@@ -47,49 +40,41 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     /**
      * Adds an item to the database
      * @param data Item to add
+     * @return Whether it was saved
      */
-    abstract fun add(data: T)
+    abstract fun add(data: T): Boolean
 
     /**
-     * Adds all items
+     * Adds all items, or none of them if one fails
      * @param data Items to add
+     * @return Whether they were saved
      */
-    abstract fun addAll(data: List<T>)
+    abstract fun addAll(data: List<T>): Boolean
 
     /**
-     * Adds a list of images to the ImageTable and links them a note
+     * Links uploaded images onto a note, see [linkImages] for which are taken
      * @param identifier Identifier of note to link images to
-     * @param images List of images to add
+     * @param images Uploaded images to add
+     * @return Whether the note was found
      */
+    fun addImagesToNote(identifier: Uuid, images: List<StoredImage>): Boolean =
+        dbWrite(ADD_IMAGE_TO_NOTE_TAG) {
+            val noteEntity = NoteEntity.findById(identifier)
+                ?: return@dbWrite false.also { AppLogger.i(ADD_IMAGE_TO_NOTE_TAG, NoteError.NOT_FOUND) }
 
-    fun addImagesToNote(identifier: Uuid, images: List<StoredImage>) {
-        appLogTryCatch(ADD_IMAGE_TO_NOTE_TAG) {
-            var result = false
+            val current = noteEntity.images.toList()
+            noteEntity.images = SizedCollection(linkImages(current.map { it.toStoredImage() } + images, current))
 
-            transaction {
-                NoteEntity.findById(identifier)?.let { noteEntity ->
-                    val imageCollection = images.map { image ->
-                        ImageEntity.new {
-                            directory = image.directory
-                        }
-                    }
-
-                    noteEntity.images = SizedCollection(noteEntity.images + imageCollection)
-
-                    result = true
-                } ?: AppLogger.i(ADD_IMAGE_TO_NOTE_TAG, NoteError.NOT_FOUND)
-            }
-
-            result
+            true
         }
-    }
 
     /**
      * Adds a note to an item and linking it to that item
      * @param identifier Identifier of item to link note to
      * @param note Note to insert and link to item
+     * @return Whether the item was found and the note saved
      */
-    abstract fun addNote(identifier: Uuid, note: Note)
+    abstract fun addNote(identifier: Uuid, note: Note): Boolean
 
     /** Returns the total number of items */
     abstract fun count(): Long
@@ -115,166 +100,92 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     abstract fun getNotes(identifier: Uuid): List<Note>?
 
     /**
-     * Adds a note to the database
+     * Adds a note to the database. Its images must have been uploaded first, see [linkImages].
+     * Must be called inside a transaction, and throws so that transaction rolls back too
      * @param note Note to insert
      */
-    protected fun insertNote(note: Note): NoteEntity? {
-        return appLogTryCatch<NoteEntity?>(INSERT_NOTE_TAG) {
-            transaction {
-                // Convert images
-                val imageCollection = note.images.map { image ->
-                    ImageEntity.new(image.identifier) {
-                        description = image.description
-                        tags = image.tags
-                        directory = image.directory
-                    }
-                }
+    protected fun insertNote(note: Note): NoteEntity {
+        val linked = linkImages(note.images, emptyList())
 
-                // Add new note to database
-                val entity = NoteEntity.new(note.identifier) {
-                    author = note.author
-                    message = note.message
-                    images = SizedCollection(imageCollection)
-                }
-
-                Pair(entity, true)
-            }
-        }
+        return NoteEntity.new(note.identifier) {
+            author = note.author
+            message = note.message
+        }.also { entity -> entity.images = SizedCollection(linked) }
     }
 
     /**
-     * Inserts and image into the ImageTable
-     * @param storedImage Image to insert
+     * Inserts [note] and attaches it to the item [find] returns, for [addNote]
+     * @param notFound Logged when there's no such item
      */
-    fun insertImage(storedImage: StoredImage): ImageEntity? {
-        return appLogTryCatch<ImageEntity?>(INSERT_IMAGE_TAG) {
-            val entity = transaction {
-                ImageEntity.new(storedImage.identifier) {
-                    directory = storedImage.directory
-                }
-            }
+    protected fun <E> attachNote(note: Note, notFound: Error, find: () -> E?, attach: (E, NoteEntity) -> Unit): Boolean =
+        dbWrite(ADD_NOTE_TAG) {
+            val item = find() ?: return@dbWrite false.also { AppLogger.i(ADD_NOTE_TAG, notFound) }
 
-            Pair(entity, true)
+            attach(item, insertNote(note))
+            true
         }
-    }
 
     /**
      * Updates an item in the database
      * @param data Item to update
+     * @return Whether the item was found and saved
      */
-    abstract fun update(data: T)
+    abstract fun update(data: T): Boolean
 
 
     /**
-     * Updates a note with this data. Essentially replaces the note with the ID with the data passed
-     * NOTE: This will delete image entities from the database but NOT the images themselves. for now i guess
-     *  @param note Note data
+     * Updates a note's text and images. Images left off are marked deleted and their files go with a later sweep
+     * @param note Note data
+     * @return Whether the note was found
      */
-    fun updateNote(note: Note) {
-        appLogTryCatch(UPDATE_NOTE_TAG) {
-            var result = false
+    fun updateNote(note: Note): Boolean =
+        dbWrite(UPDATE_NOTE_TAG) {
+            val noteEntity = NoteEntity.findById(note.identifier)
+                ?: return@dbWrite false.also { AppLogger.i(UPDATE_NOTE_TAG, NoteError.NOT_FOUND) }
 
-            transaction {
-                // Add new note to database
-                NoteEntity.findByIdAndUpdate(note.identifier) { noteEntity ->
-                    noteEntity.author = note.author
-                    noteEntity.message = note.message
+            noteEntity.author = note.author
+            noteEntity.message = note.message
+            noteEntity.images = SizedCollection(linkImages(note.images, noteEntity.images.toList()))
 
-                    val existingImageIds = noteEntity.images
-                        .map { it.id.value }
-                        .toMutableList()
-
-
-                    val updatedImages = mutableListOf<ImageEntity>()
-
-                    note.images.map { storedImage ->
-                        if (existingImageIds.contains(storedImage.identifier))
-                            updateImage(storedImage)?.let { updatedImages.add(it) }
-                        else
-                            insertImage(storedImage)?.let { updatedImages.add(it) }
-                    }
-
-                    noteEntity.images.forEach { imageEntity ->
-                        if (!updatedImages.contains(imageEntity)) imageEntity.delete()
-                    }
-
-                    noteEntity.images = SizedCollection(updatedImages)
-
-                    result = true
-                } ?: AppLogger.i(UPDATE_NOTE_TAG, NoteError.NOT_FOUND)
-            }
-
-            result
+            true
         }
-    }
 
     /**
-     * Updates and image in the ImageTable
-     * @param storedImage Image to update
-     */
-    fun updateImage(storedImage: StoredImage): ImageEntity? {
-        return appLogTryCatch<ImageEntity?>(UPDATE_IMAGE_TAG) {
-            transaction {
-                val entity = ImageEntity.findByIdAndUpdate(storedImage.identifier) { imageEntity ->
-                    imageEntity.description = storedImage.description
-                    imageEntity.directory = storedImage.directory
-                    imageEntity.tags = storedImage.tags
-                }
-
-                Pair(entity, entity != null)
-            }
-        }
-    }
-
-    /**
-     * Removes an image from ImageTable.
+     * Marks an image deleted, its files go with a later sweep
      * @param identifier Identifier of image to remove
+     * @return Whether the image was found
      */
-    fun removeImage(identifier: Uuid) {
-        appLogTryCatch(REMOVE_IMAGE_TAG) {
-            var result = false
+    fun removeImage(identifier: Uuid): Boolean =
+        dbWrite(REMOVE_IMAGE_TAG) {
+            val imageEntity = ImageEntity.findById(identifier)
+                ?: return@dbWrite false.also { AppLogger.i(REMOVE_IMAGE_TAG, ImageError.NOT_FOUND) }
 
-            transaction {
-                ImageEntity.findById(identifier)?.let { imageEntity ->
-                    imageEntity.delete()
-
-                    result = true
-                } ?: AppLogger.i(REMOVE_IMAGE_TAG, ImageError.NOT_FOUND)
-            }
-
-            result
+            markImagesDeleted(listOf(imageEntity))
+            true
         }
-    }
 
     /**
-     * Removes a note from the NoteTab;e and its images from the ImageTable
+     * Removes a note, marking its images deleted
      * @param identifier Identifier of the Note to remove
+     * @return Whether the note was found
      */
-    fun removeNote(identifier: Uuid) {
-        appLogTryCatch(REMOVE_NOTE_TAG) {
-            var result = false
+    fun removeNote(identifier: Uuid): Boolean =
+        dbWrite(REMOVE_NOTE_TAG) {
+            val noteEntity = NoteEntity.findById(identifier)
+                ?: return@dbWrite false.also { AppLogger.i(REMOVE_NOTE_TAG, NoteError.NOT_FOUND) }
 
-            transaction {
-                NoteEntity.findById(identifier)?.let { noteEntity ->
-                    noteEntity.images.forEach { imageEntity ->
-                        imageEntity.delete()
-                    }
+            markImagesDeleted(noteEntity.images)
+            noteEntity.delete()
 
-                    noteEntity.delete()
-
-                    result = true
-                } ?: AppLogger.i(REMOVE_NOTE_TAG, SimpleResult.FAIL)
-            }
-
-            result
+            true
         }
-    }
 
     /**
      * Removes an item from the database
      * @param identifier Identifier of item to remove
+     * @return Whether the item was found and removed
      */
-    abstract fun remove(identifier: Uuid)
+    abstract fun remove(identifier: Uuid): Boolean
 
     /**
      * Search the database. Returns a list of matches

@@ -6,13 +6,24 @@ import org.mr0btain.ticketman.data.SubItem
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-// TODO: Maybe add more info to this like auth and such
+/**
+ * A photo the server holds. The bytes live on the server's disk, keyed by [identifier], and never change once
+ * uploaded, so they can be cached forever. Replacing a photo means uploading a new one
+ * @param width Width in pixels of the [ImageVariant.ORIGINAL], 0 if unknown
+ * @param height Height in pixels of the [ImageVariant.ORIGINAL], 0 if unknown
+ * @param sizeBytes Size of the [ImageVariant.ORIGINAL] on the server
+ */
 @Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class StoredImage(
     override val identifier: Uuid = Uuid.generateV7(),
     val description: String = "",
-    val directory: String = "",
     val tags: List<String> = emptyList(),
-    val lastModified: Long = 0
-): MainItem(), SubItem
+    val width: Int = 0,
+    val height: Int = 0,
+    val sizeBytes: Long = 0
+): MainItem(), SubItem {
+    /** Width over height, or null when the size isn't known */
+    val aspectRatio: Float?
+        get() = if (width > 0 && height > 0) width.toFloat() / height else null
+}

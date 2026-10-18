@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.database.*
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
+import org.mr0btain.ticketman.components.network.image.ImageRemoteRepository
 import org.mr0btain.ticketman.components.network.user.createUserHttpClient
 import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.data.user.User
@@ -40,7 +41,8 @@ class RemoteHandler(
     private val LOGOUT_TAG = "$TAG:Logout"
     val userClient = ServerUserClient(createUserHttpClient(engine), localStorage)
 
-    private val httpClient = createRemoteHttpClient(
+    // Shared with the photo loader so photos go out with the same tokens and refresh
+    val httpClient = createRemoteHttpClient(
         engine = engine,
         getAccessToken = { getAccessToken() },
         getRefreshToken = { getRefreshToken() },
@@ -56,6 +58,7 @@ class RemoteHandler(
     val adminRepo = AdminRemoteRepository(httpClient)
     val counterRepo = CounterRemoteRepository(httpClient)
     val invoiceRepo = InvoiceRemoteRepository(httpClient)
+    val imageRepo = ImageRemoteRepository(httpClient)
 
     /**
      * Whether an expired session can be fixed by logging in again with the saved username and password.
@@ -86,6 +89,7 @@ class RemoteHandler(
                 adminRepo.serverUrl = url
                 counterRepo.serverUrl = url
                 invoiceRepo.serverUrl = url
+                imageRepo.serverUrl = url
 
                 AppLogger.m(SET_SERVER_URL_TAG, SimpleResult.SUCCESS)
 

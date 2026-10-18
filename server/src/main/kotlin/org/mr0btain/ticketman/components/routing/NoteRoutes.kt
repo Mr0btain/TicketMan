@@ -54,9 +54,7 @@ fun Route.noteRoutes(
             val received = call.receive<Note>()
             val note = received.copy(author = received.author.ifBlank { call.username(userDatabase) })
 
-            database.addNote(identifier, note)
-
-            if (database.getNotes(identifier)?.any { it.identifier == note.identifier } == true) {
+            if (database.addNote(identifier, note)) {
                 call.audit(auditLog, AuditAction.CREATE, "$entityType note", identifier, note.message.take(80))
                 call.respond(HttpStatusCode.Created, note)
             } else {
@@ -66,6 +64,24 @@ fun Route.noteRoutes(
     }
 
     authenticate {
+        // Replaces a note's text and images, the identifier is the note's. Images must be uploaded first
+        post("/update/note/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val received = call.receive<Note>()
+
+            if (identifier == null || identifier != received.identifier) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            if (database.updateNote(received)) {
+                call.audit(auditLog, AuditAction.UPDATE, "$entityType note", identifier, received.message.take(80))
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
         delete("/remove/note/{identifier}") {
             val identifier = call.uuidParameter("identifier")
 
@@ -74,7 +90,11 @@ fun Route.noteRoutes(
                 return@delete
             }
 
-            database.removeNote(identifier)
+            if (!database.removeNote(identifier)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@delete
+            }
+
             call.audit(auditLog, AuditAction.DELETE, "$entityType note", identifier)
             call.respond(HttpStatusCode.Accepted)
         }

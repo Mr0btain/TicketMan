@@ -27,4 +27,7 @@ dependencies {
 
     // Exposed for database
     implementation(libs.bundles.exposed)
+
+    // Photo resizing
+    implementation(libs.thumbnailator)
 }

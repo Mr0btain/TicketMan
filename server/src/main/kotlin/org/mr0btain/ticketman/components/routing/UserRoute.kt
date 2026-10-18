@@ -11,7 +11,7 @@ import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.components.service.AccountResult
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.data.audit.AuditAction
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
@@ -241,9 +241,12 @@ fun Route.userRoute(
                     call.respond(HttpStatusCode.BadRequest, "Pick an access level")
                 }
 
+                // Users made by an admin are ready to go
+                !database.add(user.copy(status = UserStatus.ACTIVE)) -> {
+                    call.respond(HttpStatusCode.InternalServerError, "The user couldn't be saved")
+                }
+
                 else -> {
-                    // Users made by an admin are ready to go
-                    database.add(user.copy(status = UserStatus.ACTIVE))
                     call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, user.identifier, "Added ${user.username} as ${user.accessLevel}")
                     call.respond(HttpStatusCode.Created, UserResponse(user.identifier, user.accessLevel))
                 }
@@ -288,7 +291,11 @@ fun Route.userRoute(
                 else -> {
                     // Pending users stay pending until approved
                     val saved = if (existing.status == UserStatus.PENDING) user.copy(status = UserStatus.PENDING) else user
-                    database.update(saved.withoutPassword())
+
+                    if (!database.update(saved.withoutPassword())) {
+                        call.respond(HttpStatusCode.InternalServerError, "The user couldn't be saved")
+                        return@post
+                    }
 
                     // Deactivating should also end their sessions
                     if (saved.status != UserStatus.ACTIVE) tokenDatabase.removeAllForUser(user.identifier.toString())
@@ -338,7 +345,11 @@ fun Route.userRoute(
             try {
                 val users = call.receive<List<User>>()
 
-                database.addAll(users)
+                if (!database.addAll(users)) {
+                    call.respond(HttpStatusCode.InternalServerError)
+                    return@post
+                }
+
                 call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, details = "Bulk added ${users.size} users")
                 call.respond(HttpStatusCode.Accepted)
             } catch (ex: Exception) {
@@ -363,9 +374,10 @@ fun Route.userRoute(
 
                 isLastAdmin(existing) -> call.respond(HttpStatusCode.Conflict, "There has to be at least one admin")
 
+                !database.remove(identifier) -> call.respond(HttpStatusCode.InternalServerError, "The user couldn't be removed")
+
                 else -> {
                     tokenDatabase.removeAllForUser(identifier.toString())
-                    database.remove(identifier)
 
                     call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier, "Removed ${existing.username}")
                     call.respond(HttpStatusCode.Accepted)

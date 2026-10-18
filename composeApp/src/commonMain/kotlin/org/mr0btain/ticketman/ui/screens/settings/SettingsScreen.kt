@@ -26,6 +26,7 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import ticketman.composeapp.generated.resources.*
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 
 // For now, I think well be fine with using this on every screen size/ platform as it should fit just fine
 @Composable
@@ -38,19 +39,19 @@ fun SettingsScreen(
     val TAG = "SettingsScreen"
     val CHECK_URL_TAG = "$TAG:CheckUrl"
 
-    val darkMode = viewModel.darkMode.collectAsState()
-    val palette = viewModel.palette.collectAsState()
-    val font = viewModel.font.collectAsState()
-    val reduceTransparency = viewModel.reduceTransparency.collectAsState()
-    val serverUrl = viewModel.serverUrl.collectAsState()
-    val rememberLogin = viewModel.rememberLogin.collectAsState()
-    val defaultTab = viewModel.defaultTab.collectAsState()
-    val pageSize = viewModel.pageSize.collectAsState()
-    val searchLimit = viewModel.searchLimit.collectAsState()
-    val cacheSize = viewModel.cacheSize.collectAsState()
-    val deviceName = viewModel.deviceName.collectAsState()
-    val station = viewModel.station.collectAsState()
-    val currentUser = viewModel.currentUser.collectAsState()
+    val darkMode = viewModel.settings.darkMode.collectAsState()
+    val palette = viewModel.settings.palette.collectAsState()
+    val font = viewModel.settings.font.collectAsState()
+    val reduceTransparency = viewModel.settings.reduceTransparency.collectAsState()
+    val serverUrl = viewModel.settings.serverUrl.collectAsState()
+    val rememberLogin = viewModel.settings.rememberLogin.collectAsState()
+    val defaultTab = viewModel.settings.defaultTab.collectAsState()
+    val pageSize = viewModel.settings.pageSize.collectAsState()
+    val searchLimit = viewModel.settings.searchLimit.collectAsState()
+    val cacheSize = viewModel.settings.cacheSize.collectAsState()
+    val deviceName = viewModel.settings.deviceName.collectAsState()
+    val station = viewModel.session.station.collectAsState()
+    val currentUser = viewModel.session.currentUser.collectAsState()
 
     var showChangePin by remember { mutableStateOf(false) }
     var showStation by remember { mutableStateOf(false) }
@@ -58,7 +59,7 @@ fun SettingsScreen(
     ChangePinDialog(
         isVisible = showChangePin,
         onDismiss = { showChangePin = false },
-        onSave = { password, pin, onResult -> viewModel.changePin(password, pin, onResult) }
+        onSave = { password, pin, onResult -> viewModel.session.changePin(password, pin, onResult) }
     )
 
     StationDialog(
@@ -67,9 +68,9 @@ fun SettingsScreen(
         defaultName = deviceName.value,
         kioskActive = viewModel.kiosk.active.collectAsState().value,
         onResumeKiosk = { viewModel.kiosk.resume() },
-        onRefresh = { viewModel.refreshStation() },
+        onRefresh = { viewModel.session.refreshStation() },
         onDismiss = { showStation = false },
-        onRegister = { name, onResult -> viewModel.registerStation(name, onResult) }
+        onRegister = { name, onResult -> viewModel.session.registerStation(name, onResult) }
     )
 
     // Names of the main screen tabs, in tab index order
@@ -87,7 +88,7 @@ fun SettingsScreen(
                     enabled = true,
                     initialState = rememberLogin.value,
                     onClick = {
-                        viewModel.toggleRememberLogin()
+                        viewModel.settings.toggleRememberLogin()
                         true
                     },
                     type = SettingType.SWITCH
@@ -99,7 +100,7 @@ fun SettingsScreen(
                     enabled = true,
                     initialState = tabNames.getOrElse(defaultTab.value) { "" },
                     onClick = {
-                        viewModel.setDefaultTab(defaultTab.value + 1)
+                        viewModel.settings.setDefaultTab(defaultTab.value + 1)
                         true
                     },
                     type = SettingType.CLICKABLE_TEXT
@@ -118,7 +119,7 @@ fun SettingsScreen(
                     initialState = serverUrl.value,
                     onClick = { url ->
                         try {
-                            viewModel.setServerUrl(url as? String ?: "")
+                            viewModel.settings.setServerUrl(url as? String ?: "")
                             true
                         } catch (ex: Exception) {
                             AppLogger.e(CHECK_URL_TAG, SimpleResult.FAIL, ex)
@@ -134,7 +135,7 @@ fun SettingsScreen(
                     enabled = true,
                     initialState = deviceName.value,
                     onClick = { name ->
-                        viewModel.setDeviceName(name as? String ?: "")
+                        viewModel.settings.setDeviceName(name as? String ?: "")
                         true
                     },
                     type = SettingType.TEXT
@@ -142,42 +143,42 @@ fun SettingsScreen(
                 SettingItem(
                     icon = painterResource(Res.drawable.list),
                     description = "Number of items loaded per page " +
-                            "(${MainViewModel.PAGE_SIZE_RANGE.first}-${MainViewModel.PAGE_SIZE_RANGE.last})",
+                            "(${SettingsHandler.PAGE_SIZE_RANGE.first}-${SettingsHandler.PAGE_SIZE_RANGE.last})",
                     label = "Page size",
                     enabled = true,
                     initialState = pageSize.value.toString(),
                     onClick = { value ->
                         (value as? String)?.trim()?.toIntOrNull()
-                            ?.takeIf { it in MainViewModel.PAGE_SIZE_RANGE }
-                            ?.let { viewModel.setPageSize(it); true } ?: false
+                            ?.takeIf { it in SettingsHandler.PAGE_SIZE_RANGE }
+                            ?.let { viewModel.settings.setPageSize(it); true } ?: false
                     },
                     type = SettingType.TEXT
                 ),
                 SettingItem(
                     icon = painterResource(Res.drawable.search),
                     description = "Max number of search results " +
-                            "(${MainViewModel.SEARCH_LIMIT_RANGE.first}-${MainViewModel.SEARCH_LIMIT_RANGE.last})",
+                            "(${SettingsHandler.SEARCH_LIMIT_RANGE.first}-${SettingsHandler.SEARCH_LIMIT_RANGE.last})",
                     label = "Search result limit",
                     enabled = true,
                     initialState = searchLimit.value.toString(),
                     onClick = { value ->
                         (value as? String)?.trim()?.toIntOrNull()
-                            ?.takeIf { it in MainViewModel.SEARCH_LIMIT_RANGE }
-                            ?.let { viewModel.setSearchLimit(it); true } ?: false
+                            ?.takeIf { it in SettingsHandler.SEARCH_LIMIT_RANGE }
+                            ?.let { viewModel.settings.setSearchLimit(it); true } ?: false
                     },
                     type = SettingType.TEXT
                 ),
                 SettingItem(
                     icon = painterResource(Res.drawable.database),
                     description = "Max items kept in each cache, applies on restart " +
-                            "(${MainViewModel.CACHE_SIZE_RANGE.first}-${MainViewModel.CACHE_SIZE_RANGE.last})",
+                            "(${SettingsHandler.CACHE_SIZE_RANGE.first}-${SettingsHandler.CACHE_SIZE_RANGE.last})",
                     label = "Cache size",
                     enabled = true,
                     initialState = cacheSize.value.toString(),
                     onClick = { value ->
                         (value as? String)?.trim()?.toIntOrNull()
-                            ?.takeIf { it in MainViewModel.CACHE_SIZE_RANGE }
-                            ?.let { viewModel.setCacheSize(it); true } ?: false
+                            ?.takeIf { it in SettingsHandler.CACHE_SIZE_RANGE }
+                            ?.let { viewModel.settings.setCacheSize(it); true } ?: false
                     },
                     type = SettingType.TEXT
                 )
@@ -231,13 +232,13 @@ fun SettingsScreen(
         item {
             AppearanceSettings(
                 palette = palette.value,
-                onPaletteChange = viewModel::setPalette,
+                onPaletteChange = viewModel.settings::setPalette,
                 darkTheme = darkMode.value,
-                onDarkThemeChange = { dark -> if (dark != darkMode.value) viewModel.toggleDarkMode() },
+                onDarkThemeChange = { dark -> if (dark != darkMode.value) viewModel.settings.toggleDarkMode() },
                 font = font.value,
-                onFontChange = viewModel::setFont,
+                onFontChange = viewModel.settings::setFont,
                 reduceTransparency = reduceTransparency.value,
-                onReduceTransparencyChange = { viewModel.toggleReduceTransparency() },
+                onReduceTransparencyChange = { viewModel.settings.toggleReduceTransparency() },
                 onOpenGallery = onOpenGallery
             )
         }

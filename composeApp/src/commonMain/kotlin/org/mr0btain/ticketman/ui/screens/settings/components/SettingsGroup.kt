@@ -15,7 +15,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.ui.dialog.TextEditDialog
+import org.mr0btain.ticketman.ui.screens.shared.TextEditDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.selection.TmSwitch

@@ -57,8 +57,8 @@ fun InvoiceScreen(
     val counter = viewModel.counter
     val invoices by counter.invoices.collectAsState()
     val endReached by counter.invoicesEndReached.collectAsState()
-    val loginState by viewModel.loginState.collectAsState()
-    val isAdmin by viewModel.isAdmin.collectAsState()
+    val loginState by viewModel.session.loginState.collectAsState()
+    val isAdmin by viewModel.session.isAdmin.collectAsState()
     val colors = TmTheme.colors
     val spacing = TmTheme.spacing
 

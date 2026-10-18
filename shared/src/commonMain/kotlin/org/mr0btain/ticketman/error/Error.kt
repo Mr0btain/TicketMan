@@ -1,3 +1,6 @@
 package org.mr0btain.ticketman.error
 
-interface Error
+import org.mr0btain.ticketman.logging.LogMessage
+
+/** Error half of a [Result]. [message] is readable enough to show the user */
+interface Error : LogMessage

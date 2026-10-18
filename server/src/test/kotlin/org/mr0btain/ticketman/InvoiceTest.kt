@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.money.Money

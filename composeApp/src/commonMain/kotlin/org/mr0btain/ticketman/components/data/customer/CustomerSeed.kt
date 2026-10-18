@@ -4,9 +4,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.customer.Address
@@ -219,6 +219,6 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         val phone: String = "",
         val tickets: List<Ticket> = emptyList(),
         val notes: List<Note> = emptyList(),
-        val images: List<ImageBitmap> = emptyList()
+        val images: List<StoredImage> = emptyList()
     )
 }

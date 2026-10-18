@@ -10,6 +10,8 @@ data class ServerInfoResponse(
     val uptimeMillis: Long,
     val dataPath: String,
     val databaseSizeBytes: Long,
+    /** Photo files on disk, kept outside the database */
+    val imagesSizeBytes: Long = 0,
     val javaVersion: String,
     val operatingSystem: String,
     val developmentMode: Boolean

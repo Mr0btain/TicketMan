@@ -10,19 +10,28 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.dialogs.FileKitType
+import io.github.vinceglb.filekit.dialogs.compose.rememberFilePickerLauncher
+import io.github.vinceglb.filekit.name
 import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatDuration
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.server.request.SeedRequest
+import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
+import org.mr0btain.ticketman.ui.screens.admin.components.BackupProgress
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.feedback.TmProgressBar
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -32,6 +41,7 @@ import ticketman.composeapp.generated.resources.database
 import ticketman.composeapp.generated.resources.download
 import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.server
+import ticketman.composeapp.generated.resources.upload
 import ticketman.composeapp.generated.resources.zap
 
 /** Width of the panels in the left column */
@@ -48,8 +58,12 @@ fun AdminServerTab(
     serverUrl: String,
     shopProfile: ShopProfile?,
     isBusy: Boolean,
+    backupProgress: BackupProgress?,
+    pendingRestore: PendingRestore?,
     onSaveShopProfile: (ShopProfile) -> Unit,
-    onBackup: () -> Unit,
+    onBackup: (includeImages: Boolean) -> Unit,
+    onRestore: (PlatformFile) -> Unit,
+    onCancelRestore: () -> Unit,
     onSeed: (SeedRequest) -> Unit
 ) {
     val spacing = TmTheme.spacing
@@ -66,7 +80,7 @@ fun AdminServerTab(
             Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
                 ServerInfoCard(serverInfo, serverUrl)
 
-                BackupCard(isBusy, onBackup)
+                BackupCard(isBusy, backupProgress, pendingRestore, serverInfo, onBackup, onRestore, onCancelRestore)
 
                 // Mock data is only allowed on servers started with -Pdevelopment
                 if (serverInfo?.developmentMode == true) {
@@ -98,6 +112,7 @@ private fun ServerInfoCard(
             KeyValueRow(label = "Uptime", value = formatDuration(serverInfo.uptimeMillis))
             KeyValueRow(label = "Started", value = formatDateTime(serverInfo.startedAt))
             KeyValueRow(label = "Database size", value = formatBytes(serverInfo.databaseSizeBytes))
+            KeyValueRow(label = "Photos size", value = formatBytes(serverInfo.imagesSizeBytes))
             KeyValueRow(label = "Java", value = serverInfo.javaVersion)
             KeyValueRow(label = "OS", value = serverInfo.operatingSystem)
             KeyValueRow(label = "Mode", value = if (serverInfo.developmentMode) "Development" else "Production")
@@ -115,15 +130,80 @@ private fun ServerInfoCard(
 @Composable
 private fun BackupCard(
     isBusy: Boolean,
-    onBackup: () -> Unit
+    progress: BackupProgress?,
+    pendingRestore: PendingRestore?,
+    serverInfo: ServerInfoResponse?,
+    onBackup: (includeImages: Boolean) -> Unit,
+    onRestore: (PlatformFile) -> Unit,
+    onCancelRestore: () -> Unit
 ) {
+    var includeImages by remember { mutableStateOf(true) }
+    var restoreFile by remember { mutableStateOf<PlatformFile?>(null) }
+    val picker = rememberFilePickerLauncher(type = FileKitType.File("zip")) { file -> restoreFile = file }
+
+    restoreFile?.let { file ->
+        TmConfirmDialog(
+            title = "Restore from ${file.name}?",
+            message = "Next time the server starts, everything on it is replaced by this backup: tickets, " +
+                "customers, users and photos. Anything changed since the backup was made is set aside in a " +
+                "pre-restore folder on the server, not deleted.",
+            confirmText = "Upload and restore",
+            destructive = true,
+            onConfirm = {
+                onRestore(file)
+                restoreFile = null
+            },
+            onDismissRequest = { restoreFile = null }
+        )
+    }
+
     TmPanel(
         modifier = Modifier.width(SIDE_WIDTH),
-        title = "Backup",
-        subtitle = "A zip of the whole database. It has customer details in it, so keep it somewhere safe.",
+        title = "Backup and restore",
+        subtitle = "A zip of the database and photos, and putting one back. Backups have customer details in them, so keep them somewhere safe.",
         icon = Res.drawable.database
     ) {
-        TmButton(text = "Download backup", enabled = !isBusy, onClick = onBackup, leadingIcon = Res.drawable.download)
+        TmSwitchRow(
+            title = "Include photos",
+            subtitle = serverInfo?.let { "About ${formatBytes(it.imagesSizeBytes)} more" }
+                ?: "Off for a quick copy of just the database",
+            checked = includeImages,
+            onCheckedChange = { includeImages = it },
+            enabled = progress == null
+        )
+
+        if (progress != null) {
+            Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
+                Text(text = progress.text, style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+                TmProgressBar(progress = progress.fraction)
+            }
+        }
+
+        TmButton(
+            text = "Download backup",
+            enabled = !isBusy,
+            onClick = { onBackup(includeImages) },
+            leadingIcon = Res.drawable.download
+        )
+
+        if (pendingRestore != null) {
+            TmNotice(
+                kind = TmNoticeKind.WARNING,
+                title = "Restore waiting",
+                text = "The backup from ${formatDateTime(pendingRestore.manifest.createdAt)} " +
+                    "(${formatBytes(pendingRestore.sizeBytes)}) replaces this server's data when it next starts. " +
+                    "Restart the server to finish."
+            )
+            TmButton(text = "Cancel restore", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = onCancelRestore)
+        } else {
+            TmButton(
+                text = "Restore from backup",
+                variant = TmButtonVariant.SECONDARY,
+                enabled = !isBusy,
+                onClick = { picker.launch() },
+                leadingIcon = Res.drawable.upload
+            )
+        }
     }
 }
 

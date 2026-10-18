@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.components.data.operations.DataType
 import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.ui.dialog.ConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.screens.shared.ConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.data.ImagePopup
@@ -35,43 +35,43 @@ fun DashboardScreen(
 ) {
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
-    val loginState = viewModel.loginState.collectAsState()
+    val loginState = viewModel.session.loginState.collectAsState()
 
     // For customer panel
-    val customerSeed = viewModel.customerSeed
-    val customerPagedItems = viewModel.customerPager.items.collectAsState()
+    val customerSeed = viewModel.customers.seed
+    val customerPagedItems = viewModel.customers.pager.items.collectAsState()
     val customerLazyListState = rememberLazyListState()
-    val pendingCustomer by viewModel.customerSelection.pending.collectAsState()
+    val pendingCustomer by viewModel.customers.selection.pending.collectAsState()
 
     // Handler for the customer pager
-    offsetPagerHandler(viewModel.customerPager, customerLazyListState)
+    offsetPagerHandler(viewModel.customers.pager, customerLazyListState)
 
     // For customer dialog
     var showCustomerDialog by remember { mutableStateOf(false) }
     var isTicketForNewCustomer by remember { mutableStateOf(false) }
 
     // For ticket panel
-    val ticketSeed = viewModel.ticketSeed
-    val ticketPagedItems = viewModel.ticketPager.items.collectAsState()
+    val ticketSeed = viewModel.tickets.seed
+    val ticketPagedItems = viewModel.tickets.pager.items.collectAsState()
     val ticketLazyListState = rememberLazyListState()
-    val pendingTicket by viewModel.ticketSelection.pending.collectAsState()
-    val ticketScope by viewModel.ticketScope.collectAsState()
+    val pendingTicket by viewModel.tickets.selection.pending.collectAsState()
+    val ticketScope by viewModel.tickets.listScope.collectAsState()
     val scope = rememberCoroutineScope()
 
     // Handler for ticket pager
-    offsetPagerHandler(viewModel.ticketPager, ticketLazyListState)
+    offsetPagerHandler(viewModel.tickets.pager, ticketLazyListState)
 
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
 
     // For Inventory panel
-    val inventorySeed = viewModel.inventorySeed
-    val inventoryPagedItems = viewModel.inventoryPager.items.collectAsState()
+    val inventorySeed = viewModel.inventory.seed
+    val inventoryPagedItems = viewModel.inventory.pager.items.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
-    val pendingInventory by viewModel.inventorySelection.pending.collectAsState()
+    val pendingInventory by viewModel.inventory.selection.pending.collectAsState()
 
     // Handler for inventory pager
-    offsetPagerHandler(viewModel.inventoryPager, inventoryLazyListState)
+    offsetPagerHandler(viewModel.inventory.pager, inventoryLazyListState)
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
@@ -83,6 +83,12 @@ fun DashboardScreen(
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
     val imagePopupList = remember { mutableStateListOf<StoredImage>() }
+
+    fun showImages(images: List<StoredImage>) {
+        imagePopupList.clear()
+        imagePopupList.addAll(images)
+        showImagePopup = true
+    }
 
     // Opens the photos of the note with this identifier
     fun showNoteImages(notes: List<Note>, noteIdentifier: Uuid) {
@@ -103,38 +109,39 @@ fun DashboardScreen(
         onDismiss = {
             showCustomerDialog = false
             // Reset seed data
-            viewModel.setSelectedCustomer(customerSeed.identifier)
+            viewModel.customers.select(customerSeed.identifier)
         },
-        onContinue = { viewModel.handleCustomerChanges() }
+        onContinue = { viewModel.customers.save() }
     )
 
     // For ticket adding or editing
     TicketDialog(
         seed = ticketSeed,
         isVisible = showTicketDialog,
-        onContinue = { viewModel.handleTicketChange() },
+        onContinue = { viewModel.tickets.save() },
         onDismiss = {
             showTicketDialog = false
 
             // Reset seed data
-            viewModel.setSelectedTicket(ticketSeed.identifier)
+            viewModel.tickets.select(ticketSeed.identifier)
         },
-        onCustomerSearchQuery = { query -> viewModel.searchCustomers(query) },
-        onUserSearchQuery = { query -> viewModel.searchUsers(query) }
+        onCustomerSearchQuery = { query -> viewModel.customers.search(query) },
+        onUserSearchQuery = { query -> viewModel.users.search(query) }
     )
 
     // For inventory adding or editing
     InventoryDialog(
-        seed = viewModel.inventorySeed,
+        seed = viewModel.inventory.seed,
         isVisible = showInventoryDialog,
         onDismiss = {
             showInventoryDialog = false
 
             // Reset seed data
-            viewModel.setSelectedInventory(inventorySeed.identifier)
+            viewModel.inventory.select(inventorySeed.identifier)
         },
         onContinue = {
-            // TODO: Not yet implemented
+            viewModel.inventory.save()
+            showInventoryDialog = false
         },
     )
 
@@ -145,9 +152,9 @@ fun DashboardScreen(
         isVisible = showConfirmDeleteDialog,
         onConfirm = {
             when (dataType) {
-                DataType.CUSTOMER -> viewModel.removeCustomer(customerSeed.identifier)
-                DataType.TICKET -> viewModel.removeTicket(ticketSeed.identifier)
-                DataType.INVENTORY -> viewModel.removeInventory(inventorySeed.identifier)
+                DataType.CUSTOMER -> viewModel.customers.remove(customerSeed.identifier)
+                DataType.TICKET -> viewModel.tickets.remove(ticketSeed.identifier)
+                DataType.INVENTORY -> viewModel.inventory.remove(inventorySeed.identifier)
                 DataType.USER -> TODO()
                 else -> {
                     // Do Nothing
@@ -207,18 +214,18 @@ fun DashboardScreen(
         when (tabIndex.value) {
             0 -> CustomerPanel(
                 onAddCustomer = {
-                    viewModel.clearSelectedCustomer()
+                    viewModel.customers.clearSelection()
                     showCustomerDialog = true
                 },
                 onEditCustomer = { showCustomerDialog = true },
-                onCustomerSelectionChange = { id -> viewModel.setSelectedCustomer(id) },
-                onSearchQuery = { query -> viewModel.searchCustomers(query) },
+                onCustomerSelectionChange = { id -> viewModel.customers.select(id) },
+                onSearchQuery = { query -> viewModel.customers.search(query) },
                 onDeleteCustomer = {
                     dataType = DataType.CUSTOMER
                     showConfirmDeleteDialog = true
                 },
                 onTicketClick = { identifier ->
-                    viewModel.setSelectedTicket(identifier)
+                    viewModel.tickets.select(identifier)
                     showTicketDialog = true
                 },
                 onImageClick = { id -> showNoteImages(customerSeed.notes, id) },
@@ -234,17 +241,17 @@ fun DashboardScreen(
                 seed = ticketSeed,
                 pendingId = pendingTicket,
                 onAddNewTicket = {
-                    viewModel.clearSelectedTicket()
+                    viewModel.tickets.clearSelection()
                     showTicketDialog = true
                 },
                 onEditTicket = { if (!ticketSeed.isNew) showTicketDialog = true },
-                onSelectedTicketChange = { id -> viewModel.setSelectedTicket(id) },
+                onSelectedTicketChange = { id -> viewModel.tickets.select(id) },
                 onTicketScopeChange = { newScope ->
-                    viewModel.setTicketScope(newScope)
+                    viewModel.tickets.setListScope(newScope)
                     // The new list is a different set of tickets, so start it from the top
                     scope.launch { ticketLazyListState.scrollToItem(0) }
                 },
-                onSearchQuery = { viewModel.searchTickets(it) },
+                onSearchQuery = { viewModel.tickets.search(it) },
                 onDeleteTicket = {
                     dataType = DataType.TICKET
                     showConfirmDeleteDialog = true
@@ -258,13 +265,14 @@ fun DashboardScreen(
                 inventoryList = inventoryPagedItems.value,
                 selectedInventory = inventorySeed,
                 pendingId = pendingInventory,
-                onSelectedInventoryChange = { id -> viewModel.setSelectedInventory(id) },
-                onSearchQuery = { viewModel.searchInventory(it) },
+                onSelectedInventoryChange = { id -> viewModel.inventory.select(id) },
+                onSearchQuery = { viewModel.inventory.search(it) },
                 onAddInventory = {
-                    viewModel.clearSelectedInventory()
+                    viewModel.inventory.clearSelection()
                     showInventoryDialog = true
                 },
                 onEditInventory = { showInventoryDialog = true },
+                onImageClick = { showImages(inventorySeed.images) },
                 onDeleteInventory = {
                     dataType = DataType.INVENTORY
                     showConfirmDeleteDialog = true

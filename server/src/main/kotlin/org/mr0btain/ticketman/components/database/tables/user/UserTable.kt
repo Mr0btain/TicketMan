@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.components.database.tables.user
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.json.json
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.UserStatus
 
 object UserTable : UuidTable("user") {

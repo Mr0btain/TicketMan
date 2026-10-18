@@ -3,8 +3,9 @@ package org.mr0btain.ticketman.components.service
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InviteDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.dbWrite
 import org.mr0btain.ticketman.data.audit.AuditAction
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
@@ -66,7 +67,7 @@ class AccountService(
             status = UserStatus.PENDING
         )
 
-        users.add(user)
+        if (!users.add(user)) return AccountResult.Invalid(SAVE_FAILED)
         auditLog.log(null, AuditAction.CREATE, "account request", user.identifier.toString(), "Requested ${user.username}", actorName = user.username)
 
         return AccountResult.Done(user.withoutPassword())
@@ -93,7 +94,7 @@ class AccountService(
         val user = users.getById(identifier)?.takeIf { it.status == UserStatus.PENDING } ?: return AccountResult.NotFound
         if (invites.exists(identifier)) return AccountResult.Conflict("Invited users activate themselves with their code")
 
-        users.setState(identifier, UserStatus.ACTIVE, accessLevel, needsSetup = true)
+        if (!users.setState(identifier, UserStatus.ACTIVE, accessLevel, needsSetup = true)) return AccountResult.NotFound
         auditLog.log(approvedBy, AuditAction.UPDATE, "user", identifier.toString(), "Approved ${user.username} as $accessLevel")
 
         return AccountResult.Done(Unit)
@@ -103,7 +104,7 @@ class AccountService(
     fun reject(identifier: Uuid, rejectedBy: Uuid?): AccountResult<Unit> {
         val user = users.getById(identifier)?.takeIf { it.status == UserStatus.PENDING } ?: return AccountResult.NotFound
 
-        users.remove(identifier)
+        if (!users.remove(identifier)) return AccountResult.NotFound
         auditLog.log(rejectedBy, AuditAction.DELETE, "user", identifier.toString(), "Rejected ${user.username}")
 
         return AccountResult.Done(Unit)
@@ -128,7 +129,7 @@ class AccountService(
             status = UserStatus.PENDING
         )
 
-        users.add(user)
+        if (!users.add(user)) return AccountResult.Invalid(SAVE_FAILED)
 
         val (code, expiresAt) = invites.create(user.identifier, invitedByName) ?: return AccountResult.Invalid("Couldn't make an invite")
         auditLog.log(invitedBy, AuditAction.CREATE, "user", user.identifier.toString(), "Invited ${user.username} as ${user.accessLevel}")
@@ -157,9 +158,7 @@ class AccountService(
         if (request.password.isNotBlank()) passwordProblem(request.password)?.let { return AccountResult.Invalid(it) }
         PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
 
-        users.update(user.copy(name = request.name.trim(), email = request.email.trim(), phone = request.phone.trim(), password = request.password))
-        users.setPin(identifier, request.pin)
-        users.setState(identifier, UserStatus.ACTIVE, needsSetup = false)
+        if (!saveSetup(user, request.name, request.email, request.phone, request.password, request.pin)) return AccountResult.Invalid(SAVE_FAILED)
         auditLog.log(identifier, AuditAction.UPDATE, "user", identifier.toString(), "Finished account setup")
 
         return AccountResult.Done(users.getById(identifier)!!.withoutPassword())
@@ -179,9 +178,7 @@ class AccountService(
         passwordProblem(request.password)?.let { return AccountResult.Invalid(it) }
         PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
 
-        users.update(user.copy(name = request.name.trim(), email = request.email.trim(), phone = request.phone.trim(), password = request.password))
-        users.setPin(identifier, request.pin)
-        users.setState(identifier, UserStatus.ACTIVE, needsSetup = false)
+        if (!saveSetup(user, request.name, request.email, request.phone, request.password, request.pin)) return AccountResult.Invalid(SAVE_FAILED)
         invites.remove(identifier)
 
         val activated = users.getById(identifier)!!
@@ -206,6 +203,20 @@ class AccountService(
         return AccountResult.Done(Unit)
     }
 
+    /**
+     * Saves someone's details, PIN and activation from finishing setup, all together or not at all
+     * @param password Blank keeps the one they have
+     */
+    private fun saveSetup(user: User, name: String, email: String, phone: String, password: String, pin: String): Boolean =
+        dbWrite(SAVE_SETUP_TAG) {
+            val saved = users.update(user.copy(name = name.trim(), email = email.trim(), phone = phone.trim(), password = password)) &&
+                users.setPin(user.identifier, pin) &&
+                users.setState(user.identifier, UserStatus.ACTIVE, needsSetup = false)
+
+            if (!saved) rollback()
+            saved
+        }
+
     private fun passwordProblem(password: String): String? =
         if (password.length < MIN_PASSWORD_LENGTH) "Password needs at least $MIN_PASSWORD_LENGTH characters" else null
 
@@ -215,5 +226,7 @@ class AccountService(
     companion object {
         const val MIN_PASSWORD_LENGTH = 8
         private const val MAX_WAITING_REQUESTS = 50
+        private const val SAVE_SETUP_TAG = "AccountService:SaveSetup"
+        private const val SAVE_FAILED = "Your account couldn't be saved, try again"
     }
 }

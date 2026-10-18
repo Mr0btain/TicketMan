@@ -1,10 +1,6 @@
 package org.mr0btain.ticketman.components.database.debug
 
 import org.mr0btain.ticketman.components.database.LocalDatabase
-import org.mr0btain.ticketman.generateMockCustomer
-import org.mr0btain.ticketman.generateMockUser
-import org.mr0btain.ticketman.generateRandomInventoryItem
-import org.mr0btain.ticketman.generateRandomTicket
 import org.mr0btain.ticketman.server.request.SeedRequest
 import kotlin.random.Random
 import kotlin.uuid.Uuid

@@ -3,9 +3,9 @@ package org.mr0btain.ticketman.components.data.inventory
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.graphics.ImageBitmap
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shared.Note
@@ -38,7 +38,8 @@ class InventorySeed: DataSeed("InventorySeed") {
     // --- Initial setting up with data ---
     fun setInitial(
         data: Inventory,
-        notes: List<Note> = emptyList()
+        notes: List<Note> = emptyList(),
+        images: List<StoredImage> = emptyList()
     ) {
         identifier = data.identifier
         name = data.name
@@ -48,6 +49,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         price = Money.toDollars(data.priceCents)
 
         setNotes(notes)
+        setImages(images)
 
         markClean()
         isNew = false
@@ -106,7 +108,7 @@ class InventorySeed: DataSeed("InventorySeed") {
 
     // Save current state as the new clean snapshot
     override fun markClean() {
-        savedState = State(identifier, name, description, stock, cost, price, _notes).hashCode()
+        savedState = State(identifier, name, description, stock, cost, price, _notes, _images).hashCode()
         _changedFields.clear()  // Reset the changed fields
     }
 
@@ -121,6 +123,6 @@ class InventorySeed: DataSeed("InventorySeed") {
         val cost: Double = 0.0,
         val price: Double = 0.0,
         val notes: List<Note> = emptyList(),
-        val images: List<ImageBitmap> = emptyList()
+        val images: List<StoredImage> = emptyList()
     )
 }

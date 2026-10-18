@@ -14,8 +14,8 @@ import org.mr0btain.ticketman.data.user.User
 import kotlin.test.*
 
 /**
- * Ktor's json converter looks up a serializer from the TypeInfo it's given. These check that the type info each
- * repository hands to RemoteRepository resolves to a working serializer, which an erased T can't.
+ * Ktor's json converter looks up a serializer from the TypeInfo it's given. These check that the type info
+ * itemTypes() makes for each repository resolves to a working serializer, which an erased T can't.
  */
 class RemoteRepositoryTypeTest {
     // Pulls the private type info out the same way Ktor resolves it
@@ -23,9 +23,13 @@ class RemoteRepositoryTypeTest {
     private fun <T> serializerFor(type: TypeInfo): KSerializer<T> = serializer(type.kotlinType!!) as KSerializer<T>
 
     private inline fun <reified T : MainItem> assertListRoundTrips(items: List<T>) {
-        val json = Json.encodeToString(items)
-        val decoded = Json.decodeFromString(serializerFor<List<T>>(typeInfo<List<T>>()), json)
-        assertEquals(items, decoded)
+        val types = itemTypes<T>()
+
+        val list = Json.encodeToString(items)
+        assertEquals(items, Json.decodeFromString(serializerFor<List<T>>(types.list), list))
+
+        val item = Json.encodeToString(items.first())
+        assertEquals(items.first(), Json.decodeFromString(serializerFor<T>(types.item), item))
     }
 
     @Test
