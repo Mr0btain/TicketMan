@@ -413,15 +413,16 @@ class MainViewModel(
         if (inventorySelection.pending.value == identifier) return
 
         inventorySelection.select(identifier) {
-            val (inventory, notes) = inventoryCache.get(identifier) ?: coroutineScope {
+            val (inventory, notes, images) = inventoryCache.get(identifier) ?: coroutineScope {
                 val notes = async { remoteHandler.inventoryRepo.getNotes(identifier) }
+                val images = async { remoteHandler.inventoryRepo.getImages(identifier) }
                 val inventory = remoteHandler.inventoryRepo.get(identifier) ?: return@coroutineScope null
 
-                InventoryCache.InventoryData(inventory, notes.await())
-                    .also { inventoryCache.put(it.inventory, it.notes) }
+                InventoryCache.InventoryData(inventory, notes.await(), images.await())
+                    .also { inventoryCache.put(it.inventory, it.notes, it.images) }
             } ?: return@select null
 
-            return@select { inventorySeed.setInitial(inventory, notes) }
+            return@select { inventorySeed.setInitial(inventory, notes, images) }
         }
     }
 
@@ -431,36 +432,39 @@ class MainViewModel(
         inventorySeed.clear()
     }
 
+    /** Saves the inventory seed: the item, its notes and its photos */
     fun handleInventoryChange() {
         if (!inventorySeed.isDirty) return
 
-        viewModelScope.launch {
-            if (inventorySeed.isNew) {
-                remoteHandler.inventoryRepo.add(inventorySeed.inventory)
+        val inventory = inventorySeed.inventory
+        val notes = inventorySeed.notes.toList()
+        val images = inventorySeed.images.toList()
+        val changed = inventorySeed.getChangedFields().toSet()
+        val isNew = inventorySeed.isNew
 
-                inventorySeed.notes.forEach { note ->
-                    remoteHandler.inventoryRepo.addNote(inventorySeed.identifier, note)
-                }
-            } else {
-                inventorySeed.getChangedFields().forEach { changedField ->
-                    when (changedField) {
-                        ChangedField.NOTE -> {
-                            // TODO: Setup way to see which one has changed
-                            inventorySeed.notes.forEach { note ->
-                                TODO("Not yet implemented")
-                            }
-                        }
-                        ChangedField.IMAGE -> {
-                            inventorySeed.images.forEach { image ->
-                                TODO("Not yet implemented")
-                            }
-                        }
-                        else -> {
-                            // TODO()
-                        }
-                    }
+        viewModelScope.launch {
+            val repo = remoteHandler.inventoryRepo
+            val linkFields = setOf(ChangedField.NOTE, ChangedField.IMAGE)
+
+            if (isNew || (changed - linkFields).isNotEmpty()) {
+                val saved = if (isNew) repo.add(inventory) else repo.update(inventory)
+
+                if (saved is Result.Error) {
+                    snackBarHost.showSnackbar("Item not saved: ${saved.error.message}")
+                    return@launch
                 }
             }
+
+            if (isNew || ChangedField.NOTE in changed) syncNotes(inventory.identifier, notes, repo)
+
+            if (isNew || ChangedField.IMAGE in changed) {
+                val photos = repo.setImages(inventory.identifier, images)
+                if (photos is Result.Error) snackBarHost.showSnackbar("Photos not saved: ${photos.error.message}")
+            }
+
+            inventoryCache.remove(inventory.identifier)
+            setSelectedInventory(inventory.identifier)
+            inventoryPager.refreshCurrentData()
         }
     }
 

@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
@@ -264,6 +265,37 @@ class ImageTest {
         // The dropped photo can't be fetched any more, but its files stay until the sweep
         assertEquals(HttpStatusCode.NotFound, client.get("/api/image/${first.identifier}/thumb") { bearerAuth(token) }.status)
         assertTrue(File(dataDir.toFile(), "server/images").walkTopDown().any { it.name == first.identifier.toString() })
+    }
+
+    // ------------------------------------------ Inventory photos ------------------------------------------
+
+    @Test
+    fun inventoryPhotosAreSetAsAWholeList() = testApplication {
+        setup()
+        val token = token(tech)
+        val item = Inventory(name = "iPhone 13 screen", stock = 4)
+        post("/api/data/inventory/add", json.encodeToString(item), token)
+
+        val front = uploadImage(token)
+        val back = uploadImage(token)
+
+        assertEquals(
+            HttpStatusCode.Accepted,
+            post("/api/data/inventory/set/images/${item.identifier}", json.encodeToString(listOf(front, back)), token).status
+        )
+        suspend fun images(): List<StoredImage> =
+            json.decodeFromString(client.get("/api/data/inventory/get/images/${item.identifier}") { bearerAuth(token) }.bodyAsText())
+
+        assertEquals(setOf(front.identifier, back.identifier), images().map { it.identifier }.toSet())
+
+        post("/api/data/inventory/set/images/${item.identifier}", json.encodeToString(listOf(back)), token)
+        assertEquals(listOf(back.identifier), images().map { it.identifier })
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/image/${front.identifier}/thumb") { bearerAuth(token) }.status)
+
+        assertEquals(
+            HttpStatusCode.NotFound,
+            post("/api/data/inventory/set/images/${Uuid.generateV7()}", "[]", token).status
+        )
     }
 
     // ------------------------------------------ Sweeping ------------------------------------------

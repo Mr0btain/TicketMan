@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
+import org.mr0btain.ticketman.ui.screens.shared.PhotoEditor
 import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
@@ -38,6 +39,7 @@ fun InventoryDialog(
     if (!isVisible) return
 
     var showNoteDialog by remember { mutableStateOf(false) }
+    var isUploading by remember { mutableStateOf(false) }
     val noteSeed = remember { NoteSeed() }
     val spacing = TmTheme.spacing
 
@@ -60,7 +62,8 @@ fun InventoryDialog(
         actions = {
             TmButtonRow(
                 confirmText = if (seed.isNew) "Add item" else "Save item",
-                confirmEnabled = seed.name.isNotBlank(),
+                // Saving mid upload would leave the photo off the item
+                confirmEnabled = seed.name.isNotBlank() && !isUploading,
                 onCancel = onDismiss,
                 onConfirm = onContinue
             )
@@ -98,6 +101,14 @@ fun InventoryDialog(
                 onCentsChange = { seed.changePrice(Money.toDollars(it)) }
             )
         }
+
+        TmSectionLabel("Photos")
+        PhotoEditor(
+            images = seed.images,
+            onAdd = { seed.addImage(it) },
+            onRemove = { seed.removeImage(it.identifier) },
+            onUploadingChange = { isUploading = it }
+        )
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) { TmSectionLabel("Notes") }

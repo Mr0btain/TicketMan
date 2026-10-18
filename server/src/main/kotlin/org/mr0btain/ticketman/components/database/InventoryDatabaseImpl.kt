@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.components.database
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -26,8 +25,7 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<Inventory>(tag) {
     private val GET_IMAGES_TAG = "$tag:GetImages"
-    private val ADD_IMAGES_TAG = "$tag:AddImages"
-    private val REMOVE_IMAGES_TAG = "$tag:RemoveImages"
+    private val SET_IMAGES_TAG = "$tag:SetImages"
     private val UPDATE_NAME_TAG = "$tag:UpdateName"
     private val UPDATE_DESCRIPTION_TAG = "$tag:UpdateDescription"
     private val UPDATE_STOCK_TAG = "$tag:UpdateStock"
@@ -380,50 +378,21 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
     }
 
     /**
-     * Links uploaded images onto an inventory item, see [linkImages] for which are taken
+     * Makes an item's photos exactly [images], see [linkImages] for which are taken. Photos left off are marked
+     * deleted and their files go with a later sweep
      * @param identifier The identifier of the inventory item
-     * @param images Uploaded images to add
      * @return Whether the item was found
      */
-    fun addImages(identifier: Uuid, images: List<StoredImage>): Boolean {
+    fun setImages(identifier: Uuid, images: List<StoredImage>): Boolean {
         var result = false
 
-        appLogTryCatch(ADD_IMAGES_TAG) {
+        appLogTryCatch(SET_IMAGES_TAG) {
             transaction {
                 InventoryEntity.findById(identifier)?.let { inventoryEntity ->
-                    val current = inventoryEntity.images.toList()
-
-                    inventoryEntity.images = SizedCollection(linkImages(current.map { it.toStoredImage() } + images, current))
+                    inventoryEntity.images = SizedCollection(linkImages(images, inventoryEntity.images.toList()))
 
                     result = true
-                } ?: AppLogger.m(ADD_IMAGES_TAG, InventoryError.NOT_FOUND)
-            }
-
-            result
-        }
-
-        return result
-    }
-
-    /**
-     * Takes images off an inventory item and marks them deleted, their files go with a later sweep
-     * @param identifier The identifier of inventory item
-     * @param imageIds Images to remove
-     * @return Whether the item was found
-     */
-    fun removeImages(identifier: Uuid, imageIds: List<Uuid>): Boolean {
-        var result = false
-
-        appLogTryCatch(REMOVE_IMAGES_TAG) {
-            transaction {
-                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
-                    val (removed, kept) = inventoryEntity.images.toList().partition { it.id.value in imageIds }
-
-                    markImagesDeleted(removed)
-                    inventoryEntity.images = SizedCollection(kept)
-
-                    result = true
-                } ?: AppLogger.m(REMOVE_IMAGES_TAG, InventoryError.NOT_FOUND)
+                } ?: AppLogger.m(SET_IMAGES_TAG, InventoryError.NOT_FOUND)
             }
 
             result

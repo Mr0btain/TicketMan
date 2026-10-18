@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -72,6 +73,31 @@ fun Route.inventoryRoute(
             } else {
                 call.respond(HttpStatusCode.NotFound)
                 AppLogger.m(SEARCH_TAG, "$request not found")
+            }
+        }
+    }
+
+    // Photos of the item itself
+    authenticate("restricted") {
+        get("/get/images/{identifier}") {
+            val result = call.uuidParameter("identifier")?.let { database.getImages(it) }
+
+            if (result != null) call.respond(HttpStatusCode.OK, result)
+            else call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
+    // Body is every photo the item should have, uploaded ones get linked and missing ones deleted
+    authenticate {
+        post("/set/images/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val images = call.receive<List<StoredImage>>()
+
+            if (identifier != null && database.setImages(identifier, images)) {
+                call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "${images.size} photos")
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
             }
         }
     }

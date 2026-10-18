@@ -84,6 +84,12 @@ fun DashboardScreen(
     var showImagePopup by remember { mutableStateOf(false) }
     val imagePopupList = remember { mutableStateListOf<StoredImage>() }
 
+    fun showImages(images: List<StoredImage>) {
+        imagePopupList.clear()
+        imagePopupList.addAll(images)
+        showImagePopup = true
+    }
+
     // Opens the photos of the note with this identifier
     fun showNoteImages(notes: List<Note>, noteIdentifier: Uuid) {
         notes.firstOrNull { it.identifier == noteIdentifier }?.let { note ->
@@ -134,7 +140,8 @@ fun DashboardScreen(
             viewModel.setSelectedInventory(inventorySeed.identifier)
         },
         onContinue = {
-            // TODO: Not yet implemented
+            viewModel.handleInventoryChange()
+            showInventoryDialog = false
         },
     )
 
@@ -265,6 +272,7 @@ fun DashboardScreen(
                     showInventoryDialog = true
                 },
                 onEditInventory = { showInventoryDialog = true },
+                onImageClick = { showImages(inventorySeed.images) },
                 onDeleteInventory = {
                     dataType = DataType.INVENTORY
                     showConfirmDeleteDialog = true
