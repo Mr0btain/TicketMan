@@ -15,8 +15,6 @@ import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.server.request.SyncRequest
-import org.mr0btain.ticketman.server.response.SyncResponse
 import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(

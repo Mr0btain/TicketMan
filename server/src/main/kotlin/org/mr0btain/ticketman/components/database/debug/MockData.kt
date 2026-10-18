@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman
+package org.mr0btain.ticketman.components.database.debug
 
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
@@ -7,37 +7,16 @@ import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.data.ticket.randomTicketPriority
-import org.mr0btain.ticketman.data.ticket.randomTicketStatus
+import org.mr0btain.ticketman.data.ticket.TicketPriority
+import org.mr0btain.ticketman.data.ticket.TicketPriorityType
+import org.mr0btain.ticketman.data.ticket.TicketStatus
+import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.money.Money
 import kotlin.random.Random
 import kotlin.time.Clock
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
-
-data class TestData(
-    val customers: List<Pair<Customer, List<Note>>>,
-    val tickets: List<Pair<Ticket, List<Note>>>,
-    val inventory: List<Pair<Inventory, List<Note>>>,
-    val users: List<Pair<User, List<Note>>>
-)
-
-fun generateMockData(num: Int): TestData {
-    val customers = mutableListOf<Pair<Customer, List<Note>>>()
-    val tickets = mutableListOf<Pair<Ticket, List<Note>>>()
-    val inventory = mutableListOf<Pair<Inventory, List<Note>>>()
-    val users = mutableListOf<Pair<User, List<Note>>>()
-
-    (0..num).forEach {
-        customers.add(generateMockCustomer())
-        tickets.add(generateRandomTicket())
-        inventory.add(generateRandomInventoryItem())
-        users.add(generateMockUser())
-    }
-
-    return TestData(customers, tickets, inventory, users)
-}
 
 /**
  * Generates a random customer for testing
@@ -331,30 +310,14 @@ private fun generatePhoneNumber(): String = buildString {
     append(Random.nextInt(1000, 9999)) // Line number
 }
 
-/**
- * Generates a random file for testing
- */
-/*
-fun generateRandomFile(path: String, sizeInBytes: Long) {
-    val bufferSize = 1024 * 1024 // 1 MB buffer
-    val buffer = ByteArray(bufferSize)
-    val random = SecureRandom()
-    val file = File(path)
+private fun randomTicketStatus(): TicketStatus {
+    val values = TicketStatusType.selectable.toTypedArray()
 
-    FileOutputStream(file).use { output ->
-        var bytesWritten: Long = 0
-        while (bytesWritten < sizeInBytes) {
-            val remaining = sizeInBytes - bytesWritten
-            val toWrite = if (remaining < bufferSize) remaining.toInt() else bufferSize
-
-            random.nextBytes(buffer)
-            output.write(buffer, 0, toWrite)
-            bytesWritten += toWrite
-
-            // Optional: Print progress
-            val percent = (bytesWritten * 100) / sizeInBytes
-            println("Generated $bytesWritten / $sizeInBytes bytes ($percent%)")
-        }
-    }
+    return TicketStatus(values[Random.nextInt(values.size)])
 }
- */
+
+private fun randomTicketPriority(): TicketPriority {
+    val values = TicketPriorityType.entries.toTypedArray()
+
+    return TicketPriority(values[Random.nextInt(values.size)])
+}
