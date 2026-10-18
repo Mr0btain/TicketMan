@@ -8,10 +8,10 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
+import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.components.database.LocalDatabase
-import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -50,7 +50,7 @@ class InvoiceTest {
     private suspend fun ApplicationTestBuilder.setup(taxRate: String = "") {
         configureTestServer(dataDir)
         startApplication()
-        UserDatabaseImpl().apply {
+        UserDatabase().apply {
             add(admin)
             add(tech)
             add(clerk)
@@ -136,7 +136,7 @@ class InvoiceTest {
     fun oldTextPricesMoveIntoCents() = testApplication {
         setup()
         val item = Inventory(name = "Screen")
-        InventoryDatabaseImpl().add(item)
+        InventoryDatabase().add(item)
 
         transaction {
             InventoryTable.update(where = { InventoryTable.id eq item.identifier }) { row ->
@@ -147,7 +147,7 @@ class InvoiceTest {
 
         LocalDatabase(dataDir.resolve("server").invariantSeparatorsPathString).initDatabase()
 
-        val migrated = InventoryDatabaseImpl().getById(item.identifier)!!
+        val migrated = InventoryDatabase().getById(item.identifier)!!
         assertEquals(1235, migrated.costCents)
         assertEquals(2999, migrated.priceCents)
     }
@@ -249,7 +249,7 @@ class InvoiceTest {
         val short = pickup(ticket, PaymentRequest(PaymentMethod.CARD, 10_000))
         assertEquals(HttpStatusCode.Conflict, short.status)
         assertEquals("$50.00 is still owed on ${invoice.number}", short.bodyAsText())
-        assertEquals(10, InventoryDatabaseImpl().getById(screen.identifier)!!.stock)
+        assertEquals(10, InventoryDatabase().getById(screen.identifier)!!.stock)
         assertEquals(1, json.decodeFromString<Invoice>(client.get("/api/invoice/${invoice.identifier}") { bearerAuth(token) }.bodyAsText()).payments.size)
 
         // Split across card and cash
@@ -262,9 +262,9 @@ class InvoiceTest {
         assertEquals(0, paid.balanceCents)
         assertEquals(3, paid.payments.size)
 
-        assertEquals(8, InventoryDatabaseImpl().getById(screen.identifier)!!.stock)
+        assertEquals(8, InventoryDatabase().getById(screen.identifier)!!.stock)
 
-        val closed = TicketDatabaseImpl().getById(ticket.identifier)!!
+        val closed = TicketDatabase().getById(ticket.identifier)!!
         assertEquals(TicketStatusType.PICKED_UP, closed.status.status)
         assertNotNull(closed.pickedUpAt)
 
@@ -307,7 +307,7 @@ class InvoiceTest {
         val invoice = invoiceFor(ticket)
         setCharges(invoice, listOf(Charge(type = ChargeType.PART, description = "Battery", unitPriceCents = 3_000, inventoryIdentifier = part.identifier)))
         pickup(ticket, PaymentRequest(PaymentMethod.CASH, 3_000))
-        assertEquals(4, InventoryDatabaseImpl().getById(part.identifier)!!.stock)
+        assertEquals(4, InventoryDatabase().getById(part.identifier)!!.stock)
 
         // Only admins
         assertEquals(HttpStatusCode.Unauthorized, postJson("/api/invoice/${invoice.identifier}/void", "").status)
@@ -315,7 +315,7 @@ class InvoiceTest {
         val voided = postJson("/api/invoice/${invoice.identifier}/void", "", adminToken)
         assertEquals(HttpStatusCode.OK, voided.status)
         assertEquals(InvoiceStatus.VOID, json.decodeFromString<Invoice>(voided.bodyAsText()).status)
-        assertEquals(5, InventoryDatabaseImpl().getById(part.identifier)!!.stock)
+        assertEquals(5, InventoryDatabase().getById(part.identifier)!!.stock)
     }
 
     @Test

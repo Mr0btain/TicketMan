@@ -4,31 +4,39 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.server.response.PendingUserResponse
-import org.mr0btain.ticketman.ui.screens.shared.PanelTopBar
+import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TmColumn
 import org.mr0btain.ticketman.ui.kit.data.TmTableRow
 import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.images.TmImageView
+import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
+import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
-import org.mr0btain.ticketman.ui.screens.dashboard.components.DetailSection
-import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordDetail
-import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsLayout
-import org.mr0btain.ticketman.ui.screens.dashboard.components.RecordsList
+import org.mr0btain.ticketman.ui.screens.records.components.DetailSection
+import org.mr0btain.ticketman.ui.screens.records.components.RecordDetail
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsLayout
+import org.mr0btain.ticketman.ui.screens.records.components.RecordsList
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.user
 import ticketman.composeapp.generated.resources.users
 import kotlin.uuid.Uuid
@@ -43,6 +51,8 @@ private val COLUMNS = listOf(
 /**
  * User management, a list of users with the selected one's details beside it
  * @param currentUserIdentifier The logged in admin, some actions are blocked on yourself
+ * @param onSaveNote Adds or edits a staff note on the selected user
+ * @param onRemoveNote Deletes a staff note on the selected user
  */
 @Composable
 fun AdminUsersTab(
@@ -65,6 +75,8 @@ fun AdminUsersTab(
     onLogOutEverywhere: () -> Unit,
     onUnlockPin: () -> Unit,
     onResetPin: () -> Unit,
+    onSaveNote: (Note) -> Unit,
+    onRemoveNote: (Uuid) -> Unit,
     onDelete: () -> Unit
 ) {
     Column(
@@ -82,7 +94,7 @@ fun AdminUsersTab(
         Box(Modifier.weight(1f)) {
             RecordsLayout(
                 toolbar = {
-                    PanelTopBar(
+                    TmPanelTopBar(
                         label = "User",
                         onSearchClick = onSelect,
                         onSearchQuery = onSearchQuery,
@@ -109,7 +121,9 @@ fun AdminUsersTab(
                         onSetActive = onSetActive,
                         onLogOutEverywhere = onLogOutEverywhere,
                         onUnlockPin = onUnlockPin,
-                        onResetPin = onResetPin
+                        onResetPin = onResetPin,
+                        onSaveNote = onSaveNote,
+                        onRemoveNote = onRemoveNote
                     )
                 }
             )
@@ -159,7 +173,9 @@ private fun UserInfoPane(
     onSetActive: (Boolean) -> Unit,
     onLogOutEverywhere: () -> Unit,
     onUnlockPin: () -> Unit,
-    onResetPin: () -> Unit
+    onResetPin: () -> Unit,
+    onSaveNote: (Note) -> Unit,
+    onRemoveNote: (Uuid) -> Unit
 ) {
     val user = seed.user
     val isActive = user.status == UserStatus.ACTIVE
@@ -180,11 +196,11 @@ private fun UserInfoPane(
 
         DetailSection("Details") {
             Column {
-                KeyValueRow(label = "Username", value = user.username)
-                KeyValueRow(label = "Email", value = user.email.ifBlank { "None" })
-                KeyValueRow(label = "Phone", value = user.phone.ifBlank { "None" })
-                KeyValueRow(label = "Added", value = formatDateTime(seed.time.toEpochMilliseconds()))
-                KeyValueRow(
+                TmKeyValueRow(label = "Username", value = user.username)
+                TmKeyValueRow(label = "Email", value = user.email.ifBlank { "None" })
+                TmKeyValueRow(label = "Phone", value = user.phone.ifBlank { "None" })
+                TmKeyValueRow(label = "Added", value = formatDateTime(seed.time.toEpochMilliseconds()))
+                TmKeyValueRow(
                     label = "PIN",
                     value = when {
                         pinLocked -> "Locked after too many tries"
@@ -219,5 +235,61 @@ private fun UserInfoPane(
                 }
             }
         }
+
+        StaffNotes(notes = seed.notes, onSave = onSaveNote, onRemove = onRemoveNote)
     }
+}
+
+/**
+ * Notes about a member of staff, like training or when they work. Only admins see them
+ */
+@Composable
+private fun StaffNotes(notes: List<Note>, onSave: (Note) -> Unit, onRemove: (Uuid) -> Unit) {
+    val noteSeed = remember { NoteSeed() }
+    var editing by remember { mutableStateOf(false) }
+    var viewing by remember { mutableStateOf<Pair<List<StoredImage>, Int>?>(null) }
+
+    DetailSection("Staff notes") {
+        Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+            TmButton(
+                text = "Add note",
+                leadingIcon = Res.drawable.plus,
+                variant = TmButtonVariant.SECONDARY,
+                size = TmControlSize.SMALL,
+                onClick = {
+                    noteSeed.clear()
+                    editing = true
+                }
+            )
+
+            TmNoteBlock(
+                notes = notes,
+                editable = true,
+                emptyText = "No notes yet",
+                onEditClick = { note ->
+                    noteSeed.setNote(note)
+                    editing = true
+                },
+                onImageClick = { noteIdentifier, page ->
+                    notes.firstOrNull { it.identifier == noteIdentifier }?.let { viewing = it.images to page }
+                }
+            )
+        }
+    }
+
+    TmEditNoteDialog(
+        seed = noteSeed,
+        label = if (noteSeed.isNew) "Add staff note" else "Edit staff note",
+        isVisible = editing,
+        onConfirm = { onSave(noteSeed.note) },
+        onDelete = { onRemove(noteSeed.identifier) },
+        onDismissRequest = { editing = false }
+    )
+
+    TmImageView(
+        images = viewing?.first.orEmpty(),
+        startPage = viewing?.second ?: 0,
+        isVisible = viewing != null,
+        onDismiss = { viewing = null }
+    )
 }

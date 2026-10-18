@@ -8,7 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.components.CustomerDetail
@@ -50,14 +50,14 @@ fun CustomerCard(
         ) {
             TmPanel(modifier = Modifier.width(340.dp), title = "Contact", icon = Res.drawable.phone) {
                 Column {
-                    KeyValueRow(label = "Phone", value = customer.phone.ifBlank { "None" })
-                    KeyValueRow(label = "Email", value = customer.email.ifBlank { "None" })
+                    TmKeyValueRow(label = "Phone", value = customer.phone.ifBlank { "None" })
+                    TmKeyValueRow(label = "Email", value = customer.email.ifBlank { "None" })
 
                     val address = customer.address
                     val lines = listOf(address.street, listOf(address.city, address.state, address.zip).filter { it.isNotBlank() }.joinToString(" "))
                         .filter { it.isNotBlank() }
 
-                    if (lines.isNotEmpty()) KeyValueRow(label = "Address", value = lines.joinToString("\n"))
+                    if (lines.isNotEmpty()) TmKeyValueRow(label = "Address", value = lines.joinToString("\n"))
                 }
             }
 

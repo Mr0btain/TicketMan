@@ -6,7 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
@@ -50,7 +50,7 @@ class CounterTest {
     private suspend fun ApplicationTestBuilder.setup() {
         configureTestServer(dataDir)
         startApplication()
-        UserDatabaseImpl().apply {
+        UserDatabase().apply {
             add(admin)
             add(tech)
             add(viewer)

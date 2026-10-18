@@ -6,8 +6,8 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.CustomerDatabase
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -33,7 +33,7 @@ class DatabaseWriteTest {
     private suspend fun ApplicationTestBuilder.setup(): String {
         configureTestServer(dataDir)
         startApplication()
-        UserDatabaseImpl().add(tech)
+        UserDatabase().add(tech)
 
         val response = client.post("/api/auth") {
             contentType(ContentType.Application.Json)
@@ -46,7 +46,7 @@ class DatabaseWriteTest {
     @Test
     fun writesToMissingItemsReturnFalse() = testApplication {
         setup()
-        val customers = CustomerDatabaseImpl()
+        val customers = CustomerDatabase()
         val missing = Uuid.generateV7()
 
         assertFalse(customers.update(Customer(identifier = missing, name = "nobody")))
@@ -58,7 +58,7 @@ class DatabaseWriteTest {
     @Test
     fun addingTheSameItemTwiceFails() = testApplication {
         setup()
-        val customers = CustomerDatabaseImpl()
+        val customers = CustomerDatabase()
         val customer = Customer(name = "jane:doe")
 
         assertTrue(customers.add(customer))
@@ -68,7 +68,7 @@ class DatabaseWriteTest {
     @Test
     fun aThrowInsideAnOuterTransactionRollsAllOfItBack() = testApplication {
         setup()
-        val customers = CustomerDatabaseImpl()
+        val customers = CustomerDatabase()
         val first = Customer(name = "first:one")
 
         assertTrue(customers.add(first))

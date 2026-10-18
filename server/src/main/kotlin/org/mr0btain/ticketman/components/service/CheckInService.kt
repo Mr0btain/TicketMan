@@ -2,11 +2,11 @@ package org.mr0btain.ticketman.components.service
 
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
-import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
+import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
-import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.Payment
@@ -22,9 +22,9 @@ import kotlin.uuid.Uuid
  * Checking devices in at the counter
  */
 class CheckInService(
-    private val tickets: TicketDatabaseImpl,
-    private val customers: CustomerDatabaseImpl,
-    private val users: UserDatabaseImpl,
+    private val tickets: TicketDatabase,
+    private val customers: CustomerDatabase,
+    private val users: UserDatabase,
     private val invoices: InvoiceDatabase,
     private val shop: ShopDatabase,
     private val auditLog: AuditLogDatabase

@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -41,7 +41,7 @@ fun CheckedInView(
         TmBadge(text = "Checked in", tone = colors.success)
 
         // The one place a ticket number is read out loud, so it's as big as the screen allows
-        TicketIdText(
+        TmTicketIdText(
             number = ticket.label,
             style = TmTheme.typography.numericHero
         )

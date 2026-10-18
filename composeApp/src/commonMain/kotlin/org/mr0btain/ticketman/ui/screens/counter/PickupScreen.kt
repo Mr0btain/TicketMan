@@ -22,9 +22,9 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
-import org.mr0btain.ticketman.ui.kit.data.MoneyText
-import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
+import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
@@ -119,7 +119,7 @@ fun PickupScreen(
             titleContent = {
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
                     Text(text = "Pickup", style = TmTheme.typography.display, color = colors.text)
-                    TicketIdText(number = ticket.label, style = TmTheme.typography.numericDisplay)
+                    TmTicketIdText(number = ticket.label, style = TmTheme.typography.numericDisplay)
                 }
             }
         )
@@ -176,10 +176,10 @@ fun PickupScreen(
             // ------------------------------------------ Totals and payment ------------------------------------------
             TmPanel(modifier = Modifier.width(400.dp), title = "Payment", icon = Res.drawable.credit_card) {
                 Column {
-                    KeyValueRow(label = "Subtotal") { MoneyText(totals.subtotalCents) }
-                    if (totals.discountCents > 0) KeyValueRow(label = "Discount") { MoneyText(-totals.discountCents, signed = true) }
-                    KeyValueRow(label = "Tax, ${invoice.taxRateBasisPoints / 100.0}%") { MoneyText(totals.taxCents) }
-                    KeyValueRow(label = "Total") { MoneyText(totals.totalCents, style = TmTheme.typography.numericLarge) }
+                    TmKeyValueRow(label = "Subtotal") { TmMoneyText(totals.subtotalCents) }
+                    if (totals.discountCents > 0) TmKeyValueRow(label = "Discount") { TmMoneyText(-totals.discountCents, signed = true) }
+                    TmKeyValueRow(label = "Tax, ${invoice.taxRateBasisPoints / 100.0}%") { TmMoneyText(totals.taxCents) }
+                    TmKeyValueRow(label = "Total") { TmMoneyText(totals.totalCents, style = TmTheme.typography.numericLarge) }
                 }
 
                 if (invoice.payments.isNotEmpty() || pending.isNotEmpty()) {
@@ -211,8 +211,8 @@ fun PickupScreen(
                 TmDivider()
 
                 // The number the person at the till is looking for
-                KeyValueRow(label = if (balance >= 0) "Balance due" else "Change due") {
-                    MoneyText(
+                TmKeyValueRow(label = if (balance >= 0) "Balance due" else "Change due") {
+                    TmMoneyText(
                         cents = if (balance >= 0) balance else -balance,
                         style = TmTheme.typography.numericDisplay,
                         color = if (balance > 0) colors.danger.color else colors.success.color
@@ -303,7 +303,7 @@ private fun PaymentRow(amountCents: Long, method: PaymentMethod, detail: String,
     TmListRow(
         title = formatEnumName(method.name),
         subtitle = detail,
-        leading = { MoneyText(amountCents, Modifier.width(96.dp)) },
+        leading = { TmMoneyText(amountCents, Modifier.width(96.dp)) },
         trailing = { TmIconButton(icon = Res.drawable.x, contentDescription = "Remove payment", onClick = onRemove, size = TmControlSize.SMALL) }
     )
 }
@@ -347,7 +347,7 @@ private fun ChargeRow(draft: ChargeDraft, onRemove: () -> Unit) {
         TmCheckbox(checked = draft.taxable, onCheckedChange = { draft.taxable = it }, label = "Tax")
 
         Box(Modifier.width(88.dp), contentAlignment = Alignment.CenterEnd) {
-            if (charge != null) MoneyText(charge.totalCents) else Text("", style = TmTheme.typography.numeric)
+            if (charge != null) TmMoneyText(charge.totalCents) else Text("", style = TmTheme.typography.numeric)
         }
 
         TmIconButton(icon = Res.drawable.x, contentDescription = "Remove line", onClick = onRemove, size = TmControlSize.SMALL)
@@ -378,7 +378,7 @@ private fun PartPicker(onSearch: suspend (String) -> List<Inventory>, onPick: (I
                 title = part.name,
                 icon = Res.drawable.package_icon,
                 subtitle = stockText(part.stock),
-                trailing = { MoneyText(part.priceCents) },
+                trailing = { TmMoneyText(part.priceCents) },
                 onClick = {
                     onPick(part)
                     query = ""
@@ -415,7 +415,7 @@ fun PickedUpView(
         verticalArrangement = Arrangement.spacedBy(spacing.sm, Alignment.CenterVertically)
     ) {
         TmBadge(text = "Picked up", tone = colors.success)
-        TicketIdText(number = invoice.label, style = TmTheme.typography.numericDisplay)
+        TmTicketIdText(number = invoice.label, style = TmTheme.typography.numericDisplay)
         Text(
             text = "Total ${Money.format(invoice.totalCents)}, paid ${Money.format(invoice.paidCents)}",
             style = TmTheme.typography.bodyLarge,
@@ -424,7 +424,7 @@ fun PickedUpView(
 
         if (invoice.balanceCents < 0) {
             Text(text = "Change due", style = TmTheme.typography.title, color = colors.text)
-            MoneyText(
+            TmMoneyText(
                 cents = -invoice.balanceCents,
                 style = TmTheme.typography.numericHero,
                 color = colors.success.color

@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.feedback.AccessBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -66,7 +66,7 @@ fun AdminSessionsTab(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(text = first.username + if (isSelf) " (you)" else "", style = TmTheme.typography.subtitle, color = colors.text)
-                    AccessBadge(first.accessLevel)
+                    TmAccessBadge(first.accessLevel)
                 }
 
                 Column {

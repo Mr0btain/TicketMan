@@ -12,6 +12,10 @@ import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * A note being written or edited. Like the record seeds, what changed is worked out against a snapshot taken when
+ * it was set, so changing something back counts as unchanged
+ */
 @OptIn(ExperimentalUuidApi::class)
 class NoteSeed {
     // Constructor to set initial data from an existing note if we need to.
@@ -39,22 +43,24 @@ class NoteSeed {
     var message: String by mutableStateOf("")
         private set
 
-    // List to store the names of fields that have changed
-    private val changedFields = mutableListOf<ChangedField>()
+    // Fields as they were when the note was set
+    private var saved: Map<ChangedField, Any?> by mutableStateOf(emptyMap())
 
-    // To check if the object has changed
+    private fun snapshot(): Map<ChangedField, Any?> = mapOf(
+        ChangedField.IDENTIFIER to identifier,
+        ChangedField.AUTHOR to author,
+        ChangedField.MESSAGE to message,
+        ChangedField.IMAGE to _images.toList()
+    )
+
+    /** Whether anything differs from when the note was set */
     val isDirty: Boolean
-        get() = changedFields.isNotEmpty()
-
-    // snapshot of the last saved state
-    private var savedState: State = State()
+        get() = snapshot() != saved
 
     val note: Note
         get() = Note(identifier, author, message, _images.toList())
 
-    fun setNote(
-        note: Note
-    ) {
+    fun setNote(note: Note) {
         identifier = note.identifier
         author = note.author
         message = note.message
@@ -66,46 +72,30 @@ class NoteSeed {
     }
 
     fun changeIdentifier(newId: Uuid) {
-        if (identifier != newId) {
-            identifier = newId
-            changedFields.add(ChangedField.IDENTIFIER)
-        }
+        identifier = newId
     }
 
     fun changeImages(newImages: List<StoredImage>) {
-        if (_images != newImages) {
+        if (_images.toList() != newImages) {
             _images.clear()
             _images.addAll(newImages)
-            changedFields.add(ChangedField.IMAGE)
         }
     }
 
     fun addImage(newImage: StoredImage) {
-        if (!_images.contains(newImage)) {
-            _images.add(newImage)
-            changedFields.add(ChangedField.IMAGE)
-        }
+        if (_images.none { it.identifier == newImage.identifier }) _images.add(newImage)
     }
 
     fun deleteImage(identifier: Uuid) {
-        _images.first { it.identifier == identifier }.also { index ->
-            _images.remove(index)
-            changedFields.add(ChangedField.IMAGE)
-        }
+        _images.removeAll { it.identifier == identifier }
     }
 
     fun changeAuthor(newAuthor: String) {
-        if (author != newAuthor) {
-            author = newAuthor
-            changedFields.add(ChangedField.AUTHOR)
-        }
+        author = newAuthor
     }
 
     fun changeMessage(newMessage: String) {
-        if (message != newMessage) {
-            message = newMessage
-            changedFields.add(ChangedField.MESSAGE)
-        }
+        message = newMessage
     }
 
     fun clear() {
@@ -118,19 +108,16 @@ class NoteSeed {
         markClean()
     }
 
+    /** Takes the note as it is now as the saved state */
     fun markClean() {
-        savedState = State(identifier, author, message, _images)
-        changedFields.clear()
+        saved = snapshot()
     }
 
-    fun getChangedFields(): List<ChangedField> = changedFields.toList()
+    /** Fields that differ from when the note was set */
+    fun getChangedFields(): List<ChangedField> {
+        val now = snapshot()
+        return now.keys.filter { now[it] != saved[it] }
+    }
 
     override fun toString(): String = "NoteSeed($author, $time: $message)"
-
-    private data class State(
-        val identifier: Uuid = Uuid.generateV7(),
-        val author: String = "",
-        val message: String = "",
-        val images: List<StoredImage> = emptyList()
-    )
 }

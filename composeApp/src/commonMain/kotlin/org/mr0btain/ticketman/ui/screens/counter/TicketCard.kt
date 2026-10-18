@@ -16,15 +16,15 @@ import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
-import org.mr0btain.ticketman.ui.kit.inputs.SignatureView
+import org.mr0btain.ticketman.ui.kit.inputs.TmSignatureView
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
-import org.mr0btain.ticketman.ui.kit.data.MoneyText
-import org.mr0btain.ticketman.ui.kit.data.TicketIdText
-import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
-import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
+import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
+import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.tone
@@ -81,9 +81,9 @@ fun TicketCard(
             onBack = onBack,
             titleContent = {
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
-                    TicketIdText(number = ticket.label, style = TmTheme.typography.numericDisplay)
-                    StatusBadge(ticket.status.status)
-                    PriorityBadge(ticket.priority.priority)
+                    TmTicketIdText(number = ticket.label, style = TmTheme.typography.numericDisplay)
+                    TmStatusBadge(ticket.status.status)
+                    TmPriorityBadge(ticket.priority.priority)
                     if (ticket.isOverdue) TmBadge(text = "Overdue", tone = colors.danger, solid = true)
                 }
             },
@@ -121,7 +121,7 @@ fun TicketCard(
         ) {
             TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Device", icon = Res.drawable.smartphone) {
                 Text(text = ticket.device.toString().ifBlank { "Unknown device" }, style = TmTheme.typography.subtitle, color = colors.text)
-                if (ticket.device.serial.isNotBlank()) KeyValueRow(label = "Serial", value = ticket.device.serial, numeric = true)
+                if (ticket.device.serial.isNotBlank()) TmKeyValueRow(label = "Serial", value = ticket.device.serial, numeric = true)
 
                 DetailBlock("Problem", ticket.problem.ifBlank { "Not written down" })
                 if (ticket.condition.isNotBlank()) DetailBlock("Condition", ticket.condition)
@@ -130,9 +130,9 @@ fun TicketCard(
                 TmDivider()
 
                 Column {
-                    KeyValueRow(label = "Checked in", value = formatDateTime(ticket.identifier.timestampMillis()))
+                    TmKeyValueRow(label = "Checked in", value = formatDateTime(ticket.identifier.timestampMillis()))
                     ticket.promisedAt?.let { promised ->
-                        KeyValueRow(label = "Promised") {
+                        TmKeyValueRow(label = "Promised") {
                             Text(
                                 text = formatDay(promised),
                                 style = TmTheme.typography.body,
@@ -140,8 +140,8 @@ fun TicketCard(
                             )
                         }
                     }
-                    ticket.pickedUpAt?.let { KeyValueRow(label = "Picked up", value = formatDateTime(it)) }
-                    ticket.estimateCents?.let { KeyValueRow(label = "Estimate") { MoneyText(it) } }
+                    ticket.pickedUpAt?.let { TmKeyValueRow(label = "Picked up", value = formatDateTime(it)) }
+                    ticket.estimateCents?.let { TmKeyValueRow(label = "Estimate") { TmMoneyText(it) } }
                 }
             }
 
@@ -156,12 +156,12 @@ fun TicketCard(
                         TmButton(text = "Open", onClick = onCustomerClick, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                     }
                     Column {
-                        if (customer.phone.isNotBlank()) KeyValueRow(label = "Phone", value = customer.phone)
-                        if (customer.email.isNotBlank()) KeyValueRow(label = "Email", value = customer.email)
+                        if (customer.phone.isNotBlank()) TmKeyValueRow(label = "Phone", value = customer.phone)
+                        if (customer.email.isNotBlank()) TmKeyValueRow(label = "Email", value = customer.email)
                     }
                 }
 
-                KeyValueRow(label = "Technician", value = detail.technician?.text?.let { cleanName(it) } ?: "Not assigned")
+                TmKeyValueRow(label = "Technician", value = detail.technician?.text?.let { cleanName(it) } ?: "Not assigned")
             }
 
             TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Invoice", icon = Res.drawable.file_text) {
@@ -170,22 +170,22 @@ fun TicketCard(
                 if (invoice == null) {
                     Text(text = "No invoice yet, one is made at check in or pickup", style = TmTheme.typography.body, color = colors.textMuted)
                 } else {
-                    KeyValueRow(label = invoice.label) {
+                    TmKeyValueRow(label = invoice.label) {
                         TmBadge(text = formatEnumName(invoice.status.name), tone = colors.neutral, dot = false)
                     }
 
                     Column {
                         invoice.charges.forEach { charge ->
-                            KeyValueRow(label = "${formatQuantity(charge.quantity)} x ${charge.description}") { MoneyText(charge.totalCents) }
+                            TmKeyValueRow(label = "${formatQuantity(charge.quantity)} x ${charge.description}") { TmMoneyText(charge.totalCents) }
                         }
                     }
 
                     TmDivider()
 
                     Column {
-                        KeyValueRow(label = "Total") { MoneyText(invoice.totalCents) }
-                        KeyValueRow(label = "Paid") { MoneyText(invoice.paidCents) }
-                        KeyValueRow(label = "Balance") { MoneyText(invoice.balanceCents, style = TmTheme.typography.numericLarge) }
+                        TmKeyValueRow(label = "Total") { TmMoneyText(invoice.totalCents) }
+                        TmKeyValueRow(label = "Paid") { TmMoneyText(invoice.paidCents) }
+                        TmKeyValueRow(label = "Balance") { TmMoneyText(invoice.balanceCents, style = TmTheme.typography.numericLarge) }
                     }
                 }
             }
@@ -236,7 +236,7 @@ fun TicketCard(
                     subtitle = "${signature.signedName}, ${formatDateTime(signature.signedAt)}",
                     icon = Res.drawable.edit_3
                 ) {
-                    SignatureView(
+                    TmSignatureView(
                         modifier = Modifier
                             .fillMaxWidth()
                             .aspectRatio(signature.aspectRatio.coerceIn(1f, 6f)),
@@ -254,7 +254,7 @@ fun TicketCard(
 
                 Column {
                     detail.history.reversed().forEach { change ->
-                        KeyValueRow(label = "${change.changedBy}, ${formatDateTime(change.time)}") {
+                        TmKeyValueRow(label = "${change.changedBy}, ${formatDateTime(change.time)}") {
                             Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
                                 TmDot(colors.tone(change.status).color)
                                 Text(text = CounterHandler.statusLabel(change.status), style = TmTheme.typography.label, color = colors.text)

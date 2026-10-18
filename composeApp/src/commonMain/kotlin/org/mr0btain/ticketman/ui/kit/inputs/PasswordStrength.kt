@@ -1,12 +1,12 @@
 package org.mr0btain.ticketman.ui.kit.inputs
 
-fun passwordStrengthCheck(password: String): StrengthPasswordTypes =
+fun passwordStrength(password: String): PasswordStrength =
     when {
-        REGEX_STRONG_PASSWORD.toRegex().containsMatchIn(password) -> StrengthPasswordTypes.STRONG
-        else -> StrengthPasswordTypes.WEAK
+        REGEX_STRONG_PASSWORD.toRegex().containsMatchIn(password) -> PasswordStrength.STRONG
+        else -> PasswordStrength.WEAK
     }
 
-enum class StrengthPasswordTypes {
+enum class PasswordStrength {
     STRONG,
     WEAK
 }

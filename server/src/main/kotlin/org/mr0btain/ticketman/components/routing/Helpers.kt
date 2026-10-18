@@ -4,7 +4,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.data.audit.AuditAction
 import kotlin.uuid.Uuid
@@ -28,7 +28,7 @@ fun RoutingCall.uuidParameter(name: String): Uuid? =
 /**
  * Username of whoever made this call
  */
-fun RoutingCall.username(users: UserDatabaseImpl): String =
+fun RoutingCall.username(users: UserDatabase): String =
     getIdentifierFromToken()?.let { users.getById(it)?.username } ?: "unknown"
 
 /**

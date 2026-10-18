@@ -33,8 +33,8 @@ import kotlin.uuid.Uuid
 @OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
 class CounterDatabase(
-    private val ticketDatabase: TicketDatabaseImpl,
-    private val customerDatabase: CustomerDatabaseImpl,
+    private val ticketDatabase: TicketDatabase,
+    private val customerDatabase: CustomerDatabase,
     private val zone: ZoneId = ZoneId.systemDefault()
 ) {
     private val TAG = "CounterDatabase"

@@ -29,7 +29,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.ui.kit.foundation.GlassSurface
+import org.mr0btain.ticketman.ui.kit.foundation.TmGlassSurface
 import org.mr0btain.ticketman.ui.kit.foundation.tmClickable
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 
@@ -62,7 +62,7 @@ fun TmNavRail(
 ) {
     val spacing = TmTheme.spacing
 
-    GlassSurface(
+    TmGlassSurface(
         modifier = modifier
             .fillMaxHeight()
             .width(if (expanded) 200.dp else 64.dp),
@@ -137,7 +137,7 @@ fun TmTopBar(
     val colors = TmTheme.colors
     val spacing = TmTheme.spacing
 
-    GlassSurface(modifier = modifier.fillMaxWidth(), shape = TmTheme.shapes.panel) {
+    TmGlassSurface(modifier = modifier.fillMaxWidth(), shape = TmTheme.shapes.panel) {
         Row(
             modifier = Modifier
                 .height(56.dp)
@@ -173,7 +173,7 @@ fun TmBottomNav(
 ) {
     val colors = TmTheme.colors
 
-    GlassSurface(modifier = modifier.fillMaxWidth(), shape = TmTheme.shapes.panel) {
+    TmGlassSurface(modifier = modifier.fillMaxWidth(), shape = TmTheme.shapes.panel) {
         Row(
             modifier = Modifier
                 .height(64.dp)

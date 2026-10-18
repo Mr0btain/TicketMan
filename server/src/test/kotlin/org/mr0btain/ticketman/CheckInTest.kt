@@ -5,8 +5,8 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.Invoice
@@ -49,7 +49,7 @@ class CheckInTest {
     private suspend fun ApplicationTestBuilder.setup(terms: String = "") {
         configureTestServer(dataDir)
         startApplication()
-        UserDatabaseImpl().apply {
+        UserDatabase().apply {
             add(admin)
             add(tech)
             add(clerk)
@@ -148,7 +148,7 @@ class CheckInTest {
 
         listOf(blankDevice, noProblem, noCustomer, restrictedTech, freeDeposit, blankSignature, unnamedSignature, offPad, alreadyDone, randomIdentifier).forEach {
             assertEquals(HttpStatusCode.BadRequest, checkIn(it).status, "Should refuse $it")
-            assertNull(TicketDatabaseImpl().getById(it.ticket.identifier))
+            assertNull(TicketDatabase().getById(it.ticket.identifier))
         }
     }
 

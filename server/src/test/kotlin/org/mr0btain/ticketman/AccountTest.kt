@@ -6,7 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.InviteDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
@@ -29,10 +29,10 @@ class AccountTest {
     @AfterTest
     fun cleanup() = cleanupTestDataDir(dataDir)
 
-    private suspend fun ApplicationTestBuilder.setup(): UserDatabaseImpl {
+    private suspend fun ApplicationTestBuilder.setup(): UserDatabase {
         configureTestServer(dataDir)
         startApplication()
-        val users = UserDatabaseImpl().apply { add(admin) }
+        val users = UserDatabase().apply { add(admin) }
         adminToken = json.decodeFromString<AuthResponse>(login(admin.username, admin.password).bodyAsText()).accessToken!!
         return users
     }

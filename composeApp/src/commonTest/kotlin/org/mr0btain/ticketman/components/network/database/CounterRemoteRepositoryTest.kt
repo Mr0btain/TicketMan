@@ -44,8 +44,8 @@ class CounterRemoteRepositoryTest {
     }
 
     private val counter = CounterRemoteRepository(client).apply { serverUrl = "http://localhost" }
-    private val tickets = TicketRemoteRepositoryImpl(client).apply { serverUrl = "http://localhost" }
-    private val customers = CustomerRemoteRepositoryImpl(client).apply { serverUrl = "http://localhost" }
+    private val tickets = TicketRemoteRepository(client).apply { serverUrl = "http://localhost" }
+    private val customers = CustomerRemoteRepository(client).apply { serverUrl = "http://localhost" }
 
     @Test
     fun counterRoutes() = runTest {

@@ -10,7 +10,7 @@ enum class Destination(val route: String, val index: Int) {
     ADMIN("Admin", 0),
     COUNTER("Counter", 1),
     INVOICE("Invoice", 2),
-    DASHBOARD("Dash", 4),
+    RECORDS("Records", 4),
     SETTINGS("Settings", 5),
 
     /** UI kit component gallery, listed in debug builds and opened from Settings */

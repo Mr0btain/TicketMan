@@ -30,7 +30,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
     val firstName: String
         get() = _name.firstOrNull() ?: ""
     val lastName: String
-        get() = _name.lastOrNull() ?: ""
+        get() = if (_name.size > 1) _name.last() else ""
 
     // Address
     var street by mutableStateOf("")
@@ -59,68 +59,40 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         get() = Customer(identifier, joinName(_name), address, email, phone)
 
     fun changeName(newName: List<String>) {
-        if (_name != newName) {
+        if (_name.toList() != newName) {
             _name.clear()
             _name.addAll(newName)
-            _changedFields.add(ChangedField.NAME)
         }
     }
 
     fun changeStreet(newStreet: String) {
-        if (street != newStreet) {
-            street = newStreet
-            _changedFields.add(ChangedField.STREET)
-        }
+        street = newStreet
     }
 
     fun changeCity(newCity: String) {
-        if (city != newCity) {
-            city = newCity
-            _changedFields.add(ChangedField.CITY)
-        }
+        city = newCity
     }
 
     fun changeState(newState: String) {
-        if (state != newState) {
-            state = newState
-            _changedFields.add(ChangedField.STATE)
-        }
+        state = newState
     }
 
     fun changeZip(newZip: String) {
-        newZip.filter { it.isDigit() }.also { result ->
-            if (zip != result) {
-                zip = result
-                _changedFields.add(ChangedField.ZIP)
-            }
-        }
-
+        zip = newZip.filter { it.isDigit() }
     }
 
     fun changeEmail(newEmail: String) {
-        newEmail.filter { !it.isWhitespace() }.also { result ->
-            if (email != result) {
-                email = result
-                _changedFields.add(ChangedField.EMAIL)
-            }
-        }
-
+        email = newEmail.filter { !it.isWhitespace() }
     }
 
     fun changePhone(newPhone: String) {
-        newPhone.filter { it.isDigit() }.also { result ->
-            if (phone != result) {
-                phone = result
-                _changedFields.add(ChangedField.PHONE)
-            }
-        }
+        phone = newPhone.filter { it.isDigit() }
     }
 
     fun addTicket(newTicket: Ticket) {
         _tickets.indexOfFirst { newTicket.identifier == it.identifier }.also { index ->
             if (index == -1) {
                 _tickets.add(newTicket)
-                _changedFields.add(ChangedField.TICKET)
             } else {
                 AppLogger.m(ADD_TICKET_TAG, "Ticket already exists")
             }
@@ -131,7 +103,6 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         _tickets.indexOfFirst { it.identifier == ticketToRemove }.also { index ->
             if (index != -1) {
                 _tickets.removeAt(index)
-                _changedFields.add(ChangedField.TICKET)
             } else {
                 AppLogger.m(DELETE_TICKET_TAG, "Ticket not found")
             }
@@ -170,6 +141,17 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         isNew = false
     }
 
+    override fun fields() = mapOf(
+        ChangedField.NAME to _name.toList(),
+        ChangedField.STREET to street,
+        ChangedField.CITY to city,
+        ChangedField.STATE to state,
+        ChangedField.ZIP to zip,
+        ChangedField.EMAIL to email,
+        ChangedField.PHONE to phone,
+        ChangedField.TICKET to _tickets.toList()
+    )
+
     override fun clear() {
         identifier = Uuid.generateV7()
         _name.clear()
@@ -187,38 +169,6 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         markClean()
     }
 
-    override fun markClean() {
-        savedState = State(
-            identifier,
-            joinName(name),
-            street,
-            city,
-            state,
-            zip,
-            email,
-            phone,
-            _tickets,
-            _notes,
-            _images
-        ).hashCode()
-
-        _changedFields.clear()
-    }
-
     override fun toString(): String =
         "CustomerSeed(Name=${splitName(customer.name).joinToString(" ")}, Address=$street $city $state $zip, Email=$email, Phone=$phone, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
-
-    private data class State(
-        val identifier: Uuid = Uuid.generateV7(),
-        val name: String = "",
-        val street: String = "",
-        val city: String = "",
-        val state: String = "",
-        val zip: String = "",
-        val email: String = "",
-        val phone: String = "",
-        val tickets: List<Ticket> = emptyList(),
-        val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList()
-    )
 }

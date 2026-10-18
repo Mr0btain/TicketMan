@@ -121,7 +121,7 @@ fun TmPasswordField(
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
     var visible by rememberSaveable { mutableStateOf(false) }
-    val strong = remember(value) { passwordStrengthCheck(value) == StrengthPasswordTypes.STRONG }
+    val strong = remember(value) { passwordStrength(value) == PasswordStrength.STRONG }
 
     if (showStrength) {
         LaunchedEffect(strong) { onStrengthChange(strong) }

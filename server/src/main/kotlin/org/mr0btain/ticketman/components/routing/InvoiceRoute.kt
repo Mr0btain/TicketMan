@@ -6,7 +6,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.server.request.PaymentRequest
 fun Route.invoiceRoute(
     database: InvoiceDatabase,
     service: InvoiceService,
-    userDatabase: UserDatabaseImpl
+    userDatabase: UserDatabase
 ) {
     authenticate("restricted") {
         get("/ticket/{ticketIdentifier}") {

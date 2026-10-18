@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
-import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
+import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.PhoneAppShell
 import org.mr0btain.ticketman.ui.screens.navigation.WideAppShell
 import org.mr0btain.ticketman.ui.screens.navigation.navigateTo
@@ -62,7 +62,7 @@ fun App() {
     // Approved stations with kiosk mode show only the counter, signed into by PIN
     val kioskActive = mainViewModel.kiosk.active.collectAsState()
 
-    val initialDestination = Destination.DASHBOARD
+    val initialDestination = Destination.RECORDS
 
     // Admin screen is only listed for admins
     val isAdmin = mainViewModel.session.isAdmin.collectAsState()
@@ -72,7 +72,7 @@ fun App() {
 
     // Logging in happens from the bottom of the nav rail, so the old login screen isn't listed
     val navDestination = listOfNotNull(
-        NavigationItem("Dashboard", Res.drawable.home, Destination.DASHBOARD),
+        NavigationItem("Records", Res.drawable.home, Destination.RECORDS),
         NavigationItem("Counter", Res.drawable.monitor, Destination.COUNTER),
         NavigationItem("Settings", Res.drawable.settings, Destination.SETTINGS),
         if (isAdmin.value) NavigationItem("Admin", Res.drawable.archive, Destination.ADMIN) else null,

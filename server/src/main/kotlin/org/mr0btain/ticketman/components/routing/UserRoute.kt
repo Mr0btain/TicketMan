@@ -7,7 +7,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.TokenDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.AccountResult
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.data.audit.AuditAction
@@ -35,7 +35,7 @@ import kotlin.uuid.Uuid
 // TODO: Handle encryption in the rest of these routes
 @OptIn(ExperimentalUuidApi::class)
 fun Route.userRoute(
-    database: UserDatabaseImpl,
+    database: UserDatabase,
     tokenDatabase: TokenDatabase,
     accountService: AccountService,
     auditLog: AuditLogDatabase
@@ -386,6 +386,9 @@ fun Route.userRoute(
             }
         }
     }
+
+    // Staff notes, like training or schedule. Only admins can see or write them
+    noteRoute(database, database, auditLog, ENTITY_TYPE, readAuth = "admin", writeAuth = "admin")
 }
 
 /**

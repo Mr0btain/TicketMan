@@ -12,7 +12,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.TokenTable
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
@@ -38,11 +38,11 @@ class SessionTest {
     @AfterTest
     fun cleanup() = cleanupTestDataDir(dataDir)
 
-    private suspend fun ApplicationTestBuilder.setup(): UserDatabaseImpl {
+    private suspend fun ApplicationTestBuilder.setup(): UserDatabase {
         configureTestServer(dataDir)
         startApplication()
 
-        return UserDatabaseImpl().apply {
+        return UserDatabase().apply {
             add(admin)
             add(tech)
         }

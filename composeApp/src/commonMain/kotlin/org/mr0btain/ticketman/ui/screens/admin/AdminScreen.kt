@@ -8,7 +8,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.components.pagination.offset.offsetPagerHandler
+import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerLoader
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.response.InviteResponse
@@ -31,7 +31,7 @@ import org.mr0btain.ticketman.ui.screens.admin.users.InviteDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.ResetPasswordDialog
 import org.mr0btain.ticketman.ui.screens.admin.users.UserDialog
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
-import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
+import org.mr0btain.ticketman.ui.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.refresh_cw
 import ticketman.composeapp.generated.resources.shield
@@ -97,7 +97,7 @@ private fun AdminContent(
     val userSeed = viewModel.users.seed
     val users = viewModel.users.pager.items.collectAsState()
     val userListState = rememberLazyListState()
-    offsetPagerHandler(viewModel.users.pager, userListState)
+    OffsetPagerLoader(viewModel.users.pager, userListState)
 
     // User dialogs
     var showUserDialog by remember { mutableStateOf(false) }
@@ -246,6 +246,8 @@ private fun AdminContent(
                 onLogOutEverywhere = { admin.revokeAllSessions(userSeed.user) },
                 onUnlockPin = { admin.unlockPin(userSeed.user) },
                 onResetPin = { admin.resetPin(userSeed.user) },
+                onSaveNote = { note -> viewModel.users.saveNote(note) },
+                onRemoveNote = { identifier -> viewModel.users.removeNote(identifier) },
                 onDelete = { if (!userSeed.isNew) showDeleteDialog = true }
             )
 

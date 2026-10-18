@@ -10,8 +10,8 @@ import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
-import org.mr0btain.ticketman.ui.kit.data.TicketIdText
-import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
+import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
+import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 
 /**
  * A ticket in a list: number, device, customer and status, the whole row is clickable
@@ -33,8 +33,8 @@ fun TicketRow(
         title = ticket.device.toString().ifBlank { "Unknown device" },
         subtitle = details.joinToString(", ").ifBlank { null },
         onClick = onClick,
-        leading = { TicketIdText(ticket.label, Modifier.width(104.dp)) },
-        trailing = if (showStatus) ({ StatusBadge(ticket.status.status) }) else null
+        leading = { TmTicketIdText(ticket.label, Modifier.width(104.dp)) },
+        trailing = if (showStatus) ({ TmStatusBadge(ticket.status.status) }) else null
     )
 }
 

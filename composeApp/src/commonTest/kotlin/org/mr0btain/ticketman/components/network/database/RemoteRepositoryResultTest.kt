@@ -24,7 +24,7 @@ class RemoteRepositoryResultTest {
         install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true }) }
     }
 
-    private val customers = CustomerRemoteRepositoryImpl(client).apply { serverUrl = "http://localhost" }
+    private val customers = CustomerRemoteRepository(client).apply { serverUrl = "http://localhost" }
 
     @Test
     fun noteAndLinkCallsSucceedWhenTheServerTakesThem() = runTest {
@@ -50,7 +50,7 @@ class RemoteRepositoryResultTest {
 
     @Test
     fun noServerIsAnError() = runTest {
-        val unset = CustomerRemoteRepositoryImpl(client)
+        val unset = CustomerRemoteRepository(client)
 
         assertIs<Result.Error<*>>(unset.addNote(Uuid.random(), Note(message = "hi")))
         assertIs<Result.Error<*>>(unset.removeNote(Uuid.random()))

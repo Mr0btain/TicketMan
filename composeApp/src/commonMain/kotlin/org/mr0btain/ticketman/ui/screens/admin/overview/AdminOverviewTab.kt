@@ -28,8 +28,8 @@ import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.data.TmCountBar
 import org.mr0btain.ticketman.ui.kit.data.TmStatTile
-import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
-import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.feedback.label
 import org.mr0btain.ticketman.ui.kit.feedback.tone
@@ -195,8 +195,8 @@ private fun OverviewTicketRow(
         onClick = onClick,
         trailing = {
             Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
-                StatusBadge(ticket.status.status)
-                PriorityBadge(ticket.priority.priority)
+                TmStatusBadge(ticket.status.status)
+                TmPriorityBadge(ticket.priority.priority)
             }
         }
     )

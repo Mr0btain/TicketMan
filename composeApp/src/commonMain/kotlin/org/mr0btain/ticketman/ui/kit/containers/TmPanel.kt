@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
-import org.mr0btain.ticketman.ui.kit.foundation.GlassSurface
+import org.mr0btain.ticketman.ui.kit.foundation.TmGlassSurface
 import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
 import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -121,7 +121,7 @@ fun TmStickyHeader(
     actions: @Composable RowScope.() -> Unit = {},
     content: @Composable ColumnScope.() -> Unit = {}
 ) {
-    GlassSurface(modifier = modifier.fillMaxWidth(), shape = TmTheme.shapes.panel) {
+    TmGlassSurface(modifier = modifier.fillMaxWidth(), shape = TmTheme.shapes.panel) {
         Column {
             TmPaneHeader(title = title, subtitle = subtitle, icon = icon, actions = actions)
             content()

@@ -14,7 +14,7 @@ import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.MoneyText
+import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.TmColumn
 import org.mr0btain.ticketman.ui.kit.data.TmTableHeader
 import org.mr0btain.ticketman.ui.kit.data.TmTableRow
@@ -97,8 +97,8 @@ fun AdminLowStockTab(
                                 style = TmTheme.typography.numeric,
                                 color = if (item.stock <= 0) colors.danger.color else colors.warning.color
                             )
-                            2 -> MoneyText(item.costCents)
-                            3 -> MoneyText(item.priceCents)
+                            2 -> TmMoneyText(item.costCents)
+                            3 -> TmMoneyText(item.priceCents)
                         }
                     }
                 }

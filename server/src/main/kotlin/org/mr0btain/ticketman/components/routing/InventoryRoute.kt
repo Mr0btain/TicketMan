@@ -7,8 +7,8 @@ import io.ktor.server.request.receive
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
-import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.InventoryDatabase
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -18,8 +18,8 @@ import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(
-    database: InventoryDatabaseImpl,
-    userDatabase: UserDatabaseImpl,
+    database: InventoryDatabase,
+    userDatabase: UserDatabase,
     auditLog: AuditLogDatabase
 ) {
     val TAG = "InventoryRoute"
@@ -145,5 +145,5 @@ fun Route.inventoryRoute(
         }
     }
 
-    noteRoutes(database, userDatabase, auditLog, ENTITY_TYPE)
+    noteRoute(database, userDatabase, auditLog, ENTITY_TYPE)
 }

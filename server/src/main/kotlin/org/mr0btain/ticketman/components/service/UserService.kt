@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.components.database.PinCheck
 import org.mr0btain.ticketman.components.database.StationDatabase
 import org.mr0btain.ticketman.components.database.StoredSession
 import org.mr0btain.ticketman.components.database.TokenDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.station.StationStatus
@@ -50,7 +50,7 @@ sealed interface PinLoginResult {
 }
 
 class UserService(
-    private val database: UserDatabaseImpl,
+    private val database: UserDatabase,
     private val jwtService: JwtService,
     private val tokenDatabase: TokenDatabase,
     private val inviteDatabase: InviteDatabase,

@@ -13,7 +13,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.MoneyText
+import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
@@ -82,7 +82,7 @@ fun PriceCheck(
                                     tone = if (item.stock <= 0) colors.danger else colors.neutral,
                                     dot = item.stock <= 0
                                 )
-                                MoneyText(item.priceCents, Modifier.widthIn(min = 96.dp), style = TmTheme.typography.numericLarge)
+                                TmMoneyText(item.priceCents, Modifier.widthIn(min = 96.dp), style = TmTheme.typography.numericLarge)
                             }
                         }
                     )

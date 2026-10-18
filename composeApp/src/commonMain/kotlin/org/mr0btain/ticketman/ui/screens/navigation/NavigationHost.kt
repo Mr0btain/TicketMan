@@ -13,15 +13,15 @@ import org.mr0btain.ticketman.ui.kit.gallery.KitGallery
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
 import org.mr0btain.ticketman.ui.screens.invoice.InvoiceScreen
-import org.mr0btain.ticketman.ui.screens.dashboard.DashboardScreen
-import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
+import org.mr0btain.ticketman.ui.screens.records.RecordsScreen
+import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
 
 @Composable
 fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
-    initialDestination: Destination = Destination.DASHBOARD,
+    initialDestination: Destination = Destination.RECORDS,
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     mainViewModel: MainViewModel,
     snackBarState: SnackbarHostState
@@ -36,7 +36,7 @@ fun NavigationHost(
                 viewModel = mainViewModel,
                 snackBarState = snackBarState,
                 coroutineScope = coroutineScope,
-                onNavigateToMain = { navHostController.navigate(Destination.DASHBOARD.route) }
+                onNavigateToMain = { navHostController.navigate(Destination.RECORDS.route) }
             )
         }
 
@@ -56,8 +56,8 @@ fun NavigationHost(
             )
         }
 
-        composable(Destination.DASHBOARD.route) {
-            DashboardScreen(viewModel = mainViewModel)
+        composable(Destination.RECORDS.route) {
+            RecordsScreen(viewModel = mainViewModel)
         }
 
         composable(Destination.SETTINGS.route) {

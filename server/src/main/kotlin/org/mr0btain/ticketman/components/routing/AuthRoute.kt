@@ -7,7 +7,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.StationDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.AccountResult
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.LoginResult
@@ -37,7 +37,7 @@ fun Route.authRoute(
     userService: UserService,
     accountService: AccountService,
     stationDatabase: StationDatabase,
-    userDatabase: UserDatabaseImpl
+    userDatabase: UserDatabase
 ) {
     // Anyone can ask for an account, so cap how often one address can
     val requestLimiter = RequestLimiter(maxAttempts = 5, window = 1.hours)

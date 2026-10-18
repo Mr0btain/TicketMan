@@ -28,7 +28,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.foundation.GlassSurface
+import org.mr0btain.ticketman.ui.kit.foundation.TmGlassSurface
 import org.mr0btain.ticketman.ui.kit.foundation.TmBackdrop
 import org.mr0btain.ticketman.ui.kit.foundation.glassSource
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
@@ -93,7 +93,7 @@ fun KitGallery(
                 }
             }
 
-            GlassSurface(
+            TmGlassSurface(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()

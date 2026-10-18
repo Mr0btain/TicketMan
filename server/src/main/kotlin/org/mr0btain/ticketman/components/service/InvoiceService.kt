@@ -2,10 +2,10 @@ package org.mr0btain.ticketman.components.service
 
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
-import org.mr0btain.ticketman.components.database.InventoryDatabaseImpl
+import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
-import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
+import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.money.Money
@@ -23,8 +23,8 @@ import kotlin.uuid.Uuid
  */
 class InvoiceService(
     private val invoices: InvoiceDatabase,
-    private val tickets: TicketDatabaseImpl,
-    private val inventory: InventoryDatabaseImpl,
+    private val tickets: TicketDatabase,
+    private val inventory: InventoryDatabase,
     private val shop: ShopDatabase,
     private val auditLog: AuditLogDatabase
 ) {

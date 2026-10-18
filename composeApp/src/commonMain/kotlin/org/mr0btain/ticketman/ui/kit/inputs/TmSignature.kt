@@ -33,7 +33,7 @@ import org.mr0btain.ticketman.ui.kit.theme.TmTheme
  * @param onSize Gets the pad's width over height, saved with the signature
  */
 @Composable
-fun SignaturePad(
+fun TmSignaturePad(
     modifier: Modifier = Modifier,
     strokes: List<List<SignaturePoint>>,
     onStrokesChange: (List<List<SignaturePoint>>) -> Unit,
@@ -109,7 +109,7 @@ fun SignaturePad(
  * Draws a saved signature, fitting it into the space given
  */
 @Composable
-fun SignatureView(
+fun TmSignatureView(
     modifier: Modifier = Modifier,
     strokes: List<List<SignaturePoint>>,
     ink: Color = TmTheme.colors.text
