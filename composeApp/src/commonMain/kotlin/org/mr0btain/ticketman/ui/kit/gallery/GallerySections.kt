@@ -48,23 +48,23 @@ import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
-import org.mr0btain.ticketman.ui.kit.data.TmImagePager
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
-import org.mr0btain.ticketman.ui.kit.data.MoneyText
-import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.images.TmImagePager
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
+import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.data.TmCountBar
-import org.mr0btain.ticketman.ui.kit.data.TmImage
+import org.mr0btain.ticketman.ui.kit.images.TmImage
 import org.mr0btain.ticketman.ui.kit.data.TmStatTile
-import org.mr0btain.ticketman.ui.kit.feedback.AccessBadge
-import org.mr0btain.ticketman.ui.kit.feedback.PriorityBadge
-import org.mr0btain.ticketman.ui.kit.feedback.StatusBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.TmSnackbarContent
-import org.mr0btain.ticketman.ui.kit.feedback.UserStatusBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmUserStatusBadge
 import org.mr0btain.ticketman.ui.kit.feedback.tone
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
@@ -89,6 +89,15 @@ import org.mr0btain.ticketman.ui.kit.selection.TmSwitch
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.theme.TmTone
 import ticketman.composeapp.generated.resources.*
+import androidx.compose.ui.text.input.KeyboardType
+import org.mr0btain.ticketman.components.data.note.NoteSeed
+import org.mr0btain.ticketman.data.shared.Note
+import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.kit.containers.TmTextEditDialog
+import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
+import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
+import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
+import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import kotlin.uuid.Uuid
 
 /** The gallery's sections in order. Two column layouts alternate them left and right */
@@ -104,6 +113,7 @@ internal fun gallerySections(): List<@Composable () -> Unit> = listOf(
     { FeedbackSection() },
     { DataSection() },
     { PhotosSection() },
+    { NotesSection() },
     { DialogSection() },
     { NavigationSection() },
     { TypeSection() },
@@ -153,8 +163,8 @@ private fun CounterSampleSection() {
                             subtitle = "${ticket.customer}, checked in ${ticket.checkedIn}",
                             selected = index == selected,
                             onClick = { selected = index },
-                            leading = { TicketIdText(ticket.number, Modifier.width(104.dp)) },
-                            trailing = { StatusBadge(ticket.status) }
+                            leading = { TmTicketIdText(ticket.number, Modifier.width(104.dp)) },
+                            trailing = { TmStatusBadge(ticket.status) }
                         )
                     }
                 }
@@ -194,10 +204,10 @@ private fun CounterSampleSection() {
                 }
 
                 TmDivider()
-                KeyValueRow(label = "Customer", value = "Dana Whitfield")
-                KeyValueRow(label = "Checked in", value = "Today, 9:42 AM")
-                KeyValueRow(label = "Deposit") { MoneyText(4000) }
-                KeyValueRow(label = "Balance due") { MoneyText(14999, style = TmTheme.typography.numericLarge) }
+                TmKeyValueRow(label = "Customer", value = "Dana Whitfield")
+                TmKeyValueRow(label = "Checked in", value = "Today, 9:42 AM")
+                TmKeyValueRow(label = "Deposit") { TmMoneyText(4000) }
+                TmKeyValueRow(label = "Balance due") { TmMoneyText(14999, style = TmTheme.typography.numericLarge) }
             }
         }
 
@@ -402,11 +412,11 @@ private fun SearchSection() {
 @Composable
 private fun BadgesSection() {
     GallerySection(title = "Badges", description = "Each state keeps its color in every theme") {
-        Specimen("Ticket status") { TicketStatusType.entries.forEach { StatusBadge(it) } }
-        Specimen("Ticket status, solid") { TicketStatusType.entries.forEach { StatusBadge(it, solid = true) } }
-        Specimen("Priority") { TicketPriorityType.entries.forEach { PriorityBadge(it) } }
-        Specimen("Access level") { AccessLevel.entries.forEach { AccessBadge(it) } }
-        Specimen("Account") { UserStatus.entries.forEach { UserStatusBadge(it) } }
+        Specimen("Ticket status") { TicketStatusType.entries.forEach { TmStatusBadge(it) } }
+        Specimen("Ticket status, solid") { TicketStatusType.entries.forEach { TmStatusBadge(it, solid = true) } }
+        Specimen("Priority") { TicketPriorityType.entries.forEach { TmPriorityBadge(it) } }
+        Specimen("Access level") { AccessLevel.entries.forEach { TmAccessBadge(it) } }
+        Specimen("Account") { UserStatus.entries.forEach { TmUserStatusBadge(it) } }
     }
 }
 
@@ -478,10 +488,10 @@ private fun TablesSection() {
                 sampleQueue.forEachIndexed { index, ticket ->
                     TmTableRow(sampleColumns, selected = index == selected, onClick = { selected = index }) { column ->
                         when (column) {
-                            0 -> TicketIdText(ticket.number)
+                            0 -> TmTicketIdText(ticket.number)
                             1 -> Text(ticket.device, style = TmTheme.typography.label, color = TmTheme.colors.text)
-                            2 -> StatusBadge(ticket.status)
-                            3 -> MoneyText(14999L - index * 2500)
+                            2 -> TmStatusBadge(ticket.status)
+                            3 -> TmMoneyText(14999L - index * 2500)
                         }
                     }
                 }
@@ -566,10 +576,10 @@ private fun DataSection() {
 
         TmDivider()
 
-        KeyValueRow(label = "Ticket") { TicketIdText("26-00000041") }
-        KeyValueRow(label = "Invoice") { TicketIdText("INV-26-00000041") }
-        KeyValueRow(label = "Refund") { MoneyText(-2500, signed = true) }
-        KeyValueRow(label = "SKU", value = "SCR-IP13-BLK", numeric = true)
+        TmKeyValueRow(label = "Ticket") { TmTicketIdText("26-00000041") }
+        TmKeyValueRow(label = "Invoice") { TmTicketIdText("INV-26-00000041") }
+        TmKeyValueRow(label = "Refund") { TmMoneyText(-2500, signed = true) }
+        TmKeyValueRow(label = "SKU", value = "SCR-IP13-BLK", numeric = true)
     }
 }
 
@@ -596,6 +606,55 @@ private fun PhotosSection() {
         Specimen("Pager, with remove for editing") {
             TmImagePager(modifier = Modifier.fillMaxWidth().height(160.dp), storedImages = photos, onRemove = {})
         }
+
+        Specimen("Editor, picked photos upload straight away") {
+            TmPhotoEditor(modifier = Modifier.fillMaxWidth(), images = photos.take(2), onAdd = {}, onRemove = {})
+        }
+    }
+}
+
+// --------------------------------------- Notes ---------------------------------------
+
+@Composable
+private fun NotesSection() {
+    val notes = remember {
+        listOf(
+            Note(author = "Dana Whitfield", message = "Back glass cracked, frame is fine. Ordered a new panel."),
+            Note(
+                author = "Marcus Oyelaran",
+                message = "Customer dropped it in water last week, indicator is tripped.",
+                images = listOf(StoredImage(description = "Water damage indicator", width = 3024, height = 4032))
+            )
+        )
+    }
+    val noteSeed = remember { NoteSeed() }
+    var editing by remember { mutableStateOf(false) }
+
+    GallerySection(title = "Notes", description = "Updates on a record, newest first, with their photos") {
+        TmNoteBlock(modifier = Modifier.fillMaxWidth(), notes = notes, editable = true, onEditClick = { note ->
+            noteSeed.setNote(note)
+            editing = true
+        })
+
+        TmNoteBlock(notes = emptyList(), emptyText = "No updates yet")
+
+        TmButton(
+            text = "Add a note",
+            variant = TmButtonVariant.SECONDARY,
+            onClick = {
+                noteSeed.clear()
+                editing = true
+            }
+        )
+
+        TmEditNoteDialog(
+            seed = noteSeed,
+            label = if (noteSeed.isNew) "Add note" else "Edit note",
+            isVisible = editing,
+            onConfirm = { editing = false },
+            onDismissRequest = { editing = false },
+            onDelete = {}
+        )
     }
 }
 
@@ -604,6 +663,8 @@ private fun PhotosSection() {
 @Composable
 private fun DialogSection() {
     var open by remember { mutableStateOf(false) }
+    var confirmDelete by remember { mutableStateOf(false) }
+    var editText by remember { mutableStateOf(false) }
 
     GallerySection(title = "Dialog", description = "Glass sheet, actions at the bottom right") {
         TmDialogSurface(
@@ -616,7 +677,29 @@ private fun DialogSection() {
             }
         )
 
-        TmButton(text = "Open as a real dialog", onClick = { open = true }, variant = TmButtonVariant.SECONDARY)
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+            TmButton(text = "Open as a real dialog", onClick = { open = true }, variant = TmButtonVariant.SECONDARY)
+            TmButton(text = "Two step delete", onClick = { confirmDelete = true }, variant = TmButtonVariant.SECONDARY)
+            TmButton(text = "Edit one value", onClick = { editText = true }, variant = TmButtonVariant.SECONDARY)
+        }
+
+        TmConfirmDeleteDialog(
+            itemName = "Customer",
+            isTwoStep = true,
+            isVisible = confirmDelete,
+            onConfirm = { confirmDelete = false },
+            onCancel = { confirmDelete = false }
+        )
+
+        TmTextEditDialog(
+            label = "Shop name",
+            value = "Fix It Shop",
+            visible = editText,
+            onConfirm = { editText = false; true },
+            onCancel = { editText = false },
+            keyboardType = KeyboardType.Text,
+            hint = "Shown on receipts and invoices"
+        )
 
         if (open) {
             TmDialog(
@@ -666,6 +749,14 @@ private fun NavigationSection() {
         }
 
         TmBottomNav(items = sampleNav.take(4), selectedKey = selected, onSelect = { selected = it.key })
+
+        TmPanelTopBar(
+            label = "Customer",
+            onSearchClick = {},
+            onSearchQuery = { query -> sampleCustomers.filter { it.text.contains(query, ignoreCase = true) } },
+            onAddClick = {},
+            onDeleteClick = {}
+        )
     }
 }
 

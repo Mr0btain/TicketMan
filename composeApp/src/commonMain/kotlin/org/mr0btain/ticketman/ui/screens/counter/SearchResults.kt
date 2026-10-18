@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.feedback.TmProgressBar
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -56,7 +56,7 @@ fun SearchResults(
 
             TmPanel(modifier = Modifier.widthIn(max = 360.dp), title = "Shortcuts") {
                 Column {
-                    SHORTCUTS.forEach { (key, action) -> KeyValueRow(label = action, value = key, numeric = true) }
+                    SHORTCUTS.forEach { (key, action) -> TmKeyValueRow(label = action, value = key, numeric = true) }
                 }
             }
         }

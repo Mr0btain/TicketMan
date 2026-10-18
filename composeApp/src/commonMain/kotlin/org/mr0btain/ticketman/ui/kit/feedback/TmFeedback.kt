@@ -26,7 +26,7 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.foundation.GlassSurface
+import org.mr0btain.ticketman.ui.kit.foundation.TmGlassSurface
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.theme.TmTone
@@ -63,7 +63,7 @@ fun TmSnackbarContent(
 ) {
     val shape = TmTheme.shapes.control
 
-    GlassSurface(
+    TmGlassSurface(
         modifier = Modifier
             .widthIn(max = 560.dp)
             .shadow(16.dp, shape, clip = false),

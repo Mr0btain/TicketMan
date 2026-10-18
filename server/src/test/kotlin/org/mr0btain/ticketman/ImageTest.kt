@@ -8,7 +8,7 @@ import io.ktor.server.testing.*
 import io.ktor.utils.io.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.ImageDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.image.ImageStore
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.data.customer.Customer
@@ -55,7 +55,7 @@ class ImageTest {
         configureTestServer(dataDir)
         startApplication()
 
-        UserDatabaseImpl().apply {
+        UserDatabase().apply {
             add(tech)
             add(viewer)
         }
@@ -293,6 +293,29 @@ class ImageTest {
         assertTrue(File(dataDir.toFile(), "server/images").walkTopDown().any { it.name == first.identifier.toString() })
     }
 
+    @Test
+    fun removingANoteDeletesItsPhotos() = testApplication {
+        setup()
+        val token = token(tech)
+        val customer = newCustomer(token)
+        val photo = uploadImage(token)
+
+        val note = Note(message = "With a photo", images = listOf(photo))
+        post("/api/data/customer/add/note/$customer", json.encodeToString(note), token)
+
+        val removed = client.delete("/api/data/customer/remove/note/${note.identifier}") { bearerAuth(token) }
+        assertEquals(HttpStatusCode.Accepted, removed.status)
+
+        assertTrue(notes(customer, token).isEmpty())
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/image/${photo.identifier}/thumb") { bearerAuth(token) }.status)
+
+        // Removing it again finds nothing
+        assertEquals(
+            HttpStatusCode.NotFound,
+            client.delete("/api/data/customer/remove/note/${note.identifier}") { bearerAuth(token) }.status
+        )
+    }
+
     // ------------------------------------------ Inventory photos ------------------------------------------
 
     @Test
@@ -329,7 +352,7 @@ class ImageTest {
     @Test
     fun backupCarriesLivePhotosButNotDeletedOnes() = testApplication {
         setup()
-        UserDatabaseImpl().add(owner)
+        UserDatabase().add(owner)
         val token = token(tech)
         val customer = newCustomer(token)
         val kept = uploadImage(token)

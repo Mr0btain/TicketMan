@@ -31,55 +31,39 @@ class UserSeed: DataSeed("UserSeed") {
     val name: List<String>
         get() = _name
     val firstName: String
-        get() = _name.first()
+        get() = _name.firstOrNull() ?: ""
     val lastName: String
-        get() = _name.last()
+        get() = if (_name.size > 1) _name.last() else ""
 
     /** Seed as a user, the password is blank unless one was set on a new user */
     val user: User
         get() = User(identifier, username, password, joinName(_name), email, phone, accessLevel)
 
     fun changeUsername(new: String) {
-        if (username != new) {
-            username = new
-            _changedFields.add(ChangedField.USERNAME)
-        }
+        username = new
     }
 
     fun changePassword(new: String) {
-        if (password != new) {
-            password = new
-            _changedFields.add(ChangedField.PASSWORD)
-        }
+        password = new
     }
 
     fun changeName(new: List<String>) {
         if (new.isNotEmpty() && new != _name.toList()) {
             _name.clear()
             _name.addAll(new)
-            _changedFields.add(ChangedField.NAME)
         }
     }
 
     fun changeEmail(new: String) {
-        if (email != new) {
-            email = new
-            _changedFields.add(ChangedField.EMAIL)
-        }
+        email = new
     }
 
     fun changePhone(new: String) {
-        if (phone != new) {
-            phone = new
-            _changedFields.add(ChangedField.PHONE)
-        }
+        phone = new
     }
 
     fun changeAccessLevel(new: AccessLevel) {
-        if (accessLevel != new) {
-            accessLevel = new
-            _changedFields.add(ChangedField.ACCESS_LEVEL)
-        }
+        accessLevel = new
     }
 
     fun setUser(user: User, notes: List<Note>) {
@@ -98,6 +82,15 @@ class UserSeed: DataSeed("UserSeed") {
         markClean()
     }
 
+    override fun fields() = mapOf(
+        ChangedField.USERNAME to username,
+        ChangedField.PASSWORD to password,
+        ChangedField.NAME to _name.toList(),
+        ChangedField.EMAIL to email,
+        ChangedField.PHONE to phone,
+        ChangedField.ACCESS_LEVEL to accessLevel
+    )
+
     override fun clear() {
         identifier = Uuid.generateV7()
         _notes.clear()
@@ -113,22 +106,7 @@ class UserSeed: DataSeed("UserSeed") {
         markClean()
     }
 
-    override fun markClean() {
-        savedState = State(identifier, username, password, joinName(name), email, phone, accessLevel).hashCode()
-        _changedFields.clear()
-    }
-
     override fun toString(): String {
         return "User($identifier, $username, ${name.joinToString(" ")}, $email, $phone, $accessLevel)"
     }
-
-    private data class State(
-        val identifier: Uuid = Uuid.generateV7(),
-        val username: String = "",
-        val password: String = "",
-        val name: String = "",
-        val email: String = "",
-        val phone: String = "",
-        val accessLevel: AccessLevel = AccessLevel.RESTRICTED
-    )
 }

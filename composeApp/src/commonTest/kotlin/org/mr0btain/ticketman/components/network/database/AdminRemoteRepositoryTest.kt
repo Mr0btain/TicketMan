@@ -81,7 +81,7 @@ class AdminRemoteRepositoryTest {
     }
 
     private val admin = AdminRemoteRepository(client).apply { serverUrl = "http://localhost/" }
-    private val users = UserRemoteRepositoryImpl(client).apply { serverUrl = "http://localhost" }
+    private val users = UserRemoteRepository(client).apply { serverUrl = "http://localhost" }
 
     @Test
     fun statsUseQueryParameters() = runTest {

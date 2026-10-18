@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.ui.kit.foundation.glassSource
 import org.mr0btain.ticketman.ui.kit.navigation.TmTopBar
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
-import org.mr0btain.ticketman.ui.screens.dashboard.components.MainViewModel
+import org.mr0btain.ticketman.ui.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.lock
 

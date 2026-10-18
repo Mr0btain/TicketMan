@@ -57,39 +57,32 @@ class InventorySeed: DataSeed("InventorySeed") {
 
     // -- Setters that automatically mark changes --
     fun changeName(newName: String) {
-        if (name != newName) {
-            name = newName
-            _changedFields.add(ChangedField.NAME)
-        }
+        name = newName
     }
 
     fun changeDescription(newDescr: String) {
-        if (description != newDescr) {
-            description = newDescr
-            _changedFields.add(ChangedField.DESCRIPTION)
-        }
+        description = newDescr
     }
 
     fun changeStock(newStock: Int) {
-        if (stock != newStock) {
-            stock = newStock
-            _changedFields.add(ChangedField.STOCK)
-        }
+        stock = newStock
     }
 
     fun changePrice(newPrice: Double) {
-        if (price != newPrice) {
-            price = newPrice
-            _changedFields.add(ChangedField.PRICE)
-        }
+        price = newPrice
     }
 
     fun changeCost(newCost: Double) {
-        if (newCost != cost) {
-            cost = newCost
-            _changedFields.add(ChangedField.COST)
-        }
+        cost = newCost
     }
+
+    override fun fields() = mapOf(
+        ChangedField.NAME to name,
+        ChangedField.DESCRIPTION to description,
+        ChangedField.STOCK to stock,
+        ChangedField.PRICE to price,
+        ChangedField.COST to cost
+    )
 
     // Reset all fields
     override fun clear() {
@@ -106,23 +99,6 @@ class InventorySeed: DataSeed("InventorySeed") {
         markClean()
     }
 
-    // Save current state as the new clean snapshot
-    override fun markClean() {
-        savedState = State(identifier, name, description, stock, cost, price, _notes, _images).hashCode()
-        _changedFields.clear()  // Reset the changed fields
-    }
-
     override fun toString(): String =
         "InventorySeed(name=$name,description=$description,stock=$stock,cost=$cost,price=$price, notes=$_notes)"
-
-    private data class State(
-        val identifier: Uuid = Uuid.generateV7(),
-        val name: String = "",
-        val description: String = "",
-        val stock: Int = 0,
-        val cost: Double = 0.0,
-        val price: Double = 0.0,
-        val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList()
-    )
 }

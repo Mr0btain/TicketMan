@@ -6,8 +6,8 @@ import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
-import org.mr0btain.ticketman.ui.kit.feedback.AccessBadge
-import org.mr0btain.ticketman.ui.kit.feedback.UserStatusBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
+import org.mr0btain.ticketman.ui.kit.feedback.TmUserStatusBadge
 import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 
 // Shared pieces for the admin screen tabs
@@ -19,8 +19,8 @@ val AccessLevel.label: String
 @Composable
 fun UserStateChip(user: User) {
     when (user.status) {
-        UserStatus.ACTIVE -> AccessBadge(user.accessLevel)
-        else -> UserStatusBadge(user.status)
+        UserStatus.ACTIVE -> TmAccessBadge(user.accessLevel)
+        else -> TmUserStatusBadge(user.status)
     }
 }
 

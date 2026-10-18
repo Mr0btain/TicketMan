@@ -6,7 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.TokenDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.StaffMember
@@ -38,7 +38,7 @@ class StationTest {
     private val tech = User(username = "tech", password = "tech_pass", name = "terry:tech", accessLevel = AccessLevel.NORMAL)
     private val clerk = User(username = "clerk", password = "clerk_pass", name = "cleo:clerk", accessLevel = AccessLevel.RESTRICTED)
 
-    private lateinit var users: UserDatabaseImpl
+    private lateinit var users: UserDatabase
     private lateinit var adminToken: String
 
     @AfterTest
@@ -47,7 +47,7 @@ class StationTest {
     private suspend fun ApplicationTestBuilder.setup() {
         configureTestServer(dataDir)
         startApplication()
-        users = UserDatabaseImpl().apply {
+        users = UserDatabase().apply {
             add(admin)
             add(tech)
             add(clerk)

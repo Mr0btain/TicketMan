@@ -24,7 +24,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
-import org.mr0btain.ticketman.ui.kit.foundation.GlassSurface
+import org.mr0btain.ticketman.ui.kit.foundation.TmGlassSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.x
@@ -65,7 +65,7 @@ fun TmFullScreenDialog(
                 .padding(80.dp)
                 .fillMaxSize()
         ) {
-            GlassSurface(
+            TmGlassSurface(
                 modifier = Modifier.clickable(false) {},
                 shape = TmTheme.shapes.sheet
             ) {

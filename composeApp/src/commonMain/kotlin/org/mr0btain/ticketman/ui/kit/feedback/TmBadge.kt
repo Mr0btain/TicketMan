@@ -103,22 +103,22 @@ val TicketStatusType.label: String
     }
 
 @Composable
-fun StatusBadge(status: TicketStatusType, modifier: Modifier = Modifier, solid: Boolean = false) {
+fun TmStatusBadge(status: TicketStatusType, modifier: Modifier = Modifier, solid: Boolean = false) {
     TmBadge(text = status.label, tone = TmTheme.colors.tone(status), modifier = modifier, solid = solid)
 }
 
 @Composable
-fun PriorityBadge(priority: TicketPriorityType, modifier: Modifier = Modifier) {
+fun TmPriorityBadge(priority: TicketPriorityType, modifier: Modifier = Modifier) {
     TmBadge(text = formatEnumName(priority.name), tone = TmTheme.colors.tone(priority), modifier = modifier)
 }
 
 @Composable
-fun AccessBadge(level: AccessLevel, modifier: Modifier = Modifier) {
+fun TmAccessBadge(level: AccessLevel, modifier: Modifier = Modifier) {
     val text = if (level == AccessLevel.NONE) "Deactivated" else formatEnumName(level.name)
     TmBadge(text = text, tone = TmTheme.colors.tone(level), modifier = modifier, dot = false)
 }
 
 @Composable
-fun UserStatusBadge(status: UserStatus, modifier: Modifier = Modifier) {
+fun TmUserStatusBadge(status: UserStatus, modifier: Modifier = Modifier) {
     TmBadge(text = formatEnumName(status.name), tone = TmTheme.colors.tone(status), modifier = modifier)
 }

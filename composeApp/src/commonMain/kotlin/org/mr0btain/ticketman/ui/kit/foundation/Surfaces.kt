@@ -76,7 +76,7 @@ fun TmSurface(
  * Blurs what's behind it inside a [TmBackdrop], otherwise (or with reduce transparency on) it's a plain fill
  */
 @Composable
-fun GlassSurface(
+fun TmGlassSurface(
     modifier: Modifier = Modifier,
     shape: Shape = TmTheme.shapes.panel,
     border: Boolean = true,
@@ -89,7 +89,7 @@ fun GlassSurface(
     }
 }
 
-/** The fill [GlassSurface] uses, for wrapping things that bring their own container like menus */
+/** The fill [TmGlassSurface] uses, for wrapping things that bring their own container like menus */
 @Composable
 fun Modifier.glass(
     shape: Shape = TmTheme.shapes.panel,

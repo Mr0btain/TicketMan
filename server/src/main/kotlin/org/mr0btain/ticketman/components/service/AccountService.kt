@@ -2,7 +2,7 @@ package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InviteDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.dbWrite
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -36,7 +36,7 @@ sealed interface AccountResult<out T> {
  * New accounts: requests from the login screen, admin invites, approving and first login setup
  */
 class AccountService(
-    private val users: UserDatabaseImpl,
+    private val users: UserDatabase,
     private val invites: InviteDatabase,
     private val userService: UserService,
     private val jwtService: JwtService,

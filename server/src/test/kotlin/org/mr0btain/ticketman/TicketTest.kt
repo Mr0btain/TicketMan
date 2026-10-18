@@ -8,8 +8,8 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.LocalDatabase
-import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchQuery
@@ -43,7 +43,7 @@ class TicketTest {
     private suspend fun ApplicationTestBuilder.setup(): String {
         configureTestServer(dataDir)
         startApplication()
-        UserDatabaseImpl().add(tech)
+        UserDatabase().add(tech)
 
         val response = client.post("/api/auth") {
             contentType(ContentType.Application.Json)
@@ -101,7 +101,7 @@ class TicketTest {
         val token = setup()
         addTicket(token, Ticket())
 
-        val nextYear = TicketDatabaseImpl(currentYear = { year + 1 })
+        val nextYear = TicketDatabase(currentYear = { year + 1 })
         val ticket = Ticket()
         nextYear.add(ticket)
 
@@ -111,7 +111,7 @@ class TicketTest {
     @Test
     fun ticketsAddedAtTheSameTimeGetDifferentNumbers() = testApplication {
         setup()
-        val tickets = TicketDatabaseImpl()
+        val tickets = TicketDatabase()
         val added = List(30) { Ticket() }
 
         val pool = Executors.newFixedThreadPool(8)
@@ -135,7 +135,7 @@ class TicketTest {
             setBody(json.encodeToString(ticket.copy(number = TicketNumber(1999, 7), problem = "Updated")))
         }
 
-        val saved = TicketDatabaseImpl().getById(ticket.identifier)!!
+        val saved = TicketDatabase().getById(ticket.identifier)!!
         assertEquals(ticket.number, saved.number)
         assertEquals("Updated", saved.problem)
     }
@@ -156,7 +156,7 @@ class TicketTest {
         // Starting up again should bring it back to the current shape
         LocalDatabase(dataDir.resolve("server").invariantSeparatorsPathString).initDatabase()
 
-        val migrated = TicketDatabaseImpl().getById(oldTicket)
+        val migrated = TicketDatabase().getById(oldTicket)
         assertNotNull(migrated)
         assertEquals("", migrated.problem)
         assertEquals(TicketNumber(year, 1), migrated.number)
@@ -181,7 +181,7 @@ class TicketTest {
             }
         }
 
-        val tickets = TicketDatabaseImpl()
+        val tickets = TicketDatabase()
         tickets.backfillNumbers()
 
         assertEquals(1, tickets.getById(older)?.number?.sequence)
@@ -254,12 +254,12 @@ class TicketTest {
     fun fetchMineOnlyReturnsTheCallersTicketsNewestFirst() = testApplication {
         val token = setup()
         val other = User(username = "other", password = "other_pass", accessLevel = AccessLevel.NORMAL)
-        val users = UserDatabaseImpl()
+        val users = UserDatabase()
         users.add(other)
         val techId = users.getByUsername(tech.username)!!.identifier
         val otherId = users.getByUsername(other.username)!!.identifier
 
-        val tickets = TicketDatabaseImpl()
+        val tickets = TicketDatabase()
         val mine = List(3) { addTicket(token, Ticket()) }
         val theirs = addTicket(token, Ticket())
         addTicket(token, Ticket()) // Nobody's

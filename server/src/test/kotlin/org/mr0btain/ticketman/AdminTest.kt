@@ -5,7 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.PasswordHasher
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.audit.AuditEntry
@@ -48,11 +48,11 @@ class AdminTest {
     @AfterTest
     fun cleanup() = cleanupTestDataDir(dataDir)
 
-    private suspend fun ApplicationTestBuilder.setup(developmentMode: Boolean = true): UserDatabaseImpl {
+    private suspend fun ApplicationTestBuilder.setup(developmentMode: Boolean = true): UserDatabase {
         configureTestServer(dataDir, developmentMode)
         startApplication()
 
-        return UserDatabaseImpl().apply {
+        return UserDatabase().apply {
             add(admin)
             add(employee)
         }

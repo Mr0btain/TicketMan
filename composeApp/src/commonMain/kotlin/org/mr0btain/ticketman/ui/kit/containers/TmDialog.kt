@@ -17,7 +17,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
-import org.mr0btain.ticketman.ui.kit.foundation.GlassSurface
+import org.mr0btain.ticketman.ui.kit.foundation.TmGlassSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 
 /**
@@ -69,7 +69,7 @@ fun TmDialogSurface(
     val spacing = TmTheme.spacing
     val shape = TmTheme.shapes.sheet
 
-    GlassSurface(
+    TmGlassSurface(
         modifier = modifier
             .widthIn(min = 280.dp, max = maxWidth)
             .shadow(24.dp, shape, clip = false),

@@ -7,7 +7,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.ImageLimits
@@ -104,7 +104,7 @@ class RestoreTest {
         testApplication {
             configureTestServer(dataDir)
             startApplication()
-            UserDatabaseImpl().add(admin)
+            UserDatabase().add(admin)
             val token = token()
 
             val customer = Customer(name = "Before Backup")
@@ -161,7 +161,7 @@ class RestoreTest {
     fun archivesThatArentBackupsOrReachOutsideAreRefused() = testApplication {
         configureTestServer(dataDir)
         startApplication()
-        UserDatabaseImpl().add(admin)
+        UserDatabase().add(admin)
         val token = token()
         val manifest = json.encodeToString(
             BackupManifest(serverVersion = "1", createdAt = 0, includesImages = false, imageCount = 0, imageBytes = 0)
@@ -191,7 +191,7 @@ class RestoreTest {
     fun waitingRestoreCanBeCancelled() = testApplication {
         configureTestServer(dataDir)
         startApplication()
-        UserDatabaseImpl().add(admin)
+        UserDatabase().add(admin)
         val token = token()
 
         val ticket = json.decodeFromString<BackupTicket>(

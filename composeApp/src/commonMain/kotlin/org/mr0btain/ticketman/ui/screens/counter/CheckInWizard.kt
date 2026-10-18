@@ -30,14 +30,14 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
-import org.mr0btain.ticketman.ui.kit.data.TicketIdText
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.tone
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
-import org.mr0btain.ticketman.ui.kit.inputs.SignaturePad
+import org.mr0btain.ticketman.ui.kit.inputs.TmSignaturePad
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.navigation.TmStepper
@@ -370,7 +370,7 @@ private fun DeviceStep(
                         title = ticket.problem.ifBlank { "No problem noted" },
                         subtitle = ticket.pickedUpAt?.let { "Picked up ${formatTimeAgo(it)}" }
                             ?: "Checked in ${formatTimeAgo(ticket.identifier.timestampMillis())}",
-                        leading = { TicketIdText(ticket.label, Modifier.width(104.dp)) },
+                        leading = { TmTicketIdText(ticket.label, Modifier.width(104.dp)) },
                         trailing = { TmButton(text = "Open", onClick = { onOpenTicket(ticket.identifier) }, variant = TmButtonVariant.GHOST) }
                     )
                 }
@@ -457,7 +457,7 @@ private fun RepairStep(
 
         val technician = form.technician
         if (technician != null) {
-            KeyValueRow(label = "Technician") {
+            TmKeyValueRow(label = "Technician") {
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
                     Text(text = technician.text, style = TmTheme.typography.label, color = TmTheme.colors.text)
                     TmButton(text = "Change", onClick = { form.technician = null }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
@@ -520,7 +520,7 @@ private fun SignStep(form: CheckInForm, terms: String) {
             )
         }
 
-        SignaturePad(
+        TmSignaturePad(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(220.dp),
@@ -546,18 +546,18 @@ private fun SignStep(form: CheckInForm, terms: String) {
 private fun ReviewStep(form: CheckInForm, needsSignature: Boolean) {
     TmPanel(title = "Check everything over", icon = Res.drawable.check_square) {
         Column {
-            KeyValueRow(label = "Customer", value = form.customer?.cleanName().orEmpty())
-            KeyValueRow(label = "Device", value = form.device.toString().trim())
-            if (form.serial.isNotBlank()) KeyValueRow(label = "Serial", value = form.serial, numeric = true)
-            KeyValueRow(label = "Problem", value = form.problem.trim())
-            if (form.condition.isNotBlank()) KeyValueRow(label = "Condition", value = form.condition.trim())
-            if (form.accessories.isNotBlank()) KeyValueRow(label = "Left with it", value = form.accessories.trim())
-            KeyValueRow(label = "Priority", value = formatEnumName(form.priority.priority.name))
-            if (form.estimateCents > 0) KeyValueRow(label = "Estimate", value = Money.format(form.estimateCents), numeric = true)
-            KeyValueRow(label = "Promised", value = form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")
-            form.depositCents?.let { KeyValueRow(label = "Deposit", value = "${Money.format(it)} by ${formatEnumName(form.depositMethod.name).lowercase()}") }
-            KeyValueRow(label = "Technician", value = form.technician?.text ?: "Not assigned")
-            if (needsSignature) KeyValueRow(label = "Signed by", value = form.signedName)
+            TmKeyValueRow(label = "Customer", value = form.customer?.cleanName().orEmpty())
+            TmKeyValueRow(label = "Device", value = form.device.toString().trim())
+            if (form.serial.isNotBlank()) TmKeyValueRow(label = "Serial", value = form.serial, numeric = true)
+            TmKeyValueRow(label = "Problem", value = form.problem.trim())
+            if (form.condition.isNotBlank()) TmKeyValueRow(label = "Condition", value = form.condition.trim())
+            if (form.accessories.isNotBlank()) TmKeyValueRow(label = "Left with it", value = form.accessories.trim())
+            TmKeyValueRow(label = "Priority", value = formatEnumName(form.priority.priority.name))
+            if (form.estimateCents > 0) TmKeyValueRow(label = "Estimate", value = Money.format(form.estimateCents), numeric = true)
+            TmKeyValueRow(label = "Promised", value = form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")
+            form.depositCents?.let { TmKeyValueRow(label = "Deposit", value = "${Money.format(it)} by ${formatEnumName(form.depositMethod.name).lowercase()}") }
+            TmKeyValueRow(label = "Technician", value = form.technician?.text ?: "Not assigned")
+            if (needsSignature) TmKeyValueRow(label = "Signed by", value = form.signedName)
         }
     }
 }

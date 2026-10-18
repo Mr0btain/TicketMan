@@ -152,7 +152,7 @@ fun TmCountBar(
  * @param signed Shows negative amounts in the danger color
  */
 @Composable
-fun MoneyText(
+fun TmMoneyText(
     cents: Long,
     modifier: Modifier = Modifier,
     style: TextStyle = TmTheme.typography.numeric,
@@ -175,7 +175,7 @@ fun MoneyText(
 
 /** Ticket or invoice number like 26-00000042, monospace so they're easy to read back */
 @Composable
-fun TicketIdText(
+fun TmTicketIdText(
     number: String,
     modifier: Modifier = Modifier,
     style: TextStyle = TmTheme.typography.numeric,
@@ -195,7 +195,7 @@ fun TicketIdText(
  * Pass [content] in place of [value] for something other than plain text
  */
 @Composable
-fun KeyValueRow(
+fun TmKeyValueRow(
     label: String,
     modifier: Modifier = Modifier,
     value: String? = null,

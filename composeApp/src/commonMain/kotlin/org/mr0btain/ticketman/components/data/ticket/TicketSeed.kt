@@ -89,81 +89,61 @@ class TicketSeed: DataSeed("TicketSeed") {
     }
 
     fun changeIdentifier(newId: Uuid) {
-        if (identifier != newId) {
-            identifier = newId
-            _changedFields.add(ChangedField.IDENTIFIER)
-        }
+        identifier = newId
     }
 
     fun changeDevice(newDevice: Device) {
-        if (device != newDevice) {
-            device = newDevice
-            _changedFields.add(ChangedField.DEVICE)
-        }
+        device = newDevice
     }
 
     fun changeStatus(newStatus: TicketStatus) {
-        if (status != newStatus) {
-            status = newStatus
-            _changedFields.add(ChangedField.STATUS)
-        }
+        status = newStatus
     }
 
     fun changePriority(newPriority: TicketPriority) {
-        if (priority != newPriority) {
-            priority = newPriority
-            _changedFields.add(ChangedField.PRIORITY)
-        }
+        priority = newPriority
     }
 
     fun changeProblem(new: String) {
-        if (problem != new) {
-            problem = new
-            _changedFields.add(ChangedField.PROBLEM)
-        }
+        problem = new
     }
 
     fun changeCondition(new: String) {
-        if (condition != new) {
-            condition = new
-            _changedFields.add(ChangedField.CONDITION)
-        }
+        condition = new
     }
 
     fun changeAccessories(new: String) {
-        if (accessories != new) {
-            accessories = new
-            _changedFields.add(ChangedField.ACCESSORIES)
-        }
+        accessories = new
     }
 
     fun changeEstimate(new: Long?) {
-        if (estimateCents != new) {
-            estimateCents = new
-            _changedFields.add(ChangedField.ESTIMATE)
-        }
+        estimateCents = new
     }
 
     fun changePromisedAt(new: Long?) {
-        if (promisedAt != new) {
-            promisedAt = new
-            _changedFields.add(ChangedField.PROMISED)
-        }
+        promisedAt = new
     }
 
     fun changeCustomer(newCustomer: EntityReference?) {
-        if (customer != newCustomer) {
-            customer = newCustomer
-            _changedFields.add(ChangedField.CUSTOMER)
-        }
+        customer = newCustomer
     }
 
     fun changeUser(newUser: EntityReference?) {
-        if (user != newUser) {
-            user = newUser
-            _changedFields.add(ChangedField.USER)
-        }
+        user = newUser
     }
+
+    override fun fields() = mapOf(
+        ChangedField.DEVICE to device,
+        ChangedField.STATUS to status,
+        ChangedField.PRIORITY to priority,
+        ChangedField.PROBLEM to problem,
+        ChangedField.CONDITION to condition,
+        ChangedField.ACCESSORIES to accessories,
+        ChangedField.ESTIMATE to estimateCents,
+        ChangedField.PROMISED to promisedAt,
+        ChangedField.CUSTOMER to customer,
+        ChangedField.USER to user
+    )
 
     // Reset all fields
     override fun clear() {
@@ -187,26 +167,8 @@ class TicketSeed: DataSeed("TicketSeed") {
         markClean()
     }
 
-    // Save current state as the new clean snapshot
-    override fun markClean() {
-        savedState = State(identifier, device, status, priority, customer, user,  notes, _images, ticket).hashCode()
-        _changedFields.clear()  // Reset the changed fields
-    }
-
     override fun toString(): String {
         return "TicketSeed(ticket=$ticket, customer=$customer, user=$user, notes=$_notes)"
     }
-
-    private data class State(
-        val identifier: Uuid = Uuid.generateV7(),
-        val device:Device = Device(),
-        val status: TicketStatus = TicketStatus(),
-        val priority: TicketPriority = TicketPriority(),
-        val customer: EntityReference? = null,
-        val user: EntityReference? = null,
-        val notes: List<Note> = emptyList(),
-        val images: List<StoredImage> = emptyList(),
-        val ticket: Ticket? = null
-    )
 }
 

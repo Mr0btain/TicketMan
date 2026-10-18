@@ -7,7 +7,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.StationDatabase
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.server.request.StationRegistrationRequest
 import org.mr0btain.ticketman.server.response.StationRegistrationResponse
@@ -17,7 +17,7 @@ import org.mr0btain.ticketman.server.response.StationRegistrationResponse
  */
 fun Route.stationRoute(
     database: StationDatabase,
-    userDatabase: UserDatabaseImpl,
+    userDatabase: UserDatabase,
     auditLog: AuditLogDatabase
 ) {
     authenticate {

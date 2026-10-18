@@ -13,6 +13,10 @@ import kotlin.time.Instant
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * A record being looked at or edited. What changed is worked out by comparing its fields against a snapshot taken
+ * when it was loaded or saved, so changing something back to how it was counts as unchanged
+ */
 @Suppress("PropertyName")
 abstract class DataSeed(tag: String) {
     protected val DELETE_NOTE_TAG = "$tag:DELETE_NOTE"
@@ -32,43 +36,54 @@ abstract class DataSeed(tag: String) {
     protected var _notes = mutableStateListOf<Note>()
     val notes: List<Note> = _notes
 
-    // List to store the names of fields that have changed
-    protected val _changedFields = mutableListOf<ChangedField>()
-
-    // Computed property to check if the object has changed
-    val isDirty: Boolean
-        get() = _changedFields.isNotEmpty()
-
     val time: Instant
         get() = identifier.createdAt()
 
-    // snapshot of the last saved state
-    protected var savedState: Int = 0
+    // Fields as they were when last loaded or saved
+    private var saved: Map<ChangedField, Any?> by mutableStateOf(emptyMap())
+
+    /**
+     * The record's editable fields as they are now. Lists have to be copies, so later edits don't change the
+     * saved snapshot too
+     */
+    protected abstract fun fields(): Map<ChangedField, Any?>
+
+    private fun snapshot(): Map<ChangedField, Any?> =
+        fields() + mapOf(
+            ChangedField.IDENTIFIER to identifier,
+            ChangedField.NOTE to _notes.toList(),
+            ChangedField.IMAGE to _images.toList()
+        )
+
+    /** Whether anything differs from when it was last loaded or saved */
+    val isDirty: Boolean
+        get() = snapshot() != saved
+
+    /** Fields that differ from when it was last loaded or saved */
+    fun getChangedFields(): List<ChangedField> {
+        val now = snapshot()
+        return now.keys.filter { now[it] != saved[it] }
+    }
 
     // Reset all fields
     abstract fun clear()
 
-    // Save current state as the new clean snapshot
-    abstract fun markClean()
-
-    // Return the list of changed fields
-    fun getChangedFields(): List<ChangedField> = _changedFields
+    /** Takes the fields as they are now as the saved state */
+    fun markClean() {
+        saved = snapshot()
+    }
 
     fun setNotes(newNotes: List<Note>) {
-        if (_notes != newNotes) {
+        if (_notes.toList() != newNotes) {
             _notes.clear()
             _notes.addAll(newNotes)
-
-            _changedFields.add(ChangedField.NOTE)
         }
     }
 
     fun setImages(newImages: List<StoredImage>) {
-        if (_images != newImages) {
+        if (_images.toList() != newImages) {
             _images.clear()
             _images.addAll(newImages)
-
-            if (!_changedFields.contains(ChangedField.IMAGE)) _changedFields.add(ChangedField.IMAGE)
         }
     }
 
@@ -82,26 +97,14 @@ abstract class DataSeed(tag: String) {
     }
 
     fun addNote(newNote: Note) {
-        if (!_notes.contains(newNote)) {
-            _notes.add(newNote)
-
-            if (!_changedFields.contains(ChangedField.NOTE))
-                _changedFields.add(ChangedField.NOTE)
-        }
+        if (!_notes.contains(newNote)) _notes.add(newNote)
     }
 
-
     fun deleteNote(identifier: Uuid) {
-        _notes.indexOfFirst { it.identifier == identifier }.also { index ->
-            if (index != -1) {
-                _notes.removeAt(index)
+        val index = _notes.indexOfFirst { it.identifier == identifier }
 
-                if (!_changedFields.contains(ChangedField.NOTE))
-                    _changedFields.add(ChangedField.NOTE)
-            } else {
-                AppLogger.m(DELETE_NOTE_TAG, "Note not found")
-            }
-        }
+        if (index != -1) _notes.removeAt(index)
+        else AppLogger.m(DELETE_NOTE_TAG, "Note not found")
     }
 
     /**
@@ -115,20 +118,12 @@ abstract class DataSeed(tag: String) {
         if (getNote(note.identifier) != null) updateNote(note) else addNote(note)
     }
 
-    /**
-    Essentially just replaces the old note with this one.
-     */
+    /** Replaces the note with the same identifier */
     fun updateNote(note: Note) {
-        _notes.indexOfFirst { it.identifier == note.identifier }.also { index ->
-            if (index != -1) {
-                _notes[index] = note
+        val index = _notes.indexOfFirst { it.identifier == note.identifier }
 
-                if (!_changedFields.contains(ChangedField.NOTE))
-                    _changedFields.add(ChangedField.NOTE)
-            } else {
-                AppLogger.m(UPDATE_NOTE_TAG, "Note not found")
-            }
-        }
+        if (index != -1) _notes[index] = note
+        else AppLogger.m(UPDATE_NOTE_TAG, "Note not found")
     }
 
     abstract override fun toString(): String

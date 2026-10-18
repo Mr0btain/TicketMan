@@ -5,7 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
@@ -30,7 +30,7 @@ class AuthTest {
         startApplication()
 
         // Database is connected once the module has run
-        UserDatabaseImpl().add(user)
+        UserDatabase().add(user)
     }
 
     private suspend fun ApplicationTestBuilder.postJson(path: String, body: String, accessToken: String? = null) =
@@ -102,7 +102,7 @@ class AuthTest {
         val auth = Json.decodeFromString<AuthResponse>(login().bodyAsText())
         val body = Json.encodeToString(PagedRequest(offset = 0, itemsPerPage = 10))
 
-        // Same routes the client's *RemoteRepositoryImpl classes use
+        // Same routes the client's *RemoteRepository classes use
         listOf("api/data/customer", "api/data/ticket", "api/data/inventory", "api/user").forEach { route ->
             val response = postJson("/$route/fetch", body, auth.accessToken)
             assertEquals(HttpStatusCode.OK, response.status, "POST /$route/fetch")

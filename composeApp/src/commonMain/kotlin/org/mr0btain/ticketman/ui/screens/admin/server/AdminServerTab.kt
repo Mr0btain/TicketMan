@@ -28,7 +28,7 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
-import org.mr0btain.ticketman.ui.kit.data.KeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.TmProgressBar
@@ -99,7 +99,7 @@ private fun ServerInfoCard(
     serverUrl: String
 ) {
     TmPanel(modifier = Modifier.width(SIDE_WIDTH), title = "Server", icon = Res.drawable.server) {
-        KeyValueRow(label = "Address", value = serverUrl.ifBlank { "Not set" })
+        TmKeyValueRow(label = "Address", value = serverUrl.ifBlank { "Not set" })
 
         if (serverInfo == null) {
             TmNotice(text = "Couldn't load server info. Check the connection, then refresh.", kind = TmNoticeKind.ERROR)
@@ -107,15 +107,15 @@ private fun ServerInfoCard(
         }
 
         Column {
-            KeyValueRow(label = "Name", value = serverInfo.name)
-            KeyValueRow(label = "Version", value = serverInfo.version, numeric = true)
-            KeyValueRow(label = "Uptime", value = formatDuration(serverInfo.uptimeMillis))
-            KeyValueRow(label = "Started", value = formatDateTime(serverInfo.startedAt))
-            KeyValueRow(label = "Database size", value = formatBytes(serverInfo.databaseSizeBytes))
-            KeyValueRow(label = "Photos size", value = formatBytes(serverInfo.imagesSizeBytes))
-            KeyValueRow(label = "Java", value = serverInfo.javaVersion)
-            KeyValueRow(label = "OS", value = serverInfo.operatingSystem)
-            KeyValueRow(label = "Mode", value = if (serverInfo.developmentMode) "Development" else "Production")
+            TmKeyValueRow(label = "Name", value = serverInfo.name)
+            TmKeyValueRow(label = "Version", value = serverInfo.version, numeric = true)
+            TmKeyValueRow(label = "Uptime", value = formatDuration(serverInfo.uptimeMillis))
+            TmKeyValueRow(label = "Started", value = formatDateTime(serverInfo.startedAt))
+            TmKeyValueRow(label = "Database size", value = formatBytes(serverInfo.databaseSizeBytes))
+            TmKeyValueRow(label = "Photos size", value = formatBytes(serverInfo.imagesSizeBytes))
+            TmKeyValueRow(label = "Java", value = serverInfo.javaVersion)
+            TmKeyValueRow(label = "OS", value = serverInfo.operatingSystem)
+            TmKeyValueRow(label = "Mode", value = if (serverInfo.developmentMode) "Development" else "Production")
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {

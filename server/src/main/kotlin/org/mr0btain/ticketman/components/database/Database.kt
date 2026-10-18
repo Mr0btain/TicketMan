@@ -1,6 +1,10 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.Column
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.data.MainItem
@@ -38,6 +42,18 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     protected val SEARCH_TAG = "$tag:Search"
 
     /**
+     * The note column of the table linking this kind of item to its notes. Note routes take a note's identifier
+     * alone, so changing a note checks it's on this kind of item first, or a customer route could edit a staff note
+     */
+    protected abstract val noteLinkColumn: Column<EntityID<Uuid>>
+
+    // A note this database's items own, null if there's none or it's on another kind of item. Inside a transaction
+    private fun findOwnNote(identifier: Uuid): NoteEntity? =
+        NoteEntity.findById(identifier)?.takeIf {
+            noteLinkColumn.table.selectAll().where { noteLinkColumn eq identifier }.any()
+        }
+
+    /**
      * Adds an item to the database
      * @param data Item to add
      * @return Whether it was saved
@@ -59,7 +75,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     fun addImagesToNote(identifier: Uuid, images: List<StoredImage>): Boolean =
         dbWrite(ADD_IMAGE_TO_NOTE_TAG) {
-            val noteEntity = NoteEntity.findById(identifier)
+            val noteEntity = findOwnNote(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(ADD_IMAGE_TO_NOTE_TAG, NoteError.NOT_FOUND) }
 
             val current = noteEntity.images.toList()
@@ -140,7 +156,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     fun updateNote(note: Note): Boolean =
         dbWrite(UPDATE_NOTE_TAG) {
-            val noteEntity = NoteEntity.findById(note.identifier)
+            val noteEntity = findOwnNote(note.identifier)
                 ?: return@dbWrite false.also { AppLogger.i(UPDATE_NOTE_TAG, NoteError.NOT_FOUND) }
 
             noteEntity.author = note.author
@@ -171,7 +187,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     fun removeNote(identifier: Uuid): Boolean =
         dbWrite(REMOVE_NOTE_TAG) {
-            val noteEntity = NoteEntity.findById(identifier)
+            val noteEntity = findOwnNote(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(REMOVE_NOTE_TAG, NoteError.NOT_FOUND) }
 
             markImagesDeleted(noteEntity.images)

@@ -19,7 +19,7 @@ import kotlin.uuid.Uuid
 @OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
 class AuditLogDatabase(
-    private val userDatabase: UserDatabaseImpl
+    private val userDatabase: UserDatabase
 ) {
     private val TAG = "AuditLogDatabase"
     private val LOG_TAG = "$TAG:Log"

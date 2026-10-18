@@ -60,16 +60,18 @@ import org.mr0btain.ticketman.ui.screens.counter.QueuePanel
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
 import org.mr0btain.ticketman.ui.screens.kiosk.LockScreen
-import org.mr0btain.ticketman.ui.screens.dashboard.components.customer.CustomerPanel
-import org.mr0btain.ticketman.ui.screens.dashboard.components.ticket.TicketPanel
+import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerPanel
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketPanel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
-import ticketman.composeapp.generated.resources.file_text
 import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.settings
 import java.io.File
+import org.mr0btain.ticketman.components.data.user.UserSeed
+import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -147,11 +149,10 @@ class ScreenRenderTest {
     )
 
     private val navItems = listOf(
-        TmNavItem("Admin", "Admin", Res.drawable.archive),
-        TmNavItem("Dash", "Counter", Res.drawable.monitor),
-        TmNavItem("Invoice", "Invoices", Res.drawable.file_text),
-        TmNavItem("Main", "Main", Res.drawable.home),
-        TmNavItem("Settings", "Settings", Res.drawable.settings)
+        TmNavItem("Records", "Records", Res.drawable.home),
+        TmNavItem("Counter", "Counter", Res.drawable.monitor),
+        TmNavItem("Settings", "Settings", Res.drawable.settings),
+        TmNavItem("Admin", "Admin", Res.drawable.archive)
     )
 
     // ------------------------------------------ Frames ------------------------------------------
@@ -194,7 +195,7 @@ class ScreenRenderTest {
 
     @Test
     fun counterTicket() = bothModes("counter-ticket") {
-        Shell("Dash") {
+        Shell("Counter") {
             Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                     TmSearchField(
@@ -229,7 +230,7 @@ class ScreenRenderTest {
 
     @Test
     fun pickup() = bothModes("pickup") {
-        Shell("Dash") {
+        Shell("Counter") {
             PickupScreen(
                 detail = detail,
                 onSearchParts = { emptyList() },
@@ -243,7 +244,7 @@ class ScreenRenderTest {
 
     @Test
     fun checkIn() = bothModes("check-in") {
-        Shell("Dash") {
+        Shell("Counter") {
             CheckInWizard(
                 startingCustomer = dana,
                 terms = "We aren't responsible for data loss.",
@@ -299,6 +300,47 @@ class ScreenRenderTest {
     }
 
     @Test
+    fun adminUsers() {
+        val boss = User(username = "dana", name = "dana:whitfield", email = "dana@example.com", accessLevel = AccessLevel.ADMIN)
+        val tech = User(username = "marcus", name = "marcus:oyelaran", phone = "5550142", accessLevel = AccessLevel.NORMAL, hasPin = true)
+        val viewer = User(username = "june", name = "june:kowalski", accessLevel = AccessLevel.RESTRICTED)
+        val seed = UserSeed().apply {
+            setUser(tech, listOf(
+                Note(author = "Dana Whitfield", message = "Trained on Apple board repair, can take micro soldering jobs."),
+                Note(author = "Dana Whitfield", message = "Works Monday to Thursday, off Fridays.")
+            ))
+        }
+
+        bothModes("admin-users") {
+            Shell("Admin") {
+                AdminUsersTab(
+                    pending = emptyList(),
+                    onInvite = {},
+                    onApprove = {},
+                    onReject = {},
+                    onRenewInvite = {},
+                    userList = listOf(boss, tech, viewer),
+                    seed = seed,
+                    currentUserIdentifier = boss.identifier,
+                    listState = rememberLazyListState(),
+                    onSelect = {},
+                    onSearchQuery = { emptyList() },
+                    onAdd = {},
+                    onEdit = {},
+                    onResetPassword = {},
+                    onSetActive = {},
+                    onLogOutEverywhere = {},
+                    onUnlockPin = {},
+                    onResetPin = {},
+                    onSaveNote = {},
+                    onRemoveNote = {},
+                    onDelete = {}
+                )
+            }
+        }
+    }
+
+    @Test
     fun records() {
         val customerSeed = CustomerSeed().apply { setCustomer(dana, sampleNotes, listOf(iphone, pixel)) }
         val ticketSeed = TicketSeed().apply {
@@ -306,7 +348,7 @@ class ScreenRenderTest {
         }
 
         bothModes("records-customers") {
-            Shell("Main") {
+            Shell("Records") {
                 CustomerPanel(
                     customerList = listOf(dana, marcus, Customer(name = "priya:raman", phone = "555 0110"), Customer(name = "tomás:herrera", email = "tomas@example.com")),
                     seed = customerSeed,
@@ -323,7 +365,7 @@ class ScreenRenderTest {
         }
 
         bothModes("records-tickets") {
-            Shell("Main") {
+            Shell("Records") {
                 TicketPanel(
                     ticketScope = TicketScope.ALL,
                     onTicketScopeChange = {},

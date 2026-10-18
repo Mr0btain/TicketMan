@@ -7,9 +7,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CounterDatabase
-import org.mr0btain.ticketman.components.database.CustomerDatabaseImpl
-import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
-import org.mr0btain.ticketman.components.database.UserDatabaseImpl
+import org.mr0btain.ticketman.components.database.CustomerDatabase
+import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchQuery
@@ -21,10 +21,10 @@ import kotlin.uuid.Uuid
  * Customer routes. Reading is open to every logged in user, changes need NORMAL access
  */
 fun Route.customerRoute(
-    database: CustomerDatabaseImpl,
-    ticketDatabase: TicketDatabaseImpl,
+    database: CustomerDatabase,
+    ticketDatabase: TicketDatabase,
     counterDatabase: CounterDatabase,
-    userDatabase: UserDatabaseImpl,
+    userDatabase: UserDatabase,
     auditLog: AuditLogDatabase
 ) {
     val TAG = "CustomerRoute"
@@ -145,5 +145,5 @@ fun Route.customerRoute(
         }
     }
 
-    noteRoutes(database, userDatabase, auditLog, ENTITY_TYPE)
+    noteRoute(database, userDatabase, auditLog, ENTITY_TYPE)
 }

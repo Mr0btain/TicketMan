@@ -51,10 +51,10 @@ class RemoteHandler(
 
     // Clients used to interact with server. Only real difference is the types and server urls
     // Could possibly combine this into one client somehow. just supplying the url for each call?
-    val customerRepo = CustomerRemoteRepositoryImpl(httpClient)
-    val ticketRepo = TicketRemoteRepositoryImpl(httpClient)
-    val inventoryRepo = InventoryRemoteRepositoryImpl(httpClient)
-    val userRepo = UserRemoteRepositoryImpl(httpClient)
+    val customerRepo = CustomerRemoteRepository(httpClient)
+    val ticketRepo = TicketRemoteRepository(httpClient)
+    val inventoryRepo = InventoryRemoteRepository(httpClient)
+    val userRepo = UserRemoteRepository(httpClient)
     val adminRepo = AdminRemoteRepository(httpClient)
     val counterRepo = CounterRemoteRepository(httpClient)
     val invoiceRepo = InvoiceRemoteRepository(httpClient)
