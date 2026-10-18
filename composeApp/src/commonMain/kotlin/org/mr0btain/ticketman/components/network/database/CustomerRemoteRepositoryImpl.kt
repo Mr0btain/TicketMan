@@ -1,19 +1,17 @@
 package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
-import io.ktor.util.reflect.typeInfo
 import io.ktor.client.request.get
-import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
 import io.ktor.http.ContentType
 import io.ktor.http.contentType
+import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleHttpResponse
-import org.mr0btain.ticketman.components.network.handlePlainHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
-import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.onSuccess
 import kotlin.uuid.Uuid
 
@@ -23,23 +21,13 @@ class CustomerRemoteRepositoryImpl(
     tag = "CustomerRemoteRepositoryImpl",
     client = httpClient,
     route = "api/data/customer",
-    itemType = typeInfo<Customer>(),
-    listType = typeInfo<List<Customer>>()
+    types = itemTypes<Customer>()
 ) {
-    private val ADD_TICKET_TAG = "addTicket"
-    private val GET_TICKETS_TAG = "getTickets"
+    private val ADD_TICKET_TAG = "$tag:AddTicket"
+    private val GET_TICKETS_TAG = "$tag:GetTickets"
 
-    suspend fun addTicket(identifier: Uuid, ticket: Uuid) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(ADD_TICKET_TAG) {
-                client.post {
-                    url("$serverUrl/add/ticket/$identifier")
-                    contentType(ContentType.Application.Json)
-                    setBody(ticket)
-                }
-            }?.let { response -> handlePlainHttpResponse(ADD_TICKET_TAG, response) }
-        }
-    }
+    suspend fun addTicket(identifier: Uuid, ticket: Uuid): EmptyResult<ServerError> =
+        setEntity(ADD_TICKET_TAG, ticket, "$serverUrl/add/ticket/$identifier")
 
     suspend fun getTickets(identifier: Uuid): List<Ticket> {
         if (serverUrl.isNotBlank()) {

@@ -7,7 +7,6 @@ import io.ktor.util.reflect.*
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
-import org.mr0btain.ticketman.components.network.handlePlainHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.search.SearchQuery
@@ -22,23 +21,26 @@ import org.mr0btain.ticketman.server.NetworkError
 import kotlin.uuid.Uuid
 
 /**
- * Base client for a MainItem type's server routes.
- * @param itemType Type info for T, e.g. typeInfo<Customer>()
- * @param listType Type info for List<T>, e.g. typeInfo<List<Customer>>()
- * These are needed because T is erased at runtime, so kotlinx serialization can't find a serializer for it.
+ * Type info for an item and a list of them. T is erased inside [RemoteRepository], so kotlinx serialization
+ * can't find a serializer for it there; these are made where T is known, see [itemTypes]
  */
+class ItemTypes<T>(val item: TypeInfo, val list: TypeInfo)
 
-// TODO: Im not a fan of the itemtype and listtype but it works for the moment. Will have to fix this later.
+inline fun <reified T> itemTypes(): ItemTypes<T> = ItemTypes(typeInfo<T>(), typeInfo<List<T>>())
+
+/**
+ * Base client for a MainItem type's server routes.
+ * @param types Type info for T, e.g. itemTypes<Customer>()
+ */
 @Suppress("PropertyName")
 abstract class RemoteRepository<T: MainItem>(
     protected val tag: String,
     protected val client: HttpClient,
     val route: String,
-    private val itemType: TypeInfo,
-    private val listType: TypeInfo
+    private val types: ItemTypes<T>
 ) {
     protected val FETCH_TAG = "$tag:Fetch"
-    protected val SEARCH_TAG = "$tag:Fetch"
+    protected val SEARCH_TAG = "$tag:Search"
     protected val ADD_TAG = "$tag:Add"
     protected val ADD_NOTE_TAG = "$tag:AddNote"
     protected val UPDATE_NOTE_TAG = "$tag:UpdateNote"
@@ -62,7 +64,7 @@ abstract class RemoteRepository<T: MainItem>(
             client.post {
                 url("$serverUrl/add")
                 contentType(ContentType.Application.Json)
-                setBody(data, itemType)
+                setBody(data, types.item)
             }
         }
 
@@ -70,28 +72,32 @@ abstract class RemoteRepository<T: MainItem>(
     }
 
     /** Replaces a note's text and photos. Its photos must have been uploaded first */
-    suspend fun updateNote(note: Note) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(UPDATE_NOTE_TAG) {
-                client.post {
-                    url("$serverUrl/update/note/${note.identifier}")
-                    contentType(ContentType.Application.Json)
-                    setBody(note)
-                }
-            }?.let { response -> handlePlainHttpResponse(UPDATE_NOTE_TAG, response) }
+    suspend fun updateNote(note: Note): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(UPDATE_NOTE_TAG) {
+            client.post {
+                url("$serverUrl/update/note/${note.identifier}")
+                contentType(ContentType.Application.Json)
+                setBody(note)
+            }
         }
+
+        return handleActionHttpResponse(UPDATE_NOTE_TAG, response)
     }
 
-    suspend fun addNote(identifier: Uuid, note: Note) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(ADD_NOTE_TAG) {
-                client.post {
-                    url("$serverUrl/add/note/$identifier")
-                    contentType(ContentType.Application.Json)
-                    setBody(note)
-                }
-            }?.let { response -> handlePlainHttpResponse(ADD_NOTE_TAG, response) }
+    suspend fun addNote(identifier: Uuid, note: Note): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(ADD_NOTE_TAG) {
+            client.post {
+                url("$serverUrl/add/note/$identifier")
+                contentType(ContentType.Application.Json)
+                setBody(note)
+            }
         }
+
+        return handleActionHttpResponse(ADD_NOTE_TAG, response)
     }
 
     suspend fun fetch(offset: Long, limit: Int): List<T> = fetchPage(FETCH_TAG, "fetch", offset, limit)
@@ -108,7 +114,7 @@ abstract class RemoteRepository<T: MainItem>(
             }
 
             if (response != null) {
-                val result = handleHttpResponse<List<T>>(tag, response, listType)
+                val result = handleHttpResponse<List<T>>(tag, response, types.list)
 
                 result.onSuccess {
                     return it
@@ -130,7 +136,7 @@ abstract class RemoteRepository<T: MainItem>(
             }
 
             if (response != null) {
-                val result = handleHttpResponse<T>(GET_TAG, response, itemType)
+                val result = handleHttpResponse<T>(GET_TAG, response, types.item)
 
                 result.onSuccess {
                     return it
@@ -159,16 +165,18 @@ abstract class RemoteRepository<T: MainItem>(
         return null
     }
 
-    protected suspend fun setEntity(tag: String, entityId: Uuid, url: String) {
-        if (serverUrl.isNotBlank()) {
-            networkErrorTryCatch(tag) {
-                client.post {
-                    url(url)
-                    contentType(ContentType.Application.Json)
-                    setBody(entityId)
-                }
-            }?.let { response -> handlePlainHttpResponse(tag, response) }
+    protected suspend fun setEntity(tag: String, entityId: Uuid, url: String): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        val response = networkErrorTryCatch(tag) {
+            client.post {
+                url(url)
+                contentType(ContentType.Application.Json)
+                setBody(entityId)
+            }
         }
+
+        return handleActionHttpResponse(tag, response)
     }
 
     suspend fun getNotes(identifier: Uuid): List<Note> {
@@ -203,17 +211,14 @@ abstract class RemoteRepository<T: MainItem>(
         return handleActionHttpResponse(REMOVE_TAG, response)
     }
 
-    suspend fun removeNote(identifier: Uuid) {
-        // TODO: Setup way to check if it was successful or not
-        if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(REMOVE_NOTE_TAG) {
-                client.delete { url("$serverUrl/remove/note/$identifier") }
-            }
+    suspend fun removeNote(identifier: Uuid): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
 
-            if (response != null) {
-                handlePlainHttpResponse(REMOVE_NOTE_TAG, response)
-            }
+        val response = networkErrorTryCatch(REMOVE_NOTE_TAG) {
+            client.delete { url("$serverUrl/remove/note/$identifier") }
         }
+
+        return handleActionHttpResponse(REMOVE_NOTE_TAG, response)
     }
 
     suspend fun search(query: String, limit: Int): List<SearchResult> {
@@ -245,7 +250,7 @@ abstract class RemoteRepository<T: MainItem>(
             client.post {
                 url("$serverUrl/update")
                 contentType(ContentType.Application.Json)
-                setBody(data, itemType)
+                setBody(data, types.item)
             }
         }
 

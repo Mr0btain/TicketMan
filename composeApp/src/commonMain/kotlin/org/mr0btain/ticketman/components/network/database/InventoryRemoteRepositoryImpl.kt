@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.components.network.database
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
-import io.ktor.util.reflect.typeInfo
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
@@ -23,8 +22,7 @@ class InventoryRemoteRepositoryImpl(
     tag = "InventoryRemoteRepositoryImpl",
     client = client,
     route = "api/data/inventory",
-    itemType = typeInfo<Inventory>(),
-    listType = typeInfo<List<Inventory>>()
+    types = itemTypes<Inventory>()
 ) {
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val SET_IMAGES_TAG = "$tag:SetImages"

@@ -190,9 +190,11 @@ class MainViewModel(
             // Tickets can be linked here, unlinking happens by giving the ticket to another customer
             if (isNew || ChangedField.TICKET in changed) {
                 val linked = repo.getTickets(customer.identifier).map { it.identifier }.toSet()
-                tickets.filter { it.identifier !in linked }.forEach { ticket ->
-                    repo.addTicket(customer.identifier, ticket.identifier)
-                }
+                val failed = tickets
+                    .filter { it.identifier !in linked }
+                    .count { ticket -> repo.addTicket(customer.identifier, ticket.identifier) is Result.Error }
+
+                if (failed > 0) snackBarHost.showSnackbar("$failed ${if (failed == 1) "ticket wasn't" else "tickets weren't"} linked")
             }
 
             customerCache.remove(customer.identifier)
@@ -202,22 +204,27 @@ class MainViewModel(
     }
 
     /**
-     * Makes the server's notes match [notes]: adds new ones, updates edited ones and removes ones that were deleted
+     * Makes the server's notes match [notes]: adds new ones, updates edited ones and removes ones that were deleted.
+     * Shows a snackbar if any of that failed
      */
     private suspend fun syncNotes(identifier: Uuid, notes: List<Note>, repo: RemoteRepository<*>) {
         val existing = repo.getNotes(identifier)
         val existingById = existing.associateBy { it.identifier }
         val keptIds = notes.map { it.identifier }.toSet()
 
-        notes.forEach { note ->
+        val saves = notes.mapNotNull { note ->
             val saved = existingById[note.identifier]
 
             when {
                 saved == null -> repo.addNote(identifier, note)
                 saved != note -> repo.updateNote(note)
+                else -> null
             }
         }
-        existing.filter { it.identifier !in keptIds }.forEach { note -> repo.removeNote(note.identifier) }
+        val removals = existing.filter { it.identifier !in keptIds }.map { note -> repo.removeNote(note.identifier) }
+
+        val failed = (saves + removals).count { it is Result.Error }
+        if (failed > 0) snackBarHost.showSnackbar("$failed ${if (failed == 1) "note change wasn't" else "note changes weren't"} saved")
     }
 
     /** Customer being loaded after a click, the list highlights it until it's in the seed */
@@ -366,8 +373,15 @@ class MainViewModel(
             }
 
             if (isNew || ChangedField.NOTE in changed) syncNotes(ticket.identifier, notes, repo)
-            if (customer != null && (isNew || ChangedField.CUSTOMER in changed)) repo.setCustomer(ticket.identifier, customer.identifier)
-            if (user != null && (isNew || ChangedField.USER in changed)) repo.setUser(ticket.identifier, user.identifier)
+            if (customer != null && (isNew || ChangedField.CUSTOMER in changed)) {
+                val linked = repo.setCustomer(ticket.identifier, customer.identifier)
+                if (linked is Result.Error) snackBarHost.showSnackbar("Customer not linked: ${linked.error.message}")
+            }
+
+            if (user != null && (isNew || ChangedField.USER in changed)) {
+                val assigned = repo.setUser(ticket.identifier, user.identifier)
+                if (assigned is Result.Error) snackBarHost.showSnackbar("Technician not assigned: ${assigned.error.message}")
+            }
 
             ticketCache.remove(ticket.identifier)
             setSelectedTicket(ticket.identifier)
