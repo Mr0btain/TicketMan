@@ -10,6 +10,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.rememberNavController
 import org.mr0btain.ticketman.components.debug.BuildConfigImpl
+import coil3.compose.setSingletonImageLoaderFactory
 import org.koin.compose.viewmodel.koinViewModel
 import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
@@ -78,6 +79,9 @@ fun App() {
         // Component gallery is for working on the ui kit, so only listed in debug builds
         if (isDebug) NavigationItem("Components", Res.drawable.layers, Destination.GALLERY) else null
     )
+
+    // Photos load through the app's http client so they carry the login, and are cached in memory and on disk
+    setSingletonImageLoaderFactory { context -> mainViewModel.imageClient.newImageLoader(context) }
 
     // Photos anywhere below can upload and load through the server
     CompositionLocalProvider(LocalImageClient provides mainViewModel.imageClient) {

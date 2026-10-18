@@ -41,7 +41,8 @@ class RemoteHandler(
     private val LOGOUT_TAG = "$TAG:Logout"
     val userClient = ServerUserClient(createUserHttpClient(engine), localStorage)
 
-    private val httpClient = createRemoteHttpClient(
+    // Shared with the photo loader so photos go out with the same tokens and refresh
+    val httpClient = createRemoteHttpClient(
         engine = engine,
         getAccessToken = { getAccessToken() },
         getRefreshToken = { getRefreshToken() },

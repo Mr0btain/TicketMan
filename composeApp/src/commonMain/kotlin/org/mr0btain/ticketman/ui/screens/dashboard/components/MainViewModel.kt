@@ -141,7 +141,7 @@ class MainViewModel(
     )
 
     /** Uploads photos and finds where they're fetched from, handed to screens through LocalImageClient */
-    val imageClient = ImageClient(remoteHandler.imageRepo)
+    val imageClient = ImageClient(remoteHandler.imageRepo, remoteHandler.httpClient)
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 

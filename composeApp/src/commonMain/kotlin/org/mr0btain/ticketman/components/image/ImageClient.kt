@@ -1,6 +1,13 @@
 package org.mr0btain.ticketman.components.image
 
 import androidx.compose.runtime.staticCompositionLocalOf
+import coil3.ImageLoader
+import coil3.PlatformContext
+import coil3.disk.DiskCache
+import coil3.memory.MemoryCache
+import coil3.network.ktor3.KtorNetworkFetcherFactory
+import coil3.request.crossfade
+import io.ktor.client.*
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.name
 import io.github.vinceglb.filekit.readBytes
@@ -17,10 +24,23 @@ import org.mr0btain.ticketman.server.NetworkError
  * What screens use for photos: sending picked files to the server and finding where a photo is fetched from
  */
 class ImageClient(
-    private val repository: ImageRemoteRepository
+    private val repository: ImageRemoteRepository,
+    private val httpClient: HttpClient
 ) {
     private val TAG = "ImageClient"
     private val UPLOAD_TAG = "$TAG:Upload"
+
+    /**
+     * Coil loader that fetches through the app's http client. Photos never change once uploaded, so whatever is
+     * in the memory or disk cache is used without asking the server again
+     */
+    fun newImageLoader(context: PlatformContext): ImageLoader =
+        ImageLoader.Builder(context)
+            .components { add(KtorNetworkFetcherFactory(httpClient = { httpClient })) }
+            .memoryCache { MemoryCache.Builder().maxSizePercent(context, MEMORY_CACHE_PERCENT).build() }
+            .diskCache { imageDiskCache(context, DISK_CACHE_BYTES) }
+            .crossfade(true)
+            .build()
 
     /** Url of a photo's [variant], null with no server set */
     fun urlFor(image: StoredImage, variant: ImageVariant): String? = repository.urlFor(image.identifier, variant)
@@ -50,6 +70,12 @@ class ImageClient(
         }
     }
 }
+
+private const val MEMORY_CACHE_PERCENT = 0.15
+private const val DISK_CACHE_BYTES = 250L * 1024 * 1024
+
+/** Disk cache for downloaded photos, null where there's no file system to keep one in (the browser has its own) */
+expect fun imageDiskCache(context: PlatformContext, maxSizeBytes: Long): DiskCache?
 
 /**
  * Makes a photo smaller before it's sent, where that can be done without losing its orientation. Android scales

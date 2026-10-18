@@ -92,6 +92,10 @@ kotlin {
             // FileKit for file operations
             implementation(libs.bundles.fileKit)
 
+            // Photo loading with memory and disk caches, through our authenticated Ktor client
+            implementation(libs.coil.compose)
+            implementation(libs.coil.network.ktor3)
+
             // Encrypted key-value storage
             implementation(libs.ksafe)
 
