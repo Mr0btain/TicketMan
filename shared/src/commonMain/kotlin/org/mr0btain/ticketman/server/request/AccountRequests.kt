@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.server.request
 
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 
 /**
  * Someone asking for an account from the login screen. It waits for an admin to approve it

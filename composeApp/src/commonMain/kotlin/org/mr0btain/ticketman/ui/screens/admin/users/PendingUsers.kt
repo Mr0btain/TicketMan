@@ -10,7 +10,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.components.utils.joinName
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UsernameRules

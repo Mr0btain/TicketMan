@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
 import kotlin.uuid.ExperimentalUuidApi

@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.data.inventory
+package org.mr0btain.ticketman.data.user
 
 enum class AccessLevel(val level: Int) {
     RESTRICTED(0),

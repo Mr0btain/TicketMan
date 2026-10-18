@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.dialog
+package org.mr0btain.ticketman.ui.screens.shared
 
 import androidx.compose.runtime.*
 import org.mr0btain.ticketman.components.data.operations.DataType

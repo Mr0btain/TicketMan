@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.components.database.StoredSession
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.data.user.User

@@ -7,7 +7,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.jwt.*
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.UserStatus
 import kotlin.time.Clock
 import kotlin.time.Duration

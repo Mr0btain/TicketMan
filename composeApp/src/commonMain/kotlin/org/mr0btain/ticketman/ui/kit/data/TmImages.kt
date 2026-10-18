@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.kit.data
 
+import org.mr0btain.ticketman.ui.kit.containers.TmFullScreenDialog
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.snapping.SnapPosition
@@ -29,7 +30,6 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.ui.dialog.FullScreenDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
@@ -214,7 +214,7 @@ fun ImagePopup(
     if (isVisible && images.isNotEmpty()) {
         var fullSize by remember { mutableStateOf(false) }
 
-        FullScreenDialog(modifier = modifier, onDismiss = onDismiss) {
+        TmFullScreenDialog(modifier = modifier, onDismiss = onDismiss) {
             Column(Modifier.fillMaxSize()) {
                 ImagePager(
                     modifier = Modifier.fillMaxWidth().weight(1f),

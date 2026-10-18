@@ -8,7 +8,7 @@ import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.audit.AuditAction
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.TicketSignature

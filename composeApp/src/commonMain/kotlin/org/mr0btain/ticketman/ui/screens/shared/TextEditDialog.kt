@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.dialog
+package org.mr0btain.ticketman.ui.screens.shared
 
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions

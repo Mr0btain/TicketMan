@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman.ui.dialog
+package org.mr0btain.ticketman.ui.kit.containers
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 
 /** Dialog that fills most of the window, clicking around it closes it. Used for looking at photos */
 @Composable
-fun FullScreenDialog(
+fun TmFullScreenDialog(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     content: @Composable (() -> Unit)

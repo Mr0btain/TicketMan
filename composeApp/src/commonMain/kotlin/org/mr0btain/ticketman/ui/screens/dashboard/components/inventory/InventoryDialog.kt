@@ -12,7 +12,7 @@ import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.ui.screens.shared.NoteBlock
 import org.mr0btain.ticketman.ui.screens.shared.PhotoEditor
-import org.mr0btain.ticketman.ui.dialog.EditNoteDialog
+import org.mr0btain.ticketman.ui.screens.shared.EditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant

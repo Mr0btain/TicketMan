@@ -8,7 +8,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.TicketDatabaseImpl
 import org.mr0btain.ticketman.components.database.UserDatabaseImpl
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.shared.EntityReference

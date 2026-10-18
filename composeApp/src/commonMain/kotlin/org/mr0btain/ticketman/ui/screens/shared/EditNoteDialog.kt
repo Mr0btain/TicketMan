@@ -1,11 +1,10 @@
-package org.mr0btain.ticketman.ui.dialog
+package org.mr0btain.ticketman.ui.screens.shared
 
 import androidx.compose.runtime.*
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.screens.shared.PhotoEditor
 
 /**
  * Adds or edits a note, with photos. Photos upload as soon as they're picked, and are only kept by the server

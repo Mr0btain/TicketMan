@@ -3,7 +3,7 @@ package org.mr0btain.ticketman.ui.screens.admin.components
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.components.utils.formatEnumName
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.kit.feedback.AccessBadge

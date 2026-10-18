@@ -11,7 +11,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.data.inventory.AccessLevel
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.PaperSize
