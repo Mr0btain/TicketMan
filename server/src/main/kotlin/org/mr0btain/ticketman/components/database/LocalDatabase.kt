@@ -27,6 +27,7 @@ import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.InviteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
+import org.mr0btain.ticketman.components.image.ImageStore
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
@@ -41,6 +42,9 @@ class LocalDatabase (
 
     /** Folder holding the H2 files */
     val databaseDirectory = File("$appDir/database")
+
+    /** Photo files, kept out of H2 so the database stays small and quick to back up */
+    val imageStore = ImageStore(File("$appDir/images"))
 
     // Connect to the local database. Might not need this as a value
     private val db = Database.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
@@ -98,7 +102,8 @@ class LocalDatabase (
         TicketTable,
         TokenTable,
         InventoryTable,
-        StationTable
+        StationTable,
+        ImageTable
     )
 
     /**

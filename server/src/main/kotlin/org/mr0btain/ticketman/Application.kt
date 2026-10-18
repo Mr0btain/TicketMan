@@ -1,4 +1,4 @@
-package org.mr0btain.ticketman
+ package org.mr0btain.ticketman
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
@@ -8,6 +8,7 @@ import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureSerialization
+import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
@@ -63,6 +64,7 @@ fun Application.module() {
         configureSerialization()
         configureContentNegotiation()
         configureSecurity(jwtService)
+        configureTransfers()
         val invoiceService = InvoiceService(
             invoices = database.invoiceDatabase,
             tickets = database.ticketDatabase,

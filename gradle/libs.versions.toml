@@ -31,6 +31,8 @@ ksafe = "3.3.0"
 kotlinx-datetime = "0.7.1"
 zxing = "3.5.3"
 haze = "2.0.1"
+thumbnailator = "0.4.20"
+coil = "3.6.2"
 
 [libraries]
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
@@ -71,6 +73,8 @@ ktor-server-status-pages = { module = "io.ktor:ktor-server-status-pages", versio
 ktor-server-config-yaml = { module = "io.ktor:ktor-server-config-yaml", version.ref = "ktor" }
 ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
+ktor-server-partial-content = { module = "io.ktor:ktor-server-partial-content", version.ref = "ktor" }
+ktor-server-conditional-headers = { module = "io.ktor:ktor-server-conditional-headers", version.ref = "ktor" }
 
 # Navigation
 compose-navigation = { group = "compose", module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "compose-navigation" }
@@ -88,6 +92,13 @@ filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "file
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }
 filekit-dialogs-compose = { module = "io.github.vinceglb:filekit-dialogs-compose", version.ref = "filekit" }
 filekit-coil = { module = "io.github.vinceglb:filekit-coil", version.ref = "filekit" }
+
+# Image loading and caching, fetched through our authenticated Ktor client
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-ktor3 = { module = "io.coil-kt.coil3:coil-network-ktor3", version.ref = "coil" }
+
+# Server side image resizing (also applies EXIF orientation)
+thumbnailator = { module = "net.coobird:thumbnailator", version.ref = "thumbnailator" }
 
 # Json serialize
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
@@ -148,7 +159,9 @@ ktorServer = [
     "ktor-server-status-pages",
     "ktor-server-config-yaml",
     "ktor-server-auth",
-    "ktor-server-auth-jwt"
+    "ktor-server-auth-jwt",
+    "ktor-server-partial-content",
+    "ktor-server-conditional-headers"
 ]
 ktorServerTesting = [
     "ktor-serverTestHost",

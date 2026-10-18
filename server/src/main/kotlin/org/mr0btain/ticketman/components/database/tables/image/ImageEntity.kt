@@ -14,13 +14,32 @@ class ImageEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var description by ImageTable.description
     var directory by ImageTable.directory
     var tags by ImageTable.tags
+    var width by ImageTable.width
+    var height by ImageTable.height
+    var sizeBytes by ImageTable.sizeBytes
+    var sha256 by ImageTable.sha256
+    var uploadedBy by ImageTable.uploadedBy
+    var status by ImageTable.status
+    var statusChangedAt by ImageTable.statusChangedAt
+
+    val imageStatus: ImageStatus
+        get() = ImageStatus.entries.firstOrNull { it.name == status } ?: ImageStatus.LINKED
+
+    fun changeStatus(newStatus: ImageStatus, now: Long = System.currentTimeMillis()) {
+        if (status != newStatus.name) {
+            status = newStatus.name
+            statusChangedAt = now
+        }
+    }
 
     fun toStoredImage(): StoredImage {
         return StoredImage(
             identifier = id.value,
             description = description,
-            directory = directory,
-            tags = tags
+            tags = tags,
+            width = width,
+            height = height,
+            sizeBytes = sizeBytes
         )
     }
 }

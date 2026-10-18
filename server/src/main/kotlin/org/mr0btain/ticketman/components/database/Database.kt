@@ -69,9 +69,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
             transaction {
                 NoteEntity.findById(identifier)?.let { noteEntity ->
                     val imageCollection = images.map { image ->
-                        ImageEntity.new {
-                            directory = image.directory
-                        }
+                        ImageEntity.new { }
                     }
 
                     noteEntity.images = SizedCollection(noteEntity.images + imageCollection)
@@ -126,7 +124,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
                     ImageEntity.new(image.identifier) {
                         description = image.description
                         tags = image.tags
-                        directory = image.directory
                     }
                 }
 
@@ -150,7 +147,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
         return appLogTryCatch<ImageEntity?>(INSERT_IMAGE_TAG) {
             val entity = transaction {
                 ImageEntity.new(storedImage.identifier) {
-                    directory = storedImage.directory
                 }
             }
 
@@ -217,7 +213,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
             transaction {
                 val entity = ImageEntity.findByIdAndUpdate(storedImage.identifier) { imageEntity ->
                     imageEntity.description = storedImage.description
-                    imageEntity.directory = storedImage.directory
                     imageEntity.tags = storedImage.tags
                 }
 

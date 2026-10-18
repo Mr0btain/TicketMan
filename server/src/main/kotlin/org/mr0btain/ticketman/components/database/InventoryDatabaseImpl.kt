@@ -393,9 +393,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
                 InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
                     // Add images to table
                     val imageEntities = images.map { storedImage ->
-                        ImageEntity.new(storedImage.identifier) {
-                            directory = storedImage.directory
-                        }
+                        ImageEntity.new(storedImage.identifier) { }
                     }
 
                     // Add them to inventory
