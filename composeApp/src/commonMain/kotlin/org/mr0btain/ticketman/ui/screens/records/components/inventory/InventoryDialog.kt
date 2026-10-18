@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
 import ticketman.composeapp.generated.resources.Res
@@ -83,9 +84,11 @@ fun InventoryDialog(
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
             TmTextField(
                 modifier = Modifier.weight(1f),
-                value = seed.stock.toString(),
+                value = if (seed.tracksStock) seed.stock.toString() else "",
                 onValueChange = { text -> seed.changeStock(text.filter { it.isDigit() }.take(9).toIntOrNull() ?: 0) },
                 label = "In stock",
+                placeholder = if (seed.tracksStock) null else "Not tracked",
+                enabled = seed.tracksStock,
                 textStyle = TmTheme.typography.numeric,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
             )
@@ -102,6 +105,12 @@ fun InventoryDialog(
                 onCentsChange = { seed.changePrice(Money.toDollars(it)) }
             )
         }
+
+        TmCheckbox(
+            checked = seed.tracksStock,
+            onCheckedChange = { seed.changeTracksStock(it) },
+            label = "Track stock"
+        )
 
         TmSectionLabel("Photos")
         TmPhotoEditor(

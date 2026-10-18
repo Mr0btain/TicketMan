@@ -53,7 +53,11 @@ fun InventoryInfoPane(
             Column {
                 TmKeyValueRow(label = "Price") { TmMoneyText(Money.fromDollars(inventoryData.price), style = TmTheme.typography.numericLarge) }
                 TmKeyValueRow(label = "Cost") { TmMoneyText(Money.fromDollars(inventoryData.cost)) }
-                TmKeyValueRow(label = "In stock", value = inventoryData.stock.toString(), numeric = true)
+                TmKeyValueRow(
+                    label = "In stock",
+                    value = if (inventoryData.tracksStock) inventoryData.stock.toString() else "Not tracked",
+                    numeric = inventoryData.tracksStock
+                )
                 TmKeyValueRow(label = "Added", value = formatDateTime(inventoryData.time.toEpochMilliseconds()))
             }
         }

@@ -336,6 +336,37 @@ class InvoiceTest {
     }
 
     @Test
+    fun aStockCountSetDuringAPickupIsntLost() = testApplication {
+        setup()
+
+        repeat(5) {
+            val part = Inventory(name = "Battery", stock = 5, priceCents = 3_000)
+            postJson("/api/data/inventory/add", json.encodeToString(part))
+            val ticket = newTicket()
+            setCharges(invoiceFor(ticket), listOf(Charge(type = ChargeType.PART, description = "Battery", unitPriceCents = 3_000, inventoryIdentifier = part.identifier)))
+
+            // Someone opened the item at 5 and is restocking it to 10 as the battery goes out
+            val (picked, restocked) = coroutineScope {
+                val picked = async(Dispatchers.IO) { pickup(ticket, PaymentRequest(PaymentMethod.CASH, 3_000)).status }
+                val restocked = async(Dispatchers.IO) {
+                    postJson("/api/data/inventory/set/stock/${part.identifier}", json.encodeToString(StockChangeRequest(5, 10))).status
+                }
+                picked.await() to restocked.await()
+            }
+
+            assertEquals(HttpStatusCode.OK, picked)
+            val stock = InventoryDatabase().getById(part.identifier)!!.stock
+            when (restocked) {
+                // Restocked first, then the battery came out of the 10
+                HttpStatusCode.Accepted -> assertEquals(9, stock)
+                // The pickup got there first, so the restock was refused rather than putting the battery back
+                HttpStatusCode.Conflict -> assertEquals(4, stock)
+                else -> fail("Restock answered $restocked")
+            }
+        }
+    }
+
+    @Test
     fun ticketsAreOnlyPickedUpAtTheCounter() = testApplication {
         setup()
         val ticket = newTicket()

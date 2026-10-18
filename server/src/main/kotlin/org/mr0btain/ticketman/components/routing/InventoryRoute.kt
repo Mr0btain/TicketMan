@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.request.StockChangeRequest
 import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(
@@ -105,6 +106,11 @@ fun Route.inventoryRoute(
         post("/add") {
             val received = call.receive<Inventory>()
 
+            if (received.stock < 0) {
+                call.respond(HttpStatusCode.BadRequest, "Stock can't be below zero")
+                return@post
+            }
+
             if (!database.add(received)) {
                 call.respond(HttpStatusCode.InternalServerError)
                 return@post
@@ -115,7 +121,7 @@ fun Route.inventoryRoute(
         }
     }
 
-    // Update
+    // Update, everything but the stock count
     authenticate {
         post("/update") {
             val received = call.receive<Inventory>()
@@ -127,6 +133,38 @@ fun Route.inventoryRoute(
 
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)
+        }
+    }
+
+    // Stock count by hand. Refused if it changed since the item was opened, so a pickup's change isn't lost
+    authenticate {
+        post("/set/stock/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val request = call.receive<StockChangeRequest>()
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            if (request.to < 0) {
+                call.respond(HttpStatusCode.BadRequest, "Stock can't be below zero")
+                return@post
+            }
+
+            when (database.setStock(identifier, request.from, request.to)) {
+                InventoryDatabase.StockChange.DONE -> {
+                    call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Stock ${request.from} to ${request.to}")
+                    call.respond(HttpStatusCode.Accepted)
+                }
+                InventoryDatabase.StockChange.CHANGED_SINCE -> {
+                    val now = database.getById(identifier)?.stock
+                    val count = if (now == Int.MAX_VALUE) "untracked" else "$now"
+                    call.respond(HttpStatusCode.Conflict, "Stock changed to $count since this was opened, check the count and try again")
+                }
+                InventoryDatabase.StockChange.NOT_FOUND -> call.respond(HttpStatusCode.NotFound)
+                null -> call.respond(HttpStatusCode.InternalServerError)
+            }
         }
     }
 

@@ -21,7 +21,7 @@ and a handler that puts them together, in `ui/screens/records/components/<entity
 |---------|-------|
 | `CustomerRecords` | `select`, `clearSelection`, `save`, `remove`, `search`, `get`, `clear` |
 | `TicketRecords` | The same, plus a list scope (my tickets or all), saved in `LocalStorage` |
-| `InventoryRecords` | The same, plus saving the item's own photo list |
+| `InventoryRecords` | The same, plus saving the item's own photo list and its stock count |
 | `UserRecords` | No `save`: users are added and changed from the admin screen. Saves and deletes staff notes straight away, admins only |
 
 ## `OffsetPager`
@@ -108,7 +108,10 @@ Every `save()` follows the same steps (see `TicketRecords.save()`):
    [`RecordNotes.kt`](../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/records/components/RecordNotes.kt)
    fetches the server's notes and adds, updates and removes to match the seed. Notes are only sent when the record is
    saved, so cancelling the dialog drops note edits too.
-5. Links (a ticket's customer and tech) and inventory photos are set if they changed.
+5. Links (a ticket's customer and tech) and inventory photos are set if they changed. So is an item's stock count,
+   which `update` leaves alone: `setStock(id, seed.loadedStock, stock)` sends the count the item was opened at with
+   the new one, and the server refuses it with a `409` if a pickup has taken stock since. The snackbar says so, and
+   the reload in the next step shows the real count.
 6. `cache.remove(id)`, `select(id)` to reload and mark clean, `pager.refreshCurrentData()`.
 
 Each step that fails shows its own snackbar, so a partly saved record says which part didn't go through.

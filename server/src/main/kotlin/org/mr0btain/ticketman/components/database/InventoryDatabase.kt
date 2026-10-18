@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -25,6 +26,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val SET_IMAGES_TAG = "$tag:SetImages"
     private val UPDATE_STOCK_TAG = "$tag:UpdateStock"
+    private val SET_STOCK_TAG = "$tag:SetStock"
     private val MIGRATE_PRICES_TAG = "$tag:MigrateLegacyPrices"
 
     override fun getById(identifier: Uuid): Inventory? =
@@ -103,6 +105,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
         }
     }
 
+    /** Saves everything but the stock count, which only changes through [setStock] and [adjustStock] */
     override fun update(data: Inventory): Boolean =
         dbWrite(UPDATE_TAG) {
             val inventoryEntity = InventoryEntity.findById(data.identifier)
@@ -111,7 +114,6 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
             inventoryEntity.apply {
                 name = data.name
                 description = data.description
-                stock = data.stock
                 costCents = data.costCents
                 priceCents = data.priceCents
             }
@@ -137,17 +139,44 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
         }
     }
 
+    /** How [setStock] went */
+    enum class StockChange { DONE, NOT_FOUND, CHANGED_SINCE }
+
     /**
-     * Takes stock away, or puts it back with a negative [amount]. Items with untracked stock are left alone
-     * @return Whether the item was found
+     * Sets the stock count by hand, only if it's still [from]. Done in one statement, so a pickup taking stock
+     * at the same moment either lands first (and this is [StockChange.CHANGED_SINCE]) or after
+     * @return How it went, null if it failed
+     */
+    fun setStock(identifier: Uuid, from: Int, to: Int): StockChange? =
+        dbQuery(SET_STOCK_TAG) {
+            val updated = InventoryTable.update(where = { (InventoryTable.id eq identifier) and (InventoryTable.stock eq from) }) { row ->
+                row[stock] = to
+            }
+
+            when {
+                updated > 0 -> StockChange.DONE
+                InventoryEntity.findById(identifier) == null -> StockChange.NOT_FOUND
+                else -> StockChange.CHANGED_SINCE
+            }
+        }
+
+    /**
+     * Takes stock away, or puts it back with a negative [amount], in one statement so nothing written in between
+     * is lost. Taking never goes below zero. Items with untracked stock, and ones that are gone, are left alone
+     * @return False when there isn't [amount] to take
      */
     fun adjustStock(identifier: Uuid, amount: Int): Boolean =
         dbWrite(UPDATE_STOCK_TAG) {
-            val item = InventoryEntity.findById(identifier)
-                ?: return@dbWrite false.also { AppLogger.i(UPDATE_STOCK_TAG, InventoryError.NOT_FOUND) }
+            val updated = InventoryTable.update(where = {
+                val tracked = (InventoryTable.id eq identifier) and (InventoryTable.stock neq Int.MAX_VALUE)
+                if (amount > 0) tracked and (InventoryTable.stock greaterEq amount) else tracked
+            }) { row ->
+                row[stock] = stock - amount
+            }
+            if (updated > 0) return@dbWrite true
 
-            if (item.stock != Int.MAX_VALUE) item.stock -= amount
-            true
+            val item = InventoryEntity.findById(identifier)
+            item == null || item.stock == Int.MAX_VALUE
         }
 
     override val noteLinkColumn = InventoryNoteTable.note

@@ -5,6 +5,7 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -15,6 +16,7 @@ import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.mr0btain.ticketman.server.request.StockChangeRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import kotlin.test.*
 import kotlin.uuid.Uuid
@@ -65,6 +67,9 @@ class InventoryTest {
     private suspend fun ApplicationTestBuilder.get(identifier: Uuid, token: String) =
         post("/api/data/inventory/get", json.encodeToString(identifier), token)
 
+    private suspend fun ApplicationTestBuilder.setStock(identifier: Uuid, from: Int, to: Int, token: String) =
+        post("/api/data/inventory/set/stock/$identifier", json.encodeToString(StockChangeRequest(from, to)), token)
+
     @Test
     fun itemsCanBeAddedReadAndChanged() = testApplication {
         setup()
@@ -73,9 +78,58 @@ class InventoryTest {
 
         assertEquals(screen, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()))
 
-        val restocked = screen.copy(stock = 12, priceCents = 11_500)
-        assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(restocked), token).status)
-        assertEquals(restocked, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()))
+        val repriced = screen.copy(priceCents = 11_500)
+        assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(repriced), token).status)
+        assertEquals(repriced, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()))
+    }
+
+    @Test
+    fun stockIsOnlySetFromTheCountThatWasOpened() = testApplication {
+        setup()
+        val token = token(tech)
+        add(screen, token)
+
+        // A plain update leaves the count alone, an older copy can't put back what a pickup took
+        assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(screen.copy(stock = 40)), token).status)
+        assertEquals(5, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).stock)
+
+        assertEquals(HttpStatusCode.Accepted, setStock(screen.identifier, 5, 12, token).status)
+        assertEquals(12, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).stock)
+
+        // Someone opened it at 5, it's 12 now
+        val stale = setStock(screen.identifier, 5, 3, token)
+        assertEquals(HttpStatusCode.Conflict, stale.status)
+        assertEquals("Stock changed to 12 since this was opened, check the count and try again", stale.bodyAsText())
+        assertEquals(12, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).stock)
+
+        assertEquals(HttpStatusCode.NotFound, setStock(Uuid.random(), 0, 1, token).status)
+    }
+
+    @Test
+    fun stockCantGoBelowZero() = testApplication {
+        setup()
+        val token = token(tech)
+
+        assertEquals(HttpStatusCode.BadRequest, post("/api/data/inventory/add", json.encodeToString(screen.copy(stock = -1)), token).status)
+        assertEquals(HttpStatusCode.NotFound, get(screen.identifier, token).status)
+
+        add(screen, token)
+        assertEquals(HttpStatusCode.BadRequest, setStock(screen.identifier, 5, -2, token).status)
+        assertEquals(HttpStatusCode.Accepted, setStock(screen.identifier, 5, 0, token).status)
+
+        // Taking more than there is leaves it as it was, putting back always works
+        val inventory = InventoryDatabase()
+        assertFalse(inventory.adjustStock(screen.identifier, 1))
+        assertEquals(0, inventory.getById(screen.identifier)!!.stock)
+        assertTrue(inventory.adjustStock(screen.identifier, -3))
+        assertTrue(inventory.adjustStock(screen.identifier, 3))
+        assertEquals(0, inventory.getById(screen.identifier)!!.stock)
+
+        // Untracked stock isn't counted at all
+        val cable = Inventory(name = "Cable")
+        add(cable, token)
+        assertTrue(inventory.adjustStock(cable.identifier, 50))
+        assertEquals(Int.MAX_VALUE, inventory.getById(cable.identifier)!!.stock)
     }
 
     @Test
@@ -148,7 +202,8 @@ class InventoryTest {
         assertEquals(HttpStatusCode.OK, get(screen.identifier, token).status)
         assertEquals(HttpStatusCode.OK, post("/api/data/inventory/fetch", json.encodeToString(PagedRequest(0, 10)), token).status)
         assertEquals(HttpStatusCode.Unauthorized, post("/api/data/inventory/add", json.encodeToString(battery), token).status)
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/inventory/update", json.encodeToString(screen.copy(stock = 0)), token).status)
+        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/inventory/update", json.encodeToString(screen.copy(name = "Changed")), token).status)
+        assertEquals(HttpStatusCode.Unauthorized, setStock(screen.identifier, 5, 0, token).status)
         assertEquals(HttpStatusCode.Unauthorized, client.delete("/api/data/inventory/remove/${screen.identifier}") { bearerAuth(token) }.status)
     }
 

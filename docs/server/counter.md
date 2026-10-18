@@ -90,7 +90,8 @@ code uses), and routes turn it into a status with `respondAccount()`: `400`, `40
 Then, in one `transaction { }`:
 
 1. add each payment,
-2. take each part's quantity out of stock (untracked items are left alone),
+2. take each part's quantity out of stock (untracked items are left alone). If a count set by hand since step 4
+   leaves too few, this throws, the whole transaction rolls back and the answer is the same `409`,
 3. mark the invoice `PAID` with the time,
 4. set the ticket's `pickedUpAt` and status `PICKED_UP`, and record the status change.
 
@@ -116,6 +117,23 @@ Only pickup sets `PICKED_UP`, so the invoice is always paid with it, and a picke
 The ticket dialog only offers `PICKED_UP` for a ticket that already is. Voiding the invoice doesn't reopen the
 ticket; a device that comes back gets a new ticket.
 
+### Stock counts
+
+A stock count is changed in three places, and each is a single SQL `UPDATE`, never a read and then a write, so two
+at once can't lose one:
+
+| Where | What it does |
+|-------|--------------|
+| Pickup | `InventoryDatabase.adjustStock(id, n)`: `stock = stock - n` where `stock >= n`. Returns false when it's short |
+| Void of a paid invoice | `adjustStock(id, -n)`: puts the parts back |
+| By hand | `POST /api/data/inventory/set/stock/{id}` with `StockChangeRequest(from, to)`: `stock = to` where `stock = from` |
+
+`POST /api/data/inventory/update` saves everything else about an item but not its stock. Without that, a dialog
+opened before a pickup would send the old count back and undo the pickup. Instead the client sends the count the
+item was opened at as `from`. If it's changed since, the answer is `409` "Stock changed to n since this was opened,
+check the count and try again", and nothing is written. A count below zero is `400`, on `set/stock` and on
+`/add`. `Int.MAX_VALUE` is allowed and means untracked.
+
 ## The queue and search
 
 [`CounterDatabase`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/database/CounterDatabase.kt) is
@@ -129,8 +147,6 @@ read only:
 
 ## Gotchas
 
-- **Stock can still be set below zero by hand.** Pickup won't take more than there is, but an inventory edit saves
-  whatever stock it's sent, and an inventory save at the same moment as a pickup can overwrite the pickup's change.
 - **The tax rate isn't locked at check-in.** An invoice made at check-in takes the rate then, but the next charge
   update reads the shop's current rate. See [Money](../shared/money.md#gotchas).
 - **A throw inside check-in or pickup reaches the client as a `500`** with the exception text, from `StatusPages`.

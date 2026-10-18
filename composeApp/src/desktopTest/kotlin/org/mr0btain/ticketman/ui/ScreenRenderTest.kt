@@ -62,6 +62,10 @@ import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
 import org.mr0btain.ticketman.ui.screens.kiosk.LockScreen
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerPanel
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketPanel
+import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryDialog
+import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryPanel
+import org.mr0btain.ticketman.components.data.inventory.InventorySeed
+import org.mr0btain.ticketman.data.inventory.Inventory
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
 import ticketman.composeapp.generated.resources.home
@@ -380,6 +384,28 @@ class ScreenRenderTest {
                     onImageClick = { _, _ -> },
                     customerLazyListState = rememberLazyListState()
                 )
+            }
+        }
+
+        // Untracked stock reads as such rather than as Int.MAX_VALUE
+        val screen = Inventory(name = "iPhone 13 Screen", description = "OEM panel", stock = 4, costCents = 6_000, priceCents = 12_000)
+        val cable = Inventory(name = "USB-C Cable", description = "1 m braided", costCents = 300, priceCents = 1_200)
+        val inventorySeed = InventorySeed().apply { setInitial(cable) }
+        bothModes("records-inventory") {
+            Shell("Records") {
+                InventoryPanel(
+                    inventoryList = listOf(screen, cable, Inventory(name = "Pixel 7 Battery", stock = 0, priceCents = 5_000)),
+                    selectedInventory = inventorySeed,
+                    onSelectedInventoryChange = {},
+                    onSearchQuery = { emptyList() },
+                    onAddInventory = {},
+                    onEditInventory = {},
+                    onDeleteInventory = {},
+                    onImageClick = {},
+                    onNoteImageClick = { _, _ -> },
+                    inventoryListState = rememberLazyListState()
+                )
+                InventoryDialog(seed = inventorySeed, isVisible = true, onDismiss = {}, onContinue = {})
             }
         }
 

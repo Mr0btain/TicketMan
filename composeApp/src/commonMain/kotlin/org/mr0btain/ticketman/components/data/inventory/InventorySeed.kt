@@ -20,6 +20,11 @@ class InventorySeed: DataSeed("InventorySeed") {
         private set
     var stock: Int by mutableStateOf(0)
         private set
+    /** The count when the item was loaded, the server only takes a new count if it's still this */
+    var loadedStock: Int = 0
+        private set
+    /** Whether pickups count this item down, `Int.MAX_VALUE` stock means they don't */
+    val tracksStock: Boolean get() = stock != Int.MAX_VALUE
     // In dollars for editing, saved as cents
     var cost: Double by mutableStateOf(0.0)
         private set
@@ -45,6 +50,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         name = data.name
         description = data.description
         stock = data.stock
+        loadedStock = data.stock
         cost = Money.toDollars(data.costCents)
         price = Money.toDollars(data.priceCents)
 
@@ -66,6 +72,12 @@ class InventorySeed: DataSeed("InventorySeed") {
 
     fun changeStock(newStock: Int) {
         stock = newStock
+    }
+
+    /** Starts counting from the loaded count, or zero if it wasn't counted before. Stopping forgets the count */
+    fun changeTracksStock(track: Boolean) {
+        if (track == tracksStock) return
+        stock = if (!track) Int.MAX_VALUE else if (loadedStock != Int.MAX_VALUE) loadedStock else 0
     }
 
     fun changePrice(newPrice: Double) {
@@ -90,6 +102,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         name = ""
         description = ""
         stock = 0
+        loadedStock = 0
         cost = 0.0
         price = 0.0
         _notes.clear()

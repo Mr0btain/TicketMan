@@ -68,7 +68,9 @@ ratio, typed name) and `SignatureInput.problem()` checks it; the server fills in
 `name`, `description`, `stock`, `costCents` (what the shop pays) and `priceCents` (what it charges).
 
 `stock` defaults to `Int.MAX_VALUE`, which means **stock isn't tracked** for that item: pickup doesn't take from it,
-and the counter shows "Stock not tracked".
+and the counter shows "Stock not tracked". In the inventory dialog it's the "Track stock" checkbox, and lists and
+details show "Not tracked" rather than the number. The server never lets a tracked count go below zero, and a plain
+inventory update doesn't change it; see [Counter](../server/counter.md#stock-counts).
 
 ### User
 

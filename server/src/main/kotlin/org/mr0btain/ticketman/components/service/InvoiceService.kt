@@ -102,21 +102,26 @@ class InvoiceService(
         val parts = partsUsed(invoice)
         parts.forEach { (identifier, quantity) ->
             val item = inventory.getById(identifier) ?: return@forEach
-            if (item.stock != Int.MAX_VALUE && item.stock < quantity) {
-                return AccountResult.Conflict("Only ${item.stock} of ${item.name.ifBlank { "an item" }} in stock, fix the count in Inventory first")
-            }
+            if (item.stock != Int.MAX_VALUE && item.stock < quantity) return shortOf(identifier)
         }
 
         val now = Clock.System.now().toEpochMilliseconds()
 
-        transaction {
-            request.payments.forEach { payment -> invoices.addPayment(invoice.identifier, payment.toPayment(receivedBy)) }
+        try {
+            transaction {
+                request.payments.forEach { payment -> invoices.addPayment(invoice.identifier, payment.toPayment(receivedBy)) }
 
-            parts.forEach { (identifier, quantity) -> inventory.adjustStock(identifier, quantity) }
+                // A count set by hand since the check above can still leave too few, which undoes the lot
+                parts.forEach { (identifier, quantity) ->
+                    if (!inventory.adjustStock(identifier, quantity)) throw ShortOfStock(identifier)
+                }
 
-            invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
-            tickets.markPickedUp(ticket.identifier, now)
-            tickets.recordStatusChange(ticket.identifier, TicketStatusType.PICKED_UP, receivedBy)
+                invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
+                tickets.markPickedUp(ticket.identifier, now)
+                tickets.recordStatusChange(ticket.identifier, TicketStatusType.PICKED_UP, receivedBy)
+            }
+        } catch (ex: ShortOfStock) {
+            return shortOf(ex.identifier)
         }
 
         auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${Money.format(invoice.totalCents)}")
@@ -140,6 +145,13 @@ class InvoiceService(
 
         auditLog.log(actor, AuditAction.DELETE, "invoice", identifier.toString(), "Voided ${invoice.label}")
         return AccountResult.Done(invoices.getById(identifier)!!)
+    }
+
+    private class ShortOfStock(val identifier: Uuid) : Exception()
+
+    private fun shortOf(identifier: Uuid): AccountResult.Conflict {
+        val item = inventory.getById(identifier)
+        return AccountResult.Conflict("Only ${item?.stock ?: 0} of ${item?.name?.ifBlank { null } ?: "an item"} in stock, fix the count in Inventory first")
     }
 
     // How many of each stocked item the invoice's part lines use, added up when one is on several lines

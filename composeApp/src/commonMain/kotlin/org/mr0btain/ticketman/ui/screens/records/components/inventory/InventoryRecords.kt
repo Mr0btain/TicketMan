@@ -77,13 +77,14 @@ class InventoryRecords(
         seed.clear()
     }
 
-    /** Saves the seed: the item, its notes and its photos */
+    /** Saves the seed: the item, its stock count, its notes and its photos */
     fun save() {
         if (!canEdit()) return
 
         if (!seed.isDirty) return
 
         val inventory = seed.inventory
+        val loadedStock = seed.loadedStock
         val notes = seed.notes.toList()
         val images = seed.images.toList()
         val changed = seed.getChangedFields().toSet()
@@ -91,15 +92,21 @@ class InventoryRecords(
 
         scope.launch {
             val repo = remoteHandler.inventoryRepo
-            val linkFields = setOf(ChangedField.NOTE, ChangedField.IMAGE)
+            // Stock is sent on its own, so a pickup since this was opened isn't overwritten
+            val separateFields = setOf(ChangedField.NOTE, ChangedField.IMAGE, ChangedField.STOCK)
 
-            if (isNew || (changed - linkFields).isNotEmpty()) {
+            if (isNew || (changed - separateFields).isNotEmpty()) {
                 val saved = if (isNew) repo.add(inventory) else repo.update(inventory)
 
                 if (saved is Result.Error) {
                     snackBarHost.showSnackbar("Item not saved: ${saved.error.message}")
                     return@launch
                 }
+            }
+
+            if (!isNew && ChangedField.STOCK in changed) {
+                val stock = repo.setStock(inventory.identifier, loadedStock, inventory.stock)
+                if (stock is Result.Error) snackBarHost.showSnackbar("Stock not saved: ${stock.error.message}")
             }
 
             if (isNew || ChangedField.NOTE in changed) syncNotes(inventory.identifier, notes, repo, snackBarHost)

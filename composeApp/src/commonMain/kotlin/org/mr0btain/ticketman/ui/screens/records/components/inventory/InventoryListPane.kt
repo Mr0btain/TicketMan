@@ -19,7 +19,7 @@ import kotlin.uuid.Uuid
 private val COLUMNS = listOf(
     TmColumn("Name", weight = 1f),
     TmColumn("Description", weight = 1.4f),
-    TmColumn("Stock", width = 64.dp, end = true),
+    TmColumn("Stock", width = 88.dp, end = true),
     TmColumn("Cost", width = 88.dp, end = true),
     TmColumn("Price", width = 88.dp, end = true)
 )
@@ -46,11 +46,15 @@ fun InventoryListPane(
                 when (column) {
                     0 -> Text(item.name, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     1 -> Text(item.description, style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    2 -> Text(
-                        text = item.stock.toString(),
-                        style = TmTheme.typography.numeric,
-                        color = if (item.stock <= 0) colors.danger.color else colors.text
-                    )
+                    2 -> if (item.stock == Int.MAX_VALUE) {
+                        Text("Not tracked", style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1)
+                    } else {
+                        Text(
+                            text = item.stock.toString(),
+                            style = TmTheme.typography.numeric,
+                            color = if (item.stock <= 0) colors.danger.color else colors.text
+                        )
+                    }
                     3 -> TmMoneyText(item.costCents, color = colors.textMuted)
                     4 -> TmMoneyText(item.priceCents)
                 }

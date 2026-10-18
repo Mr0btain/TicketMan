@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
@@ -216,7 +217,9 @@ class CounterTest {
         val overdue = addTicket(Ticket(promisedAt = now - 2.days.inWholeMilliseconds))
         val overdueButDone = addTicket(Ticket(status = TicketStatus(TicketStatusType.DONE), promisedAt = now - 2.days.inWholeMilliseconds))
         val later = addTicket(Ticket(promisedAt = now + 3.days.inWholeMilliseconds))
-        val pickedUp = addTicket(Ticket(status = TicketStatus(TicketStatusType.PICKED_UP)))
+        // Only the counter can close a ticket
+        val pickedUp = addTicket()
+        assertEquals(HttpStatusCode.OK, post("/api/counter/pickup", json.encodeToString(PickupRequest(pickedUp.identifier))).status)
 
         val queue = json.decodeFromString<CounterQueueResponse>(get("/api/counter/queue?recent=3").bodyAsText())
 
