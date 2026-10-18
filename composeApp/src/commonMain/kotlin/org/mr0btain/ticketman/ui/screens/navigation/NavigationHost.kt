@@ -69,17 +69,17 @@ fun NavigationHost(
         }
 
         composable(Destination.GALLERY.route) {
-            val darkMode = mainViewModel.darkMode.collectAsState()
+            val darkMode = mainViewModel.settings.darkMode.collectAsState()
 
             KitGallery(
-                palette = mainViewModel.palette.collectAsState().value,
-                onPaletteChange = mainViewModel::setPalette,
-                font = mainViewModel.font.collectAsState().value,
-                onFontChange = mainViewModel::setFont,
+                palette = mainViewModel.settings.palette.collectAsState().value,
+                onPaletteChange = mainViewModel.settings::setPalette,
+                font = mainViewModel.settings.font.collectAsState().value,
+                onFontChange = mainViewModel.settings::setFont,
                 darkTheme = darkMode.value,
-                onDarkThemeChange = { dark -> if (dark != darkMode.value) mainViewModel.toggleDarkMode() },
-                reduceTransparency = mainViewModel.reduceTransparency.collectAsState().value,
-                onReduceTransparencyChange = { mainViewModel.toggleReduceTransparency() }
+                onDarkThemeChange = { dark -> if (dark != darkMode.value) mainViewModel.settings.toggleDarkMode() },
+                reduceTransparency = mainViewModel.settings.reduceTransparency.collectAsState().value,
+                onReduceTransparencyChange = { mainViewModel.settings.toggleReduceTransparency() }
             )
         }
     }

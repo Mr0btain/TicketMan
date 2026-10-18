@@ -33,8 +33,8 @@ fun KioskShell(viewModel: MainViewModel) {
     val kiosk = viewModel.kiosk
     val locked by kiosk.locked.collectAsState()
     val staff by kiosk.staff.collectAsState()
-    val station by viewModel.station.collectAsState()
-    val currentUser by viewModel.currentUser.collectAsState()
+    val station by viewModel.session.station.collectAsState()
+    val currentUser by viewModel.session.currentUser.collectAsState()
     val spacing = TmTheme.spacing
 
     TmBackdrop(

@@ -37,7 +37,7 @@ fun CounterScreen(
     modifier: Modifier = Modifier
 ) {
     val counter = viewModel.counter
-    val loginState by viewModel.loginState.collectAsState()
+    val loginState by viewModel.session.loginState.collectAsState()
 
     val view by counter.view.collectAsState()
     val query by counter.query.collectAsState()
@@ -53,7 +53,7 @@ fun CounterScreen(
     val pickup by counter.pickup.collectAsState()
     val lastPickup by counter.lastPickup.collectAsState()
 
-    val canEdit = viewModel.canEdit.collectAsState().value
+    val canEdit = viewModel.session.canEdit.collectAsState().value
     val searchFocus = remember { FocusRequester() }
 
     // Keep the queue fresh while the counter is open
@@ -113,7 +113,7 @@ fun CounterScreen(
                 title = "Log in to use the counter",
                 message = "Check-ins, pickups and the queue show up once you're signed in.",
                 actionText = "Log in",
-                onAction = { viewModel.changeShowLogin(true) }
+                onAction = { viewModel.session.changeShowLogin(true) }
             )
             return@Box
         }

@@ -89,10 +89,24 @@ class MainViewModelPagerTest {
         viewModel.init()
         settle { pager.items.value.isNotEmpty() }
 
-        viewModel.setPageSize(viewModel.pageSize.value + 5)
+        viewModel.settings.setPageSize(viewModel.settings.pageSize.value + 5)
         settle { pager.items.value.isNotEmpty() && !pager.isRefreshing }
 
         assertSame(pager, viewModel.customerPager)
         assertEquals(customers.size, pager.items.value.size)
+    }
+
+    @Test
+    fun loggingOutDropsLoadedRecords() = runTest(dispatcher) {
+        val viewModel = MainViewModel(SnackbarHostState(), localStorage, engine)
+        val pager = viewModel.customerPager
+        viewModel.init()
+        settle { pager.items.value.isNotEmpty() }
+
+        viewModel.session.logout()
+        settle { pager.items.value.isEmpty() }
+
+        assertTrue(pager.items.value.isEmpty())
+        assertNull(viewModel.session.currentUser.value)
     }
 }

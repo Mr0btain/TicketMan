@@ -35,7 +35,7 @@ fun DashboardScreen(
 ) {
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
-    val loginState = viewModel.loginState.collectAsState()
+    val loginState = viewModel.session.loginState.collectAsState()
 
     // For customer panel
     val customerSeed = viewModel.customerSeed

@@ -72,7 +72,7 @@ class MainViewModelSelectionTest {
     fun theLastClickWinsEvenWhenAnEarlierOneFinishesLater() = runTest(dispatcher) {
         val viewModel = MainViewModel(SnackbarHostState(), localStorage, engine)
         viewModel.init()
-        settle { viewModel.serverConnected.value }
+        settle { viewModel.session.serverConnected.value }
 
         viewModel.setSelectedCustomer(slow.identifier)
         assertEquals(slow.identifier, viewModel.customerSelection.pending.value)

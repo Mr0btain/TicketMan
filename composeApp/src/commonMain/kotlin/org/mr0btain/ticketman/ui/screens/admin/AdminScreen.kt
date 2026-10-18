@@ -57,7 +57,7 @@ fun AdminScreen(
     coroutineScope: CoroutineScope,
     onNavigateToMain: () -> Unit
 ) {
-    val isAdmin by viewModel.isAdmin.collectAsState()
+    val isAdmin by viewModel.session.isAdmin.collectAsState()
 
     if (isAdmin) {
         AdminContent(viewModel, onNavigateToMain)
@@ -90,8 +90,8 @@ private fun AdminContent(
     val shopProfile by admin.shopProfile.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
     val auditEndReached by admin.auditEndReached.collectAsState()
-    val serverUrl by viewModel.serverUrl.collectAsState()
-    val currentUser by viewModel.currentUser.collectAsState()
+    val serverUrl by viewModel.settings.serverUrl.collectAsState()
+    val currentUser by viewModel.session.currentUser.collectAsState()
 
     // Users list uses the same pager as everywhere else
     val userSeed = viewModel.userSeed
@@ -299,7 +299,7 @@ private fun AdminContent(
 
 @Composable
 private fun NotAdminMessage(viewModel: MainViewModel) {
-    val loginState by viewModel.loginState.collectAsState()
+    val loginState by viewModel.session.loginState.collectAsState()
     val loggedIn = loginState == LoginState.LOGGED_IN
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -308,7 +308,7 @@ private fun NotAdminMessage(viewModel: MainViewModel) {
             title = "Admin access required",
             message = if (loggedIn) "Your account doesn't have admin access." else "Log in with an admin account to use this screen.",
             actionText = if (loggedIn) null else "Log in",
-            onAction = { if (loginState != LoginState.LOADING) viewModel.changeShowLogin(true) }
+            onAction = { if (loginState != LoginState.LOADING) viewModel.session.changeShowLogin(true) }
         )
     }
 }

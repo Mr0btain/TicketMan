@@ -54,10 +54,10 @@ fun App() {
     val mainScope = rememberCoroutineScope()
 
     // Should we show login popup or not
-    val shouldShowLogin = mainViewModel.showLogin.collectAsState()
+    val shouldShowLogin = mainViewModel.session.showLogin.collectAsState()
 
     // First login setup that has to be finished
-    val accountSetup = mainViewModel.accountSetup.collectAsState()
+    val accountSetup = mainViewModel.session.accountSetup.collectAsState()
 
     // Approved stations with kiosk mode show only the counter, signed into by PIN
     val kioskActive = mainViewModel.kiosk.active.collectAsState()
@@ -65,8 +65,8 @@ fun App() {
     val initialDestination = Destination.DASHBOARD
 
     // Admin screen is only listed for admins
-    val isAdmin = mainViewModel.isAdmin.collectAsState()
-    val currentUser = mainViewModel.currentUser.collectAsState()
+    val isAdmin = mainViewModel.session.isAdmin.collectAsState()
+    val currentUser = mainViewModel.session.currentUser.collectAsState()
 
     val isDebug = remember { BuildConfigImpl().isDebug() }
 
@@ -86,10 +86,10 @@ fun App() {
     // Photos anywhere below can upload and load through the server
     CompositionLocalProvider(LocalImageClient provides mainViewModel.imageClient) {
         TmTheme(
-            palette = mainViewModel.palette.collectAsState().value,
-            font = mainViewModel.font.collectAsState().value,
-            darkTheme = mainViewModel.darkMode.collectAsState().value,
-            reduceTransparency = mainViewModel.reduceTransparency.collectAsState().value
+            palette = mainViewModel.settings.palette.collectAsState().value,
+            font = mainViewModel.settings.font.collectAsState().value,
+            darkTheme = mainViewModel.settings.darkMode.collectAsState().value,
+            reduceTransparency = mainViewModel.settings.reduceTransparency.collectAsState().value
         ) {
             println("Platform: ${getPlatform().name}")
 
@@ -102,16 +102,16 @@ fun App() {
                 AccountSetupDialog(
                     setup = setup,
                     onFinish = { name, email, phone, password, pin, onResult ->
-                        mainViewModel.completeAccountSetup(name, email, phone, password, pin, onResult)
+                        mainViewModel.session.completeAccountSetup(name, email, phone, password, pin, onResult)
                     },
-                    onCancel = { mainViewModel.cancelAccountSetup() }
+                    onCancel = { mainViewModel.session.cancelAccountSetup() }
                 )
             }
 
             if (shouldShowLogin.value) {
                 LoginPopup(
                     viewModel = mainViewModel,
-                    onDismiss = { mainViewModel.changeShowLogin(false) }
+                    onDismiss = { mainViewModel.session.changeShowLogin(false) }
                 )
             }
 
@@ -135,8 +135,8 @@ fun App() {
                     destinations = navDestination,
                     snackBarState = snackBarHostState,
                     user = currentUser.value,
-                    onLogin = { mainViewModel.changeShowLogin(true) },
-                    onLogout = { mainViewModel.logout() },
+                    onLogin = { mainViewModel.session.changeShowLogin(true) },
+                    onLogout = { mainViewModel.session.logout() },
                     onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
                 ) { host() }
             } else {

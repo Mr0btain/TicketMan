@@ -7,11 +7,7 @@ import io.ktor.client.engine.HttpClientEngine
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.data.customer.CustomerCache
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
@@ -25,7 +21,6 @@ import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
 import org.mr0btain.ticketman.components.data.user.UserCache
 import org.mr0btain.ticketman.components.data.user.UserSeed
-import org.mr0btain.ticketman.components.network.ConnectionResult
 import org.mr0btain.ticketman.components.image.ImageClient
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.database.RemoteRepository
@@ -33,31 +28,22 @@ import org.mr0btain.ticketman.components.network.getHttpEngine
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.ui.kit.theme.TmFont
-import org.mr0btain.ticketman.ui.kit.theme.TmFonts
-import org.mr0btain.ticketman.ui.kit.theme.TmPalette
-import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
 import org.mr0btain.ticketman.ui.screens.kiosk.components.KioskHandler
-import org.mr0btain.ticketman.components.network.user.LoginOutcome
-import org.mr0btain.ticketman.server.request.AccountRequest
-import org.mr0btain.ticketman.server.request.AccountSetupRequest
-import org.mr0btain.ticketman.server.request.InviteSetupRequest
-import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
-import org.mr0btain.ticketman.ui.screens.login.components.LoginState
+import org.mr0btain.ticketman.ui.screens.login.components.SessionHandler
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 import kotlin.uuid.Uuid
 
 /**
  * Main View model for the project.
- * Used to store data that needs to persist for the lifetime of the app
+ * Used to store data that needs to persist for the lifetime of the app. Each part of the app has its own
+ * handler here, this wires them together
  */
 
 @Suppress("PrivatePropertyName")
@@ -78,34 +64,17 @@ class MainViewModel(
         viewModelScope.launch {
             remoteHandler.authExpired.collect {
                 // A kiosk goes back to its PIN screen instead of asking for a password
-                if (kiosk.active.value) {
-                    kiosk.lock()
-                } else {
-                    _loginState.value = LoginState.LOGGED_OUT
-                    _currentUser.value = null
-                    _showLogin.value = true
-                }
+                if (kiosk.active.value) kiosk.lock() else session.expired()
             }
         }
 
         viewModelScope.launch {
-            // Pull saved settings
-            // TODO: Maybe we could move this to a handler or something as its getting kind of large
-            _darkMode.value = localStorage.darkMode
-            _palette.value = TmPalettes.byId(localStorage.themeId)
-            _font.value = TmFonts.byId(localStorage.fontId)
-            _reduceTransparency.value = localStorage.reduceTransparency
+            settings.load()
             _ticketScope.value = TicketScope.byName(localStorage.ticketScope)
-            _serverUrl.value = localStorage.serverUrl
-            _rememberLogin.value = localStorage.rememberLogin
-            _defaultTab.value = localStorage.defaultTab
-            _pageSize.value = localStorage.pageSize
-            _searchLimit.value = localStorage.searchLimit
-            _cacheSize.value = localStorage.cacheSize
             _selectedMainTabIndex.value = localStorage.defaultTab
 
             // Set url in all our handlers and log in with any stored credentials
-            handleConnectionResult(remoteHandler.setUrl(localStorage.serverUrl))
+            session.connect(localStorage.serverUrl)
 
             // Pagers don't load themselves, so do the first load now that we're connected
             refreshPagers()
@@ -113,9 +82,6 @@ class MainViewModel(
     }
 
     /** ----------------------------------------------OPERATIONS------------------------------------------------------------------- */
-
-    // Whether we should log exposed transactions or not
-    val shouldLog = false
 
     // Max size of cache. Caches are built with the view model, so changes apply on next start
     val maxCacheSize = localStorage.cacheSize
@@ -133,6 +99,27 @@ class MainViewModel(
         }
     }
 
+    /** Loaded pages were fetched with the old size, so reload them with the new one */
+    private fun changePageSize(size: Int) {
+        customerPager.setPageSize(size)
+        ticketPager.setPageSize(size)
+        inventoryPager.setPageSize(size)
+        userPager.setPageSize(size)
+        refreshPagers()
+    }
+
+    /** Drops every loaded record, for when whoever loaded them is gone */
+    private fun clearRecords() {
+        clearSelectedCustomer()
+        clearSelectedTicket()
+        clearSelectedInventory()
+        clearSelectedUser()
+        customerPager.clear()
+        ticketPager.clear()
+        inventoryPager.clear()
+        userPager.clear()
+    }
+
     /** ----------------------------------------------REMOTE------------------------------------------------------------------- */
 
     val remoteHandler = RemoteHandler(
@@ -142,6 +129,27 @@ class MainViewModel(
 
     /** Uploads photos and finds where they're fetched from, handed to screens through LocalImageClient */
     val imageClient = ImageClient(remoteHandler.imageRepo, remoteHandler.httpClient)
+
+    /** ----------------------------------------------SESSION------------------------------------------------------------------- */
+
+    val session: SessionHandler = SessionHandler(
+        remoteHandler = remoteHandler,
+        localStorage = localStorage,
+        scope = viewModelScope,
+        onLoggedIn = { refreshPagers() },
+        onLoggedOut = {
+            admin.clear()
+            counter.clear()
+            clearRecords()
+        }
+    )
+
+    val settings: SettingsHandler = SettingsHandler(
+        localStorage = localStorage,
+        scope = viewModelScope,
+        onServerUrlChanged = { url -> session.changeServer(url) },
+        onPageSizeChanged = { size -> changePageSize(size) }
+    )
 
     /** ----------------------------------------------CUSTOMER------------------------------------------------------------------- */
 
@@ -260,7 +268,7 @@ class MainViewModel(
             ?: remoteHandler.customerRepo.get(identifier)
 
     suspend fun searchCustomers(query: String) = coroutineScope {
-        remoteHandler.customerRepo.search(query, _searchLimit.value)
+        remoteHandler.customerRepo.search(query, settings.searchLimit.value)
     }
 
     fun removeCustomer(identifier: Uuid) {
@@ -390,7 +398,7 @@ class MainViewModel(
     }
 
     suspend fun searchTickets(query: String) = coroutineScope {
-        remoteHandler.ticketRepo.search(query, _searchLimit.value)
+        remoteHandler.ticketRepo.search(query, settings.searchLimit.value)
     }
 
     fun removeTicket(identifier: Uuid) {
@@ -483,7 +491,7 @@ class MainViewModel(
     }
 
     suspend fun searchInventory(query: String) = coroutineScope {
-        remoteHandler.inventoryRepo.search(query, _searchLimit.value)
+        remoteHandler.inventoryRepo.search(query, settings.searchLimit.value)
     }
 
     fun removeInventory(identifier: Uuid) {
@@ -543,7 +551,7 @@ class MainViewModel(
     }
 
     suspend fun searchUsers(query: String) = coroutineScope {
-        remoteHandler.userRepo.search(query, _searchLimit.value)
+        remoteHandler.userRepo.search(query, settings.searchLimit.value)
     }
 
     /** Drops stale copies of a changed user and reloads the list, [identifier] is null when the user is gone */
@@ -554,7 +562,7 @@ class MainViewModel(
                 if (userSeed.identifier == identifier) setSelectedUser(identifier, force = true)
 
                 // Admins can edit themselves, keep what we show for the current user in step
-                if (identifier == _currentUser.value?.identifier) loadCurrentUser()
+                if (identifier == session.currentUser.value?.identifier) session.reloadCurrentUser()
             } else {
                 clearSelectedUser()
             }
@@ -565,20 +573,31 @@ class MainViewModel(
 
     /** ----------------------------------------------COUNTER------------------------------------------------------------------- */
 
-    val counter = CounterHandler(
+    val counter: CounterHandler = CounterHandler(
         remoteHandler = remoteHandler,
         scope = viewModelScope,
         snackBarHost = snackBarHost,
-        canEdit = { _currentUser.value?.canAccess(AccessLevel.NORMAL) == true }
+        canEdit = { session.canEditNow() }
     )
 
     /** ----------------------------------------------ADMIN------------------------------------------------------------------- */
 
-    val admin = AdminHandler(
+    val admin: AdminHandler = AdminHandler(
         remoteHandler = remoteHandler,
         scope = viewModelScope,
         snackBarHost = snackBarHost,
         onUsersChanged = { identifier -> onUsersChanged(identifier) }
+    )
+
+    /** ----------------------------------------------KIOSK------------------------------------------------------------------- */
+
+    val kiosk: KioskHandler = KioskHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        station = session.station,
+        onSignedIn = { session.signedIn() },
+        onSignedOut = { session.signedOut() },
+        isAdmin = { session.isAdminNow() }
     )
 
     /** ----------------------------------------------UI------------------------------------------------------------------- */
@@ -591,393 +610,4 @@ class MainViewModel(
     fun changeMainTabIndex(update: Int) {
         _selectedMainTabIndex.value = update
     }
-
-    private val _showLogin: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val showLogin = _showLogin.asStateFlow()
-
-    /** Update whether we should show the login popup or not*/
-    fun changeShowLogin(value: Boolean) {
-        _showLogin.value = value
-    }
-
-    /** ----------------------------------------------LOGIN------------------------------------------------------------------- */
-
-    private val _loginState: MutableStateFlow<LoginState> = MutableStateFlow(LoginState.LOGGED_OUT)
-    val loginState = _loginState.asStateFlow()
-
-    // Who is logged in, null when logged out
-    private val _currentUser: MutableStateFlow<User?> = MutableStateFlow(null)
-    val currentUser = _currentUser.asStateFlow()
-
-    /** Whether the logged in user can change things, restricted users can only look. The server checks this too */
-    val canEdit: StateFlow<Boolean> = _currentUser
-        .map { user -> user?.canAccess(AccessLevel.NORMAL) == true }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    /** Whether the logged in user can use the admin screen. The server checks this too, this just hides things */
-    val isAdmin: StateFlow<Boolean> = _currentUser
-        .map { user -> user?.canAccess(AccessLevel.ADMIN) == true }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
-
-    private suspend fun loadCurrentUser() {
-        val user = remoteHandler.userRepo.getMe()
-        _currentUser.value = user
-
-        // Approved but not set up yet, they have to finish before anything else
-        if (user?.needsSetup == true) _accountSetup.value = AccountSetup.Approved(user)
-    }
-
-    // Shown on the login form, like when an account is still waiting for approval
-    private val _loginMessage: MutableStateFlow<String?> = MutableStateFlow(null)
-    val loginMessage = _loginMessage.asStateFlow()
-
-    // First login setup waiting to be finished, null when there isn't one
-    private val _accountSetup: MutableStateFlow<AccountSetup?> = MutableStateFlow(null)
-    val accountSetup = _accountSetup.asStateFlow()
-
-    /**
-     * Asks for an account from the login screen
-     * @param onResult Gets null when it went through, otherwise what went wrong
-     */
-    fun requestAccount(request: AccountRequest, onResult: (String?) -> Unit) {
-        viewModelScope.launch {
-            when (val result = remoteHandler.userClient.requestAccount(request)) {
-                is Result.Success -> {
-                    _loginMessage.value = "Request sent. An admin has to approve it before you can log in."
-                    onResult(null)
-                }
-
-                is Result.Error -> onResult(result.error.message)
-            }
-        }
-    }
-
-    /**
-     * Finishes whichever setup is waiting
-     * @param password Required for invites, optional for approved requests
-     * @param onResult Gets null when it went through, otherwise what went wrong
-     */
-    fun completeAccountSetup(name: String, email: String, phone: String, password: String, pin: String, onResult: (String?) -> Unit) {
-        val setup = _accountSetup.value ?: return
-
-        viewModelScope.launch {
-            val result = when (setup) {
-                is AccountSetup.Approved -> remoteHandler.userRepo.completeSetup(
-                    AccountSetupRequest(name = name, email = email, phone = phone, password = password, pin = pin)
-                )
-
-                is AccountSetup.Invite -> remoteHandler.completeInviteSetup(
-                    setup.username,
-                    InviteSetupRequest(setup.setupToken, password = password, name = name, email = email, phone = phone, pin = pin)
-                )
-            }
-
-            when (result) {
-                is Result.Success -> {
-                    _accountSetup.value = null
-                    _loginState.value = LoginState.LOGGED_IN
-                    _loginMessage.value = null
-                    loadCurrentUser()
-                    refreshPagers()
-                    onResult(null)
-                }
-
-                is Result.Error -> onResult(result.error.message)
-            }
-        }
-    }
-
-    /**
-     * Changes your own station PIN
-     * @param onResult Gets null when it went through, otherwise what went wrong
-     */
-    fun changePin(currentPassword: String, pin: String, onResult: (String?) -> Unit) {
-        viewModelScope.launch {
-            when (val result = remoteHandler.userRepo.setOwnPin(currentPassword, pin)) {
-                is Result.Success -> {
-                    loadCurrentUser()
-                    onResult(null)
-                }
-
-                is Result.Error -> onResult(result.error.message)
-            }
-        }
-    }
-
-    /** ----------------------------------------------STATION------------------------------------------------------------------- */
-
-    // This device's station record, null when it isn't one
-    private val _station: MutableStateFlow<Station?> = MutableStateFlow(null)
-    val station = _station.asStateFlow()
-
-    val kiosk = KioskHandler(
-        remoteHandler = remoteHandler,
-        scope = viewModelScope,
-        station = station,
-        onSignedIn = {
-            _loginState.value = LoginState.LOGGED_IN
-            loadCurrentUser()
-            refreshPagers()
-        },
-        onSignedOut = {
-            _loginState.value = LoginState.LOGGED_OUT
-            _currentUser.value = null
-            counter.clear()
-            admin.clear()
-        },
-        isAdmin = { _currentUser.value?.canAccess(AccessLevel.ADMIN) == true }
-    )
-
-    /** Asks the server about this device's station, forgetting the credentials if the server no longer has it */
-    fun refreshStation() {
-        val credentials = localStorage.stationCredentials ?: run {
-            _station.value = null
-            return
-        }
-
-        viewModelScope.launch {
-            _station.value = remoteHandler.userClient.stationStatus(credentials)
-        }
-    }
-
-    /**
-     * Registers this device as a station, which an admin then approves
-     * @param onResult Gets null when it went through, otherwise what went wrong
-     */
-    fun registerStation(name: String, onResult: (String?) -> Unit) {
-        viewModelScope.launch {
-            when (val result = remoteHandler.adminRepo.registerStation(localStorage.deviceId, name.trim())) {
-                is Result.Success -> {
-                    localStorage.stationCredentials = result.data.credentials
-                    _station.value = result.data.station
-                    onResult(null)
-                }
-
-                is Result.Error -> onResult(result.error.message)
-            }
-        }
-    }
-
-    /** Backs out of setup, logging out if they were logged in for it */
-    fun cancelAccountSetup() {
-        val setup = _accountSetup.value
-        _accountSetup.value = null
-
-        if (setup is AccountSetup.Approved) logout()
-    }
-
-    // Whether the server at the current url could be reached
-    private val _serverConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val serverConnected = _serverConnected.asStateFlow()
-
-    /** Username saved from the last login, blank unless remember login is on */
-    val savedUsername: String
-        get() = localStorage.username
-
-    /** Logs in with the given credentials. Credentials are only saved if remember login is on */
-    fun login(user: String, pass: String) {
-        if (user.isBlank() || pass.isBlank()) {
-            _loginState.value = LoginState.FAILED
-            return
-        }
-
-        _loginState.value = LoginState.LOADING
-
-        viewModelScope.launch {
-            _loginMessage.value = null
-
-            when (val outcome = remoteHandler.login(user.trim(), pass)) {
-                is LoginOutcome.LoggedIn -> {
-                    _loginState.value = LoginState.LOGGED_IN
-                    _showLogin.value = false
-                    loadCurrentUser()
-                    if (!outcome.needsSetup) refreshPagers()
-                }
-
-                LoginOutcome.PendingApproval -> {
-                    _loginState.value = LoginState.LOGGED_OUT
-                    _loginMessage.value = "Your account is waiting for an admin to approve it."
-                }
-
-                is LoginOutcome.InviteSetup -> {
-                    _loginState.value = LoginState.LOGGED_OUT
-                    _showLogin.value = false
-                    _accountSetup.value = AccountSetup.Invite(outcome.username, outcome.setupToken)
-                }
-
-                LoginOutcome.Failed -> {
-                    _loginState.value = LoginState.FAILED
-                    _loginMessage.value = "Wrong username, password or setup code."
-                }
-            }
-        }
-    }
-
-    /** Ends the session and clears out any loaded data */
-    fun logout() {
-        viewModelScope.launch {
-            remoteHandler.logout()
-            _loginState.value = LoginState.LOGGED_OUT
-            _currentUser.value = null
-            admin.clear()
-            counter.clear()
-
-            // Drop anything pulled while logged in
-            clearSelectedCustomer()
-            clearSelectedTicket()
-            clearSelectedInventory()
-            clearSelectedUser()
-            customerPager.clear()
-            ticketPager.clear()
-            inventoryPager.clear()
-            userPager.clear()
-        }
-    }
-
-    private suspend fun handleConnectionResult(result: ConnectionResult) {
-        _serverConnected.value = result != ConnectionResult.UNREACHABLE
-
-        if (result == ConnectionResult.LOGGED_IN) {
-            _loginState.value = LoginState.LOGGED_IN
-            _showLogin.value = false
-            loadCurrentUser()
-        } else {
-            _loginState.value = LoginState.LOGGED_OUT
-            _currentUser.value = null
-        }
-
-        // Station status only needs a reachable server, not a login
-        if (result != ConnectionResult.UNREACHABLE) refreshStation()
-    }
-
-    /** ----------------------------------------------SETTINGS------------------------------------------------------------------- */
-
-    private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(LocalStorage.DEFAULT_DARK_MODE)
-    val darkMode = _darkMode.asStateFlow()
-
-    private val _palette: MutableStateFlow<TmPalette> = MutableStateFlow(TmPalettes.default)
-    val palette = _palette.asStateFlow()
-
-    private val _font: MutableStateFlow<TmFont> = MutableStateFlow(TmFonts.default)
-    val font = _font.asStateFlow()
-
-    private val _reduceTransparency: MutableStateFlow<Boolean> = MutableStateFlow(false)
-    val reduceTransparency = _reduceTransparency.asStateFlow()
-
-    private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
-    val serverUrl = _serverUrl.asStateFlow()
-
-    private val _rememberLogin: MutableStateFlow<Boolean> = MutableStateFlow(LocalStorage.DEFAULT_REMEMBER_LOGIN)
-    val rememberLogin = _rememberLogin.asStateFlow()
-
-    private val _defaultTab: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_TAB)
-    val defaultTab = _defaultTab.asStateFlow()
-
-    private val _pageSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_PAGE_SIZE)
-    val pageSize = _pageSize.asStateFlow()
-
-    private val _searchLimit: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_SEARCH_LIMIT)
-    val searchLimit = _searchLimit.asStateFlow()
-
-    private val _cacheSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_CACHE_SIZE)
-    val cacheSize = _cacheSize.asStateFlow()
-
-    // Name shown to admins in the session list, sent at login
-    private val _deviceName: MutableStateFlow<String> = MutableStateFlow(localStorage.deviceName)
-    val deviceName = _deviceName.asStateFlow()
-
-    /** Takes effect on the next login */
-    fun setDeviceName(name: String) {
-        localStorage.deviceName = name
-        _deviceName.value = localStorage.deviceName
-    }
-
-    fun toggleDarkMode() {
-        val value = !_darkMode.value
-        _darkMode.value = value
-        localStorage.darkMode = value
-    }
-
-    fun setPalette(palette: TmPalette) {
-        _palette.value = palette
-        localStorage.themeId = palette.id
-    }
-
-    fun setFont(font: TmFont) {
-        _font.value = font
-        localStorage.fontId = font.id
-    }
-
-    fun toggleReduceTransparency() {
-        val value = !_reduceTransparency.value
-        _reduceTransparency.value = value
-        localStorage.reduceTransparency = value
-    }
-
-    fun setServerUrl(url: String) {
-        _serverUrl.value = url
-        localStorage.serverUrl = url
-
-        _loginState.value = LoginState.LOADING
-
-        viewModelScope.launch {
-            handleConnectionResult(remoteHandler.setUrl(url))
-            // Reload lists from the new server
-            refreshPagers()
-        }
-    }
-
-    fun toggleRememberLogin() {
-        val value = !_rememberLogin.value
-        _rememberLogin.value = value
-        localStorage.rememberLogin = value
-
-        // Forget anything we've already stored
-        if (!value) {
-            viewModelScope.launch { localStorage.clearCredentials() }
-        }
-    }
-
-    /** Sets which main tab is shown on start, wraps around past the last tab */
-    fun setDefaultTab(index: Int) {
-        val value = index.mod(MAIN_TAB_COUNT)
-        _defaultTab.value = value
-        localStorage.defaultTab = value
-    }
-
-    fun setPageSize(size: Int) {
-        val value = size.coerceIn(PAGE_SIZE_RANGE)
-        _pageSize.value = value
-        localStorage.pageSize = value
-
-        // Loaded pages were fetched with the old size, so reload them with the new one
-        customerPager.setPageSize(value)
-        ticketPager.setPageSize(value)
-        inventoryPager.setPageSize(value)
-        userPager.setPageSize(value)
-        refreshPagers()
-    }
-
-    fun setSearchLimit(limit: Int) {
-        val value = limit.coerceIn(SEARCH_LIMIT_RANGE)
-        _searchLimit.value = value
-        localStorage.searchLimit = value
-    }
-
-    /** Cache size is only read when the view model is built, so this applies on next start */
-    fun setCacheSize(size: Int) {
-        val value = size.coerceIn(CACHE_SIZE_RANGE)
-        _cacheSize.value = value
-        localStorage.cacheSize = value
-    }
-
-    /** ----------------------------------------------TESTING------------------------------------------------------------------- */
-
-    companion object {
-        const val MAIN_TAB_COUNT = 3
-        val PAGE_SIZE_RANGE = 5..100
-        val SEARCH_LIMIT_RANGE = 1..100
-        val CACHE_SIZE_RANGE = 1..200
-    }
-
 }
