@@ -12,7 +12,6 @@ import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.ui.kit.gallery.KitGallery
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
-import org.mr0btain.ticketman.ui.screens.invoice.InvoiceScreen
 import org.mr0btain.ticketman.ui.screens.records.RecordsScreen
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
@@ -36,23 +35,17 @@ fun NavigationHost(
                 viewModel = mainViewModel,
                 snackBarState = snackBarState,
                 coroutineScope = coroutineScope,
-                onNavigateToMain = { navHostController.navigate(Destination.RECORDS.route) }
+                onNavigateToMain = { navHostController.navigateTo(Destination.RECORDS.route) },
+                onOpenTicketAtCounter = { identifier ->
+                    mainViewModel.counter.openTicket(identifier)
+                    navHostController.navigateTo(Destination.COUNTER.route)
+                }
             )
         }
 
         composable(Destination.COUNTER.route) {
             CounterScreen(
                 viewModel = mainViewModel
-            )
-        }
-
-        composable(Destination.INVOICE.route) {
-            InvoiceScreen(
-                viewModel = mainViewModel,
-                onOpenTicket = { identifier ->
-                    mainViewModel.counter.openTicket(identifier)
-                    navHostController.navigate(Destination.COUNTER.route)
-                }
             )
         }
 

@@ -18,8 +18,9 @@ Everything is driven by
 | `LoginPopup` | `session.showLogin` | Logged in, or dismissed |
 | `ServerTrustDialog` | `session.untrustedCertificate` is set | Trusted or refused |
 
-The login dialog opens from the Log in button at the foot of the nav rail, the counter and admin screens' empty
-states, and on its own when a session can't be refreshed (`SessionHandler.expired()`).
+The login dialog opens from the Log in button at the foot of the nav rail, the Account panel in Settings (the
+only one on phones), the Log in button on the records screen and the counter and admin screens' empty states,
+and on its own when a session can't be refreshed (`SessionHandler.expired()`).
 
 ### The login dialog
 

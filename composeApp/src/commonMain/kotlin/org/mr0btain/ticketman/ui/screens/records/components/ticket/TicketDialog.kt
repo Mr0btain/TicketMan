@@ -36,7 +36,7 @@ import ticketman.composeapp.generated.resources.plus
 // TODO: Add ability to trigger new customer
 /**
  * Adds or edits a ticket. Changes go straight onto [seed]
- * @param onContinue Saves the seed
+ * @param onContinue Saves the seed and closes the dialog. Cancelling goes through onDismiss, which reloads the record
  */
 @Composable
 fun TicketDialog(

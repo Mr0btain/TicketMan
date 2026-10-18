@@ -11,6 +11,8 @@ import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerLoader
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.images.TmImageView
@@ -26,6 +28,7 @@ import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryP
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketPanel
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.log_in
 import ticketman.composeapp.generated.resources.refresh_cw
 import kotlin.uuid.Uuid
 
@@ -111,14 +114,20 @@ fun RecordsScreen(
             // Reset seed data
             viewModel.customers.select(customerSeed.identifier)
         },
-        onContinue = { viewModel.customers.save() }
+        onContinue = {
+            viewModel.customers.save()
+            showCustomerDialog = false
+        }
     )
 
     // For ticket adding or editing
     TicketDialog(
         seed = ticketSeed,
         isVisible = showTicketDialog,
-        onContinue = { viewModel.tickets.save() },
+        onContinue = {
+            viewModel.tickets.save()
+            showTicketDialog = false
+        },
         onDismiss = {
             showTicketDialog = false
 
@@ -155,10 +164,8 @@ fun RecordsScreen(
                 DataType.CUSTOMER -> viewModel.customers.remove(customerSeed.identifier)
                 DataType.TICKET -> viewModel.tickets.remove(ticketSeed.identifier)
                 DataType.INVENTORY -> viewModel.inventory.remove(inventorySeed.identifier)
-                DataType.USER -> TODO("Only admins can edit or remove users. Not sure what we could do here")
-                else -> {
-                    // Do Nothing
-                }
+                // Users are deleted from the admin screen, nothing here asks to delete one
+                else -> Unit
             }
 
             dataType = DataType.NONE
@@ -200,10 +207,19 @@ fun RecordsScreen(
         }
 
         if (loginState.value != LoginState.LOGGED_IN) {
-            TmNotice(
-                kind = TmNoticeKind.INFO,
-                text = "You're not logged in, so these lists can't load. Log in from the bottom of the sidebar."
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                TmNotice(
+                    modifier = Modifier.weight(1f),
+                    kind = TmNoticeKind.INFO,
+                    text = "You're not logged in, so these lists can't load."
+                )
+                TmButton(
+                    text = "Log in",
+                    onClick = { viewModel.session.changeShowLogin(true) },
+                    variant = TmButtonVariant.SECONDARY,
+                    leadingIcon = Res.drawable.log_in
+                )
+            }
         }
 
         when (tabIndex.value) {

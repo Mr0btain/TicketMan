@@ -1,0 +1,257 @@
+# Fix plan
+
+Everything the docs found that should change, gathered from every page's **Known gaps** and **Gotchas**, the
+`TODO` comments in the code, and issues found while writing the docs. Grouped into phases, roughly in the order
+they're worth doing: bugs people will hit first, then security, data, API cleanup, the client, code health and
+platforms.
+
+Tick an item when it's merged. When one is done, also fix the doc page it came from (its **Source**), usually by
+taking it out of that page's Known gaps. Things that aren't problems, just rules to follow, are in
+[Rules to keep](#rules-to-keep) at the end, not in the phases.
+
+Each phase is sized for a PR or two. Items marked **(decide)** need a choice made before the work; the item says
+what the options are.
+
+## Phase 1: Bugs people will hit
+
+Small, user visible, no design questions.
+
+- [x] **Phones can't log out, and logging in is hard to find.** `PhoneAppShell` has no account controls. Add the
+      user menu (or log in button) to the phone layout, or a Log in / Log out row at the top of Settings. *Done:*
+      an Account panel at the top of Settings (`AccountPanel`).
+      *Source:* [navigation](ui/screens/navigation.md#known-gaps), [settings](ui/screens/settings.md#known-gaps)
+- [x] **Wrong login hint on phones.** The records screen says "Log in from the bottom of the sidebar". Word it for
+      both layouts, or point at whatever the item above adds. *Source:* [records](ui/screens/records.md#known-gaps)
+- [x] **Failed deletes go unreported.** `CustomerRecords`, `TicketRecords` and `InventoryRecords` `remove()` ignore
+      the server's answer and clear the selection first, so a refused or failed delete looks like it worked until
+      the list reloads. Show a snackbar on failure, and only clear the selection once the server says yes.
+      *Source:* found while writing the KDoc
+- [x] **`InvoiceScreen` can't be reached.** It's registered in `NavigationHost` but nothing links to it. Add an
+      Invoices item to the nav (or a tab on the admin screen), or delete the screen. **(decide)**
+      *Source:* [navigation](ui/screens/navigation.md#known-gaps)
+- [x] **A crash waiting to happen.** `RecordsScreen`'s delete dialog has `DataType.USER -> TODO(...)`. Replace it with
+      a no-op branch (users are deleted on the admin screen). *Source:* [records](ui/screens/records.md#known-gaps)
+- [x] **Cancelling a dialog on a record deleted elsewhere.** Cancel reloads the record, which fails if another device
+      deleted it meanwhile. Clear the selection and refresh the list when the reload finds nothing.
+      *Source:* [client records](client/records.md#gotchas)
+- [x] **The low stock threshold isn't saved.** It goes back to 5 on restart. Save it in `LocalStorage` like the
+      other settings. *Source:* [admin](ui/screens/admin.md#known-gaps)
+- [x] **Admin links stack screens.** `AdminScreen` uses `navigate()` instead of `navigateTo()`, so each link adds to
+      the back stack. *Source:* [navigation](ui/screens/navigation.md#gotchas)
+- [x] **Ticket dialog stays open after Save**, while the customer and inventory dialogs close. Pick one behaviour
+      for all three. **Decided:** all three close on Save. *Source:* [records](ui/screens/records.md#dialogs)
+
+## Phase 2: Security and accounts
+
+- [ ] **`/set/user` takes any user as a technician**, even Restricted or deactivated ones. Apply check-in's rule
+      (active, Normal access or higher). *Source:* [ticket API](api/ticket.md#known-gaps)
+- [ ] **Password and username rules aren't applied everywhere.** `POST /api/user/add` and `/password/{id}` don't
+      check the 8 character minimum, and `/update` doesn't check `UsernameRules`.
+      *Source:* [users and accounts](server/users-and-accounts.md#known-gaps)
+- [ ] **Remove unused routes and code** that skip the usual checks:
+  - `POST /api/user/add/all` (no username rules, no taken check; nothing calls it),
+  - `POST /api/auth/user` and `ServerUserClient.checkLoginCredentials` (nothing calls it any more; `auth.md`
+    wrongly says the client does),
+  - `Database.removeImage(id)` (doesn't check the owner; nothing calls it).
+
+  Update `docs/api/` and run `check_api_docs.py`. *Source:* [user API](api/user.md#gotchas),
+  [auth](server/auth.md#gotchas), [database](server/database.md#gotchas)
+- [ ] **Pending photos can be fetched by anyone logged in** who knows the id. Only serve a `PENDING` photo to the user
+      who uploaded it. *Source:* [photos](server/photos.md#gotchas)
+- [ ] **The default `SECRET` is public.** Refuse to start outside development mode when `SECRET` isn't set (it
+      only logs an error now), or make and keep a random one in the data folder like the certificate. **(decide)**
+      *Source:* [auth](server/auth.md#known-gaps), [configuration](configuration.md)
+- [ ] **Expired sessions are never removed.** `TokenTable` keeps a row per login until someone logs it out, even
+      after the refresh token has expired. Delete expired sessions in the hourly sweep or on start, and drop the
+      `TODO` in `Application.kt`. *Source:* found while checking the TODOs
+- [ ] **Refresh tokens aren't rotated.** Issue a new refresh token on each refresh and refuse the old one, so a
+      stolen one stops working once the real device refreshes. The client already stores what it's given.
+      *Source:* [auth](server/auth.md#known-gaps), [decisions](decisions.md#refresh-tokens-last-a-year-and-arent-rotated)
+- [ ] **The backup download link is a bearer credential** for 30 minutes and lands in browser history. Make it
+      single use, or shorten its life once the download has started. *Source:* [backup](server/backup-restore.md#gotchas)
+- [ ] **Kiosk exit and idle lock are client only.** Tell the server when a kiosk is left, and give PIN sessions a
+      server side idle expiry (say, the station's idle timeout plus a margin) so a switched off kiosk doesn't leave
+      someone signed in for 12 hours. *Source:* [PINs and stations](server/pins-and-stations.md#known-gaps),
+      [kiosk](ui/screens/kiosk.md#known-gaps)
+- [ ] **Rate limits behind a proxy.** Behind a reverse proxy every request has the proxy's address. Add an opt-in
+      setting to trust `X-Forwarded-For` (Ktor's `XForwardedHeaders`). Keeping counts across restarts is optional.
+      *Source:* [auth](server/auth.md#known-gaps), [users and accounts](server/users-and-accounts.md#known-gaps)
+- [ ] **Not enough access answers `401`, not `403`.** A Restricted user hitting a write route looks like an expired
+      token, so the client tries a refresh first. Answer `403` when the token is fine but the access level isn't,
+      and have the client show "You don't have access" instead of asking for a login.
+      *Source:* [request lifecycle](architecture/request-lifecycle.md#gotchas), [auth](server/auth.md#gotchas)
+- [ ] **Plain HTTP is on by default.** Once devices have moved to `https://` addresses, default `HTTP_MODE` to
+      `redirect`. *Source:* [overview](architecture/overview.md#known-gaps), [operations](operations.md#plain-http)
+
+## Phase 3: Data and the server
+
+- [ ] **The tax rate isn't locked at check-in.** Saving an open invoice's lines reads the shop's current rate.
+      Either keep the rate the invoice was made with, or keep updating it and show the change. **(decide)**
+      *Source:* [counter](server/counter.md#gotchas), [money](shared/money.md#gotchas)
+- [ ] **Invoice, charge and payment ids aren't v7.** They default to `Uuid.random()`. Make them `Uuid.generateV7()`
+      like every other id, so times can be read from them consistently. *Source:* [domain models](shared/domain-models.md#gotchas)
+- [ ] **Audit entries are written in their own transaction**, so one inside a rolled back change still lands, and a
+      failed write is only logged. Add a variant that joins the caller's transaction, and use it inside check-in and
+      pickup. *Source:* [audit log](server/audit-log.md#gotchas)
+- [ ] **The audit log is never trimmed.** Add a retention setting (say, two years) applied by the sweep.
+      *Source:* [audit log](server/audit-log.md#gotchas)
+- [ ] **Restore leftovers pile up.** Remove `pre-restore-*` folders and `restore/failed-*.zip` files older than a
+      set age, or list them on the admin screen with a delete button. *Source:* [operations](operations.md#known-gaps)
+- [ ] **`server/tls/` isn't in backups**, so a restored server on a new machine makes a new certificate and every
+      device asks again. Include it (it's secret, like the database). *Source:* [operations](operations.md#known-gaps)
+- [ ] **The made certificate isn't renewed.** It lasts ten years. Show its expiry on the admin Server tab with a
+      warning in the last year, and a way to make a new one. *Source:* [operations](operations.md#known-gaps)
+- [ ] **No scheduled backups.** Add a daily backup to a folder (and how many to keep) as a server setting.
+      *Source:* [operations](operations.md#known-gaps)
+- [ ] **A database only restore leaves photos missing.** Warn before restoring a backup without photos, and say
+      so on the restored server. *Source:* [backup](server/backup-restore.md#gotchas)
+- [ ] **Some databases predate `dbQuery`/`dbWrite`.** Move the ones still using `appLogTryCatch` + `transaction`
+      over, so failures are reported the same way. *Source:* [overview](architecture/overview.md#known-gaps)
+- [ ] **Some list routes answer `404` for a database error.** `/fetch` and `/search` on users, customers, tickets
+      and inventory turn a failed read into `404`; it should be `500`. *Source:* [API overview](api/README.md#status-codes)
+- [ ] **Logins without a device id add a session every time.** Old clients and scripts pile up sessions. Expired
+      session clean up (Phase 2) limits it; optionally refuse a blank `deviceId`. *Source:* [auth](server/auth.md#gotchas)
+
+## Phase 4: API and plumbing cleanup
+
+These change both sides, so do them together, and check `check_api_docs.py` after each.
+
+- [ ] **Route paths are strings on both sides.** Move the path strings into `shared` (constants per route file)
+      so a rename breaks the build instead of the app. *Source:* [entity layers](architecture/entity-layers.md#gotchas),
+      [networking](client/networking.md#gotchas)
+- [ ] **Hand kept lists of record types.** Replace them with one registry so a new record type can't be missed:
+  - `RemoteHandler.setUrl()` sets each repository's URL by name (keep the repositories in a list),
+  - `ImageDatabase.markUnreferencedDeleted` and `LocalDatabase.removeDetachedNotes` list every note join table
+    (ask each `Database` for its note table instead).
+
+  *Source:* [networking](client/networking.md#gotchas), [add a record type](how-to/add-an-entity.md)
+- [ ] **Reads that are `POST`.** Move `/get`, `/fetch`, `/search` and `/get/notes/{id}` to `GET` with path and
+      query parameters, like the newer routes. *Source:* [API overview](api/README.md#gotchas),
+      [decisions](decisions.md#reads-that-are-post)
+- [ ] **`/add` answers differ by record type** (customers `202` and no body, inventory `201` and no body, tickets
+      `201` with the ticket). Make them all `201` with the saved record. *Source:* [API overview](api/README.md#gotchas)
+- [ ] **Reads can't tell "nothing there" from "couldn't load".** Some repository reads return null or an empty list
+      on failure. Return a `Result` where the screen should say the load failed.
+      *Source:* [request lifecycle](architecture/request-lifecycle.md#gotchas)
+- [ ] **Restricted users can't list users** (`/api/user/get`, `/fetch`, `/search` need Normal), unlike every other
+      record type. Decide whether that's on purpose; if not, open them to Restricted with passwords still blanked.
+      **(decide)** *Source:* [user API](api/user.md#gotchas)
+- [ ] **No API versioning.** Fine while client and server ship together. Revisit if a shop could run mismatched
+      versions. *Source:* [API overview](api/README.md#known-gaps)
+
+## Phase 5: The client
+
+- [ ] **Counter on narrow windows.** The queue panel is always 360 dp beside the main area and the top bar doesn't
+      wrap. Stack them, or move the queue behind a button, on narrow widths. *Source:* [counter](ui/screens/counter.md#known-gaps)
+- [ ] **Admin screen reloads everything** on every visit and every Refresh, one request per tab. Load a tab's data
+      when it's opened. *Source:* [admin](ui/screens/admin.md#known-gaps)
+- [ ] **Settings:** move Start tab out of the Login group and make it a dropdown rather than click to cycle; lay
+      the panels out in two columns on wide windows. *Source:* [settings](ui/screens/settings.md#gotchas)
+- [ ] **Notes edited on two devices.** `syncNotes` overwrites a note edited elsewhere since the record was opened.
+      Warn when a note changed on the server since it was loaded, or send the version it was edited from.
+      *Source:* [client records](client/records.md#gotchas)
+- [ ] **Old name format.** `cleanName()` treats `:` as a name separator, left from an older way of storing names,
+      and there's a `TODO` about middle names. Store names as typed and drop the `:` handling, with a data fix for
+      old rows. *Source:* [domain models](shared/domain-models.md#gotchas), `App.kt` TODO
+- [ ] **`Address.fromString` and `Device.fromString`** cut two word values apart. Nothing calls them; delete them.
+      *Source:* [domain models](shared/domain-models.md#gotchas)
+- [ ] **Currency is always `$`.** Add a currency symbol (or locale) to the shop profile and use it in `Money.format`.
+      *Source:* [money](shared/money.md#gotchas)
+- [ ] **Cache size changes apply on the next start.** Either rebuild the caches when it changes or say so in the
+      setting's description (it does say "applies on restart" now; keep or fix). *Source:* [state](client/state.md#gotchas)
+
+## Phase 6: Code health
+
+- [ ] **Split the big handlers.** `CounterHandler` and `AdminHandler` are each over 500 lines. Split by area
+      (counter: search and queue, check-in, pickup and invoices, printing; admin: one per tab group).
+      *Source:* [state](client/state.md#gotchas), [counter](ui/screens/counter.md#known-gaps), [admin](ui/screens/admin.md#known-gaps)
+- [ ] **Leftovers to remove:**
+  - `AdminScreen`'s unused `snackBarState` and `coroutineScope` parameters ([navigation](ui/screens/navigation.md#known-gaps)),
+  - `isTicketForNewCustomer` in `RecordsScreen` ([records](ui/screens/records.md#known-gaps)),
+  - `SettingItem.enabled`'s `TODO`, and the log tags declared inside `SettingsScreen` ([settings](ui/screens/settings.md#known-gaps)),
+  - the commented out `postgres` block in `application.yaml` ([configuration](configuration.md#known-gaps)).
+- [ ] **Stale and open `TODO` comments.** Delete the ones already done, and turn real ones into items here:
+  - done already: "Secure the storage of these, maybe encrypt?" (`CreateUserHttpClient`, `CreateDatabaseHttpClient`;
+    KSafe encrypts), "timeout for session tokens" (`Application.kt`; see Phase 2), "Handle encryption in the rest of
+    these routes" (`UserRoute`; passwords are hashed and HTTPS is on), "Find new way of using identifier"
+    (`ServerUserClient`; there's a device id now), "Setup getting user info from server" (`ServerUserClient`;
+    `/api/user/me` does it), "Add logging" (`AuthRoute`; logins are audited),
+  - ideas, to keep or drop: import database data from a file, photos on every record type, assigning existing
+    tickets to a customer, starting a new customer from the ticket dialog, hours worked and parts on tickets,
+    exporting invoices, a reorder prompt for low stock (`App.kt`, `CustomerDialog`, `TicketDialog`, `TicketPanel`,
+    `InventoryPanel`),
+  - checks: `AppDir.jvm.kt` "test this" (twice), `ConfigureDatabase.kt` "work with OS file dir", `AppLogger`
+    "store these", `AppDir.wasmJs.kt`.
+- [ ] **Tighten `UiKitRulesTest`.** It's a text search, so it misses `Color.Red`, a `TextStyle(...)` on a screen,
+      Material 2 imports and Material subpackages, and it flags banned text inside comments. Catch the first three,
+      allow `material3.windowsizeclass`, and skip comments. *Source:* [kit rules](ui/kit-rules.md#gotchas)
+- [ ] **`SettingItem` is cast by `type`.** A mismatched item is quietly not drawn. Make it a sealed class per type.
+      *Source:* [settings](ui/screens/settings.md#gotchas)
+- [ ] **Telling desktop apart by name.** `App()` checks `getPlatform().name.contains("Java")`. Use an `expect` (or a
+      `Platform` value) instead. *Source:* [add platform code](how-to/add-a-platform-actual.md#gotchas)
+- [ ] **Logging.** `AppLogger.d` isn't hidden in release builds, and `LOG_LEVEL` is only read once. Make debug
+      logging follow `isDebug()`. *Source:* [results and errors](shared/results-and-errors.md#gotchas)
+- [ ] **Two `Result` types.** `kotlin.Result` and the app's `Result` are both in scope. Consider renaming the app's
+      (`Outcome`?) to stop mix-ups. Optional. *Source:* [results and errors](shared/results-and-errors.md#gotchas)
+
+## Phase 7: Platforms, CI and docs
+
+- [ ] **Run Android end to end** on a device: login, records, counter, photos, printing, kiosk. Fix what breaks and
+      update [Platforms](client/platforms.md). Needs compileSdk 37 and an AAPT2 that runs on the build machine.
+      *Source:* [platforms](client/platforms.md#known-gaps)
+- [ ] **Run the web client end to end** in a browser, served by `-PwithWeb`. Same list as Android.
+      *Source:* [platforms](client/platforms.md#known-gaps)
+- [ ] **Kiosk lockdown on Android.** Use Android's lock task mode so a kiosk can't be swiped out of.
+      *Source:* [kiosk](ui/screens/kiosk.md#known-gaps)
+- [ ] **Large uploads on web** are read into memory whole. Stream them if Kotlin/Wasm allows, or cap the size the
+      web client offers. *Source:* [add platform code](how-to/add-a-platform-actual.md#gotchas)
+- [ ] **iOS.** The targets are commented out and `iosApp` doesn't build. Decide whether to support it; if not,
+      remove the `iosMain` source sets and `iosApp`. **(decide)** *Source:* [platforms](client/platforms.md#known-gaps)
+- [ ] **CI.** A Gitea Actions workflow that runs `:server:test`, `:shared:jvmTest`, `:composeApp:desktopTest`,
+      `check_api_docs.py` and the docs link check (from [STYLE.md](STYLE.md#keeping-them-current)) on every PR.
+      Add `:composeApp:wasmJsBrowserTest` if a headless browser is available there.
+      *Source:* [testing](testing.md#gotchas)
+- [ ] **Font licence.** `composeApp/licenses/` has Barlow's and Atkinson's but not JetBrains Mono's (also OFL).
+      Add it. *Source:* found while writing [add a theme or font](how-to/add-a-theme-or-font.md)
+- [ ] **Docs to correct:**
+  - `server/auth.md` says the client still calls `POST /api/auth/user`; it doesn't (fixed by removing it in Phase 2),
+  - `server/migrations.md` says the order of `LocalDatabase.tables` matters because of foreign keys; check whether
+    Exposed's `SchemaUtils.create` sorts tables by reference (the list already has `CustomerNoteTable` before
+    `NoteTable`) and correct the page.
+- [ ] **Dokka** (optional): a generated API site from the KDoc. *Source:* [PLAN.md](PLAN.md)
+
+## Rules to keep
+
+Not work to do, but the gotchas and must-dos the docs list. Keep these in mind on every change; most are also on
+the PR template.
+
+**Database and server**
+- New columns need a default or must be nullable; add the table to `migratedTables` (or the column to
+  `addUserColumns()` for `user`). Avoid SQL reserved words as column names. ([Migrations](server/migrations.md))
+- Fields the server owns (a ticket's number, pickup time, stock) stay out of `update`.
+- When deleting a record, take its notes first, clear join tables without a cascade, then delete. ([Database](server/database.md#gotchas))
+- An outer transaction that adds a ticket or invoice wraps itself in `tickets.whileNumbering { invoices.whileNumbering { ... } }`, ticket first. ([Numbering](server/numbering.md))
+- Never delete photo files directly; mark rows deleted and let the sweep do it. ([Photos](server/photos.md#gotchas))
+- Stream big bodies (`receiveChannel().copyToFile`, `respondFile`); never `receive<ByteArray>()` or `respondBytes`.
+- Write audit entries after a multi-step transaction commits, not inside it.
+- Check uploads, downloads and restore against a real `./gradlew :server:run`; the test engine isn't Netty.
+- Add fields to the server before any client sends them; the server refuses unknown fields.
+
+**Client**
+- A new seed field goes in `fields()`, or edits never make the seed dirty.
+- A new repository is constructed in `RemoteHandler` **and** set in `setUrl()`.
+- A new record type's note table goes in `markUnreferencedDeleted` **and** `removeDetachedNotes`. ([Add a record type](how-to/add-an-entity.md))
+- Write actions check `canEdit()` and their buttons hide for people who can't use them; the server checks again.
+- Show ticket numbers with `Ticket.label`, which works before the ticket has a number.
+- Mock engines in tests answer `SERVER_PING_PATH` with `SERVER_PING_BODY`, and send JSON headers. ([Testing](testing.md#client-tests))
+
+**UI**
+- Screens style only through the kit; new UI goes in `ui/kit` with a gallery entry first. ([Kit rules](ui/kit-rules.md))
+- Glass for floating layers only; anything glass sits over needs `glassSource()`.
+- Numbers (ticket numbers, money, PINs, SKUs) use the `numeric*` styles.
+- The counter's F-keys and Escape are taken by the counter; fields there can't use them.
+
+**Docs**
+- Fix the doc page in the same PR as the change; run `check_api_docs.py` after route changes and the link check
+  after moving pages. ([STYLE.md](STYLE.md#keeping-them-current))
+- Add a [decisions](decisions.md) entry for a choice someone might want to undo later.

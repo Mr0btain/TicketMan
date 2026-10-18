@@ -42,6 +42,7 @@ read KSafe's in-memory cache and write to disk in the background. On the web KSa
 | Station | `stationCredentials` | The station id and secret, set when the device registers as a station |
 | Appearance | `darkMode`, `themeId`, `fontId`, `reduceTransparency` | |
 | Lists | `pageSize`, `searchLimit`, `cacheSize`, `defaultTab`, `ticketScope` | |
+| Admin | `lowStockThreshold` | Read and written by `AdminHandler`, not `SettingsHandler` |
 | Login | `rememberLogin` | |
 
 `SettingsHandler` is the only thing screens use to change settings; it exposes each as a `StateFlow` and writes it

@@ -28,7 +28,7 @@ import ticketman.composeapp.generated.resources.plus
 
 /**
  * Adds or edits an inventory item. Changes go straight onto [seed]
- * @param onContinue Saves the seed
+ * @param onContinue Saves the seed and closes the dialog. Cancelling goes through onDismiss, which reloads the record
  */
 @Composable
 fun InventoryDialog(

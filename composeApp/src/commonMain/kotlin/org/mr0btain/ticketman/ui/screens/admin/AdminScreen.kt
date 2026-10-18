@@ -7,6 +7,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerLoader
 import org.mr0btain.ticketman.data.shop.PaperSize
@@ -20,6 +21,7 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
+import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
@@ -42,6 +44,7 @@ private enum class AdminTab(val label: String) {
     SESSIONS("Sessions"),
     STATIONS("Stations"),
     LOW_STOCK("Low stock"),
+    INVOICES("Invoices"),
     SERVER("Server and data"),
     AUDIT("Audit log")
 }
@@ -49,18 +52,20 @@ private enum class AdminTab(val label: String) {
 /**
  * Admin dashboard. Only usable by admins, the server enforces this as well
  * @param onNavigateToMain Switches to the main screen, used after picking a ticket or item to look at
+ * @param onOpenTicketAtCounter Opens a ticket on the counter screen, from the invoice list
  */
 @Composable
 fun AdminScreen(
     viewModel: MainViewModel,
     snackBarState: SnackbarHostState,
     coroutineScope: CoroutineScope,
-    onNavigateToMain: () -> Unit
+    onNavigateToMain: () -> Unit,
+    onOpenTicketAtCounter: (Uuid) -> Unit
 ) {
     val isAdmin by viewModel.session.isAdmin.collectAsState()
 
     if (isAdmin) {
-        AdminContent(viewModel, onNavigateToMain)
+        AdminContent(viewModel, onNavigateToMain, onOpenTicketAtCounter)
     } else {
         NotAdminMessage(viewModel)
     }
@@ -69,7 +74,8 @@ fun AdminScreen(
 @Composable
 private fun AdminContent(
     viewModel: MainViewModel,
-    onNavigateToMain: () -> Unit
+    onNavigateToMain: () -> Unit,
+    onOpenTicketAtCounter: (Uuid) -> Unit
 ) {
     val admin = viewModel.admin
 
@@ -198,6 +204,7 @@ private fun AdminContent(
                 onClick = {
                     admin.refreshAll()
                     viewModel.refreshPagers()
+                    if (selectedTab == AdminTab.INVOICES) viewModel.counter.loadInvoices(reset = true)
                 }
             )
         }
@@ -274,6 +281,11 @@ private fun AdminContent(
                     viewModel.changeMainTabIndex(INVENTORY_TAB)
                     onNavigateToMain()
                 }
+            )
+
+            AdminTab.INVOICES -> AdminInvoicesTab(
+                viewModel = viewModel,
+                onOpenTicket = onOpenTicketAtCounter
             )
 
             AdminTab.SERVER -> AdminServerTab(

@@ -36,7 +36,7 @@ and draw the `TmBackdrop`, mark the screen area as a `glassSource()` so glass la
 | Shell | Nav | Signed in user |
 |-------|-----|----------------|
 | `WideAppShell` | `TmNavRail` on the left. The button at its top expands it to show labels (kept with `rememberSaveable`) | At the foot of the rail: a "Log in" button, or the user, whose menu has Settings and Log out |
-| `PhoneAppShell` | `TmBottomNav` floating at the bottom. Screens are padded by 80 dp so the bar doesn't cover them | Not shown |
+| `PhoneAppShell` | `TmBottomNav` floating at the bottom. Screens are padded by 80 dp so the bar doesn't cover them | Not in the shell. The Account panel at the top of Settings logs in and out |
 
 ## Destinations
 
@@ -49,7 +49,6 @@ maps each route to its screen. Which ones are in the nav is decided in `App()`:
 |-------------|--------|------------|
 | `ADMIN` | [`AdminScreen`](admin.md) | Admins only |
 | `COUNTER` | [`CounterScreen`](counter.md) | Always |
-| `INVOICE` | `InvoiceScreen` | Never, see below |
 | `RECORDS` | [`RecordsScreen`](records.md) | Always. The start destination |
 | `SETTINGS` | [`SettingsScreen`](settings.md) | Always |
 | `GALLERY` | [`KitGallery`](../kit.md#the-component-gallery) | Debug builds, as "Components". Also opened from Settings |
@@ -74,9 +73,6 @@ screen and coming back keeps its search, selection and open ticket.
 
 ## Gotchas
 
-- **Admin links stack.** `AdminScreen` opens a ticket or item on the records screen with plain `navigate()`, not
-  `navigateTo()`, so each one adds to the back stack. The shell has no back button, but Android's system back
-  walks back through them.
 - **The "Start tab" setting isn't a screen.** It picks which records tab (Customers, Tickets, Inventory) opens
   first. The app always starts on Records.
 - **Desktop is never a phone.** The platform check comes before the window size, so a narrow desktop window still
@@ -84,12 +80,6 @@ screen and coming back keeps its search, selection and open ticket.
 
 ## Known gaps
 
-- **`InvoiceScreen` can't be reached.** It's registered in `NavigationHost` (every invoice, newest first; click one
-  to open its ticket at the counter, admins can void) but no nav item or link goes to it.
-- **The phone shell has no account controls.** There's no log in or log out button on phones. Logging in is
-  offered by the counter and admin screens' empty states, and the login dialog opens on its own when a session
-  can't be refreshed, but there's no way to log out. The records screen's "Log in from the bottom of the sidebar"
-  notice is wrong on phones.
 - `AdminScreen` takes `snackBarState` and `coroutineScope` parameters it doesn't use.
 
 ## See also

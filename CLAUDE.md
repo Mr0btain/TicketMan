@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 TicketMan is a ticket-tracking app for repair shops. It is a Kotlin Multiplatform project: a Compose Multiplatform client (desktop is the primary, most complete target) talking over HTTP to a Ktor server backed by an H2 database via Exposed. Package root everywhere is `org.mr0btain.ticketman`.
 
-Developer docs live in `docs/` (index: `docs/README.md`), with longer explanations of what's summarized here. `docs/PLAN.md` tracks which pages are written. When a change makes a doc page wrong, fix the page too, and follow `docs/STYLE.md` when writing one. `docs/decisions.md` says why some choices were made (H2, per device sessions, delayed photo deletion, ...); read it before undoing one.
+Developer docs live in `docs/` (index: `docs/README.md`), with longer explanations of what's summarized here. `docs/PLAN.md` tracks which pages are written. When a change makes a doc page wrong, fix the page too, and follow `docs/STYLE.md` when writing one. `docs/decisions.md` says why some choices were made (H2, per device sessions, delayed photo deletion, ...); read it before undoing one. `docs/FIX-PLAN.md` is the phased list of known issues to work through; tick items there (and remove them from their page's Known gaps) as they're fixed.
 
 ## Commands
 

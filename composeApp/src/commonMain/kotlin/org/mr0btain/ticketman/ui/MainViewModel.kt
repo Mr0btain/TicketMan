@@ -155,6 +155,7 @@ class MainViewModel(
         remoteHandler = remoteHandler,
         scope = viewModelScope,
         snackBarHost = snackBarHost,
+        localStorage = localStorage,
         onUsersChanged = { identifier ->
             users.onChanged(identifier)
 

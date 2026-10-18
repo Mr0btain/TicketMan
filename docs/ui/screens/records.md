@@ -60,13 +60,16 @@ Users are records too (`UserRecords`), but they're managed on the [admin screen]
 it, and the dialog's Save stays off until `seed.isDirty`.
 
 - **Add** clears the selection first (`clearSelection()`), so the seed is a blank new record.
-- **Cancel** re-selects the same record, which reloads the seed from the cache and throws the edits away.
-- **Save** calls the handler's `save()`. Customer and inventory dialogs close; the ticket dialog stays open, now
-  titled with the ticket number the server gave it.
+- **Cancel** re-selects the same record, which reloads the seed from the cache and throws the edits away. If the
+  record has been deleted on another device meanwhile, the reload finds nothing: the handler clears the seed,
+  reloads the list and says it may have been deleted (`forgetIfOpen`).
+- **Save** calls the handler's `save()` and closes the dialog, for all three record types. A new ticket's number
+  shows in the details and the list once the server has given it one.
 - **Notes** are added and edited in the kit's `TmEditNoteDialog`, on the seed. They're sent when the record is
   saved, not when the note dialog closes (see [`syncNotes`](../../client/records.md#saving)).
 - **Delete** opens `TmConfirmDeleteDialog(isTwoStep = true)`, which asks twice, then calls the handler's
-  `remove()` with the selected record.
+  `remove()` with the selected record. The record stays selected until the server agrees; if it refuses, a
+  snackbar says why ("Customer not deleted: ...").
 
 Clicking a photo anywhere on the screen opens one shared `TmImageView` at that photo.
 
@@ -111,11 +114,8 @@ The handlers refuse changes too, and the server checks again. See
 
 ## Known gaps
 
-- The delete dialog's `DataType.USER` branch is a `TODO()`, which would crash. Nothing sets it, since users are
-  removed from the admin screen.
 - `isTicketForNewCustomer` in `RecordsScreen` and a few `TODO` comments in the panels are left over from features
   that were never started.
-- The not logged in notice says to log in "from the bottom of the sidebar", which isn't there on phones.
 
 ## See also
 

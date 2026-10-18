@@ -13,6 +13,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
+import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.transfer.DownloadOutcome
 import org.mr0btain.ticketman.components.network.transfer.fileBody
 import org.mr0btain.ticketman.components.network.transfer.saveDownload
@@ -47,6 +48,7 @@ import kotlin.uuid.Uuid
 
 /**
  * State and actions for the admin screen. Owned by the main view model so it lives as long as the app does.
+ * @param localStorage Where the low stock threshold is kept between runs
  * @param onUsersChanged Called after a user is added, changed or removed so lists can reload
  */
 @Suppress("PrivatePropertyName")
@@ -54,6 +56,7 @@ class AdminHandler(
     private val remoteHandler: RemoteHandler,
     private val scope: CoroutineScope,
     private val snackBarHost: SnackbarHostState,
+    private val localStorage: LocalStorage,
     private val onUsersChanged: (Uuid?) -> Unit
 ) {
     private val TAG = "AdminHandler"
@@ -79,7 +82,7 @@ class AdminHandler(
     private val _dailyReport = MutableStateFlow<DailyReport?>(null)
     val dailyReport = _dailyReport.asStateFlow()
 
-    private val _lowStockThreshold = MutableStateFlow(DEFAULT_LOW_STOCK_THRESHOLD)
+    private val _lowStockThreshold = MutableStateFlow(localStorage.lowStockThreshold.coerceIn(LOW_STOCK_RANGE))
     val lowStockThreshold = _lowStockThreshold.asStateFlow()
 
     private val _lowStock = MutableStateFlow<List<Inventory>>(emptyList())
@@ -153,9 +156,11 @@ class AdminHandler(
         }
     }
 
-    /** Changes what counts as low stock and reloads the list and overview. Kept until the app closes, not saved */
+    /** Changes what counts as low stock, saves it on this device, and reloads the list and overview */
     fun setLowStockThreshold(threshold: Int) {
-        _lowStockThreshold.value = threshold.coerceIn(LOW_STOCK_RANGE)
+        val value = threshold.coerceIn(LOW_STOCK_RANGE)
+        _lowStockThreshold.value = value
+        localStorage.lowStockThreshold = value
 
         scope.launch {
             loadLowStock()
@@ -553,7 +558,6 @@ class AdminHandler(
     }
 
     companion object {
-        const val DEFAULT_LOW_STOCK_THRESHOLD = 5
         val LOW_STOCK_RANGE = 0..10_000
         private const val LOW_STOCK_LIMIT = 200
         private const val RECENT_TICKET_COUNT = 10

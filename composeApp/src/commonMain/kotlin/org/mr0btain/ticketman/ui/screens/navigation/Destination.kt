@@ -9,7 +9,6 @@ package org.mr0btain.ticketman.ui.screens.navigation
 enum class Destination(val route: String, val index: Int) {
     ADMIN("Admin", 0),
     COUNTER("Counter", 1),
-    INVOICE("Invoice", 2),
     RECORDS("Records", 4),
     SETTINGS("Settings", 5),
 

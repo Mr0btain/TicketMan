@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.ui.kit.containers.TmLazyColumn
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.MainViewModel
+import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
 import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.ChangePinDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
@@ -229,6 +230,14 @@ fun SettingsScreen(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
     ) {
+        item {
+            AccountPanel(
+                user = currentUser.value,
+                onLogin = { viewModel.session.changeShowLogin(true) },
+                onLogout = { viewModel.session.logout() }
+            )
+        }
+
         item {
             AppearanceSettings(
                 palette = palette.value,

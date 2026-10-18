@@ -90,7 +90,7 @@ class TicketRecords(
 
                 TicketCache.TicketData(ticket, notes.await(), customer.await(), user.await())
                     .also { cache.put(it.ticket, it.notes, it.customer, it.user) }
-            } ?: return@select null
+            } ?: return@select forgetIfOpen(identifier)
 
             return@select { seed.setTicket(ticket, notes, customer, user) }
         }
@@ -101,6 +101,18 @@ class TicketRecords(
         selection.cancel()
         seed.clear()
     }
+
+    // Loading the open ticket found nothing, like reloading it after Cancel when another device deleted it. Stop
+    // showing a copy that can't be saved, and reload the list without it
+    private fun forgetIfOpen(identifier: Uuid): (() -> Unit)? =
+        if (seed.identifier == identifier && !seed.isNew) ({
+            seed.clear()
+            cache.remove(identifier)
+            scope.launch {
+                pager.refreshCurrentData()
+                snackBarHost.showSnackbar("That ticket couldn't be loaded, it may have been deleted")
+            }
+        }) else null
 
     /** Saves the seed: the ticket, its notes, and who it belongs to and is assigned to */
     fun save() {
@@ -165,17 +177,24 @@ class TicketRecords(
         remoteHandler.ticketRepo.search(query, searchLimit())
 
     /**
-     * Deletes the record if it's the one selected, then clears the selection and reloads the list. Does nothing for
-     * people who can only look
+     * Deletes the record if it's the one selected. Once the server has, clears the selection and reloads the list;
+     * if it refuses, says why and keeps it open. Does nothing for people who can only look
      */
     fun remove(identifier: Uuid) {
         if (!canEdit()) return
 
         scope.launch {
-            if (seed.identifier == identifier) {
-                clearSelection()
-                remoteHandler.ticketRepo.remove(identifier)
-                pager.refreshCurrentData()
+            if (seed.identifier != identifier) return@launch
+
+            // The selection stays until the server agrees, so a refused delete doesn't look like it worked
+            when (val removed = remoteHandler.ticketRepo.remove(identifier)) {
+                is Result.Success -> {
+                    clearSelection()
+                    cache.remove(identifier)
+                    pager.refreshCurrentData()
+                }
+
+                is Result.Error -> snackBarHost.showSnackbar("Ticket not deleted: ${removed.error.message}")
             }
         }
     }

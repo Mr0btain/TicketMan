@@ -78,6 +78,7 @@ import java.io.File
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
+import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -451,6 +452,16 @@ class ScreenRenderTest {
                     onImageClick = { _, _ -> },
                     ticketListState = rememberLazyListState()
                 )
+            }
+        }
+    }
+
+    @Test
+    fun settingsAccount() = bothModes("settings-account", height = 360) {
+        Shell("Settings") {
+            Column(Modifier.width(720.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                AccountPanel(user = User(username = "dana", name = "dana:whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
+                AccountPanel(user = null, onLogin = {}, onLogout = {})
             }
         }
     }

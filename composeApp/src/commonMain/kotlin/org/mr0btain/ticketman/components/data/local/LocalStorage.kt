@@ -19,6 +19,7 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _serverUrl: String = ""
     private var _rememberLogin: Boolean = DEFAULT_REMEMBER_LOGIN
     private var _defaultTab: Int = DEFAULT_TAB
+    private var _lowStockThreshold: Int = DEFAULT_LOW_STOCK_THRESHOLD
     private var _pageSize: Int = DEFAULT_PAGE_SIZE
     private var _searchLimit: Int = DEFAULT_SEARCH_LIMIT
     private var _cacheSize: Int = DEFAULT_CACHE_SIZE
@@ -126,6 +127,14 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(DEFAULT_TAB_KEY, value.toString())
         }
 
+    /** Stock count at or below which the admin screen lists an item as running low */
+    var lowStockThreshold: Int
+        get() = _lowStockThreshold
+        set(value) {
+            _lowStockThreshold = value
+            store.putString(LOW_STOCK_THRESHOLD_KEY, value.toString())
+        }
+
     /** Number of items each pager pulls per page */
     var pageSize: Int
         get() = _pageSize
@@ -195,6 +204,7 @@ class LocalStorage(private val store: KeyValueStore) {
         if (_serverUrl != savedUrl) store.putString(SERVER_URL_KEY, _serverUrl)
         _rememberLogin = getBoolean(REMEMBER_LOGIN_KEY, DEFAULT_REMEMBER_LOGIN)
         _defaultTab = getInt(DEFAULT_TAB_KEY, DEFAULT_TAB)
+        _lowStockThreshold = getInt(LOW_STOCK_THRESHOLD_KEY, DEFAULT_LOW_STOCK_THRESHOLD)
         _pageSize = getInt(PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE)
         _searchLimit = getInt(SEARCH_LIMIT_KEY, DEFAULT_SEARCH_LIMIT)
         _cacheSize = getInt(CACHE_SIZE_KEY, DEFAULT_CACHE_SIZE)
@@ -239,6 +249,7 @@ class LocalStorage(private val store: KeyValueStore) {
         const val DEFAULT_REMEMBER_LOGIN = true
         const val DEFAULT_DARK_MODE = true
         const val DEFAULT_TAB = 0
+        const val DEFAULT_LOW_STOCK_THRESHOLD = 5
         const val DEFAULT_PAGE_SIZE = 20
         const val DEFAULT_SEARCH_LIMIT = 20
         const val DEFAULT_CACHE_SIZE = 20
@@ -256,6 +267,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val TRUSTED_CERTIFICATES_KEY = "trusted_certificates"
         private const val REMEMBER_LOGIN_KEY = "remember_login"
         private const val DEFAULT_TAB_KEY = "default_tab"
+        private const val LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"
         private const val PAGE_SIZE_KEY = "page_size"
         private const val SEARCH_LIMIT_KEY = "search_limit"
         private const val CACHE_SIZE_KEY = "cache_size"

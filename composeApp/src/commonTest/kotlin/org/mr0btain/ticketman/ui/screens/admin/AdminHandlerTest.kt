@@ -59,6 +59,7 @@ class AdminHandlerTest {
     private fun entry() = AuditEntry(Uuid.random(), null, "boss", AuditAction.UPDATE, "ticket", null, "", 0)
 
     private val snackBar = SnackbarHostState()
+    private val storage = LocalStorage(InMemoryKeyValueStore())
     private val usersChanged = mutableListOf<Uuid?>()
     private val sam = User(username = "sam", name = "Sam:Tech", accessLevel = AccessLevel.NORMAL, password = "old-hash")
 
@@ -76,7 +77,7 @@ class AdminHandlerTest {
         val remote = RemoteHandler(engine, LocalStorage(InMemoryKeyValueStore()))
         remote.setUrl("http://localhost")
 
-        return AdminHandler(remote, backgroundScope, snackBar) { usersChanged += it }
+        return AdminHandler(remote, backgroundScope, snackBar, storage) { usersChanged += it }
     }
 
     @Test
@@ -175,5 +176,13 @@ class AdminHandlerTest {
         assertFalse(admin.auditEndReached.value)
         assertNull(admin.stats.value)
         assertTrue(admin.pending.value.isEmpty())
+    }
+
+    @Test
+    fun theLowStockThresholdIsKeptForNextTime() = runTest {
+        handler().setLowStockThreshold(12)
+
+        assertEquals(12, storage.lowStockThreshold)
+        assertEquals(12, handler().lowStockThreshold.value)
     }
 }

@@ -129,8 +129,9 @@ their place), and a ticket clicked on a customer opens on the Tickets tab instea
 
 ## Gotchas
 
-- **Cancelling a dialog reloads the record** (`select(seed.identifier)`) to throw away edits. A record deleted on
-  another device in the meantime fails to load.
+- **Cancelling a dialog reloads the record** (`select(seed.identifier)`) to throw away edits. If the open record
+  can't be loaded (deleted on another device, or the server can't be reached), the handler's `forgetIfOpen` clears
+  the seed and the list reloads, rather than keeping a copy that can't be saved.
 - **`ChangedField` is one enum for every record type.** Add a value when a seed gains a field that needs its own
   change detection.
 - **`syncNotes` refetches the server's notes on every save** to work out the difference, so a note added on another

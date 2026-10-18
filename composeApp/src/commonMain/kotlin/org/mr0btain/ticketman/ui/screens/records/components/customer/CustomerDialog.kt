@@ -31,7 +31,7 @@ import kotlin.uuid.Uuid
 // TODO: Add ability to assign already existing tickets to customer.
 /**
  * Adds or edits a customer. Most changes go straight onto [seed], the name is applied when saved
- * @param onContinue Saves the seed
+ * @param onContinue Saves the seed and closes the dialog. Cancelling goes through onDismiss, which reloads the record
  */
 @Composable
 fun CustomerDialog(
@@ -89,7 +89,6 @@ fun CustomerDialog(
                     if (nameChanged) seed.changeName(listOf(firstName, lastName))
 
                     onContinue()
-                    onDismiss()
                 }
             )
         }

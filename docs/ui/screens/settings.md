@@ -13,6 +13,7 @@ is a `TmLazyColumn` of panels:
 
 | Panel | Setting | What it does |
 |-------|---------|--------------|
+| **Account** | - | Who's signed in, with Log out, or Log in when nobody is. The only way to log in and out on phones, whose layout has no user menu (`AccountPanel`) |
 | **Appearance** | Theme | Cards drawn in each palette's own colors (`TmPalettes.all`) |
 | | Mode | Dark or light |
 | | Font | `TmFonts.all` |
@@ -78,8 +79,6 @@ drawn by `SettingsGroup`, and each item is a `SettingItem<T>`:
 
 - `SettingItem.enabled` is only partly used (there's a `TODO` on it), and `SettingsScreen` declares log tags
   inside the composable.
-- There's no log out on this screen. On phones, where the shell has no user menu, there's no way to log out at all
-  (see [App shell](navigation.md#known-gaps)).
 
 ## See also
 
