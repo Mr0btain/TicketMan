@@ -30,8 +30,8 @@ import kotlin.uuid.Uuid
 fun InventoryInfoPane(
     inventoryData: InventorySeed,
     onEditClick: () -> Unit,
-    onImageClick: () -> Unit = {},
-    onNoteImageClick: (Uuid) -> Unit = {}
+    onImageClick: (page: Int) -> Unit = {},
+    onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> }
 ) {
     RecordDetail(
         title = inventoryData.name.ifBlank { "Unnamed item" },

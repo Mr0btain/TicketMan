@@ -24,7 +24,7 @@ import kotlin.uuid.Uuid
 fun TicketInfoPane(
     seed: TicketSeed,
     onEditClick: () -> Unit,
-    onImageClick: (Uuid) -> Unit
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit
 ) {
     val ticket = seed.ticket
 

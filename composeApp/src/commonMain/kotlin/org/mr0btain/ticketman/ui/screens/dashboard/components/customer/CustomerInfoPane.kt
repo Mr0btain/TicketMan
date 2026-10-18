@@ -24,7 +24,7 @@ fun CustomerInfoPane(
     selectedCustomer: CustomerSeed,
     onEditClick: () -> Unit,
     onTicketClick: (Uuid) -> Unit,
-    onImageClick: (Uuid) -> Unit
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit
 ) {
     val seed = selectedCustomer
 

@@ -118,6 +118,7 @@ private fun ImagePlaceholder(modifier: Modifier, failed: Boolean) {
 /**
  * Photos side by side, swiped or stepped through with the arrows
  * @param variant Size fetched, thumbnails for small strips and display for anything bigger
+ * @param onImageClick Gets the page of the photo clicked
  * @param clickEnabled Lets a photo be clicked, usually to open it full size
  * @param onRemove Shows a remove button on the photo in view, null for none
  * @param pagerState Pass one in to move between photos from outside, like the arrow keys in [TmImageView]
@@ -127,7 +128,7 @@ fun TmImagePager(
     modifier: Modifier = Modifier,
     storedImages: List<StoredImage>,
     variant: ImageVariant = ImageVariant.THUMB,
-    onImageClick: () -> Unit = {},
+    onImageClick: (page: Int) -> Unit = {},
     coroutineScope: CoroutineScope = rememberCoroutineScope(),
     clickEnabled: Boolean = true,
     onRemove: ((StoredImage) -> Unit)? = null,
@@ -154,7 +155,7 @@ fun TmImagePager(
                 TmImage(
                     modifier = Modifier
                         .fillMaxSize()
-                        .tmClickable(onClick = onImageClick, shape = shape, enabled = clickEnabled),
+                        .tmClickable(onClick = { onImageClick(page) }, shape = shape, enabled = clickEnabled),
                     image = image,
                     variant = variant,
                     contentDescription = image.description.ifBlank { "Photo ${page + 1} of ${storedImages.size}" }
@@ -210,17 +211,22 @@ fun TmImagePager(
  * Photos shown big over everything, closed like any [TmFullScreenDialog]. The left and right arrow keys step
  * through them. Shows the display size, with a button to fetch
  * the sharper original (up to 2560px) when the detail matters on a big screen
+ * @param startPage Photo shown first, usually the one clicked to open it
  */
 @Composable
 fun TmImageView(
     modifier: Modifier = Modifier,
     onDismiss: () -> Unit,
     isVisible: Boolean,
-    images: List<StoredImage>
+    images: List<StoredImage>,
+    startPage: Int = 0
 ) {
     if (isVisible && images.isNotEmpty()) {
         var fullSize by remember { mutableStateOf(false) }
-        val pagerState = rememberPagerState(pageCount = { images.size })
+        val pagerState = rememberPagerState(
+            initialPage = startPage.coerceIn(0, images.size - 1),
+            pageCount = { images.size }
+        )
         val coroutineScope = rememberCoroutineScope()
 
         fun step(by: Int): Boolean {

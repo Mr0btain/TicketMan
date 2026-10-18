@@ -83,20 +83,18 @@ fun DashboardScreen(
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
     val imagePopupList = remember { mutableStateListOf<StoredImage>() }
+    var imagePopupPage by remember { mutableIntStateOf(0) }
 
-    fun showImages(images: List<StoredImage>) {
+    fun showImages(images: List<StoredImage>, page: Int) {
         imagePopupList.clear()
         imagePopupList.addAll(images)
+        imagePopupPage = page
         showImagePopup = true
     }
 
-    // Opens the photos of the note with this identifier
-    fun showNoteImages(notes: List<Note>, noteIdentifier: Uuid) {
-        notes.firstOrNull { it.identifier == noteIdentifier }?.let { note ->
-            imagePopupList.clear()
-            imagePopupList.addAll(note.images)
-            showImagePopup = true
-        }
+    // Opens the photos of the note with this identifier, at the one clicked
+    fun showNoteImages(notes: List<Note>, noteIdentifier: Uuid, page: Int) {
+        notes.firstOrNull { it.identifier == noteIdentifier }?.let { note -> showImages(note.images, page) }
     }
 
     // For customer adding or editing
@@ -105,7 +103,7 @@ fun DashboardScreen(
     CustomerDialog(
         seed = customerSeed,
         isVisible = showCustomerDialog,
-        onImageClick = { id -> showNoteImages(customerSeed.notes, id) },
+        onImageClick = { id, page -> showNoteImages(customerSeed.notes, id, page) },
         onDismiss = {
             showCustomerDialog = false
             // Reset seed data
@@ -176,6 +174,7 @@ fun DashboardScreen(
     // For image viewing
     TmImageView(
         images = imagePopupList,
+        startPage = imagePopupPage,
         isVisible = showImagePopup,
         onDismiss = {
             imagePopupList.clear()
@@ -228,7 +227,7 @@ fun DashboardScreen(
                     viewModel.tickets.select(identifier)
                     showTicketDialog = true
                 },
-                onImageClick = { id -> showNoteImages(customerSeed.notes, id) },
+                onImageClick = { id, page -> showNoteImages(customerSeed.notes, id, page) },
                 seed = customerSeed,
                 pendingId = pendingCustomer,
                 customerList = customerPagedItems.value,
@@ -258,7 +257,7 @@ fun DashboardScreen(
                 },
                 ticketScope = ticketScope,
                 ticketListState = ticketLazyListState,
-                onImageClick = { id -> showNoteImages(ticketSeed.notes, id) }
+                onImageClick = { id, page -> showNoteImages(ticketSeed.notes, id, page) }
             )
 
             2 -> InventoryPanel(
@@ -272,8 +271,8 @@ fun DashboardScreen(
                     showInventoryDialog = true
                 },
                 onEditInventory = { showInventoryDialog = true },
-                onImageClick = { showImages(inventorySeed.images) },
-                onNoteImageClick = { id -> showNoteImages(inventorySeed.notes, id) },
+                onImageClick = { page -> showImages(inventorySeed.images, page) },
+                onNoteImageClick = { id, page -> showNoteImages(inventorySeed.notes, id, page) },
                 onDeleteInventory = {
                     dataType = DataType.INVENTORY
                     showConfirmDeleteDialog = true

@@ -20,7 +20,7 @@ import kotlin.uuid.Uuid
  * Notes newest first: author, time, message and any photos
  * @param editable Shows an edit button on each note
  * @param emptyText Shown when there are no notes, null shows nothing
- * @param onImageClick Gets the note's identifier when one of its photos is clicked
+ * @param onImageClick Gets the note's identifier and the page of its photo that was clicked
  */
 @Composable
 fun TmNoteBlock(
@@ -28,7 +28,7 @@ fun TmNoteBlock(
     notes: List<Note>,
     editable: Boolean = false,
     emptyText: String? = "No notes yet",
-    onImageClick: (Uuid) -> Unit = {},
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> },
     onEditClick: (Note) -> Unit = {}
 ) {
     val colors = TmTheme.colors
@@ -61,7 +61,7 @@ fun TmNoteBlock(
                     TmImagePager(
                         modifier = Modifier.fillMaxWidth().height(160.dp),
                         storedImages = note.images,
-                        onImageClick = { onImageClick(note.identifier) }
+                        onImageClick = { page -> onImageClick(note.identifier, page) }
                     )
                 }
             }

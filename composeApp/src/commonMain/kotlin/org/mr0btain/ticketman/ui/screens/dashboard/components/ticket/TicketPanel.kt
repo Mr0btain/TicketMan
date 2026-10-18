@@ -31,7 +31,7 @@ fun TicketPanel(
     onSelectedTicketChange: (Uuid) -> Unit,
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteTicket: () -> Unit,
-    onImageClick: (Uuid) -> Unit,
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
     ticketListState: LazyListState
 ) {
     RecordsLayout(

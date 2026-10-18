@@ -22,8 +22,8 @@ fun InventoryPanel(
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
     onDeleteInventory: () -> Unit,
-    onImageClick: () -> Unit,
-    onNoteImageClick: (Uuid) -> Unit,
+    onImageClick: (page: Int) -> Unit,
+    onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
     inventoryListState: LazyListState
 ) {
     RecordsLayout(

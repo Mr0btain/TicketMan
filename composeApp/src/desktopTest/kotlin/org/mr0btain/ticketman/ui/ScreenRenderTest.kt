@@ -316,7 +316,7 @@ class ScreenRenderTest {
                     onSearchQuery = { emptyList() },
                     onDeleteCustomer = {},
                     onTicketClick = {},
-                    onImageClick = {},
+                    onImageClick = { _, _ -> },
                     customerLazyListState = rememberLazyListState()
                 )
             }
@@ -334,7 +334,7 @@ class ScreenRenderTest {
                     onSelectedTicketChange = {},
                     onSearchQuery = { emptyList() },
                     onDeleteTicket = {},
-                    onImageClick = {},
+                    onImageClick = { _, _ -> },
                     ticketListState = rememberLazyListState()
                 )
             }

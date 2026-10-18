@@ -22,7 +22,7 @@ fun CustomerPanel(
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteCustomer: () -> Unit,
     onTicketClick: (Uuid) -> Unit,
-    onImageClick: (Uuid) -> Unit,
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
     customerLazyListState: LazyListState = rememberLazyListState()
 ) {
     RecordsLayout(

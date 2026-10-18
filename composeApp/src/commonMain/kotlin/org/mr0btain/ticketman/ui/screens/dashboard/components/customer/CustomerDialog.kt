@@ -39,7 +39,7 @@ fun CustomerDialog(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
-    onImageClick: (Uuid) -> Unit
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit
 ) {
     if (!isVisible) return
 
