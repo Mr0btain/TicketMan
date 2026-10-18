@@ -34,7 +34,7 @@ On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:P
 | Kiosk mode: PIN login on approved stations, idle lock | Done |
 | Admin: overview, users and account requests, sessions, stations, audit log, low stock, backup and restore | Done |
 | Themes (Bench, Copper, Mono), fonts, light and dark, reduce transparency | Done |
-| HTTPS between client and server | Not yet. Put the server behind a TLS proxy for now |
+| HTTPS between client and server | Done |
 
 | Platform | Status |
 |----------|--------|
