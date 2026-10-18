@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.error
 
-enum class ImageError(override val message: String): ErrorCode {
+enum class ImageError(override val message: String): ErrorCode, Error {
     NOT_FOUND("Image not found!"),
     TOO_LARGE("That photo is too big"),
     UNSUPPORTED("That file isn't a photo we can read (use JPEG, PNG, GIF or BMP)"),

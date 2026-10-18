@@ -380,24 +380,20 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
     }
 
     /**
-     * Adds an image to the ImageTable and links it to an inventory item
+     * Links uploaded images onto an inventory item, see [linkImages] for which are taken
      * @param identifier The identifier of the inventory item
-     * @param images List of images to add
+     * @param images Uploaded images to add
+     * @return Whether the item was found
      */
-    fun addImages(identifier: Uuid, images: List<StoredImage>) {
+    fun addImages(identifier: Uuid, images: List<StoredImage>): Boolean {
+        var result = false
+
         appLogTryCatch(ADD_IMAGES_TAG) {
-            var result = false
-
             transaction {
-                // Find inventory item
-                InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
-                    // Add images to table
-                    val imageEntities = images.map { storedImage ->
-                        ImageEntity.new(storedImage.identifier) { }
-                    }
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
+                    val current = inventoryEntity.images.toList()
 
-                    // Add them to inventory
-                    inventoryEntity.images = SizedCollection(inventoryEntity.images + imageEntities)
+                    inventoryEntity.images = SizedCollection(linkImages(current.map { it.toStoredImage() } + images, current))
 
                     result = true
                 } ?: AppLogger.m(ADD_IMAGES_TAG, InventoryError.NOT_FOUND)
@@ -405,23 +401,26 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
 
             result
         }
+
+        return result
     }
 
-    /** Removes an image linked to an inventory item. This will delete it from our ImageTable but WILL NOT delete the image file itself.
+    /**
+     * Takes images off an inventory item and marks them deleted, their files go with a later sweep
      * @param identifier The identifier of inventory item
-     * @param images List of images to remove
+     * @param imageIds Images to remove
+     * @return Whether the item was found
      */
-    fun removeImages(identifier: Uuid, images: List<StoredImage>) {
-        appLogTryCatch(REMOVE_IMAGES_TAG) {
-            var result = false
-            val imageIds = images.map { it.identifier }
+    fun removeImages(identifier: Uuid, imageIds: List<Uuid>): Boolean {
+        var result = false
 
+        appLogTryCatch(REMOVE_IMAGES_TAG) {
             transaction {
-                // Find inventory item
-                InventoryEntity.findByIdAndUpdate(identifier) { inventoryEntity ->
-                    inventoryEntity.images.forEach { imageEntity ->
-                        if (imageIds.contains(imageEntity.id.value)) imageEntity.delete()
-                    }
+                InventoryEntity.findById(identifier)?.let { inventoryEntity ->
+                    val (removed, kept) = inventoryEntity.images.toList().partition { it.id.value in imageIds }
+
+                    markImagesDeleted(removed)
+                    inventoryEntity.images = SizedCollection(kept)
 
                     result = true
                 } ?: AppLogger.m(REMOVE_IMAGES_TAG, InventoryError.NOT_FOUND)
@@ -429,5 +428,7 @@ class InventoryDatabaseImpl(tag: String = "InventoryLocalDatabase") : Database<I
 
             result
         }
+
+        return result
     }
 }

@@ -2,6 +2,10 @@
 
 import io.ktor.server.application.*
 import io.ktor.server.netty.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
@@ -13,6 +17,7 @@ import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.CheckInService
+import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.UserService
@@ -82,7 +87,17 @@ fun Application.module() {
             auditLog = database.auditLogDatabase
         )
 
-        configureRouting(userService, accountService, adminService, invoiceService, checkInService, database)
+        val imageService = ImageService(database.imageDatabase, database.imageStore)
+
+        configureRouting(userService, accountService, adminService, invoiceService, checkInService, imageService, database)
+
+        // Clears out photos deleted or never saved a day ago. Stops with the application
+        launch(Dispatchers.IO) {
+            while (isActive) {
+                imageService.sweep()
+                delay(ImageService.SWEEP_INTERVAL)
+            }
+        }
 
         AppLogger.m("SERVER", "Server initialized!")
 

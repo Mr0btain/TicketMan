@@ -500,7 +500,7 @@ class UserDatabaseImpl(tag: String = "UserLocalDatabase") : Database<User>(tag) 
     }
 
     private fun deleteNoteEntity(noteEntity: NoteEntity) {
-        noteEntity.images.forEach { imageEntity -> imageEntity.delete() }
+        markImagesDeleted(noteEntity.images)
         noteEntity.delete()
     }
 

@@ -66,6 +66,24 @@ fun Route.noteRoutes(
     }
 
     authenticate {
+        // Replaces a note's text and images, the identifier is the note's. Images must be uploaded first
+        post("/update/note/{identifier}") {
+            val identifier = call.uuidParameter("identifier")
+            val received = call.receive<Note>()
+
+            if (identifier == null || identifier != received.identifier) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            if (database.updateNote(received)) {
+                call.audit(auditLog, AuditAction.UPDATE, "$entityType note", identifier, received.message.take(80))
+                call.respond(HttpStatusCode.Accepted)
+            } else {
+                call.respond(HttpStatusCode.NotFound)
+            }
+        }
+
         delete("/remove/note/{identifier}") {
             val identifier = call.uuidParameter("identifier")
 

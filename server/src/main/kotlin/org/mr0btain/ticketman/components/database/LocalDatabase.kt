@@ -65,6 +65,7 @@ class LocalDatabase (
     val inviteDatabase = InviteDatabase()
     val stationDatabase = StationDatabase()
     val invoiceDatabase = InvoiceDatabase()
+    val imageDatabase = ImageDatabase()
 
     // Every table, in an order where references come before the tables that use them
     private val tables = arrayOf(

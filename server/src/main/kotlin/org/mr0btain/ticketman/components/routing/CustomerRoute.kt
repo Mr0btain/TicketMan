@@ -137,22 +137,6 @@ fun Route.customerRoute(
                 call.respond(HttpStatusCode.NotFound)
             }
         }
-
-        // Images aren't uploaded through the client yet
-        post("/add/images/{identifier}") {
-            call.respond(HttpStatusCode.NotImplemented)
-        }
-
-        delete("/remove/image/{identifier}") {
-            val identifier = call.uuidParameter("identifier")
-
-            if (identifier == null) {
-                call.respond(HttpStatusCode.BadRequest)
-            } else {
-                database.removeImage(identifier)
-                call.respond(HttpStatusCode.Accepted)
-            }
-        }
     }
 
     noteRoutes(database, userDatabase, auditLog, ENTITY_TYPE)

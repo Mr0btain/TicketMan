@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.CheckInService
+import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
@@ -20,6 +21,7 @@ fun Application.configureRouting(
     adminService: AdminService,
     invoiceService: InvoiceService,
     checkInService: CheckInService,
+    imageService: ImageService,
     localDatabase: LocalDatabase
 ) {
     install(StatusPages) {
@@ -89,6 +91,13 @@ fun Application.configureRouting(
         route("/api/shop") {
             shopRoute(
                 database = localDatabase.shopDatabase,
+                auditLog = localDatabase.auditLogDatabase
+            )
+        }
+
+        route("/api/image") {
+            imageRoute(
+                service = imageService,
                 auditLog = localDatabase.auditLogDatabase
             )
         }
