@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.logging
 
-import org.mr0btain.ticketman.error.ErrorCode
 import org.mr0btain.ticketman.logging.SimpleResult
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -22,7 +21,7 @@ actual object AppLogger {
         logger.log(Level.SEVERE, "ERROR: [$tag] $message", throwable)
     }
 
-    actual fun e(tag: String, message: ErrorCode, throwable: Throwable?) {
+    actual fun e(tag: String, message: LogMessage, throwable: Throwable?) {
         logger.log(Level.SEVERE, "ERROR: [$tag] ${message.message}", throwable)
     }
 
@@ -34,7 +33,7 @@ actual object AppLogger {
         logger.info("[$tag] $message")
     }
 
-    actual fun i(tag: String, message: ErrorCode) {
+    actual fun i(tag: String, message: LogMessage) {
         logger.info("[$tag] ${message.message}")
     }
 
@@ -42,7 +41,7 @@ actual object AppLogger {
         println("[$tag] $message")
     }
 
-    actual fun m(tag: String, message: ErrorCode) {
+    actual fun m(tag: String, message: LogMessage) {
         //logger.log(Level.ALL, "[$tag] $message")
         println("[$tag] ${message.message}")
     }
