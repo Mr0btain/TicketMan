@@ -5,6 +5,7 @@ import io.ktor.client.engine.mock.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.http.*
+import io.ktor.http.content.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.Buffer
@@ -17,7 +18,9 @@ import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.BackupTicket
+import org.mr0btain.ticketman.server.response.PendingRestore
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -38,6 +41,14 @@ class AdminRemoteRepositoryTest {
         includesImages = false
     )
 
+    private val pendingRestore = PendingRestore(
+        manifest = BackupManifest(serverVersion = "1.0.0", createdAt = 5, includesImages = true, imageCount = 2, imageBytes = 10),
+        sizeBytes = 4,
+        stagedAt = 6
+    )
+    private var hasPendingRestore = false
+    private val restoreBodies = mutableListOf<Pair<String, ByteArray>>()
+
     private val json = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
     private val engine = MockEngine { request ->
@@ -47,6 +58,15 @@ class AdminRemoteRepositoryTest {
             "/api/admin/stats" -> respond(Json.encodeToString(AdminStatsResponse(openTickets = 3, totalTickets = 5)), HttpStatusCode.OK, json)
             "/api/admin/backup" -> respond(Json.encodeToString(backupTicket), HttpStatusCode.Created, json)
             "/api/admin/backup/download/b1" -> respond(backupBytes, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/zip"))
+            "/api/admin/restore" -> when (request.method) {
+                HttpMethod.Post -> {
+                    restoreBodies += request.body.contentType.toString() to request.body.toByteArray()
+                    respond(Json.encodeToString(pendingRestore), HttpStatusCode.Accepted, json)
+                }
+                HttpMethod.Get -> if (hasPendingRestore) respond(Json.encodeToString(pendingRestore), HttpStatusCode.OK, json)
+                    else respond("", HttpStatusCode.NoContent)
+                else -> respond("", HttpStatusCode.Accepted)
+            }
             "/api/admin/seed" -> respond("Seeding is only allowed in development mode", HttpStatusCode.Forbidden)
             "/api/shop" -> respond(Json.encodeToString(ShopProfile(name = "Shop")), HttpStatusCode.OK, json)
             "/api/user/me" -> respond(Json.encodeToString(User(username = "me")), HttpStatusCode.OK, json)
@@ -89,6 +109,24 @@ class AdminRemoteRepositoryTest {
         assertContentEquals(backupBytes, file.readByteArray())
         // Written as it arrived, not all at the end
         assertTrue(progress.size > 1, "$progress")
+    }
+
+    @Test
+    fun restoreUploadsTheArchiveAsTheBody() = runTest {
+        val result = admin.uploadRestore(ByteArrayContent(byteArrayOf(80, 75, 3, 4), ContentType.Application.Zip))
+
+        assertEquals(Result.Success(pendingRestore), result)
+        val (type, body) = restoreBodies.single()
+        assertEquals(ContentType.Application.Zip.toString(), type)
+        assertContentEquals(byteArrayOf(80, 75, 3, 4), body)
+    }
+
+    @Test
+    fun noPendingRestoreIsNull() = runTest {
+        assertNull(admin.getPendingRestore())
+
+        hasPendingRestore = true
+        assertEquals(pendingRestore, admin.getPendingRestore())
     }
 
     @Test

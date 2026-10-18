@@ -1,7 +1,6 @@
 package org.mr0btain.ticketman.components.service
 
 import io.ktor.utils.io.*
-import io.ktor.utils.io.jvm.javaio.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
@@ -43,27 +42,8 @@ class ImageService(
      * Streams [channel] into [target], stopping once it passes [ImageLimits.MAX_UPLOAD_BYTES]
      * @return Bytes written, or null if it was too big
      */
-    suspend fun receive(channel: ByteReadChannel, target: File): Long? = withContext(Dispatchers.IO) {
-        var total = 0L
-
-        channel.toInputStream().use { input ->
-            target.outputStream().buffered().use { output ->
-                val buffer = ByteArray(COPY_BUFFER_BYTES)
-
-                while (true) {
-                    val read = input.read(buffer)
-                    if (read < 0) break
-
-                    total += read
-                    if (total > ImageLimits.MAX_UPLOAD_BYTES) return@withContext null
-
-                    output.write(buffer, 0, read)
-                }
-            }
-        }
-
-        total
-    }
+    suspend fun receive(channel: ByteReadChannel, target: File): Long? =
+        channel.copyToFile(target, ImageLimits.MAX_UPLOAD_BYTES)
 
     /**
      * Makes the variants of a received file and adds it as a pending photo. Deletes [upload] either way
@@ -146,7 +126,6 @@ class ImageService(
     companion object {
         const val MAX_CONCURRENT_PROCESSING = 2
         const val MAX_DESCRIPTION_LENGTH = 2_000
-        private const val COPY_BUFFER_BYTES = 64 * 1024
 
         /** How long a deleted or never saved photo keeps its files */
         val GRACE_PERIOD = 24.hours

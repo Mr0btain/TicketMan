@@ -9,6 +9,8 @@ import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
+import org.mr0btain.ticketman.components.service.RestoreService
+import org.mr0btain.ticketman.components.service.copyToFile
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.station.KioskSettings
@@ -26,13 +28,15 @@ import kotlin.time.Clock
 fun Route.adminRoute(
     database: LocalDatabase,
     adminService: AdminService,
-    backupService: BackupService
+    backupService: BackupService,
+    restoreService: RestoreService
 ) {
     val TAG = "AdminRoute"
     val STATS_TAG = "$TAG:Stats"
     val LOW_STOCK_TAG = "$TAG:LowStock"
     val SESSIONS_TAG = "$TAG:Sessions"
     val BACKUP_TAG = "$TAG:Backup"
+    val RESTORE_TAG = "$TAG:Restore"
     val SEED_TAG = "$TAG:Seed"
     val AUDIT_TAG = "$TAG:Audit"
 
@@ -221,6 +225,54 @@ fun Route.adminRoute(
             val contents = if (ticket.includesImages) "database and photos" else "database only"
             call.audit(auditLog, AuditAction.BACKUP, "database", details = "$contents, ${ticket.sizeBytes} bytes")
             call.respond(HttpStatusCode.Created, ticket)
+        }
+
+        // Upload a backup archive (the raw zip as the body) to restore from on the next start
+        post("/restore") {
+            // Room for the upload and for it unpacked
+            val space = restoreService.usableSpace()
+            val length = call.request.contentLength()
+
+            if (length != null && length * 2 > space) {
+                call.respondText("Not enough disk space on the server for that backup", status = HttpStatusCode.InsufficientStorage)
+                return@post
+            }
+
+            val upload = restoreService.newUploadFile()
+            val received = try {
+                call.receiveChannel().copyToFile(upload, space / 2)
+            } catch (ex: Exception) {
+                AppLogger.i(RESTORE_TAG, "Restore upload cut short: ${ex.message}")
+                upload.delete()
+                call.respondText("The upload was cut off", status = HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            if (received == null) {
+                upload.delete()
+                call.respondText("Not enough disk space on the server for that backup", status = HttpStatusCode.InsufficientStorage)
+                return@post
+            }
+
+            restoreService.stage(upload)
+                .onSuccess { pending ->
+                    call.audit(auditLog, AuditAction.BACKUP, "restore", details = "Restore from ${pending.manifest.createdAt} staged, ${pending.sizeBytes} bytes")
+                    call.respond(HttpStatusCode.Accepted, pending)
+                }
+                .onFailure { call.respondText(it.message ?: "That backup can't be restored", status = HttpStatusCode.BadRequest) }
+        }
+
+        // The restore waiting for a restart, 204 when there isn't one
+        get("/restore") {
+            val pending = restoreService.pending()
+
+            if (pending == null) call.respond(HttpStatusCode.NoContent)
+            else call.respond(HttpStatusCode.OK, pending)
+        }
+
+        delete("/restore") {
+            if (restoreService.cancel()) call.audit(auditLog, AuditAction.BACKUP, "restore", details = "Waiting restore cancelled")
+            call.respond(HttpStatusCode.Accepted)
         }
 
         // Mock data, only on servers started in development mode

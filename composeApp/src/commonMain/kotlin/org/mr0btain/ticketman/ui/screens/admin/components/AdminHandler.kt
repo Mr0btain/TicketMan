@@ -1,6 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.admin.components
 
 import androidx.compose.material3.SnackbarHostState
+import io.github.vinceglb.filekit.PlatformFile
+import io.github.vinceglb.filekit.name
+import io.ktor.http.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,6 +14,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import org.mr0btain.ticketman.components.network.transfer.DownloadOutcome
+import org.mr0btain.ticketman.components.network.transfer.fileBody
 import org.mr0btain.ticketman.components.network.transfer.saveDownload
 import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.components.print.PrintTemplates
@@ -31,6 +35,7 @@ import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
+import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.server.response.PendingUserResponse
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
@@ -60,9 +65,13 @@ class AdminHandler(
     private val _isLoading = MutableStateFlow(false)
     val isLoading = _isLoading.asStateFlow()
 
-    // Where a backup is up to, null when none is running
+    // Where a backup or restore upload is up to, null when none is running
     private val _backupProgress = MutableStateFlow<BackupProgress?>(null)
     val backupProgress = _backupProgress.asStateFlow()
+
+    // A restore the server will apply when it next starts
+    private val _pendingRestore = MutableStateFlow<PendingRestore?>(null)
+    val pendingRestore = _pendingRestore.asStateFlow()
 
     private val _stats = MutableStateFlow<AdminStatsResponse?>(null)
     val stats = _stats.asStateFlow()
@@ -111,6 +120,7 @@ class AdminHandler(
             _stations.value = admin.getStations()
             _sessions.value = admin.getSessions()
             _serverInfo.value = admin.getServerInfo()
+            _pendingRestore.value = admin.getPendingRestore()
             _shopProfile.value = admin.getShopProfile()
             loadAudit(reset = true)
 
@@ -157,7 +167,10 @@ class AdminHandler(
     }
 
     fun refreshServerInfo() {
-        scope.launch { _serverInfo.value = admin.getServerInfo() }
+        scope.launch {
+            _serverInfo.value = admin.getServerInfo()
+            _pendingRestore.value = admin.getPendingRestore()
+        }
     }
 
     fun refreshAudit() {
@@ -179,6 +192,7 @@ class AdminHandler(
         _lowStock.value = emptyList()
         _sessions.value = emptyList()
         _serverInfo.value = null
+        _pendingRestore.value = null
         _shopProfile.value = null
         _auditEntries.value = emptyList()
         _auditEndReached.value = false
@@ -446,6 +460,50 @@ class AdminHandler(
 
             _backupProgress.value = null
             _isLoading.value = false
+        }
+    }
+
+    /**
+     * Sends a backup archive to the server to restore from. The server checks it and swaps it in the next time
+     * it starts, keeping the current data aside
+     */
+    fun restoreFrom(file: PlatformFile) {
+        scope.launch {
+            _isLoading.value = true
+            _backupProgress.value = BackupProgress("Uploading ${file.name}", 0f)
+
+            val result = admin.uploadRestore(fileBody(file, ContentType.Application.Zip)) { sent, total ->
+                _backupProgress.value = BackupProgress(
+                    text = total?.let { "Uploading ${formatBytes(sent)} of ${formatBytes(it)}" } ?: "Uploading ${formatBytes(sent)}",
+                    fraction = total?.takeIf { it > 0 }?.let { sent.toFloat() / it }
+                )
+            }
+
+            when (result) {
+                is Result.Success -> {
+                    _pendingRestore.value = result.data
+                    notify("Backup ready. Restart the server to restore it")
+                }
+
+                is Result.Error -> notify("Restore failed: ${result.error.message}")
+            }
+
+            _backupProgress.value = null
+            _isLoading.value = false
+        }
+    }
+
+    /** Drops the restore waiting for a restart */
+    fun cancelRestore() {
+        scope.launch {
+            when (val result = admin.cancelRestore()) {
+                is Result.Success -> {
+                    _pendingRestore.value = null
+                    notify("Restore cancelled")
+                }
+
+                is Result.Error -> notify(result.error.message)
+            }
         }
     }
 

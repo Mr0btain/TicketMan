@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
+import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
@@ -24,6 +25,7 @@ fun Application.configureRouting(
     checkInService: CheckInService,
     imageService: ImageService,
     backupService: BackupService,
+    restoreService: RestoreService,
     localDatabase: LocalDatabase
 ) {
     install(StatusPages) {
@@ -61,7 +63,8 @@ fun Application.configureRouting(
             adminRoute(
                 database = localDatabase,
                 adminService = adminService,
-                backupService = backupService
+                backupService = backupService,
+                restoreService = restoreService
             )
         }
 

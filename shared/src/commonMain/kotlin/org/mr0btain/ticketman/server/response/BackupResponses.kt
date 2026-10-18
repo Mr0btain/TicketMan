@@ -40,3 +40,15 @@ data class BackupManifest(
         const val IMAGES_FOLDER = "images"
     }
 }
+
+/**
+ * A backup uploaded to restore from. It's applied the next time the server starts, when the current data is
+ * moved aside to a `pre-restore-<time>` folder first
+ * @param stagedAt Epoch millis it was uploaded
+ */
+@Serializable
+data class PendingRestore(
+    val manifest: BackupManifest,
+    val sizeBytes: Long,
+    val stagedAt: Long
+)

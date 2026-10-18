@@ -17,6 +17,7 @@ import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
+import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
@@ -97,7 +98,12 @@ fun Application.module() {
             backupsFolder = File(database.databaseDirectory.parentFile, "backups")
         )
 
-        configureRouting(userService, accountService, adminService, invoiceService, checkInService, imageService, backupService, database)
+        val restoreService = RestoreService(database.databaseDirectory.parentFile)
+
+        configureRouting(
+            userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
+            restoreService, database
+        )
 
         // Clears out photos deleted or never saved a day ago, and backups whose link has run out. Stops with
         // the application
