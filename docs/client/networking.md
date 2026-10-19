@@ -157,16 +157,16 @@ has the calls every record type shares, on the server's [`RecordPaths` and `Note
 
 | Call | Route | Returns |
 |------|-------|---------|
-| `add(data)` | `POST /add` | `Result<T, ServerError>`, the record as saved |
+| `add(data)` | `POST /add` | `TmResult<T, ServerError>`, the record as saved |
 | `update(data)` | `POST /update` | `EmptyResult<ServerError>` |
 | `remove(id)` | `DELETE /remove/{id}` | `EmptyResult<ServerError>` |
-| `get(id)` | `GET /get/{id}` | `Result<T, ServerError>` |
-| `fetch(offset, limit)` | `GET /fetch` | `Result<List<T>, ServerError>` |
-| `search(query, limit)` | `GET /search` | `Result<List<SearchResult>, ServerError>` |
-| `getNotes(id)`, `addNote`, `updateNote`, `removeNote` | note routes | `Result` of notes, `EmptyResult` |
+| `get(id)` | `GET /get/{id}` | `TmResult<T, ServerError>` |
+| `fetch(offset, limit)` | `GET /fetch` | `TmResult<List<T>, ServerError>` |
+| `search(query, limit)` | `GET /search` | `TmResult<List<SearchResult>, ServerError>` |
+| `getNotes(id)`, `addNote`, `updateNote`, `removeNote` | note routes | `TmResult` of notes, `EmptyResult` |
 | `fetchPage`, `getEntity`, `setEntity` (protected) | for subclasses | |
 
-Reads return a `Result` so a screen can tell "nothing there" from "couldn't load": an empty list or a `NOT_FOUND`
+Reads return a `TmResult` so a screen can tell "nothing there" from "couldn't load": an empty list or a `NOT_FOUND`
 error (`ServerError.isNotFound`) means there's nothing, any other error that it couldn't be read. A linked record
 that may be missing, like a ticket's tech, goes through `orNullIfNotFound()`. Records screens forget a record that's
 gone and say so for one that couldn't be loaded; `OffsetPager.loadError` puts a notice over a list whose page
@@ -183,7 +183,7 @@ The other repositories (`AdminRemoteRepository`, `CounterRemoteRepository`, `Inv
 ### Writing a call
 
 ```kotlin
-suspend fun getTickets(identifier: Uuid): Result<List<Ticket>, ServerError> {
+suspend fun getTickets(identifier: Uuid): TmResult<List<Ticket>, ServerError> {
     if (serverUrl.isBlank()) return noServer()
 
     val response = networkRequest(GET_TICKETS_TAG) {
@@ -201,7 +201,7 @@ suspend fun getTickets(identifier: Uuid): Result<List<Ticket>, ServerError> {
   only need to know whether it worked.
 - Turn the response into a result: `handleActionHttpResponse` for success or failure, `handleDataHttpResponse<T>`
   for a body, `handleHttpResponse<T>` for a body with a `NetworkError`.
-- Return `Result`/`EmptyResult` with a `ServerError`, so the handler can show the server's reason, and for reads
+- Return `TmResult`/`EmptyResult` with a `ServerError`, so the handler can show the server's reason, and for reads
   tell a failure from nothing there. A few older reads (ticket history, signature, invoice for a ticket) still
   return `T?`.
 

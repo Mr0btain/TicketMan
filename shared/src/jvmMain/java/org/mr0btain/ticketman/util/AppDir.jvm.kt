@@ -23,25 +23,23 @@ actual class AppDir {
                 }
             }
 
-        // TODO: Test this
             Platform.MacOS -> {
                 val env = System.getenv("HOME") ?: ""
 
                 AppLogger.m(TAG, "Mac OS")
 
                 if (env.isBlank()) {
-                    println("Env is blank!")
+                    AppLogger.e(TAG, "HOME isn't set")
                     null
                 } else Path("$env/Library/Application Support/$appId")
             }
 
-        // TODO: test this
             Platform.Windows -> {
                 AppLogger.m(TAG, "Windows OS")
                 val env = System.getenv("APPDATA") ?: ""
 
                 if (env.isBlank()) {
-                    println(" Env is blank!")
+                    AppLogger.e(TAG, "APPDATA isn't set")
                     null
                 } else  Path("$env/$appId")
             }

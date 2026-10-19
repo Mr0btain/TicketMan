@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.error.EmptyResult
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.CustomerPaths
 import org.mr0btain.ticketman.server.fill
@@ -30,7 +30,7 @@ class CustomerRemoteRepository(
         setEntity(ADD_TICKET_TAG, ticket, "$serverUrl${CustomerPaths.ADD_TICKET.fill(identifier)}")
 
     /** The customer's tickets, newest first */
-    suspend fun getTickets(identifier: Uuid): Result<List<Ticket>, ServerError> {
+    suspend fun getTickets(identifier: Uuid): TmResult<List<Ticket>, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(GET_TICKETS_TAG) {

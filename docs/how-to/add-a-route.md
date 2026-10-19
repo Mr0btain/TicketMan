@@ -115,7 +115,7 @@ suspend fun setPromised(identifier: Uuid, promisedAt: Long?): EmptyResult<Server
 }
 ```
 
-Reads use `networkRequest` and `handleDataHttpResponse<T>` and return a `Result` (see
+Reads use `networkRequest` and `handleDataHttpResponse<T>` and return a `TmResult` (see
 `CustomerRemoteRepository.getTickets`), so the screen can tell a failure from nothing there. If an endpoint changes
 in a way an older client can't use, bump `API_VERSION` in `ApiRoutes.kt`.
 
@@ -130,8 +130,8 @@ fun setPromised(promisedAt: Long?, onResult: (String?) -> Unit) {
 
     scope.launch {
         when (val result = remoteHandler.ticketRepo.setPromised(ticket.identifier, promisedAt)) {
-            is Result.Success -> { reloadTicket(); onResult(null) }
-            is Result.Error -> onResult(result.error.message)
+            is TmResult.Success -> { reloadTicket(); onResult(null) }
+            is TmResult.Error -> onResult(result.error.message)
         }
     }
 }

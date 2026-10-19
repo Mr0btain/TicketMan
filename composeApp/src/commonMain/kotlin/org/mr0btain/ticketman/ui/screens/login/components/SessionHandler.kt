@@ -19,7 +19,7 @@ import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
@@ -254,12 +254,12 @@ class SessionHandler(
     fun requestAccount(request: AccountRequest, onResult: (String?) -> Unit) {
         scope.launch {
             when (val result = remoteHandler.userClient.requestAccount(request)) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     _loginMessage.value = "Request sent. An admin has to approve it before you can log in."
                     onResult(null)
                 }
 
-                is Result.Error -> onResult(result.error.message)
+                is TmResult.Error -> onResult(result.error.message)
             }
         }
     }
@@ -285,7 +285,7 @@ class SessionHandler(
             }
 
             when (result) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     _accountSetup.value = null
                     _loginState.value = LoginState.LOGGED_IN
                     _loginMessage.value = null
@@ -294,7 +294,7 @@ class SessionHandler(
                     onResult(null)
                 }
 
-                is Result.Error -> onResult(result.error.message)
+                is TmResult.Error -> onResult(result.error.message)
             }
         }
     }
@@ -314,12 +314,12 @@ class SessionHandler(
     fun changePin(currentPassword: String, pin: String, onResult: (String?) -> Unit) {
         scope.launch {
             when (val result = remoteHandler.userRepo.setOwnPin(currentPassword, pin)) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     reloadCurrentUser()
                     onResult(null)
                 }
 
-                is Result.Error -> onResult(result.error.message)
+                is TmResult.Error -> onResult(result.error.message)
             }
         }
     }
@@ -343,13 +343,13 @@ class SessionHandler(
     fun registerStation(name: String, onResult: (String?) -> Unit) {
         scope.launch {
             when (val result = remoteHandler.adminRepo.registerStation(localStorage.deviceId, name.trim())) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     localStorage.stationCredentials = result.data.credentials
                     _station.value = result.data.station
                     onResult(null)
                 }
 
-                is Result.Error -> onResult(result.error.message)
+                is TmResult.Error -> onResult(result.error.message)
             }
         }
     }

@@ -28,7 +28,6 @@ import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
 import kotlin.uuid.Uuid
 
-// TODO: Add ability to assign already existing tickets to customer.
 /**
  * Adds or edits a customer. Most changes go straight onto [seed], the name is applied when saved
  * @param onContinue Saves the seed and closes the dialog. Cancelling goes through onDismiss, which reloads the record

@@ -17,7 +17,7 @@ import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import kotlin.uuid.Uuid
 
 /**
@@ -63,12 +63,12 @@ class UserRecords(
         if (!force && (seed.identifier == identifier || selection.pending.value == identifier)) return
 
         selection.select(identifier) {
-            val loaded = cache.get(identifier)?.let { Result.Success(it) } ?: coroutineScope {
+            val loaded = cache.get(identifier)?.let { TmResult.Success(it) } ?: coroutineScope {
                 val notes = async { remoteHandler.userRepo.getNotes(identifier) }
-                val user = remoteHandler.userRepo.get(identifier).valueOr { return@coroutineScope Result.Error(it) }
+                val user = remoteHandler.userRepo.get(identifier).valueOr { return@coroutineScope TmResult.Error(it) }
 
-                Result.Success(
-                    UserCache.UserData(user, notes.await().valueOr { return@coroutineScope Result.Error(it) }, emptyList())
+                TmResult.Success(
+                    UserCache.UserData(user, notes.await().valueOr { return@coroutineScope TmResult.Error(it) }, emptyList())
                         .also { cache.put(it.user, it.notes) }
                 )
             }
@@ -103,7 +103,7 @@ class UserRecords(
         scope.launch {
             val result = if (isEdit) repo.updateNote(note) else repo.addNote(identifier, note)
 
-            if (result is Result.Error) {
+            if (result is TmResult.Error) {
                 snackBarHost.showSnackbar("Note not saved: ${result.error.message}")
                 return@launch
             }
@@ -129,7 +129,7 @@ class UserRecords(
         scope.launch {
             val result = repo.removeNote(noteIdentifier)
 
-            if (result is Result.Error) {
+            if (result is TmResult.Error) {
                 snackBarHost.showSnackbar("Note not deleted: ${result.error.message}")
                 return@launch
             }

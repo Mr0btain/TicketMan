@@ -24,7 +24,6 @@ fun createRemoteHttpClient(
 ): HttpClient {
     val TAG = "CreateRemoteHttpClient"
 
-    // TODO: Secure the storage of these, maybe encrypt?
     return HttpClient(engine) {
         // Headers only: logging bodies makes Ktor hold every photo and backup in memory, and dumps them to the log
         install(Logging) {

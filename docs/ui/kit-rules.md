@@ -21,18 +21,24 @@ doesn't get the kit's hover, focus and sizing.
 ## What the test checks
 
 [`UiKitRulesTest`](../../composeApp/src/desktopTest/kotlin/org/mr0btain/ticketman/ui/UiKitRulesTest.kt) reads every
-`.kt` file under `ui/` except `ui/kit/`, plus `App.kt`, line by line. It fails on:
+`.kt` file under `ui/` except `ui/kit/`, plus `App.kt`, line by line, with comments and the insides of strings
+blanked out first. It fails on:
 
 | Found | Why it's refused | Use instead |
 |-------|------------------|-------------|
 | `import androidx.compose.material3.X` where `X` isn't `Text`, `Icon` or `SnackbarHostState` | A Material component on a screen | The kit's version, or add one |
+| `import androidx.compose.material3.<subpackage>...`, other than `windowsizeclass` | The same, from a subpackage | The kit's version, or add one |
+| `import androidx.compose.material.` | Material 2 | The kit |
 | `Color(0x` | A hard coded color | `TmTheme.colors`, or a tone through `TmColors.tone(...)` |
+| `Color.Red` and the other named colors, except `Transparent` and `Unspecified` | A hard coded color | `TmTheme.colors` |
 | `fontSize =` | A hard coded text size | A `TmTheme.typography` style |
+| `TextStyle(` | A hand made text style | A `TmTheme.typography` style, `.copy(...)` it if needed |
 | `RoundedCornerShape(` | A hand made shape | `TmTheme.shapes` |
 | `MaterialTheme.` | Reading Material's theme | `TmTheme` |
 
 Import lines are only checked for Material; the other patterns are looked for on every other line. The failure
-message lists each hit as `path:line has ...`.
+message lists each hit as `path:line has ...`. `rulesCatchWhatTheyShould` runs the same checks on a made up file,
+so a rule that stops matching fails too.
 
 It runs with the client tests:
 
@@ -77,9 +83,9 @@ Pick an `id` you won't change: it's what's saved in settings, and an unknown `id
 
 - **`dp` values aren't checked.** Fixed widths like a 360 dp queue panel are fine on screens; gaps and padding
   should still come from `TmTheme.spacing`.
-- **It's a text search.** It doesn't catch `Color.Red`, a `TextStyle(...)` built on a screen, Material 2
-  (`androidx.compose.material.`) imports, or Material imports from a subpackage, like
-  `material3.windowsizeclass` (which `App.kt` uses, and is fine). It also flags the banned text inside a comment.
+- **It's still a text search.** It reads the code, not what it compiles to, so a color or style built in a helper
+  outside `ui/` (or reached through an alias) isn't caught. A `'"'` character literal confuses its string
+  blanking for the rest of that line.
 - **Paths are relative.** It reads `src/commonMain/...` from the `composeApp` folder, which is where Gradle runs
   it. Running it from an IDE with another working directory fails the "found more than 20 files" check.
 

@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.pagination.offset
 
 import org.mr0btain.ticketman.server.NetworkError
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
@@ -17,8 +17,8 @@ class OffsetPagerTest {
         config = OffsetPagerConfig(pageSize = 2, initialLoadSize = 3)
     ) { page, pageSize ->
         fetched += page
-        if (failing) Result.Error(NetworkError.SERVER_ERROR)
-        else Result.Success((page * pageSize..<minOf(total, (page + 1) * pageSize)).toList())
+        if (failing) TmResult.Error(NetworkError.SERVER_ERROR)
+        else TmResult.Success((page * pageSize..<minOf(total, (page + 1) * pageSize)).toList())
     }
 
     @Test
@@ -68,7 +68,7 @@ class OffsetPagerTest {
         val small = OffsetPager<Int>(
             tag = "TestPager",
             config = OffsetPagerConfig(pageSize = 2, initialLoadSize = 2, maxSize = 4)
-        ) { page, pageSize -> Result.Success((page * pageSize..<(page + 1) * pageSize).toList()) }
+        ) { page, pageSize -> TmResult.Success((page * pageSize..<(page + 1) * pageSize).toList()) }
 
         // Load far enough that the first pages get trimmed off
         small.refresh()

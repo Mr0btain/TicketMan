@@ -11,7 +11,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.database.transferTimeout
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.networkRequest
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 
 /** How a download to a file ended */
@@ -40,12 +40,12 @@ suspend fun HttpClient.downloadTo(
     expectedBytes: Long?,
     openSink: () -> RawSink,
     onProgress: (received: Long, total: Long?) -> Unit = { _, _ -> }
-): Result<Long, ServerError> {
+): TmResult<Long, ServerError> {
     val result = networkRequest(TAG) {
         prepareGet(url) { transferTimeout() }.execute { response ->
             if (!response.status.isSuccess()) {
-                val failed = handleActionHttpResponse(TAG, response) as? Result.Error
-                return@execute Result.Error(failed?.error ?: ServerError(NetworkError.UNKNOWN))
+                val failed = handleActionHttpResponse(TAG, response) as? TmResult.Error
+                return@execute TmResult.Error(failed?.error ?: ServerError(NetworkError.UNKNOWN))
             }
 
             val total = response.contentLength() ?: expectedBytes
@@ -65,17 +65,17 @@ suspend fun HttpClient.downloadTo(
             }
 
             if (expectedBytes != null && received != expectedBytes) {
-                Result.Error(ServerError(NetworkError.UNKNOWN, "Download stopped early ($received of $expectedBytes bytes)"))
+                TmResult.Error(ServerError(NetworkError.UNKNOWN, "Download stopped early ($received of $expectedBytes bytes)"))
             } else {
-                Result.Success(received)
+                TmResult.Success(received)
             }
         }
     }
 
     return when (result) {
-        is Result.Success -> result.data
+        is TmResult.Success -> result.data
         // A connection that drops part way reads as no connection, so say what that means here
-        is Result.Error -> Result.Error(
+        is TmResult.Error -> TmResult.Error(
             if (result.error == NetworkError.NO_INTERNET) ServerError(result.error, "The download was cut off")
             else ServerError(result.error)
         )

@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.network
 
 import org.mr0btain.ticketman.error.Error
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 
 /**
@@ -21,5 +21,5 @@ val ServerError.isNotFound: Boolean
     get() = type == NetworkError.NOT_FOUND
 
 /** For a linked record that may not be there, like a ticket's technician: not found becomes null, other failures stay */
-fun <T> Result<T, ServerError>.orNullIfNotFound(): Result<T?, ServerError> =
-    if (this is Result.Error && error.isNotFound) Result.Success(null) else this
+fun <T> TmResult<T, ServerError>.orNullIfNotFound(): TmResult<T?, ServerError> =
+    if (this is TmResult.Error && error.isNotFound) TmResult.Success(null) else this

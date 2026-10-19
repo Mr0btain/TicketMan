@@ -11,7 +11,7 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.AppWindow
 import kotlin.time.Clock
 
@@ -77,8 +77,8 @@ class KioskHandler(
     fun refreshStaff() {
         scope.launch {
             when (val result = remoteHandler.stationStaff()) {
-                is Result.Success -> _staff.value = result.data
-                is Result.Error -> _staff.value = emptyList()
+                is TmResult.Success -> _staff.value = result.data
+                is TmResult.Error -> _staff.value = emptyList()
             }
         }
     }
@@ -90,14 +90,14 @@ class KioskHandler(
     fun unlock(member: StaffMember, pin: String, onResult: (String?) -> Unit) {
         scope.launch {
             when (val result = remoteHandler.pinLogin(member.identifier, pin)) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     onSignedIn()
                     lastActivity = now()
                     _locked.value = false
                     onResult(null)
                 }
 
-                is Result.Error -> {
+                is TmResult.Error -> {
                     onResult(result.error.message)
                     refreshStaff()
                 }
@@ -112,7 +112,7 @@ class KioskHandler(
     fun exit(member: StaffMember, pin: String, onResult: (String?) -> Unit) {
         scope.launch {
             when (val result = remoteHandler.pinLogin(member.identifier, pin)) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     onSignedIn()
 
                     if (isAdmin()) {
@@ -127,7 +127,7 @@ class KioskHandler(
                     }
                 }
 
-                is Result.Error -> onResult(result.error.message)
+                is TmResult.Error -> onResult(result.error.message)
             }
         }
     }

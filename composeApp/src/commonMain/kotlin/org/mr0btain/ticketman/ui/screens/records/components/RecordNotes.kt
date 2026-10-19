@@ -4,7 +4,7 @@ import org.mr0btain.ticketman.error.valueOr
 import androidx.compose.material3.SnackbarHostState
 import org.mr0btain.ticketman.components.network.database.RemoteRepository
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import kotlin.uuid.Uuid
 
 /**
@@ -72,6 +72,6 @@ suspend fun syncNotes(
         )
     }
 
-    val failed = (saves + removals).count { it is Result.Error }
+    val failed = (saves + removals).count { it is TmResult.Error }
     if (failed > 0) snackBarHost.showSnackbar("$failed ${if (failed == 1) "note change wasn't" else "note changes weren't"} saved")
 }

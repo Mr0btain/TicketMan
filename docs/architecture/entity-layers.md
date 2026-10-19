@@ -172,7 +172,7 @@ All repositories share the one authenticated `HttpClient` that `RemoteHandler` b
 handled once for all of them. `serverUrl` stays blank until a server has been reached, and every call returns
 early with a "No server set" error while it's blank.
 
-Everything returns a `Result<T, ServerError>` (or `EmptyResult` for a change), so a screen can tell a record that
+Everything returns a `TmResult<T, ServerError>` (or `EmptyResult` for a change), so a screen can tell a record that
 isn't there (`NOT_FOUND`) from one that couldn't be loaded. See [Networking](../client/networking.md#repositories).
 
 ## 6. Client cache and seed

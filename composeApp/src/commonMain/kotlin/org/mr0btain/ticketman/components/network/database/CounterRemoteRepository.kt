@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.invoice.Invoice
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.CheckInRequest
@@ -49,9 +49,9 @@ class CounterRemoteRepository(
         }
 
     /** Tickets and customers matching [query]. Nothing for a blank one */
-    suspend fun search(query: String, limit: Int): Result<CounterSearchResponse, ServerError> {
-        if (query.isBlank()) return Result.Success(CounterSearchResponse())
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun search(query: String, limit: Int): TmResult<CounterSearchResponse, ServerError> {
+        if (query.isBlank()) return TmResult.Success(CounterSearchResponse())
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(SEARCH_TAG) {
             client.get {
@@ -77,8 +77,8 @@ class CounterRemoteRepository(
     }
 
     /** Checks a device in: ticket, customer, tech, deposit and signature all at once */
-    suspend fun checkIn(request: CheckInRequest): Result<CheckInResponse, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun checkIn(request: CheckInRequest): TmResult<CheckInResponse, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(CHECK_IN_TAG) {
             client.post {
@@ -95,8 +95,8 @@ class CounterRemoteRepository(
      * Hands a ticket back: takes the payments, pays off its invoice and closes the ticket.
      * Refused with what's still owed if the payments don't cover it
      */
-    suspend fun pickup(ticketIdentifier: Uuid, payments: List<PaymentRequest>): Result<Invoice, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun pickup(ticketIdentifier: Uuid, payments: List<PaymentRequest>): TmResult<Invoice, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(PICKUP_TAG) {
             client.post {

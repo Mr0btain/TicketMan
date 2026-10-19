@@ -17,7 +17,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 ## Shared module
 
 - [Domain models](shared/domain-models.md): `MainItem`, ids and creation time, every record type
-- [Results and errors](shared/results-and-errors.md): `Result`, `Error`, the try/catch helpers, logging
+- [Results and errors](shared/results-and-errors.md): `TmResult`, `Error`, the try/catch helpers, logging
 - [Money](shared/money.md): cents everywhere, `Money` and `InvoiceMath`
 - [DTOs, caches and platform helpers](shared/dtos-and-platform.md): request and response bodies, `LruCache`, `AppDir`
 

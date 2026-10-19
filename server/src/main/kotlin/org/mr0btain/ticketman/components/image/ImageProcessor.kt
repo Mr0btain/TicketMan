@@ -4,7 +4,7 @@ import net.coobird.thumbnailator.Thumbnails
 import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.error.ImageError
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import java.awt.Color
@@ -38,12 +38,12 @@ object ImageProcessor {
     /**
      * Writes every variant of [source] into [outputFolder] as `<variant>.jpg`
      */
-    fun process(source: File, outputFolder: File): Result<Processed, ImageError> {
+    fun process(source: File, outputFolder: File): TmResult<Processed, ImageError> {
         // Header only, so a small file claiming to be enormous is caught before it's decoded
-        val (sourceWidth, sourceHeight) = readSize(source) ?: return Result.Error(ImageError.UNSUPPORTED)
+        val (sourceWidth, sourceHeight) = readSize(source) ?: return TmResult.Error(ImageError.UNSUPPORTED)
 
-        if (sourceWidth <= 0 || sourceHeight <= 0) return Result.Error(ImageError.UNSUPPORTED)
-        if (sourceWidth.toLong() * sourceHeight > ImageLimits.MAX_PIXELS) return Result.Error(ImageError.TOO_LARGE)
+        if (sourceWidth <= 0 || sourceHeight <= 0) return TmResult.Error(ImageError.UNSUPPORTED)
+        if (sourceWidth.toLong() * sourceHeight > ImageLimits.MAX_PIXELS) return TmResult.Error(ImageError.TOO_LARGE)
 
         return try {
             outputFolder.mkdirs()
@@ -64,7 +64,7 @@ object ImageProcessor {
 
             val originalFile = File(outputFolder, "${ImageVariant.ORIGINAL.path}.jpg")
 
-            Result.Success(
+            TmResult.Success(
                 Processed(
                     width = original.width,
                     height = original.height,
@@ -74,10 +74,10 @@ object ImageProcessor {
             )
         } catch (ex: Exception) {
             AppLogger.e(PROCESS_TAG, SimpleResult.FAIL, ex)
-            Result.Error(ImageError.UNSUPPORTED)
+            TmResult.Error(ImageError.UNSUPPORTED)
         } catch (ex: OutOfMemoryError) {
             AppLogger.e(PROCESS_TAG, "Ran out of memory on a ${sourceWidth}x$sourceHeight image", ex)
-            Result.Error(ImageError.TOO_LARGE)
+            TmResult.Error(ImageError.TOO_LARGE)
         }
     }
 

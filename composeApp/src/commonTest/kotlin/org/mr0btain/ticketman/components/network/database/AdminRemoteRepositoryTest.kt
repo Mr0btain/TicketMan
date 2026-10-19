@@ -14,7 +14,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.transfer.downloadTo
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
@@ -95,7 +95,7 @@ class AdminRemoteRepositoryTest {
     fun backupIsPreparedThenStreamedToAFile() = runTest {
         val prepared = admin.prepareBackup(includeImages = false)
 
-        assertIs<Result.Success<BackupTicket>>(prepared)
+        assertIs<TmResult.Success<BackupTicket>>(prepared)
         assertEquals("POST /api/admin/backup", requests.single())
         assertEquals("http://localhost/api/admin/backup/download/b1?token=t", admin.backupDownloadUrl(prepared.data))
 
@@ -105,7 +105,7 @@ class AdminRemoteRepositoryTest {
             progress += received
         }
 
-        assertEquals(Result.Success(backupBytes.size.toLong()), downloaded)
+        assertEquals(TmResult.Success(backupBytes.size.toLong()), downloaded)
         assertContentEquals(backupBytes, file.readByteArray())
         // Written as it arrived, not all at the end
         assertTrue(progress.size > 1, "$progress")
@@ -115,7 +115,7 @@ class AdminRemoteRepositoryTest {
     fun restoreUploadsTheArchiveAsTheBody() = runTest {
         val result = admin.uploadRestore(ByteArrayContent(byteArrayOf(80, 75, 3, 4), ContentType.Application.Zip))
 
-        assertEquals(Result.Success(pendingRestore), result)
+        assertEquals(TmResult.Success(pendingRestore), result)
         val (type, body) = restoreBodies.single()
         assertEquals(ContentType.Application.Zip.toString(), type)
         assertContentEquals(byteArrayOf(80, 75, 3, 4), body)
@@ -133,15 +133,15 @@ class AdminRemoteRepositoryTest {
     fun shortDownloadsFail() = runTest {
         val downloaded = client.downloadTo("http://localhost/api/admin/backup/download/b1", backupBytes.size + 1L, { Buffer() })
 
-        assertIs<Result.Error<*>>(downloaded)
+        assertIs<TmResult.Error<*>>(downloaded)
     }
 
     @Test
     fun failuresCarryTheServersReason() = runTest {
         val result = admin.seed(SeedRequest())
 
-        assertIs<Result.Error<*>>(result)
-        val error = (result as Result.Error).error
+        assertIs<TmResult.Error<*>>(result)
+        val error = (result as TmResult.Error).error
         assertEquals(NetworkError.FORBIDDEN, error.type)
         assertEquals("Seeding is only allowed in development mode", error.message)
     }
@@ -188,8 +188,8 @@ class AdminRemoteRepositoryTest {
     fun addingATakenUsernameReportsTheConflict() = runTest {
         val result = users.add(User(username = "taken"))
 
-        assertIs<Result.Error<*>>(result)
-        assertEquals("Username is already taken", (result as Result.Error).error.message)
+        assertIs<TmResult.Error<*>>(result)
+        assertEquals("Username is already taken", (result as TmResult.Error).error.message)
     }
 
     @Test
@@ -197,7 +197,7 @@ class AdminRemoteRepositoryTest {
         val unset = AdminRemoteRepository(client)
 
         assertNull(unset.getStats(5, 10))
-        assertIs<Result.Error<*>>(unset.revokeSession("session-1"))
+        assertIs<TmResult.Error<*>>(unset.revokeSession("session-1"))
         assertTrue(requests.isEmpty())
     }
 }

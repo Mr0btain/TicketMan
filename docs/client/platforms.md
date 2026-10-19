@@ -24,13 +24,14 @@ In `composeApp` (`composeApp/src/commonMain/.../`):
 | `defaultServerAddress()` | `components/network/DefaultServerAddress.kt` | Blank (shared, `jvmSharedMain`) | Blank | The page's own origin |
 | `BuildConfigImpl.isDebug()` | `components/debug/IsDebug.kt` | `-DticketmanDebug=true` system property | The app is debuggable (a debug build) | The page came from `localhost` |
 | `platformModule` | `components/injection/PlatformModule.kt` | `KSafe` | `KSafe` with the app `Context` | `KSafe` |
-| `initAppDir()` | `components/injection/InitAppDir.kt` | `AppDir()` | `AppDir(context)` | `AppDir()` |
+| `initAppDir()` | `components/injection/InitAppDir.kt` | `AppDir()` | `AppDir(context)` | `AppDir()`, with no folder |
 | `printDocument(document, paper)` | `components/print/PrintDocument.kt` | Java2D `PrinterJob` | `WebView` + `PrintManager` | Hidden iframe |
 | `saveFile(bytes, name, ext)` | `components/data/SaveFile.kt` | FileKit save dialog | FileKit save dialog | Browser download |
 | `saveDownload(...)` | `components/network/transfer/Download.kt` | Save dialog, then stream | Save dialog, then stream | Browser download of the link |
 | `fileBody(file, type)` | `components/network/transfer/Upload.kt` | Streams the file | Streams the file | Reads it whole |
 | `shrinkForUpload(bytes)` | `components/image/ImageClient.kt` | Sends as is | Scales photos over 1.5 MB to 2560px JPEG | Sends as is |
 | `imageDiskCache(context, size)` | `components/image/ImageClient.kt` | Coil disk cache in FileKit's cache dir | Coil disk cache in the app cache dir | None, the browser caches |
+| `alwaysWide` | `ui/screens/navigation/AlwaysWide.kt` | `true`: always the nav rail | `false`: the window's width decides | `false` |
 | `TmVerticalScrollbar(...)`, `tmShowsScrollbars` | `ui/kit/foundation/TmScrollbar.kt` | Desktop scrollbars, shown | None | None |
 
 In `shared` (see [DTOs, caches and platform helpers](../shared/dtos-and-platform.md#platform-helpers)): `AppLogger`,

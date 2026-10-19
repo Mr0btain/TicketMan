@@ -92,7 +92,7 @@ class AdminHandlerTest {
         val admin = handler()
         var closed = false
 
-        admin.saveUser(sam, isNew = true, password = "new-pass") { closed = true }
+        admin.accounts.saveUser(sam, isNew = true, password = "new-pass") { closed = true }
         settle { snackBar.currentSnackbarData != null }
 
         val (call, body) = requests.single()
@@ -107,7 +107,7 @@ class AdminHandlerTest {
     fun savingAnExistingUserNeverSendsAPassword() = runTest {
         val admin = handler()
 
-        admin.saveUser(sam, isNew = false, password = "ignored") {}
+        admin.accounts.saveUser(sam, isNew = false, password = "ignored") {}
         settle { snackBar.currentSnackbarData != null }
 
         val (call, body) = requests.single()
@@ -121,7 +121,7 @@ class AdminHandlerTest {
         val admin = handler()
         var closed = false
 
-        admin.saveUser(sam, isNew = true, password = "new-pass") { closed = true }
+        admin.accounts.saveUser(sam, isNew = true, password = "new-pass") { closed = true }
         settle { snackBar.currentSnackbarData != null }
 
         assertFalse(closed)
@@ -133,7 +133,7 @@ class AdminHandlerTest {
     fun deactivatingSendsTheStatus() = runTest {
         val admin = handler()
 
-        admin.setUserActive(sam, active = false)
+        admin.accounts.setUserActive(sam, active = false)
         settle { snackBar.currentSnackbarData != null }
 
         assertEquals(UserStatus.DEACTIVATED, json.decodeFromString<User>(requests.single().second).status)
@@ -193,7 +193,7 @@ class AdminHandlerTest {
         assertTrue(admin.auditEntries.value.isEmpty())
         assertFalse(admin.auditEndReached.value)
         assertNull(admin.stats.value)
-        assertTrue(admin.pending.value.isEmpty())
+        assertTrue(admin.accounts.pending.value.isEmpty())
     }
 
     @Test

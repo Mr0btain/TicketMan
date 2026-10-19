@@ -152,10 +152,6 @@ The client has no config file. What it needs is set from the app and saved on th
 The device id is how the server tells this device's session apart from others, so logging in again on the same
 device replaces its old session instead of adding one.
 
-## Known gaps
-
-- The commented out `postgres` block in `application.yaml` isn't used. H2 is the only database.
-
 ## See also
 
 - [Getting started](getting-started.md)

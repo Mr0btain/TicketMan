@@ -23,7 +23,7 @@ import org.mr0btain.ticketman.components.network.user.createUserHttpClient
 import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
@@ -183,7 +183,7 @@ class RemoteHandler(
     suspend fun refreshTokens(): Token? {
         if (localStorage.refreshToken.isNotBlank()) {
             // On success this stores the new access token through updateAuthTokens
-            if (userClient.refreshTokens(localStorage.refreshToken) is Result.Success) {
+            if (userClient.refreshTokens(localStorage.refreshToken) is TmResult.Success) {
                 AppLogger.m(REFRESH_TOKENS_TAG, SimpleResult.SUCCESS)
                 return getStoredToken()
             }
@@ -232,17 +232,17 @@ class RemoteHandler(
      */
     suspend fun pinLogin(userIdentifier: Uuid, pin: String): EmptyResult<ServerError> {
         val station = localStorage.stationCredentials
-            ?: return Result.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
+            ?: return TmResult.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
 
         return userClient.pinLogin(station, userIdentifier, pin).also { result ->
-            if (result is Result.Success) onLoggedIn()
+            if (result is TmResult.Success) onLoggedIn()
         }
     }
 
     /** Finishes an invite, which also logs in */
     suspend fun completeInviteSetup(username: String, request: InviteSetupRequest): EmptyResult<ServerError> =
         userClient.completeInviteSetup(username, request).also { result ->
-            if (result is Result.Success) onLoggedIn()
+            if (result is TmResult.Success) onLoggedIn()
         }
 
     /**
@@ -299,9 +299,9 @@ class RemoteHandler(
     }
 
     /** People who can PIN in at this station, empty if it isn't one */
-    suspend fun stationStaff(): Result<List<StaffMember>, ServerError> {
+    suspend fun stationStaff(): TmResult<List<StaffMember>, ServerError> {
         val station = localStorage.stationCredentials
-            ?: return Result.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
+            ?: return TmResult.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
 
         return userClient.stationStaff(station)
     }

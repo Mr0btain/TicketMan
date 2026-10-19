@@ -9,7 +9,6 @@ import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsLayout
 import kotlin.uuid.Uuid
 
-// TODO: Setup setting reorder on stock hitting a certain amount. Like a popup on login or when it happens?
 
 /** Inventory: search and add on top, the list, and the picked item's details */
 @Composable

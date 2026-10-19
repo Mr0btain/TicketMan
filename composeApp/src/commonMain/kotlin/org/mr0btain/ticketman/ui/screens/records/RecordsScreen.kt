@@ -54,7 +54,6 @@ fun RecordsScreen(
 
     // For customer dialog
     var showCustomerDialog by remember { mutableStateOf(false) }
-    var isTicketForNewCustomer by remember { mutableStateOf(false) }
 
     // For ticket panel
     val ticketSeed = viewModel.tickets.seed
@@ -252,7 +251,6 @@ fun RecordsScreen(
                 loadError = customerLoadError
             )
 
-            // TODO: Finish user implementation
             1 -> TicketPanel(
                 ticketList = ticketPagedItems.value,
                 seed = ticketSeed,

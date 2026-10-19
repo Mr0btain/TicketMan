@@ -11,7 +11,7 @@ import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
@@ -66,7 +66,7 @@ class CounterRemoteRepositoryTest {
     fun addReturnsTheNumberedTicket() = runTest {
         val result = tickets.add(Ticket())
 
-        assertIs<Result.Success<Ticket>>(result)
+        assertIs<TmResult.Success<Ticket>>(result)
         assertEquals("26-00000007", result.data.number.toString())
     }
 
@@ -108,8 +108,8 @@ class CounterRemoteRepositoryTest {
     fun pickupPassesOnWhatsStillOwed() = runTest {
         val result = counter.pickup(Uuid.random(), listOf(PaymentRequest(PaymentMethod.CASH, 100)))
 
-        assertIs<Result.Error<*>>(result)
-        assertEquals("$12.00 is still owed on INV-26-00000001", (result as Result.Error).error.message)
+        assertIs<TmResult.Error<*>>(result)
+        assertEquals("$12.00 is still owed on INV-26-00000001", (result as TmResult.Error).error.message)
     }
 
     @Test

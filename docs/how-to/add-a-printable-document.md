@@ -53,7 +53,7 @@ fits an 80 mm receipt; letter paper just gets wider margins.
 Counter printouts are picked from `PrintButton`'s menu, listed by `PrintTemplate`:
 
 1. Add an entry to the `PrintTemplate` enum: `ESTIMATE("Estimate")`. The label is what the menu shows.
-2. Add a branch to the `when` in `CounterHandler.print(...)`. It's exhaustive, so the build fails until you do:
+2. Add a branch to the `when` in `CounterPrinter.print(...)`. It's exhaustive, so the build fails until you do:
 
    ```kotlin
    PrintTemplate.ESTIMATE -> PrintTemplates.estimate(shop, detail.ticket, detail.customer)
@@ -90,7 +90,7 @@ escapes any text it puts in the page (`escape(...)`).
 ## Checklist
 
 - [ ] A `PrintTemplates` function returning a `PrintDocument`
-- [ ] A `PrintTemplate` entry and a branch in `CounterHandler.print`, or its own handler call
+- [ ] A `PrintTemplate` entry and a branch in `CounterPrinter.print`, or its own handler call
 - [ ] Offered in a `PrintButton`
 - [ ] Any new block drawn in `Java2DPrintLayout` and `HtmlPrintRenderer`
 - [ ] `PrintTemplatesTest` and `Java2DPrintLayoutTest`

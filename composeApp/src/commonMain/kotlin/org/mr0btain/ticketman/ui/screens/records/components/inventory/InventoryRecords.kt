@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.screens.records.components.syncNotes
 import kotlin.uuid.Uuid
 
@@ -64,16 +64,16 @@ class InventoryRecords(
 
         selection.select(identifier) {
             // Notes and photos that failed to load aren't shown as none, saving would then drop them
-            val loaded = cache.get(identifier)?.let { Result.Success(it) } ?: coroutineScope {
+            val loaded = cache.get(identifier)?.let { TmResult.Success(it) } ?: coroutineScope {
                 val notes = async { remoteHandler.inventoryRepo.getNotes(identifier) }
                 val images = async { remoteHandler.inventoryRepo.getImages(identifier) }
-                val inventory = remoteHandler.inventoryRepo.get(identifier).valueOr { return@coroutineScope Result.Error(it) }
+                val inventory = remoteHandler.inventoryRepo.get(identifier).valueOr { return@coroutineScope TmResult.Error(it) }
 
-                Result.Success(
+                TmResult.Success(
                     InventoryCache.InventoryData(
                         inventory,
-                        notes.await().valueOr { return@coroutineScope Result.Error(it) },
-                        images.await().valueOr { return@coroutineScope Result.Error(it) }
+                        notes.await().valueOr { return@coroutineScope TmResult.Error(it) },
+                        images.await().valueOr { return@coroutineScope TmResult.Error(it) }
                     ).also { cache.put(it.inventory, it.notes, it.images) }
                 )
             }
@@ -129,7 +129,7 @@ class InventoryRecords(
             if (isNew || (changed - separateFields).isNotEmpty()) {
                 val saved = if (isNew) repo.add(inventory).asEmptyDataResult() else repo.update(inventory)
 
-                if (saved is Result.Error) {
+                if (saved is TmResult.Error) {
                     snackBarHost.showSnackbar("Item not saved: ${saved.error.message}")
                     return@launch
                 }
@@ -137,14 +137,14 @@ class InventoryRecords(
 
             if (!isNew && ChangedField.STOCK in changed) {
                 val stock = repo.setStock(inventory.identifier, loadedStock, inventory.stock)
-                if (stock is Result.Error) snackBarHost.showSnackbar("Stock not saved: ${stock.error.message}")
+                if (stock is TmResult.Error) snackBarHost.showSnackbar("Stock not saved: ${stock.error.message}")
             }
 
             if (isNew || ChangedField.NOTE in changed) syncNotes(inventory.identifier, notes, loadedNotes, repo, snackBarHost)
 
             if (isNew || ChangedField.IMAGE in changed) {
                 val photos = repo.setImages(inventory.identifier, images)
-                if (photos is Result.Error) snackBarHost.showSnackbar("Photos not saved: ${photos.error.message}")
+                if (photos is TmResult.Error) snackBarHost.showSnackbar("Photos not saved: ${photos.error.message}")
             }
 
             cache.remove(inventory.identifier)
@@ -169,13 +169,13 @@ class InventoryRecords(
 
             // The selection stays until the server agrees, so a refused delete doesn't look like it worked
             when (val removed = remoteHandler.inventoryRepo.remove(identifier)) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     clearSelection()
                     cache.remove(identifier)
                     pager.refreshCurrentData()
                 }
 
-                is Result.Error -> snackBarHost.showSnackbar("Item not deleted: ${removed.error.message}")
+                is TmResult.Error -> snackBarHost.showSnackbar("Item not deleted: ${removed.error.message}")
             }
         }
     }

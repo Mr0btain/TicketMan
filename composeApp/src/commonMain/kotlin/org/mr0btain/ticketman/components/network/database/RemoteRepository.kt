@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.error.EmptyResult
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.ApiQuery
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.NotePaths
@@ -34,7 +34,7 @@ inline fun <reified T> itemTypes(): ItemTypes<T> = ItemTypes(typeInfo<T>(), type
  * Base client for a MainItem type's server routes: the [RecordPaths] and [NotePaths] every record type has, under
  * its [route]. Subclasses pass their route and add calls for their own endpoints.
  *
- * Everything returns a [Result], so a screen can tell "nothing there" (an empty list, or a `NOT_FOUND` error for one
+ * Everything returns a [TmResult], so a screen can tell "nothing there" (an empty list, or a `NOT_FOUND` error for one
  * record) from "couldn't load" (any other error). Every call returns straight away while [serverUrl] is blank.
  * @param tag Logging tag, also the start of each call's own tag
  * @param client The shared, logged in client from RemoteHandler, so tokens and refresh are handled once
@@ -70,7 +70,7 @@ abstract class RemoteRepository<T: MainItem>(
         }
 
     /** Adds a new record and returns it as saved. Its identifier is made by the client, so it's final before it's sent */
-    suspend fun add(data: T): Result<T, ServerError> {
+    suspend fun add(data: T): TmResult<T, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(ADD_TAG) {
@@ -115,10 +115,10 @@ abstract class RemoteRepository<T: MainItem>(
     }
 
     /** A page of records in the server's order */
-    suspend fun fetch(offset: Long, limit: Int): Result<List<T>, ServerError> = fetchPage(FETCH_TAG, RecordPaths.FETCH, offset, limit)
+    suspend fun fetch(offset: Long, limit: Int): TmResult<List<T>, ServerError> = fetchPage(FETCH_TAG, RecordPaths.FETCH, offset, limit)
 
     /** A page from one of the route's paged endpoints, at [path] under [route] */
-    protected suspend fun fetchPage(tag: String, path: String, offset: Long, limit: Int): Result<List<T>, ServerError> {
+    protected suspend fun fetchPage(tag: String, path: String, offset: Long, limit: Int): TmResult<List<T>, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(tag) {
@@ -133,7 +133,7 @@ abstract class RemoteRepository<T: MainItem>(
     }
 
     /** One record. A `NOT_FOUND` error means it isn't there, any other that it couldn't be loaded */
-    suspend fun get(identifier: Uuid): Result<T, ServerError> {
+    suspend fun get(identifier: Uuid): TmResult<T, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(GET_TAG) {
@@ -144,7 +144,7 @@ abstract class RemoteRepository<T: MainItem>(
     }
 
     /** A linked record's identifier and name, like a ticket's customer, from a GET at [url]. `NOT_FOUND` if there isn't one */
-    protected suspend fun getEntity(tag: String, url: String): Result<EntityReference, ServerError> {
+    protected suspend fun getEntity(tag: String, url: String): TmResult<EntityReference, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         return handleDataHttpResponse(tag, networkRequest(tag) { client.get { url(url) } })
@@ -166,7 +166,7 @@ abstract class RemoteRepository<T: MainItem>(
     }
 
     /** The record's notes with their photos */
-    suspend fun getNotes(identifier: Uuid): Result<List<Note>, ServerError> {
+    suspend fun getNotes(identifier: Uuid): TmResult<List<Note>, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(GET_NOTES_TAG) {
@@ -199,7 +199,7 @@ abstract class RemoteRepository<T: MainItem>(
     }
 
     /** Records matching [query], as identifiers and display text */
-    suspend fun search(query: String, limit: Int): Result<List<SearchResult>, ServerError> {
+    suspend fun search(query: String, limit: Int): TmResult<List<SearchResult>, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(SEARCH_TAG) {
@@ -233,7 +233,7 @@ abstract class RemoteRepository<T: MainItem>(
         get() = noServer()
 
     /** What any call returns while [serverUrl] is blank */
-    protected fun <R> noServer(): Result<R, ServerError> = Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    protected fun <R> noServer(): TmResult<R, ServerError> = TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 }
 
 /**

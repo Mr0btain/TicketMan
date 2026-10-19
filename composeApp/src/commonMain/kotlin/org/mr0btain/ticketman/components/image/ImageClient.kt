@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.components.network.image.ImageRemoteRepository
 import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.NetworkError
 
@@ -53,16 +53,16 @@ class ImageClient(
         file: PlatformFile,
         description: String = "",
         onProgress: (Float) -> Unit = {}
-    ): Result<StoredImage, ServerError> {
+    ): TmResult<StoredImage, ServerError> {
         val bytes = try {
             shrinkForUpload(file.readBytes())
         } catch (ex: Exception) {
             AppLogger.e(UPLOAD_TAG, "Couldn't read ${file.name}", ex)
-            return Result.Error(ServerError(NetworkError.UNKNOWN, "Couldn't read that file"))
+            return TmResult.Error(ServerError(NetworkError.UNKNOWN, "Couldn't read that file"))
         }
 
         if (bytes.size > ImageLimits.MAX_UPLOAD_BYTES) {
-            return Result.Error(ServerError(NetworkError.PAYLOAD_TOO_LARGE, "That photo is too big"))
+            return TmResult.Error(ServerError(NetworkError.PAYLOAD_TOO_LARGE, "That photo is too big"))
         }
 
         return repository.upload(bytes, file.name, description) { sent, total ->

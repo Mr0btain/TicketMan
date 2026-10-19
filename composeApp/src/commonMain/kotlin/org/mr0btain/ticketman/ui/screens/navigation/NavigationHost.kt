@@ -1,14 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.navigation
 
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.ui.kit.gallery.KitGallery
 import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
@@ -21,9 +18,7 @@ fun NavigationHost(
     modifier: Modifier = Modifier,
     navHostController: NavHostController,
     initialDestination: Destination = Destination.RECORDS,
-    coroutineScope: CoroutineScope = rememberCoroutineScope(),
-    mainViewModel: MainViewModel,
-    snackBarState: SnackbarHostState
+    mainViewModel: MainViewModel
 ) {
     NavHost(
         modifier = modifier,
@@ -33,8 +28,6 @@ fun NavigationHost(
         composable(Destination.ADMIN.route) {
             AdminScreen(
                 viewModel = mainViewModel,
-                snackBarState = snackBarState,
-                coroutineScope = coroutineScope,
                 onNavigateToMain = { navHostController.navigateTo(Destination.RECORDS.route) },
                 onOpenTicketAtCounter = { identifier ->
                     mainViewModel.counter.openTicket(identifier)
@@ -56,7 +49,6 @@ fun NavigationHost(
         composable(Destination.SETTINGS.route) {
             SettingsScreen(
                 viewModel = mainViewModel,
-                scope = coroutineScope,
                 onOpenGallery = { navHostController.navigate(Destination.GALLERY.route) }
             )
         }

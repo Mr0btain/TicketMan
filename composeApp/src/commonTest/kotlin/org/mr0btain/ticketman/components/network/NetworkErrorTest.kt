@@ -12,7 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.runTest
 import kotlinx.io.IOException
 import kotlinx.serialization.Serializable
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import kotlin.test.*
 
@@ -30,7 +30,7 @@ class NetworkErrorTest {
 
     private suspend fun errorFrom(engine: MockEngine): NetworkError? {
         val result = handleActionHttpResponse("Test", networkRequest("Test") { client(engine).get("http://server/") })
-        return ((result as? Result.Error)?.error)?.type
+        return ((result as? TmResult.Error)?.error)?.type
     }
 
     @Test
@@ -52,7 +52,7 @@ class NetworkErrorTest {
         }
         val result = handleDataHttpResponse<Body>("Test", networkRequest("Test") { client(engine).get("http://server/") })
 
-        assertEquals(NetworkError.SERIALIZATION, (result as Result.Error).error.type)
+        assertEquals(NetworkError.SERIALIZATION, (result as TmResult.Error).error.type)
     }
 
     @Test

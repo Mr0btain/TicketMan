@@ -9,5 +9,5 @@ import org.jetbrains.compose.resources.DrawableResource
 data class SettingItemGroup(
     val label: String,
     val icon: DrawableResource? = null,
-    val items: List<SettingItem<*>>
+    val items: List<SettingItem>
 )

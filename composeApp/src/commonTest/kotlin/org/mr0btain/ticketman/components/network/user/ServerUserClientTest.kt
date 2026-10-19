@@ -7,7 +7,7 @@ import org.mr0btain.ticketman.components.data.local.InMemoryKeyValueStore
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.data.station.StationCredentials
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
@@ -76,7 +76,7 @@ class ServerUserClientTest {
 
     @Test
     fun refreshingKeepsTheNewRefreshToken() = runTest {
-        assertIs<Result.Success<*>>(client.refreshTokens("refresh"))
+        assertIs<TmResult.Success<*>>(client.refreshTokens("refresh"))
 
         assertEquals("new-access", localStorage.accessToken)
         assertEquals("new-refresh", localStorage.refreshToken)
@@ -87,7 +87,7 @@ class ServerUserClientTest {
         localStorage.refreshToken = "refresh"
         refreshBody = """{"token":"new-access"}"""
 
-        assertIs<Result.Success<*>>(client.refreshTokens("refresh"))
+        assertIs<TmResult.Success<*>>(client.refreshTokens("refresh"))
         assertEquals("refresh", localStorage.refreshToken)
     }
 
@@ -182,7 +182,7 @@ class ServerUserClientTest {
     fun finishingAnInviteStoresTheSession() = runTest {
         val result = client.completeInviteSetup("user", InviteSetupRequest("setup", "new_password", "User Name"))
 
-        assertIs<Result.Success<Unit>>(result)
+        assertIs<TmResult.Success<Unit>>(result)
         assertEquals("access", localStorage.accessToken)
         assertTrue("/api/auth/setup/invite" in requests)
     }
@@ -191,8 +191,8 @@ class ServerUserClientTest {
     fun accountRequestPassesOnTheServersReason() = runTest {
         val result = client.requestAccount(AccountRequest("taken", "password1"))
 
-        assertIs<Result.Error<*>>(result)
-        assertEquals("Username is already taken", (result as Result.Error).error.message)
+        assertIs<TmResult.Error<*>>(result)
+        assertEquals("Username is already taken", (result as TmResult.Error).error.message)
     }
 
     @Test
@@ -202,7 +202,7 @@ class ServerUserClientTest {
 
         val result = client.pinLogin(station, Uuid.random(), "246813")
 
-        assertIs<Result.Success<Unit>>(result)
+        assertIs<TmResult.Success<Unit>>(result)
         assertEquals("pin-access", localStorage.accessToken)
         assertEquals("owner", localStorage.username)
         assertEquals("owner_pass", localStorage.password)
@@ -214,8 +214,8 @@ class ServerUserClientTest {
 
         val result = client.pinLogin(station, Uuid.random(), "000001")
 
-        assertIs<Result.Error<*>>(result)
-        assertEquals("Wrong PIN, 4 tries left", (result as Result.Error).error.message)
+        assertIs<TmResult.Error<*>>(result)
+        assertEquals("Wrong PIN, 4 tries left", (result as TmResult.Error).error.message)
         assertEquals("", localStorage.accessToken)
     }
 
@@ -223,7 +223,7 @@ class ServerUserClientTest {
     fun stationStaffList() = runTest {
         val staff = client.stationStaff(station)
 
-        assertIs<Result.Success<List<StaffMember>>>(staff)
+        assertIs<TmResult.Success<List<StaffMember>>>(staff)
         assertEquals("tech", staff.data.single().username)
     }
 }

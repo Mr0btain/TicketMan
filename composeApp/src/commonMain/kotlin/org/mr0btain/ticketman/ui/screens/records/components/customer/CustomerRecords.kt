@@ -19,7 +19,7 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.screens.records.components.syncNotes
 import kotlin.uuid.Uuid
 
@@ -65,16 +65,16 @@ class CustomerRecords(
 
         selection.select(identifier) {
             // Notes and tickets that failed to load aren't shown as none, saving would then drop them
-            val loaded = cache.get(identifier)?.let { Result.Success(it) } ?: coroutineScope {
+            val loaded = cache.get(identifier)?.let { TmResult.Success(it) } ?: coroutineScope {
                 val notes = async { remoteHandler.customerRepo.getNotes(identifier) }
                 val tickets = async { remoteHandler.customerRepo.getTickets(identifier) }
-                val customer = remoteHandler.customerRepo.get(identifier).valueOr { return@coroutineScope Result.Error(it) }
+                val customer = remoteHandler.customerRepo.get(identifier).valueOr { return@coroutineScope TmResult.Error(it) }
 
-                Result.Success(
+                TmResult.Success(
                     CustomerCache.CustomerData(
                         customer,
-                        notes.await().valueOr { return@coroutineScope Result.Error(it) },
-                        tickets.await().valueOr { return@coroutineScope Result.Error(it) }
+                        notes.await().valueOr { return@coroutineScope TmResult.Error(it) },
+                        tickets.await().valueOr { return@coroutineScope TmResult.Error(it) }
                     ).also { cache.put(it.customer, it.notes, it.tickets) }
                 )
             }
@@ -128,10 +128,10 @@ class CustomerRecords(
             val saved = if (isNew) repo.add(customer).asEmptyDataResult() else {
                 // Notes and tickets are saved on their own, only send the customer if something else changed
                 if ((changed - setOf(ChangedField.NOTE, ChangedField.TICKET)).isNotEmpty()) repo.update(customer)
-                else Result.Success(Unit)
+                else TmResult.Success(Unit)
             }
 
-            if (saved is Result.Error) {
+            if (saved is TmResult.Error) {
                 snackBarHost.showSnackbar("Customer not saved: ${saved.error.message}")
                 return@launch
             }
@@ -143,7 +143,7 @@ class CustomerRecords(
                 val linked = repo.getTickets(customer.identifier).getOrNull().orEmpty().map { it.identifier }.toSet()
                 val failed = tickets
                     .filter { it.identifier !in linked }
-                    .count { ticket -> repo.addTicket(customer.identifier, ticket.identifier) is Result.Error }
+                    .count { ticket -> repo.addTicket(customer.identifier, ticket.identifier) is TmResult.Error }
 
                 if (failed > 0) snackBarHost.showSnackbar("$failed ${if (failed == 1) "ticket wasn't" else "tickets weren't"} linked")
             }
@@ -175,13 +175,13 @@ class CustomerRecords(
 
             // The selection stays until the server agrees, so a refused delete doesn't look like it worked
             when (val removed = remoteHandler.customerRepo.remove(identifier)) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     clearSelection()
                     cache.remove(identifier)
                     pager.refreshCurrentData()
                 }
 
-                is Result.Error -> snackBarHost.showSnackbar("Customer not deleted: ${removed.error.message}")
+                is TmResult.Error -> snackBarHost.showSnackbar("Customer not deleted: ${removed.error.message}")
             }
         }
     }

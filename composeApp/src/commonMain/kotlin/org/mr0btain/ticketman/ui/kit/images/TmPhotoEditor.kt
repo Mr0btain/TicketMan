@@ -12,7 +12,7 @@ import io.github.vinceglb.filekit.name
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.image.LocalImageClient
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
@@ -59,8 +59,8 @@ fun TmPhotoEditor(
                 progress = 0f
 
                 when (val result = imageClient.upload(file) { progress = it }) {
-                    is Result.Success -> onAdd(result.data)
-                    is Result.Error -> uploadError = "${file.name}: ${result.error.message}"
+                    is TmResult.Success -> onAdd(result.data)
+                    is TmResult.Error -> uploadError = "${file.name}: ${result.error.message}"
                 }
 
                 waiting--

@@ -22,7 +22,7 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.ticket.Ticket
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.screens.records.components.syncNotes
 import kotlin.uuid.Uuid
 
@@ -88,18 +88,18 @@ class TicketRecords(
 
         selection.select(identifier) {
             // Notes that failed to load aren't shown as none, saving would then drop them. No customer or tech is fine
-            val loaded = cache.get(identifier)?.let { Result.Success(it) } ?: coroutineScope {
+            val loaded = cache.get(identifier)?.let { TmResult.Success(it) } ?: coroutineScope {
                 val notes = async { remoteHandler.ticketRepo.getNotes(identifier) }
                 val customer = async { remoteHandler.ticketRepo.getCustomer(identifier).orNullIfNotFound() }
                 val user = async { remoteHandler.ticketRepo.getUser(identifier).orNullIfNotFound() }
-                val ticket = remoteHandler.ticketRepo.get(identifier).valueOr { return@coroutineScope Result.Error(it) }
+                val ticket = remoteHandler.ticketRepo.get(identifier).valueOr { return@coroutineScope TmResult.Error(it) }
 
-                Result.Success(
+                TmResult.Success(
                     TicketCache.TicketData(
                         ticket,
-                        notes.await().valueOr { return@coroutineScope Result.Error(it) },
-                        customer.await().valueOr { return@coroutineScope Result.Error(it) },
-                        user.await().valueOr { return@coroutineScope Result.Error(it) }
+                        notes.await().valueOr { return@coroutineScope TmResult.Error(it) },
+                        customer.await().valueOr { return@coroutineScope TmResult.Error(it) },
+                        user.await().valueOr { return@coroutineScope TmResult.Error(it) }
                     ).also { cache.put(it.ticket, it.notes, it.customer, it.user) }
                 )
             }
@@ -154,12 +154,12 @@ class TicketRecords(
             if (isNew) {
                 // Add answers with the saved ticket, so the seed picks up the number the server gave it
                 when (val created = repo.add(ticket)) {
-                    is Result.Error -> {
+                    is TmResult.Error -> {
                         snackBarHost.showSnackbar("Ticket not saved: ${created.error.message}")
                         return@launch
                     }
 
-                    is Result.Success -> seed.setTicket(created.data, notes, customer, user)
+                    is TmResult.Success -> seed.setTicket(created.data, notes, customer, user)
                 }
             } else {
                 val linkFields = setOf(ChangedField.NOTE, ChangedField.CUSTOMER, ChangedField.USER)
@@ -167,7 +167,7 @@ class TicketRecords(
                 if ((changed - linkFields).isNotEmpty()) {
                     val updated = repo.update(ticket)
 
-                    if (updated is Result.Error) {
+                    if (updated is TmResult.Error) {
                         snackBarHost.showSnackbar("Ticket not saved: ${updated.error.message}")
                         return@launch
                     }
@@ -178,12 +178,12 @@ class TicketRecords(
 
             if (customer != null && (isNew || ChangedField.CUSTOMER in changed)) {
                 val linked = repo.setCustomer(ticket.identifier, customer.identifier)
-                if (linked is Result.Error) snackBarHost.showSnackbar("Customer not linked: ${linked.error.message}")
+                if (linked is TmResult.Error) snackBarHost.showSnackbar("Customer not linked: ${linked.error.message}")
             }
 
             if (user != null && (isNew || ChangedField.USER in changed)) {
                 val assigned = repo.setUser(ticket.identifier, user.identifier)
-                if (assigned is Result.Error) snackBarHost.showSnackbar("Technician not assigned: ${assigned.error.message}")
+                if (assigned is TmResult.Error) snackBarHost.showSnackbar("Technician not assigned: ${assigned.error.message}")
             }
 
             cache.remove(ticket.identifier)
@@ -208,13 +208,13 @@ class TicketRecords(
 
             // The selection stays until the server agrees, so a refused delete doesn't look like it worked
             when (val removed = remoteHandler.ticketRepo.remove(identifier)) {
-                is Result.Success -> {
+                is TmResult.Success -> {
                     clearSelection()
                     cache.remove(identifier)
                     pager.refreshCurrentData()
                 }
 
-                is Result.Error -> snackBarHost.showSnackbar("Ticket not deleted: ${removed.error.message}")
+                is TmResult.Error -> snackBarHost.showSnackbar("Ticket not deleted: ${removed.error.message}")
             }
         }
     }

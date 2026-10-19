@@ -46,7 +46,7 @@ Blocks say what goes on the page, not where. Sizes, wrapping and page breaks are
 | `receipt(shop, ticket, customer, invoice)` | Counter, after pickup | Shop header, charges, discount, tax, total, payments, change, invoice footer |
 | `dailyReport(shop, report)` | Admin overview | The day's takings by payment method, sales, tax and ticket counts |
 
-`CounterHandler` and `AdminHandler` build the document and call `printDocument(document, paper)`, with the paper
+`CounterPrinter` (`counter.printer`) and `AdminHandler` build the document and call `printDocument(document, paper)`, with the paper
 size from the shop profile's default or the one picked.
 
 ## Platforms

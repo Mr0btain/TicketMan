@@ -17,7 +17,7 @@ import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.error.EmptyResult
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
@@ -41,8 +41,6 @@ import kotlin.uuid.Uuid
 /**
  * Main Client for user services with the server
  */
-// TODO: Setup getting user info from server and setting current user after we get data
-// TODO: Find new way of using identifier, maybe generate a random uuid each time and use that for the duration of the program?
 @OptIn(ExperimentalUuidApi::class)
 class ServerUserClient(
     private val userHttpClient: HttpClient,
@@ -93,8 +91,8 @@ class ServerUserClient(
         }
 
         val result = when (response) {
-            is Result.Error -> response
-            is Result.Success -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response.data)
+            is TmResult.Error -> response
+            is TmResult.Success -> handleHttpResponse<AuthResponse>(LOGIN_TAG, response.data)
         }
 
         result.onSuccess { authResponse ->
@@ -113,7 +111,7 @@ class ServerUserClient(
 
         AppLogger.i(LOGIN_TAG, "FAIL")
         // Accepted but missing its tokens is a reply the app can't use
-        return LoginOutcome.Failed((result as? Result.Error)?.error ?: NetworkError.SERIALIZATION)
+        return LoginOutcome.Failed((result as? TmResult.Error)?.error ?: NetworkError.SERIALIZATION)
     }
 
     // Keeps the tokens, and the credentials if they should be remembered
@@ -147,18 +145,18 @@ class ServerUserClient(
         }
 
         return when (val result = handleDataHttpResponse<AuthResponse>(PIN_LOGIN_TAG, response)) {
-            is Result.Success -> {
+            is TmResult.Success -> {
                 val access = result.data.accessToken
                 val refresh = result.data.refreshToken
 
                 if (access != null && refresh != null) {
                     localStorage.accessToken = access
                     localStorage.refreshToken = refresh
-                    Result.Success(Unit)
-                } else Result.Error(ServerError(NetworkError.UNKNOWN))
+                    TmResult.Success(Unit)
+                } else TmResult.Error(ServerError(NetworkError.UNKNOWN))
             }
 
-            is Result.Error -> result
+            is TmResult.Error -> result
         }
     }
 
@@ -177,7 +175,7 @@ class ServerUserClient(
     }
 
     /** People who can PIN in here */
-    suspend fun stationStaff(station: StationCredentials): Result<List<StaffMember>, ServerError> {
+    suspend fun stationStaff(station: StationCredentials): TmResult<List<StaffMember>, ServerError> {
         val response = networkRequest(STATION_TAG) {
             userHttpClient.post {
                 url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.STATION_STAFF}")
@@ -215,16 +213,16 @@ class ServerUserClient(
         }
 
         return when (val result = handleDataHttpResponse<AuthResponse>(INVITE_SETUP_TAG, response)) {
-            is Result.Success -> if (storeSession(result.data, username, request.password)) Result.Success(Unit)
-                else Result.Error(ServerError(NetworkError.UNKNOWN))
-            is Result.Error -> result
+            is TmResult.Success -> if (storeSession(result.data, username, request.password)) TmResult.Success(Unit)
+                else TmResult.Error(ServerError(NetworkError.UNKNOWN))
+            is TmResult.Error -> result
         }
     }
 
     /**
      * Refresh tokens for authentication with server
      */
-    suspend fun refreshTokens(token: String): Result<AuthResponse, NetworkError> {
+    suspend fun refreshTokens(token: String): TmResult<AuthResponse, NetworkError> {
         if (checkServerConnection()) {
             networkErrorTryCatch(REFRESH_TOKEN_TAG) {
                 userHttpClient.post {
@@ -239,11 +237,11 @@ class ServerUserClient(
                     tokens.refreshToken?.let { localStorage.refreshToken = it }
 
                     // We don't use UUID here so just slap whatever. Maybe make another data class for this??
-                    return Result.Success(AuthResponse(Uuid.generateV7(), tokens.token, tokens.refreshToken ?: token))
+                    return TmResult.Success(AuthResponse(Uuid.generateV7(), tokens.token, tokens.refreshToken ?: token))
                 }
         }
 
-        return Result.Error(NetworkError.UNKNOWN)
+        return TmResult.Error(NetworkError.UNKNOWN)
     }
 
     /**

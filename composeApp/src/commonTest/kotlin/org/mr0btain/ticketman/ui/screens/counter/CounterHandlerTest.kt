@@ -137,22 +137,22 @@ class CounterHandlerTest {
         val counter = handler(canEdit = true)
         var error: String? = "not called"
 
-        counter.startCheckIn()
+        counter.checkIn.start()
         assertEquals(CounterView.CHECK_IN, counter.view.value)
 
-        counter.submitCheckIn(CheckInRequest(Ticket(), Uuid.random())) { error = it }
+        counter.checkIn.submit(CheckInRequest(Ticket(), Uuid.random())) { error = it }
         settle { counter.view.value == CounterView.CHECKED_IN }
 
         assertNull(error)
-        assertEquals("26-00000042", counter.lastCheckIn.value?.ticket?.label)
+        assertEquals("26-00000042", counter.checkIn.last.value?.ticket?.label)
     }
 
     @Test
     fun viewOnlyUsersCantCheckIn() = runTest {
         val counter = handler(canEdit = false)
 
-        counter.startCheckIn()
-        counter.submitCheckIn(CheckInRequest(Ticket(), Uuid.random())) {}
+        counter.checkIn.start()
+        counter.checkIn.submit(CheckInRequest(Ticket(), Uuid.random())) {}
         advanceUntilIdle()
 
         assertEquals(CounterView.HOME, counter.view.value)
@@ -163,13 +163,13 @@ class CounterHandlerTest {
     fun pickupSavesChangedLinesBeforeFinishing() = runTest {
         val counter = handler(canEdit = true)
 
-        counter.startPickup(ticket.identifier)
+        counter.pickup.start(ticket.identifier)
         settle { counter.view.value == CounterView.PICKUP }
-        assertEquals(invoice.identifier, counter.pickup.value?.invoice?.identifier)
+        assertEquals(invoice.identifier, counter.pickup.detail.value?.invoice?.identifier)
         requests.clear()
 
         var error: String? = "not called"
-        counter.finishPickup(
+        counter.pickup.finish(
             charges = listOf(Charge(description = "Labor", unitPriceCents = 4_000)),
             discountCents = 0,
             payments = listOf(PaymentRequest(PaymentMethod.CASH, 4_000))
@@ -178,14 +178,14 @@ class CounterHandlerTest {
 
         assertNull(error)
         assertEquals(listOf("POST /api/invoice/${invoice.identifier}/update", "POST /api/counter/pickup"), requests.filter { "queue" !in it && "shop" !in it })
-        assertEquals(InvoiceStatus.PAID, counter.lastPickup.value?.status)
+        assertEquals(InvoiceStatus.PAID, counter.pickup.last.value?.status)
     }
 
     @Test
     fun viewOnlyUsersCantStartAPickup() = runTest {
         val counter = handler(canEdit = false)
 
-        counter.startPickup(ticket.identifier)
+        counter.pickup.start(ticket.identifier)
         advanceUntilIdle()
 
         assertEquals(CounterView.HOME, counter.view.value)

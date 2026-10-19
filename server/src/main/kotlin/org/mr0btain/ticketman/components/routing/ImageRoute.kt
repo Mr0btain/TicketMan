@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.error.ImageError
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.logging.AppLogger
 import java.io.File
 import kotlin.uuid.ExperimentalUuidApi
@@ -88,12 +88,12 @@ fun Route.imageRoute(
                 tooLarge -> call.respondText(ImageError.TOO_LARGE.message, status = HttpStatusCode.PayloadTooLarge)
                 received == null -> call.respondText(ImageError.MISSING.message, status = HttpStatusCode.BadRequest)
                 else -> when (val stored = service.store(received, description, call.getIdentifierFromToken())) {
-                    is Result.Success -> {
+                    is TmResult.Success -> {
                         call.audit(auditLog, AuditAction.CREATE, "image", stored.data.identifier, "${stored.data.sizeBytes} bytes")
                         call.respond(HttpStatusCode.Created, stored.data)
                     }
 
-                    is Result.Error -> call.respondText(stored.error.message, status = stored.error.status())
+                    is TmResult.Error -> call.respondText(stored.error.message, status = stored.error.status())
                 }
             }
         }

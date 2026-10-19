@@ -51,15 +51,15 @@ fun AdminInvoicesTab(
     onOpenTicket: (Uuid) -> Unit
 ) {
     val counter = viewModel.counter
-    val invoices by counter.invoices.collectAsState()
-    val endReached by counter.invoicesEndReached.collectAsState()
+    val invoices by counter.invoices.list.collectAsState()
+    val endReached by counter.invoices.endReached.collectAsState()
     val colors = TmTheme.colors
     val spacing = TmTheme.spacing
 
     var voiding by remember { mutableStateOf<Invoice?>(null) }
 
     LaunchedEffect(Unit) {
-        counter.loadInvoices(reset = true)
+        counter.invoices.load(reset = true)
     }
 
     voiding?.let { invoice ->
@@ -70,7 +70,7 @@ fun AdminInvoicesTab(
             confirmText = "Void invoice",
             destructive = true,
             onConfirm = {
-                counter.voidInvoice(invoice)
+                counter.invoices.void(invoice)
                 voiding = null
             },
             onDismissRequest = { voiding = null }
@@ -89,7 +89,7 @@ fun AdminInvoicesTab(
             actions = {
                 TmButton(
                     text = "Refresh",
-                    onClick = { counter.loadInvoices(reset = true) },
+                    onClick = { counter.invoices.load(reset = true) },
                     variant = TmButtonVariant.SECONDARY,
                     leadingIcon = Res.drawable.refresh_cw
                 )
@@ -132,7 +132,7 @@ fun AdminInvoicesTab(
 
                 Box(Modifier.fillMaxWidth().padding(spacing.md), contentAlignment = Alignment.Center) {
                     if (endReached) Text("That's all of them", style = TmTheme.typography.caption, color = colors.textFaint)
-                    else TmButton(text = "Load older invoices", onClick = { counter.loadInvoices(reset = false) }, variant = TmButtonVariant.SECONDARY)
+                    else TmButton(text = "Load older invoices", onClick = { counter.invoices.load(reset = false) }, variant = TmButtonVariant.SECONDARY)
                 }
             }
         }

@@ -12,7 +12,7 @@ import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.NetworkError
@@ -164,8 +164,8 @@ class UserRemoteRepository(
         return handleActionHttpResponse(REJECT_TAG, response)
     }
 
-    suspend fun invite(request: InviteRequest): Result<InviteResponse, ServerError> {
-        if (serverUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun invite(request: InviteRequest): TmResult<InviteResponse, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(INVITE_TAG) {
             client.post {
@@ -179,8 +179,8 @@ class UserRemoteRepository(
     }
 
     /** New setup code for an invite, the old one stops working */
-    suspend fun renewInvite(identifier: Uuid): Result<InviteResponse, ServerError> {
-        if (serverUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun renewInvite(identifier: Uuid): TmResult<InviteResponse, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(INVITE_TAG) {
             client.post { url("$serverUrl${UserPaths.INVITE_RENEW.fill(identifier)}") }

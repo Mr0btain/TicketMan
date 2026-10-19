@@ -39,24 +39,27 @@ button.
 ### Setting rows
 
 The panels below Appearance are built from data rather than by hand. Each is a `SettingItemGroup(label, icon, items)`
-drawn by `SettingsGroup`, and each item is a `SettingItem<T>`:
+drawn by `SettingsGroup`, and each item is one kind of the sealed `SettingItem`, each with an `icon`, `label`,
+`description` and `enabled` (off greys the row out):
 
-| `type` | `T` | Drawn as | `onClick` |
-|--------|-----|----------|-----------|
-| `SWITCH` | `Boolean` | A `TmListRow` with a `TmSwitch`; the whole row toggles | Gets the new value |
-| `TEXT` | `String` | A row showing the value; clicking opens a `TmTextEditDialog` | Gets the typed text. Return `false` to keep the dialog open and show `description` as the error |
-| `CLICKABLE_TEXT` | `String` | A row showing the value with a chevron | Gets the current value. Used to open a dialog |
-| `CHOICE` | `String` | A row with a `TmDropdown` of the item's `options` | Gets the picked option |
+| Kind | Drawn as | Callback |
+|------|----------|----------|
+| `Switch(checked)` | A `TmListRow` with a `TmSwitch`; the whole row toggles | `onToggle` gets the new value |
+| `Text(value)` | A row showing the value; clicking opens a `TmTextEditDialog` | `onChange` gets the typed text. Return `false` to keep the dialog open and show `description` as the error |
+| `Action(value)` | A row with a chevron, and `value` beside it if there is one | `onClick`, used to open a dialog |
+| `Choice(selected, options)` | A row with a `TmDropdown` of `options` | `onSelect` gets the picked option |
 
-`initialState` is the value shown, read from the handler's state, so the row updates when the setting changes.
+Values are read from the handler's state, so the row updates when the setting changes. `numberSetting(...)` in
+`SettingsScreen` builds a `Text` row for a whole number in a range, with the range added to its description.
 
 ## Adding a setting
 
 1. Add it to `LocalStorage` (see [Adding a setting](../../client/storage.md#adding-a-setting)).
 2. Add a `StateFlow` and a setter to `SettingsHandler`. Check the value in the setter, and pass a callback in if
    another part of the app has to react.
-3. Collect it in `SettingsScreen` and add a `SettingItem` to the right group. For a typed value, have `onClick`
-   return `false` when it's out of range, and put the range in `description`.
+3. Collect it in `SettingsScreen` and add a `SettingItem` to the right group. For a typed value, have `onChange`
+   return `false` when it's out of range, and put the range in `description` (`numberSetting` does both for
+   whole numbers).
 4. For a picker that doesn't fit a row, add it to `AppearanceSettings` or its own panel, built from kit components.
 
 ## Where it lives
@@ -66,19 +69,9 @@ drawn by `SettingsGroup`, and each item is a `SettingItem<T>`:
 | Screen and the setting groups | `ui/screens/settings/SettingsScreen.kt` |
 | Saved settings as state | `ui/screens/settings/components/SettingsHandler.kt` |
 | Appearance panel and theme cards | `ui/screens/settings/components/AppearanceSettings.kt` |
-| Row model and drawing | `SettingItem.kt`, `SettingItemGroup.kt`, `SettingType.kt`, `SettingsGroup.kt` |
+| Row model and drawing | `SettingItem.kt`, `SettingItemGroup.kt`, `SettingsGroup.kt` |
 | PIN and station dialogs | `ui/screens/settings/components/AccountDialogs.kt` |
 | Render tests | `ScreenRenderTest.settings()` (two columns), `KitGalleryRenderTest.appearanceSettings()` |
-
-## Gotchas
-
-- **`SettingItem` is cast by `type`.** `SettingsGroup` uses `runIfType<String>` or `runIfType<Boolean>`, and an
-  item whose `type` doesn't match its `T` is quietly not drawn.
-
-## Known gaps
-
-- `SettingItem.enabled` is only partly used (there's a `TODO` on it), and `SettingsScreen` declares log tags
-  inside the composable.
 
 ## See also
 

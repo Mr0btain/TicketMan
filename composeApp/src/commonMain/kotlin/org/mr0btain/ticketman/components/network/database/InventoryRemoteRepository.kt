@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.network.database
 
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -36,7 +36,7 @@ class InventoryRemoteRepository(
     private val SET_STOCK_TAG = "$tag:SetStock"
 
     /** Photos of the item itself */
-    suspend fun getImages(identifier: Uuid): Result<List<StoredImage>, ServerError> {
+    suspend fun getImages(identifier: Uuid): TmResult<List<StoredImage>, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(GET_IMAGES_TAG) {

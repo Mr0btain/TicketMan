@@ -9,7 +9,6 @@ import org.mr0btain.ticketman.ui.kit.data.LocalCurrencySymbol
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.navigation.compose.rememberNavController
 import org.mr0btain.ticketman.components.debug.BuildConfigImpl
 import coil3.compose.setSingletonImageLoaderFactory
@@ -26,6 +25,7 @@ import org.mr0btain.ticketman.ui.screens.navigation.navigateTo
 import org.mr0btain.ticketman.ui.screens.navigation.Destination
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationHost
 import org.mr0btain.ticketman.ui.screens.navigation.NavigationItem
+import org.mr0btain.ticketman.ui.screens.navigation.alwaysWide
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.archive
@@ -34,11 +34,6 @@ import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.layers
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
-
-// TODO: Make option to import database data from file?
-// TODO: All main data classes have the ability to have images of their own. We should set that up
-
-// the focus upon opening dialog.
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -51,9 +46,6 @@ fun App() {
 
     // Navigation
     val navigator = rememberNavController()
-
-    // Main scope to use with coroutines
-    val mainScope = rememberCoroutineScope()
 
     // Should we show login popup or not
     val shouldShowLogin = mainViewModel.session.showLogin.collectAsState()
@@ -106,8 +98,6 @@ fun App() {
             darkTheme = mainViewModel.settings.darkMode.collectAsState().value,
             reduceTransparency = mainViewModel.settings.reduceTransparency.collectAsState().value
         ) {
-            println("Platform: ${getPlatform().name}")
-
             if (kioskActive.value) {
                 KioskShell(mainViewModel)
                 return@TmTheme
@@ -142,15 +132,13 @@ fun App() {
             val host: @Composable () -> Unit = {
                 NavigationHost(
                     navHostController = navigator,
-                    coroutineScope = mainScope,
                     mainViewModel = mainViewModel,
-                    snackBarState = snackBarHostState,
                     initialDestination = initialDestination
                 )
             }
 
             // Desktop always gets the rail, phones and tablets go by window width
-            val wide = getPlatform().name.contains("Java") ||
+            val wide = alwaysWide ||
                     calculateWindowSizeClass().widthSizeClass == WindowWidthSizeClass.Expanded
 
             if (wide) {

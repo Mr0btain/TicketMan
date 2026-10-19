@@ -5,7 +5,7 @@ import kotlinx.io.files.Path
 actual class AppDir {
     actual val TAG = "AppDir"
     actual val appId: String = "TicketMan"
-    // TODO: Browser never uses this, browser only connects to database
-    actual val path: Path? = Path("")
+    // A browser has no folder to keep files in. The web client only talks to the server
+    actual val path: Path? = null
     actual val currentPlatform: Platform = Platform.WasmJs
 }

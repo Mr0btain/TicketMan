@@ -2,13 +2,11 @@ package org.mr0btain.ticketman.ui.screens.admin
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlin.uuid.Uuid
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerLoader
 import org.mr0btain.ticketman.data.shop.PaperSize
@@ -48,8 +46,6 @@ import ticketman.composeapp.generated.resources.shield
 @Composable
 fun AdminScreen(
     viewModel: MainViewModel,
-    snackBarState: SnackbarHostState,
-    coroutineScope: CoroutineScope,
     onNavigateToMain: () -> Unit,
     onOpenTicketAtCounter: (Uuid) -> Unit
 ) {
@@ -79,13 +75,13 @@ private fun AdminContent(
     val dailyReport by admin.dailyReport.collectAsState()
     val lowStock by admin.lowStock.collectAsState()
     val lowStockThreshold by admin.lowStockThreshold.collectAsState()
-    val sessions by admin.sessions.collectAsState()
-    val pending by admin.pending.collectAsState()
-    val stations by admin.stations.collectAsState()
-    val serverInfo by admin.serverInfo.collectAsState()
-    val backupProgress by admin.backupProgress.collectAsState()
-    val pendingRestore by admin.pendingRestore.collectAsState()
-    val shopProfile by admin.shopProfile.collectAsState()
+    val sessions by admin.devices.sessions.collectAsState()
+    val pending by admin.accounts.pending.collectAsState()
+    val stations by admin.devices.stations.collectAsState()
+    val serverInfo by admin.server.serverInfo.collectAsState()
+    val backupProgress by admin.server.backupProgress.collectAsState()
+    val pendingRestore by admin.server.pendingRestore.collectAsState()
+    val shopProfile by admin.server.shopProfile.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
     val auditEndReached by admin.auditEndReached.collectAsState()
     val serverUrl by viewModel.settings.serverUrl.collectAsState()
@@ -112,7 +108,7 @@ private fun AdminContent(
         isVisible = showInviteDialog,
         onDismiss = { showInviteDialog = false },
         onInvite = { request ->
-            admin.invite(request) { invite ->
+            admin.accounts.invite(request) { invite ->
                 showInviteDialog = false
                 shownInvite = invite
             }
@@ -122,7 +118,7 @@ private fun AdminContent(
     ApproveDialog(
         user = approving,
         onDismiss = { approving = null },
-        onApprove = { level -> approving?.let { user -> admin.approve(user, level) { approving = null } } }
+        onApprove = { level -> approving?.let { user -> admin.accounts.approve(user, level) { approving = null } } }
     )
 
     InviteCodeDialog(
@@ -143,7 +139,7 @@ private fun AdminContent(
         isSelf = !isNewUser && userSeed.identifier == currentUser?.identifier,
         onDismiss = { showUserDialog = false },
         onConfirm = { user, password ->
-            admin.saveUser(user, isNewUser, password, onSuccess = {
+            admin.accounts.saveUser(user, isNewUser, password, onSuccess = {
                 showUserDialog = false
                 viewModel.users.select(user.identifier, force = true)
             })
@@ -155,7 +151,7 @@ private fun AdminContent(
         user = userSeed.user,
         onDismiss = { showResetPasswordDialog = false },
         onConfirm = { password ->
-            admin.resetPassword(userSeed.user, password, onSuccess = { showResetPasswordDialog = false })
+            admin.accounts.resetPassword(userSeed.user, password, onSuccess = { showResetPasswordDialog = false })
         }
     )
 
@@ -166,7 +162,7 @@ private fun AdminContent(
             confirmText = "Delete user",
             destructive = true,
             onConfirm = {
-                admin.deleteUser(userSeed.user)
+                admin.accounts.deleteUser(userSeed.user)
                 showDeleteDialog = false
             },
             onDismissRequest = { showDeleteDialog = false }
@@ -197,7 +193,7 @@ private fun AdminContent(
                     admin.refresh(selectedTab)
                     when (selectedTab) {
                         AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
-                        AdminTab.INVOICES -> viewModel.counter.loadInvoices(reset = true)
+                        AdminTab.INVOICES -> viewModel.counter.invoices.load(reset = true)
                         else -> Unit
                     }
                 }
@@ -224,8 +220,8 @@ private fun AdminContent(
                 pending = pending,
                 onInvite = { showInviteDialog = true },
                 onApprove = { user -> approving = user },
-                onReject = { user -> admin.reject(user) },
-                onRenewInvite = { user -> admin.renewInvite(user) { invite -> shownInvite = invite } },
+                onReject = { user -> admin.accounts.reject(user) },
+                onRenewInvite = { user -> admin.accounts.renewInvite(user) { invite -> shownInvite = invite } },
                 userList = users.value,
                 seed = userSeed,
                 pendingId = pendingUser,
@@ -244,10 +240,10 @@ private fun AdminContent(
                     }
                 },
                 onResetPassword = { if (!userSeed.isNew) showResetPasswordDialog = true },
-                onSetActive = { active -> admin.setUserActive(userSeed.user, active) },
-                onLogOutEverywhere = { admin.revokeAllSessions(userSeed.user) },
-                onUnlockPin = { admin.unlockPin(userSeed.user) },
-                onResetPin = { admin.resetPin(userSeed.user) },
+                onSetActive = { active -> admin.accounts.setUserActive(userSeed.user, active) },
+                onLogOutEverywhere = { admin.devices.revokeAllSessions(userSeed.user) },
+                onUnlockPin = { admin.accounts.unlockPin(userSeed.user) },
+                onResetPin = { admin.accounts.resetPin(userSeed.user) },
                 onSaveNote = { note -> viewModel.users.saveNote(note) },
                 onRemoveNote = { identifier -> viewModel.users.removeNote(identifier) },
                 onDelete = { if (!userSeed.isNew) showDeleteDialog = true }
@@ -256,15 +252,15 @@ private fun AdminContent(
             AdminTab.SESSIONS -> AdminSessionsTab(
                 sessions = sessions,
                 currentUserIdentifier = currentUser?.identifier,
-                currentSessionId = admin.currentSessionId(),
-                onRevoke = { session -> admin.revokeSession(session) }
+                currentSessionId = admin.devices.currentSessionId(),
+                onRevoke = { session -> admin.devices.revokeSession(session) }
             )
 
             AdminTab.STATIONS -> AdminStationsTab(
                 stations = stations,
-                onApprove = { admin.approveStation(it) },
-                onKiosk = { station, settings -> admin.setKiosk(station, settings) },
-                onRemove = { admin.removeStation(it) }
+                onApprove = { admin.devices.approveStation(it) },
+                onKiosk = { station, settings -> admin.devices.setKiosk(station, settings) },
+                onRemove = { admin.devices.removeStation(it) }
             )
 
             AdminTab.LOW_STOCK -> AdminLowStockTab(
@@ -290,13 +286,13 @@ private fun AdminContent(
                 isBusy = isLoading,
                 backupProgress = backupProgress,
                 pendingRestore = pendingRestore,
-                onSaveShopProfile = { admin.saveShopProfile(it) },
-                onBackup = { includeImages -> admin.downloadBackup(includeImages) },
-                onRestore = { file -> admin.restoreFrom(file) },
-                onCancelRestore = { admin.cancelRestore() },
-                onRenewCertificate = { admin.renewCertificate() },
-                onCancelCertificateRenewal = { admin.cancelCertificateRenewal() },
-                onSeed = { request -> admin.seed(request, onSuccess = { viewModel.refreshPagers() }) }
+                onSaveShopProfile = { admin.server.saveShopProfile(it) },
+                onBackup = { includeImages -> admin.server.downloadBackup(includeImages) },
+                onRestore = { file -> admin.server.restoreFrom(file) },
+                onCancelRestore = { admin.server.cancelRestore() },
+                onRenewCertificate = { admin.server.renewCertificate() },
+                onCancelCertificateRenewal = { admin.server.cancelCertificateRenewal() },
+                onSeed = { request -> admin.server.seed(request, onSuccess = { viewModel.refreshPagers() }) }
             )
 
             AdminTab.AUDIT -> AdminAuditTab(

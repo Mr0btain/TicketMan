@@ -29,7 +29,7 @@ Per platform:
 The web version works because backup download links carry their own token in the URL instead of needing the login
 header.
 
-`AdminHandler` is the user of all of this: downloading a backup with `saveDownload`, and uploading a restore with
+`AdminServer` (`admin.server`) is the user of all of this: downloading a backup with `saveDownload`, and uploading a restore with
 `fileBody` as the raw request body.
 
 `saveFile(bytes, name, extension)` (`components/data/SaveFile.kt`, `expect`) saves bytes already in memory. Nothing
@@ -61,7 +61,7 @@ sequenceDiagram
     IC->>IC: shrinkForUpload (Android only)
     IC->>S: POST /api/image/upload (multipart)
     S-->>IC: StoredImage (PENDING)
-    IC-->>E: Result
+    IC-->>E: TmResult
     E->>D: add to the note's images
     Note over D,S: Saving the record links it on the server
 ```

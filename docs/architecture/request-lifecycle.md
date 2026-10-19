@@ -30,7 +30,7 @@ sequenceDiagram
     Route->>Route: recordStatusChange (if changed), audit
     Route-->>HC: 202 Accepted
     HC-->>Repo: response
-    Repo-->>TR: Result.Success
+    Repo-->>TR: TmResult.Success
     TR->>Repo: syncNotes, setCustomer, setUser (only what changed)
     TR->>TR: cache.remove, select (reload), pager.refreshCurrentData
 ```
@@ -59,7 +59,7 @@ val linkFields = setOf(ChangedField.NOTE, ChangedField.CUSTOMER, ChangedField.US
 if ((changed - linkFields).isNotEmpty()) {
     val updated = repo.update(ticket)
 
-    if (updated is Result.Error) {
+    if (updated is TmResult.Error) {
         snackBarHost.showSnackbar("Ticket not saved: ${updated.error.message}")
         return@launch
     }
@@ -73,7 +73,7 @@ number the server gave it.
 
 [`RemoteRepository.update()`](../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/components/network/database/RemoteRepository.kt)
 posts the ticket as JSON to `<server>/api/data/ticket/update`. The call is wrapped in `networkRequest(TAG)`,
-which logs any exception and gives back a `Result` saying what kind of failure it was: `REQUEST_TIMEOUT`,
+which logs any exception and gives back a `TmResult` saying what kind of failure it was: `REQUEST_TIMEOUT`,
 `NO_INTERNET` (no route to the server, connection refused or dropped), `SERIALIZATION` (JSON the app can't read) or
 `UNKNOWN`. Cancellation is rethrown, so a call from a screen that's gone stops cleanly.
 
@@ -163,7 +163,7 @@ failure rolls back everything.
 
 ## Back on the client
 
-### 8. The response becomes a `Result`
+### 8. The response becomes a `TmResult`
 
 `handleActionHttpResponse` turns the response into `EmptyResult<ServerError>`:
 
@@ -178,7 +178,7 @@ failure rolls back everything.
 message on the `NetworkError`. That message is what ends up in the snackbar, like
 "Ticket not saved: Not found on the server".
 
-`handleDataHttpResponse` does the same for calls that return a body, giving `Result<T, ServerError>`.
+`handleDataHttpResponse` does the same for calls that return a body, giving `TmResult<T, ServerError>`.
 
 ### 9. The handler finishes up
 
@@ -197,7 +197,7 @@ user is told which part didn't work.
 ## Error handling in short
 
 - The client never throws out of a network call (apart from cancellation). Exceptions stop in `networkRequest`, and failures travel as
-  `Result.Error` carrying something that implements `Error`, which always has a readable `message`.
+  `TmResult.Error` carrying something that implements `Error`, which always has a readable `message`.
 - The server never throws out of a database call either. `dbQuery`/`dbWrite` turn failures into `null`/`false`,
   and routes turn those into `404` or `500`. A throw that escapes a route anyway is caught by `StatusPages`: a body
   that couldn't be read is a `400`, anything else a `500`, with the details only in the server's log
@@ -209,7 +209,7 @@ user is told which part didn't work.
 - **Check access before calling.** A Restricted user calling a write route gets a `403`, shown as "You don't have
   access to that". The counter and records handlers check `canEdit` before calling, and their screens hide the
   buttons that change things, so it doesn't get that far. New write actions should do the same.
-- **Some reads return `null` or an empty list on failure** rather than a `Result`, so the screen can't always tell
+- **Some reads return `null` or an empty list on failure** rather than a `TmResult`, so the screen can't always tell
   "nothing there" from "couldn't load".
 
 ## See also

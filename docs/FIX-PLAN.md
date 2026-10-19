@@ -19,18 +19,18 @@ Small, user visible, no design questions.
 - [x] **Phones can't log out, and logging in is hard to find.** `PhoneAppShell` has no account controls. Add the
       user menu (or log in button) to the phone layout, or a Log in / Log out row at the top of Settings. *Done:*
       an Account panel at the top of Settings (`AccountPanel`).
-      *Source:* [navigation](ui/screens/navigation.md#known-gaps), [settings](ui/screens/settings.md#known-gaps)
+      *Source:* [navigation](ui/screens/navigation.md), [settings](ui/screens/settings.md)
 - [x] **Wrong login hint on phones.** The records screen says "Log in from the bottom of the sidebar". Word it for
-      both layouts, or point at whatever the item above adds. *Source:* [records](ui/screens/records.md#known-gaps)
+      both layouts, or point at whatever the item above adds. *Source:* [records](ui/screens/records.md)
 - [x] **Failed deletes go unreported.** `CustomerRecords`, `TicketRecords` and `InventoryRecords` `remove()` ignore
       the server's answer and clear the selection first, so a refused or failed delete looks like it worked until
       the list reloads. Show a snackbar on failure, and only clear the selection once the server says yes.
       *Source:* found while writing the KDoc
 - [x] **`InvoiceScreen` can't be reached.** It's registered in `NavigationHost` but nothing links to it. Add an
       Invoices item to the nav (or a tab on the admin screen), or delete the screen. **(decide)**
-      *Source:* [navigation](ui/screens/navigation.md#known-gaps)
+      *Source:* [navigation](ui/screens/navigation.md)
 - [x] **A crash waiting to happen.** `RecordsScreen`'s delete dialog has `DataType.USER -> TODO(...)`. Replace it with
-      a no-op branch (users are deleted on the admin screen). *Source:* [records](ui/screens/records.md#known-gaps)
+      a no-op branch (users are deleted on the admin screen). *Source:* [records](ui/screens/records.md)
 - [x] **Cancelling a dialog on a record deleted elsewhere.** Cancel reloads the record, which fails if another device
       deleted it meanwhile. Clear the selection and refresh the list when the reload finds nothing.
       *Source:* [client records](client/records.md#gotchas)
@@ -154,7 +154,7 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
 - [x] **`/add` answers differ by record type** (customers `202` and no body, inventory `201` and no body, tickets
       `201` with the ticket). Make them all `201` with the saved record. *Done:* users too. *Source:* [API overview](api/README.md#gotchas)
 - [x] **Reads can't tell "nothing there" from "couldn't load".** Some repository reads return null or an empty list
-      on failure. Return a `Result` where the screen should say the load failed. *Done:* every `RemoteRepository`
+      on failure. Return a `TmResult` where the screen should say the load failed. *Done:* every `RemoteRepository`
       read, invoices, audit and counter search; the records lists show `OffsetPager.loadError`. A record whose
       notes didn't load no longer opens as having none (saving it would have deleted them).
       *Source:* [request lifecycle](architecture/request-lifecycle.md#gotchas)
@@ -177,7 +177,7 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
 - [x] **Settings:** move Start tab out of the Login group and make it a dropdown rather than click to cycle; lay
       the panels out in two columns on wide windows. *Done:* a Records group (start tab, page size, search limit,
       cache size) with a `CHOICE` setting type; Server and data is now Server; two columns from 1000 dp
-      (`SettingsLayout`). *Source:* [settings](ui/screens/settings.md#gotchas)
+      (`SettingsLayout`). *Source:* [settings](ui/screens/settings.md)
 - [x] **Notes edited on two devices.** `syncNotes` overwrites a note edited elsewhere since the record was opened.
       Warn when a note changed on the server since it was loaded, or send the version it was edited from.
       *Done:* `syncNotes` diffs against the notes as loaded (`seed.savedNotes`): another device's edit or delete
@@ -200,15 +200,20 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
 
 ## Phase 6: Code health
 
-- [ ] **Split the big handlers.** `CounterHandler` and `AdminHandler` are each over 500 lines. Split by area
+- [x] **Split the big handlers.** `CounterHandler` and `AdminHandler` are each over 500 lines. Split by area
       (counter: search and queue, check-in, pickup and invoices, printing; admin: one per tab group).
-      *Source:* [state](client/state.md#gotchas), [counter](ui/screens/counter.md#known-gaps), [admin](ui/screens/admin.md#known-gaps)
-- [ ] **Leftovers to remove:**
-  - `AdminScreen`'s unused `snackBarState` and `coroutineScope` parameters ([navigation](ui/screens/navigation.md#known-gaps)),
-  - `isTicketForNewCustomer` in `RecordsScreen` ([records](ui/screens/records.md#known-gaps)),
-  - `SettingItem.enabled`'s `TODO`, and the log tags declared inside `SettingsScreen` ([settings](ui/screens/settings.md#known-gaps)),
-  - the commented out `postgres` block in `application.yaml` ([configuration](configuration.md#known-gaps)).
-- [ ] **Stale and open `TODO` comments.** Delete the ones already done, and turn real ones into items here:
+      *Done:* `counter.checkIn`, `counter.pickup`, `counter.invoices`, `counter.printer`, and `admin.accounts`,
+      `admin.devices`, `admin.server`, each sharing a small `CounterSupport` / `AdminSupport`; tickets load through
+      `RemoteHandler.loadTicketDetail`. *Source:* [state](client/state.md#gotchas), [counter](ui/screens/counter.md#known-gaps), [admin](ui/screens/admin.md#known-gaps)
+- [x] **Leftovers to remove:**
+  - `AdminScreen`'s unused `snackBarState` and `coroutineScope` parameters ([navigation](ui/screens/navigation.md)),
+  - `isTicketForNewCustomer` in `RecordsScreen` ([records](ui/screens/records.md)),
+  - `SettingItem.enabled`'s `TODO`, and the log tags declared inside `SettingsScreen` ([settings](ui/screens/settings.md)),
+  - the commented out `postgres` block in `application.yaml` ([configuration](configuration.md)).
+
+  *Done:* also `SettingsScreen`'s unused `scope`, `NavigationHost`'s parameters that only fed those, `App()`'s
+  `println` of the platform on every recomposition, and the commented out client `AppLogger.kt`.
+- [x] **Stale and open `TODO` comments.** Delete the ones already done, and turn real ones into items here:
   - done already: "Secure the storage of these, maybe encrypt?" (`CreateUserHttpClient`, `CreateDatabaseHttpClient`;
     KSafe encrypts), "timeout for session tokens" (`Application.kt`; see Phase 2), "Handle encryption in the rest of
     these routes" (`UserRoute`; passwords are hashed and HTTPS is on), "Find new way of using identifier"
@@ -220,17 +225,27 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
     `InventoryPanel`),
   - checks: `AppDir.jvm.kt` "test this" (twice), `ConfigureDatabase.kt` "work with OS file dir", `AppLogger`
     "store these", `AppDir.wasmJs.kt`.
-- [ ] **Tighten `UiKitRulesTest`.** It's a text search, so it misses `Color.Red`, a `TextStyle(...)` on a screen,
+
+  *Done:* there are no `TODO`s left. The ideas are under [Ideas](#ideas); checking `AppDir` on macOS and Windows
+  is in Phase 7; `DATA_PATH` already falls back to the OS folder; the web `AppDir` has no folder (`null`); logs
+  aren't stored, which Docker and the OS service manager handle.
+- [x] **Tighten `UiKitRulesTest`.** It's a text search, so it misses `Color.Red`, a `TextStyle(...)` on a screen,
       Material 2 imports and Material subpackages, and it flags banned text inside comments. Catch the first three,
-      allow `material3.windowsizeclass`, and skip comments. *Source:* [kit rules](ui/kit-rules.md#gotchas)
-- [ ] **`SettingItem` is cast by `type`.** A mismatched item is quietly not drawn. Make it a sealed class per type.
-      *Source:* [settings](ui/screens/settings.md#gotchas)
-- [ ] **Telling desktop apart by name.** `App()` checks `getPlatform().name.contains("Java")`. Use an `expect` (or a
-      `Platform` value) instead. *Source:* [add platform code](how-to/add-a-platform-actual.md#gotchas)
-- [ ] **Logging.** `AppLogger.d` isn't hidden in release builds, and `LOG_LEVEL` is only read once. Make debug
-      logging follow `isDebug()`. *Source:* [results and errors](shared/results-and-errors.md#gotchas)
-- [ ] **Two `Result` types.** `kotlin.Result` and the app's `Result` are both in scope. Consider renaming the app's
-      (`Outcome`?) to stop mix-ups. Optional. *Source:* [results and errors](shared/results-and-errors.md#gotchas)
+      allow `material3.windowsizeclass`, and skip comments. *Done:* comments and strings are blanked first, and
+      `rulesCatchWhatTheyShould` checks the rules on a made up file. *Source:* [kit rules](ui/kit-rules.md#gotchas)
+- [x] **`SettingItem` is cast by `type`.** A mismatched item is quietly not drawn. Make it a sealed class per type.
+      *Done:* `SettingItem.Switch`, `Text`, `Action` and `Choice`; `SettingType` is gone.
+      *Source:* [settings](ui/screens/settings.md)
+- [x] **Telling desktop apart by name.** `App()` checks `getPlatform().name.contains("Java")`. Use an `expect` (or a
+      `Platform` value) instead. *Done:* `alwaysWide` in `ui/screens/navigation/`.
+      *Source:* [add platform code](how-to/add-a-platform-actual.md#gotchas)
+- [x] **Logging.** `AppLogger.d` isn't hidden in release builds, and `LOG_LEVEL` is only read once. Make debug
+      logging follow `isDebug()`. *Done:* `LOG_LEVEL` (which nothing set) is replaced by `AppLogger.debug`, which
+      `d` checks on every call; clients set it from `isDebug()`, the server in development mode.
+      *Source:* [results and errors](shared/results-and-errors.md#gotchas)
+- [x] **Two `Result` types.** `kotlin.Result` and the app's `Result` are both in scope. Consider renaming the app's
+      (`Outcome`?) to stop mix-ups. Optional. *Done:* the app's is `TmResult` (`error/TmResult.kt`);
+      `EmptyResult` keeps its name. *Source:* [results and errors](shared/results-and-errors.md#gotchas)
 
 ## Phase 7: Platforms, CI and docs
 
@@ -239,6 +254,9 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
       *Source:* [platforms](client/platforms.md#known-gaps)
 - [ ] **Run the web client end to end** in a browser, served by `-PwithWeb`. Same list as Android.
       *Source:* [platforms](client/platforms.md#known-gaps)
+- [ ] **Check `AppDir` on macOS and Windows.** The per OS data folders (`~/Library/Application Support/TicketMan`,
+      `%APPDATA%/TicketMan`) have only been tried on Linux. Run the desktop client and a server without `DATA_PATH`
+      on each. *Source:* `AppDir.jvm.kt`'s old `TODO`s
 - [ ] **Kiosk lockdown on Android.** Use Android's lock task mode so a kiosk can't be swiped out of.
       *Source:* [kiosk](ui/screens/kiosk.md#known-gaps)
 - [ ] **Large uploads on web** are read into memory whole. Stream them if Kotlin/Wasm allows, or cap the size the
@@ -370,6 +388,19 @@ the user types the address and logs in. These cover what goes wrong around that.
       off` for backup downloads, longer timeouts, forwarded headers, query strings kept out of the access log
       since the backup `?token=` is a credential); the HTTPS section becomes "Without a proxy". Add the Docker
       build to `CLAUDE.md`.
+
+## Ideas
+
+Features that came up as `TODO` comments but were never started. Not planned; pick one up, or drop it, when
+deciding what's next.
+
+- Import data into the database from a file (a CSV of customers or inventory from another system).
+- Photos on every record type, not just notes and inventory. Customers, tickets and users already have the shape.
+- Assign existing tickets to a customer from the customer dialog.
+- Start a new customer from the ticket dialog, the way check in does.
+- Hours worked and parts used recorded on a ticket as it's worked on, feeding its invoice.
+- Export invoices (CSV or PDF) for the books.
+- A reorder prompt when an item's stock drops to a set level, at login or when it happens.
 
 ## Rules to keep
 

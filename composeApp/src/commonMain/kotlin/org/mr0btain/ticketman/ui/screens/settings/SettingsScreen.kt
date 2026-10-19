@@ -13,12 +13,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.logging.AppLogger
-import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.ui.kit.containers.TmScrollColumn
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.MainViewModel
@@ -27,7 +25,6 @@ import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.ChangePinDialog
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
-import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import ticketman.composeapp.generated.resources.*
@@ -40,12 +37,8 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 fun SettingsScreen(
     modifier: Modifier = Modifier,
     viewModel: MainViewModel,
-    scope: CoroutineScope,
     onOpenGallery: (() -> Unit)? = null
 ) {
-    val TAG = "SettingsScreen"
-    val CHECK_URL_TAG = "$TAG:CheckUrl"
-
     val darkMode = viewModel.settings.darkMode.collectAsState()
     val palette = viewModel.settings.palette.collectAsState()
     val font = viewModel.settings.font.collectAsState()
@@ -88,17 +81,12 @@ fun SettingsScreen(
             label = "Login",
             icon = Res.drawable.lock,
             items = listOf(
-                SettingItem(
+                SettingItem.Switch(
                     icon = if (rememberLogin.value) painterResource(Res.drawable.lock) else painterResource(Res.drawable.unlock),
-                    description = "Save username and password after logging in",
                     label = "Remember login",
-                    enabled = true,
-                    initialState = rememberLogin.value,
-                    onClick = {
-                        viewModel.settings.toggleRememberLogin()
-                        true
-                    },
-                    type = SettingType.SWITCH
+                    description = "Save username and password after logging in",
+                    checked = rememberLogin.value,
+                    onToggle = { viewModel.settings.toggleRememberLogin() }
                 )
             )
         ),
@@ -106,34 +94,25 @@ fun SettingsScreen(
             label = "Server",
             icon = Res.drawable.server,
             items = listOf(
-                SettingItem(
+                SettingItem.Text(
                     icon = painterResource(Res.drawable.server),
-                    description = "Where the server is, like 192.168.1.20:8443. Uses HTTPS unless it starts with http://",
                     label = "Server address",
-                    enabled = true,
-                    initialState = serverUrl.value,
-                    onClick = { url ->
-                        try {
-                            viewModel.settings.setServerUrl(url as? String ?: "")
-                            true
-                        } catch (ex: Exception) {
-                            AppLogger.e(CHECK_URL_TAG, SimpleResult.FAIL, ex)
-                            false
-                        }
-                    },
-                    type = SettingType.TEXT
-                ),
-                SettingItem(
-                    icon = painterResource(Res.drawable.monitor),
-                    description = "Name admins see for this device, used from the next login",
-                    label = "Device name",
-                    enabled = true,
-                    initialState = deviceName.value,
-                    onClick = { name ->
-                        viewModel.settings.setDeviceName(name as? String ?: "")
+                    description = "Where the server is, like 192.168.1.20:8443. Uses HTTPS unless it starts with http://",
+                    value = serverUrl.value,
+                    onChange = { url ->
+                        viewModel.settings.setServerUrl(url)
                         true
-                    },
-                    type = SettingType.TEXT
+                    }
+                ),
+                SettingItem.Text(
+                    icon = painterResource(Res.drawable.monitor),
+                    label = "Device name",
+                    description = "Name admins see for this device, used from the next login",
+                    value = deviceName.value,
+                    onChange = { name ->
+                        viewModel.settings.setDeviceName(name)
+                        true
+                    }
                 )
             )
         ),
@@ -141,59 +120,39 @@ fun SettingsScreen(
             label = "Records",
             icon = Res.drawable.list,
             items = listOf(
-                SettingItem(
+                SettingItem.Choice(
                     icon = painterResource(Res.drawable.home),
-                    description = "Records tab shown on start",
                     label = "Start tab",
-                    enabled = true,
-                    initialState = tabNames.getOrElse(defaultTab.value) { "" },
+                    description = "Records tab shown on start",
+                    selected = tabNames.getOrElse(defaultTab.value) { "" },
                     options = tabNames,
-                    onClick = { name ->
-                        tabNames.indexOf(name).takeIf { it >= 0 }?.let { viewModel.settings.setDefaultTab(it); true } ?: false
-                    },
-                    type = SettingType.CHOICE
+                    onSelect = { name ->
+                        tabNames.indexOf(name).takeIf { it >= 0 }?.let { viewModel.settings.setDefaultTab(it) }
+                    }
                 ),
-                SettingItem(
+                numberSetting(
                     icon = painterResource(Res.drawable.list),
-                    description = "Number of items loaded per page " +
-                            "(${SettingsHandler.PAGE_SIZE_RANGE.first}-${SettingsHandler.PAGE_SIZE_RANGE.last})",
                     label = "Page size",
-                    enabled = true,
-                    initialState = pageSize.value.toString(),
-                    onClick = { value ->
-                        (value as? String)?.trim()?.toIntOrNull()
-                            ?.takeIf { it in SettingsHandler.PAGE_SIZE_RANGE }
-                            ?.let { viewModel.settings.setPageSize(it); true } ?: false
-                    },
-                    type = SettingType.TEXT
+                    description = "Number of items loaded per page",
+                    value = pageSize.value,
+                    range = SettingsHandler.PAGE_SIZE_RANGE,
+                    onChange = viewModel.settings::setPageSize
                 ),
-                SettingItem(
+                numberSetting(
                     icon = painterResource(Res.drawable.search),
-                    description = "Max number of search results " +
-                            "(${SettingsHandler.SEARCH_LIMIT_RANGE.first}-${SettingsHandler.SEARCH_LIMIT_RANGE.last})",
                     label = "Search result limit",
-                    enabled = true,
-                    initialState = searchLimit.value.toString(),
-                    onClick = { value ->
-                        (value as? String)?.trim()?.toIntOrNull()
-                            ?.takeIf { it in SettingsHandler.SEARCH_LIMIT_RANGE }
-                            ?.let { viewModel.settings.setSearchLimit(it); true } ?: false
-                    },
-                    type = SettingType.TEXT
+                    description = "Max number of search results",
+                    value = searchLimit.value,
+                    range = SettingsHandler.SEARCH_LIMIT_RANGE,
+                    onChange = viewModel.settings::setSearchLimit
                 ),
-                SettingItem(
+                numberSetting(
                     icon = painterResource(Res.drawable.database),
-                    description = "Opened records kept so going back to them is quick " +
-                            "(${SettingsHandler.CACHE_SIZE_RANGE.first}-${SettingsHandler.CACHE_SIZE_RANGE.last})",
                     label = "Cache size",
-                    enabled = true,
-                    initialState = cacheSize.value.toString(),
-                    onClick = { value ->
-                        (value as? String)?.trim()?.toIntOrNull()
-                            ?.takeIf { it in SettingsHandler.CACHE_SIZE_RANGE }
-                            ?.let { viewModel.settings.setCacheSize(it); true } ?: false
-                    },
-                    type = SettingType.TEXT
+                    description = "Opened records kept so going back to them is quick",
+                    value = cacheSize.value,
+                    range = SettingsHandler.CACHE_SIZE_RANGE,
+                    onChange = viewModel.settings::setCacheSize
                 )
             )
         ),
@@ -201,38 +160,27 @@ fun SettingsScreen(
             label = "Account and station",
             icon = Res.drawable.key,
             items = listOf(
-                SettingItem(
+                SettingItem.Action(
                     icon = painterResource(Res.drawable.key),
+                    label = "Change PIN",
                     description = when {
                         currentUser.value == null -> "Log in to change your PIN"
                         currentUser.value?.pinLocked == true -> "Your PIN is locked, ask an admin to unlock it"
                         currentUser.value?.hasPin == true -> "PIN used to sign in at counter stations"
                         else -> "You don't have a PIN yet, set one to use counter stations"
                     },
-                    label = "Change PIN",
                     enabled = currentUser.value != null,
-                    initialState = "",
-                    onClick = {
-                        if (currentUser.value != null) showChangePin = true
-                        true
-                    },
-                    type = SettingType.CLICKABLE_TEXT
+                    onClick = { showChangePin = true }
                 ),
-                SettingItem(
+                SettingItem.Action(
                     icon = painterResource(Res.drawable.monitor),
+                    label = "Counter station",
                     description = when (station.value?.status) {
                         null -> "Make this device a station staff can PIN in at"
                         StationStatus.PENDING -> "Waiting for an admin to approve \"${station.value?.name}\""
                         StationStatus.APPROVED -> "Approved as \"${station.value?.name}\""
                     },
-                    label = "Counter station",
-                    enabled = true,
-                    initialState = "",
-                    onClick = {
-                        showStation = true
-                        true
-                    },
-                    type = SettingType.CLICKABLE_TEXT
+                    onClick = { showStation = true }
                 )
             )
         )
@@ -274,6 +222,22 @@ fun SettingsScreen(
         }
     )
 }
+
+/** A typed whole number setting that refuses anything outside [range], which its description gives */
+private fun numberSetting(
+    icon: Painter,
+    label: String,
+    description: String,
+    value: Int,
+    range: IntRange,
+    onChange: (Int) -> Unit
+) = SettingItem.Text(
+    icon = icon,
+    label = label,
+    description = "$description (${range.first}-${range.last})",
+    value = value.toString(),
+    onChange = { text -> text.trim().toIntOrNull()?.takeIf { it in range }?.let { onChange(it); true } ?: false }
+)
 
 /** Wider than this, settings sit in two columns */
 private val TWO_COLUMN_WIDTH = 1000.dp

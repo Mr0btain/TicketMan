@@ -66,7 +66,7 @@ from the main thread only.
 | Declaration | What it gives | Per platform |
 |-------------|---------------|--------------|
 | `AppLogger` (`logging/`) | Logging, see [Results and errors](results-and-errors.md#logging) | JVM: `java.util.logging` and stdout. Android and Wasm: their own consoles |
-| `AppDir` (`util/`) | `path`: where the app keeps its files. `currentPlatform` | JVM: per OS app data folder ([table](../configuration.md#data_path)). Android: the app's data dir. Wasm: empty path |
+| `AppDir` (`util/`) | `path`: where the app keeps its files. `currentPlatform` | JVM: per OS app data folder ([table](../configuration.md#data_path)). Android: the app's data dir. Wasm: `null`, a browser has no folder |
 | `getPlatform()` (root) | A `Platform` with a display `name` | One per target |
 | `util.Platform` enum | `Linux`, `MacOS`, `Windows`, `Android`, `IOS`, `WasmJs` | - |
 

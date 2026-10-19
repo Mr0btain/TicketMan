@@ -59,8 +59,8 @@ Every handler gets `viewModelScope` to launch work in and, where it shows messag
 | `customers`, `tickets`, `inventory`, `users` | `CustomerRecords`, `TicketRecords`, `InventoryRecords`, `UserRecords` | Records | Per record type: cache, pager, seed, selection, save, remove, search. See [Records](records.md) |
 | `session` | `SessionHandler` | Login, Settings | Connecting, login and logout, `currentUser`, `isAdmin`, `canEdit`, account requests and setup, this device's station |
 | `settings` | `SettingsHandler` | Settings | Saved settings as state flows. Each change is written to `LocalStorage` at once |
-| `counter` | `CounterHandler` | Counter | Search, queue, the open ticket and customer, check-in, pickup, invoices, price check, printing |
-| `admin` | `AdminHandler` | Admin | Overview, daily report, users and requests, stations, sessions, server info, backup and restore, shop profile, audit log |
+| `counter` | `CounterHandler` | Counter | Search, queue, the open ticket and customer, price check. Its parts: `checkIn` (`CounterCheckIn`), `pickup` (`CounterPickup`), `invoices` (`CounterInvoices`, the invoice list) and `printer` (`CounterPrinter`) |
+| `admin` | `AdminHandler` | Admin | Overview, daily report, low stock, audit log. Its parts: `accounts` (`AdminAccounts`: users, requests, invites, PINs), `devices` (`AdminDevices`: stations, sessions) and `server` (`AdminServer`: server info, shop profile, backup and restore, certificate, mock data) |
 | `kiosk` | `KioskHandler` | Kiosk | Kiosk on or off, the PIN lock, the idle timer |
 
 `selectedMainTabIndex` is the one bit of UI state kept on the view model itself, so the start tab setting can set it.
@@ -104,8 +104,12 @@ Every handler gets `viewModelScope` to launch work in and, where it shows messag
 
 ## Gotchas
 
-- **Handlers are big.** `CounterHandler` and `AdminHandler` are each over 500 lines. New screens should split their
-  state into smaller handlers rather than grow these.
+- **Big handlers are split into parts.** `CounterHandler` and `AdminHandler` hold one part per area of their
+  screen, made in their constructor and sharing a small `CounterSupport` / `AdminSupport` (the scope, snackbar
+  messages, and for the counter `canEdit` and switching views; for admin the loading flag and reloading the audit
+  log after a change). A part reaches the rest of its handler only through the callbacks it's given, like
+  `reloadOverview`. `clear()` on the handler clears its parts too. Split a new screen's state the same way once it
+  grows past a few hundred lines.
 
 ## See also
 

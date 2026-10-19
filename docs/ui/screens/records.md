@@ -112,11 +112,6 @@ The handlers refuse changes too, and the server checks again. See
 - **Dialogs need a picked record for Edit.** `onEditTicket` does nothing for a new seed; the button is only there
   once something is selected.
 
-## Known gaps
-
-- `isTicketForNewCustomer` in `RecordsScreen` and a few `TODO` comments in the panels are left over from features
-  that were never started.
-
 ## See also
 
 - [Records: seeds, caches and pagers](../../client/records.md)

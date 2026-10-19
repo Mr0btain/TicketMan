@@ -13,7 +13,7 @@ import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.error.ImageError
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.logging.AppLogger
 import java.io.File
 import kotlin.time.Duration.Companion.hours
@@ -49,7 +49,7 @@ class ImageService(
     /**
      * Makes the variants of a received file and adds it as a pending photo. Deletes [upload] either way
      */
-    suspend fun store(upload: File, description: String, uploadedBy: Uuid?): Result<StoredImage, ImageError> {
+    suspend fun store(upload: File, description: String, uploadedBy: Uuid?): TmResult<StoredImage, ImageError> {
         val identifier = Uuid.generateV7()
         val work = File(store.tempFolder(), identifier.toString())
 
@@ -59,10 +59,10 @@ class ImageService(
             }
 
             when (processed) {
-                is Result.Error -> processed
+                is TmResult.Error -> processed
 
-                is Result.Success -> if (!store.moveIn(identifier, work)) {
-                    Result.Error(ImageError.FAILED)
+                is TmResult.Success -> if (!store.moveIn(identifier, work)) {
+                    TmResult.Error(ImageError.FAILED)
                 } else {
                     database.insertPending(
                         identifier = identifier,
@@ -70,9 +70,9 @@ class ImageService(
                         uploadedBy = uploadedBy,
                         processed = processed.data,
                         folder = store.relativeFolder(identifier)
-                    )?.let { Result.Success(it) } ?: run {
+                    )?.let { TmResult.Success(it) } ?: run {
                         store.delete(identifier)
-                        Result.Error(ImageError.FAILED)
+                        TmResult.Error(ImageError.FAILED)
                     }
                 }
             }
@@ -81,7 +81,7 @@ class ImageService(
             if (work.exists()) work.deleteRecursively()
         }
 
-        if (result is Result.Success) AppLogger.m(UPLOAD_TAG, "Stored $identifier")
+        if (result is TmResult.Success) AppLogger.m(UPLOAD_TAG, "Stored $identifier")
         else AppLogger.i(UPLOAD_TAG, "Upload refused: $result")
 
         return result

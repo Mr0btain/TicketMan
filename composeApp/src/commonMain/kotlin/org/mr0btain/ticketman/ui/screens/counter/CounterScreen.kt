@@ -43,10 +43,10 @@ fun CounterScreen(
     val customer by counter.customer.collectAsState()
     val priceResults by counter.priceResults.collectAsState()
     val shop by counter.shop.collectAsState()
-    val checkInCustomer by counter.checkInCustomer.collectAsState()
-    val lastCheckIn by counter.lastCheckIn.collectAsState()
-    val pickup by counter.pickup.collectAsState()
-    val lastPickup by counter.lastPickup.collectAsState()
+    val checkInCustomer by counter.checkIn.customer.collectAsState()
+    val lastCheckIn by counter.checkIn.last.collectAsState()
+    val pickup by counter.pickup.detail.collectAsState()
+    val lastPickup by counter.pickup.last.collectAsState()
 
     val canEdit = viewModel.session.canEdit.collectAsState().value
     val searchFocus = remember { FocusRequester() }
@@ -75,7 +75,7 @@ fun CounterScreen(
                     }
 
                     Key.F3 -> {
-                        counter.startCheckIn()
+                        counter.checkIn.start()
                         true
                     }
 
@@ -86,7 +86,7 @@ fun CounterScreen(
 
                     // Picks up whichever ticket is open
                     Key.F5 -> {
-                        if (view == CounterView.TICKET) ticket?.let { counter.startPickup(it.ticket.identifier) }
+                        if (view == CounterView.TICKET) ticket?.let { counter.pickup.start(it.ticket.identifier) }
                         true
                     }
 
@@ -124,8 +124,8 @@ fun CounterScreen(
             },
             canEdit = canEdit,
             queue = queue,
-            onCheckIn = { counter.startCheckIn() },
-            onNewCustomer = { counter.startNewCustomer() },
+            onCheckIn = { counter.checkIn.start() },
+            onNewCustomer = { counter.checkIn.startNewCustomer() },
             onPriceCheck = { counter.openPriceCheck() },
             onQueueTicketClick = { counter.openTicket(it) }
         ) {
@@ -155,13 +155,13 @@ fun CounterScreen(
                                     PrintTemplate.RECEIPT.takeIf { detail.invoice != null }
                                 ),
                                 defaultPaper = shop.defaultPaper,
-                                onPrint = { template, paper, onResult -> counter.print(detail.ticket.identifier, template, paper, onResult) }
+                                onPrint = { template, paper, onResult -> counter.printer.print(detail.ticket.identifier, template, paper, onResult) }
                             )
                         },
                         extraActions = {
                             TmButton(
                                 text = "Pick up  (F5)",
-                                onClick = { counter.startPickup(detail.ticket.identifier) },
+                                onClick = { counter.pickup.start(detail.ticket.identifier) },
                                 size = TmControlSize.LARGE,
                                 leadingIcon = Res.drawable.dollar_sign
                             )
@@ -176,7 +176,7 @@ fun CounterScreen(
                         onBack = { counter.goHome() },
                         actions = {
                             if (canEdit) {
-                                TmButton(text = "Check in a device", onClick = { counter.startCheckIn(detail.customer) }, leadingIcon = Res.drawable.plus)
+                                TmButton(text = "Check in a device", onClick = { counter.checkIn.start(detail.customer) }, leadingIcon = Res.drawable.plus)
                             }
                         }
                     )
@@ -191,12 +191,12 @@ fun CounterScreen(
                 CounterView.CHECK_IN -> CheckInWizard(
                     startingCustomer = checkInCustomer,
                     terms = shop.repairTerms,
-                    onSearchCustomers = { counter.searchCustomers(it) },
-                    onAddCustomer = { customer, onResult -> counter.addCustomer(customer, onResult) },
-                    onSearchTechnicians = { counter.searchTechnicians(it) },
-                    onRepeatCheck = { customer, device, exclude -> counter.repeatCheck(customer, device, exclude) },
+                    onSearchCustomers = { counter.checkIn.searchCustomers(it) },
+                    onAddCustomer = { customer, onResult -> counter.checkIn.addCustomer(customer, onResult) },
+                    onSearchTechnicians = { counter.checkIn.searchTechnicians(it) },
+                    onRepeatCheck = { customer, device, exclude -> counter.checkIn.repeatCheck(customer, device, exclude) },
                     onOpenTicket = { counter.openTicket(it) },
-                    onSubmit = { request, onResult -> counter.submitCheckIn(request, onResult) },
+                    onSubmit = { request, onResult -> counter.checkIn.submit(request, onResult) },
                     onCancel = { counter.goHome() }
                 )
 
@@ -204,7 +204,7 @@ fun CounterScreen(
                     CheckedInView(
                         result = result,
                         onOpenTicket = { counter.openTicket(result.ticket.identifier) },
-                        onCheckInAnother = { counter.startCheckIn() },
+                        onCheckInAnother = { counter.checkIn.start() },
                         onDone = { counter.goHome() },
                         actions = {
                             PrintButton(
@@ -212,7 +212,7 @@ fun CounterScreen(
                                 size = TmControlSize.LARGE,
                                 templates = listOf(PrintTemplate.CLAIM_SLIP, PrintTemplate.DEVICE_TAG),
                                 defaultPaper = shop.defaultPaper,
-                                onPrint = { template, paper, onResult -> counter.print(result.ticket.identifier, template, paper, onResult) }
+                                onPrint = { template, paper, onResult -> counter.printer.print(result.ticket.identifier, template, paper, onResult) }
                             )
                         }
                     )
@@ -221,10 +221,10 @@ fun CounterScreen(
                 CounterView.PICKUP -> pickup?.let { detail ->
                     PickupScreen(
                         detail = detail,
-                        onSearchParts = { counter.searchParts(it) },
-                        onSave = { charges, discount, onResult -> counter.saveCharges(charges, discount, onResult) },
-                        onRemovePayment = { counter.removePayment(it) },
-                        onFinish = { charges, discount, payments, onResult -> counter.finishPickup(charges, discount, payments, onResult) },
+                        onSearchParts = { counter.pickup.searchParts(it) },
+                        onSave = { charges, discount, onResult -> counter.pickup.saveCharges(charges, discount, onResult) },
+                        onRemovePayment = { counter.pickup.removePayment(it) },
+                        onFinish = { charges, discount, payments, onResult -> counter.pickup.finish(charges, discount, payments, onResult) },
                         onBack = { counter.openTicket(detail.ticket.identifier) }
                     )
                 }
@@ -239,7 +239,7 @@ fun CounterScreen(
                                 size = TmControlSize.LARGE,
                                 templates = listOf(PrintTemplate.RECEIPT),
                                 defaultPaper = shop.defaultPaper,
-                                onPrint = { template, paper, onResult -> counter.print(invoice.ticketIdentifier, template, paper, onResult) }
+                                onPrint = { template, paper, onResult -> counter.printer.print(invoice.ticketIdentifier, template, paper, onResult) }
                             )
                         }
                     )
@@ -247,7 +247,7 @@ fun CounterScreen(
 
                 CounterView.NEW_CUSTOMER -> NewCustomerScreen(
                     onSave = { customer, onResult ->
-                        counter.addCustomer(customer) { saved, problem ->
+                        counter.checkIn.addCustomer(customer) { saved, problem ->
                             onResult(problem)
                             saved?.let { counter.openCustomer(it.identifier) }
                         }

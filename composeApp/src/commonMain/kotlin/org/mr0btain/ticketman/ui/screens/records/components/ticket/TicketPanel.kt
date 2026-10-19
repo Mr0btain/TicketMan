@@ -12,8 +12,6 @@ import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsLayout
 import kotlin.uuid.Uuid
 
-// TODO: Add hours worked/ inventory items to a list of expense and charges
-// TODO: Add invoice and ability to export
 
 /**
  * Tickets: search and add on top, the list, and the picked ticket's details

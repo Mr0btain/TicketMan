@@ -1,20 +1,20 @@
 # Results and errors
 
-TicketMan code returns failures instead of throwing them. A call that can fail gives back a `Result` holding either
+TicketMan code returns failures instead of throwing them. A call that can fail gives back a `TmResult` holding either
 the value or an error with a readable message, and the caller decides what to show. This page covers the types in
 `shared/.../error/` and the helpers that turn exceptions into results.
 
-## `Result`
+## `TmResult`
 
-[`Result.kt`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/error/Result.kt):
+[`TmResult.kt`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/error/TmResult.kt):
 
 ```kotlin
-sealed interface Result<out D, out E: Error> {
-    data class Success<out D>(val data: D): Result<D, Nothing>
-    data class Error<out E: org.mr0btain.ticketman.error.Error>(val error: E): Result<Nothing, E>
+sealed interface TmResult<out D, out E: Error> {
+    data class Success<out D>(val data: D): TmResult<D, Nothing>
+    data class Error<out E: org.mr0btain.ticketman.error.Error>(val error: E): TmResult<Nothing, E>
 }
 
-typealias EmptyResult<E> = Result<Unit, E>
+typealias EmptyResult<E> = TmResult<Unit, E>
 ```
 
 Helpers: `map`, `onSuccess`, `onError` (both return the result, so they chain) and `asEmptyDataResult()`.
@@ -23,8 +23,8 @@ Use it with a `when`, or the helpers:
 
 ```kotlin
 when (val created = repo.create(ticket)) {
-    is Result.Error -> snackBarHost.showSnackbar("Ticket not saved: ${created.error.message}")
-    is Result.Success -> seed.setTicket(created.data, notes, customer, user)
+    is TmResult.Error -> snackBarHost.showSnackbar("Ticket not saved: ${created.error.message}")
+    is TmResult.Success -> seed.setTicket(created.data, notes, customer, user)
 }
 
 handleHttpResponse<Ticket>(TAG, response).onSuccess { return it }
@@ -35,11 +35,11 @@ handleHttpResponse<Ticket>(TAG, response).onSuccess { return it }
 ## `Error`
 
 ```kotlin
-/** Error half of a [Result]. [message] is readable enough to show the user */
+/** Error half of a [TmResult]. [message] is readable enough to show the user */
 interface Error : LogMessage
 ```
 
-Anything implementing `Error` can go in a `Result`, and its `message` should make sense in a snackbar. Because
+Anything implementing `Error` can go in a `TmResult`, and its `message` should make sense in a snackbar. Because
 `Error` extends `LogMessage`, every error can also be passed straight to `AppLogger`.
 
 Most errors are enums with the message as a constructor argument:
@@ -52,7 +52,7 @@ Most errors are enums with the message as a constructor argument:
 
 The client also has `ServerError` (in `composeApp/.../network/ServerError.kt`), which wraps a `NetworkError` with
 the short plain text reason the server sent, if any. Its `message` prefers the server's reason. Repository calls
-that change something return `Result<T, ServerError>` or `EmptyResult<ServerError>`.
+that change something return `TmResult<T, ServerError>` or `EmptyResult<ServerError>`.
 
 To add an error, add an enum (or a value to an existing one) implementing `Error`:
 
@@ -68,7 +68,7 @@ Three helpers catch exceptions at the edge, log them, and return something the c
 
 | Helper | Where | Returns |
 |--------|-------|---------|
-| `networkRequest(tag) { ... }` | Client, `composeApp/.../network/Helpers.kt` | `Result<T, NetworkError>`: the value, or what kind of failure it was (timeout, no connection, unreadable response, unknown). Rethrows cancellation |
+| `networkRequest(tag) { ... }` | Client, `composeApp/.../network/Helpers.kt` | `TmResult<T, NetworkError>`: the value, or what kind of failure it was (timeout, no connection, unreadable response, unknown). Rethrows cancellation |
 | `networkErrorTryCatch(tag) { ... }` | Client, same file | The value, or `null` if it threw. For reads that only need to know whether it worked |
 | `dbQuery(tag) { ... }`, `dbWrite(tag) { ... }` | Server, `server/.../database/DbCall.kt` | The value or `null`; whether the write happened. See [Request lifecycle](../architecture/request-lifecycle.md) |
 | `appLogTryCatch(tag) { ... }` | Shared, `error/AppLogTryCatch.kt` | Nothing, or `T?`. See below |
@@ -88,9 +88,13 @@ and a message (a `String` or any `LogMessage`):
 | `e(tag, message, throwable?)` | Something failed with an exception |
 | `i(tag, message)` | Something didn't work but nothing threw: not found, refused |
 | `m(tag, message)` | Things that worked, and general messages |
-| `d(tag, message)` | Debugging |
+| `d(tag, message)` | Debugging. Only written when `AppLogger.debug` is on |
 
 `SimpleResult.SUCCESS` and `SimpleResult.FAIL` are the usual messages for `m` and `i`.
+
+`AppLogger.debug` starts off. The clients turn it on from `isDebug()` in `initKoin()` (after Koin starts, since
+Android reads its debug flag from the context Koin holds), and the server in development mode, at the top of
+`Application.module()`. Everything else is always written.
 
 Tags are hierarchical strings declared as constants at the top of a class, so log lines can be filtered by area:
 
@@ -103,13 +107,14 @@ On the JVM (desktop and server), `e`, `i` and `d` go through `java.util.logging`
 
 ## Gotchas
 
-- **Two `Result`s.** Kotlin's own `kotlin.Result` is also in scope everywhere. `RestoreService` uses it
-  on purpose (`Result.failure`, `runCatching`). Import `org.mr0btain.ticketman.error.Result` explicitly
-  when you mean this one, and check which one a file is using before calling `onSuccess` on it.
-- **`Result.Error` shadows `Error`** inside the sealed interface, which is why its bound is written out in full.
-- **`AppLogger.LOG_LEVEL` is only read once.** On the JVM the level is applied when the object is first used, so
-  setting `LOG_LEVEL` later does nothing.
-- **`d` isn't hidden in release builds.** On the JVM it logs at info level like `i`.
+- **`TmResult` isn't `kotlin.Result`.** Kotlin's own `Result` is always in scope, which is why the app's is named
+  `TmResult`: a bare `Result` in this codebase is Kotlin's. `RestoreService` uses Kotlin's on purpose
+  (`Result.failure`, `runCatching`), for exceptions rather than error enums. Use `TmResult` for anything a caller
+  shows or acts on.
+- **`TmResult.Error` shadows `Error`** inside the sealed interface, which is why its bound is written out in full.
+- **`d` logs at info level on the JVM**, like `i`, with a `DEBUG:` prefix, so it shows without changing
+  `java.util.logging`'s level. Anything logged before `debug` is set (Koin's own start up, the server's
+  `createServer`) skips `d`.
 
 ## See also
 

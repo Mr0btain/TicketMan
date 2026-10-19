@@ -38,7 +38,12 @@ stateDiagram-v2
 Every view can go back to `HOME` (Escape, or its back button), and typing in the search bar always goes back to
 `HOME` to show the results. All of it lives in
 [`CounterHandler`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/counter/components/CounterHandler.kt)
-on `MainViewModel`, so leaving the counter and coming back keeps the open ticket.
+on `MainViewModel`, so leaving the counter and coming back keeps the open ticket. `CounterHandler` holds the
+search, queue, shop profile, ticket and customer cards and price check itself, and a part for each bigger flow:
+`counter.checkIn` (`CounterCheckIn`, the wizard and new customer screen), `counter.pickup` (`CounterPickup`),
+`counter.invoices` (`CounterInvoices`, the invoice list the admin screen shows) and `counter.printer`
+(`CounterPrinter`). They share a `CounterSupport` (scope, snackbar, `canEdit`, switching views, reloading the
+queue) and load tickets through `RemoteHandler.loadTicketDetail` (`TicketDetail.kt`).
 
 ### Keyboard
 
@@ -118,14 +123,14 @@ server's message.
 ### Printing
 
 `PrintButton` asks which slip (claim slip, device tag, receipt) and which paper, starting on the shop's default
-paper, then calls `CounterHandler.print`, which loads the ticket fresh so the printout matches the server. See
+paper, then calls `counter.printer.print`, which loads the ticket fresh so the printout matches the server. See
 [Printing](../../client/printing.md).
 
 ### View only
 
 Restricted users can search, open tickets and customers, use price check and print. The Check in and New customer
 buttons, the ticket's status switch and Pick up are hidden, a "View only" badge shows instead, and
-`CounterHandler` refuses those actions anyway.
+the handler and its parts refuse those actions anyway.
 
 ## Where it lives
 
@@ -133,7 +138,8 @@ buttons, the ticket's status switch and Pick up are hidden, a "View only" badge 
 |------|-------|
 | Screen, shortcuts, view switching | `ui/screens/counter/CounterScreen.kt` |
 | Top bar and queue placement, wide and narrow | `ui/screens/counter/CounterLayout.kt` |
-| State and every action | `ui/screens/counter/components/CounterHandler.kt` |
+| State and every action | `ui/screens/counter/components/CounterHandler.kt`, and its parts `CounterCheckIn.kt`, `CounterPickup.kt`, `CounterInvoices.kt`, `CounterPrinter.kt`, `CounterSupport.kt` |
+| `TicketDetail`, `CustomerDetail` and loading a ticket's card | `ui/screens/counter/components/TicketDetail.kt` |
 | Ticket and customer rows, `isOverdue`, `isClosed` | `ui/screens/counter/components/CounterRows.kt` |
 | Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt` (with `QueueDialog`), `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `CustomerForm.kt` (new customer), `PickupScreen.kt` (with `PickedUpView`) |
 | Print button | `ui/screens/counter/PrintButton.kt` |
@@ -154,7 +160,6 @@ buttons, the ticket's status switch and Pick up are hidden, a "View only" badge 
 
 - On a phone the check-in stepper scrolls sideways rather than fitting, and the F-key hints stay in the search
   box's placeholder.
-- `CounterHandler` is over 500 lines. New counter features should get their own handler.
 
 ## See also
 

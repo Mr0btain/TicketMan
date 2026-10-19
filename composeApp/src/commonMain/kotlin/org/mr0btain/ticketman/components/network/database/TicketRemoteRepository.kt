@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.ticket.TicketStatusChange
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.ApiRoutes
@@ -44,7 +44,7 @@ class TicketRemoteRepository(
     private val FETCH_MINE_TAG = "$tag:FetchMine"
 
     /** A page of the tickets assigned to whoever is logged in, newest first */
-    suspend fun fetchMine(offset: Long, limit: Int): Result<List<Ticket>, ServerError> =
+    suspend fun fetchMine(offset: Long, limit: Int): TmResult<List<Ticket>, ServerError> =
         fetchPage(FETCH_MINE_TAG, TicketPaths.FETCH_MINE, offset, limit)
 
     suspend fun getByNumber(number: TicketNumber): Ticket? {
@@ -83,14 +83,14 @@ class TicketRemoteRepository(
     }
 
     /** The ticket's customer, `NOT_FOUND` when it has none */
-    suspend fun getCustomer(identifier: Uuid): Result<EntityReference, ServerError> =
+    suspend fun getCustomer(identifier: Uuid): TmResult<EntityReference, ServerError> =
         getEntity(GET_CUSTOMER_TAG, "$serverUrl${TicketPaths.GET_CUSTOMER.fill(identifier)}")
 
     suspend fun setCustomer(identifier: Uuid, customerId: Uuid) =
         setEntity(SET_CUSTOMER_TAG, customerId, "$serverUrl${TicketPaths.SET_CUSTOMER.fill(identifier)}")
 
     /** The ticket's technician, `NOT_FOUND` when nobody is assigned */
-    suspend fun getUser(identifier: Uuid): Result<EntityReference, ServerError> =
+    suspend fun getUser(identifier: Uuid): TmResult<EntityReference, ServerError> =
         getEntity(GET_USER_TAG, "$serverUrl${TicketPaths.GET_USER.fill(identifier)}")
 
     suspend fun setUser(identifier: Uuid, userId: Uuid) =

@@ -19,8 +19,12 @@ from any tab. The Users tab also reloads the users list, and the Invoices tab lo
 counter. Refresh does the same for the open tab.
 
 All the state is in
-[`AdminHandler`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/admin/components/AdminHandler.kt);
-the users list itself comes from the shared `UserRecords` pager and seed, like the record lists.
+[`AdminHandler`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/admin/components/AdminHandler.kt),
+which holds the overview, low stock and audit log itself and one part per group of tabs: `admin.accounts`
+(`AdminAccounts`, the Users tab), `admin.devices` (`AdminDevices`, Stations and Sessions) and `admin.server`
+(`AdminServer`, the Server tab). The parts share an `AdminSupport`: every change goes through its `report(...)`,
+which shows a snackbar and reloads the audit log. The users list itself comes from the shared `UserRecords` pager
+and seed, like the record lists.
 
 ### Tabs
 
@@ -53,7 +57,7 @@ through `fileBody`, so neither is held in memory. See [Transfers and photos](../
 | What | Where |
 |------|-------|
 | Screen, tabs, users dialogs | `ui/screens/admin/AdminScreen.kt` |
-| State and actions | `ui/screens/admin/components/AdminHandler.kt` |
+| State and actions | `ui/screens/admin/components/AdminHandler.kt`, and its parts `AdminAccounts.kt`, `AdminDevices.kt`, `AdminServer.kt`, `AdminSupport.kt` |
 | The tabs, in order | `ui/screens/admin/components/AdminTab.kt` |
 | Shared bits (user state chip, access level dropdown) | `ui/screens/admin/components/AdminCommon.kt` |
 | One folder per tab | `ui/screens/admin/<overview|users|sessions|stations|inventory|invoices|server|audit>/` |
@@ -63,7 +67,8 @@ through `fileBody`, so neither is held in memory. See [Transfers and photos](../
 ## Adding a tab
 
 1. Add an entry to the `AdminTab` enum (`components/AdminTab.kt`) with its label. The enum order is the tab order.
-2. Add its state and loading to `AdminHandler`, and a branch for it in `refresh(tab)`.
+2. Add its state and loading to the part of `AdminHandler` it belongs with (or a new part, made in
+   `AdminHandler`'s constructor, if it's its own area), and a branch for it in `refresh(tab)`.
 3. Put the tab's composable in its own folder under `ui/screens/admin/` and add a branch for it in
    `AdminContent`'s `when`.
 4. Wrap the server routes it uses in `authenticate("admin")`.
@@ -73,7 +78,8 @@ through `fileBody`, so neither is held in memory. See [Transfers and photos](../
 - **Links to records go through the main tab index.** Clicking a ticket or a low stock item selects it in its
   handler, sets `changeMainTabIndex` (1 for tickets, 2 for inventory) and navigates to Records with `navigateTo`, so
   the back stack doesn't grow. An invoice opens its ticket on the counter the same way (`onOpenTicketAtCounter`).
-- **The Invoices tab loads through `CounterHandler`**, which owns the invoice list (`loadInvoices`, `voidInvoice`).
+- **The Invoices tab loads through the counter**, whose `counter.invoices` (`CounterInvoices`) owns the invoice
+  list (`load`, `void`).
   The screen's Refresh reloads it when that tab is open.
 - **The Users tab is the only place users are edited.** The records screen has no users tab.
 - **The mock data card only shows on development servers** (`ServerInfoResponse.developmentMode`), and the server
@@ -82,7 +88,6 @@ through `fileBody`, so neither is held in memory. See [Transfers and photos](../
 ## Known gaps
 
 - A tab reloads every time it's opened, even if it was loaded a moment ago.
-- `AdminHandler` is over 500 lines. A new tab with much state should get its own handler.
 
 ## See also
 

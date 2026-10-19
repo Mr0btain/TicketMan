@@ -88,7 +88,6 @@ import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
 import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
-import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.kit.theme.TmFonts
 import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
@@ -566,15 +565,15 @@ class ScreenRenderTest {
                     SettingsGroup(
                         settingItemGroup = SettingItemGroup(
                             label = "Login",
-                            items = listOf(SettingItem(icon, "Save username and password after logging in", "Remember login", true, true, type = SettingType.SWITCH))
+                            items = listOf(SettingItem.Switch(icon, "Remember login", "Save username and password after logging in", checked = true, onToggle = {}))
                         )
                     )
                     SettingsGroup(
                         settingItemGroup = SettingItemGroup(
                             label = "Records",
                             items = listOf(
-                                SettingItem(icon, "Records tab shown on start", "Start tab", true, "Tickets", type = SettingType.CHOICE, options = tabs),
-                                SettingItem(icon, "Number of items loaded per page (10-200)", "Page size", true, "50", type = SettingType.TEXT)
+                                SettingItem.Choice(icon, "Start tab", "Records tab shown on start", selected = "Tickets", options = tabs, onSelect = {}),
+                                SettingItem.Text(icon, "Page size", "Number of items loaded per page (5-100)", value = "50", onChange = { true })
                             )
                         )
                     )

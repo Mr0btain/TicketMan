@@ -9,7 +9,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import kotlin.test.*
 import kotlin.uuid.Uuid
@@ -28,10 +28,10 @@ class RemoteRepositoryResultTest {
 
     @Test
     fun noteAndLinkCallsSucceedWhenTheServerTakesThem() = runTest {
-        assertIs<Result.Success<Unit>>(customers.addNote(Uuid.random(), Note(message = "hi")))
-        assertIs<Result.Success<Unit>>(customers.updateNote(Note(message = "hi")))
-        assertIs<Result.Success<Unit>>(customers.removeNote(Uuid.random()))
-        assertIs<Result.Success<Unit>>(customers.addTicket(Uuid.random(), Uuid.random()))
+        assertIs<TmResult.Success<Unit>>(customers.addNote(Uuid.random(), Note(message = "hi")))
+        assertIs<TmResult.Success<Unit>>(customers.updateNote(Note(message = "hi")))
+        assertIs<TmResult.Success<Unit>>(customers.removeNote(Uuid.random()))
+        assertIs<TmResult.Success<Unit>>(customers.addTicket(Uuid.random(), Uuid.random()))
     }
 
     @Test
@@ -44,7 +44,7 @@ class RemoteRepositoryResultTest {
             customers.removeNote(Uuid.random()),
             customers.addTicket(Uuid.random(), Uuid.random())
         ).forEach { result ->
-            assertEquals(NetworkError.NOT_FOUND, assertIs<Result.Error<ServerError>>(result).error.type)
+            assertEquals(NetworkError.NOT_FOUND, assertIs<TmResult.Error<ServerError>>(result).error.type)
         }
     }
 
@@ -52,7 +52,7 @@ class RemoteRepositoryResultTest {
     fun noServerIsAnError() = runTest {
         val unset = CustomerRemoteRepository(client)
 
-        assertIs<Result.Error<*>>(unset.addNote(Uuid.random(), Note(message = "hi")))
-        assertIs<Result.Error<*>>(unset.removeNote(Uuid.random()))
+        assertIs<TmResult.Error<*>>(unset.addNote(Uuid.random(), Note(message = "hi")))
+        assertIs<TmResult.Error<*>>(unset.removeNote(Uuid.random()))
     }
 }

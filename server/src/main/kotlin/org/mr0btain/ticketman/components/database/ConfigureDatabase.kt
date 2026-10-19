@@ -4,9 +4,9 @@ import org.mr0btain.ticketman.components.service.RestoreService
 import java.io.File
 
 /**
- * Initializes the server database
+ * Initializes the server database in `<databaseDirectory>/server`. [resolveDataPath] picks the folder: `DATA_PATH`,
+ * or the platform's app data folder
  */
-// TODO: Get this to work with OS file dir
 fun configureDatabase(
     databaseDirectory: String
 ): LocalDatabase {

@@ -25,7 +25,7 @@ import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.error.EmptyResult
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.BackupRequest
@@ -153,8 +153,8 @@ class AdminRemoteRepository(
      * Registers this device as a station. Needs NORMAL access, then an admin approves it
      * @return The registration, including the secret which is only handed out here
      */
-    suspend fun registerStation(deviceId: String, name: String): Result<StationRegistrationResponse, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun registerStation(deviceId: String, name: String): TmResult<StationRegistrationResponse, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(STATIONS_TAG) {
             client.post {
@@ -174,8 +174,8 @@ class AdminRemoteRepository(
      * Has the server build a backup archive. Can take minutes with lots of photos, so there's no overall timeout
      * @param includeImages Photos too, off for a quick database only copy
      */
-    suspend fun prepareBackup(includeImages: Boolean): Result<BackupTicket, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun prepareBackup(includeImages: Boolean): TmResult<BackupTicket, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(BACKUP_TAG) {
             client.post {
@@ -196,8 +196,8 @@ class AdminRemoteRepository(
     suspend fun uploadRestore(
         body: OutgoingContent,
         onProgress: (sent: Long, total: Long?) -> Unit = { _, _ -> }
-    ): Result<PendingRestore, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    ): TmResult<PendingRestore, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(RESTORE_TAG) {
             client.post {
@@ -236,8 +236,8 @@ class AdminRemoteRepository(
     }
 
     /** Has the server make a new HTTPS certificate, used from its next start */
-    suspend fun renewCertificate(): Result<ServerCertificateInfo, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun renewCertificate(): TmResult<ServerCertificateInfo, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(CERTIFICATE_TAG) {
             client.post { url("$adminUrl${AdminPaths.CERTIFICATE_RENEW}") }
@@ -275,8 +275,8 @@ class AdminRemoteRepository(
     }
 
     /** Audit entries newest first */
-    suspend fun fetchAudit(offset: Long, limit: Int): Result<List<AuditEntry>, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun fetchAudit(offset: Long, limit: Int): TmResult<List<AuditEntry>, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(AUDIT_TAG) {
             client.get {
@@ -319,5 +319,5 @@ class AdminRemoteRepository(
     }
 
     private val noServerError: EmptyResult<ServerError>
-        get() = Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+        get() = TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 }

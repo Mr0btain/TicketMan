@@ -75,12 +75,8 @@ screen and coming back keeps its search, selection and open ticket.
 
 - **The "Start tab" setting isn't a screen.** It picks which records tab (Customers, Tickets, Inventory) opens
   first. The app always starts on Records.
-- **Desktop is never a phone.** The platform check comes before the window size, so a narrow desktop window still
+- **Desktop is never a phone.** `alwaysWide` (an `expect`, `true` on desktop) is checked before the window size, so a narrow desktop window still
   gets the rail. Screens handle narrow widths themselves (records stack their panes under 760 dp).
-
-## Known gaps
-
-- `AdminScreen` takes `snackBarState` and `coroutineScope` parameters it doesn't use.
 
 ## See also
 

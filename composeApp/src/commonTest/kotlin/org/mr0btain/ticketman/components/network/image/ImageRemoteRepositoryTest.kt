@@ -11,7 +11,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import kotlin.test.*
 import kotlin.uuid.ExperimentalUuidApi
@@ -48,7 +48,7 @@ class ImageRemoteRepositoryTest {
     fun uploadSendsMultipartAndReturnsThePendingImage() = runTest {
         val result = images.upload("jpeg bytes".encodeToByteArray(), "IMG \"1\".jpg", description = "Back glass")
 
-        assertIs<Result.Success<StoredImage>>(result)
+        assertIs<TmResult.Success<StoredImage>>(result)
         assertEquals(uploaded, result.data)
 
         val body = bodies.single()
@@ -67,16 +67,16 @@ class ImageRemoteRepositoryTest {
 
         val result = images.upload(byteArrayOf(1, 2, 3), "notes.txt")
 
-        assertIs<Result.Error<*>>(result)
-        assertEquals("Not a photo", (result as Result.Error).error.message)
+        assertIs<TmResult.Error<*>>(result)
+        assertEquals("Not a photo", (result as TmResult.Error).error.message)
     }
 
     @Test
     fun oversizedPhotosAreRefusedBeforeSending() = runTest {
         val result = images.upload(ByteArray((ImageLimits.MAX_UPLOAD_BYTES + 1).toInt()), "huge.jpg")
 
-        assertIs<Result.Error<*>>(result)
-        assertEquals(NetworkError.PAYLOAD_TOO_LARGE, (result as Result.Error).error.type)
+        assertIs<TmResult.Error<*>>(result)
+        assertEquals(NetworkError.PAYLOAD_TOO_LARGE, (result as TmResult.Error).error.type)
         assertTrue(bodies.isEmpty())
     }
 

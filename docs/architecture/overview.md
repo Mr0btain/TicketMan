@@ -39,7 +39,7 @@ flowchart TD
 
 | Module | What it is | Targets |
 |--------|------------|---------|
-| [`shared`](../../shared) | Models, request and response DTOs, `Result` and error enums, money maths, logging and platform helpers. Everything both sides need | Android, JVM, Wasm |
+| [`shared`](../../shared) | Models, request and response DTOs, `TmResult` and error enums, money maths, logging and platform helpers. Everything both sides need | Android, JVM, Wasm |
 | [`composeApp`](../../composeApp) | The client: all UI, client state, networking and printing. Built as an Android *library* | Android, desktop JVM, Wasm |
 | [`androidApp`](../../androidApp) | A thin Android application around `composeApp`. Just `MainActivity` and the manifest | Android |
 | [`server`](../../server) | The Ktor app: routes, services, the database layer, photo storage, backup and restore | JVM |
@@ -58,7 +58,7 @@ The package root everywhere is `org.mr0btain.ticketman`.
 |--------|-------|
 | `data/` | `@Serializable` models, one folder per area (`ticket/`, `customer/`, `invoice/`, `user/`, ...). `MainItem` is the base for the main record types |
 | `server/request`, `server/response` | Bodies for requests and responses that aren't just a model |
-| `error/` | `Result<D, E>`, the `Error` interface, one error enum per area, `appLogTryCatch` |
+| `error/` | `TmResult<D, E>`, the `Error` interface, one error enum per area, `appLogTryCatch` |
 | `logging/` | `AppLogger` (`expect`), `SimpleResult` |
 | `util/` | `AppDir` (where app data lives on each platform), `Platform` |
 
@@ -126,7 +126,7 @@ the shared model, the server table and database class, the route, the client rep
 - iOS targets are commented out, so `iosApp` doesn't build.
 - Android and web compile but haven't been run end to end on a device or in a browser yet. See
   [Platforms](../client/platforms.md#known-gaps).
-- Some `TODO` comments describe ideas that were never started.
+- Feature ideas that were never started are listed under [Ideas](../FIX-PLAN.md#ideas) in the fix plan.
 
 ## See also
 

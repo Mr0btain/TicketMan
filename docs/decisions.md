@@ -184,8 +184,9 @@ uploads whole; Android's full screen can be swiped away).
 **Why:** leaving a screen and coming back keeps its search, selection and open ticket, and handlers can be tested
 without the UI, on a `MockEngine`.
 
-**Costs:** everything loads up front, and the biggest handlers (`CounterHandler`, `AdminHandler`) are over 500
-lines. New areas should get smaller handlers of their own.
+**Costs:** everything loads up front, and a handler grows with its screen. The two biggest (`CounterHandler`,
+`AdminHandler`) are split into parts, one per area of the screen, reached through the handler (`counter.pickup`,
+`admin.accounts`). New areas should do the same rather than grow one class.
 
 ### A UI kit enforced by a test
 

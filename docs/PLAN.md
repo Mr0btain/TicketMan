@@ -31,7 +31,7 @@ Audience: developers working on TicketMan. There is no guide for shop staff.
 ## Phase 3: The `shared` module
 
 - [x] `shared/domain-models.md`: `MainItem`, creation time from the `Uuid`, notes, `StoredImage`, each entity
-- [x] `shared/results-and-errors.md`: `Result`, the error enums, `networkErrorTryCatch`, `appLogTryCatch`
+- [x] `shared/results-and-errors.md`: `TmResult`, the error enums, `networkErrorTryCatch`, `appLogTryCatch`
 - [x] `shared/money.md`: `Money` in cents and `InvoiceMath`
 - [x] `shared/dtos-and-platform.md`: request and response DTOs, caches, `AppLogger`, `AppDir`, `Platform`
 

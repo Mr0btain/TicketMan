@@ -23,11 +23,10 @@ import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import org.mr0btain.ticketman.ui.kit.selection.TmSwitch
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem.Companion.runIfType
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.chevron_right
 
-/** One panel of settings, each item drawn as a row for its [SettingType] */
+/** One panel of settings, each item drawn as a row for its kind of [SettingItem] */
 @Composable
 fun SettingsGroup(
     modifier: Modifier = Modifier,
@@ -36,11 +35,11 @@ fun SettingsGroup(
     TmPanel(modifier = modifier.fillMaxWidth(), title = settingItemGroup.label, icon = settingItemGroup.icon) {
         Column {
             settingItemGroup.items.forEach { settingItem ->
-                when (settingItem.type) {
-                    SettingType.TEXT -> settingItem.runIfType<String> { TextSettingRow(it) }
-                    SettingType.CLICKABLE_TEXT -> settingItem.runIfType<String> { ClickableSettingRow(it) }
-                    SettingType.SWITCH -> settingItem.runIfType<Boolean> { SwitchSettingRow(it) }
-                    SettingType.CHOICE -> settingItem.runIfType<String> { ChoiceSettingRow(it) }
+                when (settingItem) {
+                    is SettingItem.Text -> TextSettingRow(settingItem)
+                    is SettingItem.Action -> SettingRow(settingItem, value = settingItem.value, onClick = settingItem.onClick)
+                    is SettingItem.Switch -> SwitchSettingRow(settingItem)
+                    is SettingItem.Choice -> ChoiceSettingRow(settingItem)
                 }
             }
         }
@@ -49,30 +48,25 @@ fun SettingsGroup(
 
 /** Shows the value, clicking opens a dialog to change it */
 @Composable
-private fun TextSettingRow(settingItem: SettingItem<String>) {
+private fun TextSettingRow(settingItem: SettingItem.Text) {
     var showDialog by remember { mutableStateOf(false) }
 
     TmTextEditDialog(
         label = settingItem.label,
-        value = settingItem.initialState,
+        value = settingItem.value,
         visible = showDialog,
         hint = settingItem.description,
-        onConfirm = { text -> settingItem.onClick?.invoke(text) ?: false },
+        onConfirm = settingItem.onChange,
         onCancel = { showDialog = false },
         keyboardType = KeyboardType.Text
     )
 
-    SettingRow(settingItem, value = settingItem.initialState, onClick = { showDialog = true })
+    SettingRow(settingItem, value = settingItem.value, onClick = { showDialog = true })
 }
 
 @Composable
-private fun ClickableSettingRow(settingItem: SettingItem<String>) {
-    SettingRow(settingItem, value = settingItem.initialState, onClick = { settingItem.onClick?.invoke(settingItem.initialState) })
-}
-
-@Composable
-private fun SwitchSettingRow(settingItem: SettingItem<Boolean>) {
-    val toggle = { settingItem.onClick?.invoke(!settingItem.initialState); Unit }
+private fun SwitchSettingRow(settingItem: SettingItem.Switch) {
+    val toggle = { settingItem.onToggle(!settingItem.checked) }
 
     TmListRow(
         title = settingItem.label,
@@ -81,13 +75,13 @@ private fun SwitchSettingRow(settingItem: SettingItem<Boolean>) {
         leading = { SettingIcon(settingItem) },
         onClick = toggle,
         trailing = {
-            TmSwitch(checked = settingItem.initialState, onCheckedChange = { toggle() }, enabled = settingItem.enabled)
+            TmSwitch(checked = settingItem.checked, onCheckedChange = { toggle() }, enabled = settingItem.enabled)
         }
     )
 }
 
 @Composable
-private fun ChoiceSettingRow(settingItem: SettingItem<String>) {
+private fun ChoiceSettingRow(settingItem: SettingItem.Choice) {
     TmListRow(
         title = settingItem.label,
         subtitle = settingItem.description,
@@ -97,8 +91,8 @@ private fun ChoiceSettingRow(settingItem: SettingItem<String>) {
             TmDropdown(
                 modifier = Modifier.width(180.dp),
                 options = settingItem.options,
-                selected = settingItem.initialState,
-                onSelect = { settingItem.onClick?.invoke(it) },
+                selected = settingItem.selected,
+                onSelect = settingItem.onSelect,
                 optionLabel = { it },
                 enabled = settingItem.enabled,
                 size = TmControlSize.SMALL
@@ -108,7 +102,7 @@ private fun ChoiceSettingRow(settingItem: SettingItem<String>) {
 }
 
 @Composable
-private fun SettingRow(settingItem: SettingItem<*>, value: String, onClick: () -> Unit) {
+private fun SettingRow(settingItem: SettingItem, value: String, onClick: () -> Unit) {
     TmListRow(
         title = settingItem.label,
         subtitle = settingItem.description,
@@ -139,7 +133,7 @@ private fun SettingRow(settingItem: SettingItem<*>, value: String, onClick: () -
 }
 
 @Composable
-private fun SettingIcon(settingItem: SettingItem<*>) {
+private fun SettingIcon(settingItem: SettingItem) {
     Icon(
         modifier = Modifier.size(18.dp),
         painter = settingItem.icon,

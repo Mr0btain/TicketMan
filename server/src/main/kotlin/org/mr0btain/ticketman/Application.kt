@@ -104,6 +104,7 @@ fun resolveDataPath(config: ApplicationConfig): String {
 }
 
 fun Application.module() {
+    AppLogger.debug = developmentMode
     val dataPath = resolveDataPath(environment.config)
 
     if (dataPath.isBlank()) {

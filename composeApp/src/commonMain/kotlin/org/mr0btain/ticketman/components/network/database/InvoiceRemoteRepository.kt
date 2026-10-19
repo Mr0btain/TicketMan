@@ -15,7 +15,7 @@ import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.Invoice
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
@@ -55,10 +55,10 @@ class InvoiceRemoteRepository(
     }
 
     /** The ticket's invoice, made if it doesn't have one */
-    suspend fun openForTicket(ticketIdentifier: Uuid): Result<Invoice, ServerError> =
+    suspend fun openForTicket(ticketIdentifier: Uuid): TmResult<Invoice, ServerError> =
         change { client.post { url("$baseUrl${InvoicePaths.FOR_TICKET.fill(ticketIdentifier)}") } }
 
-    suspend fun update(identifier: Uuid, charges: List<Charge>, discountCents: Long): Result<Invoice, ServerError> =
+    suspend fun update(identifier: Uuid, charges: List<Charge>, discountCents: Long): TmResult<Invoice, ServerError> =
         change {
             client.post {
                 url("$baseUrl${InvoicePaths.UPDATE.fill(identifier)}")
@@ -67,7 +67,7 @@ class InvoiceRemoteRepository(
             }
         }
 
-    suspend fun addPayment(identifier: Uuid, payment: PaymentRequest): Result<Invoice, ServerError> =
+    suspend fun addPayment(identifier: Uuid, payment: PaymentRequest): TmResult<Invoice, ServerError> =
         change {
             client.post {
                 url("$baseUrl${InvoicePaths.PAYMENTS.fill(identifier)}")
@@ -76,16 +76,16 @@ class InvoiceRemoteRepository(
             }
         }
 
-    suspend fun removePayment(identifier: Uuid, paymentIdentifier: Uuid): Result<Invoice, ServerError> =
+    suspend fun removePayment(identifier: Uuid, paymentIdentifier: Uuid): TmResult<Invoice, ServerError> =
         change { client.delete { url("$baseUrl${InvoicePaths.PAYMENT.fill(identifier, paymentIdentifier)}") } }
 
     /** Admin only */
-    suspend fun void(identifier: Uuid): Result<Invoice, ServerError> =
+    suspend fun void(identifier: Uuid): TmResult<Invoice, ServerError> =
         change { client.post { url("$baseUrl${InvoicePaths.VOID.fill(identifier)}") } }
 
     /** Newest first */
-    suspend fun fetch(offset: Long, limit: Int): Result<List<Invoice>, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    suspend fun fetch(offset: Long, limit: Int): TmResult<List<Invoice>, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(GET_TAG) {
             client.get {
@@ -99,8 +99,8 @@ class InvoiceRemoteRepository(
     }
 
     // Runs a request that answers with the invoice as it now stands
-    private suspend fun change(request: suspend () -> HttpResponse): Result<Invoice, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    private suspend fun change(request: suspend () -> HttpResponse): TmResult<Invoice, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         return handleDataHttpResponse(CHANGE_TAG, networkRequest(CHANGE_TAG) { request() })
     }

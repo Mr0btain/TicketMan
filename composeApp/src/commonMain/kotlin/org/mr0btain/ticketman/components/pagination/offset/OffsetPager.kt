@@ -1,7 +1,7 @@
 package org.mr0btain.ticketman.components.pagination.offset
 
 import org.mr0btain.ticketman.error.Error
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -25,7 +25,7 @@ import org.mr0btain.ticketman.logging.AppLogger
 class OffsetPager<Value>(
     tag: String,
     config: OffsetPagerConfig = OffsetPagerConfig(),
-    private val fetch: suspend (page: Int, pageSize: Int) -> Result<List<Value>, Error>
+    private val fetch: suspend (page: Int, pageSize: Int) -> TmResult<List<Value>, Error>
 ) {
     private val LOAD_NEXT_TAG = "$tag:LoadNext"
     private val LOAD_PREVIOUS_TAG = "$tag:LoadPrevious"
@@ -211,8 +211,8 @@ class OffsetPager<Value>(
         try {
             // Check if we had the item in cache, if not fetch it and insert into cache
             val result = cache.get(page) ?: when (val fetched = fetch(page, config.pageSize)) {
-                is Result.Success -> fetched.data.also { cache.put(page, it) }
-                is Result.Error -> {
+                is TmResult.Success -> fetched.data.also { cache.put(page, it) }
+                is TmResult.Error -> {
                     _loadError.value = fetched.error.message
                     AppLogger.i(tag, "${SimpleResult.FAIL}: ${fetched.error.message}")
                     return

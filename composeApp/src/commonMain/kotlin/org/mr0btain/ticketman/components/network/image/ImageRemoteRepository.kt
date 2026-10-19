@@ -16,7 +16,7 @@ import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.error.Result
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.NetworkError
 import kotlin.uuid.Uuid
 
@@ -54,11 +54,11 @@ class ImageRemoteRepository(
         fileName: String,
         description: String = "",
         onProgress: (sent: Long, total: Long?) -> Unit = { _, _ -> }
-    ): Result<StoredImage, ServerError> {
-        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+    ): TmResult<StoredImage, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         if (bytes.size > ImageLimits.MAX_UPLOAD_BYTES) {
-            return Result.Error(ServerError(NetworkError.PAYLOAD_TOO_LARGE, "That photo is too big"))
+            return TmResult.Error(ServerError(NetworkError.PAYLOAD_TOO_LARGE, "That photo is too big"))
         }
 
         val response = networkRequest(UPLOAD_TAG) {
