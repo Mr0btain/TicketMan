@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.records.components
 
+import org.mr0btain.ticketman.error.valueOr
 import androidx.compose.material3.SnackbarHostState
 import org.mr0btain.ticketman.components.network.database.RemoteRepository
 import org.mr0btain.ticketman.data.shared.Note
@@ -8,10 +9,14 @@ import kotlin.uuid.Uuid
 
 /**
  * Makes the server's notes on [identifier] match [notes]: adds new ones, updates edited ones and removes ones that
- * were deleted. Shows a snackbar if any of that failed
+ * were deleted. Shows a snackbar if any of that failed. Changes nothing if the server's notes can't be read, since
+ * every note would look new or deleted
  */
 suspend fun syncNotes(identifier: Uuid, notes: List<Note>, repo: RemoteRepository<*>, snackBarHost: SnackbarHostState) {
-    val existing = repo.getNotes(identifier)
+    val existing = repo.getNotes(identifier).valueOr { error ->
+        snackBarHost.showSnackbar("Notes not saved: ${error.message}")
+        return
+    }
     val existingById = existing.associateBy { it.identifier }
     val keptIds = notes.map { it.identifier }.toSet()
 

@@ -9,7 +9,7 @@ only. How notes are stored and checked is in [Database layer](../server/database
 
 | Route | Body | Answers |
 |-------|------|---------|
-| `POST <prefix>/get/notes/{record id}` | The record's id again (the path is what's used) | **`200`** a list of `Note`, each with its `images`. **`404`** no such record |
+| `GET <prefix>/get/notes/{record id}` | - | **`200`** a list of `Note`, each with its `images`. **`404`** no such record |
 | `POST <prefix>/add/note/{record id}` | `Note` | **`201`** the saved `Note`. **`400`** not a UUID. **`404`** no such record |
 | `POST <prefix>/update/note/{note id}` | `Note`, whose `identifier` matches the path | **`202`** saved. **`400`** the ids don't match. **`404`** no such note on this record type |
 | `DELETE <prefix>/remove/note/{note id}` | - | **`202`** deleted. **`404`** no such note on this record type |
@@ -26,7 +26,7 @@ only. How notes are stored and checked is in [Database layer](../server/database
 
 Notes on a customer. See the [Customers API](customer.md).
 
-### `POST /api/data/customer/get/notes/{identifier}`
+### `GET /api/data/customer/get/notes/{identifier}`
 
 **Auth:** restricted
 
@@ -54,7 +54,7 @@ Deletes a note. The id is the note's.
 
 Notes on a ticket. See the [Tickets API](ticket.md).
 
-### `POST /api/data/ticket/get/notes/{identifier}`
+### `GET /api/data/ticket/get/notes/{identifier}`
 
 **Auth:** restricted
 
@@ -82,7 +82,7 @@ Deletes a note. The id is the note's.
 
 Notes on a item. See the [Inventory API](inventory.md).
 
-### `POST /api/data/inventory/get/notes/{identifier}`
+### `GET /api/data/inventory/get/notes/{identifier}`
 
 **Auth:** restricted
 
@@ -110,7 +110,7 @@ Deletes a note. The id is the note's.
 
 Notes on a user (staff notes, like training or when they work). See the [Users API](user.md).
 
-### `POST /api/user/get/notes/{identifier}`
+### `GET /api/user/get/notes/{identifier}`
 
 **Auth:** admin
 

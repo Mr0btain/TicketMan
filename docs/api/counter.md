@@ -37,14 +37,14 @@ as `PICKED_UP`, in one transaction. Makes the invoice if the ticket doesn't have
 
 ## Reading
 
-### `POST /api/counter/search`
+### `GET /api/counter/search`
 
 **Auth:** restricted
 
 Tickets and customers matching a query. Tickets match on number, device or problem, customers on name, phone or
 email, and each matching customer's tickets are added to the tickets.
 
-- **Body:** `SearchQuery`, `limit` clamped to 1 to 100.
+- **Query:** `query`, `limit` (default 20, kept to 1 to 100).
 - **`200`** `CounterSearchResponse { tickets, customers }`, tickets as `TicketSummary` (the ticket with its
   customer's name).
 

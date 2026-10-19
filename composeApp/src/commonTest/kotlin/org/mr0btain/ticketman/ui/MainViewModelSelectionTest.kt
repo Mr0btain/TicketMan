@@ -38,12 +38,11 @@ class MainViewModelSelectionTest {
     private val release = CompletableDeferred<Unit>()
 
     private val engine = MockEngine { request ->
-        when (request.url.encodedPath) {
+        when (val path = request.url.encodedPath) {
             SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
-            "/api/data/customer/get" -> {
-                val body = (request.body as TextContent).text
-                val customer = if (body.contains(slow.identifier.toString())) slow.also { release.await() } else fast
+            "/api/data/customer/get/${slow.identifier}", "/api/data/customer/get/${fast.identifier}" -> {
+                val customer = if (path.endsWith(slow.identifier.toString())) slow.also { release.await() } else fast
                 respond(Json.encodeToString(customer), HttpStatusCode.OK, jsonHeaders)
             }
             else -> respond("[]", HttpStatusCode.OK, jsonHeaders)

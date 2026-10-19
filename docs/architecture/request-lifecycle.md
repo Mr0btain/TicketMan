@@ -125,7 +125,7 @@ A caller whose token is no good gets `401 Unauthorized`. One whose token is fine
 [`ticketRoute()`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/TicketRoute.kt):
 
 ```kotlin
-post("/update") {
+post(RecordPaths.UPDATE) {
     val received = call.receive<Ticket>()
     val existing = database.getById(received.identifier)
 

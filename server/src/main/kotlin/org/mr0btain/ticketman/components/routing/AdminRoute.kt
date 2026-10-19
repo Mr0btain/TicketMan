@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.AdminPaths
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -12,7 +13,6 @@ import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.copyToFile
 import org.mr0btain.ticketman.data.audit.AuditAction
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
@@ -44,7 +44,7 @@ fun Route.adminRoute(
 
     // The token in the link is the login here, so a browser can download it directly. Range requests work, so
     // a dropped download can carry on
-    get("/backup/download/{id}") {
+    get(AdminPaths.BACKUP_DOWNLOAD) {
         val found = call.parameters["id"]?.let { backupService.fileFor(it, call.request.queryParameters["token"]) }
 
         if (found == null) {
@@ -63,7 +63,7 @@ fun Route.adminRoute(
 
     authenticate("admin") {
         // Overview numbers
-        get("/stats") {
+        get(AdminPaths.STATS) {
             val lowStockThreshold = call.queryParameters["lowStock"]?.toIntOrNull() ?: DEFAULT_LOW_STOCK_THRESHOLD
             val recentLimit = (call.queryParameters["recent"]?.toIntOrNull() ?: DEFAULT_RECENT_LIMIT).coerceIn(0, MAX_LIMIT)
 
@@ -82,7 +82,7 @@ fun Route.adminRoute(
         }
 
         // End of day numbers, ?date=yyyy-mm-dd or today
-        get("/report/daily") {
+        get(AdminPaths.DAILY_REPORT) {
             val date = call.queryParameters["date"]?.let {
                 try {
                     LocalDate.parse(it)
@@ -101,7 +101,7 @@ fun Route.adminRoute(
             if (report != null) call.respond(HttpStatusCode.OK, report) else call.respond(HttpStatusCode.InternalServerError)
         }
 
-        get("/inventory/low-stock") {
+        get(AdminPaths.LOW_STOCK) {
             val threshold = call.queryParameters["threshold"]?.toIntOrNull() ?: DEFAULT_LOW_STOCK_THRESHOLD
             val limit = (call.queryParameters["limit"]?.toIntOrNull() ?: MAX_LIMIT).coerceIn(1, MAX_LIMIT)
 
@@ -116,12 +116,12 @@ fun Route.adminRoute(
         }
 
         // Logged in users
-        get("/sessions") {
+        get(AdminPaths.SESSIONS) {
             call.respond(HttpStatusCode.OK, adminService.getSessions())
         }
 
         // Log out one device. Its access tokens stop working with it
-        delete("/sessions/{sessionId}") {
+        delete(AdminPaths.SESSION) {
             val session = call.parameters["sessionId"]?.let { database.tokenDatabase.findBySessionId(it) }
 
             if (session == null) {
@@ -136,7 +136,7 @@ fun Route.adminRoute(
         }
 
         // Log a user out of every device
-        delete("/sessions/user/{identifier}") {
+        delete(AdminPaths.USER_SESSIONS) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null || database.userDatabase.getById(identifier) == null) {
@@ -151,11 +151,11 @@ fun Route.adminRoute(
 
         // ------------------------------------------ Stations ------------------------------------------
 
-        get("/stations") {
+        get(AdminPaths.STATIONS) {
             call.respond(HttpStatusCode.OK, database.stationDatabase.getAll())
         }
 
-        post("/stations/{identifier}/approve") {
+        post(AdminPaths.STATION_APPROVE) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier != null && database.stationDatabase.approve(identifier, call.username(database.userDatabase))) {
@@ -167,7 +167,7 @@ fun Route.adminRoute(
         }
 
         // Kiosk mode only makes sense on a station that's been approved
-        post("/stations/{identifier}/kiosk") {
+        post(AdminPaths.STATION_KIOSK) {
             val station = call.uuidParameter("identifier")?.let { database.stationDatabase.getById(it) }
             val settings = call.receive<KioskSettings>()
 
@@ -193,7 +193,7 @@ fun Route.adminRoute(
         }
 
         // Removing a station also signs out whoever is PINned in there
-        delete("/stations/{identifier}") {
+        delete(AdminPaths.STATION) {
             val station = call.uuidParameter("identifier")?.let { database.stationDatabase.getById(it) }
 
             if (station == null) {
@@ -207,12 +207,12 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
-        get("/server") {
+        get(AdminPaths.SERVER) {
             call.respond(HttpStatusCode.OK, adminService.getServerInfo())
         }
 
         // Makes a new HTTPS certificate, used from the next start. Only for one the server made itself
-        post("/certificate/renew") {
+        post(AdminPaths.CERTIFICATE_RENEW) {
             if (!adminService.canRenewCertificate) {
                 call.respond(HttpStatusCode.Conflict, "This server uses a supplied certificate, replace SSL_KEYSTORE instead")
                 return@post
@@ -229,7 +229,7 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.Created, info)
         }
 
-        delete("/certificate/renew") {
+        delete(AdminPaths.CERTIFICATE_RENEW) {
             if (adminService.cancelCertificateRenewal()) {
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "certificate", details = "Waiting certificate cancelled")
             }
@@ -237,7 +237,7 @@ fun Route.adminRoute(
         }
 
         // Builds a backup archive on the server and returns a link to download it from. Can take a while
-        post("/backup") {
+        post(AdminPaths.BACKUP) {
             val request = call.receive<BackupRequest>()
             val ticket = backupService.prepare(request.includeImages)
 
@@ -253,7 +253,7 @@ fun Route.adminRoute(
         }
 
         // Upload a backup archive (the raw zip as the body) to restore from on the next start
-        post("/restore") {
+        post(AdminPaths.RESTORE) {
             // Room for the upload and for it unpacked
             val space = restoreService.usableSpace()
             val length = call.request.contentLength()
@@ -288,20 +288,20 @@ fun Route.adminRoute(
         }
 
         // The restore waiting for a restart, 204 when there isn't one
-        get("/restore") {
+        get(AdminPaths.RESTORE) {
             val pending = restoreService.pending()
 
             if (pending == null) call.respond(HttpStatusCode.NoContent)
             else call.respond(HttpStatusCode.OK, pending)
         }
 
-        delete("/restore") {
+        delete(AdminPaths.RESTORE) {
             if (restoreService.cancel()) call.audit(auditLog, AuditAction.BACKUP, "restore", details = "Waiting restore cancelled")
             call.respond(HttpStatusCode.Accepted)
         }
 
         // Mock data, only on servers started in development mode
-        post("/seed") {
+        post(AdminPaths.SEED) {
             if (!call.application.developmentMode) {
                 call.respond(HttpStatusCode.Forbidden, "Seeding is only allowed in development mode")
                 return@post
@@ -322,8 +322,8 @@ fun Route.adminRoute(
         }
 
         // Audit log, newest first
-        post("/audit/fetch") {
-            val request = call.receive<PagedRequest>()
+        get(AdminPaths.AUDIT) {
+            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
 
             val result = auditLog.getPagedItems(request)
 

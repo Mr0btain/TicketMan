@@ -43,7 +43,7 @@ class AdminHandlerTest {
             path == SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             path == "/" -> respond("", HttpStatusCode.OK)
             path.endsWith("/audit/fetch") -> {
-                auditOffsets += Regex("\"offset\":(\\d+)").find(body)!!.groupValues[1].toLong()
+                auditOffsets += request.url.parameters["offset"]!!.toLong()
                 val page = List(minOf(auditLeft, 50)) { entry() }
                 auditLeft -= page.size
                 respond(json.encodeToString(page), HttpStatusCode.OK, jsonHeaders)
@@ -51,7 +51,9 @@ class AdminHandlerTest {
             path.startsWith("/api/admin/") -> respond("null", HttpStatusCode.OK, jsonHeaders)
             else -> {
                 requests += "${request.method.value} $path" to body
-                respond("", writeStatus)
+                // Adding answers with what was saved
+                if (path.endsWith("/add") && writeStatus.isSuccess()) respond(body, HttpStatusCode.Created, jsonHeaders)
+                else respond("", writeStatus)
             }
         }
     }

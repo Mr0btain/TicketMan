@@ -1,5 +1,11 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.server.AdminPaths
+import org.mr0btain.ticketman.server.ApiQuery
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.ShopPaths
+import org.mr0btain.ticketman.server.StationPaths
+import org.mr0btain.ticketman.server.fill
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -41,7 +47,7 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 class AdminRemoteRepository(
     private val client: HttpClient
-) {
+) : ServerRepository {
     private val TAG = "AdminRemoteRepository"
     private val STATS_TAG = "$TAG:Stats"
     private val LOW_STOCK_TAG = "$TAG:LowStock"
@@ -61,34 +67,34 @@ class AdminRemoteRepository(
     private var baseUrl = ""
 
     // Stays blank until a server is set so requests are skipped instead of going to a relative url
-    var serverUrl: String
+    override var serverUrl: String
         get() = baseUrl
         set(value) {
             baseUrl = value.trimEnd('/')
         }
 
-    private val adminUrl get() = "$baseUrl/api/admin"
-    private val shopUrl get() = "$baseUrl/api/shop"
+    private val adminUrl get() = "$baseUrl${ApiRoutes.ADMIN}"
+    private val shopUrl get() = "$baseUrl${ApiRoutes.SHOP}"
 
     suspend fun getStats(lowStockThreshold: Int, recentLimit: Int): AdminStatsResponse? =
-        getJson(STATS_TAG, "$adminUrl/stats?lowStock=$lowStockThreshold&recent=$recentLimit")
+        getJson(STATS_TAG, "$adminUrl${AdminPaths.STATS}?lowStock=$lowStockThreshold&recent=$recentLimit")
 
     /** End of day numbers, for today when [date] (yyyy-mm-dd) is null */
     suspend fun getDailyReport(date: String?): DailyReport? =
-        getJson(DAILY_REPORT_TAG, "$adminUrl/report/daily" + (date?.let { "?date=$it" } ?: ""))
+        getJson(DAILY_REPORT_TAG, "$adminUrl${AdminPaths.DAILY_REPORT}" + (date?.let { "?date=$it" } ?: ""))
 
     suspend fun getLowStock(threshold: Int, limit: Int): List<Inventory> =
-        getJson(LOW_STOCK_TAG, "$adminUrl/inventory/low-stock?threshold=$threshold&limit=$limit") ?: emptyList()
+        getJson(LOW_STOCK_TAG, "$adminUrl${AdminPaths.LOW_STOCK}?threshold=$threshold&limit=$limit") ?: emptyList()
 
     suspend fun getSessions(): List<SessionResponse> =
-        getJson(SESSIONS_TAG, "$adminUrl/sessions") ?: emptyList()
+        getJson(SESSIONS_TAG, "$adminUrl${AdminPaths.SESSIONS}") ?: emptyList()
 
     /** Logs out one device */
     suspend fun revokeSession(sessionId: String): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkRequest(REVOKE_SESSION_TAG) {
-            client.delete { url("$adminUrl/sessions/$sessionId") }
+            client.delete { url("$adminUrl${AdminPaths.SESSION.fill(sessionId)}") }
         }
 
         return handleActionHttpResponse(REVOKE_SESSION_TAG, response)
@@ -99,20 +105,20 @@ class AdminRemoteRepository(
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkRequest(REVOKE_SESSION_TAG) {
-            client.delete { url("$adminUrl/sessions/user/$userIdentifier") }
+            client.delete { url("$adminUrl${AdminPaths.USER_SESSIONS.fill(userIdentifier)}") }
         }
 
         return handleActionHttpResponse(REVOKE_SESSION_TAG, response)
     }
 
     suspend fun getStations(): List<Station> =
-        getJson(STATIONS_TAG, "$adminUrl/stations") ?: emptyList()
+        getJson(STATIONS_TAG, "$adminUrl${AdminPaths.STATIONS}") ?: emptyList()
 
     suspend fun approveStation(identifier: Uuid): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkRequest(STATIONS_TAG) {
-            client.post { url("$adminUrl/stations/$identifier/approve") }
+            client.post { url("$adminUrl${AdminPaths.STATION_APPROVE.fill(identifier)}") }
         }
 
         return handleActionHttpResponse(STATIONS_TAG, response)
@@ -123,7 +129,7 @@ class AdminRemoteRepository(
 
         val response = networkRequest(STATIONS_TAG) {
             client.post {
-                url("$adminUrl/stations/$identifier/kiosk")
+                url("$adminUrl${AdminPaths.STATION_KIOSK.fill(identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(settings)
             }
@@ -137,7 +143,7 @@ class AdminRemoteRepository(
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkRequest(STATIONS_TAG) {
-            client.delete { url("$adminUrl/stations/$identifier") }
+            client.delete { url("$adminUrl${AdminPaths.STATION.fill(identifier)}") }
         }
 
         return handleActionHttpResponse(STATIONS_TAG, response)
@@ -152,7 +158,7 @@ class AdminRemoteRepository(
 
         val response = networkRequest(STATIONS_TAG) {
             client.post {
-                url("$baseUrl/api/station/register")
+                url("$baseUrl${ApiRoutes.STATION}${StationPaths.REGISTER}")
                 contentType(ContentType.Application.Json)
                 setBody(StationRegistrationRequest(deviceId, name))
             }
@@ -162,7 +168,7 @@ class AdminRemoteRepository(
     }
 
     suspend fun getServerInfo(): ServerInfoResponse? =
-        getJson(SERVER_INFO_TAG, "$adminUrl/server")
+        getJson(SERVER_INFO_TAG, "$adminUrl${AdminPaths.SERVER}")
 
     /**
      * Has the server build a backup archive. Can take minutes with lots of photos, so there's no overall timeout
@@ -173,7 +179,7 @@ class AdminRemoteRepository(
 
         val response = networkRequest(BACKUP_TAG) {
             client.post {
-                url("$adminUrl/backup")
+                url("$adminUrl${AdminPaths.BACKUP}")
                 contentType(ContentType.Application.Json)
                 setBody(BackupRequest(includeImages))
                 transferTimeout()
@@ -195,7 +201,7 @@ class AdminRemoteRepository(
 
         val response = networkRequest(RESTORE_TAG) {
             client.post {
-                url("$adminUrl/restore")
+                url("$adminUrl${AdminPaths.RESTORE}")
                 setBody(body)
                 transferTimeout()
                 onUpload { sent, total -> onProgress(sent, total) }
@@ -210,7 +216,7 @@ class AdminRemoteRepository(
         if (baseUrl.isBlank()) return null
 
         val response = networkErrorTryCatch(RESTORE_TAG) {
-            client.get { url("$adminUrl/restore") }
+            client.get { url("$adminUrl${AdminPaths.RESTORE}") }
         } ?: return null
 
         if (response.status == HttpStatusCode.NoContent) return null
@@ -223,7 +229,7 @@ class AdminRemoteRepository(
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkRequest(RESTORE_TAG) {
-            client.delete { url("$adminUrl/restore") }
+            client.delete { url("$adminUrl${AdminPaths.RESTORE}") }
         }
 
         return handleActionHttpResponse(RESTORE_TAG, response)
@@ -234,7 +240,7 @@ class AdminRemoteRepository(
         if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(CERTIFICATE_TAG) {
-            client.post { url("$adminUrl/certificate/renew") }
+            client.post { url("$adminUrl${AdminPaths.CERTIFICATE_RENEW}") }
         }
 
         return handleDataHttpResponse(CERTIFICATE_TAG, response)
@@ -245,7 +251,7 @@ class AdminRemoteRepository(
         if (baseUrl.isBlank()) return noServerError
 
         val response = networkRequest(CERTIFICATE_TAG) {
-            client.delete { url("$adminUrl/certificate/renew") }
+            client.delete { url("$adminUrl${AdminPaths.CERTIFICATE_RENEW}") }
         }
 
         return handleActionHttpResponse(CERTIFICATE_TAG, response)
@@ -259,7 +265,7 @@ class AdminRemoteRepository(
 
         val response = networkRequest(SEED_TAG) {
             client.post {
-                url("$adminUrl/seed")
+                url("$adminUrl${AdminPaths.SEED}")
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -269,22 +275,18 @@ class AdminRemoteRepository(
     }
 
     /** Audit entries newest first */
-    suspend fun fetchAudit(offset: Long, limit: Int): List<AuditEntry> {
-        if (baseUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(AUDIT_TAG) {
-                client.post {
-                    url("$adminUrl/audit/fetch")
-                    contentType(ContentType.Application.Json)
-                    setBody(PagedRequest(offset, limit))
-                }
-            }
+    suspend fun fetchAudit(offset: Long, limit: Int): Result<List<AuditEntry>, ServerError> {
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-            if (response != null) {
-                handleHttpResponse<List<AuditEntry>>(AUDIT_TAG, response).onSuccess { return it }
+        val response = networkRequest(AUDIT_TAG) {
+            client.get {
+                url("$adminUrl${AdminPaths.AUDIT}")
+                parameter(ApiQuery.OFFSET, offset)
+                parameter(ApiQuery.LIMIT, limit)
             }
         }
 
-        return emptyList()
+        return handleDataHttpResponse(AUDIT_TAG, response)
     }
 
     suspend fun getShopProfile(): ShopProfile? =
@@ -295,7 +297,7 @@ class AdminRemoteRepository(
 
         val response = networkRequest(UPDATE_SHOP_TAG) {
             client.post {
-                url("$shopUrl/update")
+                url("$shopUrl${ShopPaths.UPDATE}")
                 contentType(ContentType.Application.Json)
                 setBody(profile)
             }

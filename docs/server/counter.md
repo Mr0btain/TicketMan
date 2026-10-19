@@ -55,7 +55,7 @@ owns the rules; `InvoiceDatabase` just stores.
 
 | Route (`/api/invoice`) | Access | Does |
 |------------------------|--------|------|
-| `GET /ticket/{ticketId}`, `GET /{id}`, `POST /fetch` | Restricted | Read |
+| `GET /ticket/{ticketId}`, `GET /{id}`, `GET /fetch` | Restricted | Read |
 | `POST /ticket/{ticketId}` | Normal | Get the ticket's invoice, making it if needed |
 | `POST /{id}/update` | Normal | Replace the charges and discount (`InvoiceUpdateRequest`) |
 | `POST /{id}/payments` | Normal | Add a payment |
@@ -145,7 +145,7 @@ read only:
 - `GET /api/counter/queue?recent=10`: tickets that aren't picked up, sorted into **ready for pickup** (`DONE`,
   oldest first), **due today** and **overdue** (open tickets by `promisedAt`, using the server's time zone for
   "today"), and the most recently **checked in**. Each is a list of `TicketSummary` (ticket, customer, tech).
-- `POST /api/counter/search`: one box for everything. Matching tickets come first, then the tickets of matching
+- `GET /api/counter/search?query=`: one box for everything. Matching tickets come first, then the tickets of matching
   customers, so a phone number brings up that customer's tickets.
 
 ## Gotchas

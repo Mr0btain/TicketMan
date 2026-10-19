@@ -136,28 +136,34 @@ Small, user visible, no design questions.
 
 These change both sides, so do them together, and check `check_api_docs.py` after each.
 
-- [ ] **Route paths are strings on both sides.** Move the path strings into `shared` (constants per route file)
-      so a rename breaks the build instead of the app. *Source:* [entity layers](architecture/entity-layers.md#gotchas),
+- [x] **Route paths are strings on both sides.** Move the path strings into `shared` (constants per route file)
+      so a rename breaks the build instead of the app. *Done:* `ApiRoutes.kt`, read by `check_api_docs.py` too. *Source:* [entity layers](architecture/entity-layers.md#gotchas),
       [networking](client/networking.md#gotchas)
-- [ ] **Hand kept lists of record types.** Replace them with one registry so a new record type can't be missed:
+- [x] **Hand kept lists of record types.** Replace them with one registry so a new record type can't be missed:
   - `RemoteHandler.setUrl()` sets each repository's URL by name (keep the repositories in a list),
   - `ImageDatabase.markUnreferencedDeleted` and `LocalDatabase.removeDetachedNotes` list every note join table
     (ask each `Database` for its note table instead).
 
+  *Done:* `RemoteHandler.repositories` and `LocalDatabase.recordDatabases`.
+
   *Source:* [networking](client/networking.md#gotchas), [add a record type](how-to/add-an-entity.md)
-- [ ] **Reads that are `POST`.** Move `/get`, `/fetch`, `/search` and `/get/notes/{id}` to `GET` with path and
-      query parameters, like the newer routes. *Source:* [API overview](api/README.md#gotchas),
-      [decisions](decisions.md#reads-that-are-post)
-- [ ] **`/add` answers differ by record type** (customers `202` and no body, inventory `201` and no body, tickets
-      `201` with the ticket). Make them all `201` with the saved record. *Source:* [API overview](api/README.md#gotchas)
-- [ ] **Reads can't tell "nothing there" from "couldn't load".** Some repository reads return null or an empty list
-      on failure. Return a `Result` where the screen should say the load failed.
+- [x] **Reads that are `POST`.** Move `/get`, `/fetch`, `/search` and `/get/notes/{id}` to `GET` with path and
+      query parameters, like the newer routes. *Done:* also the invoice and audit pages, `/fetch/mine` and the
+      counter search. The station routes and repeat check stay `POST` (a secret, a whole device). *Source:* [API overview](api/README.md#gotchas),
+      [decisions](decisions.md#route-paths-shared-reads-as-get)
+- [x] **`/add` answers differ by record type** (customers `202` and no body, inventory `201` and no body, tickets
+      `201` with the ticket). Make them all `201` with the saved record. *Done:* users too. *Source:* [API overview](api/README.md#gotchas)
+- [x] **Reads can't tell "nothing there" from "couldn't load".** Some repository reads return null or an empty list
+      on failure. Return a `Result` where the screen should say the load failed. *Done:* every `RemoteRepository`
+      read, invoices, audit and counter search; the records lists show `OffsetPager.loadError`. A record whose
+      notes didn't load no longer opens as having none (saving it would have deleted them).
       *Source:* [request lifecycle](architecture/request-lifecycle.md#gotchas)
-- [ ] **Restricted users can't list users** (`/api/user/get`, `/fetch`, `/search` need Normal), unlike every other
+- [x] **Restricted users can't list users** (`/api/user/get`, `/fetch`, `/search` need Normal), unlike every other
       record type. Decide whether that's on purpose; if not, open them to Restricted with passwords still blanked.
-      **(decide)** *Source:* [user API](api/user.md#gotchas)
-- [ ] **No API versioning.** Fine while client and server ship together. Revisit if a shop could run mismatched
-      versions. *Source:* [API overview](api/README.md#known-gaps)
+      **(decide)** **Decided:** opened to Restricted. *Source:* [user API](api/user.md#gotchas)
+- [x] **No API versioning.** Fine while client and server ship together. Revisit if a shop could run mismatched
+      versions. **Decided:** a version check, not versioned routes: `X-TicketMan-Api` on `/api/ping`, and the client
+      warns on a mismatch ([API overview](api/README.md#versions)). *Source:* [API overview](api/README.md#versions)
 
 ## Phase 5: The client
 
@@ -260,8 +266,11 @@ the PR template.
 
 **Client**
 - A new seed field goes in `fields()`, or edits never make the seed dirty.
-- A new repository is constructed in `RemoteHandler` **and** set in `setUrl()`.
-- A new record type's note table goes in `markUnreferencedDeleted` **and** `removeDetachedNotes`. ([Add a record type](how-to/add-an-entity.md))
+- A new repository is constructed in `RemoteHandler` **and** added to its `repositories`.
+- A new record type's database goes in `LocalDatabase.recordDatabases`. ([Add a record type](how-to/add-an-entity.md))
+- New paths go in shared's `ApiRoutes.kt`, never as strings in a route file or repository. Bump `API_VERSION` when
+  older clients couldn't use the change.
+- Don't turn a failed read into an empty list a save could write back.
 - Write actions check `canEdit()` and their buttons hide for people who can't use them; the server checks again.
 - Show ticket numbers with `Ticket.label`, which works before the ticket has a number.
 - Mock engines in tests answer `SERVER_PING_PATH` with `SERVER_PING_BODY`, and send JSON headers. ([Testing](testing.md#client-tests))

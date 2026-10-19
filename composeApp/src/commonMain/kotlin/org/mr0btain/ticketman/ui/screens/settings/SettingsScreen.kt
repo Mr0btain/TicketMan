@@ -226,6 +226,8 @@ fun SettingsScreen(
         )
     )
 
+    val apiMismatch = viewModel.session.apiMismatch.collectAsState()
+
     TmLazyColumn(
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
@@ -234,7 +236,8 @@ fun SettingsScreen(
             AccountPanel(
                 user = currentUser.value,
                 onLogin = { viewModel.session.changeShowLogin(true) },
-                onLogout = { viewModel.session.logout() }
+                onLogout = { viewModel.session.logout() },
+                apiMismatch = apiMismatch.value
             )
         }
 

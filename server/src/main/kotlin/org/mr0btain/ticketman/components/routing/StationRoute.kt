@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.StationPaths
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -21,7 +22,7 @@ fun Route.stationRoute(
     auditLog: AuditLogDatabase
 ) {
     authenticate {
-        post("/register") {
+        post(StationPaths.REGISTER) {
             val request = call.receive<StationRegistrationRequest>()
 
             if (request.deviceId.isBlank() || request.name.isBlank()) {

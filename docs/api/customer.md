@@ -7,28 +7,30 @@ the [Notes](notes.md#customers) page.
 
 ## Reading
 
-### `POST /api/data/customer/get`
+### `GET /api/data/customer/get/{identifier}`
 
 **Auth:** restricted
 
-- **Body:** the customer's id. **`200`** `Customer`. **`404`** no such customer.
+- **`200`** `Customer`. **`404`** no such customer.
 
-### `POST /api/data/customer/fetch`
+### `GET /api/data/customer/fetch`
 
 **Auth:** restricted
 
 A page of customers, by name.
 
-- **Body:** `PagedRequest`. **`200`** a list of `Customer`.
+- **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
+- **`200`** a list of `Customer`.
 
-### `POST /api/data/customer/search`
+### `GET /api/data/customer/search`
 
 **Auth:** restricted
 
 Customers matching any part of their name ("jane doe" works), the start of their email or id, or their phone
 number ignoring formatting.
 
-- **Body:** `SearchQuery`. **`200`** a list of `SearchResult`, the text being the name and phone.
+- **Query:** `query`, `limit` (default 20, at most 200).
+- **`200`** a list of `SearchResult`, the text being the name and phone.
 
 ### `GET /api/data/customer/get/tickets/{identifier}`
 
@@ -44,8 +46,8 @@ The customer's tickets, newest first.
 
 **Auth:** normal
 
-- **Body:** `Customer`, with an id the client made. **`202`** no body. **`500`** not saved, including when that id
-  is already taken.
+- **Body:** `Customer`, with an id the client made. **`201`** the `Customer` as saved. **`500`** not saved,
+  including when that id is already taken.
 
 ### `POST /api/data/customer/update`
 

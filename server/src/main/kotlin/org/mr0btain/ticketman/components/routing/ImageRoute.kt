@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.ImagePaths
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.auth.*
@@ -35,7 +36,7 @@ fun Route.imageRoute(
 
     authenticate {
         // Multipart with the file in "image" and optionally a "description"
-        post("/upload") {
+        post(ImagePaths.UPLOAD) {
             // Refused before reading a byte when the client says up front it's too big
             if ((call.request.contentLength() ?: 0) > ImageLimits.MAX_UPLOAD_BYTES + MULTIPART_OVERHEAD_BYTES) {
                 call.respondText(ImageError.TOO_LARGE.message, status = HttpStatusCode.PayloadTooLarge)
@@ -99,14 +100,14 @@ fun Route.imageRoute(
     }
 
     authenticate("restricted") {
-        get("/{identifier}") {
+        get(ImagePaths.GET) {
             val image = call.uuidParameter("identifier")?.let { service.get(it, call.getIdentifierFromToken()) }
 
             if (image == null) call.respond(HttpStatusCode.NotFound)
             else call.respond(HttpStatusCode.OK, image)
         }
 
-        get("/{identifier}/{variant}") {
+        get(ImagePaths.FILE) {
             val identifier = call.uuidParameter("identifier")
             val variant = call.parameters["variant"]?.let { ImageVariant.fromPath(it) }
             val found = if (identifier != null && variant != null) service.fileFor(identifier, variant, call.getIdentifierFromToken()) else null

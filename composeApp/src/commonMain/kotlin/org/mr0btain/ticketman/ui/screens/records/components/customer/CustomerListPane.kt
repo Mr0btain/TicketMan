@@ -26,7 +26,8 @@ fun CustomerListPane(
     customerList: List<Customer>,
     onClick: (Uuid) -> Unit,
     selectedId: Uuid,
-    lazyListState: LazyListState
+    lazyListState: LazyListState,
+    loadError: String? = null
 ) {
     val colors = TmTheme.colors
 
@@ -36,7 +37,8 @@ fun CustomerListPane(
         isEmpty = customerList.isEmpty(),
         emptyTitle = "No customers yet",
         emptyIcon = Res.drawable.users,
-        emptyMessage = "Add one with New customer, or check you're connected."
+        emptyMessage = "Add one with New customer, or check you're connected.",
+        loadError = loadError
     ) {
         items(customerList, key = { it.identifier }) { customer ->
             TmTableRow(COLUMNS, selected = customer.identifier == selectedId, onClick = { onClick(customer.identifier) }) { column ->

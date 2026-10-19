@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.records.components.user
 
+import org.mr0btain.ticketman.error.getOrNull
+import org.mr0btain.ticketman.error.getOrDefault
+import org.mr0btain.ticketman.error.valueOr
+import org.mr0btain.ticketman.components.network.isNotFound
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -59,13 +63,21 @@ class UserRecords(
         if (!force && (seed.identifier == identifier || selection.pending.value == identifier)) return
 
         selection.select(identifier) {
-            val (user, notes) = cache.get(identifier) ?: coroutineScope {
+            val loaded = cache.get(identifier)?.let { Result.Success(it) } ?: coroutineScope {
                 val notes = async { remoteHandler.userRepo.getNotes(identifier) }
-                val user = remoteHandler.userRepo.get(identifier) ?: return@coroutineScope null
+                val user = remoteHandler.userRepo.get(identifier).valueOr { return@coroutineScope Result.Error(it) }
 
-                UserCache.UserData(user, notes.await(), emptyList())
-                    .also { cache.put(it.user, it.notes) }
-            } ?: return@select null
+                Result.Success(
+                    UserCache.UserData(user, notes.await().valueOr { return@coroutineScope Result.Error(it) }, emptyList())
+                        .also { cache.put(it.user, it.notes) }
+                )
+            }
+
+            // Staff notes that failed to load aren't shown as none, they're saved straight away so would be lost
+            val (user, notes) = loaded.valueOr { error ->
+                if (!error.isNotFound) scope.launch { snackBarHost.showSnackbar("That user couldn't be loaded: ${error.message}") }
+                return@select null
+            }
 
             return@select { seed.setUser(user, notes) }
         }
@@ -97,11 +109,11 @@ class UserRecords(
             }
 
             // Reloaded so a new note comes back signed by whoever wrote it
-            val notes = repo.getNotes(identifier)
+            val notes = repo.getNotes(identifier).getOrNull()
             cache.remove(identifier)
 
             if (seed.identifier == identifier) {
-                seed.setNotes(notes)
+                if (notes != null) seed.setNotes(notes) else select(identifier, force = true)
                 seed.markClean()
             }
         }
@@ -131,9 +143,9 @@ class UserRecords(
         }
     }
 
-    /** Users matching [query], at most the search limit setting */
+    /** Users matching [query], at most the search limit setting. Nothing when the search fails */
     suspend fun search(query: String) =
-        remoteHandler.userRepo.search(query, searchLimit())
+        remoteHandler.userRepo.search(query, searchLimit()).getOrDefault(emptyList())
 
     /** Drops stale copies of a changed user and reloads the list, [identifier] is null when the user is gone */
     fun onChanged(identifier: Uuid?) {

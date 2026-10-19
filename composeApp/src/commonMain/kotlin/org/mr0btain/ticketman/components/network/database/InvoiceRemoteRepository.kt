@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.server.ApiQuery
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.InvoicePaths
+import org.mr0btain.ticketman.server.fill
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -11,7 +15,6 @@ import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.Invoice
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
@@ -25,7 +28,7 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 class InvoiceRemoteRepository(
     private val client: HttpClient
-) {
+) : ServerRepository {
     private val TAG = "InvoiceRemoteRepository"
     private val GET_TAG = "$TAG:Get"
     private val CHANGE_TAG = "$TAG:Change"
@@ -33,10 +36,10 @@ class InvoiceRemoteRepository(
     private var baseUrl = ""
 
     // Stays blank until a server is set so requests are skipped instead of going to a relative url
-    var serverUrl: String
+    override var serverUrl: String
         get() = baseUrl
         set(value) {
-            baseUrl = if (value.isBlank()) "" else "${value.trimEnd('/')}/api/invoice"
+            baseUrl = if (value.isBlank()) "" else "${value.trimEnd('/')}${ApiRoutes.INVOICE}"
         }
 
     /** The ticket's invoice if it has one, doesn't make one */
@@ -44,7 +47,7 @@ class InvoiceRemoteRepository(
         if (baseUrl.isBlank()) return null
 
         val response = networkErrorTryCatch(GET_TAG) {
-            client.get { url("$baseUrl/ticket/$ticketIdentifier") }
+            client.get { url("$baseUrl${InvoicePaths.FOR_TICKET.fill(ticketIdentifier)}") }
         } ?: return null
 
         handleHttpResponse<Invoice>(GET_TAG, response).onSuccess { return it }
@@ -53,12 +56,12 @@ class InvoiceRemoteRepository(
 
     /** The ticket's invoice, made if it doesn't have one */
     suspend fun openForTicket(ticketIdentifier: Uuid): Result<Invoice, ServerError> =
-        change { client.post { url("$baseUrl/ticket/$ticketIdentifier") } }
+        change { client.post { url("$baseUrl${InvoicePaths.FOR_TICKET.fill(ticketIdentifier)}") } }
 
     suspend fun update(identifier: Uuid, charges: List<Charge>, discountCents: Long): Result<Invoice, ServerError> =
         change {
             client.post {
-                url("$baseUrl/$identifier/update")
+                url("$baseUrl${InvoicePaths.UPDATE.fill(identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(InvoiceUpdateRequest(charges, discountCents))
             }
@@ -67,33 +70,32 @@ class InvoiceRemoteRepository(
     suspend fun addPayment(identifier: Uuid, payment: PaymentRequest): Result<Invoice, ServerError> =
         change {
             client.post {
-                url("$baseUrl/$identifier/payments")
+                url("$baseUrl${InvoicePaths.PAYMENTS.fill(identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(payment)
             }
         }
 
     suspend fun removePayment(identifier: Uuid, paymentIdentifier: Uuid): Result<Invoice, ServerError> =
-        change { client.delete { url("$baseUrl/$identifier/payments/$paymentIdentifier") } }
+        change { client.delete { url("$baseUrl${InvoicePaths.PAYMENT.fill(identifier, paymentIdentifier)}") } }
 
     /** Admin only */
     suspend fun void(identifier: Uuid): Result<Invoice, ServerError> =
-        change { client.post { url("$baseUrl/$identifier/void") } }
+        change { client.post { url("$baseUrl${InvoicePaths.VOID.fill(identifier)}") } }
 
     /** Newest first */
-    suspend fun fetch(offset: Long, limit: Int): List<Invoice> {
-        if (baseUrl.isBlank()) return emptyList()
+    suspend fun fetch(offset: Long, limit: Int): Result<List<Invoice>, ServerError> {
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(GET_TAG) {
-            client.post {
-                url("$baseUrl/fetch")
-                contentType(ContentType.Application.Json)
-                setBody(PagedRequest(offset, limit))
+        val response = networkRequest(GET_TAG) {
+            client.get {
+                url("$baseUrl${InvoicePaths.FETCH}")
+                parameter(ApiQuery.OFFSET, offset)
+                parameter(ApiQuery.LIMIT, limit)
             }
-        } ?: return emptyList()
+        }
 
-        handleHttpResponse<List<Invoice>>(GET_TAG, response).onSuccess { return it }
-        return emptyList()
+        return handleDataHttpResponse(GET_TAG, response)
     }
 
     // Runs a request that answers with the invoice as it now stands

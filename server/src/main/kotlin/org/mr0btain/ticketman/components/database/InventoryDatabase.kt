@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.update
@@ -176,7 +178,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
             item == null || item.stock == Int.MAX_VALUE
         }
 
-    override val noteLinkColumn = InventoryNoteTable.note
+    override val noteLinkColumn: Column<EntityID<Uuid>> = InventoryNoteTable.note
 
     override fun addNote(identifier: Uuid, note: Note): Boolean =
         attachNote(note, InventoryError.NOT_FOUND, { InventoryEntity.findById(identifier) }) { inventoryEntity, noteEntity ->

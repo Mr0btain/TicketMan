@@ -15,6 +15,9 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
+import org.mr0btain.ticketman.server.AdminPaths
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.fill
 import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.ScheduledBackupInfo
@@ -113,7 +116,7 @@ class BackupService(
                 fileName = fileName,
                 sizeBytes = archive.length(),
                 sha256 = sha256,
-                downloadPath = "$DOWNLOAD_ROUTE/$id?token=$token",
+                downloadPath = "${ApiRoutes.ADMIN}${AdminPaths.BACKUP_DOWNLOAD.fill(id)}?token=$token",
                 expiresAt = expiresAt,
                 includesImages = includeImages
             )
@@ -318,8 +321,6 @@ class BackupService(
     }
 
     companion object {
-        const val DOWNLOAD_ROUTE = "/api/admin/backup/download"
-
         /** How long a download link works if nobody uses it */
         val DOWNLOAD_WINDOW = 30.minutes
 

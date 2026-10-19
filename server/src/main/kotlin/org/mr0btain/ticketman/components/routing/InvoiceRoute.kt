@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.InvoicePaths
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -8,7 +9,6 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.InvoiceService
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 
@@ -21,26 +21,28 @@ fun Route.invoiceRoute(
     userDatabase: UserDatabase
 ) {
     authenticate("restricted") {
-        get("/ticket/{ticketIdentifier}") {
+        get(InvoicePaths.FOR_TICKET) {
             val invoice = call.uuidParameter("ticketIdentifier")?.let { database.getByTicket(it) }
 
             if (invoice != null) call.respond(HttpStatusCode.OK, invoice) else call.respond(HttpStatusCode.NotFound)
         }
 
-        get("/{identifier}") {
+        get(InvoicePaths.GET) {
             val invoice = call.uuidParameter("identifier")?.let { database.getById(it) }
 
             if (invoice != null) call.respond(HttpStatusCode.OK, invoice) else call.respond(HttpStatusCode.NotFound)
         }
 
-        post("/fetch") {
-            call.respond(HttpStatusCode.OK, database.getPagedItems(call.receive<PagedRequest>()))
+        get(InvoicePaths.FETCH) {
+            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
+
+            call.respond(HttpStatusCode.OK, database.getPagedItems(request))
         }
     }
 
     authenticate {
         // Gets or makes the ticket's invoice
-        post("/ticket/{ticketIdentifier}") {
+        post(InvoicePaths.FOR_TICKET) {
             val ticket = call.uuidParameter("ticketIdentifier")
 
             if (ticket == null) {
@@ -51,7 +53,7 @@ fun Route.invoiceRoute(
             call.respondAccount(service.forTicket(ticket, call.getIdentifierFromToken()), HttpStatusCode.OK)
         }
 
-        post("/{identifier}/update") {
+        post(InvoicePaths.UPDATE) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {
@@ -62,7 +64,7 @@ fun Route.invoiceRoute(
             call.respondAccount(service.update(identifier, call.receive<InvoiceUpdateRequest>(), call.getIdentifierFromToken()), HttpStatusCode.OK)
         }
 
-        post("/{identifier}/payments") {
+        post(InvoicePaths.PAYMENTS) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {
@@ -76,7 +78,7 @@ fun Route.invoiceRoute(
             )
         }
 
-        delete("/{identifier}/payments/{paymentIdentifier}") {
+        delete(InvoicePaths.PAYMENT) {
             val identifier = call.uuidParameter("identifier")
             val payment = call.uuidParameter("paymentIdentifier")
 
@@ -90,7 +92,7 @@ fun Route.invoiceRoute(
     }
 
     authenticate("admin") {
-        post("/{identifier}/void") {
+        post(InvoicePaths.VOID) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {

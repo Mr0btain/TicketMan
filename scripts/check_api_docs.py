@@ -2,7 +2,8 @@
 """
 Checks docs/api/ against the server's routes.
 
-Reads the route files under server/.../components/routing, works out every endpoint (method, full path and auth
+Reads the route files under server/.../components/routing, with the path constants they use from shared's
+server/ApiRoutes.kt, works out every endpoint (method, full path and auth
 provider) by following route(), authenticate() and the shared noteRoute(), then compares them with the endpoint
 headings in docs/api/*.md. Each documented endpoint is a heading like
 
@@ -25,6 +26,7 @@ ROOT = Path(__file__).resolve().parent.parent
 ROUTING = ROOT / "server/src/main/kotlin/org/mr0btain/ticketman/components/routing"
 PLUGINS = ROOT / "server/src/main/kotlin/org/mr0btain/ticketman/components/plugins"
 DOCS = ROOT / "docs/api"
+API_ROUTES = ROOT / "shared/src/commonMain/kotlin/org/mr0btain/ticketman/server/ApiRoutes.kt"
 
 METHODS = ("get", "post", "put", "delete", "patch", "head")
 
@@ -47,8 +49,31 @@ def strip_line(line):
     return code, [s[1:-1] for s in strings]
 
 
+def path_constants():
+    """`Object.NAME` -> its string, for every `const val` inside an `object` in ApiRoutes.kt"""
+    constants = {}
+    current = None
+    for line in API_ROUTES.read_text().splitlines():
+        m = re.match(r'^object (\w+)', line)
+        if m:
+            current = m.group(1)
+            continue
+        if line.startswith("}"):
+            current = None
+            continue
+        m = re.match(r'^\s+const val (\w+)\s*=\s*("[^"]*")', line)
+        if m and current:
+            constants[f"{current}.{m.group(1)}"] = m.group(2)
+    return constants
+
+
+CONSTANTS = path_constants()
+CONSTANT = re.compile(r'\b(' + "|".join(re.escape(k) for k in sorted(CONSTANTS, key=len, reverse=True)) + r')\b')
+
+
 def code_lines(text):
-    """The file's lines with block comments blanked out"""
+    """The file's lines with block comments blanked out, and path constants written out as their strings"""
+    text = CONSTANT.sub(lambda m: CONSTANTS[m.group(1)], text)
     out = []
     in_block = False
     for line in text.splitlines():

@@ -95,11 +95,11 @@ class AdminTest {
         assertNotEquals(admin.password, stored)
 
         val adminToken = token(admin)
-        val fetched = post("/api/user/fetch", json.encodeToString(PagedRequest(0, 50)), adminToken).bodyAsText()
+        val fetched = get("/api/user/fetch?offset=0&limit=50", adminToken).bodyAsText()
         assertFalse(fetched.contains(stored), "Fetch leaked a password hash")
         json.decodeFromString<List<User>>(fetched).forEach { assertEquals("", it.password) }
 
-        val got = json.decodeFromString<User>(post("/api/user/get", json.encodeToString(admin.identifier), adminToken).bodyAsText())
+        val got = json.decodeFromString<User>(get("/api/user/get/${admin.identifier}", adminToken).bodyAsText())
         assertEquals("", got.password)
     }
 
@@ -129,7 +129,7 @@ class AdminTest {
         assertEquals(HttpStatusCode.Unauthorized, login(employee.username, employee.password).status)
         assertEquals(
             HttpStatusCode.Unauthorized,
-            post("/api/data/customer/fetch", json.encodeToString(PagedRequest(0, 10)), employeeToken).status
+            get("/api/data/customer/fetch?offset=0&limit=10", employeeToken).status
         )
     }
 
@@ -173,7 +173,7 @@ class AdminTest {
     fun searchUsesTheClientsSearchQuery() = testApplication {
         setup()
 
-        val response = post("/api/user/search", json.encodeToString(SearchQuery("tec", 10)), token(admin))
+        val response = get("/api/user/search?query=tec&limit=10", token(admin))
         assertEquals(HttpStatusCode.OK, response.status)
 
         val results = json.decodeFromString<List<SearchResult>>(response.bodyAsText())
@@ -422,7 +422,7 @@ class AdminTest {
         login(employee.username, "wrong")
         post("/api/data/inventory/add", json.encodeToString(Inventory(name = "logged part")), adminToken)
 
-        val response = post("/api/admin/audit/fetch", json.encodeToString(PagedRequest(0, 50)), adminToken)
+        val response = get("/api/admin/audit/fetch?offset=0&limit=50", adminToken)
         assertEquals(HttpStatusCode.OK, response.status)
 
         val entries = json.decodeFromString<List<AuditEntry>>(response.bodyAsText())

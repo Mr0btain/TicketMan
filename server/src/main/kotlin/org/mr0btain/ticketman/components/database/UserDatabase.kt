@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.neq
@@ -292,7 +294,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             UserTable.selectAll().where { UserTable.access eq accessLevel }.count()
         } ?: 0L
 
-    override val noteLinkColumn = UserNoteTable.note
+    override val noteLinkColumn: Column<EntityID<Uuid>> = UserNoteTable.note
 
     override fun addNote(identifier: Uuid, note: Note): Boolean =
         attachNote(note, UserError.NOT_FOUND, { UserEntity.findById(identifier) }) { userEntity, noteEntity ->

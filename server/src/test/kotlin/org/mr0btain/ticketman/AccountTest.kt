@@ -91,7 +91,7 @@ class AccountTest {
         val token = first.accessToken!!
 
         assertEquals(HttpStatusCode.OK, client.get("/api/user/me") { bearerAuth(token) }.status)
-        assertEquals(HttpStatusCode.Forbidden, postJson("/api/data/ticket/fetch", json.encodeToString(PagedRequest(0, 5)), token).status)
+        assertEquals(HttpStatusCode.Forbidden, client.get("/api/data/ticket/fetch?limit=5") { bearerAuth(token) }.status)
 
         // A PIN is required
         val noPin = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person")), token)
@@ -100,7 +100,7 @@ class AccountTest {
         val setup = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person", email = "n@shop.test", pin = "246813")), token)
         assertEquals(HttpStatusCode.Accepted, setup.status)
 
-        assertEquals(HttpStatusCode.OK, postJson("/api/data/ticket/fetch", json.encodeToString(PagedRequest(0, 5)), token).status)
+        assertEquals(HttpStatusCode.OK, client.get("/api/data/ticket/fetch?limit=5") { bearerAuth(token) }.status)
         assertEquals(LoginStatus.OK, loginResult("newbie", "new_password").status)
         assertEquals("n@shop.test", users.getByUsername("newbie")!!.email)
         assertEquals(AccessLevel.NORMAL, users.getByUsername("newbie")!!.accessLevel)

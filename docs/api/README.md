@@ -21,7 +21,11 @@ changes here are made to both sides together.
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 
 The prefixes are set in
-[`Routing.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/Routing.kt).
+[`Routing.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/Routing.kt), and every path,
+prefix or endpoint, is a constant in shared's
+[`ApiRoutes.kt`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/server/ApiRoutes.kt) (`ApiRoutes.CUSTOMER`,
+`RecordPaths.GET`, `TicketPaths.FETCH_MINE`, ...). The server mounts them and the client fills them in with
+`fill()`, so renaming one breaks the build on both sides instead of the app.
 
 ## Auth
 
@@ -48,9 +52,13 @@ a `403` with `You don't have access to that`, which refreshing wouldn't fix.
   `shared/.../server/response/`. [DTOs](../shared/dtos-and-platform.md) lists them.
 - **Unknown fields are refused.** The default `Json` doesn't ignore unknown keys, so a client sending a field the
   server doesn't have yet gets a `400`. Add fields to the server first, with a default.
-- **A bare id** is a JSON string: `"0190a2b0-...-000000000000"`. Several `/get` routes take one as the whole body.
-- **Lists** come back as JSON arrays, never wrapped. Paging is `PagedRequest { offset, itemsPerPage }`, searching
-  is `SearchQuery { query, limit }` answering `SearchResult { identifier, text }` items.
+- **Reads are `GET`**, with ids in the path and anything else in the query. Paged reads take `?offset=&limit=`
+  (default 0 and 50, the limit kept to 200) and searches `?query=&limit=` (limit 20 by default), answering
+  `SearchResult { identifier, text }` items. A paging value that isn't a whole number is a `400`.
+- **A bare id** in a body is a JSON string: `"0190a2b0-...-000000000000"`, like linking a ticket to a customer.
+- **Lists** come back as JSON arrays, never wrapped.
+- **Adding a record** (`/add` on customers, tickets, inventory and users) answers `201` with the record as saved,
+  so the client gets anything the server filled in, like a ticket's number.
 - **Money** is always `Long` cents. **Times** are epoch milliseconds. **Ids** are UUIDs, version 7 for records.
 - **Errors** that come with a reason have it as a plain text body meant for people, like
   `Username is already taken`. The client's `handleActionHttpResponse` keeps a short text body (under 200
@@ -113,15 +121,20 @@ Run it after adding, moving or re-guarding a route. It follows `route()`, `authe
   `call.receive` throws for a body it can't read) becomes a `400` and is logged at info with the serializer's reason,
   like `Field 'password' is required`. Anything else becomes a `500` and is logged as an error with its stack trace.
   Neither sends the exception to the caller, so look in the server log to see why.
-- **Most reads are `POST`.** `/get`, `/fetch`, `/search` and `/get/notes/{id}` take a body, so they're `POST` even
-  though they change nothing. Newer routes use `GET` with path and query parameters.
-- **Add answers differ by record type**: customers `202` with no body, inventory `201` with no body, tickets `201`
-  with the saved ticket (so the client learns its number).
+- **A few reads are still `POST`**, because what they take doesn't fit in a URL: the station routes
+  (`/api/auth/station/status`, `/station/staff`) take the station's secret, and `/api/counter/repeat-check` takes a
+  whole device.
 - **The in-process test engine isn't Netty.** Check upload and download changes against a real `:server:run`.
 
-## Known gaps
+## Versions
 
-- There's no versioning. Client and server are expected to be updated together.
+`GET /api/ping` answers with an `X-TicketMan-Api` header holding the server's `API_VERSION` (in shared's
+`ApiRoutes.kt`). The client reads it when it connects and, if it isn't its own, warns once with a snackbar and keeps
+a notice on Settings > Account saying which side to update. A server too old to send the header counts as older.
+It's only a warning: nothing is refused.
+
+Bump `API_VERSION` when a change means an older client and the new server, or the other way round, can't work
+together, like moving a route or changing what one takes. Adding an endpoint or an optional field doesn't need it.
 
 ## See also
 

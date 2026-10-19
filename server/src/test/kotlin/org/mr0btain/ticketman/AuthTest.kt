@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.RecordPaths
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -88,28 +90,24 @@ class AuthTest {
     @Test
     fun protectedRouteRequiresAccessToken() = testApplication {
         setup()
-        val body = Json.encodeToString(PagedRequest(offset = 0, itemsPerPage = 10))
-
-        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/data/customer/fetch", body).status)
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/api/data/customer/fetch").status)
 
         val auth = Json.decodeFromString<AuthResponse>(login().bodyAsText())
-        assertEquals(HttpStatusCode.OK, postJson("/api/data/customer/fetch", body, auth.accessToken).status)
+        assertEquals(HttpStatusCode.OK, client.get("/api/data/customer/fetch") { bearerAuth(auth.accessToken!!) }.status)
     }
 
     @Test
     fun pagerFetchRoutesMatchClient() = testApplication {
         setup()
         val auth = Json.decodeFromString<AuthResponse>(login().bodyAsText())
-        val body = Json.encodeToString(PagedRequest(offset = 0, itemsPerPage = 10))
-
         // Same routes the client's *RemoteRepository classes use
-        listOf("api/data/customer", "api/data/ticket", "api/data/inventory", "api/user").forEach { route ->
-            val response = postJson("/$route/fetch", body, auth.accessToken)
-            assertEquals(HttpStatusCode.OK, response.status, "POST /$route/fetch")
+        listOf(ApiRoutes.CUSTOMER, ApiRoutes.TICKET, ApiRoutes.INVENTORY, ApiRoutes.USER).forEach { route ->
+            val response = client.get("$route${RecordPaths.FETCH}?offset=0&limit=10") { bearerAuth(auth.accessToken!!) }
+            assertEquals(HttpStatusCode.OK, response.status, "GET $route/fetch")
         }
 
         // The test user should come back from the user pager route
-        val users = postJson("/api/user/fetch", body, auth.accessToken).bodyAsText()
+        val users = client.get("/api/user/fetch?limit=10") { bearerAuth(auth.accessToken!!) }.bodyAsText()
         assertTrue(users.contains(user.username), "User fetch didn't include the test user: $users")
     }
 }

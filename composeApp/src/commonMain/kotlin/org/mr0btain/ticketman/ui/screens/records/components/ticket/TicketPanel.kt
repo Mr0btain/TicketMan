@@ -33,7 +33,8 @@ fun TicketPanel(
     onSearchQuery: suspend (String) -> List<SearchResult>,
     onDeleteTicket: () -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
-    ticketListState: LazyListState
+    ticketListState: LazyListState,
+    loadError: String? = null
 ) {
     RecordsLayout(
         toolbar = {
@@ -62,7 +63,8 @@ fun TicketPanel(
                 ticketScope = ticketScope,
                 selectedTicket = pendingId ?: seed.identifier,
                 onClick = onSelectedTicketChange,
-                state = ticketListState
+                state = ticketListState,
+                loadError = loadError
             )
         },
         detail = {

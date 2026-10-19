@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -319,7 +321,7 @@ class TicketDatabase(
             true
         }
 
-    override val noteLinkColumn = TicketNoteTable.note
+    override val noteLinkColumn: Column<EntityID<Uuid>> = TicketNoteTable.note
 
     override fun addNote(identifier: Uuid, note: Note): Boolean =
         attachNote(note, TicketError.NOT_FOUND, { TicketEntity.findById(identifier) }) { ticketEntity, noteEntity ->

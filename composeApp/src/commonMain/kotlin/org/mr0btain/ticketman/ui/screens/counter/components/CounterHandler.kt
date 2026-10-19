@@ -1,5 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.error.getOrDefault
+import org.mr0btain.ticketman.error.getOrNull
+import org.mr0btain.ticketman.error.valueOr
+import org.mr0btain.ticketman.components.network.orNullIfNotFound
+import org.mr0btain.ticketman.components.network.isNotFound
+import org.mr0btain.ticketman.components.network.ServerError
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
 import org.mr0btain.ticketman.ui.kit.feedback.label
@@ -151,7 +157,10 @@ class CounterHandler(
         searchJob = scope.launch {
             _searching.value = true
             delay(SEARCH_DELAY_MILLIS)
-            _results.value = remoteHandler.counterRepo.search(text.trim(), SEARCH_LIMIT)
+            _results.value = remoteHandler.counterRepo.search(text.trim(), SEARCH_LIMIT).valueOr { error ->
+                notify("Search failed: ${error.message}")
+                CounterSearchResponse()
+            }
             _searching.value = false
         }
     }
@@ -179,24 +188,33 @@ class CounterHandler(
     /** Loads a ticket with its customer, notes, history and invoice and shows it */
     fun openTicket(identifier: Uuid) {
         scope.launch {
-            loadTicket(identifier)?.let {
-                _ticket.value = it
-                _view.value = CounterView.TICKET
-            } ?: notify("Couldn't load that ticket")
+            when (val loaded = loadTicket(identifier)) {
+                is Result.Success -> {
+                    _ticket.value = loaded.data
+                    _view.value = CounterView.TICKET
+                }
+
+                is Result.Error -> notify(
+                    if (loaded.error.isNotFound) "That ticket isn't there any more" else "Couldn't load that ticket: ${loaded.error.message}"
+                )
+            }
         }
     }
 
     /** Loads a customer with their tickets and shows them */
     fun openCustomer(identifier: Uuid) {
         scope.launch {
-            val customer = remoteHandler.customerRepo.get(identifier)
-
-            if (customer == null) {
-                notify("Couldn't load that customer")
+            val repo = remoteHandler.customerRepo
+            val customer = repo.get(identifier).valueOr { error ->
+                notify(if (error.isNotFound) "That customer isn't there any more" else "Couldn't load that customer: ${error.message}")
+                return@launch
+            }
+            val tickets = repo.getTickets(identifier).valueOr { error ->
+                notify("Couldn't load that customer's tickets: ${error.message}")
                 return@launch
             }
 
-            _customer.value = CustomerDetail(customer, remoteHandler.customerRepo.getTickets(identifier))
+            _customer.value = CustomerDetail(customer, tickets)
             _view.value = CounterView.CUSTOMER
         }
     }
@@ -204,23 +222,32 @@ class CounterHandler(
     /** Reloads whatever ticket is open, after something changed it */
     fun reloadTicket() {
         val identifier = _ticket.value?.ticket?.identifier ?: return
-        scope.launch { loadTicket(identifier)?.let { _ticket.value = it } }
+        scope.launch {
+            when (val loaded = loadTicket(identifier)) {
+                is Result.Success -> _ticket.value = loaded.data
+                is Result.Error -> notify("Couldn't reload the ticket: ${loaded.error.message}")
+            }
+        }
     }
 
-    private suspend fun loadTicket(identifier: Uuid): TicketDetail? {
+    // The ticket and what goes with it. Fails if the ticket, its notes, or a customer or tech it has can't be read
+    private suspend fun loadTicket(identifier: Uuid): Result<TicketDetail, ServerError> {
         val repo = remoteHandler.ticketRepo
-        val ticket = repo.get(identifier) ?: return null
+        val ticket = repo.get(identifier).valueOr { return Result.Error(it) }
 
-        val customer = repo.getCustomer(identifier)?.let { remoteHandler.customerRepo.get(it.identifier) }
+        val customer = repo.getCustomer(identifier).orNullIfNotFound().valueOr { return Result.Error(it) }
+            ?.let { remoteHandler.customerRepo.get(it.identifier).valueOr { error -> return Result.Error(error) } }
 
-        return TicketDetail(
-            ticket = ticket,
-            customer = customer,
-            technician = repo.getUser(identifier),
-            notes = repo.getNotes(identifier),
-            history = repo.getStatusHistory(identifier),
-            invoice = remoteHandler.invoiceRepo.getForTicket(identifier),
-            signature = repo.getSignature(identifier)
+        return Result.Success(
+            TicketDetail(
+                ticket = ticket,
+                customer = customer,
+                technician = repo.getUser(identifier).orNullIfNotFound().valueOr { return Result.Error(it) },
+                notes = repo.getNotes(identifier).valueOr { return Result.Error(it) },
+                history = repo.getStatusHistory(identifier),
+                invoice = remoteHandler.invoiceRepo.getForTicket(identifier),
+                signature = repo.getSignature(identifier)
+            )
         )
     }
 
@@ -276,11 +303,11 @@ class CounterHandler(
 
     /** Customers for the check in wizard's lookup */
     suspend fun searchCustomers(text: String): List<Customer> =
-        if (text.isBlank()) emptyList() else remoteHandler.counterRepo.search(text.trim(), SEARCH_LIMIT).customers
+        remoteHandler.counterRepo.search(text.trim(), SEARCH_LIMIT).getOrNull()?.customers.orEmpty()
 
     /** Staff for picking a technician */
     suspend fun searchTechnicians(text: String): List<SearchResult> =
-        remoteHandler.userRepo.search(text.trim(), SEARCH_LIMIT)
+        remoteHandler.userRepo.search(text.trim(), SEARCH_LIMIT).getOrDefault(emptyList())
 
     /** Earlier repairs of this device for the customer, for the repeat warning */
     suspend fun repeatCheck(customer: Uuid, device: Device, excludeTicket: Uuid): List<TicketSummary> =
@@ -295,7 +322,7 @@ class CounterHandler(
 
         scope.launch {
             when (val result = remoteHandler.customerRepo.add(customer)) {
-                is Result.Success -> onResult(customer, null)
+                is Result.Success -> onResult(result.data, null)
                 is Result.Error -> onResult(null, result.error.message)
             }
         }
@@ -330,8 +357,8 @@ class CounterHandler(
         if (!canEdit()) return
 
         scope.launch {
-            val detail = loadTicket(ticketIdentifier) ?: run {
-                notify("Couldn't load that ticket")
+            val detail = loadTicket(ticketIdentifier).valueOr { error ->
+                notify("Couldn't load that ticket: ${error.message}")
                 return@launch
             }
 
@@ -356,7 +383,7 @@ class CounterHandler(
         if (text.isBlank()) return emptyList()
 
         val inventory = remoteHandler.inventoryRepo
-        return inventory.search(text.trim(), SEARCH_LIMIT).mapNotNull { inventory.get(it.identifier) }
+        return inventory.search(text.trim(), SEARCH_LIMIT).getOrDefault(emptyList()).mapNotNull { inventory.get(it.identifier).getOrNull() }
     }
 
     /**
@@ -439,8 +466,8 @@ class CounterHandler(
      */
     fun print(ticketIdentifier: Uuid, template: PrintTemplate, paper: PaperSize, onResult: (String?) -> Unit) {
         scope.launch {
-            val detail = loadTicket(ticketIdentifier) ?: run {
-                onResult("Couldn't load the ticket to print")
+            val detail = loadTicket(ticketIdentifier).valueOr { error ->
+                onResult("Couldn't load the ticket to print: ${error.message}")
                 return@launch
             }
 
@@ -465,7 +492,10 @@ class CounterHandler(
     fun loadInvoices(reset: Boolean) {
         scope.launch {
             val offset = if (reset) 0L else _invoices.value.size.toLong()
-            val page = remoteHandler.invoiceRepo.fetch(offset, INVOICE_PAGE_SIZE)
+            val page = remoteHandler.invoiceRepo.fetch(offset, INVOICE_PAGE_SIZE).valueOr { error ->
+                notify("Couldn't load invoices: ${error.message}")
+                return@launch
+            }
 
             _invoices.value = if (reset) page else _invoices.value + page
             _invoicesEndReached.value = page.size < INVOICE_PAGE_SIZE
@@ -501,7 +531,10 @@ class CounterHandler(
             delay(SEARCH_DELAY_MILLIS)
 
             val inventory = remoteHandler.inventoryRepo
-            _priceResults.value = inventory.search(text.trim(), SEARCH_LIMIT).mapNotNull { inventory.get(it.identifier) }
+            _priceResults.value = inventory.search(text.trim(), SEARCH_LIMIT).valueOr { error ->
+                notify("Price check failed: ${error.message}")
+                emptyList()
+            }.mapNotNull { inventory.get(it.identifier).getOrNull() }
         }
     }
 

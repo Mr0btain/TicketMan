@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.components.network
 
+import org.mr0btain.ticketman.server.API_VERSION
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.AuthPaths
+import org.mr0btain.ticketman.server.UserPaths
 import io.ktor.client.engine.*
 import io.ktor.client.request.*
 import io.ktor.client.plugins.auth.*
@@ -52,8 +56,7 @@ class RemoteHandler(
         refreshTokens = { refreshTokens() }
     )
 
-    // Clients used to interact with server. Only real difference is the types and server urls
-    // Could possibly combine this into one client somehow. just supplying the url for each call?
+    // One per area of the API, all on the same logged in client
     val customerRepo = CustomerRemoteRepository(httpClient)
     val ticketRepo = TicketRemoteRepository(httpClient)
     val inventoryRepo = InventoryRemoteRepository(httpClient)
@@ -63,6 +66,10 @@ class RemoteHandler(
     val invoiceRepo = InvoiceRemoteRepository(httpClient)
     val imageRepo = ImageRemoteRepository(httpClient)
 
+    /** Every repository, so [setUrl] points all of them at the server. A new one goes here too */
+    private val repositories: List<ServerRepository> =
+        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo)
+
     /**
      * Whether an expired session can be fixed by logging in again with the saved username and password.
      * Kiosks turn this off so a locked counter can't quietly sign the device's owner back in
@@ -71,6 +78,19 @@ class RemoteHandler(
 
     // Base url once a server has been reached, used for routes outside the repositories
     private var serverUrl = ""
+
+    /**
+     * Why this app and the server the last [setUrl] reached may not work together, null when they match. Only means
+     * something after a [setUrl] that connected. Older servers don't say their version, which counts as a mismatch
+     */
+    val apiMismatch: String?
+        get() = userClient.serverApiVersion.let { version ->
+            when {
+                version == API_VERSION -> null
+                version == null || version < API_VERSION -> "The server is older than this app, so some things may not work. Update the server."
+                else -> "The server is newer than this app, so some things may not work. Update the app."
+            }
+        }
 
     /**
      * The address the last [setUrl] went to. Not always the one it was given: a plain HTTP address the server
@@ -98,14 +118,7 @@ class RemoteHandler(
             if (userClient.checkServerConnection(url)) {
                 userClient.changeServerUrl(url)
                 serverUrl = url.trimEnd('/')
-                customerRepo.serverUrl = url
-                ticketRepo.serverUrl = url
-                inventoryRepo.serverUrl = url
-                userRepo.serverUrl = url
-                adminRepo.serverUrl = url
-                counterRepo.serverUrl = url
-                invoiceRepo.serverUrl = url
-                imageRepo.serverUrl = url
+                repositories.forEach { it.serverUrl = url }
 
                 AppLogger.m(SET_SERVER_URL_TAG, SimpleResult.SUCCESS)
 
@@ -240,7 +253,7 @@ class RemoteHandler(
         // Tell the server so this device's session ends, other devices stay logged in
         if (serverUrl.isNotBlank() && localStorage.accessToken.isNotBlank()) {
             networkErrorTryCatch(LOGOUT_TAG) {
-                httpClient.post { url("$serverUrl/api/auth/logout") }
+                httpClient.post { url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.LOGOUT}") }
             }?.let { response -> handlePlainHttpResponse(LOGOUT_TAG, response) }
         }
 
@@ -256,7 +269,7 @@ class RemoteHandler(
     suspend fun endSession() {
         if (serverUrl.isNotBlank() && localStorage.accessToken.isNotBlank()) {
             networkErrorTryCatch(LOGOUT_TAG) {
-                httpClient.post { url("$serverUrl/api/auth/logout") }
+                httpClient.post { url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.LOGOUT}") }
             }?.let { response -> handlePlainHttpResponse(LOGOUT_TAG, response) }
         }
 
@@ -272,7 +285,7 @@ class RemoteHandler(
         if (serverUrl.isBlank() || localStorage.accessToken.isBlank()) return
 
         networkErrorTryCatch(KIOSK_TAG) {
-            httpClient.get { url("$serverUrl/api/user/me") }
+            httpClient.get { url("$serverUrl${ApiRoutes.USER}${UserPaths.ME}") }
         }
     }
 
@@ -281,7 +294,7 @@ class RemoteHandler(
         if (serverUrl.isBlank()) return
 
         networkErrorTryCatch(KIOSK_TAG) {
-            httpClient.post { url("$serverUrl/api/auth/kiosk/leave") }
+            httpClient.post { url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.KIOSK_LEAVE}") }
         }?.let { response -> handlePlainHttpResponse(KIOSK_TAG, response) }
     }
 

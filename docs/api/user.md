@@ -38,27 +38,29 @@ Changes your own PIN. Needs your password, so someone at an unlocked screen can'
 
 ## Looking users up
 
-### `POST /api/user/get`
+### `GET /api/user/get/{identifier}`
 
-**Auth:** normal
+**Auth:** restricted
 
-- **Body:** a user id. **`200`** `User`. **`404`** no such user.
+- **`200`** `User`. **`404`** no such user.
 
-### `POST /api/user/fetch`
+### `GET /api/user/fetch`
 
-**Auth:** normal
+**Auth:** restricted
 
 A page of users.
 
-- **Body:** `PagedRequest`. **`200`** a list of `User`. **`500`** if the database read failed.
+- **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
+- **`200`** a list of `User`. **`500`** if the database read failed.
 
-### `POST /api/user/search`
+### `GET /api/user/search`
 
-**Auth:** normal
+**Auth:** restricted
 
 Users whose name, username or id starts with the query. Used to pick a technician.
 
-- **Body:** `SearchQuery`. **`200`** a list of `SearchResult`.
+- **Query:** `query`, `limit` (default 20, at most 200).
+- **`200`** a list of `SearchResult`.
 
 ## Managing users
 
@@ -69,7 +71,7 @@ Users whose name, username or id starts with the query. Used to pick a technicia
 Adds a user who can log in straight away (`ACTIVE`).
 
 - **Body:** `User` with a plain `password`, which the server hashes.
-- **`201`** `UserResponse { identifier, accessLevel }`.
+- **`201`** the `User` as saved, with its password blanked.
 - **`400`** no username or password, a username `UsernameRules` refuses, a password `PasswordRules` refuses (under
   8 characters), or `accessLevel` `NONE`. **`409`** the username is taken.
 
@@ -170,8 +172,8 @@ Replaces an invite's code with a new one; the old one stops working.
 
 ## Gotchas
 
-- **Restricted users can't list users.** `/get`, `/fetch` and `/search` need Normal access, unlike the other
-  record types, where Restricted can read.
+- **Restricted users can read users**, like every other record type, so they can see who's on a ticket. Passwords
+  and PINs are blanked before anything is sent. Staff notes on users stay admin only.
 
 ## See also
 

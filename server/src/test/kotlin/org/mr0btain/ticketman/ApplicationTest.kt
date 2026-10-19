@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.server.API_VERSION
+import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
+import org.mr0btain.ticketman.data.customer.Customer
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -30,6 +35,15 @@ class ApplicationTest {
     }
 
     @Test
+    fun pingSaysWhichApiTheServerSpeaks() = testApplication {
+        configureTestServer(dataDir)
+
+        val response = client.get(SERVER_PING_PATH)
+        assertEquals(SERVER_PING_BODY, response.bodyAsText())
+        assertEquals(API_VERSION.toString(), response.headers[API_VERSION_HEADER])
+    }
+
+    @Test
     fun aBodyThatCantBeReadIsABadRequest() = testApplication {
         configureTestServer(dataDir)
         startApplication()
@@ -51,12 +65,15 @@ class ApplicationTest {
 
         // An id that isn't a UUID, behind a login
         val token = json.decodeFromString<AuthResponse>(login(json.encodeToString(LoginRequest("tech", "tech_pass"))).bodyAsText()).accessToken!!
-        val badId = client.post("/api/data/customer/get") {
+        val badBody = client.post("/api/data/customer/add/ticket/${Customer().identifier}") {
             contentType(ContentType.Application.Json)
             bearerAuth(token)
             setBody("\"not-an-id\"")
         }
-        assertEquals(HttpStatusCode.BadRequest, badId.status)
+        assertEquals(HttpStatusCode.BadRequest, badBody.status)
+
+        // Paging that isn't a number
+        assertEquals(HttpStatusCode.BadRequest, client.get("/api/data/customer/fetch?offset=x") { bearerAuth(token) }.status)
     }
 
     @Test

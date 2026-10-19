@@ -191,13 +191,14 @@ Adds made up records. Only on servers started with `-Pdevelopment`.
 
 ## Audit log
 
-### `POST /api/admin/audit/fetch`
+### `GET /api/admin/audit/fetch`
 
 **Auth:** admin
 
 A page of the audit log, newest first.
 
-- **Body:** `PagedRequest`. **`200`** a list of `AuditEntry`.
+- **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
+- **`200`** a list of `AuditEntry`.
 
 ## See also
 

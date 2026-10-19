@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.ShopPaths
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -28,7 +29,7 @@ fun Route.shopRoute(
     }
 
     authenticate("admin") {
-        post("/update") {
+        post(ShopPaths.UPDATE) {
             val profile = call.receive<ShopProfile>()
 
             if (profile.repeatWindowDays !in 1..3650) {

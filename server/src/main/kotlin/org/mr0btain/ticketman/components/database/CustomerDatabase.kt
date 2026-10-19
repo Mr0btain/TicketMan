@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.dao.id.EntityID
+import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerEntity
@@ -135,7 +137,7 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
             true
         }
 
-    override val noteLinkColumn = CustomerNoteTable.note
+    override val noteLinkColumn: Column<EntityID<Uuid>> = CustomerNoteTable.note
 
     override fun addNote(identifier: Uuid, note: Note): Boolean =
         attachNote(note, CustomerError.NOT_FOUND, { CustomerEntity.findById(identifier) }) { customerEntity, noteEntity ->

@@ -113,7 +113,9 @@ class DatabaseWriteTest {
             setBody(json.encodeToString(customer))
         }
 
-        assertEquals(HttpStatusCode.Accepted, add().status)
+        val first = add()
+        assertEquals(HttpStatusCode.Created, first.status)
+        assertEquals(customer, json.decodeFromString<Customer>(first.bodyAsText()), "Answers with the customer as saved")
         assertEquals(HttpStatusCode.InternalServerError, add().status)
     }
 

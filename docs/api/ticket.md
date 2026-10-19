@@ -8,36 +8,39 @@ deposit and signature with it. A ticket's notes are on the [Notes](notes.md#tick
 
 ## Reading
 
-### `POST /api/data/ticket/get`
+### `GET /api/data/ticket/get/{identifier}`
 
 **Auth:** restricted
 
-- **Body:** the ticket's id. **`200`** `Ticket`. **`404`** no such ticket.
+- **`200`** `Ticket`. **`404`** no such ticket.
 
-### `POST /api/data/ticket/fetch`
+### `GET /api/data/ticket/fetch`
 
 **Auth:** restricted
 
 A page of every ticket, newest first.
 
-- **Body:** `PagedRequest`. **`200`** a list of `Ticket`.
+- **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
+- **`200`** a list of `Ticket`.
 
-### `POST /api/data/ticket/fetch/mine`
+### `GET /api/data/ticket/fetch/mine`
 
 **Auth:** restricted
 
 A page of the tickets assigned to the caller, who comes from the token, so nobody can list someone else's.
 
-- **Body:** `PagedRequest`. **`200`** a list of `Ticket`.
+- **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
+- **`200`** a list of `Ticket`.
 
-### `POST /api/data/ticket/search`
+### `GET /api/data/ticket/search`
 
 **Auth:** restricted
 
 Tickets matching a number (`26-42` exactly, `42` in any year), part of the id, the device's make, model or serial,
 or the problem. Newest number first.
 
-- **Body:** `SearchQuery`. **`200`** a list of `SearchResult`, the text being the number and device.
+- **Query:** `query`, `limit` (default 20, at most 200).
+- **`200`** a list of `SearchResult`, the text being the number and device.
 
 ### `GET /api/data/ticket/number/{number}`
 

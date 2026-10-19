@@ -14,7 +14,10 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
+import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.UserPaths
+import org.mr0btain.ticketman.server.fill
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
 import org.mr0btain.ticketman.server.request.ApproveRequest
 import org.mr0btain.ticketman.server.request.InviteRequest
@@ -30,7 +33,7 @@ class UserRemoteRepository(
 ) : RemoteRepository<User>(
     tag = "UserRemoteRepository",
     client = client,
-    route = "api/user",
+    route = ApiRoutes.USER,
     types = itemTypes<User>()
 ) {
     private val GET_ME_TAG = "$tag:GetMe"
@@ -46,7 +49,7 @@ class UserRemoteRepository(
     suspend fun getMe(): User? {
         if (serverUrl.isNotBlank()) {
             val response = networkErrorTryCatch(GET_ME_TAG) {
-                client.get { url("$serverUrl/me") }
+                client.get { url("$serverUrl${UserPaths.ME}") }
             }
 
             if (response != null) {
@@ -63,7 +66,7 @@ class UserRemoteRepository(
 
         val response = networkRequest(RESET_PASSWORD_TAG) {
             client.post {
-                url("$serverUrl/password/$identifier")
+                url("$serverUrl${UserPaths.PASSWORD.fill(identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(PasswordResetRequest(password))
             }
@@ -78,7 +81,7 @@ class UserRemoteRepository(
 
         val response = networkRequest(PIN_TAG) {
             client.post {
-                url("$serverUrl/me/pin")
+                url("$serverUrl${UserPaths.ME_PIN}")
                 contentType(ContentType.Application.Json)
                 setBody(SetPinRequest(currentPassword, pin))
             }
@@ -92,7 +95,7 @@ class UserRemoteRepository(
         if (serverUrl.isBlank()) return noServerError
 
         val response = networkRequest(PIN_TAG) {
-            client.post { url("$serverUrl/pin/$identifier/unlock") }
+            client.post { url("$serverUrl${UserPaths.PIN_UNLOCK.fill(identifier)}") }
         }
 
         return handleActionHttpResponse(PIN_TAG, response)
@@ -103,7 +106,7 @@ class UserRemoteRepository(
         if (serverUrl.isBlank()) return noServerError
 
         val response = networkRequest(PIN_TAG) {
-            client.delete { url("$serverUrl/pin/$identifier") }
+            client.delete { url("$serverUrl${UserPaths.PIN.fill(identifier)}") }
         }
 
         return handleActionHttpResponse(PIN_TAG, response)
@@ -115,7 +118,7 @@ class UserRemoteRepository(
 
         val response = networkRequest(SETUP_TAG) {
             client.post {
-                url("$serverUrl/setup")
+                url("$serverUrl${UserPaths.SETUP}")
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -129,7 +132,7 @@ class UserRemoteRepository(
         if (serverUrl.isBlank()) return emptyList()
 
         val response = networkErrorTryCatch(PENDING_TAG) {
-            client.get { url("$serverUrl/pending") }
+            client.get { url("$serverUrl${UserPaths.PENDING}") }
         } ?: return emptyList()
 
         handleHttpResponse<List<PendingUserResponse>>(PENDING_TAG, response).onSuccess { return it }
@@ -141,7 +144,7 @@ class UserRemoteRepository(
 
         val response = networkRequest(APPROVE_TAG) {
             client.post {
-                url("$serverUrl/approve/$identifier")
+                url("$serverUrl${UserPaths.APPROVE.fill(identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(ApproveRequest(accessLevel))
             }
@@ -155,7 +158,7 @@ class UserRemoteRepository(
         if (serverUrl.isBlank()) return noServerError
 
         val response = networkRequest(REJECT_TAG) {
-            client.delete { url("$serverUrl/reject/$identifier") }
+            client.delete { url("$serverUrl${UserPaths.REJECT.fill(identifier)}") }
         }
 
         return handleActionHttpResponse(REJECT_TAG, response)
@@ -166,7 +169,7 @@ class UserRemoteRepository(
 
         val response = networkRequest(INVITE_TAG) {
             client.post {
-                url("$serverUrl/invite")
+                url("$serverUrl${UserPaths.INVITE}")
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -180,7 +183,7 @@ class UserRemoteRepository(
         if (serverUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         val response = networkRequest(INVITE_TAG) {
-            client.post { url("$serverUrl/invite/$identifier/renew") }
+            client.post { url("$serverUrl${UserPaths.INVITE_RENEW.fill(identifier)}") }
         }
 
         return handleDataHttpResponse(INVITE_TAG, response)

@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.server.ApiQuery
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.CounterPaths
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -10,7 +13,6 @@ import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.invoice.Invoice
-import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
@@ -29,7 +31,7 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 class CounterRemoteRepository(
     private val client: HttpClient
-) {
+) : ServerRepository {
     private val TAG = "CounterRemoteRepository"
     private val SEARCH_TAG = "$TAG:Search"
     private val QUEUE_TAG = "$TAG:Queue"
@@ -40,25 +42,26 @@ class CounterRemoteRepository(
     private var baseUrl = ""
 
     // Stays blank until a server is set so requests are skipped instead of going to a relative url
-    var serverUrl: String
+    override var serverUrl: String
         get() = baseUrl
         set(value) {
-            baseUrl = if (value.isBlank()) "" else "${value.trimEnd('/')}/api/counter"
+            baseUrl = if (value.isBlank()) "" else "${value.trimEnd('/')}${ApiRoutes.COUNTER}"
         }
 
-    suspend fun search(query: String, limit: Int): CounterSearchResponse {
-        if (baseUrl.isBlank() || query.isBlank()) return CounterSearchResponse()
+    /** Tickets and customers matching [query]. Nothing for a blank one */
+    suspend fun search(query: String, limit: Int): Result<CounterSearchResponse, ServerError> {
+        if (query.isBlank()) return Result.Success(CounterSearchResponse())
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
-        val response = networkErrorTryCatch(SEARCH_TAG) {
-            client.post {
-                url("$baseUrl/search")
-                contentType(ContentType.Application.Json)
-                setBody(SearchQuery(query, limit))
+        val response = networkRequest(SEARCH_TAG) {
+            client.get {
+                url("$baseUrl${CounterPaths.SEARCH}")
+                parameter(ApiQuery.QUERY, query)
+                parameter(ApiQuery.LIMIT, limit)
             }
-        } ?: return CounterSearchResponse()
+        }
 
-        handleHttpResponse<CounterSearchResponse>(SEARCH_TAG, response).onSuccess { return it }
-        return CounterSearchResponse()
+        return handleDataHttpResponse(SEARCH_TAG, response)
     }
 
     /** Null when it couldn't be loaded, so the screen can tell that apart from an empty queue */
@@ -66,7 +69,7 @@ class CounterRemoteRepository(
         if (baseUrl.isBlank()) return null
 
         val response = networkErrorTryCatch(QUEUE_TAG) {
-            client.get { url("$baseUrl/queue?recent=$recentLimit") }
+            client.get { url("$baseUrl${CounterPaths.QUEUE}?recent=$recentLimit") }
         } ?: return null
 
         handleHttpResponse<CounterQueueResponse>(QUEUE_TAG, response).onSuccess { return it }
@@ -79,7 +82,7 @@ class CounterRemoteRepository(
 
         val response = networkRequest(CHECK_IN_TAG) {
             client.post {
-                url("$baseUrl/check-in")
+                url("$baseUrl${CounterPaths.CHECK_IN}")
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -97,7 +100,7 @@ class CounterRemoteRepository(
 
         val response = networkRequest(PICKUP_TAG) {
             client.post {
-                url("$baseUrl/pickup")
+                url("$baseUrl${CounterPaths.PICKUP}")
                 contentType(ContentType.Application.Json)
                 setBody(PickupRequest(ticketIdentifier, payments))
             }
@@ -112,7 +115,7 @@ class CounterRemoteRepository(
 
         val response = networkErrorTryCatch(REPEAT_TAG) {
             client.post {
-                url("$baseUrl/repeat-check")
+                url("$baseUrl${CounterPaths.REPEAT_CHECK}")
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }

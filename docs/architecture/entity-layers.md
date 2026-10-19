@@ -126,17 +126,17 @@ mounted at `/api/data/ticket` in `Routing.kt`. Routes are split by who may call 
 
 ```kotlin
 authenticate("restricted") {   // any logged in user, including Restricted
-    post("/get") { ... }
-    post("/fetch") { ... }
-    post("/search") { ... }
-    get("/number/{number}") { ... }
+    get(RecordPaths.GET) { ... }
+    get(RecordPaths.FETCH) { ... }     // ?offset=&limit=, read with call.pagedRequest()
+    get(RecordPaths.SEARCH) { ... }    // ?query=&limit=, read with call.searchQuery()
+    get(TicketPaths.BY_NUMBER) { ... }
 }
 
 authenticate {                 // NORMAL access or higher
-    post("/add") { ... }
-    post("/update") { ... }
-    delete("/remove/{identifier}") { ... }
-    post("/set/customer/{identifier}") { ... }
+    post(RecordPaths.ADD) { ... }
+    post(RecordPaths.UPDATE) { ... }
+    delete(RecordPaths.REMOVE) { ... }
+    post(TicketPaths.SET_CUSTOMER) { ... }
 }
 
 noteRoute(database, userDatabase, auditLog, "ticket")   // /add/note, /get/notes, /update/note, /remove/note
@@ -146,9 +146,9 @@ A route reads the body, calls the database class, and turns the result into a st
 isn't there, `500` when a write failed, `201`/`202`/`200` otherwise. Every write also records an audit entry with
 `call.audit(...)`.
 
-The paths every entity shares (`/add`, `/fetch`, `/get`, `/update`, `/remove/{id}`, `/search`, and the note
-routes) have to match what `RemoteRepository` calls on the client. Ticket also adds its own, like `/fetch/mine` and
-`/number/{number}`.
+Every path is a constant in shared's `ApiRoutes.kt`: the ones every entity has in `RecordPaths` and `NotePaths`,
+the ticket's own (like `/fetch/mine` and `/number/{number}`) in `TicketPaths`. The client's repositories use the same
+constants, so a renamed path breaks the build on both sides.
 
 ## 5. Client repository
 
@@ -161,19 +161,19 @@ which already knows the shared routes. A subclass only passes its route and type
 class TicketRemoteRepository(client: HttpClient) : RemoteRepository<Ticket>(
     tag = "TicketRemoteRepository",
     client = client,
-    route = "api/data/ticket",
+    route = ApiRoutes.TICKET,
     types = itemTypes<Ticket>()
 )
 ```
 
-and then adds functions for its own routes (`create`, `fetchMine`, `getByNumber`, `setCustomer`, ...).
+and then adds functions for its own routes (`fetchMine`, `getByNumber`, `setCustomer`, ...).
 
 All repositories share the one authenticated `HttpClient` that `RemoteHandler` builds, so tokens and refresh are
 handled once for all of them. `serverUrl` stays blank until a server has been reached, and every call returns
 early with a "No server set" error while it's blank.
 
-Calls that change something return `EmptyResult<ServerError>` or `Result<T, ServerError>`. Reads usually return
-the value, or null or an empty list on failure, since the screen just shows nothing.
+Everything returns a `Result<T, ServerError>` (or `EmptyResult` for a change), so a screen can tell a record that
+isn't there (`NOT_FOUND`) from one that couldn't be loaded. See [Networking](../client/networking.md#repositories).
 
 ## 6. Client cache and seed
 
@@ -205,8 +205,8 @@ it. A save drops the ticket from the cache so the next open pulls it fresh.
 
 ## Gotchas
 
-- **Paths are strings on both sides.** Rename a route on the server and the client still compiles. Check
-  `RemoteRepository` and the subclass whenever a route changes.
+- **Paths come from `ApiRoutes.kt`.** Write a new one there rather than as a string in a route file or repository,
+  and run `check_api_docs.py`, which reads the constants to find the routes.
 - **Fields the server owns** must be left out of `update` on the server, or a client could overwrite them.
 - **New columns need a default or must be nullable**, so they can be added to databases that already have rows.
 - **The `user` table is special.** H2 can't list its columns because `user` is a reserved word, so its new columns

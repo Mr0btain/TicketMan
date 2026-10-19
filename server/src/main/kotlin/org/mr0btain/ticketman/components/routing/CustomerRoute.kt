@@ -12,9 +12,9 @@ import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.CustomerPaths
+import org.mr0btain.ticketman.server.RecordPaths
 import kotlin.uuid.Uuid
 
 /**
@@ -36,8 +36,8 @@ fun Route.customerRoute(
     // ------------------------------------------ Reading ------------------------------------------
 
     authenticate("restricted") {
-        post("/fetch") {
-            val request = call.receive<PagedRequest>()
+        get(RecordPaths.FETCH) {
+            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
 
             val result = database.getPagedItems(request)
 
@@ -49,21 +49,20 @@ fun Route.customerRoute(
             }
         }
 
-        post("/get") {
-            val request = call.receive<Uuid>()
-
-            val result = database.getById(request)
+        get(RecordPaths.GET) {
+            val identifier = call.uuidParameter("identifier")
+            val result = identifier?.let { database.getById(it) }
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
             } else {
                 call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(GET_TAG, "$request not found")
+                AppLogger.m(GET_TAG, "$identifier not found")
             }
         }
 
-        post("/search") {
-            val request = call.receive<SearchQuery>()
+        get(RecordPaths.SEARCH) {
+            val request = call.searchQuery() ?: return@get call.respondBadQuery()
 
             val result = database.search(request.query, request.limit)
 
@@ -76,7 +75,7 @@ fun Route.customerRoute(
         }
 
         // The customer's tickets, newest first
-        get("/get/tickets/{identifier}") {
+        get(CustomerPaths.GET_TICKETS) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null || database.getById(identifier) == null) {
@@ -91,19 +90,21 @@ fun Route.customerRoute(
     // ------------------------------------------ Changing ------------------------------------------
 
     authenticate {
-        post("/add") {
+        // Answers with the customer as saved
+        post(RecordPaths.ADD) {
             val received = call.receive<Customer>()
+            val saved = received.takeIf { database.add(it) }?.let { database.getById(it.identifier) }
 
-            if (!database.add(received)) {
+            if (saved == null) {
                 call.respond(HttpStatusCode.InternalServerError)
                 return@post
             }
 
-            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier, received.cleanName())
-            call.respond(HttpStatusCode.Accepted)
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, saved.identifier, saved.cleanName())
+            call.respond(HttpStatusCode.Created, saved)
         }
 
-        post("/update") {
+        post(RecordPaths.UPDATE) {
             val received = call.receive<Customer>()
 
             if (database.getById(received.identifier) == null) {
@@ -120,7 +121,7 @@ fun Route.customerRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
-        delete("/remove/{identifier}") {
+        delete(RecordPaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null || !database.remove(identifier)) {
@@ -132,7 +133,7 @@ fun Route.customerRoute(
         }
 
         // Link a ticket to this customer, the body is the ticket's identifier
-        post("/add/ticket/{identifier}") {
+        post(CustomerPaths.ADD_TICKET) {
             val identifier = call.uuidParameter("identifier")
             val ticket = call.receive<Uuid>()
 

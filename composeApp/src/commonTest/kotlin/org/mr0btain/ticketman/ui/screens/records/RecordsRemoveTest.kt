@@ -31,6 +31,7 @@ class RecordsRemoveTest {
     private var removeStatus = HttpStatusCode.Accepted
     private var removeBody = ""
     private var janeExists = true
+    private var notesFail = false
 
     private val engine = MockEngine { request ->
         val path = request.url.encodedPath
@@ -38,9 +39,10 @@ class RecordsRemoveTest {
         when {
             path == SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             path == "/" -> respond("", HttpStatusCode.OK)
-            path.endsWith("/get") ->
+            path == "/api/data/customer/get/${jane.identifier}" ->
                 if (janeExists) respond(Json.encodeToString(jane), HttpStatusCode.OK, jsonHeaders)
                 else respond("", HttpStatusCode.NotFound)
+            path.contains("/get/notes/") && notesFail -> respond("", HttpStatusCode.InternalServerError)
             path.contains("/get/notes/") || path.contains("/get/tickets/") || path.endsWith("/fetch") ->
                 respond("[]", HttpStatusCode.OK, jsonHeaders)
             path.contains("/remove/") -> respond(removeBody, removeStatus)
@@ -107,5 +109,20 @@ class RecordsRemoveTest {
 
         assertNotEquals(jane.identifier, records.seed.identifier)
         assertTrue(snackBar.currentSnackbarData?.visuals?.message.orEmpty().contains("may have been deleted"))
+    }
+
+    @Test
+    fun aRecordThatCouldntBeLoadedStaysAndSaysWhy() = runTest {
+        val records = withJaneOpen()
+
+        // Her notes can't be read, which mustn't look like she has none
+        notesFail = true
+        records.cache.remove(jane.identifier)
+        records.select(jane.identifier)
+        settle { snackBar.currentSnackbarData != null }
+
+        assertEquals(jane.identifier, records.seed.identifier)
+        assertFalse(records.seed.isNew)
+        assertTrue(snackBar.currentSnackbarData?.visuals?.message.orEmpty().startsWith("That customer couldn't be loaded"))
     }
 }

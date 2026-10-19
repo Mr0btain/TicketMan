@@ -9,15 +9,11 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
-import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.image.ImageStatus
 import org.mr0btain.ticketman.components.database.tables.image.ImageTable
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryImageTable
-import org.mr0btain.ticketman.components.database.tables.inventory.InventoryNoteTable
 import org.mr0btain.ticketman.components.database.tables.note.NoteImageTable
-import org.mr0btain.ticketman.components.database.tables.ticket.TicketNoteTable
-import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.image.ImageProcessor
 import org.mr0btain.ticketman.data.image.StoredImage
 import kotlin.uuid.ExperimentalUuidApi
@@ -25,10 +21,11 @@ import kotlin.uuid.Uuid
 
 /**
  * Photo rows. Linking photos onto notes and items happens in [linkImages], inside those tables' transactions
+ * @param recordDatabases Every record type's database, whose notes keep their photos, see [LocalDatabase.recordDatabases]
  */
 @OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
-class ImageDatabase {
+class ImageDatabase(private val recordDatabases: () -> List<Database<*>>) {
     private val TAG = "ImageDatabase"
     private val INSERT_TAG = "$TAG:InsertPending"
     private val GET_TAG = "$TAG:Get"
@@ -118,13 +115,8 @@ class ImageDatabase {
         } ?: emptyList()
 
     private fun markUnreferencedDeleted(now: Long) {
-        // Notes still attached to a customer, ticket, item or user
-        val attachedNotes = buildSet {
-            addAll(CustomerNoteTable.select(CustomerNoteTable.note).map { it[CustomerNoteTable.note].value })
-            addAll(TicketNoteTable.select(TicketNoteTable.note).map { it[TicketNoteTable.note].value })
-            addAll(InventoryNoteTable.select(InventoryNoteTable.note).map { it[InventoryNoteTable.note].value })
-            addAll(UserNoteTable.select(UserNoteTable.note).map { it[UserNoteTable.note].value })
-        }
+        // Notes still attached to a record of any type
+        val attachedNotes = attachedNotes(recordDatabases())
 
         val referenced = buildSet {
             NoteImageTable.selectAll().forEach { row ->

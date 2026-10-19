@@ -5,6 +5,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -62,6 +63,12 @@ fun App() {
 
     // A server with its own certificate has to be checked before this device talks to it
     val untrustedCertificate = mainViewModel.session.untrustedCertificate.collectAsState()
+
+    // Said once each time it connects to a server from another version, and kept on Settings > Account
+    val apiMismatch = mainViewModel.session.apiMismatch.collectAsState()
+    LaunchedEffect(apiMismatch.value) {
+        apiMismatch.value?.let { snackBarHostState.showSnackbar(it) }
+    }
 
     // Approved stations with kiosk mode show only the counter, signed into by PIN
     val kioskActive = mainViewModel.kiosk.active.collectAsState()

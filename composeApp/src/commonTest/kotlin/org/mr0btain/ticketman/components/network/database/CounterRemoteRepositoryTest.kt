@@ -53,7 +53,7 @@ class CounterRemoteRepositoryTest {
         counter.search("555", 10)
         counter.repeatCheck(RepeatCheckRequest(Uuid.random(), Device()))
 
-        assertEquals(listOf("GET /api/counter/queue", "POST /api/counter/search", "POST /api/counter/repeat-check"), requests)
+        assertEquals(listOf("GET /api/counter/queue", "GET /api/counter/search", "POST /api/counter/repeat-check"), requests)
     }
 
     @Test
@@ -63,8 +63,8 @@ class CounterRemoteRepositoryTest {
     }
 
     @Test
-    fun createReturnsTheNumberedTicket() = runTest {
-        val result = tickets.create(Ticket())
+    fun addReturnsTheNumberedTicket() = runTest {
+        val result = tickets.add(Ticket())
 
         assertIs<Result.Success<Ticket>>(result)
         assertEquals("26-00000007", result.data.number.toString())
@@ -75,7 +75,7 @@ class CounterRemoteRepositoryTest {
         tickets.fetch(0, 20)
         tickets.fetchMine(20, 20)
 
-        assertEquals(listOf("POST /api/data/ticket/fetch", "POST /api/data/ticket/fetch/mine"), requests)
+        assertEquals(listOf("GET /api/data/ticket/fetch", "GET /api/data/ticket/fetch/mine"), requests)
     }
 
     @Test
@@ -96,7 +96,7 @@ class CounterRemoteRepositoryTest {
                 "GET /api/data/ticket/number/26-00000007",
                 "POST /api/data/ticket/set/customer/$id",
                 "POST /api/data/ticket/set/user/$id",
-                "POST /api/data/ticket/get/notes/$id",
+                "GET /api/data/ticket/get/notes/$id",
                 "POST /api/data/customer/add/ticket/$id",
                 "GET /api/data/customer/get/tickets/$id"
             ),
@@ -133,7 +133,7 @@ class CounterRemoteRepositoryTest {
                 "POST /api/invoice/$id/payments",
                 "DELETE /api/invoice/$id/payments/$id",
                 "POST /api/invoice/$id/void",
-                "POST /api/invoice/fetch"
+                "GET /api/invoice/fetch"
             ),
             requests
         )

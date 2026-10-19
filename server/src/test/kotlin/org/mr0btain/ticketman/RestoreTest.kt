@@ -72,7 +72,7 @@ class RestoreTest {
 
     private suspend fun ApplicationTestBuilder.customerNames(token: String): List<String> =
         json.decodeFromString<List<Customer>>(
-            post("/api/data/customer/fetch", json.encodeToString(PagedRequest(0, 50)), token).bodyAsText()
+            client.get("/api/data/customer/fetch?offset=0&limit=50") { bearerAuth(token) }.bodyAsText()
         ).map { it.name }
 
     /** Like a server stopping: H2 lets go of its files */

@@ -6,19 +6,19 @@ import io.ktor.http.*
 import io.ktor.util.reflect.*
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
-import org.mr0btain.ticketman.components.network.handleHttpResponse
-import org.mr0btain.ticketman.components.network.networkErrorTryCatch
+import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.MainItem
-import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.Result
-import org.mr0btain.ticketman.error.onSuccess
+import org.mr0btain.ticketman.server.ApiQuery
 import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.server.NotePaths
+import org.mr0btain.ticketman.server.RecordPaths
+import org.mr0btain.ticketman.server.fill
 import kotlin.uuid.Uuid
 
 /**
@@ -31,16 +31,14 @@ class ItemTypes<T>(val item: TypeInfo, val list: TypeInfo)
 inline fun <reified T> itemTypes(): ItemTypes<T> = ItemTypes(typeInfo<T>(), typeInfo<List<T>>())
 
 /**
- * Base client for a MainItem type's server routes: add, get, fetch, search, update, remove and the note routes,
- * at the same paths as the server's route file and its shared noteRoute. Subclasses pass their route and add
- * calls for their own endpoints.
+ * Base client for a MainItem type's server routes: the [RecordPaths] and [NotePaths] every record type has, under
+ * its [route]. Subclasses pass their route and add calls for their own endpoints.
  *
- * Changes return an [EmptyResult] saying whether the server took it and why not. Reads return the value, or null
- * or an empty list on any failure, since a screen just shows nothing. Every call returns straight away while
- * [serverUrl] is blank.
+ * Everything returns a [Result], so a screen can tell "nothing there" (an empty list, or a `NOT_FOUND` error for one
+ * record) from "couldn't load" (any other error). Every call returns straight away while [serverUrl] is blank.
  * @param tag Logging tag, also the start of each call's own tag
  * @param client The shared, logged in client from RemoteHandler, so tokens and refresh are handled once
- * @param route Path under the server, like "api/data/ticket", without slashes at either end
+ * @param route Where the server mounts this record type, one of the ApiRoutes paths
  * @param types Type info for T, e.g. itemTypes<Customer>()
  */
 @Suppress("PropertyName")
@@ -49,7 +47,7 @@ abstract class RemoteRepository<T: MainItem>(
     protected val client: HttpClient,
     val route: String,
     private val types: ItemTypes<T>
-) {
+) : ServerRepository {
     protected val FETCH_TAG = "$tag:Fetch"
     protected val SEARCH_TAG = "$tag:Search"
     protected val ADD_TAG = "$tag:Add"
@@ -66,24 +64,24 @@ abstract class RemoteRepository<T: MainItem>(
      * The server's address with [route] on the end. Stays blank until RemoteHandler.setUrl reaches a server, so
      * requests are skipped instead of going to a relative url
      */
-    var serverUrl: String = ""
+    final override var serverUrl: String = ""
         set(value) {
-            field = if (value.isBlank()) "" else "${value.trimEnd('/')}/$route"
+            field = if (value.isBlank()) "" else "${value.trimEnd('/')}$route"
         }
 
-    /** Adds a new record. Its identifier is made by the client, so it's final before it's sent */
-    suspend fun add(data: T): EmptyResult<ServerError> {
-        if (serverUrl.isBlank()) return noServerError
+    /** Adds a new record and returns it as saved. Its identifier is made by the client, so it's final before it's sent */
+    suspend fun add(data: T): Result<T, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(ADD_TAG) {
             client.post {
-                url("$serverUrl/add")
+                url("$serverUrl${RecordPaths.ADD}")
                 contentType(ContentType.Application.Json)
                 setBody(data, types.item)
             }
         }
 
-        return handleActionHttpResponse(ADD_TAG, response)
+        return handleDataHttpResponse(ADD_TAG, response, types.item)
     }
 
     /** Replaces a note's text and photos. Its photos must have been uploaded first */
@@ -92,7 +90,7 @@ abstract class RemoteRepository<T: MainItem>(
 
         val response = networkRequest(UPDATE_NOTE_TAG) {
             client.post {
-                url("$serverUrl/update/note/${note.identifier}")
+                url("$serverUrl${NotePaths.UPDATE.fill(note.identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(note)
             }
@@ -107,7 +105,7 @@ abstract class RemoteRepository<T: MainItem>(
 
         val response = networkRequest(ADD_NOTE_TAG) {
             client.post {
-                url("$serverUrl/add/note/$identifier")
+                url("$serverUrl${NotePaths.ADD.fill(identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(note)
             }
@@ -116,72 +114,40 @@ abstract class RemoteRepository<T: MainItem>(
         return handleActionHttpResponse(ADD_NOTE_TAG, response)
     }
 
-    /** A page of records in the server's order, empty on any failure */
-    suspend fun fetch(offset: Long, limit: Int): List<T> = fetchPage(FETCH_TAG, "fetch", offset, limit)
+    /** A page of records in the server's order */
+    suspend fun fetch(offset: Long, limit: Int): Result<List<T>, ServerError> = fetchPage(FETCH_TAG, RecordPaths.FETCH, offset, limit)
 
-    /** A page from one of the route's paged endpoints, empty on any failure */
-    protected suspend fun fetchPage(tag: String, path: String, offset: Long, limit: Int): List<T> {
-        if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(tag) {
-                client.post {
-                    url("$serverUrl/$path")
-                    contentType(ContentType.Application.Json)
-                    setBody(PagedRequest(offset,limit))
-                }
-            }
+    /** A page from one of the route's paged endpoints, at [path] under [route] */
+    protected suspend fun fetchPage(tag: String, path: String, offset: Long, limit: Int): Result<List<T>, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
 
-            if (response != null) {
-                val result = handleHttpResponse<List<T>>(tag, response, types.list)
-
-                result.onSuccess {
-                    return it
-                }
+        val response = networkRequest(tag) {
+            client.get {
+                url("$serverUrl$path")
+                parameter(ApiQuery.OFFSET, offset)
+                parameter(ApiQuery.LIMIT, limit)
             }
         }
 
-        return emptyList()
+        return handleDataHttpResponse(tag, response, types.list)
     }
 
-    /** One record, null if it isn't there or the call failed */
-    suspend fun get(identifier: Uuid): T? {
-        if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(GET_TAG) {
-                client.post {
-                    url("$serverUrl/get")
-                    contentType(ContentType.Application.Json)
-                    setBody(identifier)
-                }
-            }
+    /** One record. A `NOT_FOUND` error means it isn't there, any other that it couldn't be loaded */
+    suspend fun get(identifier: Uuid): Result<T, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
 
-            if (response != null) {
-                val result = handleHttpResponse<T>(GET_TAG, response, types.item)
-
-                result.onSuccess {
-                    return it
-                }
-            }
+        val response = networkRequest(GET_TAG) {
+            client.get { url("$serverUrl${RecordPaths.GET.fill(identifier)}") }
         }
 
-        return null
+        return handleDataHttpResponse(GET_TAG, response, types.item)
     }
 
-    /** A linked record's identifier and name, like a ticket's customer, from a GET at [url]. Null if there isn't one */
-    protected suspend fun getEntity(tag: String, url: String): EntityReference? {
-        if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(tag) {
-                client.get { url(url) }
-            }
+    /** A linked record's identifier and name, like a ticket's customer, from a GET at [url]. `NOT_FOUND` if there isn't one */
+    protected suspend fun getEntity(tag: String, url: String): Result<EntityReference, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
 
-            if (response != null) {
-                val result = handleHttpResponse<EntityReference>(tag, response)
-
-                result.onSuccess {
-                    return it
-                }
-            }
-        }
-
-        return null
+        return handleDataHttpResponse(tag, networkRequest(tag) { client.get { url(url) } })
     }
 
     /** Links a record to [entityId] by posting the identifier to [url], like setting a ticket's customer */
@@ -199,27 +165,15 @@ abstract class RemoteRepository<T: MainItem>(
         return handleActionHttpResponse(tag, response)
     }
 
-    /** The record's notes with their photos, empty on any failure */
-    suspend fun getNotes(identifier: Uuid): List<Note> {
-        if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(GET_NOTES_TAG) {
-                client.post {
-                    url("$serverUrl/get/notes/$identifier")
-                    contentType(ContentType.Application.Json)
-                    setBody(identifier)
-                }
-            }
+    /** The record's notes with their photos */
+    suspend fun getNotes(identifier: Uuid): Result<List<Note>, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
 
-            if (response != null) {
-                val result = handleHttpResponse<List<Note>>(GET_NOTES_TAG, response)
-
-                result.onSuccess {
-                    return it
-                }
-            }
+        val response = networkRequest(GET_NOTES_TAG) {
+            client.get { url("$serverUrl${NotePaths.GET.fill(identifier)}") }
         }
 
-        return emptyList()
+        return handleDataHttpResponse(GET_NOTES_TAG, response)
     }
 
     /** Deletes the record, and on the server its notes */
@@ -227,7 +181,7 @@ abstract class RemoteRepository<T: MainItem>(
         if (serverUrl.isBlank()) return noServerError
 
         val response = networkRequest(REMOVE_TAG) {
-            client.delete { url("$serverUrl/remove/$identifier") }
+            client.delete { url("$serverUrl${RecordPaths.REMOVE.fill(identifier)}") }
         }
 
         return handleActionHttpResponse(REMOVE_TAG, response)
@@ -238,33 +192,25 @@ abstract class RemoteRepository<T: MainItem>(
         if (serverUrl.isBlank()) return noServerError
 
         val response = networkRequest(REMOVE_NOTE_TAG) {
-            client.delete { url("$serverUrl/remove/note/$identifier") }
+            client.delete { url("$serverUrl${NotePaths.REMOVE.fill(identifier)}") }
         }
 
         return handleActionHttpResponse(REMOVE_NOTE_TAG, response)
     }
 
-    /** Records matching [query], as identifiers and display text, empty on any failure */
-    suspend fun search(query: String, limit: Int): List<SearchResult> {
-        if (serverUrl.isNotBlank()) {
-            val response = networkErrorTryCatch(SEARCH_TAG) {
-                client.post {
-                    url("$serverUrl/search")
-                    contentType(ContentType.Application.Json)
-                    setBody(SearchQuery(query, limit))
-                }
-            }
+    /** Records matching [query], as identifiers and display text */
+    suspend fun search(query: String, limit: Int): Result<List<SearchResult>, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
 
-            if (response != null) {
-                val result = handleHttpResponse<List<SearchResult>>(SEARCH_TAG, response)
-
-                result.onSuccess {
-                    return it
-                }
+        val response = networkRequest(SEARCH_TAG) {
+            client.get {
+                url("$serverUrl${RecordPaths.SEARCH}")
+                parameter(ApiQuery.QUERY, query)
+                parameter(ApiQuery.LIMIT, limit)
             }
         }
 
-        return emptyList()
+        return handleDataHttpResponse(SEARCH_TAG, response)
     }
 
     /** Replaces the record's fields. Fields the server owns, like a ticket's number, are ignored */
@@ -273,7 +219,7 @@ abstract class RemoteRepository<T: MainItem>(
 
         val response = networkRequest(UPDATE_TAG) {
             client.post {
-                url("$serverUrl/update")
+                url("$serverUrl${RecordPaths.UPDATE}")
                 contentType(ContentType.Application.Json)
                 setBody(data, types.item)
             }
@@ -284,5 +230,17 @@ abstract class RemoteRepository<T: MainItem>(
 
     /** What changes return while [serverUrl] is blank */
     protected val noServerError: EmptyResult<ServerError>
-        get() = Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+        get() = noServer()
+
+    /** What any call returns while [serverUrl] is blank */
+    protected fun <R> noServer(): Result<R, ServerError> = Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+}
+
+/**
+ * Anything [org.mr0btain.ticketman.components.network.RemoteHandler] points at the server. It keeps them in one
+ * list and sets each one's address when the server changes, so a new one can't be left out
+ */
+interface ServerRepository {
+    /** Set to the server's base address, or blank when there isn't one. Each repository adds its own route */
+    var serverUrl: String
 }

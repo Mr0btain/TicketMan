@@ -46,7 +46,7 @@ class CounterHandlerTest {
             SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
             "/api/counter/search" -> respond(Json.encodeToString(CounterSearchResponse(tickets = listOf(TicketSummary(ticket)))), HttpStatusCode.OK, jsonHeaders)
-            "/api/data/ticket/get" -> respond(Json.encodeToString(ticket), HttpStatusCode.OK, jsonHeaders)
+            "/api/data/ticket/get/${ticket.identifier}" -> respond(Json.encodeToString(ticket), HttpStatusCode.OK, jsonHeaders)
             "/api/counter/check-in" -> respond(Json.encodeToString(CheckInResponse(ticket)), HttpStatusCode.Created, jsonHeaders)
             "/api/invoice/ticket/${ticket.identifier}" -> respond(Json.encodeToString(invoice), HttpStatusCode.OK, jsonHeaders)
             "/api/invoice/${invoice.identifier}/update" -> respond(Json.encodeToString(invoice.copy(totalCents = 4_000)), HttpStatusCode.OK, jsonHeaders)
@@ -85,7 +85,7 @@ class CounterHandlerTest {
         counter.setQuery("26-42")
         settle { counter.results.value.tickets.isNotEmpty() }
 
-        assertEquals(1, requests.count { it == "POST /api/counter/search" })
+        assertEquals(1, requests.count { it == "GET /api/counter/search" })
         assertEquals(ticket.identifier, counter.results.value.tickets.single().ticket.identifier)
     }
 

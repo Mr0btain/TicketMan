@@ -66,10 +66,10 @@ class TicketTest {
 
     private suspend fun ApplicationTestBuilder.search(token: String, query: String): List<SearchResult> =
         json.decodeFromString(
-            client.post("/api/data/ticket/search") {
-                contentType(ContentType.Application.Json)
+            client.get("/api/data/ticket/search") {
                 bearerAuth(token)
-                setBody(json.encodeToString(SearchQuery(query, 20)))
+                parameter("query", query)
+                parameter("limit", 20)
             }.bodyAsText()
         )
 
@@ -267,11 +267,7 @@ class TicketTest {
         tickets.setUser(theirs.identifier, otherId)
 
         suspend fun fetchMine(offset: Long, limit: Int): List<Ticket> {
-            val response = client.post("/api/data/ticket/fetch/mine") {
-                contentType(ContentType.Application.Json)
-                bearerAuth(token)
-                setBody(json.encodeToString(PagedRequest(offset, limit)))
-            }
+            val response = client.get("/api/data/ticket/fetch/mine?offset=$offset&limit=$limit") { bearerAuth(token) }
             assertEquals(HttpStatusCode.OK, response.status)
             return json.decodeFromString(response.bodyAsText())
         }
@@ -297,11 +293,7 @@ class TicketTest {
         val removed = client.delete("/api/data/ticket/remove/${ticket.identifier}") { bearerAuth(token) }
         assertEquals(HttpStatusCode.Accepted, removed.status)
 
-        val after = client.post("/api/data/ticket/get") {
-            contentType(ContentType.Application.Json)
-            bearerAuth(token)
-            setBody(json.encodeToString(ticket.identifier))
-        }
+        val after = client.get("/api/data/ticket/get/${ticket.identifier}") { bearerAuth(token) }
         assertEquals(HttpStatusCode.NotFound, after.status)
     }
 }

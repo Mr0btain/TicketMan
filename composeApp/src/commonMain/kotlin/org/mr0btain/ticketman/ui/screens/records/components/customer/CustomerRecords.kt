@@ -1,5 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.records.components.customer
 
+import org.mr0btain.ticketman.error.asEmptyDataResult
+import org.mr0btain.ticketman.error.getOrDefault
+import org.mr0btain.ticketman.error.getOrNull
+import org.mr0btain.ticketman.error.valueOr
+import org.mr0btain.ticketman.components.network.isNotFound
+import org.mr0btain.ticketman.components.network.ServerError
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -58,14 +64,22 @@ class CustomerRecords(
         if (selection.pending.value == identifier) return
 
         selection.select(identifier) {
-            val (customer, notes, tickets) = cache.get(identifier) ?: coroutineScope {
+            // Notes and tickets that failed to load aren't shown as none, saving would then drop them
+            val loaded = cache.get(identifier)?.let { Result.Success(it) } ?: coroutineScope {
                 val notes = async { remoteHandler.customerRepo.getNotes(identifier) }
                 val tickets = async { remoteHandler.customerRepo.getTickets(identifier) }
-                val customer = remoteHandler.customerRepo.get(identifier) ?: return@coroutineScope null
+                val customer = remoteHandler.customerRepo.get(identifier).valueOr { return@coroutineScope Result.Error(it) }
 
-                CustomerCache.CustomerData(customer, notes.await(), tickets.await())
-                    .also { cache.put(it.customer, it.notes, it.tickets) }
-            } ?: return@select forgetIfOpen(identifier)
+                Result.Success(
+                    CustomerCache.CustomerData(
+                        customer,
+                        notes.await().valueOr { return@coroutineScope Result.Error(it) },
+                        tickets.await().valueOr { return@coroutineScope Result.Error(it) }
+                    ).also { cache.put(it.customer, it.notes, it.tickets) }
+                )
+            }
+
+            val (customer, notes, tickets) = loaded.valueOr { return@select loadFailed(identifier, it) }
 
             return@select { seed.setCustomer(customer, notes, tickets) }
         }
@@ -89,6 +103,11 @@ class CustomerRecords(
             }
         }) else null
 
+    // Loading failed: a record that's gone is forgotten, anything else is said and what's shown stays
+    private fun loadFailed(identifier: Uuid, error: ServerError): (() -> Unit)? =
+        if (error.isNotFound) forgetIfOpen(identifier)
+        else null.also { scope.launch { snackBarHost.showSnackbar("That customer couldn't be loaded: ${error.message}") } }
+
     /** Saves the seed: the customer, its notes, and any tickets linked to it */
     fun save() {
         if (!canEdit()) return
@@ -105,7 +124,7 @@ class CustomerRecords(
         scope.launch {
             val repo = remoteHandler.customerRepo
 
-            val saved = if (isNew) repo.add(customer) else {
+            val saved = if (isNew) repo.add(customer).asEmptyDataResult() else {
                 // Notes and tickets are saved on their own, only send the customer if something else changed
                 if ((changed - setOf(ChangedField.NOTE, ChangedField.TICKET)).isNotEmpty()) repo.update(customer)
                 else Result.Success(Unit)
@@ -120,7 +139,7 @@ class CustomerRecords(
 
             // Tickets can be linked here, unlinking happens by giving the ticket to another customer
             if (isNew || ChangedField.TICKET in changed) {
-                val linked = repo.getTickets(customer.identifier).map { it.identifier }.toSet()
+                val linked = repo.getTickets(customer.identifier).getOrNull().orEmpty().map { it.identifier }.toSet()
                 val failed = tickets
                     .filter { it.identifier !in linked }
                     .count { ticket -> repo.addTicket(customer.identifier, ticket.identifier) is Result.Error }
@@ -137,11 +156,11 @@ class CustomerRecords(
     /** A customer from the cache, or the server if it isn't cached. Null if neither has it */
     suspend fun get(identifier: Uuid): Customer? =
         cache.get(identifier)?.customer
-            ?: remoteHandler.customerRepo.get(identifier)
+            ?: remoteHandler.customerRepo.get(identifier).getOrNull()
 
-    /** Customers matching [query], at most the search limit setting */
+    /** Customers matching [query], at most the search limit setting. Nothing when the search fails */
     suspend fun search(query: String) =
-        remoteHandler.customerRepo.search(query, searchLimit())
+        remoteHandler.customerRepo.search(query, searchLimit()).getOrDefault(emptyList())
 
     /**
      * Deletes the record if it's the one selected. Once the server has, clears the selection and reloads the list;

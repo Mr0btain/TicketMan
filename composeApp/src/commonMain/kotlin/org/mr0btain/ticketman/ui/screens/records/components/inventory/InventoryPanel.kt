@@ -25,7 +25,8 @@ fun InventoryPanel(
     onDeleteInventory: () -> Unit,
     onImageClick: (page: Int) -> Unit,
     onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
-    inventoryListState: LazyListState
+    inventoryListState: LazyListState,
+    loadError: String? = null
 ) {
     RecordsLayout(
         toolbar = {
@@ -44,7 +45,8 @@ fun InventoryPanel(
                 inventoryList = inventoryList,
                 selected = pendingId ?: selectedInventory.identifier,
                 onClick = onSelectedInventoryChange,
-                state = inventoryListState
+                state = inventoryListState,
+                loadError = loadError
             )
         },
         detail = {

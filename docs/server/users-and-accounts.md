@@ -91,7 +91,7 @@ All under `/api/user`, admin only unless noted:
 
 | Route | Does |
 |-------|------|
-| `POST /get`, `/fetch`, `/search` | Read users (Normal access and up) |
+| `GET /get/{id}`, `/fetch`, `/search` | Read users (Restricted access and up, passwords and PINs blanked) |
 | `GET /me` | The caller (setup provider) |
 | `POST /update` | Change details, level or status. Not the password |
 | `POST /password/{id}` | Set a new password, ending all that user's sessions (except the caller's, if it's their own) |

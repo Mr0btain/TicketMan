@@ -51,7 +51,7 @@ class StaffNoteTest {
         }
 
     private suspend fun ApplicationTestBuilder.staffNotes(token: String) =
-        post("/api/user/get/notes/${tech.identifier}", "\"${tech.identifier}\"", token)
+        client.get("/api/user/get/notes/${tech.identifier}") { bearerAuth(token) }
 
     @Test
     fun adminsKeepNotesOnStaff() = testApplication {

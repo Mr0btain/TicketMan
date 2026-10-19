@@ -32,7 +32,8 @@ fun TicketListPane(
     ticketScope: TicketScope,
     selectedTicket: Uuid,
     onClick: (Uuid) -> Unit,
-    state: LazyListState
+    state: LazyListState,
+    loadError: String? = null
 ) {
     RecordsList(
         columns = COLUMNS,
@@ -43,7 +44,8 @@ fun TicketListPane(
         emptyMessage = if (ticketScope == TicketScope.MINE)
             "Tickets show up here once you're picked as the technician. Switch to All tickets to see everyone's."
         else
-            "Devices checked in at the counter show up here."
+            "Devices checked in at the counter show up here.",
+        loadError = loadError
     ) {
         items(ticketList, key = { it.identifier }) { ticket ->
             TmTableRow(COLUMNS, selected = ticket.identifier == selectedTicket, onClick = { onClick(ticket.identifier) }) { column ->

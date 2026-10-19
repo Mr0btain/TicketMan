@@ -65,7 +65,7 @@ class InventoryTest {
         assertEquals(HttpStatusCode.Created, post("/api/data/inventory/add", json.encodeToString(item), token).status)
 
     private suspend fun ApplicationTestBuilder.get(identifier: Uuid, token: String) =
-        post("/api/data/inventory/get", json.encodeToString(identifier), token)
+        client.get("/api/data/inventory/get/$identifier") { bearerAuth(token) }
 
     private suspend fun ApplicationTestBuilder.setStock(identifier: Uuid, from: Int, to: Int, token: String) =
         post("/api/data/inventory/set/stock/$identifier", json.encodeToString(StockChangeRequest(from, to)), token)
@@ -148,8 +148,8 @@ class InventoryTest {
         val token = token(tech)
         listOf(charger, screen, battery).forEach { add(it, token) }
 
-        val first = json.decodeFromString<List<Inventory>>(post("/api/data/inventory/fetch", json.encodeToString(PagedRequest(0, 2)), token).bodyAsText())
-        val rest = json.decodeFromString<List<Inventory>>(post("/api/data/inventory/fetch", json.encodeToString(PagedRequest(2, 2)), token).bodyAsText())
+        val first = json.decodeFromString<List<Inventory>>(client.get("/api/data/inventory/fetch?offset=0&limit=2") { bearerAuth(token) }.bodyAsText())
+        val rest = json.decodeFromString<List<Inventory>>(client.get("/api/data/inventory/fetch?offset=2&limit=2") { bearerAuth(token) }.bodyAsText())
 
         assertEquals(listOf(screen, battery, charger).map { it.name }, (first + rest).map { it.name })
         assertEquals(2, first.size)
@@ -163,9 +163,9 @@ class InventoryTest {
 
         fun ids(results: String) = json.decodeFromString<List<SearchResult>>(results).map { it.identifier }
 
-        assertEquals(listOf(battery.identifier), ids(post("/api/data/inventory/search", json.encodeToString(SearchQuery("pixel", 10)), token).bodyAsText()))
-        assertEquals(listOf(screen.identifier), ids(post("/api/data/inventory/search", json.encodeToString(SearchQuery("oem", 10)), token).bodyAsText()))
-        assertTrue(ids(post("/api/data/inventory/search", json.encodeToString(SearchQuery("tablet", 10)), token).bodyAsText()).isEmpty())
+        assertEquals(listOf(battery.identifier), ids(client.get("/api/data/inventory/search?query=pixel&limit=10") { bearerAuth(token) }.bodyAsText()))
+        assertEquals(listOf(screen.identifier), ids(client.get("/api/data/inventory/search?query=oem&limit=10") { bearerAuth(token) }.bodyAsText()))
+        assertTrue(ids(client.get("/api/data/inventory/search?query=tablet&limit=10") { bearerAuth(token) }.bodyAsText()).isEmpty())
     }
 
     @Test
@@ -176,7 +176,7 @@ class InventoryTest {
         val note = Note(message = "Supplier backordered")
 
         assertEquals(HttpStatusCode.Created, post("/api/data/inventory/add/note/${screen.identifier}", json.encodeToString(note), token).status)
-        val saved = json.decodeFromString<List<Note>>(post("/api/data/inventory/get/notes/${screen.identifier}", "\"${screen.identifier}\"", token).bodyAsText())
+        val saved = json.decodeFromString<List<Note>>(client.get("/api/data/inventory/get/notes/${screen.identifier}") { bearerAuth(token) }.bodyAsText())
 
         assertEquals(listOf("Supplier backordered"), saved.map { it.message })
         // Signed by whoever wrote it
@@ -200,7 +200,7 @@ class InventoryTest {
         val token = token(viewer)
 
         assertEquals(HttpStatusCode.OK, get(screen.identifier, token).status)
-        assertEquals(HttpStatusCode.OK, post("/api/data/inventory/fetch", json.encodeToString(PagedRequest(0, 10)), token).status)
+        assertEquals(HttpStatusCode.OK, client.get("/api/data/inventory/fetch?limit=10") { bearerAuth(token) }.status)
         assertEquals(HttpStatusCode.Forbidden, post("/api/data/inventory/add", json.encodeToString(battery), token).status)
         assertEquals(HttpStatusCode.Forbidden, post("/api/data/inventory/update", json.encodeToString(screen.copy(name = "Changed")), token).status)
         assertEquals(HttpStatusCode.Forbidden, setStock(screen.identifier, 5, 0, token).status)
@@ -212,12 +212,12 @@ class InventoryTest {
         setup()
         val token = token(tech)
         val customer = Customer(name = "Jane:Doe", phone = "5550100")
-        assertEquals(HttpStatusCode.Accepted, post("/api/data/customer/add", json.encodeToString(customer), token).status)
+        assertEquals(HttpStatusCode.Created, post("/api/data/customer/add", json.encodeToString(customer), token).status)
 
         val moved = customer.copy(phone = "5550199", email = "jane@example.com")
         assertEquals(HttpStatusCode.Accepted, post("/api/data/customer/update", json.encodeToString(moved), token).status)
         // Names are kept lowercase and capitalised for display
-        assertEquals(moved.copy(name = "jane:doe"), json.decodeFromString<Customer>(post("/api/data/customer/get", json.encodeToString(customer.identifier), token).bodyAsText()))
+        assertEquals(moved.copy(name = "jane:doe"), json.decodeFromString<Customer>(client.get("/api/data/customer/get/${customer.identifier}") { bearerAuth(token) }.bodyAsText()))
 
         assertEquals(HttpStatusCode.NotFound, post("/api/data/customer/update", json.encodeToString(Customer(name = "Nobody")), token).status)
     }

@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.components.network.user
 
+import org.mr0btain.ticketman.server.API_VERSION
+import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.AuthPaths
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -82,7 +86,7 @@ class ServerUserClient(
         // The login call itself says whether the server is there, so a timeout isn't taken for a wrong password
         val response = networkRequest(LOGIN_TAG) {
             userHttpClient.post {
-                url("$serverUrl/api/auth")
+                url("$serverUrl${ApiRoutes.AUTH}")
                 contentType(ContentType.Application.Json)
                 setBody(LoginRequest(username, password, localStorage.deviceId, localStorage.deviceName))
             }
@@ -136,7 +140,7 @@ class ServerUserClient(
     suspend fun pinLogin(station: StationCredentials, userIdentifier: Uuid, pin: String): EmptyResult<ServerError> {
         val response = networkRequest(PIN_LOGIN_TAG) {
             userHttpClient.post {
-                url("$serverUrl/api/auth/pin")
+                url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.PIN}")
                 contentType(ContentType.Application.Json)
                 setBody(PinLoginRequest(station, userIdentifier, pin))
             }
@@ -162,7 +166,7 @@ class ServerUserClient(
     suspend fun stationStatus(station: StationCredentials): Station? {
         val response = networkErrorTryCatch(STATION_TAG) {
             userHttpClient.post {
-                url("$serverUrl/api/auth/station/status")
+                url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.STATION_STATUS}")
                 contentType(ContentType.Application.Json)
                 setBody(station)
             }
@@ -176,7 +180,7 @@ class ServerUserClient(
     suspend fun stationStaff(station: StationCredentials): Result<List<StaffMember>, ServerError> {
         val response = networkRequest(STATION_TAG) {
             userHttpClient.post {
-                url("$serverUrl/api/auth/station/staff")
+                url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.STATION_STAFF}")
                 contentType(ContentType.Application.Json)
                 setBody(station)
             }
@@ -189,7 +193,7 @@ class ServerUserClient(
     suspend fun requestAccount(request: AccountRequest): EmptyResult<ServerError> {
         val response = networkRequest(REQUEST_ACCOUNT_TAG) {
             userHttpClient.post {
-                url("$serverUrl/api/auth/request-account")
+                url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.REQUEST_ACCOUNT}")
                 contentType(ContentType.Application.Json)
                 setBody(request)
             }
@@ -204,7 +208,7 @@ class ServerUserClient(
     suspend fun completeInviteSetup(username: String, request: InviteSetupRequest): EmptyResult<ServerError> {
         val response = networkRequest(INVITE_SETUP_TAG) {
             userHttpClient.post {
-                url("$serverUrl/api/auth/setup/invite")
+                url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.SETUP_INVITE}")
                 contentType(ContentType.Application.Json)
                 setBody(request.copy(deviceId = localStorage.deviceId, deviceName = localStorage.deviceName))
             }
@@ -224,7 +228,7 @@ class ServerUserClient(
         if (checkServerConnection()) {
             networkErrorTryCatch(REFRESH_TOKEN_TAG) {
                 userHttpClient.post {
-                    url("$serverUrl/api/auth/refresh")
+                    url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.REFRESH}")
                     contentType(ContentType.Application.Json)
                     setBody(RefreshTokenRequest(token))
                 }
@@ -272,16 +276,28 @@ class ServerUserClient(
     }
 
     /**
+     * The [API_VERSION] the server reported the last time [checkServerConnection] reached it, null for a server from
+     * before it reported one
+     */
+    var serverApiVersion: Int? = null
+        private set
+
+    /**
      * Whether a TicketMan server answers at [url]. Asks `/api/ping`, then `/` for servers older than that. Only a
-     * reply that isn't a web page counts from `/`, so the web client's dev server isn't mistaken for one
+     * reply that isn't a web page counts from `/`, so the web client's dev server isn't mistaken for one. Also notes
+     * the server's [serverApiVersion]
      */
     suspend fun checkServerConnection(url: String): Boolean {
+        serverApiVersion = null
         if (url.isBlank()) return false
         val base = url.trimEnd('/')
 
         val ping = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base$SERVER_PING_PATH") }
             ?: return false
-        if (ping.status == HttpStatusCode.OK) return ping.bodyAsText().trim() == SERVER_PING_BODY
+        if (ping.status == HttpStatusCode.OK) {
+            serverApiVersion = ping.headers[API_VERSION_HEADER]?.trim()?.toIntOrNull()
+            return ping.bodyAsText().trim() == SERVER_PING_BODY
+        }
         if (ping.status != HttpStatusCode.NotFound) return false
 
         val root = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base/") } ?: return false

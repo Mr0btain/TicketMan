@@ -29,7 +29,8 @@ fun InventoryListPane(
     inventoryList: List<Inventory>,
     selected: Uuid,
     onClick: (Uuid) -> Unit,
-    state: LazyListState
+    state: LazyListState,
+    loadError: String? = null
 ) {
     val colors = TmTheme.colors
 
@@ -39,7 +40,8 @@ fun InventoryListPane(
         isEmpty = inventoryList.isEmpty(),
         emptyTitle = "No items yet",
         emptyIcon = Res.drawable.package_icon,
-        emptyMessage = "Add parts with New item so they can go on invoices."
+        emptyMessage = "Add parts with New item so they can go on invoices.",
+        loadError = loadError
     ) {
         items(inventoryList, key = { it.identifier }) { item ->
             TmTableRow(COLUMNS, selected = item.identifier == selected, onClick = { onClick(item.identifier) }) { column ->

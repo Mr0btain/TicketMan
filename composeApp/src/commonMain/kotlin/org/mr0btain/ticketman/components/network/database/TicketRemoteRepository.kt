@@ -21,6 +21,9 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.error.onSuccess
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.TicketPaths
+import org.mr0btain.ticketman.server.fill
 import kotlin.uuid.Uuid
 
 class TicketRemoteRepository(
@@ -28,42 +31,27 @@ class TicketRemoteRepository(
 ) : RemoteRepository<Ticket>(
     tag = "TicketRemoteRepository",
     client = client,
-    route = "api/data/ticket",
+    route = ApiRoutes.TICKET,
     types = itemTypes<Ticket>()
 ) {
     private val GET_CUSTOMER_TAG = "$tag:GetCustomer"
     private val SET_CUSTOMER_TAG = "$tag:SetCustomer"
     private val GET_USER_TAG = "$tag:GetUser"
     private val SET_USER_TAG = "$tag:SetUser"
-    private val CREATE_TAG = "$tag:Create"
     private val GET_BY_NUMBER_TAG = "$tag:GetByNumber"
     private val GET_HISTORY_TAG = "$tag:GetHistory"
     private val GET_SIGNATURE_TAG = "$tag:GetSignature"
     private val FETCH_MINE_TAG = "$tag:FetchMine"
 
     /** A page of the tickets assigned to whoever is logged in, newest first */
-    suspend fun fetchMine(offset: Long, limit: Int): List<Ticket> = fetchPage(FETCH_MINE_TAG, "fetch/mine", offset, limit)
-
-    /** Adds a ticket and returns it as saved, with the number the server gave it */
-    suspend fun create(ticket: Ticket): Result<Ticket, ServerError> {
-        if (serverUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
-
-        val response = networkRequest(CREATE_TAG) {
-            client.post {
-                url("$serverUrl/add")
-                contentType(ContentType.Application.Json)
-                setBody(ticket)
-            }
-        }
-
-        return handleDataHttpResponse(CREATE_TAG, response)
-    }
+    suspend fun fetchMine(offset: Long, limit: Int): Result<List<Ticket>, ServerError> =
+        fetchPage(FETCH_MINE_TAG, TicketPaths.FETCH_MINE, offset, limit)
 
     suspend fun getByNumber(number: TicketNumber): Ticket? {
         if (serverUrl.isBlank()) return null
 
         val response = networkErrorTryCatch(GET_BY_NUMBER_TAG) {
-            client.get { url("$serverUrl/number/$number") }
+            client.get { url("$serverUrl${TicketPaths.BY_NUMBER.fill(number)}") }
         } ?: return null
 
         handleHttpResponse<Ticket>(GET_BY_NUMBER_TAG, response).onSuccess { return it }
@@ -75,7 +63,7 @@ class TicketRemoteRepository(
         if (serverUrl.isBlank()) return null
 
         val response = networkErrorTryCatch(GET_SIGNATURE_TAG) {
-            client.get { url("$serverUrl/signature/$identifier") }
+            client.get { url("$serverUrl${TicketPaths.SIGNATURE.fill(identifier)}") }
         } ?: return null
 
         handleHttpResponse<TicketSignature>(GET_SIGNATURE_TAG, response).onSuccess { return it }
@@ -87,22 +75,24 @@ class TicketRemoteRepository(
         if (serverUrl.isBlank()) return emptyList()
 
         val response = networkErrorTryCatch(GET_HISTORY_TAG) {
-            client.get { url("$serverUrl/get/history/$identifier") }
+            client.get { url("$serverUrl${TicketPaths.HISTORY.fill(identifier)}") }
         } ?: return emptyList()
 
         handleHttpResponse<List<TicketStatusChange>>(GET_HISTORY_TAG, response).onSuccess { return it }
         return emptyList()
     }
 
-    suspend fun getCustomer(identifier: Uuid): EntityReference? =
-        getEntity(GET_CUSTOMER_TAG, "$serverUrl/get/customer/$identifier")
+    /** The ticket's customer, `NOT_FOUND` when it has none */
+    suspend fun getCustomer(identifier: Uuid): Result<EntityReference, ServerError> =
+        getEntity(GET_CUSTOMER_TAG, "$serverUrl${TicketPaths.GET_CUSTOMER.fill(identifier)}")
 
     suspend fun setCustomer(identifier: Uuid, customerId: Uuid) =
-        setEntity(SET_CUSTOMER_TAG, customerId, "$serverUrl/set/customer/$identifier")
+        setEntity(SET_CUSTOMER_TAG, customerId, "$serverUrl${TicketPaths.SET_CUSTOMER.fill(identifier)}")
 
-    suspend fun getUser(identifier: Uuid): EntityReference? =
-        getEntity(GET_USER_TAG, "$serverUrl/get/user/$identifier")
+    /** The ticket's technician, `NOT_FOUND` when nobody is assigned */
+    suspend fun getUser(identifier: Uuid): Result<EntityReference, ServerError> =
+        getEntity(GET_USER_TAG, "$serverUrl${TicketPaths.GET_USER.fill(identifier)}")
 
     suspend fun setUser(identifier: Uuid, userId: Uuid) =
-        setEntity(SET_USER_TAG, userId, "$serverUrl/set/user/$identifier")
+        setEntity(SET_USER_TAG, userId, "$serverUrl${TicketPaths.SET_USER.fill(identifier)}")
 }

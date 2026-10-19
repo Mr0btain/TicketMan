@@ -11,9 +11,10 @@ import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.NotePaths
 
 /**
- * Note routes shared by every entity: /add/note/{id}, /get/notes/{id} and /remove/note/{id}.
+ * Note routes shared by every entity, the paths in [NotePaths].
  * By default anyone logged in can read notes and writing needs NORMAL access
  * @param entityType Used in the audit log, e.g. "ticket"
  * @param readAuth Auth provider for reading, like "admin" for staff notes
@@ -31,8 +32,7 @@ fun Route.noteRoute(
     val GET_NOTES_TAG = "$TAG:GetNotes"
 
     authenticate(readAuth) {
-        // Post to match the client, which sends the identifier as the body too
-        post("/get/notes/{identifier}") {
+        get(NotePaths.GET) {
             val identifier = call.uuidParameter("identifier")
             val result = identifier?.let { database.getNotes(it) }
 
@@ -46,7 +46,7 @@ fun Route.noteRoute(
     }
 
     authenticate(writeAuth) {
-        post("/add/note/{identifier}") {
+        post(NotePaths.ADD) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {
@@ -69,7 +69,7 @@ fun Route.noteRoute(
 
     authenticate(writeAuth) {
         // Replaces a note's text and images, the identifier is the note's. Images must be uploaded first
-        post("/update/note/{identifier}") {
+        post(NotePaths.UPDATE) {
             val identifier = call.uuidParameter("identifier")
             val received = call.receive<Note>()
 
@@ -86,7 +86,7 @@ fun Route.noteRoute(
             }
         }
 
-        delete("/remove/note/{identifier}") {
+        delete(NotePaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {

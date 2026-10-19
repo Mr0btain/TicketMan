@@ -161,3 +161,23 @@ suspend inline fun <reified T> handleDataHttpResponse(tag: String, request: Resu
         is Result.Success -> Result.Error(ServerError(NetworkError.UNKNOWN))
     }
 }
+
+/** [handleDataHttpResponse] for a body whose type isn't known at compile time, like a generic repository's T */
+suspend fun <T> handleDataHttpResponse(tag: String, request: Result<HttpResponse, NetworkError>, bodyType: TypeInfo): Result<T, ServerError> {
+    val response = when (request) {
+        is Result.Error -> return Result.Error(ServerError(request.error))
+        is Result.Success -> request.data
+    }
+
+    if (response.status.value in 200..299) {
+        return when (val result = handleHttpResponse<T>(tag, response, bodyType)) {
+            is Result.Success -> result
+            is Result.Error -> Result.Error(ServerError(result.error))
+        }
+    }
+
+    return when (val failed = handleActionHttpResponse(tag, response)) {
+        is Result.Error -> failed
+        is Result.Success -> Result.Error(ServerError(NetworkError.UNKNOWN))
+    }
+}

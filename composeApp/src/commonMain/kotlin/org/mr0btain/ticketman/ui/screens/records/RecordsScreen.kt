@@ -45,6 +45,7 @@ fun RecordsScreen(
     // For customer panel
     val customerSeed = viewModel.customers.seed
     val customerPagedItems = viewModel.customers.pager.items.collectAsState()
+    val customerLoadError by viewModel.customers.pager.loadError.collectAsState()
     val customerLazyListState = rememberLazyListState()
     val pendingCustomer by viewModel.customers.selection.pending.collectAsState()
 
@@ -58,6 +59,7 @@ fun RecordsScreen(
     // For ticket panel
     val ticketSeed = viewModel.tickets.seed
     val ticketPagedItems = viewModel.tickets.pager.items.collectAsState()
+    val ticketLoadError by viewModel.tickets.pager.loadError.collectAsState()
     val ticketLazyListState = rememberLazyListState()
     val pendingTicket by viewModel.tickets.selection.pending.collectAsState()
     val ticketScope by viewModel.tickets.listScope.collectAsState()
@@ -72,6 +74,7 @@ fun RecordsScreen(
     // For Inventory panel
     val inventorySeed = viewModel.inventory.seed
     val inventoryPagedItems = viewModel.inventory.pager.items.collectAsState()
+    val inventoryLoadError by viewModel.inventory.pager.loadError.collectAsState()
     val inventoryLazyListState = rememberLazyListState()
     val pendingInventory by viewModel.inventory.selection.pending.collectAsState()
 
@@ -245,7 +248,8 @@ fun RecordsScreen(
                 seed = customerSeed,
                 pendingId = pendingCustomer,
                 customerList = customerPagedItems.value,
-                customerLazyListState = customerLazyListState
+                customerLazyListState = customerLazyListState,
+                loadError = customerLoadError
             )
 
             // TODO: Finish user implementation
@@ -272,7 +276,8 @@ fun RecordsScreen(
                 },
                 ticketScope = ticketScope,
                 ticketListState = ticketLazyListState,
-                onImageClick = { id, page -> showNoteImages(ticketSeed.notes, id, page) }
+                onImageClick = { id, page -> showNoteImages(ticketSeed.notes, id, page) },
+                loadError = ticketLoadError
             )
 
             2 -> InventoryPanel(
@@ -293,7 +298,8 @@ fun RecordsScreen(
                     dataType = DataType.INVENTORY
                     showConfirmDeleteDialog = true
                 },
-                inventoryListState = inventoryLazyListState
+                inventoryListState = inventoryLazyListState,
+                loadError = inventoryLoadError
             )
         }
     }

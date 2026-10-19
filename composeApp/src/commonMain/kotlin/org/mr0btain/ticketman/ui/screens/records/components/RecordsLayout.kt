@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.records.components
 
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
@@ -61,6 +63,7 @@ fun RecordsLayout(
 /**
  * A table of records that loads more as it scrolls
  * @param emptyTitle Shown when there's nothing in the list
+ * @param loadError Why the list couldn't be loaded, shown above it instead of pretending it's empty
  */
 @Composable
 fun RecordsList(
@@ -70,10 +73,15 @@ fun RecordsList(
     emptyTitle: String,
     emptyIcon: DrawableResource,
     emptyMessage: String? = null,
+    loadError: String? = null,
     content: LazyListScope.() -> Unit
 ) {
-    Column(Modifier.padding(TmTheme.spacing.sm)) {
+    Column(Modifier.padding(TmTheme.spacing.sm), verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+        loadError?.let { TmNotice(kind = TmNoticeKind.ERROR, title = "Couldn't load the list", text = "$it. Refresh to try again.") }
+
         TmTableHeader(columns)
+
+        if (isEmpty && loadError != null) return@Column
 
         if (isEmpty) {
             TmEmptyState(icon = emptyIcon, title = emptyTitle, message = emptyMessage)

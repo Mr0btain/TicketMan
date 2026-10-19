@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.settings.components
 
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -18,15 +20,19 @@ import ticketman.composeapp.generated.resources.user
  * Who is signed in, with a button to log in or out. The phone layout has no user menu, so this is where phones do
  * it; on wide screens it's the same as the menu at the foot of the nav rail
  * @param user Whoever is signed in, null when nobody is
+ * @param apiMismatch Why this app and the server may not work together, null when they're the same version
  */
 @Composable
 fun AccountPanel(
     user: User?,
     onLogin: () -> Unit,
     onLogout: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    apiMismatch: String? = null
 ) {
     TmPanel(modifier = modifier.fillMaxWidth(), title = "Account", icon = Res.drawable.user) {
+        apiMismatch?.let { TmNotice(kind = TmNoticeKind.WARNING, title = "Different versions", text = it) }
+
         if (user == null) {
             TmListRow(
                 title = "Not logged in",

@@ -207,24 +207,31 @@ transparency turns it all solid.
 
 ## The API
 
-### Reads that are `POST`
+### Route paths shared, reads as `GET`
 
-**Chosen:** the older record routes read with `POST` (`/get`, `/fetch`, `/search`), with the id or query in the
-body. Newer routes use `GET` with path and query parameters.
+**Chosen:** every route path is a constant in shared's `ApiRoutes.kt`, used by the server's route files and the
+client's repositories. Reads are `GET` with path and query parameters; only reads that take a secret or a whole
+object (station status, repeat check) are `POST`.
 
-**Why:** the older routes came first and the client calls them by those names. Changing them means changing both
-sides together.
+**Why:** a path typed on both sides could drift apart and only fail when someone used that screen. A shared constant
+breaks the build instead. `GET` reads can be retried and cached, and show what they read in the server's log.
 
-**Revisit if:** the routes are versioned, at which point the reads could move to `GET`.
+**Costs:** `scripts/check_api_docs.py` has to read the constants to work out the routes, so they stay plain string
+constants. Moving the reads to `GET` was a breaking change, the reason `API_VERSION` is 2.
 
-### Client and server updated together
+### Client and server updated together, with a version check
 
-**Chosen:** there's no API versioning. The server refuses fields it doesn't know; the client ignores fields it
-doesn't know.
+**Chosen:** one API version, `API_VERSION`, sent in the `X-TicketMan-Api` header of `/api/ping`. The client warns
+when the server's isn't its own, but carries on. There are no versioned routes. The server refuses fields it doesn't
+know; the client ignores fields it doesn't know.
 
-**Why:** a shop runs one server and its own few devices, updated together.
+**Why:** a shop runs one server and its own few devices, normally updated together. The warning catches the device
+that was missed, without keeping old routes around.
 
-**Costs:** a new field has to reach the server before any client sends it.
+**Costs:** a new field has to reach the server before any client sends it, and a mismatched device gets errors on
+whatever changed until it's updated.
+
+**Revisit if:** shops can't update every device at once, which would need the server to keep older routes working.
 
 ## See also
 

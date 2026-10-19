@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.components.network.image
 
+import org.mr0btain.ticketman.components.network.database.ServerRepository
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.ImagePaths
+import org.mr0btain.ticketman.server.fill
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -22,24 +26,24 @@ import kotlin.uuid.Uuid
 @Suppress("PrivatePropertyName")
 class ImageRemoteRepository(
     private val client: HttpClient
-) {
+) : ServerRepository {
     private val TAG = "ImageRemoteRepository"
     private val UPLOAD_TAG = "$TAG:Upload"
 
     private var baseUrl = ""
 
     // Stays blank until a server is set so requests are skipped instead of going to a relative url
-    var serverUrl: String
+    override var serverUrl: String
         get() = baseUrl
         set(value) {
             baseUrl = value.trimEnd('/')
         }
 
-    private val imageUrl get() = "$baseUrl/api/image"
+    private val imageUrl get() = "$baseUrl${ApiRoutes.IMAGE}"
 
     /** Where a photo's [variant] is fetched from, null with no server set */
     fun urlFor(identifier: Uuid, variant: ImageVariant): String? =
-        if (baseUrl.isBlank()) null else "$imageUrl/$identifier/${variant.path}"
+        if (baseUrl.isBlank()) null else "$imageUrl${ImagePaths.FILE.fill(identifier, variant.path)}"
 
     /**
      * Sends a photo. It comes back pending, and is only kept once a note or item is saved with it
@@ -59,7 +63,7 @@ class ImageRemoteRepository(
 
         val response = networkRequest(UPLOAD_TAG) {
             client.submitFormWithBinaryData(
-                url = "$imageUrl/upload",
+                url = "$imageUrl${ImagePaths.UPLOAD}",
                 formData = formData {
                     if (description.isNotBlank()) append(ImageLimits.DESCRIPTION_FIELD, description)
                     append(ImageLimits.UPLOAD_FIELD, bytes, Headers.build {

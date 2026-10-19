@@ -10,12 +10,12 @@ import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.RecordPaths
+import org.mr0btain.ticketman.server.TicketPaths
 import kotlin.uuid.Uuid
 
 /**
@@ -38,21 +38,20 @@ fun Route.ticketRoute(
     // ------------------------------------------ Reading ------------------------------------------
 
     authenticate("restricted") {
-        post("/get") {
-            val request = call.receive<Uuid>()
-
-            val result = database.getById(request)
+        get(RecordPaths.GET) {
+            val identifier = call.uuidParameter("identifier")
+            val result = identifier?.let { database.getById(it) }
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
             } else {
                 call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(GET_TAG, "$request not found")
+                AppLogger.m(GET_TAG, "$identifier not found")
             }
         }
 
-        post("/fetch") {
-            val request = call.receive<PagedRequest>()
+        get(RecordPaths.FETCH) {
+            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
 
             val result = database.getPagedItems(request)
 
@@ -65,14 +64,13 @@ fun Route.ticketRoute(
         }
 
         // Tickets assigned to the caller, who comes from the token so nobody can list someone else's
-        post("/fetch/mine") {
-            val request = call.receive<PagedRequest>()
-
+        get(TicketPaths.FETCH_MINE) {
+            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
             val caller = call.getIdentifierFromToken()
 
             if (caller == null) {
                 call.respond(HttpStatusCode.Unauthorized)
-                return@post
+                return@get
             }
 
             val result = database.getPagedItemsForUser(caller, request)
@@ -85,8 +83,8 @@ fun Route.ticketRoute(
             }
         }
 
-        post("/search") {
-            val request = call.receive<SearchQuery>()
+        get(RecordPaths.SEARCH) {
+            val request = call.searchQuery() ?: return@get call.respondBadQuery()
 
             val result = database.search(request.query, request.limit)
 
@@ -99,7 +97,7 @@ fun Route.ticketRoute(
         }
 
         // Look up by the number on a claim slip, like 26-00000042
-        get("/number/{number}") {
+        get(TicketPaths.BY_NUMBER) {
             val number = call.parameters["number"]?.let { TicketNumber.parse(it) }
             val result = number?.let { database.getByNumber(it) }
 
@@ -111,7 +109,7 @@ fun Route.ticketRoute(
             }
         }
 
-        get("/get/history/{identifier}") {
+        get(TicketPaths.HISTORY) {
             val identifier = call.uuidParameter("identifier")
             val result = identifier?.let { database.getStatusHistory(it) }
 
@@ -123,19 +121,19 @@ fun Route.ticketRoute(
             }
         }
 
-        get("/signature/{identifier}") {
+        get(TicketPaths.SIGNATURE) {
             val result = call.uuidParameter("identifier")?.let { database.getSignature(it) }
 
             if (result != null) call.respond(HttpStatusCode.OK, result) else call.respond(HttpStatusCode.NotFound)
         }
 
-        get("/get/customer/{identifier}") {
+        get(TicketPaths.GET_CUSTOMER) {
             val result = call.uuidParameter("identifier")?.let { database.getCustomer(it) }
 
             if (result != null) call.respond(HttpStatusCode.OK, result) else call.respond(HttpStatusCode.NotFound)
         }
 
-        get("/get/user/{identifier}") {
+        get(TicketPaths.GET_USER) {
             val result = call.uuidParameter("identifier")?.let { database.getUser(it) }
 
             if (result != null) call.respond(HttpStatusCode.OK, result) else call.respond(HttpStatusCode.NotFound)
@@ -146,7 +144,7 @@ fun Route.ticketRoute(
 
     authenticate {
         // Responds with the saved ticket so the caller gets its number
-        post("/add") {
+        post(RecordPaths.ADD) {
             val received = call.receive<Ticket>()
 
             if (received.status.status == TicketStatusType.PICKED_UP) {
@@ -166,7 +164,7 @@ fun Route.ticketRoute(
             call.respond(HttpStatusCode.Created, saved)
         }
 
-        post("/update") {
+        post(RecordPaths.UPDATE) {
             val received = call.receive<Ticket>()
             val existing = database.getById(received.identifier)
 
@@ -201,7 +199,7 @@ fun Route.ticketRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
-        delete("/remove/{identifier}") {
+        delete(RecordPaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null || !database.remove(identifier)) {
@@ -214,7 +212,7 @@ fun Route.ticketRoute(
         }
 
         // Body is the customer's identifier
-        post("/set/customer/{identifier}") {
+        post(TicketPaths.SET_CUSTOMER) {
             val identifier = call.uuidParameter("identifier")
             val customer = call.receive<Uuid>()
 
@@ -227,7 +225,7 @@ fun Route.ticketRoute(
         }
 
         // Body is the tech's identifier
-        post("/set/user/{identifier}") {
+        post(TicketPaths.SET_USER) {
             val identifier = call.uuidParameter("identifier")
             val user = call.receive<Uuid>()
 

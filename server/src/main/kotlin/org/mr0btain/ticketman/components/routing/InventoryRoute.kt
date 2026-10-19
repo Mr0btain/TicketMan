@@ -12,11 +12,10 @@ import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.InventoryPaths
+import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.request.StockChangeRequest
-import kotlin.uuid.Uuid
 
 fun Route.inventoryRoute(
     database: InventoryDatabase,
@@ -32,23 +31,20 @@ fun Route.inventoryRoute(
     val ENTITY_TYPE = "inventory"
 
     authenticate("restricted") {
-        post("/get") {
-            val request = call.receive<Uuid>()
-
-            val result = database.getById(request)
+        get(RecordPaths.GET) {
+            val identifier = call.uuidParameter("identifier")
+            val result = identifier?.let { database.getById(it) }
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
             } else {
                 call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(GET_TAG, "$request not found")
+                AppLogger.m(GET_TAG, "$identifier not found")
             }
         }
-    }
 
-    authenticate("restricted") {
-        post("/fetch") {
-            val request = call.receive<PagedRequest>()
+        get(RecordPaths.FETCH) {
+            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
 
             val result = database.getPagedItems(request)
 
@@ -59,11 +55,9 @@ fun Route.inventoryRoute(
                 AppLogger.i(FETCH_TAG, "Couldn't read $request")
             }
         }
-    }
 
-    authenticate("restricted") {
-        post("/search") {
-            val request = call.receive<SearchQuery>()
+        get(RecordPaths.SEARCH) {
+            val request = call.searchQuery() ?: return@get call.respondBadQuery()
 
             val result = database.search(request.query, request.limit)
 
@@ -78,7 +72,7 @@ fun Route.inventoryRoute(
 
     // Photos of the item itself
     authenticate("restricted") {
-        get("/get/images/{identifier}") {
+        get(InventoryPaths.GET_IMAGES) {
             val result = call.uuidParameter("identifier")?.let { database.getImages(it) }
 
             if (result != null) call.respond(HttpStatusCode.OK, result)
@@ -88,7 +82,7 @@ fun Route.inventoryRoute(
 
     // Body is every photo the item should have, uploaded ones get linked and missing ones deleted
     authenticate {
-        post("/set/images/{identifier}") {
+        post(InventoryPaths.SET_IMAGES) {
             val identifier = call.uuidParameter("identifier")
             val images = call.receive<List<StoredImage>>()
 
@@ -103,7 +97,8 @@ fun Route.inventoryRoute(
 
     // Adding new
     authenticate {
-        post("/add") {
+        // Answers with the item as saved
+        post(RecordPaths.ADD) {
             val received = call.receive<Inventory>()
 
             if (received.stock < 0) {
@@ -111,19 +106,21 @@ fun Route.inventoryRoute(
                 return@post
             }
 
-            if (!database.add(received)) {
+            val saved = received.takeIf { database.add(it) }?.let { database.getById(it.identifier) }
+
+            if (saved == null) {
                 call.respond(HttpStatusCode.InternalServerError)
                 return@post
             }
 
-            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, received.identifier, received.name)
-            call.respond(HttpStatusCode.Created)
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, saved.identifier, saved.name)
+            call.respond(HttpStatusCode.Created, saved)
         }
     }
 
     // Update, everything but the stock count
     authenticate {
-        post("/update") {
+        post(RecordPaths.UPDATE) {
             val received = call.receive<Inventory>()
 
             if (!database.update(received)) {
@@ -138,7 +135,7 @@ fun Route.inventoryRoute(
 
     // Stock count by hand. Refused if it changed since the item was opened, so a pickup's change isn't lost
     authenticate {
-        post("/set/stock/{identifier}") {
+        post(InventoryPaths.SET_STOCK) {
             val identifier = call.uuidParameter("identifier")
             val request = call.receive<StockChangeRequest>()
 
@@ -170,7 +167,7 @@ fun Route.inventoryRoute(
 
     // Remove
     authenticate {
-        delete("/remove/{identifier}") {
+        delete(RecordPaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null || !database.remove(identifier)) {

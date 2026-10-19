@@ -24,13 +24,14 @@ The ticket's invoice, without making one.
 
 - **`200`** `Invoice`. **`404`** the ticket has no invoice.
 
-### `POST /api/invoice/fetch`
+### `GET /api/invoice/fetch`
 
 **Auth:** restricted
 
 A page of every invoice, newest first.
 
-- **Body:** `PagedRequest`. **`200`** a list of `Invoice`.
+- **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
+- **`200`** a list of `Invoice`.
 
 ## Changing
 

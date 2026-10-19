@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.components.database.InventoryDatabase
+import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.components.database.CustomerDatabase
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
@@ -61,7 +64,7 @@ class ImageTest {
         }
     }
 
-    private fun imageService() = ImageService(ImageDatabase(), ImageStore(File(dataDir.toFile(), "server/images")))
+    private fun imageService() = ImageService(ImageDatabase { listOf(CustomerDatabase(), TicketDatabase(), InventoryDatabase(), UserDatabase()) }, ImageStore(File(dataDir.toFile(), "server/images")))
 
     private suspend fun ApplicationTestBuilder.token(user: User): String {
         val response = client.post("/api/auth") {
@@ -98,11 +101,11 @@ class ImageTest {
         }
 
     private suspend fun ApplicationTestBuilder.notes(customer: Uuid, token: String): List<Note> =
-        json.decodeFromString(post("/api/data/customer/get/notes/$customer", "\"$customer\"", token).bodyAsText())
+        json.decodeFromString(client.get("/api/data/customer/get/notes/$customer") { bearerAuth(token) }.bodyAsText())
 
     private suspend fun ApplicationTestBuilder.newCustomer(token: String): Uuid {
         val customer = Customer(name = "Jane Doe")
-        assertEquals(HttpStatusCode.Accepted, post("/api/data/customer/add", json.encodeToString(customer), token).status)
+        assertEquals(HttpStatusCode.Created, post("/api/data/customer/add", json.encodeToString(customer), token).status)
         return customer.identifier
     }
 

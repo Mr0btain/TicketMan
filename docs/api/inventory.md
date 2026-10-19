@@ -10,27 +10,29 @@ A `stock` of `Int.MAX_VALUE` (2147483647) means the item's stock isn't tracked.
 
 ## Reading
 
-### `POST /api/data/inventory/get`
+### `GET /api/data/inventory/get/{identifier}`
 
 **Auth:** restricted
 
-- **Body:** the item's id. **`200`** `Inventory`. **`404`** no such item.
+- **`200`** `Inventory`. **`404`** no such item.
 
-### `POST /api/data/inventory/fetch`
+### `GET /api/data/inventory/fetch`
 
 **Auth:** restricted
 
 A page of items, by name.
 
-- **Body:** `PagedRequest`. **`200`** a list of `Inventory`.
+- **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
+- **`200`** a list of `Inventory`.
 
-### `POST /api/data/inventory/search`
+### `GET /api/data/inventory/search`
 
 **Auth:** restricted
 
 Items whose name or description contains the query, or whose id starts with it.
 
-- **Body:** `SearchQuery`. **`200`** a list of `SearchResult`.
+- **Query:** `query`, `limit` (default 20, at most 200).
+- **`200`** a list of `SearchResult`.
 
 ### `GET /api/data/inventory/get/images/{identifier}`
 
@@ -46,7 +48,7 @@ The item's own photos (not its notes' photos).
 
 **Auth:** normal
 
-- **Body:** `Inventory`, with an id the client made. **`201`** no body.
+- **Body:** `Inventory`, with an id the client made. **`201`** the `Inventory` as saved.
 - **`400`** `Stock can't be below zero`. **`500`** not saved.
 
 ### `POST /api/data/inventory/update`

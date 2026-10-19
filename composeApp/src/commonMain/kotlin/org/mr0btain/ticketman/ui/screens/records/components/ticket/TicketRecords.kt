@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.ui.screens.records.components.ticket
 
+import org.mr0btain.ticketman.error.getOrDefault
+import org.mr0btain.ticketman.error.valueOr
+import org.mr0btain.ticketman.components.network.orNullIfNotFound
+import org.mr0btain.ticketman.components.network.isNotFound
+import org.mr0btain.ticketman.components.network.ServerError
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.async
@@ -82,15 +87,24 @@ class TicketRecords(
         if (selection.pending.value == identifier) return
 
         selection.select(identifier) {
-            val (ticket, notes, customer, user) = cache.get(identifier) ?: coroutineScope {
+            // Notes that failed to load aren't shown as none, saving would then drop them. No customer or tech is fine
+            val loaded = cache.get(identifier)?.let { Result.Success(it) } ?: coroutineScope {
                 val notes = async { remoteHandler.ticketRepo.getNotes(identifier) }
-                val customer = async { remoteHandler.ticketRepo.getCustomer(identifier) }
-                val user = async { remoteHandler.ticketRepo.getUser(identifier) }
-                val ticket = remoteHandler.ticketRepo.get(identifier) ?: return@coroutineScope null
+                val customer = async { remoteHandler.ticketRepo.getCustomer(identifier).orNullIfNotFound() }
+                val user = async { remoteHandler.ticketRepo.getUser(identifier).orNullIfNotFound() }
+                val ticket = remoteHandler.ticketRepo.get(identifier).valueOr { return@coroutineScope Result.Error(it) }
 
-                TicketCache.TicketData(ticket, notes.await(), customer.await(), user.await())
-                    .also { cache.put(it.ticket, it.notes, it.customer, it.user) }
-            } ?: return@select forgetIfOpen(identifier)
+                Result.Success(
+                    TicketCache.TicketData(
+                        ticket,
+                        notes.await().valueOr { return@coroutineScope Result.Error(it) },
+                        customer.await().valueOr { return@coroutineScope Result.Error(it) },
+                        user.await().valueOr { return@coroutineScope Result.Error(it) }
+                    ).also { cache.put(it.ticket, it.notes, it.customer, it.user) }
+                )
+            }
+
+            val (ticket, notes, customer, user) = loaded.valueOr { return@select loadFailed(identifier, it) }
 
             return@select { seed.setTicket(ticket, notes, customer, user) }
         }
@@ -114,6 +128,11 @@ class TicketRecords(
             }
         }) else null
 
+    // Loading failed: a record that's gone is forgotten, anything else is said and what's shown stays
+    private fun loadFailed(identifier: Uuid, error: ServerError): (() -> Unit)? =
+        if (error.isNotFound) forgetIfOpen(identifier)
+        else null.also { scope.launch { snackBarHost.showSnackbar("That ticket couldn't be loaded: ${error.message}") } }
+
     /** Saves the seed: the ticket, its notes, and who it belongs to and is assigned to */
     fun save() {
         if (!canEdit()) return
@@ -132,8 +151,8 @@ class TicketRecords(
             val repo = remoteHandler.ticketRepo
 
             if (isNew) {
-                // Created through create so the seed picks up the number the server gave it
-                when (val created = repo.create(ticket)) {
+                // Add answers with the saved ticket, so the seed picks up the number the server gave it
+                when (val created = repo.add(ticket)) {
                     is Result.Error -> {
                         snackBarHost.showSnackbar("Ticket not saved: ${created.error.message}")
                         return@launch
@@ -174,7 +193,7 @@ class TicketRecords(
 
     /** Tickets matching [query], at most the search limit setting */
     suspend fun search(query: String) =
-        remoteHandler.ticketRepo.search(query, searchLimit())
+        remoteHandler.ticketRepo.search(query, searchLimit()).getOrDefault(emptyList())
 
     /**
      * Deletes the record if it's the one selected. Once the server has, clears the selection and reloads the list;

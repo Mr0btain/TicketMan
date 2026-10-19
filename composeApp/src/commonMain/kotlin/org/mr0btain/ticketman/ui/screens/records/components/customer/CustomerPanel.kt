@@ -24,7 +24,8 @@ fun CustomerPanel(
     onDeleteCustomer: () -> Unit,
     onTicketClick: (Uuid) -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
-    customerLazyListState: LazyListState = rememberLazyListState()
+    customerLazyListState: LazyListState = rememberLazyListState(),
+    loadError: String? = null
 ) {
     RecordsLayout(
         toolbar = {
@@ -43,7 +44,8 @@ fun CustomerPanel(
                 customerList = customerList,
                 selectedId = pendingId ?: seed.identifier,
                 lazyListState = customerLazyListState,
-                onClick = onCustomerSelectionChange
+                onClick = onCustomerSelectionChange,
+                loadError = loadError
             )
         },
         detail = {

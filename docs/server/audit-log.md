@@ -60,7 +60,7 @@ Conventions:
 
 ## Reading it
 
-`POST /api/admin/audit/fetch` with a `PagedRequest`, admin only, gives entries newest first.
+`GET /api/admin/audit/fetch?offset=&limit=`, admin only, gives entries newest first.
 
 ## Trimming
 

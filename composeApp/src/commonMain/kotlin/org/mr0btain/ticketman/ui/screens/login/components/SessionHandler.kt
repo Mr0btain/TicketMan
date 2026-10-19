@@ -72,6 +72,12 @@ class SessionHandler(
     private val _serverConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val serverConnected = _serverConnected.asStateFlow()
 
+    // Set when the server and this app are from different versions, see RemoteHandler.apiMismatch
+    private val _apiMismatch: MutableStateFlow<String?> = MutableStateFlow(null)
+
+    /** Why this app and the server may not work together, null when they're the same version */
+    val apiMismatch = _apiMismatch.asStateFlow()
+
     // The address connected to last, so trusting its certificate can try it again
     private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
 
@@ -134,6 +140,7 @@ class SessionHandler(
         }
 
         _serverConnected.value = result == ConnectionResult.CONNECTED || result == ConnectionResult.LOGGED_IN
+        _apiMismatch.value = if (_serverConnected.value) remoteHandler.apiMismatch else null
 
         if (result == ConnectionResult.LOGGED_IN) {
             _loginState.value = LoginState.LOGGED_IN

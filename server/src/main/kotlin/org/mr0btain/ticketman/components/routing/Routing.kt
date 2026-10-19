@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.API_VERSION
+import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.ApiRoutes
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.*
@@ -47,7 +50,9 @@ fun Application.configureRouting(
 
     routing {
         // Tells clients the server is up, and that it's this app
+        // The header says which API this server speaks, so a client can warn when it's from another version
         get(SERVER_PING_PATH) {
+            call.response.header(API_VERSION_HEADER, API_VERSION.toString())
             call.respondText(SERVER_PING_BODY)
         }
 
@@ -63,11 +68,11 @@ fun Application.configureRouting(
             }
         }
 
-        route("/api/auth") {
+        route(ApiRoutes.AUTH) {
             authRoute(userService, accountService, localDatabase.stationDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase)
         }
 
-        route("/api/user") {
+        route(ApiRoutes.USER) {
             userRoute(
                 database = localDatabase.userDatabase,
                 tokenDatabase = localDatabase.tokenDatabase,
@@ -76,7 +81,7 @@ fun Application.configureRouting(
             )
         }
 
-        route("/api/admin") {
+        route(ApiRoutes.ADMIN) {
             adminRoute(
                 database = localDatabase,
                 adminService = adminService,
@@ -85,7 +90,7 @@ fun Application.configureRouting(
             )
         }
 
-        route("/api/counter") {
+        route(ApiRoutes.COUNTER) {
             counterRoute(
                 database = localDatabase.counterDatabase,
                 shopDatabase = localDatabase.shopDatabase,
@@ -95,7 +100,7 @@ fun Application.configureRouting(
             )
         }
 
-        route("/api/invoice") {
+        route(ApiRoutes.INVOICE) {
             invoiceRoute(
                 database = localDatabase.invoiceDatabase,
                 service = invoiceService,
@@ -103,7 +108,7 @@ fun Application.configureRouting(
             )
         }
 
-        route("/api/station") {
+        route(ApiRoutes.STATION) {
             stationRoute(
                 database = localDatabase.stationDatabase,
                 userDatabase = localDatabase.userDatabase,
@@ -111,21 +116,21 @@ fun Application.configureRouting(
             )
         }
 
-        route("/api/shop") {
+        route(ApiRoutes.SHOP) {
             shopRoute(
                 database = localDatabase.shopDatabase,
                 auditLog = localDatabase.auditLogDatabase
             )
         }
 
-        route("/api/image") {
+        route(ApiRoutes.IMAGE) {
             imageRoute(
                 service = imageService,
                 auditLog = localDatabase.auditLogDatabase
             )
         }
 
-        route("/api/data/customer") {
+        route(ApiRoutes.CUSTOMER) {
             customerRoute(
                 database = localDatabase.customerDatabase,
                 ticketDatabase = localDatabase.ticketDatabase,
@@ -135,7 +140,7 @@ fun Application.configureRouting(
             )
         }
 
-        route("/api/data/ticket") {
+        route(ApiRoutes.TICKET) {
             ticketRoute(
                 database = localDatabase.ticketDatabase,
                 userDatabase = localDatabase.userDatabase,
@@ -143,7 +148,7 @@ fun Application.configureRouting(
             )
         }
 
-        route("/api/data/inventory") {
+        route(ApiRoutes.INVENTORY) {
             inventoryRoute(
                 database = localDatabase.inventoryDatabase,
                 userDatabase = localDatabase.userDatabase,

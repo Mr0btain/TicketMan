@@ -50,10 +50,23 @@ records together, or has rules of its own, goes in a service under `components/s
 
 ## 4. The route
 
+Add the path to the route file's object in shared's
+[`ApiRoutes.kt`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/server/ApiRoutes.kt), so the server and
+the client use the same one:
+
+```kotlin
+object TicketPaths {
+    ...
+    const val SET_PROMISED = "/set/promised/{identifier}"
+}
+```
+
+Then the route:
+
 ```kotlin
 authenticate {
     ...
-    post("/set/promised/{identifier}") {
+    post(TicketPaths.SET_PROMISED) {
         val identifier = call.uuidParameter("identifier")
         val request = call.receive<PromiseRequest>()
 
@@ -70,6 +83,8 @@ authenticate {
 
 - **Check what you can and answer with a reason**: `call.respond(HttpStatusCode.BadRequest, "Pick a time in the
   future")`. The client shows short text bodies to the user.
+- **Reads are `GET`**, with ids in the path and anything else as query parameters (`call.pagedRequest()`,
+  `call.searchQuery()` for the usual ones). Only use `POST` for a read that takes a secret or a whole object.
 - **Status codes**: `202` for a change with no body, `201` for something made (with it as the body), `200` for a
   read, `404` when the record isn't there, `409` when it clashes with the current state, `400` for a bad value.
   A route on a service answers with `call.respondAccount(result)`, which maps them for you.
@@ -90,7 +105,7 @@ suspend fun setPromised(identifier: Uuid, promisedAt: Long?): EmptyResult<Server
 
     val response = networkRequest(SET_PROMISED_TAG) {
         client.post {
-            url("$serverUrl/set/promised/$identifier")
+            url("$serverUrl${TicketPaths.SET_PROMISED.fill(identifier)}")
             contentType(ContentType.Application.Json)
             setBody(PromiseRequest(promisedAt))
         }
@@ -100,8 +115,9 @@ suspend fun setPromised(identifier: Uuid, promisedAt: Long?): EmptyResult<Server
 }
 ```
 
-Reads use `networkErrorTryCatch` and `handleHttpResponse<T>` and return the value or null (see `getByNumber`).
-The path is a string on both sides, so the compiler won't tell you if they don't match; the tests will.
+Reads use `networkRequest` and `handleDataHttpResponse<T>` and return a `Result` (see
+`CustomerRemoteRepository.getTickets`), so the screen can tell a failure from nothing there. If an endpoint changes
+in a way an older client can't use, bump `API_VERSION` in `ApiRoutes.kt`.
 
 ## 6. The handler
 

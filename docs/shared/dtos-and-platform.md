@@ -27,7 +27,7 @@ it can't disagree on the shape.
 | `InvoiceUpdateRequest`, `PaymentRequest` | `/api/invoice/...` | Charges and discount; one payment |
 | `RepeatCheckRequest` | `/api/counter/repeat-check` | Customer and device, to flag a repeat repair |
 | `BackupRequest`, `SeedRequest` | `/api/admin/...` | Whether to include photos; how much test data |
-| `PagedRequest`, `SearchQuery` (in `data/`) | Every record route | Offset and page size; query text and limit |
+| `PagedRequest`, `SearchQuery` (in `data/`) | The server, from the `?offset=&limit=` and `?query=&limit=` of paged reads and searches | Offset and page size; query text and limit |
 
 The [API reference](../PLAN.md) (Phase 4d) will list every route with its body.
 
@@ -38,7 +38,6 @@ The [API reference](../PLAN.md) (Phase 4d) will list every route with its body.
 | `AuthResponse` | `POST /api/auth`, PIN login, invite setup | User id, tokens, and a `LoginStatus` (`OK`, `NEEDS_SETUP`, `INVITE_SETUP`, `PENDING_APPROVAL`) |
 | `RefreshTokenResponse` | Refresh | New access token |
 | `InviteResponse`, `PendingUserResponse` | Admin user routes | The invite code and expiry; requests and invites waiting |
-| `UserResponse` | `/api/user/add` | The new user's id and access level |
 | `CheckInResponse` | Check-in | The saved ticket and its invoice |
 | `CounterSearchResponse`, `CounterQueueResponse` | Counter | Search hits; the queue buckets (ready, due today, overdue, just checked in) |
 | `DailyReport` | `/api/admin/report/daily` | A day's takings by payment method, sales, tax and ticket counts |

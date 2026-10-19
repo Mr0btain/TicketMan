@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.AuthPaths
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -33,8 +34,6 @@ import kotlin.time.Duration.Companion.minutes
 /**
  * Authorization routes
  */
-
-// TODO: Add logging
 
 fun Route.authRoute(
     userService: UserService,
@@ -71,7 +70,7 @@ fun Route.authRoute(
     }
 
     // Asking for an account from the login screen, it waits for an admin
-    post("/request-account") {
+    post(AuthPaths.REQUEST_ACCOUNT) {
         if (!requestLimiter.tryAcquire(call.request.origin.remoteHost)) {
             call.respond(HttpStatusCode.TooManyRequests, "Too many requests, try again later")
             return@post
@@ -86,7 +85,7 @@ fun Route.authRoute(
     }
 
     // Finishing an invite with the setup token from logging in with the code
-    post("/setup/invite") {
+    post(AuthPaths.SETUP_INVITE) {
         when (val result = accountService.completeInviteSetup(call.receive<InviteSetupRequest>())) {
             is AccountResult.Done -> call.respond(HttpStatusCode.Accepted, result.value)
             is AccountResult.Invalid -> call.respond(HttpStatusCode.BadRequest, result.message)
@@ -99,7 +98,7 @@ fun Route.authRoute(
     // These prove who they are with the station's secret rather than a login
 
     // Switch to someone at a station with their PIN
-    post("/pin") {
+    post(AuthPaths.PIN) {
         when (val result = userService.pinLogin(call.receive<PinLoginRequest>())) {
             is PinLoginResult.Success -> call.respond(HttpStatusCode.Accepted, result.response)
             PinLoginResult.BadStation -> call.respond(HttpStatusCode.Forbidden, "This device isn't a registered station")
@@ -113,14 +112,14 @@ fun Route.authRoute(
     }
 
     // Station's own record, so it can see whether it's been approved
-    post("/station/status") {
+    post(AuthPaths.STATION_STATUS) {
         val station = stationDatabase.verify(call.receive<StationCredentials>())
 
         if (station != null) call.respond(HttpStatusCode.OK, station) else call.respond(HttpStatusCode.NotFound)
     }
 
     // Who can PIN in, for the station's sign in screen
-    post("/station/staff") {
+    post(AuthPaths.STATION_STAFF) {
         val station = stationDatabase.verify(call.receive<StationCredentials>())
 
         when {
@@ -135,7 +134,7 @@ fun Route.authRoute(
 
     // Ends the calling device's session, works mid setup too
     authenticate("setup") {
-        post("/logout") {
+        post(AuthPaths.LOGOUT) {
             val sessionId = call.getSessionIdFromToken()
 
             if (sessionId != null && userService.logout(sessionId)) {
@@ -147,7 +146,7 @@ fun Route.authRoute(
     }
 
     // Get Tokens
-    post("/refresh") {
+    post(AuthPaths.REFRESH) {
         // Receive refresh token request
         val request = call.receive<RefreshTokenRequest>()
 
@@ -159,7 +158,7 @@ fun Route.authRoute(
 
     // An admin left kiosk mode on a station. Their PIN session there stops ending with the kiosk's idle lock
     authenticate("admin") {
-        post("/kiosk/leave") {
+        post(AuthPaths.KIOSK_LEAVE) {
             val sessionId = call.getSessionIdFromToken()
             val station = sessionId?.let { userService.leaveKiosk(it) }
 

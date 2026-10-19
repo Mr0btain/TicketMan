@@ -12,8 +12,6 @@ import org.mr0btain.ticketman.components.service.AccountResult
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
@@ -24,7 +22,8 @@ import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.request.SetPinRequest
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
-import org.mr0btain.ticketman.server.response.UserResponse
+import org.mr0btain.ticketman.server.RecordPaths
+import org.mr0btain.ticketman.server.UserPaths
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -33,7 +32,6 @@ import kotlin.uuid.Uuid
  * Changing users is admin only, and the server keeps at least one admin around.
  */
 
-// TODO: Handle encryption in the rest of these routes
 @OptIn(ExperimentalUuidApi::class)
 fun Route.userRoute(
     database: UserDatabase,
@@ -59,7 +57,7 @@ fun Route.userRoute(
     // Logged in user, also reachable while finishing first login setup
     authenticate("setup") {
         // First login after an approved request
-        post("/setup") {
+        post(UserPaths.SETUP) {
             val identifier = call.getIdentifierFromToken()
 
             if (identifier == null) {
@@ -70,7 +68,7 @@ fun Route.userRoute(
             call.respondAccount(accountService.completeSetup(identifier, call.receive<AccountSetupRequest>()))
         }
 
-        get("/me") {
+        get(UserPaths.ME) {
             val identifier = call.getIdentifierFromToken()
             val result = identifier?.let { database.getById(it) }
 
@@ -83,24 +81,23 @@ fun Route.userRoute(
         }
     }
 
-    authenticate {
-        post("/get") {
-            val request = call.receive<Uuid>()
-
-            val result = database.getById(request)
+    // Open to Restricted like every other record type, so they can see who's on a ticket. Passwords and PINs are
+    // blanked before anything leaves
+    authenticate("restricted") {
+        get(RecordPaths.GET) {
+            val identifier = call.uuidParameter("identifier")
+            val result = identifier?.let { database.getById(it) }
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result.withoutPassword())
             } else {
                 call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(GET_TAG, "$request not found")
+                AppLogger.m(GET_TAG, "$identifier not found")
             }
         }
-    }
 
-    authenticate {
-        post("/fetch") {
-            val request = call.receive<PagedRequest>()
+        get(RecordPaths.FETCH) {
+            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
 
             val result = database.getPagedItems(request)
 
@@ -111,11 +108,9 @@ fun Route.userRoute(
                 AppLogger.i(FETCH_TAG, "Couldn't read $request")
             }
         }
-    }
 
-    authenticate {
-        post("/search") {
-            val request = call.receive<SearchQuery>()
+        get(RecordPaths.SEARCH) {
+            val request = call.searchQuery() ?: return@get call.respondBadQuery()
 
             val result = database.search(request.query, request.limit)
 
@@ -132,7 +127,7 @@ fun Route.userRoute(
 
     authenticate("restricted") {
         // Change your own PIN, needs your password
-        post("/me/pin") {
+        post(UserPaths.ME_PIN) {
             val identifier = call.getIdentifierFromToken()
 
             if (identifier == null) {
@@ -145,7 +140,7 @@ fun Route.userRoute(
     }
 
     authenticate("admin") {
-        post("/pin/{identifier}/unlock") {
+        post(UserPaths.PIN_UNLOCK) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier != null && database.unlockPin(identifier)) {
@@ -157,7 +152,7 @@ fun Route.userRoute(
         }
 
         // Clears the PIN, they set a new one from their settings
-        delete("/pin/{identifier}") {
+        delete(UserPaths.PIN) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier != null && database.clearPin(identifier)) {
@@ -173,11 +168,11 @@ fun Route.userRoute(
 
     authenticate("admin") {
         // Requests and invites waiting on someone
-        get("/pending") {
+        get(UserPaths.PENDING) {
             call.respond(HttpStatusCode.OK, accountService.pending())
         }
 
-        post("/approve/{identifier}") {
+        post(UserPaths.APPROVE) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {
@@ -189,7 +184,7 @@ fun Route.userRoute(
         }
 
         // Turns down a request or cancels an invite
-        delete("/reject/{identifier}") {
+        delete(UserPaths.REJECT) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {
@@ -200,14 +195,14 @@ fun Route.userRoute(
             call.respondAccount(accountService.reject(identifier, call.getIdentifierFromToken()))
         }
 
-        post("/invite") {
+        post(UserPaths.INVITE) {
             call.respondAccount(
                 accountService.invite(call.receive<InviteRequest>(), call.getIdentifierFromToken(), call.username(database)),
                 success = HttpStatusCode.Created
             )
         }
 
-        post("/invite/{identifier}/renew") {
+        post(UserPaths.INVITE_RENEW) {
             val identifier = call.uuidParameter("identifier")
 
             if (identifier == null) {
@@ -221,7 +216,7 @@ fun Route.userRoute(
 
     // Add a new user, the password comes in plain and gets hashed by the database
     authenticate("admin") {
-        post("/add") {
+        post(RecordPaths.ADD) {
             val user = call.receive<User>()
 
             when {
@@ -252,8 +247,15 @@ fun Route.userRoute(
                 }
 
                 else -> {
+                    val saved = database.getById(user.identifier)
+
+                    if (saved == null) {
+                        call.respond(HttpStatusCode.InternalServerError, "The user couldn't be saved")
+                        return@post
+                    }
+
                     call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, user.identifier, "Added ${user.username} as ${user.accessLevel}")
-                    call.respond(HttpStatusCode.Created, UserResponse(user.identifier, user.accessLevel))
+                    call.respond(HttpStatusCode.Created, saved.withoutPassword())
                 }
             }
         }
@@ -261,7 +263,7 @@ fun Route.userRoute(
 
     // Update everything but the password, which has its own route
     authenticate("admin") {
-        post("/update") {
+        post(RecordPaths.UPDATE) {
             val user = call.receive<User>()
             val existing = database.getById(user.identifier)
             val sameUsername = database.getByUsername(user.username)
@@ -326,7 +328,7 @@ fun Route.userRoute(
 
     // Reset a password, which also logs that user out everywhere
     authenticate("admin") {
-        post("/password/{identifier}") {
+        post(UserPaths.PASSWORD) {
             val identifier = call.uuidParameter("identifier")
             val request = call.receive<PasswordResetRequest>()
 
@@ -353,7 +355,7 @@ fun Route.userRoute(
 
     // Remove
     authenticate("admin") {
-        delete("/remove/{identifier}") {
+        delete(RecordPaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
             val existing = identifier?.let { database.getById(it) }
 

@@ -145,14 +145,14 @@ class CounterTest {
 
             assertEquals(HttpStatusCode.Created, post("/api/data/$type/add/note/$identifier", json.encodeToString(note)).status)
 
-            val notes = json.decodeFromString<List<Note>>(post("/api/data/$type/get/notes/$identifier", json.encodeToString(identifier)).bodyAsText())
+            val notes = json.decodeFromString<List<Note>>(get("/api/data/$type/get/notes/$identifier").bodyAsText())
             assertEquals(listOf(note.message), notes.map { it.message })
 
             // Blank authors get the writer's username
             assertEquals(tech.username, notes.single().author)
 
             client.delete("/api/data/$type/remove/note/${note.identifier}") { bearerAuth(token) }
-            val after = json.decodeFromString<List<Note>>(post("/api/data/$type/get/notes/$identifier", json.encodeToString(identifier)).bodyAsText())
+            val after = json.decodeFromString<List<Note>>(get("/api/data/$type/get/notes/$identifier").bodyAsText())
             assertTrue(after.isEmpty(), "$type note wasn't removed")
         }
     }
@@ -164,15 +164,21 @@ class CounterTest {
         setup()
         val ticket = addTicket()
         val viewerToken = login(viewer)
-        val page = json.encodeToString(PagedRequest(0, 10))
+        val page = "?offset=0&limit=10"
 
         listOf("ticket", "customer", "inventory").forEach { type ->
-            assertEquals(HttpStatusCode.OK, post("/api/data/$type/fetch", page, viewerToken).status, "$type fetch")
+            assertEquals(HttpStatusCode.OK, get("/api/data/$type/fetch$page", viewerToken).status, "$type fetch")
         }
-        assertEquals(HttpStatusCode.OK, post("/api/data/ticket/get", json.encodeToString(ticket.identifier), viewerToken).status)
+        assertEquals(HttpStatusCode.OK, get("/api/data/ticket/get/${ticket.identifier}", viewerToken).status)
         assertEquals(HttpStatusCode.OK, get("/api/data/ticket/get/history/${ticket.identifier}", viewerToken).status)
         assertEquals(HttpStatusCode.OK, get("/api/counter/queue", viewerToken).status)
-        assertEquals(HttpStatusCode.OK, post("/api/counter/search", json.encodeToString(SearchQuery("1", 10)), viewerToken).status)
+        assertEquals(HttpStatusCode.OK, get("/api/counter/search?query=1&limit=10", viewerToken).status)
+
+        // Users too, like every other record type, with nothing secret in them
+        val users = get("/api/user/fetch$page", viewerToken)
+        assertEquals(HttpStatusCode.OK, users.status)
+        assertTrue(json.decodeFromString<List<User>>(users.bodyAsText()).all { it.password.isEmpty() })
+        assertEquals(HttpStatusCode.OK, get("/api/user/search?query=v", viewerToken).status)
 
         assertEquals(HttpStatusCode.Forbidden, post("/api/data/ticket/add", json.encodeToString(Ticket()), viewerToken).status)
         assertEquals(HttpStatusCode.Forbidden, post("/api/data/ticket/update", json.encodeToString(ticket), viewerToken).status)
@@ -189,7 +195,7 @@ class CounterTest {
         addCustomer(Customer(name = "john:roe", phone = "555-999-0000"))
 
         suspend fun search(query: String) =
-            json.decodeFromString<List<SearchResult>>(post("/api/data/customer/search", json.encodeToString(SearchQuery(query, 10))).bodyAsText())
+            json.decodeFromString<List<SearchResult>>(client.get("/api/data/customer/search") { bearerAuth(token); parameter("query", query); parameter("limit", 10) }.bodyAsText())
                 .map { it.identifier }
 
         assertEquals(listOf(jane.identifier), search("jane doe"))
@@ -208,14 +214,14 @@ class CounterTest {
         link(first, jane)
         link(second, jane)
 
-        val result = json.decodeFromString<CounterSearchResponse>(post("/api/counter/search", json.encodeToString(SearchQuery("5551234567", 10))).bodyAsText())
+        val result = json.decodeFromString<CounterSearchResponse>(get("/api/counter/search?query=5551234567&limit=10").bodyAsText())
 
         assertEquals(listOf(jane.identifier), result.customers.map { it.identifier })
         assertEquals(setOf(first.identifier, second.identifier), result.tickets.map { it.ticket.identifier }.toSet())
         assertTrue(result.tickets.all { it.customer?.identifier == jane.identifier })
 
         // Ticket numbers work too
-        val byNumber = json.decodeFromString<CounterSearchResponse>(post("/api/counter/search", json.encodeToString(SearchQuery(second.number.toString(), 10))).bodyAsText())
+        val byNumber = json.decodeFromString<CounterSearchResponse>(get("/api/counter/search?query=${second.number}&limit=10").bodyAsText())
         assertEquals(second.identifier, byNumber.tickets.first().ticket.identifier)
     }
 

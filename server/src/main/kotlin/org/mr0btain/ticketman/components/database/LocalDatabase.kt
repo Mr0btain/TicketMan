@@ -1,6 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
-import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.Database as ExposedDatabase
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
@@ -51,7 +51,7 @@ class LocalDatabase (
     val imageStore = ImageStore(File("$appDir/images"))
 
     // Connect to the local database. Might not need this as a value
-    private val db = Database.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    private val db = ExposedDatabase.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
 
     //Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")
@@ -69,7 +69,13 @@ class LocalDatabase (
     val inviteDatabase = InviteDatabase()
     val stationDatabase = StationDatabase()
     val invoiceDatabase = InvoiceDatabase()
-    val imageDatabase = ImageDatabase()
+    val imageDatabase = ImageDatabase { recordDatabases }
+
+    /**
+     * Every record type's database. A new record type goes here, and the photo sweep and the detached note clean up
+     * pick up its notes from it
+     */
+    val recordDatabases: List<Database<*>> = listOf(customerDatabase, ticketDatabase, inventoryDatabase, userDatabase)
 
     // Every table, in an order where references come before the tables that use them
     private val tables = arrayOf(
@@ -148,12 +154,7 @@ class LocalDatabase (
     private fun removeDetachedNotes() {
         try {
             val removed = transaction {
-                val attached = buildSet {
-                    addAll(CustomerNoteTable.select(CustomerNoteTable.note).map { it[CustomerNoteTable.note].value })
-                    addAll(TicketNoteTable.select(TicketNoteTable.note).map { it[TicketNoteTable.note].value })
-                    addAll(InventoryNoteTable.select(InventoryNoteTable.note).map { it[InventoryNoteTable.note].value })
-                    addAll(UserNoteTable.select(UserNoteTable.note).map { it[UserNoteTable.note].value })
-                }
+                val attached = attachedNotes(recordDatabases)
                 val detached = NoteTable.select(NoteTable.id).map { it[NoteTable.id].value }.filter { it !in attached }
 
                 detached.chunked(500).forEach { ids -> NoteTable.deleteWhere { NoteTable.id inList ids } }

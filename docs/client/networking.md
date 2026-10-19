@@ -153,49 +153,57 @@ the device's owner back in.
 ## Repositories
 
 [`RemoteRepository<T: MainItem>`](../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/components/network/database/RemoteRepository.kt)
-has the calls every record type shares, matching the server's shared routes:
+has the calls every record type shares, on the server's [`RecordPaths` and `NotePaths`](../api/README.md):
 
 | Call | Route | Returns |
 |------|-------|---------|
-| `add(data)` | `POST add` | `EmptyResult<ServerError>` |
-| `update(data)` | `POST update` | `EmptyResult<ServerError>` |
-| `remove(id)` | `DELETE remove/{id}` | `EmptyResult<ServerError>` |
-| `get(id)` | `POST get` | `T?` |
-| `fetch(offset, limit)` | `POST fetch` | `List<T>`, empty on failure |
-| `search(query, limit)` | `POST search` | `List<SearchResult>` |
-| `getNotes(id)`, `addNote`, `updateNote`, `removeNote` | note routes | notes, `EmptyResult` |
+| `add(data)` | `POST /add` | `Result<T, ServerError>`, the record as saved |
+| `update(data)` | `POST /update` | `EmptyResult<ServerError>` |
+| `remove(id)` | `DELETE /remove/{id}` | `EmptyResult<ServerError>` |
+| `get(id)` | `GET /get/{id}` | `Result<T, ServerError>` |
+| `fetch(offset, limit)` | `GET /fetch` | `Result<List<T>, ServerError>` |
+| `search(query, limit)` | `GET /search` | `Result<List<SearchResult>, ServerError>` |
+| `getNotes(id)`, `addNote`, `updateNote`, `removeNote` | note routes | `Result` of notes, `EmptyResult` |
 | `fetchPage`, `getEntity`, `setEntity` (protected) | for subclasses | |
 
-A subclass passes its `route` (`"api/data/ticket"`) and `itemTypes<T>()`, which carries the `TypeInfo` for `T` and
+Reads return a `Result` so a screen can tell "nothing there" from "couldn't load": an empty list or a `NOT_FOUND`
+error (`ServerError.isNotFound`) means there's nothing, any other error that it couldn't be read. A linked record
+that may be missing, like a ticket's tech, goes through `orNullIfNotFound()`. Records screens forget a record that's
+gone and say so for one that couldn't be loaded; `OffsetPager.loadError` puts a notice over a list whose page
+failed. Searches in dropdowns fall back to nothing with `getOrDefault(emptyList())`.
+
+A subclass passes its `route` (`ApiRoutes.TICKET`) and `itemTypes<T>()`, which carries the `TypeInfo` for `T` and
 `List<T>`. That's needed because `T` is erased in the generic base, and kotlinx.serialization can't find a
 serializer for an erased type.
 
 The other repositories (`AdminRemoteRepository`, `CounterRemoteRepository`, `InvoiceRemoteRepository`,
-`ImageRemoteRepository`) don't extend the base; they follow the same shape by hand.
+`ImageRemoteRepository`) don't extend the base; they follow the same shape by hand. Every repository implements
+`ServerRepository` and is in `RemoteHandler.repositories`, which `setUrl()` points at the server.
 
 ### Writing a call
 
 ```kotlin
-suspend fun getByNumber(number: TicketNumber): Ticket? {
-    if (serverUrl.isBlank()) return null
+suspend fun getTickets(identifier: Uuid): Result<List<Ticket>, ServerError> {
+    if (serverUrl.isBlank()) return noServer()
 
-    val response = networkErrorTryCatch(GET_BY_NUMBER_TAG) {
-        client.get { url("$serverUrl/number/$number") }
-    } ?: return null
+    val response = networkRequest(GET_TICKETS_TAG) {
+        client.get { url("$serverUrl${CustomerPaths.GET_TICKETS.fill(identifier)}") }
+    }
 
-    handleHttpResponse<Ticket>(GET_BY_NUMBER_TAG, response).onSuccess { return it }
-    return null
+    return handleDataHttpResponse(GET_TICKETS_TAG, response)
 }
 ```
 
+- Build the URL from the shared path constant, filling in its `{parameters}` with `fill()`.
 - Return early when `serverUrl` is blank.
 - Wrap the call in `networkRequest(TAG)` when the failure reaches the user, so a timeout or a bad response says so
   instead of "Couldn't reach the server". `networkErrorTryCatch(TAG)` gives back the value or `null`, for reads that
   only need to know whether it worked.
 - Turn the response into a result: `handleActionHttpResponse` for success or failure, `handleDataHttpResponse<T>`
   for a body, `handleHttpResponse<T>` for a body with a `NetworkError`.
-- Calls that change something return `Result`/`EmptyResult` with a `ServerError`, so the handler can show the
-  server's reason. Reads usually return `T?` or a list.
+- Return `Result`/`EmptyResult` with a `ServerError`, so the handler can show the server's reason, and for reads
+  tell a failure from nothing there. A few older reads (ticket history, signature, invoice for a ticket) still
+  return `T?`.
 
 See [Request lifecycle](../architecture/request-lifecycle.md) for what each helper does with errors.
 
@@ -203,14 +211,17 @@ See [Request lifecycle](../architecture/request-lifecycle.md) for what each help
 
 Repositories and handlers are tested in `composeApp/src/commonTest` with Ktor's `MockEngine`: build a
 `RemoteHandler` on a `MockEngine` that answers the routes under test, and an `InMemoryKeyValueStore` for
-`LocalStorage`. The mock has to answer `SERVER_PING_PATH` with `SERVER_PING_BODY`, or connecting fails.
+`LocalStorage`. The mock has to answer `SERVER_PING_PATH` with `SERVER_PING_BODY`, or connecting fails. Reads are
+`GET`s with the id in the path (`/api/data/customer/get/<id>`), so match on the whole path.
 `PinnedHttpsTest` (desktopTest) runs a real HTTPS server with a self-made certificate against the OkHttp engine.
 
 ## Gotchas
 
-- **Route strings aren't checked against the server.** Rename a route on one side and the other still compiles.
-- **Repositories keep their own copy of the server URL.** `setUrl` sets each one by name, so a new repository must be
-  added to that list as well as constructed in `RemoteHandler`.
+- **A new repository goes in `RemoteHandler.repositories`** as well as being constructed, or it never gets the
+  server's address and every call returns "No server set".
+- **A failed read isn't an empty one.** Don't turn a read's error into an empty list where the user could then save
+  over it: a record whose notes failed to load would save as having none, and `syncNotes` would delete them. The
+  records handlers refuse to open a record whose notes didn't load for that reason.
 - **Trust is per `host:port`.** The same server reached by its IP address and by its name is asked about twice.
 - **A login with credentials not remembered can't be refreshed by password.** Once the refresh token is refused the
   user has to log in again. That includes a refresh whose answer was lost: the server had already swapped the

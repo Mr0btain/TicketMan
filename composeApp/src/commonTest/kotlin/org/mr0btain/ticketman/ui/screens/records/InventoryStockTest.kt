@@ -37,7 +37,8 @@ class InventoryStockTest {
         when {
             path == SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             path == "/" -> respond("", HttpStatusCode.OK)
-            path.endsWith("/get") -> respond(Json.encodeToString(item), HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+            path == "/api/data/inventory/get/${item.identifier}" || path.endsWith("/add") ->
+                respond(Json.encodeToString(item), HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
             path.contains("/get/") || path.endsWith("/fetch") -> respond("[]", HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
             else -> respond("", HttpStatusCode.Accepted)
         }

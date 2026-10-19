@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.data.MainItem
@@ -49,9 +50,11 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
     /**
      * The note column of the table linking this kind of item to its notes. Note routes take a note's identifier
-     * alone, so changing a note checks it's on this kind of item first, or a customer route could edit a staff note
+     * alone, so changing a note checks it's on this kind of item first, or a customer route could edit a staff note.
+     * The photo sweep and the detached note clean up also read it, through [LocalDatabase.recordDatabases], to know
+     * which notes still belong to something
      */
-    protected abstract val noteLinkColumn: Column<EntityID<Uuid>>
+    abstract val noteLinkColumn: Column<EntityID<Uuid>>
 
     // A note this database's items own, null if there's none or it's on another kind of item. Inside a transaction
     private fun findOwnNote(identifier: Uuid): NoteEntity? =
@@ -204,3 +207,12 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      */
     abstract fun search(query: String, limit: Int = 20): List<SearchResult>?
 }
+/**
+ * Ids of every note linked to a record of one of [databases]' types. Must run inside a transaction
+ */
+@OptIn(ExperimentalUuidApi::class)
+fun attachedNotes(databases: List<Database<*>>): Set<Uuid> =
+    databases.flatMapTo(mutableSetOf()) { database ->
+        val column = database.noteLinkColumn
+        column.table.select(column).map { it[column].value }
+    }

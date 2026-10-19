@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin.components
 
+import org.mr0btain.ticketman.error.asEmptyDataResult
+import org.mr0btain.ticketman.error.valueOr
 import androidx.compose.material3.SnackbarHostState
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.name
@@ -215,7 +217,10 @@ class AdminHandler(
 
     private suspend fun loadAudit(reset: Boolean) {
         val offset = if (reset) 0L else _auditEntries.value.size.toLong()
-        val page = admin.fetchAudit(offset, AUDIT_PAGE_SIZE)
+        val page = admin.fetchAudit(offset, AUDIT_PAGE_SIZE).valueOr { error ->
+            notify("Couldn't load the audit log: ${error.message}")
+            return
+        }
 
         _auditEntries.value = if (reset) page else _auditEntries.value + page
         _auditEndReached.value = page.size < AUDIT_PAGE_SIZE
@@ -230,7 +235,7 @@ class AdminHandler(
      */
     fun saveUser(user: User, isNew: Boolean, password: String, onSuccess: () -> Unit) {
         scope.launch {
-            val result = if (isNew) users.add(user.copy(password = password)) else users.update(user.withoutPassword())
+            val result = if (isNew) users.add(user.copy(password = password)).asEmptyDataResult() else users.update(user.withoutPassword())
 
             report(result, if (isNew) "Added ${user.username}" else "Saved ${user.username}") {
                 onSuccess()

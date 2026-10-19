@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.pagination.offset
 
+import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.error.Result
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 
@@ -7,13 +9,32 @@ class OffsetPagerTest {
     private var total = 0
     private val fetched = mutableListOf<Int>()
 
+    private var failing = false
+
     // Items are just their position, so a page of a list of [total] items is easy to check
-    private val pager = OffsetPager(
+    private val pager = OffsetPager<Int>(
         tag = "TestPager",
         config = OffsetPagerConfig(pageSize = 2, initialLoadSize = 3)
     ) { page, pageSize ->
         fetched += page
-        (page * pageSize..<minOf(total, (page + 1) * pageSize)).toList()
+        if (failing) Result.Error(NetworkError.SERVER_ERROR)
+        else Result.Success((page * pageSize..<minOf(total, (page + 1) * pageSize)).toList())
+    }
+
+    @Test
+    fun aFailedPageIsReportedNotTakenAsTheEnd() = runTest {
+        total = 10
+        failing = true
+        pager.refresh()
+
+        assertTrue(pager.items.value.isEmpty())
+        assertEquals(NetworkError.SERVER_ERROR.message, pager.loadError.value)
+
+        // Scrolling on tries again, and a page that loads clears the error
+        failing = false
+        pager.loadNext()
+        assertNull(pager.loadError.value)
+        assertTrue(pager.items.value.isNotEmpty())
     }
 
     @Test
@@ -44,10 +65,10 @@ class OffsetPagerTest {
     @Test
     fun refreshCurrentDataReloadsFromTheFirstLoadedPage() = runTest {
         total = 100
-        val small = OffsetPager(
+        val small = OffsetPager<Int>(
             tag = "TestPager",
             config = OffsetPagerConfig(pageSize = 2, initialLoadSize = 2, maxSize = 4)
-        ) { page, pageSize -> (page * pageSize..<(page + 1) * pageSize).toList() }
+        ) { page, pageSize -> Result.Success((page * pageSize..<(page + 1) * pageSize).toList()) }
 
         // Load far enough that the first pages get trimmed off
         small.refresh()
