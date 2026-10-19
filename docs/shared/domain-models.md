@@ -135,9 +135,9 @@ There's one invoice per ticket. Totals are worked out by `InvoiceMath`, see [Mon
 
 ## Gotchas
 
-- **`Invoice`, `Charge` and `Payment` default to `Uuid.random()`**, not v7. The server gives the invoices it makes a
-  v7 id, but charges keep the id the client sent and payments get a random one, so don't read times from their ids. Use
-  `Invoice.createdAt` and `Payment.receivedAt`.
+- **Older invoice ids aren't time based.** `Invoice`, `Charge` and `Payment` default to `Uuid.generateV7()` like
+  everything else, but rows saved before that have random ids, and a charge keeps whatever id the client sent. Read
+  times from `Invoice.createdAt` and `Payment.receivedAt`, not from their ids.
 - **`Address.fromString` and `Device.fromString` split on spaces**, so a two word street or model name is cut up.
   Nothing in the app calls them now; don't start.
 - **`Customer.cleanName()` and `User.cleanName()`** treat `:` as a name separator, left over from an older way of

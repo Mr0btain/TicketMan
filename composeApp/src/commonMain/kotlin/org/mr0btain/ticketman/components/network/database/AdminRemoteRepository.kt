@@ -29,6 +29,7 @@ import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.DailyReport
+import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
 import org.mr0btain.ticketman.server.response.StationRegistrationResponse
@@ -49,6 +50,7 @@ class AdminRemoteRepository(
     private val SERVER_INFO_TAG = "$TAG:ServerInfo"
     private val BACKUP_TAG = "$TAG:Backup"
     private val RESTORE_TAG = "$TAG:Restore"
+    private val CERTIFICATE_TAG = "$TAG:Certificate"
     private val SEED_TAG = "$TAG:Seed"
     private val AUDIT_TAG = "$TAG:Audit"
     private val GET_SHOP_TAG = "$TAG:GetShop"
@@ -225,6 +227,28 @@ class AdminRemoteRepository(
         }
 
         return handleActionHttpResponse(RESTORE_TAG, response)
+    }
+
+    /** Has the server make a new HTTPS certificate, used from its next start */
+    suspend fun renewCertificate(): Result<ServerCertificateInfo, ServerError> {
+        if (baseUrl.isBlank()) return Result.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkRequest(CERTIFICATE_TAG) {
+            client.post { url("$adminUrl/certificate/renew") }
+        }
+
+        return handleDataHttpResponse(CERTIFICATE_TAG, response)
+    }
+
+    /** Drops the new certificate waiting for the server's next start */
+    suspend fun cancelCertificateRenewal(): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkRequest(CERTIFICATE_TAG) {
+            client.delete { url("$adminUrl/certificate/renew") }
+        }
+
+        return handleActionHttpResponse(CERTIFICATE_TAG, response)
     }
 
     /** Full url a prepared backup downloads from */

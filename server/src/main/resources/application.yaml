@@ -38,6 +38,20 @@ env:
     # true behind a reverse proxy, so client addresses come from X-Forwarded-For. Leave off otherwise, anyone
     # could send that header
     trustProxy: "$TRUST_PROXY:false"
+
+# A backup made once a day into a folder, like a USB drive or a synced folder. Blank turns it off
+backup:
+    folder: "$BACKUP_DIR:"
+    # How many to keep, the oldest are deleted
+    keep: "$BACKUP_KEEP:7"
+    # false for database only backups, much smaller
+    photos: "$BACKUP_PHOTOS:true"
+
+# What the hourly sweep removes. 0 keeps them forever
+housekeeping:
+    auditLogDays: "$AUDIT_LOG_DAYS:730"
+    # pre-restore-<time> folders and restore/failed-<time>.zip files
+    restoreLeftoverDays: "$RESTORE_KEEP_DAYS:30"
 # postgres:
 #  url: "jdbc:postgresql://localhost/default"
 #  user: username

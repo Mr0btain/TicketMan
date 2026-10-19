@@ -6,7 +6,6 @@ import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.station.StationTable
 import org.mr0btain.ticketman.components.service.PasswordHasher
@@ -14,7 +13,6 @@ import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.data.station.StationStatus
-import org.mr0btain.ticketman.error.appLogTryCatch
 import java.security.SecureRandom
 import java.util.Base64
 import kotlin.time.Clock
@@ -44,89 +42,64 @@ class StationDatabase {
         val secret = ByteArray(32).also { random.nextBytes(it) }.let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
         val identifier = Uuid.generateV7()
 
-        return appLogTryCatch<Pair<Station, StationCredentials>>(REGISTER_TAG) {
-            transaction {
-                StationTable.deleteWhere { StationTable.deviceId eq deviceId }
-                StationTable.insert { row ->
-                    row[StationTable.id] = identifier
-                    row[StationTable.deviceId] = deviceId
-                    row[StationTable.name] = name
-                    row[StationTable.status] = StationStatus.PENDING.name
-                    row[StationTable.secretHash] = PasswordHasher.hash(secret)
-                    row[StationTable.requestedBy] = requestedBy
-                    row[StationTable.requestedAt] = Clock.System.now().toEpochMilliseconds()
-                }
-
-                val station = StationTable.selectAll().where { StationTable.id eq identifier }.single().toStation()
-                Pair(Pair(station, StationCredentials(identifier, secret)), true)
+        return dbQuery(REGISTER_TAG) {
+            StationTable.deleteWhere { StationTable.deviceId eq deviceId }
+            StationTable.insert { row ->
+                row[StationTable.id] = identifier
+                row[StationTable.deviceId] = deviceId
+                row[StationTable.name] = name
+                row[StationTable.status] = StationStatus.PENDING.name
+                row[StationTable.secretHash] = PasswordHasher.hash(secret)
+                row[StationTable.requestedBy] = requestedBy
+                row[StationTable.requestedAt] = Clock.System.now().toEpochMilliseconds()
             }
+
+            val station = StationTable.selectAll().where { StationTable.id eq identifier }.single().toStation()
+            Pair(station, StationCredentials(identifier, secret))
         }
     }
 
     fun getById(identifier: Uuid): Station? =
-        appLogTryCatch<Station?>(GET_TAG) {
-            transaction {
-                val station = StationTable.selectAll().where { StationTable.id eq identifier }.firstOrNull()?.toStation()
-                Pair(station, station != null)
-            }
+        dbQuery(GET_TAG) {
+            StationTable.selectAll().where { StationTable.id eq identifier }.firstOrNull()?.toStation()
         }
 
     /** Every station, newest first */
     fun getAll(): List<Station> =
-        appLogTryCatch<List<Station>>(GET_TAG) {
-            transaction {
-                Pair(
-                    StationTable.selectAll().orderBy(StationTable.requestedAt to SortOrder.DESC).map { it.toStation() },
-                    true
-                )
-            }
+        dbQuery(GET_TAG) {
+            StationTable.selectAll().orderBy(StationTable.requestedAt to SortOrder.DESC).map { it.toStation() }
         }.orEmpty()
 
     /**
      * The station these credentials belong to if the secret is right, whatever its status
      */
     fun verify(credentials: StationCredentials): Station? =
-        appLogTryCatch<Station?>(GET_TAG) {
-            transaction {
-                val row = StationTable.selectAll().where { StationTable.id eq credentials.stationId }.firstOrNull()
-                val station = row?.takeIf { PasswordHasher.verify(credentials.secret, it[StationTable.secretHash]) }?.toStation()
-
-                Pair(station, station != null)
-            }
+        dbQuery(GET_TAG) {
+            val row = StationTable.selectAll().where { StationTable.id eq credentials.stationId }.firstOrNull()
+            row?.takeIf { PasswordHasher.verify(credentials.secret, it[StationTable.secretHash]) }?.toStation()
         }
 
     fun approve(identifier: Uuid, approvedBy: String): Boolean =
-        appLogTryCatch<Boolean>(APPROVE_TAG) {
-            transaction {
-                val updated = StationTable.update(where = { StationTable.id eq identifier }) { row ->
-                    row[status] = StationStatus.APPROVED.name
-                    row[StationTable.approvedBy] = approvedBy
-                    row[approvedAt] = Clock.System.now().toEpochMilliseconds()
-                } > 0
-
-                Pair(updated, updated)
-            }
-        } ?: false
+        dbWrite(APPROVE_TAG) {
+            StationTable.update(where = { StationTable.id eq identifier }) { row ->
+                row[status] = StationStatus.APPROVED.name
+                row[StationTable.approvedBy] = approvedBy
+                row[approvedAt] = Clock.System.now().toEpochMilliseconds()
+            } > 0
+        }
 
     fun setKiosk(identifier: Uuid, settings: KioskSettings): Boolean =
-        appLogTryCatch<Boolean>(KIOSK_TAG) {
-            transaction {
-                val updated = StationTable.update(where = { StationTable.id eq identifier }) { row ->
-                    row[kioskEnabled] = settings.enabled
-                    row[idleTimeoutSeconds] = settings.idleTimeoutSeconds
-                } > 0
-
-                Pair(updated, updated)
-            }
-        } ?: false
+        dbWrite(KIOSK_TAG) {
+            StationTable.update(where = { StationTable.id eq identifier }) { row ->
+                row[kioskEnabled] = settings.enabled
+                row[idleTimeoutSeconds] = settings.idleTimeoutSeconds
+            } > 0
+        }
 
     fun remove(identifier: Uuid): Boolean =
-        appLogTryCatch<Boolean>(REMOVE_TAG) {
-            transaction {
-                val removed = StationTable.deleteWhere { StationTable.id eq identifier } > 0
-                Pair(removed, removed)
-            }
-        } ?: false
+        dbWrite(REMOVE_TAG) {
+            StationTable.deleteWhere { StationTable.id eq identifier } > 0
+        }
 
     private fun ResultRow.toStation(): Station =
         Station(

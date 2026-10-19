@@ -65,7 +65,7 @@ class CheckInService(
                 // Under the lock, so the same ticket sent twice at once is only made once
                 if (tickets.getById(ticket.identifier) != null) return@whileNumbering false
 
-                saveCheckIn(request, takenBy, shopProfile)
+                saveCheckIn(request, takenBy, actor, shopProfile)
                 true
             }
         }
@@ -75,16 +75,11 @@ class CheckInService(
         val saved = tickets.getById(ticket.identifier) ?: return AccountResult.Invalid("Couldn't save the ticket")
         val invoice = invoices.getByTicket(ticket.identifier)
 
-        auditLog.log(
-            actor, AuditAction.CREATE, "ticket", saved.identifier.toString(),
-            "Checked in ${saved.label}" + (request.deposit?.let { " with a ${Money.format(it.amountCents)} deposit" } ?: "")
-        )
-
         return AccountResult.Done(CheckInResponse(saved, invoice))
     }
 
     // Everything checked in goes in together or not at all
-    private fun saveCheckIn(request: CheckInRequest, takenBy: String, shopProfile: ShopProfile) {
+    private fun saveCheckIn(request: CheckInRequest, takenBy: String, actor: Uuid?, shopProfile: ShopProfile) {
         val ticket = request.ticket
         val now = Clock.System.now().toEpochMilliseconds()
 
@@ -118,6 +113,13 @@ class CheckInService(
                     )
                 )
             }
+
+            // Inside the transaction so the entry is only there if the check in is. The number was just assigned
+            val label = tickets.getById(ticket.identifier)?.label ?: ticket.label
+            auditLog.log(
+                actor, AuditAction.CREATE, "ticket", ticket.identifier.toString(),
+                "Checked in $label" + (request.deposit?.let { " with a ${Money.format(it.amountCents)} deposit" } ?: "")
+            )
         }
     }
 }

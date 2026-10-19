@@ -56,7 +56,7 @@ replaces its session instead of piling up. Ending a session cuts it off on the d
 its token would have run out.
 
 **Costs:** every authenticated request looks the session up. A device that logs in without a device id (old
-clients, scripts) adds a new session every time.
+clients, scripts) adds a new session every time; only the newest 10 of those are kept per user.
 
 ### Refresh tokens last a year and are swapped on each use
 
@@ -84,8 +84,10 @@ certificate for that address.
 **Why:** most shops have no domain name for a box in the back room, so a public certificate isn't an option, and
 plain HTTP sends passwords readable on the network. Pinning gives encryption with one check by a person.
 
-**Costs:** replacing the certificate makes every device ask again, a restored server on a new machine makes a new
-one (the `tls/` folder isn't in backups), and web users get the browser's own warning instead of the app's.
+**Costs:** replacing the certificate makes every device ask again, and web users get the browser's own warning
+instead of the app's. So the certificate is put in backups (a server restored on a new machine keeps it), which
+makes a backup something that can impersonate the server. A new one can be made from the admin screen ahead of time
+but only takes over on a restart.
 
 ### Money in cents, totals from one place
 
@@ -96,6 +98,20 @@ which the server uses to store them and the client uses to preview them.
 
 **Costs:** inventory prices were text once, and moved to cents with a data fix (`migrateLegacyPrices`); any new
 money field has to follow the pattern.
+
+### Invoices keep the tax rate they were made with
+
+**Chosen:** an invoice stores the shop's tax rate when it's made (at check-in with a deposit, or the first time
+it's opened) and keeps it. Saving its lines later uses the stored rate, not the shop's current one.
+
+**Why:** the customer was quoted with the rate at the time, and an invoice that changes under someone because the
+profile was edited is hard to explain at the counter.
+
+**Costs:** if the shop's rate was wrong, or blank, open invoices made before it was fixed keep the wrong rate.
+There's no way yet to put the shop's current rate on an existing invoice.
+
+**Revisit if:** shops need a rate per line or per customer (tax exempt customers), which would make the rate a
+choice on the invoice anyway.
 
 ### Pickup is the only way to close a ticket
 
@@ -118,6 +134,17 @@ both picking up the same ticket.
 
 **Costs:** it only works with one server process, which H2 already requires. An outer transaction that adds a
 ticket or invoice has to hold the locks until it commits.
+
+### Audit entries join the change's transaction
+
+**Chosen:** `AuditLogDatabase.log` writes through `dbWrite`, so called inside a `transaction { }` it's part of
+that transaction. Check-in, pickup and voiding log as the last step inside theirs.
+
+**Why:** an entry for a change that was rolled back is a lie in the one place people go to find out what happened,
+and an entry logged after the commit can be lost if the server stops in between.
+
+**Costs:** inside a transaction, an entry that can't be written undoes the change it describes. Outside one (most
+routes), a failed entry is only logged to the console and the change stays.
 
 ### In-memory rate limits
 

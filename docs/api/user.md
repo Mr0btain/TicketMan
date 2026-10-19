@@ -50,7 +50,7 @@ Changes your own PIN. Needs your password, so someone at an unlocked screen can'
 
 A page of users.
 
-- **Body:** `PagedRequest`. **`200`** a list of `User`. **`404`** if the database read failed.
+- **Body:** `PagedRequest`. **`200`** a list of `User`. **`500`** if the database read failed.
 
 ### `POST /api/user/search`
 

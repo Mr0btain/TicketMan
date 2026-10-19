@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.database
 
 import com.auth0.jwt.JWT
 import org.jetbrains.exposed.v1.core.ResultRow
+import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
@@ -9,8 +10,6 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.*
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.server.response.SessionKind
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
@@ -39,51 +38,56 @@ class TokenDatabase() {
     fun findBySessionId(sessionId: String): StoredSession? {
         if (sessionId.isBlank()) return null
 
-        return appLogTryCatch<StoredSession?>(FIND_BY_SESSION_TAG) {
-            transaction {
-                val found = TokenTable.selectAll().where { TokenTable.sessionId eq sessionId }.firstOrNull()?.toSession()
-                Pair(found, found != null)
-            }
+        return dbQuery(FIND_BY_SESSION_TAG) {
+            TokenTable.selectAll().where { TokenTable.sessionId eq sessionId }.firstOrNull()?.toSession()
         }
     }
 
     fun findByToken(refreshToken: String): StoredSession? {
-        return appLogTryCatch<StoredSession?>(FIND_BY_TOKEN_TAG) {
-            transaction {
-                val found = TokenTable.selectAll().where { TokenTable.token eq refreshToken }.firstOrNull()?.toSession()
-                Pair(found, found != null)
-            }
+        return dbQuery(FIND_BY_TOKEN_TAG) {
+            TokenTable.selectAll().where { TokenTable.token eq refreshToken }.firstOrNull()?.toSession()
         }
     }
 
     /**
-     * Saves a new session. A device that logs in again replaces its old session for that user
+     * Saves a new session. A device that logs in again replaces its old session for that user. Logins with no
+     * device id (scripts, old clients) can't be told apart, so only the newest [MAX_UNNAMED_SESSIONS] of those
+     * are kept per user
      */
     fun add(session: StoredSession): Boolean {
-        return appLogTryCatch<Boolean>(ADD_TAG) {
-            transaction {
-                if (session.deviceId.isNotBlank()) {
-                    TokenTable.deleteWhere {
-                        (TokenTable.identifier eq session.userIdentifier) and (TokenTable.deviceId eq session.deviceId)
-                    }
+        return dbWrite(ADD_TAG) {
+            if (session.deviceId.isNotBlank()) {
+                TokenTable.deleteWhere {
+                    (TokenTable.identifier eq session.userIdentifier) and (TokenTable.deviceId eq session.deviceId)
                 }
-
-                TokenTable.insert { row ->
-                    row[identifier] = session.userIdentifier
-                    row[token] = session.token
-                    row[sessionId] = session.sessionId
-                    row[deviceId] = session.deviceId
-                    row[deviceName] = session.deviceName
-                    row[kind] = session.kind.name
-                    row[createdAt] = session.createdAt
-                    row[lastUsedAt] = session.lastUsedAt
-                    row[expiresAt] = session.expiresAt
-                    row[idleTimeoutSeconds] = session.idleTimeoutSeconds
-                }
-
-                Pair(true, true)
             }
-        } ?: false
+
+            TokenTable.insert { row ->
+                row[identifier] = session.userIdentifier
+                row[token] = session.token
+                row[sessionId] = session.sessionId
+                row[deviceId] = session.deviceId
+                row[deviceName] = session.deviceName
+                row[kind] = session.kind.name
+                row[createdAt] = session.createdAt
+                row[lastUsedAt] = session.lastUsedAt
+                row[expiresAt] = session.expiresAt
+                row[idleTimeoutSeconds] = session.idleTimeoutSeconds
+            }
+
+            if (session.deviceId.isBlank()) {
+                val unnamed = (TokenTable.identifier eq session.userIdentifier) and (TokenTable.deviceId eq "")
+                val oldest = TokenTable.select(TokenTable.sessionId)
+                    .where { unnamed }
+                    .orderBy(TokenTable.createdAt to SortOrder.DESC, TokenTable.id to SortOrder.DESC)
+                    .offset(MAX_UNNAMED_SESSIONS.toLong())
+                    .map { it[TokenTable.sessionId] }
+
+                if (oldest.isNotEmpty()) TokenTable.deleteWhere { TokenTable.sessionId inList oldest }
+            }
+
+            true
+        }
     }
 
     /**
@@ -92,28 +96,24 @@ class TokenDatabase() {
      * @return Whether it was swapped
      */
     fun rotate(sessionId: String, oldToken: String, newToken: String): Boolean {
-        return appLogTryCatch<Boolean>(ROTATE_TAG) {
-            transaction {
-                val swapped = TokenTable.update(where = { (TokenTable.sessionId eq sessionId) and (TokenTable.token eq oldToken) }) { row ->
-                    row[token] = newToken
-                    row[lastUsedAt] = Clock.System.now().toEpochMilliseconds()
-                } > 0
+        return dbQuery(ROTATE_TAG) {
+            val swapped = TokenTable.update(where = { (TokenTable.sessionId eq sessionId) and (TokenTable.token eq oldToken) }) { row ->
+                row[token] = newToken
+                row[lastUsedAt] = Clock.System.now().toEpochMilliseconds()
+            } > 0
 
-                Pair(swapped, true)
-            }
+            swapped
         } ?: false
     }
 
     /** Takes a session's idle limit off, for when an admin leaves kiosk mode and keeps using the device */
     fun clearIdleLimit(sessionId: String): Boolean {
-        return appLogTryCatch<Boolean>(IDLE_TAG) {
-            transaction {
-                val changed = TokenTable.update(where = { TokenTable.sessionId eq sessionId }) { row ->
-                    row[idleTimeoutSeconds] = 0
-                } > 0
+        return dbQuery(IDLE_TAG) {
+            val changed = TokenTable.update(where = { TokenTable.sessionId eq sessionId }) { row ->
+                row[idleTimeoutSeconds] = 0
+            } > 0
 
-                Pair(changed, changed)
-            }
+            changed
         } ?: false
     }
 
@@ -122,36 +122,32 @@ class TokenDatabase() {
      * @return How many were removed
      */
     fun removeExpired(now: Long = Clock.System.now().toEpochMilliseconds()): Int {
-        return appLogTryCatch<Int>(EXPIRED_TAG) {
-            transaction {
-                var removed = TokenTable.deleteWhere { (TokenTable.expiresAt greater 0L) and (TokenTable.expiresAt less now) }
+        return dbQuery(EXPIRED_TAG) {
+            var removed = TokenTable.deleteWhere { (TokenTable.expiresAt greater 0L) and (TokenTable.expiresAt less now) }
 
-                val idle = TokenTable.selectAll().where { TokenTable.idleTimeoutSeconds greater 0 }
-                    .map { it.toSession() }
-                    .filter { !it.isLive(now) }
-                    .map { it.sessionId }
-                if (idle.isNotEmpty()) removed += TokenTable.deleteWhere { TokenTable.sessionId inList idle }
+            val idle = TokenTable.selectAll().where { TokenTable.idleTimeoutSeconds greater 0 }
+                .map { it.toSession() }
+                .filter { !it.isLive(now) }
+                .map { it.sessionId }
+            if (idle.isNotEmpty()) removed += TokenTable.deleteWhere { TokenTable.sessionId inList idle }
 
-                Pair(removed, true)
-            }
+            removed
         } ?: 0
     }
 
     /** Fills in [TokenTable.expiresAt] for sessions saved before it was kept, from their refresh token */
     fun backfillExpiry() {
-        appLogTryCatch(BACKFILL_TAG) {
-            transaction {
-                TokenTable.selectAll().where { TokenTable.expiresAt eq 0L }.forEach { row ->
-                    val fromToken = try {
-                        JWT.decode(row[TokenTable.token]).expiresAt?.time
-                    } catch (ex: Exception) {
-                        null
-                    }
-
-                    // A token that can't be read can't be refreshed either, so it may as well go now
-                    val expiry = fromToken ?: (row[TokenTable.createdAt] + LEGACY_LIFETIME.inWholeMilliseconds)
-                    TokenTable.update(where = { TokenTable.id eq row[TokenTable.id] }) { it[expiresAt] = expiry }
+        dbWrite(BACKFILL_TAG) {
+            TokenTable.selectAll().where { TokenTable.expiresAt eq 0L }.forEach { row ->
+                val fromToken = try {
+                    JWT.decode(row[TokenTable.token]).expiresAt?.time
+                } catch (ex: Exception) {
+                    null
                 }
+
+                // A token that can't be read can't be refreshed either, so it may as well go now
+                val expiry = fromToken ?: (row[TokenTable.createdAt] + LEGACY_LIFETIME.inWholeMilliseconds)
+                TokenTable.update(where = { TokenTable.id eq row[TokenTable.id] }) { it[expiresAt] = expiry }
             }
 
             true
@@ -168,22 +164,17 @@ class TokenDatabase() {
 
     /** Marks a session as just used */
     fun touch(sessionId: String) {
-        appLogTryCatch(TOUCH_TAG) {
-            transaction {
-                TokenTable.update(where = { TokenTable.sessionId eq sessionId }) { row ->
-                    row[lastUsedAt] = Clock.System.now().toEpochMilliseconds()
-                } > 0
-            }
+        dbWrite(TOUCH_TAG) {
+            TokenTable.update(where = { TokenTable.sessionId eq sessionId }) { row ->
+                row[lastUsedAt] = Clock.System.now().toEpochMilliseconds()
+            } > 0
         }
     }
 
     /** Ends one session, false if it didn't exist */
     fun remove(sessionId: String): Boolean {
-        return appLogTryCatch<Boolean>(REMOVE_TAG) {
-            transaction {
-                val removed = TokenTable.deleteWhere { TokenTable.sessionId eq sessionId } > 0
-                Pair(removed, removed)
-            }
+        return dbQuery(REMOVE_TAG) {
+            TokenTable.deleteWhere { TokenTable.sessionId eq sessionId } > 0
         } ?: false
     }
 
@@ -192,12 +183,10 @@ class TokenDatabase() {
      * @param keepSessionId A session to leave alone, like the one making the request
      */
     fun removeAllForUser(userIdentifier: String, keepSessionId: String? = null) {
-        appLogTryCatch(REMOVE_FOR_USER_TAG) {
-            transaction {
-                TokenTable.deleteWhere {
-                    val forUser = TokenTable.identifier eq userIdentifier
-                    if (keepSessionId != null) forUser and (TokenTable.sessionId neq keepSessionId) else forUser
-                }
+        dbWrite(REMOVE_FOR_USER_TAG) {
+            TokenTable.deleteWhere {
+                val forUser = TokenTable.identifier eq userIdentifier
+                if (keepSessionId != null) forUser and (TokenTable.sessionId neq keepSessionId) else forUser
             }
 
             true
@@ -208,11 +197,9 @@ class TokenDatabase() {
     fun removePinSessionsForDevice(deviceId: String) {
         if (deviceId.isBlank()) return
 
-        appLogTryCatch(REMOVE_FOR_USER_TAG) {
-            transaction {
-                TokenTable.deleteWhere {
-                    (TokenTable.deviceId eq deviceId) and (TokenTable.kind eq SessionKind.PIN.name)
-                }
+        dbWrite(REMOVE_FOR_USER_TAG) {
+            TokenTable.deleteWhere {
+                (TokenTable.deviceId eq deviceId) and (TokenTable.kind eq SessionKind.PIN.name)
             }
 
             true
@@ -220,28 +207,21 @@ class TokenDatabase() {
     }
 
     fun getAll(): List<StoredSession> {
-        return appLogTryCatch<List<StoredSession>>(GET_ALL_TAG) {
-            transaction {
-                Pair(TokenTable.selectAll().map { it.toSession() }, true)
-            }
+        return dbQuery(GET_ALL_TAG) {
+            TokenTable.selectAll().map { it.toSession() }
         }.orEmpty()
     }
 
     fun count(): Long {
-        return appLogTryCatch<Long>(COUNT_TAG) {
-            transaction {
-                Pair(TokenTable.selectAll().count(), true)
-            }
+        return dbQuery(COUNT_TAG) {
+            TokenTable.selectAll().count()
         } ?: 0
     }
 
     /** Drops sessions from before sessions had ids, those users just log in again */
     fun clearLegacySessions() {
-        appLogTryCatch(CLEAR_LEGACY_TAG) {
-            transaction {
-                TokenTable.deleteWhere { TokenTable.sessionId eq "" }
-            }
-
+        dbWrite(CLEAR_LEGACY_TAG) {
+            TokenTable.deleteWhere { TokenTable.sessionId eq "" }
             true
         }
     }
@@ -261,6 +241,9 @@ class TokenDatabase() {
         )
 
     companion object {
+        /** Sessions kept per user for logins that sent no device id */
+        const val MAX_UNNAMED_SESSIONS = 10
+
         private val TOUCH_INTERVAL = 30.seconds
         // What refresh tokens lasted before the expiry was kept
         private val LEGACY_LIFETIME = 365.days

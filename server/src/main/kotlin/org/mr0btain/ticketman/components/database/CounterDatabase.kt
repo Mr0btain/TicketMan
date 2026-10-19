@@ -7,7 +7,6 @@ import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.select
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
@@ -16,7 +15,6 @@ import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
-import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import java.time.Instant
@@ -72,16 +70,12 @@ class CounterDatabase(
         val startOfToday = today.atStartOfDay(zone).toInstant().toEpochMilli()
         val startOfTomorrow = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
-        val tickets = appLogTryCatch<List<Ticket>>(QUEUE_TAG) {
-            transaction {
-                val notPickedUp = TicketEntity
-                    .find { TicketTable.pickedUpAt.isNull() }
-                    .orderBy(TicketTable.id to SortOrder.DESC)
-                    .map { it.toTicket() }
-                    .filter { it.status.status != TicketStatusType.PICKED_UP }
-
-                Pair(notPickedUp, true)
-            }
+        val tickets = dbQuery(QUEUE_TAG) {
+            TicketEntity
+                .find { TicketTable.pickedUpAt.isNull() }
+                .orderBy(TicketTable.id to SortOrder.DESC)
+                .map { it.toTicket() }
+                .filter { it.status.status != TicketStatusType.PICKED_UP }
         }.orEmpty()
 
         val open = tickets.filter { it.status.status.isOpen }
@@ -112,34 +106,32 @@ class CounterDatabase(
 
         if (serial.isBlank() && (device.manufacturer.isBlank() || device.model.isBlank())) return emptyList()
 
-        val matches = appLogTryCatch<List<Ticket>>(REPEAT_TAG) {
-            transaction {
-                val identifiers = CustomerTicketTable
-                    .select(CustomerTicketTable.ticket)
-                    .where {
-                        val forCustomer = CustomerTicketTable.customer eq customerIdentifier
-                        if (excludeTicket != null) forCustomer and (CustomerTicketTable.ticket neq excludeTicket) else forCustomer
+        val matches = dbQuery(REPEAT_TAG) {
+            val identifiers = CustomerTicketTable
+                .select(CustomerTicketTable.ticket)
+                .where {
+                    val forCustomer = CustomerTicketTable.customer eq customerIdentifier
+                    if (excludeTicket != null) forCustomer and (CustomerTicketTable.ticket neq excludeTicket) else forCustomer
+                }
+                .map { it[CustomerTicketTable.ticket].value }
+
+            val tickets = TicketEntity
+                .find { TicketTable.id inList identifiers }
+                .map { it.toTicket() }
+                .filter { ticket ->
+                    val previous = ticket.device
+
+                    if (serial.isNotBlank()) {
+                        previous.serial.trim().equals(serial, ignoreCase = true)
+                    } else {
+                        previous.manufacturer.trim().equals(device.manufacturer.trim(), ignoreCase = true) &&
+                            previous.model.trim().equals(device.model.trim(), ignoreCase = true)
                     }
-                    .map { it[CustomerTicketTable.ticket].value }
+                }
+                .filter { ticket -> (ticket.pickedUpAt ?: ticket.identifier.timestampMillis()) >= since }
+                .sortedByDescending { ticket -> ticket.pickedUpAt ?: ticket.identifier.timestampMillis() }
 
-                val tickets = TicketEntity
-                    .find { TicketTable.id inList identifiers }
-                    .map { it.toTicket() }
-                    .filter { ticket ->
-                        val previous = ticket.device
-
-                        if (serial.isNotBlank()) {
-                            previous.serial.trim().equals(serial, ignoreCase = true)
-                        } else {
-                            previous.manufacturer.trim().equals(device.manufacturer.trim(), ignoreCase = true) &&
-                                previous.model.trim().equals(device.model.trim(), ignoreCase = true)
-                        }
-                    }
-                    .filter { ticket -> (ticket.pickedUpAt ?: ticket.identifier.timestampMillis()) >= since }
-                    .sortedByDescending { ticket -> ticket.pickedUpAt ?: ticket.identifier.timestampMillis() }
-
-                Pair(tickets, true)
-            }
+            tickets
         }.orEmpty()
 
         return ticketDatabase.summarize(matches)
@@ -152,20 +144,16 @@ class CounterDatabase(
     private fun ticketsForCustomers(customers: List<Uuid>): List<Ticket> {
         if (customers.isEmpty()) return emptyList()
 
-        return appLogTryCatch<List<Ticket>>(CUSTOMER_TICKETS_TAG) {
-            transaction {
-                val identifiers = CustomerTicketTable
-                    .select(CustomerTicketTable.ticket)
-                    .where { CustomerTicketTable.customer inList customers }
-                    .map { it[CustomerTicketTable.ticket].value }
+        return dbQuery(CUSTOMER_TICKETS_TAG) {
+            val identifiers = CustomerTicketTable
+                .select(CustomerTicketTable.ticket)
+                .where { CustomerTicketTable.customer inList customers }
+                .map { it[CustomerTicketTable.ticket].value }
 
-                val tickets = TicketEntity
-                    .find { TicketTable.id inList identifiers }
-                    .orderBy(TicketTable.id to SortOrder.DESC)
-                    .map { it.toTicket() }
-
-                Pair(tickets, true)
-            }
+            TicketEntity
+                .find { TicketTable.id inList identifiers }
+                .orderBy(TicketTable.id to SortOrder.DESC)
+                .map { it.toTicket() }
         }.orEmpty()
     }
 }

@@ -42,7 +42,10 @@ class InvoiceService(
         return AccountResult.Done(invoice)
     }
 
-    /** Replaces an open invoice's lines and discount. Uses the shop's current tax rate */
+    /**
+     * Replaces an open invoice's lines and discount. Keeps the tax rate the invoice was made with, so changing the
+     * shop's rate doesn't change what a customer was already quoted
+     */
     fun update(identifier: Uuid, request: InvoiceUpdateRequest, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()} and can't be changed")
@@ -50,7 +53,7 @@ class InvoiceService(
         chargesProblem(request.charges)?.let { return AccountResult.Invalid(it) }
         if (request.discountCents < 0) return AccountResult.Invalid("Discount can't be negative")
 
-        val saved = invoices.setCharges(identifier, request.charges, request.discountCents, taxRate())
+        val saved = invoices.setCharges(identifier, request.charges, request.discountCents, invoice.taxRateBasisPoints)
             ?: return AccountResult.Invalid("Couldn't save the invoice")
 
         auditLog.log(actor, AuditAction.UPDATE, "invoice", identifier.toString(), "Invoice ${invoice.label} total ${Money.format(saved.totalCents)}")
@@ -120,12 +123,14 @@ class InvoiceService(
                 invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
                 tickets.markPickedUp(ticket.identifier, now)
                 tickets.recordStatusChange(ticket.identifier, TicketStatusType.PICKED_UP, receivedBy)
+
+                // Part of the transaction, so it's only there if the pickup is
+                auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${Money.format(invoice.totalCents)}")
             }
         } catch (ex: ShortOfStock) {
             return shortOf(ex.identifier)
         }
 
-        auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${Money.format(invoice.totalCents)}")
         return AccountResult.Done(invoices.getById(invoice.identifier)!!)
     }
 
@@ -142,9 +147,9 @@ class InvoiceService(
             }
 
             invoices.setStatus(identifier, InvoiceStatus.VOID)
+            auditLog.log(actor, AuditAction.DELETE, "invoice", identifier.toString(), "Voided ${invoice.label}")
         }
 
-        auditLog.log(actor, AuditAction.DELETE, "invoice", identifier.toString(), "Voided ${invoice.label}")
         return AccountResult.Done(invoices.getById(identifier)!!)
     }
 

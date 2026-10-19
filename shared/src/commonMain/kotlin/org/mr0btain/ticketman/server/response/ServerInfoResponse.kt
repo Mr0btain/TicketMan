@@ -16,5 +16,9 @@ data class ServerInfoResponse(
     val operatingSystem: String,
     val developmentMode: Boolean,
     /** Null when HTTPS is off */
-    val certificate: ServerCertificateInfo? = null
+    val certificate: ServerCertificateInfo? = null,
+    /** Null when `BACKUP_DIR` isn't set */
+    val scheduledBackup: ScheduledBackupInfo? = null,
+    /** The last restore applied, while its set aside data is still kept */
+    val lastRestore: RestoreRecord? = null
 )

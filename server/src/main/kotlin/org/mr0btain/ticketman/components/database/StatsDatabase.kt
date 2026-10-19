@@ -8,7 +8,6 @@ import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.lessEq
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
@@ -25,7 +24,6 @@ import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.data.user.UserStatus
-import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.DailyReport
 import java.time.LocalDate
@@ -52,59 +50,57 @@ class StatsDatabase {
      * @param activeSessions Passed in since sessions live in the token database
      */
     fun getAdminStats(lowStockThreshold: Int, recentLimit: Int, activeSessions: Long): AdminStatsResponse? {
-        return appLogTryCatch<AdminStatsResponse?>(GET_STATS_TAG) {
-            transaction {
-                // Status and priority are json columns so group them here rather than in sql
-                val tickets = TicketTable
-                    .select(TicketTable.id, TicketTable.status, TicketTable.priority)
-                    .map { row -> Triple(row[TicketTable.id].value, row[TicketTable.status].status, row[TicketTable.priority].priority) }
+        return dbQuery(GET_STATS_TAG) {
+            // Status and priority are json columns so group them here rather than in sql
+            val tickets = TicketTable
+                .select(TicketTable.id, TicketTable.status, TicketTable.priority)
+                .map { row -> Triple(row[TicketTable.id].value, row[TicketTable.status].status, row[TicketTable.priority].priority) }
 
-                val openTickets = tickets.filter { (_, status, _) -> status.isOpen }
-                val weekAgo = (Clock.System.now() - 7.days).toEpochMilliseconds()
+            val openTickets = tickets.filter { (_, status, _) -> status.isOpen }
+            val weekAgo = (Clock.System.now() - 7.days).toEpochMilliseconds()
 
-                // Identifiers are v7 so their embedded time is when the ticket was made
-                val oldestOpenTicket = openTickets
-                    .minByOrNull { (identifier, _, _) -> identifier.timestampMillis() }
-                    ?.let { (identifier, _, _) -> TicketEntity.findById(identifier)?.toTicket() }
+            // Identifiers are v7 so their embedded time is when the ticket was made
+            val oldestOpenTicket = openTickets
+                .minByOrNull { (identifier, _, _) -> identifier.timestampMillis() }
+                ?.let { (identifier, _, _) -> TicketEntity.findById(identifier)?.toTicket() }
 
-                val recentTickets = TicketEntity
-                    .all()
-                    .orderBy(TicketTable.id to SortOrder.DESC)
-                    .limit(recentLimit)
-                    .map { it.toTicket() }
+            val recentTickets = TicketEntity
+                .all()
+                .orderBy(TicketTable.id to SortOrder.DESC)
+                .limit(recentLimit)
+                .map { it.toTicket() }
 
-                val users = UserTable
-                    .select(UserTable.access, UserTable.status)
-                    .map { row -> row[UserTable.access] to row[UserTable.status] }
+            val users = UserTable
+                .select(UserTable.access, UserTable.status)
+                .map { row -> row[UserTable.access] to row[UserTable.status] }
 
-                val activeLevels = users.filter { (_, status) -> status == UserStatus.ACTIVE.name }.map { (level, _) -> level }
+            val activeLevels = users.filter { (_, status) -> status == UserStatus.ACTIVE.name }.map { (level, _) -> level }
 
-                val stats = AdminStatsResponse(
-                    totalTickets = tickets.size.toLong(),
-                    openTickets = openTickets.size.toLong(),
-                    ticketsCreatedLastWeek = tickets.count { (identifier, _, _) -> identifier.timestampMillis() >= weekAgo }.toLong(),
-                    ticketsByStatus = TicketStatusType.entries.associateWith { type ->
-                        tickets.count { (_, status, _) -> status == type }.toLong()
-                    },
-                    ticketsByPriority = TicketPriorityType.entries.associateWith { type ->
-                        openTickets.count { (_, _, priority) -> priority == type }.toLong()
-                    },
-                    oldestOpenTicket = oldestOpenTicket,
-                    recentTickets = recentTickets,
-                    totalCustomers = CustomerTable.selectAll().count(),
-                    totalInventory = InventoryTable.selectAll().count(),
-                    lowStockCount = InventoryTable.selectAll().where { InventoryTable.stock lessEq lowStockThreshold }.count(),
-                    lowStockThreshold = lowStockThreshold,
-                    totalUsers = users.size.toLong(),
-                    usersByAccessLevel = listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN)
-                        .associateWith { level -> activeLevels.count { it == level }.toLong() },
-                    pendingUsers = users.count { (_, status) -> status == UserStatus.PENDING.name }.toLong(),
-                    deactivatedUsers = users.count { (_, status) -> status == UserStatus.DEACTIVATED.name }.toLong(),
-                    activeSessions = activeSessions
-                )
+            val stats = AdminStatsResponse(
+                totalTickets = tickets.size.toLong(),
+                openTickets = openTickets.size.toLong(),
+                ticketsCreatedLastWeek = tickets.count { (identifier, _, _) -> identifier.timestampMillis() >= weekAgo }.toLong(),
+                ticketsByStatus = TicketStatusType.entries.associateWith { type ->
+                    tickets.count { (_, status, _) -> status == type }.toLong()
+                },
+                ticketsByPriority = TicketPriorityType.entries.associateWith { type ->
+                    openTickets.count { (_, _, priority) -> priority == type }.toLong()
+                },
+                oldestOpenTicket = oldestOpenTicket,
+                recentTickets = recentTickets,
+                totalCustomers = CustomerTable.selectAll().count(),
+                totalInventory = InventoryTable.selectAll().count(),
+                lowStockCount = InventoryTable.selectAll().where { InventoryTable.stock lessEq lowStockThreshold }.count(),
+                lowStockThreshold = lowStockThreshold,
+                totalUsers = users.size.toLong(),
+                usersByAccessLevel = listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN)
+                    .associateWith { level -> activeLevels.count { it == level }.toLong() },
+                pendingUsers = users.count { (_, status) -> status == UserStatus.PENDING.name }.toLong(),
+                deactivatedUsers = users.count { (_, status) -> status == UserStatus.DEACTIVATED.name }.toLong(),
+                activeSessions = activeSessions
+            )
 
-                Pair(stats, true)
-            }
+            stats
         }
     }
 
@@ -116,39 +112,37 @@ class StatsDatabase {
         val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val startOfToday = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
 
-        return appLogTryCatch<DailyReport?>(DAILY_REPORT_TAG) {
-            transaction {
-                val payments = InvoicePaymentTable
-                    .select(InvoicePaymentTable.method, InvoicePaymentTable.amountCents)
-                    .where { (InvoicePaymentTable.receivedAt greaterEq start) and (InvoicePaymentTable.receivedAt less end) }
-                    .map { PaymentMethod.valueOf(it[InvoicePaymentTable.method]) to it[InvoicePaymentTable.amountCents] }
+        return dbQuery(DAILY_REPORT_TAG) {
+            val payments = InvoicePaymentTable
+                .select(InvoicePaymentTable.method, InvoicePaymentTable.amountCents)
+                .where { (InvoicePaymentTable.receivedAt greaterEq start) and (InvoicePaymentTable.receivedAt less end) }
+                .map { PaymentMethod.valueOf(it[InvoicePaymentTable.method]) to it[InvoicePaymentTable.amountCents] }
 
-                val paidInvoices = InvoiceTable
-                    .select(InvoiceTable.totalCents, InvoiceTable.taxCents)
-                    .where {
-                        (InvoiceTable.status eq InvoiceStatus.PAID.name) and
-                            (InvoiceTable.paidAt greaterEq start) and (InvoiceTable.paidAt less end)
-                    }
-                    .map { it[InvoiceTable.totalCents] to it[InvoiceTable.taxCents] }
+            val paidInvoices = InvoiceTable
+                .select(InvoiceTable.totalCents, InvoiceTable.taxCents)
+                .where {
+                    (InvoiceTable.status eq InvoiceStatus.PAID.name) and
+                        (InvoiceTable.paidAt greaterEq start) and (InvoiceTable.paidAt less end)
+                }
+                .map { it[InvoiceTable.totalCents] to it[InvoiceTable.taxCents] }
 
-                // Check in time is in the ticket's identifier, the rest are json, so these are sorted out here
-                val tickets = TicketEntity.all().map { it.toTicket() }
+            // Check in time is in the ticket's identifier, the rest are json, so these are sorted out here
+            val tickets = TicketEntity.all().map { it.toTicket() }
 
-                val report = DailyReport(
-                    date = date.toString(),
-                    takenByMethod = payments.groupBy({ it.first }, { it.second }).mapValues { (_, amounts) -> amounts.sum() },
-                    paymentCount = payments.size,
-                    salesCents = paidInvoices.sumOf { it.first },
-                    taxCents = paidInvoices.sumOf { it.second },
-                    invoicesPaid = paidInvoices.size,
-                    ticketsCheckedIn = tickets.count { it.identifier.timestampMillis() in start until end },
-                    ticketsPickedUp = tickets.count { ticket -> ticket.pickedUpAt?.let { it in start until end } == true },
-                    overdueNow = tickets.count { ticket -> ticket.status.status.isOpen && ticket.promisedAt?.let { it < startOfToday } == true },
-                    waitingForPickupNow = tickets.count { it.status.status == TicketStatusType.DONE }
-                )
+            val report = DailyReport(
+                date = date.toString(),
+                takenByMethod = payments.groupBy({ it.first }, { it.second }).mapValues { (_, amounts) -> amounts.sum() },
+                paymentCount = payments.size,
+                salesCents = paidInvoices.sumOf { it.first },
+                taxCents = paidInvoices.sumOf { it.second },
+                invoicesPaid = paidInvoices.size,
+                ticketsCheckedIn = tickets.count { it.identifier.timestampMillis() in start until end },
+                ticketsPickedUp = tickets.count { ticket -> ticket.pickedUpAt?.let { it in start until end } == true },
+                overdueNow = tickets.count { ticket -> ticket.status.status.isOpen && ticket.promisedAt?.let { it < startOfToday } == true },
+                waitingForPickupNow = tickets.count { it.status.status == TicketStatusType.DONE }
+            )
 
-                Pair(report, true)
-            }
+            report
         }
     }
 
@@ -156,16 +150,12 @@ class StatsDatabase {
      * Inventory items at or below the threshold, lowest stock first
      */
     fun getLowStock(threshold: Int, limit: Int): List<Inventory>? {
-        return appLogTryCatch<List<Inventory>?>(GET_LOW_STOCK_TAG) {
-            transaction {
-                val items = InventoryEntity
-                    .find { InventoryTable.stock lessEq threshold }
-                    .orderBy(InventoryTable.stock to SortOrder.ASC, InventoryTable.name to SortOrder.ASC)
-                    .limit(limit)
-                    .map { it.toInventory() }
-
-                Pair(items, true)
-            }
+        return dbQuery(GET_LOW_STOCK_TAG) {
+            InventoryEntity
+                .find { InventoryTable.stock lessEq threshold }
+                .orderBy(InventoryTable.stock to SortOrder.ASC, InventoryTable.name to SortOrder.ASC)
+                .limit(limit)
+                .map { it.toInventory() }
         }
     }
 }

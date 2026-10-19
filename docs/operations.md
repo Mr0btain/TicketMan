@@ -32,10 +32,12 @@ server/
 │       ├── display.jpg
 │       └── thumb.jpg
 ├── tls/                       The certificate the server made for HTTPS, and its keystore password
+│   └── next/                  A new certificate made from the admin screen, swapped in on the next start
 ├── secret                     What tokens are signed with, when SECRET isn't set. Deleting it logs every device out
 ├── backups/                   Backups waiting to be downloaded, removed once their link runs out
-├── restore/                   An uploaded backup waiting for the next restart
-└── pre-restore-<time>/        What a restore replaced, kept so it can be undone by hand
+├── restore/                   An uploaded backup waiting for the next restart, last.json for the last restore,
+│                              and failed-<time>.zip for ones that couldn't be applied
+└── pre-restore-<time>/        What a restore replaced, kept for 30 days so it can be undone by hand
 ```
 
 Photo bytes are kept on disk rather than in H2 so the database stays small and quick to back up. Only their
@@ -75,8 +77,19 @@ A supplied keystore that can't be read stops the server, rather than quietly ser
 ### Changing the certificate
 
 Every device that trusted the old certificate will warn that it changed, so do it on purpose and tell staff to
-expect it. To make a new one, stop the server, delete `server/tls/` and start it again. Moving the server to a new
-machine without copying `server/tls/` does the same, since backups don't include it.
+expect it.
+
+The Server tab shows when the certificate runs out, and warns once that's less than a year away. To replace one
+the server made, use **Make a new certificate** there. The new one waits in `server/tls/next/` and the tab shows its
+fingerprint, so staff can be told what to look for; the server switches to it the next time it starts. **Keep the
+current certificate** drops it before then. Stopping the server, deleting `server/tls/` and starting it again does
+the same in one go.
+
+A supplied certificate is replaced by replacing the `SSL_KEYSTORE` file and restarting.
+
+Backups include a certificate the server made, so restoring one on a new machine brings the old certificate back
+and devices carry on without asking. Moving to a new machine without a backup or a copy of `server/tls/` makes a
+new certificate.
 
 ### Plain HTTP
 
@@ -168,9 +181,22 @@ On the admin screen's **Server** tab, choose whether to include photos and make 
    to someone who finds the link in the browser's history later.
 
 Download it straight away. When the link runs out the hourly sweep deletes the file, and any backup file left from
-before a restart is deleted too. The server doesn't keep a history of backups, so store them somewhere else.
+before a restart is deleted too. Downloaded backups aren't kept on the server, so store them somewhere else.
 
 A database only backup is small and fine to take often. Photos can make a full one large.
+
+A backup holds the server's certificate (if it made its own) as well as customer details, so keep it as safe as
+the server itself.
+
+### Daily backups
+
+Set `BACKUP_DIR` to a folder (a USB drive, a network share, a folder a sync tool copies off the machine) and the
+server makes a backup there once a day, keeping the newest `BACKUP_KEEP` (7 by default). `BACKUP_PHOTOS=false` makes
+them database only. See [Configuration](configuration.md#backup_dir). The Server tab shows the folder, when the last
+one was made and how big it was, and says so if the last one failed.
+
+The first one is made within an hour of the server starting, and then about a day after the newest one in the
+folder. A folder on the same disk as the server doesn't help if that disk dies, so point it somewhere else.
 
 ## Restore
 
@@ -180,16 +206,18 @@ Restoring always needs a restart, because H2's files can't be swapped under a ru
    newer server, it has a database, and it has nothing unexpected in it) and parks it in `restore/`. There must be
    free disk space of at least twice the zip's size.
 2. The tab shows the restore as waiting. It can be cancelled until the restart.
-3. Restart the server. Before opening the database it moves `database/` and `images/` into `pre-restore-<time>/`,
-   then unpacks the backup in their place.
+3. Restart the server. Before opening the database it moves `database/` and `images/` (and `tls/`, if the backup
+   has the certificate) into `pre-restore-<time>/`, then unpacks the backup in their place.
 4. If unpacking fails, it moves the old folders back and renames the backup to `restore/failed-<time>.zip`, so the
    server starts on its old data.
 
 To undo a restore by hand: stop the server, move `database/` and `images/` out of the way, move the ones from
-`pre-restore-<time>/` back, and start it again. Delete old `pre-restore-*` folders once you're happy, since nothing
-cleans them up.
+`pre-restore-<time>/` back, and start it again. The hourly sweep deletes `pre-restore-*` folders and
+`restore/failed-*.zip` files after `RESTORE_KEEP_DAYS` (30), so undo within that time or copy the folder elsewhere.
 
 If a backup without photos is restored, `images/` is replaced with an empty folder and photos on records won't load.
+The app warns before uploading a file named like a database only backup, the waiting restore says the backup has no
+photos, and after the restart the Server tab says it was restored from one.
 
 ## The hourly sweep
 
@@ -200,6 +228,10 @@ While the server runs it sweeps once an hour:
 - **Backups** whose download link has run out are deleted.
 - **Sessions** whose refresh token has expired, and kiosk PIN sessions left unused past their idle limit, are
   deleted.
+- **Audit entries** older than `AUDIT_LOG_DAYS` (two years) are deleted.
+- **Restore leftovers** (`pre-restore-*` folders, `restore/failed-*.zip`) older than `RESTORE_KEEP_DAYS` (30 days)
+  are deleted.
+- **The daily backup** is made, if `BACKUP_DIR` is set and the newest one is a day old.
 
 Photos are deleted a day late on purpose. A backup copies the database first and the photos after, and the delay
 means a photo the database still lists can't vanish between the two.
@@ -212,10 +244,9 @@ short of restoring a backup.
 
 ## Known gaps
 
-- The made certificate isn't renewed. It lasts ten years, and replacing it makes every device ask again.
-- `server/tls/` isn't in backups, so a server restored on a new machine makes a new certificate.
-- No scheduled backups. They're made by hand from the admin screen.
-- `pre-restore-*` folders and `restore/failed-*.zip` files pile up until removed by hand.
+- Replacing the certificate still makes every device ask to trust the new one; there's no way to hand devices the
+  next certificate ahead of time.
+- Daily backup settings are environment variables, so changing them means restarting the server.
 
 ## See also
 

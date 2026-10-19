@@ -59,8 +59,8 @@ fun Route.ticketRoute(
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
             } else {
-                call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(FETCH_TAG, "$request not found")
+                call.respond(HttpStatusCode.InternalServerError)
+                AppLogger.i(FETCH_TAG, "Couldn't read $request")
             }
         }
 
@@ -68,13 +68,20 @@ fun Route.ticketRoute(
         post("/fetch/mine") {
             val request = call.receive<PagedRequest>()
 
-            val result = call.getIdentifierFromToken()?.let { database.getPagedItemsForUser(it, request) }
+            val caller = call.getIdentifierFromToken()
+
+            if (caller == null) {
+                call.respond(HttpStatusCode.Unauthorized)
+                return@post
+            }
+
+            val result = database.getPagedItemsForUser(caller, request)
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
             } else {
-                call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(FETCH_MINE_TAG, "$request not found")
+                call.respond(HttpStatusCode.InternalServerError)
+                AppLogger.i(FETCH_MINE_TAG, "Couldn't read $request")
             }
         }
 
@@ -86,8 +93,8 @@ fun Route.ticketRoute(
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
             } else {
-                call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(SEARCH_TAG, "$request not found")
+                call.respond(HttpStatusCode.InternalServerError)
+                AppLogger.i(SEARCH_TAG, "Couldn't read $request")
             }
         }
 

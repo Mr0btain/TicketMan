@@ -20,7 +20,9 @@ import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.configureRouting
 import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AdminService
+import org.mr0btain.ticketman.components.service.BackupSchedule
 import org.mr0btain.ticketman.components.service.BackupService
+import org.mr0btain.ticketman.components.service.Housekeeping
 import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
@@ -59,6 +61,9 @@ fun createServer(args: Array<String>): EmbeddedServer<NettyApplicationEngine, Ne
     val config = commandLine.environment.config
     val settings = TlsSettings.from(config, commandLine.rootConfig.developmentMode)
     val dataPath = resolveDataPath(config)
+
+    // A waiting restore can bring the certificate back too, so it goes in before the certificate is read
+    if (dataPath.isNotBlank()) RestoreService.applyPending(File(dataPath, "server"))
 
     val certificate = when {
         !settings.enabled -> null
@@ -118,13 +123,6 @@ fun Application.module() {
         )
         val accountService = AccountService(database.userDatabase, database.inviteDatabase, userService, jwtService, database.auditLogDatabase)
         val tls = TlsSettings.from(environment.config, developmentMode)
-        val adminService = AdminService(
-            database = database,
-            serverName = environment.config.propertyOrNull("env.name")?.getString() ?: "Server",
-            dataPath = dataPath,
-            developmentMode = developmentMode,
-            certificate = certificateInfo(tls, dataPath)
-        )
 
         configureContentNegotiation()
         configureSecurity(jwtService)
@@ -154,23 +152,41 @@ fun Application.module() {
             database = database,
             images = database.imageDatabase,
             imageStore = database.imageStore,
-            backupsFolder = File(database.databaseDirectory.parentFile, "backups")
+            backupsFolder = File(database.databaseDirectory.parentFile, "backups"),
+            tlsFolder = ServerTls.folder(dataPath),
+            schedule = BackupSchedule.from(environment.config),
+            auditLog = database.auditLogDatabase
         )
 
         val restoreService = RestoreService(database.databaseDirectory.parentFile)
+        val certificate = certificateInfo(tls, dataPath)
+        val adminService = AdminService(
+            database = database,
+            serverName = environment.config.propertyOrNull("env.name")?.getString() ?: "Server",
+            dataPath = dataPath,
+            developmentMode = developmentMode,
+            certificate = certificate,
+            tlsFolder = ServerTls.folder(dataPath).takeIf { certificate?.generated == true },
+            backupService = backupService,
+            restoreService = restoreService
+        )
+        val housekeeping = Housekeeping.from(environment.config)
 
         configureRouting(
             userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
             restoreService, database
         )
 
-        // Clears out photos deleted or never saved a day ago, backups whose link has run out, and sessions that
-        // have expired. Stops with the application
+        // Clears out photos deleted or never saved a day ago, backups whose link has run out, sessions that have
+        // expired, old audit entries and old restore leftovers, and makes the daily backup. Stops with the application
         launch(Dispatchers.IO) {
             while (isActive) {
                 imageService.sweep()
                 backupService.sweep()
                 database.tokenDatabase.removeExpired()
+                housekeeping.auditCutoff()?.let { database.auditLogDatabase.removeOlderThan(it) }
+                restoreService.sweepLeftovers(housekeeping.restoreLeftoverAge)
+                backupService.runSchedule()
                 delay(ImageService.SWEEP_INTERVAL)
             }
         }

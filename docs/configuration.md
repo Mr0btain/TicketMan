@@ -27,6 +27,11 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 | `env.dataPath` | `DATA_PATH` | blank | Folder for the database, photos, backups and restores. Blank means the platform's app data folder |
 | `env.adminPassword` | `ADMIN_PASSWORD` | blank | Password for the `admin` user made when no admin exists. Blank means a random one is logged |
 | `env.trustProxy` | `TRUST_PROXY` | `false` | `true` behind a reverse proxy, so client addresses come from `X-Forwarded-For` |
+| `backup.folder` | `BACKUP_DIR` | blank | Folder for a backup made once a day. Blank turns it off |
+| `backup.keep` | `BACKUP_KEEP` | `7` | How many daily backups to keep, the oldest are deleted |
+| `backup.photos` | `BACKUP_PHOTOS` | `true` | `false` for database only daily backups |
+| `housekeeping.auditLogDays` | `AUDIT_LOG_DAYS` | `730` | Audit entries older than this many days are deleted. `0` keeps them all |
+| `housekeeping.restoreLeftoverDays` | `RESTORE_KEEP_DAYS` | `30` | Days to keep what a restore replaced (`pre-restore-*`) and restores that failed. `0` keeps them |
 
 Settings with no env var can only be changed by editing the file.
 
@@ -37,8 +42,8 @@ start, keeps it in `<DATA_PATH>/server/secret` (readable only by the account run
 `SECRET isn't set, made one in ...`. Later starts read the same file.
 
 Either way, keep it the same across restarts: changing `SECRET` or deleting the file signs everyone out, since every
-existing token stops verifying. A backup doesn't include the file, so a server restored onto a new machine makes a
-new one and devices log in once more.
+existing token stops verifying. A backup doesn't include the file (it does include the certificate), so a server
+restored onto a new machine makes a new secret and devices log in once more.
 
 Servers from before this used a fixed default written in `application.yaml`. The first start after upgrading makes
 a secret instead, so devices that relied on that default log in once more.
@@ -58,6 +63,23 @@ Behind a reverse proxy, every request reaches the server from the proxy's addres
 request limits count every device together. `TRUST_PROXY=true` takes the client's address from the last entry in
 `X-Forwarded-For`, the one the proxy added. Leave it off when there's no proxy: anyone could send the header and
 pick their own address.
+
+### `BACKUP_DIR`
+
+A folder for a backup made once a day, the same as one downloaded from the admin screen, named
+`ticketman-backup-<millis>[-database].zip`. After each one, all but the newest `BACKUP_KEEP` are deleted; other files
+in the folder are left alone. The server makes the folder if it isn't there. Point it off the machine's own disk if
+you can (a USB drive or network share), and keep it private: backups hold customer details and the certificate.
+
+It can't be the server's own `<DATA_PATH>/server/backups/`, which is emptied by the hourly sweep. See
+[Running a server](operations.md#daily-backups).
+
+### Housekeeping
+
+`AUDIT_LOG_DAYS` and `RESTORE_KEEP_DAYS` set what the hourly sweep deletes (see
+[Running a server](operations.md#the-hourly-sweep)). The audit log keeps two years by default; set `0` to keep it
+forever, for example where records have to be kept longer. Restore leftovers are whole copies of the database and
+photos, so they're only kept 30 days.
 
 ### `DATA_PATH`
 

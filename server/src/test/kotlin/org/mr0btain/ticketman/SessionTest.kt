@@ -67,6 +67,19 @@ class SessionTest {
         json.decodeFromString(client.get("/api/admin/sessions") { bearerAuth(adminToken) }.bodyAsText())
 
     @Test
+    fun loginsWithoutADeviceIdKeepOnlyTheNewestSessions() = testApplication {
+        setup()
+
+        val logins = (1..TokenDatabase.MAX_UNNAMED_SESSIONS + 2).map { login(tech) }
+        val named = login(tech, "desk-1", "Back Desk")
+
+        assertEquals(TokenDatabase.MAX_UNNAMED_SESSIONS + 1, TokenDatabase().getAll().count { it.userIdentifier == tech.identifier.toString() })
+        assertEquals(HttpStatusCode.Unauthorized, me(logins.first().accessToken!!))
+        assertEquals(HttpStatusCode.OK, me(logins.last().accessToken!!))
+        assertEquals(HttpStatusCode.OK, me(named.accessToken!!))
+    }
+
+    @Test
     fun eachDeviceGetsItsOwnSession() = testApplication {
         setup()
 

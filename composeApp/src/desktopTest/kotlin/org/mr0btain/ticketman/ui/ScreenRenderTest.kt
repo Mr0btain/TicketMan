@@ -44,6 +44,12 @@ import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.BackupManifest
+import org.mr0btain.ticketman.server.response.RestoreRecord
+import org.mr0btain.ticketman.server.response.ScheduledBackupInfo
+import org.mr0btain.ticketman.server.response.ServerCertificateInfo
+import org.mr0btain.ticketman.server.response.ServerInfoResponse
+import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
@@ -300,6 +306,46 @@ class ScreenRenderTest {
                         onDismiss = {}
                     )
                 }
+            }
+        }
+    }
+
+    /** The Server tab with a certificate close to running out, a new one waiting, a daily backup and a restore without photos */
+    @Test
+    fun adminServer() {
+        val fingerprint = (0 until 32).joinToString(":") { ((it * 37 + 11) % 256).toString(16).padStart(2, '0').uppercase() }
+        val day = 24L * 60 * 60 * 1000
+        val now = System.currentTimeMillis()
+        val manifest = BackupManifest(serverVersion = "1.0.0", createdAt = now - 3 * day, includesImages = false, imageCount = 0, imageBytes = 0)
+
+        bothModes("admin-server", height = 1300) {
+            Shell("Admin") {
+                AdminServerTab(
+                    serverInfo = ServerInfoResponse(
+                        name = "Front shop", version = "1.0.0", startedAt = now - day, uptimeMillis = day,
+                        dataPath = "/srv/ticketman", databaseSizeBytes = 48_000_000, imagesSizeBytes = 2_400_000_000,
+                        javaVersion = "21.0.4", operatingSystem = "Linux 6.8", developmentMode = false,
+                        certificate = ServerCertificateInfo(
+                            fingerprint = fingerprint, subject = "CN=TicketMan server", expiresAt = now + 200 * day,
+                            generated = true, httpsPort = 8443, httpMode = "redirect",
+                            pendingFingerprint = fingerprint.reversed(), pendingExpiresAt = now + 3650 * day
+                        ),
+                        scheduledBackup = ScheduledBackupInfo(folder = "/mnt/usb/ticketman", keep = 7, includesImages = true, lastBackupAt = now - day / 2, lastSizeBytes = 2_300_000_000),
+                        lastRestore = RestoreRecord(manifest, now - day, "pre-restore-${now - day}")
+                    ),
+                    serverUrl = "https://192.168.1.20:8443",
+                    shopProfile = null,
+                    isBusy = false,
+                    backupProgress = null,
+                    pendingRestore = null,
+                    onSaveShopProfile = {},
+                    onBackup = {},
+                    onRestore = {},
+                    onCancelRestore = {},
+                    onRenewCertificate = {},
+                    onCancelCertificateRenewal = {},
+                    onSeed = {}
+                )
             }
         }
     }

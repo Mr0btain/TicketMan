@@ -211,6 +211,31 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.OK, adminService.getServerInfo())
         }
 
+        // Makes a new HTTPS certificate, used from the next start. Only for one the server made itself
+        post("/certificate/renew") {
+            if (!adminService.canRenewCertificate) {
+                call.respond(HttpStatusCode.Conflict, "This server uses a supplied certificate, replace SSL_KEYSTORE instead")
+                return@post
+            }
+
+            val info = adminService.renewCertificate()
+
+            if (info == null) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@post
+            }
+
+            call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "certificate", details = "New certificate for the next start, ${info.pendingFingerprint}")
+            call.respond(HttpStatusCode.Created, info)
+        }
+
+        delete("/certificate/renew") {
+            if (adminService.cancelCertificateRenewal()) {
+                call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "certificate", details = "Waiting certificate cancelled")
+            }
+            call.respond(HttpStatusCode.Accepted)
+        }
+
         // Builds a backup archive on the server and returns a link to download it from. Can take a while
         post("/backup") {
             val request = call.receive<BackupRequest>()

@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.data.invoice
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.SubItem
 import kotlin.math.roundToLong
+import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
@@ -11,9 +12,10 @@ import kotlin.uuid.Uuid
  * @param unitPriceCents Price of one
  * @param inventoryIdentifier The inventory item for parts, its stock is taken when the invoice is paid
  */
+@OptIn(ExperimentalUuidApi::class)
 @Serializable
 data class Charge(
-    val identifier: Uuid = Uuid.random(),
+    val identifier: Uuid = Uuid.generateV7(),
     val type: ChargeType = ChargeType.OTHER,
     val description: String = "",
     val quantity: Double = 1.0,

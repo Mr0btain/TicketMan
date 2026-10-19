@@ -9,6 +9,7 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.RestoreService
+import org.mr0btain.ticketman.components.tls.ServerTls
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -22,12 +23,14 @@ import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.PendingRestore
+import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.imageio.ImageIO
+import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.test.*
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -155,6 +158,70 @@ class RestoreTest {
             val serverDir = File(dataDir.toFile(), "server")
             assertEquals(1, serverDir.listFiles().orEmpty().count { it.name.startsWith(RestoreService.SET_ASIDE_PREFIX) })
         }
+    }
+
+    @Test
+    fun theCertificateComesBackWithTheRestore() {
+        val tlsFolder = ServerTls.folder(dataDir.invariantSeparatorsPathString)
+        lateinit var original: String
+
+        testApplication {
+            configureTestServer(dataDir)
+            startApplication()
+            UserDatabase().add(admin)
+            val token = token()
+
+            original = ServerTls.loadOrGenerate(tlsFolder).fingerprint
+            val ticket = json.decodeFromString<BackupTicket>(
+                post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), token).bodyAsText()
+            )
+            val backup = client.get(ticket.downloadPath).readRawBytes()
+
+            // Like a new machine, which makes its own certificate on first start
+            tlsFolder.deleteRecursively()
+            assertNotEquals(original, ServerTls.loadOrGenerate(tlsFolder).fingerprint)
+
+            val manifest = json.decodeFromString<PendingRestore>(restore(backup, token).bodyAsText()).manifest
+            assertTrue(manifest.includesCertificate)
+            assertFalse(manifest.includesImages)
+        }
+        shutDownDatabase()
+
+        testApplication {
+            configureTestServer(dataDir)
+            startApplication()
+            val token = token()
+
+            assertEquals(original, ServerTls.loadOrGenerate(tlsFolder).fingerprint)
+
+            // The server says it was restored, and from a backup without photos
+            val info = json.decodeFromString<ServerInfoResponse>(client.get("/api/admin/server") { bearerAuth(token) }.bodyAsText())
+            val restored = assertNotNull(info.lastRestore)
+            assertFalse(restored.manifest.includesImages)
+            assertTrue(File(dataDir.toFile(), "server/${restored.setAsideFolder}/tls").isDirectory)
+        }
+    }
+
+    @Test
+    fun oldRestoreLeftoversAreSwept() {
+        val serverDir = File(dataDir.toFile(), "server").apply { mkdirs() }
+        val service = RestoreService(serverDir)
+        val now = System.currentTimeMillis()
+        val old = now - RestoreService.LEFTOVER_AGE.inWholeMilliseconds - 1
+
+        val oldAside = File(serverDir, "${RestoreService.SET_ASIDE_PREFIX}$old").apply { mkdirs() }
+        val newAside = File(serverDir, "${RestoreService.SET_ASIDE_PREFIX}$now").apply { mkdirs() }
+        val restoreDir = File(serverDir, RestoreService.RESTORE_FOLDER).apply { mkdirs() }
+        val oldFailed = File(restoreDir, "${RestoreService.FAILED_PREFIX}$old.zip").apply { writeText("x") }
+        val newFailed = File(restoreDir, "${RestoreService.FAILED_PREFIX}$now.zip").apply { writeText("x") }
+        val other = File(serverDir, "${RestoreService.SET_ASIDE_PREFIX}notes").apply { mkdirs() }
+
+        assertEquals(2, service.sweepLeftovers(now = now))
+        assertFalse(oldAside.exists())
+        assertFalse(oldFailed.exists())
+        assertTrue(newAside.exists())
+        assertTrue(newFailed.exists())
+        assertTrue(other.exists(), "Folders without a time in the name aren't ours to delete")
     }
 
     @Test

@@ -101,16 +101,19 @@ class ServerCertificate(
 /**
  * Finds the certificate the server answers HTTPS with: the one supplied through `SSL_KEYSTORE`, or one the server
  * made itself in `<dataPath>/server/tls/`. A made one lasts ten years and is kept, since every device that trusted
- * it would be asked again if it changed. Delete the folder to make a new one
+ * it would be asked again if it changed. A new one can be made ahead of time with [stageNew], which waits in
+ * `tls/next/` and replaces the old one on the next start
  */
 object ServerTls {
     private const val TAG = "ServerTls"
     private const val LOAD_TAG = "$TAG:Load"
     private const val GENERATE_TAG = "$TAG:Generate"
+    private const val RENEW_TAG = "$TAG:Renew"
 
     const val ALIAS = "ticketman"
-    private const val KEYSTORE_FILE = "server.p12"
-    private const val PASSWORD_FILE = "server.p12.password"
+    const val KEYSTORE_FILE = "server.p12"
+    const val PASSWORD_FILE = "server.p12.password"
+    private const val PENDING_FOLDER = "next"
     private const val DAYS_VALID = 3650L
 
     fun folder(dataPath: String) = File(dataPath, "server/tls")
@@ -143,16 +146,60 @@ object ServerTls {
         )
     }
 
-    /** Reads the certificate made on an earlier start, or makes one */
+    /** Reads the certificate made on an earlier start, or makes one. A new one waiting from [stageNew] takes over first */
     fun loadOrGenerate(folder: File): ServerCertificate {
+        swapInPending(folder)
+
+        // Not regenerated when it can't be read, a new one would make every device ask to trust it again
+        return read(folder) ?: generate(folder)
+    }
+
+    /** The new certificate waiting for the next start, null if there isn't one */
+    fun pending(folder: File): ServerCertificate? = read(File(folder, PENDING_FOLDER))
+
+    /**
+     * Makes a new certificate to use from the next start, replacing one already waiting. Devices that trusted the
+     * old one will ask again once it's in use
+     */
+    fun stageNew(folder: File): ServerCertificate {
+        val pending = File(folder, PENDING_FOLDER)
+        pending.deleteRecursively()
+
+        return generate(pending).also { AppLogger.m(RENEW_TAG, "New certificate waiting for the next start: ${it.fingerprint}") }
+    }
+
+    /** Drops the certificate waiting from [stageNew], false if there wasn't one */
+    fun cancelPending(folder: File): Boolean {
+        val pending = File(folder, PENDING_FOLDER)
+        return pending.exists() && pending.deleteRecursively()
+    }
+
+    private fun swapInPending(folder: File) {
+        val pending = File(folder, PENDING_FOLDER)
+        if (read(pending) == null) return
+
+        listOf(KEYSTORE_FILE, PASSWORD_FILE).forEach { name ->
+            File(pending, name).copyTo(File(folder, name), overwrite = true)
+            ownerOnly(File(folder, name))
+        }
+        pending.deleteRecursively()
+
+        AppLogger.m(RENEW_TAG, "Switched to the new certificate, devices will ask to trust it")
+    }
+
+    /** The certificate in [folder], null if there isn't one there */
+    private fun read(folder: File): ServerCertificate? {
         val keyStoreFile = File(folder, KEYSTORE_FILE)
         val passwordFile = File(folder, PASSWORD_FILE)
+        if (!keyStoreFile.isFile || !passwordFile.isFile) return null
 
-        if (keyStoreFile.isFile && passwordFile.isFile) {
-            // Not regenerated when it can't be read, a new one would make every device ask to trust it again
-            val password = passwordFile.readText().trim()
-            return ServerCertificate(readKeyStore(keyStoreFile, password), ALIAS, password, password, generated = true)
-        }
+        val password = passwordFile.readText().trim()
+        return ServerCertificate(readKeyStore(keyStoreFile, password), ALIAS, password, password, generated = true)
+    }
+
+    private fun generate(folder: File): ServerCertificate {
+        val keyStoreFile = File(folder, KEYSTORE_FILE)
+        val passwordFile = File(folder, PASSWORD_FILE)
 
         val password = ByteArray(24).also { SecureRandom().nextBytes(it) }.let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
         val hostName = localHostName()

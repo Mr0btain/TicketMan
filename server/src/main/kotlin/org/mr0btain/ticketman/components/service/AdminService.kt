@@ -2,16 +2,20 @@ package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.JWT
 import org.mr0btain.ticketman.components.database.LocalDatabase
+import org.mr0btain.ticketman.components.tls.ServerTls
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
+import java.io.File
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
  * Admin things that aren't a straight database query
  * @param dataPath Folder the server was started with, shown on the admin screen
+ * @param certificate The certificate HTTPS started with, null when HTTPS is off
+ * @param tlsFolder Where a made certificate is kept, null when it's supplied, so it can't be renewed here
  */
 @Suppress("PrivatePropertyName")
 class AdminService(
@@ -19,10 +23,14 @@ class AdminService(
     private val serverName: String,
     private val dataPath: String,
     private val developmentMode: Boolean,
-    private val certificate: ServerCertificateInfo? = null
+    private val certificate: ServerCertificateInfo? = null,
+    private val tlsFolder: File? = null,
+    private val backupService: BackupService? = null,
+    private val restoreService: RestoreService? = null
 ) {
     private val TAG = "AdminService"
     private val SESSIONS_TAG = "$TAG:Sessions"
+    private val RENEW_TAG = "$TAG:RenewCertificate"
 
     private val startedAt = Clock.System.now().toEpochMilliseconds()
 
@@ -70,9 +78,50 @@ class AdminService(
             javaVersion = System.getProperty("java.version") ?: "",
             operatingSystem = "${System.getProperty("os.name")} ${System.getProperty("os.version")}",
             developmentMode = developmentMode,
-            certificate = certificate
+            certificate = certificateInfo(),
+            scheduledBackup = backupService?.scheduleInfo(),
+            lastRestore = restoreService?.lastRestore()
         )
     }
+
+    /** The certificate in use, with the one waiting for the next start if there is one */
+    fun certificateInfo(): ServerCertificateInfo? {
+        val pending = tlsFolder?.let { folder ->
+            try {
+                ServerTls.pending(folder)
+            } catch (ex: Exception) {
+                AppLogger.e(RENEW_TAG, "Couldn't read the waiting certificate", ex)
+                null
+            }
+        }
+
+        return certificate?.copy(
+            pendingFingerprint = pending?.fingerprint,
+            pendingExpiresAt = pending?.certificate?.notAfter?.time
+        )
+    }
+
+    /** Whether the certificate is one the server made, so it can make a new one */
+    val canRenewCertificate: Boolean get() = certificate?.generated == true && tlsFolder != null
+
+    /**
+     * Makes a new certificate to use from the next start
+     * @return The certificate info with the new one waiting, null if it couldn't be made
+     */
+    fun renewCertificate(): ServerCertificateInfo? {
+        val folder = tlsFolder?.takeIf { canRenewCertificate } ?: return null
+
+        return try {
+            ServerTls.stageNew(folder)
+            certificateInfo()
+        } catch (ex: Exception) {
+            AppLogger.e(RENEW_TAG, "Couldn't make a new certificate", ex)
+            null
+        }
+    }
+
+    /** Drops the certificate waiting for the next start, false if there wasn't one */
+    fun cancelCertificateRenewal(): Boolean = tlsFolder?.let { ServerTls.cancelPending(it) } ?: false
 
     companion object {
         // Keep in step with version in server/build.gradle.kts

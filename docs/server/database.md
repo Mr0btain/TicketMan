@@ -117,24 +117,11 @@ The second column is what makes multi step operations safe. `CheckInService` ope
 `tickets.add`, `setCustomer`, `invoices.addPayment` and `setSignature` inside it; if any of them throws, none of
 them happened.
 
-Routes turn the results into status codes: `null` from a read is `404`, `false` from a write is `404` when the
-record might be missing and `500` otherwise.
+Routes turn the results into status codes: `null` from a read of one record is `404`, and from a list or search
+`500` (an empty list is `200`). `false` from a write is `404` when the record might be missing and `500` otherwise.
 
-### The older pattern
-
-Several databases written earlier (`TokenDatabase`, `StationDatabase`, `InviteDatabase`, `ShopDatabase`,
-`StatsDatabase`, `CounterDatabase`, `AuditLogDatabase`, `ImageDatabase`) use `appLogTryCatch` around
-`transaction { }` instead:
-
-```kotlin
-appLogTryCatch<StoredImage?>(INSERT_TAG) {
-    transaction { Pair(entity.toStoredImage(), true) }
-}
-```
-
-It does the same job, but always opens its own transaction, so a throw inside it never reaches an outer one. Don't
-call these methods inside a multi step transaction expecting them to roll back with it. New code uses
-`dbQuery`/`dbWrite`; move old methods over when you're changing them anyway.
+Every server database uses these. Don't wrap `transaction { }` in `appLogTryCatch` in new server code: it always
+opens its own transaction, so a throw inside it never reaches an outer one.
 
 ## Tables and entities
 

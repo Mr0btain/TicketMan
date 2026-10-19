@@ -107,8 +107,8 @@ fun Route.userRoute(
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result.map { it.withoutPassword() })
             } else {
-                call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(FETCH_TAG, "$request not found")
+                call.respond(HttpStatusCode.InternalServerError)
+                AppLogger.i(FETCH_TAG, "Couldn't read $request")
             }
         }
     }
@@ -122,8 +122,8 @@ fun Route.userRoute(
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
             } else {
-                call.respond(HttpStatusCode.NotFound)
-                AppLogger.m(SEARCH_TAG, "$request not found")
+                call.respond(HttpStatusCode.InternalServerError)
+                AppLogger.i(SEARCH_TAG, "Couldn't read $request")
             }
         }
     }

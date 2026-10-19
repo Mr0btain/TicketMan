@@ -50,6 +50,9 @@ auditLog.log(null, AuditAction.LOGIN_FAILED, "user", details = "Failed login", a
 Conventions:
 
 - Log **after** the change has worked, not before, so the log doesn't claim things that didn't happen.
+- In a multi step change wrapped in `transaction { }` (check-in, pickup, voiding), log **inside** it, as its last
+  step. `log()` writes through `dbWrite`, so it joins that transaction: the entry is only kept if the change is,
+  and an entry that can't be written undoes the change.
 - Route files keep their entity type in a `val ENTITY_TYPE = "ticket"` and pass it to `call.audit` and `noteRoute`.
 - Write `details` for a person reading the Audit tab. Use the record's label (`ticket.label`, `invoice.label`) and
   `Money.format` rather than raw ids and cents.
@@ -59,13 +62,15 @@ Conventions:
 
 `POST /api/admin/audit/fetch` with a `PagedRequest`, admin only, gives entries newest first.
 
+## Trimming
+
+The hourly sweep deletes entries older than `AUDIT_LOG_DAYS` (730, two years, by default) with
+`AuditLogDatabase.removeOlderThan`. `0` keeps them forever. See [Configuration](../configuration.md#housekeeping).
+
 ## Gotchas
 
-- **Entries are written in their own transaction.** `AuditLogDatabase.log` uses `appLogTryCatch` + `transaction`, so
-  calling it inside a multi step transaction writes the entry even if the rest rolls back. Check-in and pickup log
-  after their transaction for that reason. Do the same.
-- **A failed write is only logged to the console.** The change the entry was for still goes ahead.
-- **It's never trimmed.** The table grows for the life of the database.
+- **Outside a transaction, a failed write is only logged to the console.** The change the entry was for has
+  already happened and stays. Only entries written inside a `transaction { }` take the change down with them.
 
 ## See also
 

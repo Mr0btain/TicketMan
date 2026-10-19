@@ -70,10 +70,10 @@ The routes mostly use these:
 | `400 Bad Request` | A value the route checked was wrong, with the reason as the text body. Or the body couldn't be read at all: not JSON, an unknown or missing field, an id that isn't a UUID. That one always says `The server couldn't read that request` |
 | `401 Unauthorized` | Not logged in, or the token is no good (see above). Also a wrong password or PIN |
 | `403 Forbidden` | Logged in, but not allowed: the access level is too low. Also an unknown or unapproved station, and seeding outside development mode |
-| `404 Not Found` | No such record, or an id in the path that isn't a UUID. Some list routes also use it for a database error |
+| `404 Not Found` | No such record, or an id in the path that isn't a UUID |
 | `409 Conflict` | The change clashes with the current state: a taken username, a picked up ticket, stock that changed |
 | `413`, `415`, `423`, `429`, `507` | Too big an upload, a photo type that can't be read, a locked PIN, too many tries, no disk space |
-| `500 Internal Server Error` | The write didn't happen, or the route threw. The body is just `Something went wrong on the server`; the exception is in the server's log |
+| `500 Internal Server Error` | The write didn't happen, a read failed (a list route answers this rather than an empty list), or the route threw. The body is just `Something went wrong on the server`; the exception is in the server's log |
 
 Routes that go through a service answer with `respondAccount` (in `UserRoute.kt`): `Done` → the route's success
 code, `Invalid` → `400`, `Conflict` → `409`, `NotFound` → `404`, each with the service's message.

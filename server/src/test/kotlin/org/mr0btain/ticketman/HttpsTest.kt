@@ -55,6 +55,26 @@ class HttpsTest {
     }
 
     @Test
+    fun aNewCertificateTakesOverOnTheNextStart() {
+        val folder = ServerTls.folder(dataDir.toString())
+        val current = ServerTls.load(settings(), dataDir.toString())
+        assertNull(ServerTls.pending(folder))
+
+        val staged = ServerTls.stageNew(folder)
+        assertNotEquals(current.fingerprint, staged.fingerprint)
+        assertEquals(staged.fingerprint, ServerTls.pending(folder)?.fingerprint)
+
+        val next = ServerTls.load(settings(), dataDir.toString())
+        assertEquals(staged.fingerprint, next.fingerprint)
+        assertNull(ServerTls.pending(folder))
+
+        // Cancelled, nothing changes
+        ServerTls.stageNew(folder)
+        assertTrue(ServerTls.cancelPending(folder))
+        assertEquals(next.fingerprint, ServerTls.load(settings(), dataDir.toString()).fingerprint)
+    }
+
+    @Test
     fun aSuppliedKeystoreIsUsed() {
         val file = File(dataDir.toFile(), "shop.p12")
         val keyStore = buildKeyStore { certificate("shop") { password = "shop-pass" } }

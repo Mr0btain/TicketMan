@@ -10,12 +10,20 @@ keep in mind when changing it.
 ticketman-backup-<millis>[-database].zip
 ├── manifest.json     BackupManifest: format version, server version, time, photo count and size
 ├── database.zip      H2's own online backup (itself a zip of the database files)
+├── tls/              The certificate the server made and its password, when it made one
+│   ├── server.p12
+│   └── server.p12.password
 └── images/           Only when photos are included: the same layout as server/images/
     └── ab/<id>/{original,display,thumb}.jpg
 ```
 
-`BackupManifest.CURRENT_FORMAT_VERSION` is `1`. Bump it whenever the layout changes in a way an older server
-couldn't restore; servers refuse archives with a newer version than theirs.
+`BackupManifest.CURRENT_FORMAT_VERSION` is `2` (2 added `tls/`). Bump it whenever the layout changes in a way an
+older server couldn't restore; servers refuse archives with a newer version than theirs, and still restore older
+ones.
+
+`tls/` is there so a server restored on a new machine answers with the same certificate, and devices that pinned
+it don't ask again. It's as secret as the database: anyone with the archive can pretend to be the server. A server
+using a supplied certificate (`SSL_KEYSTORE`) leaves it out.
 
 ## Building
 
@@ -25,7 +33,8 @@ couldn't restore; servers refuse archives with a newer version than theirs.
 1. Only one backup is built at a time (a `Mutex`), on the IO dispatcher.
 2. **The database first.** `LocalDatabase.backupTo()` runs H2's `BACKUP TO`, which copies a consistent snapshot
    while the server keeps running.
-3. **Then the photos**, if asked for: every variant of every photo that isn't `DELETED`.
+3. **Then the certificate**, if the server made one, and **the photos**, if asked for: every variant of every photo
+   that isn't `DELETED`.
 4. Everything is written into one zip on disk under `server/backups/`. The manifest is compressed; the database copy
    and JPEGs are stored as is, since they're already compressed. A SHA-256 of the archive is worked out as it's
    written.
@@ -50,6 +59,21 @@ file in memory.
 - The file is sent with `respondFile`, `Content-Disposition: attachment` and `Cache-Control: no-store`.
 
 Links are kept in memory. After a restart they're gone, and the sweep deletes the files.
+
+## Daily backups
+
+With `BACKUP_DIR` set (see [Configuration](../configuration.md#backup_dir)), `BackupService.runSchedule()` runs with
+the hourly sweep. When the newest `ticketman-backup-<millis>[-database].zip` in that folder is about a day old (23
+and a half hours, so it doesn't creep later each day) or there isn't one, it writes a new archive, the same as a
+downloaded one. It's written as `.<name>.part` and renamed when finished, so a half written file never counts as the
+newest. Then all but the newest `BACKUP_KEEP` are deleted. Other files in the folder are left alone.
+
+Each one is logged in the audit log as a `BACKUP` by `server`. A failed one is logged to the console and shown on
+the admin screen's Server tab (`ScheduledBackupInfo.lastFailedAt`), and tried again on the next sweep. It shares
+the build lock with downloaded backups, so the two never run at once.
+
+`BACKUP_DIR` can't be `server/backups/`, which the sweep below empties; the server logs an error and turns daily
+backups off.
 
 ## Cleaning up
 
@@ -79,15 +103,24 @@ Swapping H2's files under a running server isn't safe, so a restore is split in 
 
 `configureDatabase()` calls `RestoreService.applyPending(serverDir)` before H2 opens anything:
 
-1. Moves `database/` and `images/` into a new `pre-restore-<millis>/` folder.
-2. Unpacks the archive: `database.zip` is unzipped into `database/`, and `images/...` into `images/`. Every path is
-   checked to land inside its folder, so an archive can't write anywhere else (zip slip).
-3. Deletes the pending files.
+1. Moves `database/` and `images/`, and `tls/` if the archive has a certificate, into a new `pre-restore-<millis>/`
+   folder.
+2. Unpacks the archive: `database.zip` is unzipped into `database/`, `images/...` into `images/` and `tls/...` into
+   `tls/` (readable only by the server's account). Every path is checked to land inside its folder, so an archive
+   can't write anywhere else (zip slip), and `tls/` only takes the two certificate files.
+3. Deletes the pending files and writes `restore/last.json` (`RestoreRecord`: the manifest, when, and the
+   `pre-restore` folder), which the admin screen shows, with a warning if the backup had no photos.
 
 If anything fails, it deletes the half unpacked folders, moves the old ones back, and renames the archive to
 `restore/failed-<millis>.zip`. The server then starts on its old data.
 
-The `pre-restore-*` folder is kept so a restore can be undone by hand.
+`createServer()` calls `applyPending` too, before it reads the certificate, so a restored certificate is the one
+the server starts with. `configureDatabase()` calling it again finds nothing waiting. Tests don't go through
+`createServer()`, so there it's `configureDatabase()` that applies it.
+
+The `pre-restore-*` folder is kept so a restore can be undone by hand, for `RESTORE_KEEP_DAYS` (30 by default). The
+hourly sweep then deletes it with `RestoreService.sweepLeftovers()`, along with `restore/failed-*.zip` files of the
+same age and `last.json` once its folder is gone. Only names with a time in them are touched.
 
 ## Gotchas
 
@@ -95,7 +128,11 @@ The `pre-restore-*` folder is kept so a restore can be undone by hand.
   downloads, not `receive<ByteArray>()` or `respondBytes`. A backup with photos can be gigabytes.
 - **Test against a real server.** The in-process test engine handles big and cut off bodies differently from Netty.
   `RestoreTest` covers the logic by starting the server twice on one data folder, with an H2 `SHUTDOWN` between.
-- **Restoring a database only backup leaves `images/` empty**, so photos on restored records won't load.
+- **Restoring a database only backup leaves `images/` empty**, so photos on restored records won't load. The
+  confirm dialog warns when the file name ends in `-database.zip`, the waiting restore says so once the server has
+  read its manifest, and the restored server's Server tab says so until the `pre-restore` folder is swept.
+- **A restore that brings a certificate drops a waiting new one.** `tls/next/` goes aside with the rest of `tls/`,
+  so the server starts with the backup's certificate. Make the new one again afterwards if it's still wanted.
 - **The download link is a bearer credential** until it expires. It ends up in browser history and possibly proxy
   logs, which is why it only lasts 5 minutes after it's used.
 

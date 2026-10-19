@@ -2,18 +2,20 @@ package org.mr0btain.ticketman.data.invoice
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.MainItem
+import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
  * A ticket's bill. There's one per ticket, it stays OPEN while being built and taking deposits,
  * and is PAID once the ticket is picked up. Totals are worked out by the server
- * @param taxRateBasisPoints Tax rate when last saved, 750 is 7.5%
+ * @param taxRateBasisPoints Shop tax rate when the invoice was made, kept after, 750 is 7.5%
  * @param createdAt Epoch millis
  * @param paidAt Epoch millis it was paid off at pickup
  */
+@OptIn(ExperimentalUuidApi::class)
 @Serializable
 data class Invoice(
-    override val identifier: Uuid = Uuid.random(),
+    override val identifier: Uuid = Uuid.generateV7(),
     val number: InvoiceNumber? = null,
     val ticketIdentifier: Uuid,
     val customerIdentifier: Uuid? = null,
@@ -63,9 +65,10 @@ data class InvoiceNumber(
  * @param receivedAt Epoch millis
  * @param receivedBy Username of whoever took it
  */
+@OptIn(ExperimentalUuidApi::class)
 @Serializable
 data class Payment(
-    val identifier: Uuid = Uuid.random(),
+    val identifier: Uuid = Uuid.generateV7(),
     val method: PaymentMethod,
     val amountCents: Long,
     val receivedAt: Long = 0,

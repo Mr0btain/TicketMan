@@ -199,6 +199,28 @@ class InvoiceTest {
     }
 
     @Test
+    fun invoiceKeepsTheTaxRateItWasMadeWith() = testApplication {
+        setup(taxRate = "10")
+        val invoice = invoiceFor(newTicket())
+
+        postJson("/api/shop/update", json.encodeToString(ShopProfile(taxRate = "20")), adminToken)
+
+        val saved = json.decodeFromString<Invoice>(setCharges(invoice, listOf(Charge(description = "Labor", unitPriceCents = 1000))).bodyAsText())
+        assertEquals(1000, saved.taxRateBasisPoints)
+        assertEquals(100, saved.taxCents)
+
+        // A new invoice takes the new rate
+        assertEquals(2000, invoiceFor(newTicket()).taxRateBasisPoints)
+    }
+
+    @Test
+    fun invoiceChargeAndPaymentIdsAreTimeBased() {
+        assertEquals(7, Invoice(ticketIdentifier = Ticket().identifier).identifier.toByteArray()[6].toInt() ushr 4)
+        assertEquals(7, Charge(description = "x").identifier.toByteArray()[6].toInt() ushr 4)
+        assertEquals(7, Payment(method = PaymentMethod.CASH, amountCents = 1, receivedAt = 0, receivedBy = "").identifier.toByteArray()[6].toInt() ushr 4)
+    }
+
+    @Test
     fun badChargesAreRefused() = testApplication {
         setup()
         val invoice = invoiceFor(newTicket())

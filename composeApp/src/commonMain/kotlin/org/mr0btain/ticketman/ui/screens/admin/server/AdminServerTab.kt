@@ -49,6 +49,7 @@ import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.server
 import ticketman.composeapp.generated.resources.upload
 import ticketman.composeapp.generated.resources.zap
+import kotlin.time.Clock
 
 /** Width of the panels in the left column */
 private val SIDE_WIDTH = 440.dp
@@ -70,6 +71,8 @@ fun AdminServerTab(
     onBackup: (includeImages: Boolean) -> Unit,
     onRestore: (PlatformFile) -> Unit,
     onCancelRestore: () -> Unit,
+    onRenewCertificate: () -> Unit,
+    onCancelCertificateRenewal: () -> Unit,
     onSeed: (SeedRequest) -> Unit
 ) {
     val spacing = TmTheme.spacing
@@ -84,7 +87,7 @@ fun AdminServerTab(
             verticalArrangement = Arrangement.spacedBy(spacing.md)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
-                ServerInfoCard(serverInfo, serverUrl)
+                ServerInfoCard(serverInfo, serverUrl, isBusy, onRenewCertificate, onCancelCertificateRenewal)
 
                 BackupCard(isBusy, backupProgress, pendingRestore, serverInfo, onBackup, onRestore, onCancelRestore)
 
@@ -102,7 +105,10 @@ fun AdminServerTab(
 @Composable
 private fun ServerInfoCard(
     serverInfo: ServerInfoResponse?,
-    serverUrl: String
+    serverUrl: String,
+    isBusy: Boolean,
+    onRenewCertificate: () -> Unit,
+    onCancelCertificateRenewal: () -> Unit
 ) {
     TmPanel(modifier = Modifier.width(SIDE_WIDTH), title = "Server", icon = Res.drawable.server) {
         TmKeyValueRow(label = "Address") {
@@ -138,16 +144,40 @@ private fun ServerInfoCard(
         }
 
         TmDivider()
-        CertificateRows(serverInfo.certificate)
+        CertificateRows(serverInfo.certificate, isBusy, onRenewCertificate, onCancelCertificateRenewal)
     }
 }
 
-/** HTTPS settings and the certificate's fingerprint, which devices ask staff to check before trusting the server */
+/**
+ * HTTPS settings and the certificate's fingerprint, which devices ask staff to check before trusting the server.
+ * A certificate the server made can be replaced here, ahead of it running out
+ */
 @Composable
-private fun CertificateRows(certificate: ServerCertificateInfo?) {
+private fun CertificateRows(
+    certificate: ServerCertificateInfo?,
+    isBusy: Boolean,
+    onRenew: () -> Unit,
+    onCancelRenewal: () -> Unit
+) {
     if (certificate == null) {
         TmKeyValueRow(label = "HTTPS", value = "Off")
         return
+    }
+
+    var confirmRenew by remember { mutableStateOf(false) }
+
+    if (confirmRenew) {
+        TmConfirmDialog(
+            title = "Make a new certificate?",
+            message = "The server switches to it the next time it starts. After that every device will warn that " +
+                "the certificate changed and ask staff to trust the new one, so tell them to expect it.",
+            confirmText = "Make certificate",
+            onConfirm = {
+                onRenew()
+                confirmRenew = false
+            },
+            onDismissRequest = { confirmRenew = false }
+        )
     }
 
     Column {
@@ -164,12 +194,45 @@ private fun CertificateRows(certificate: ServerCertificateInfo?) {
         TmKeyValueRow(label = "Expires", value = formatDay(certificate.expiresAt))
     }
 
+    FingerprintText(label = "Fingerprint", fingerprint = certificate.fingerprint)
+
+    if (certificate.expiresSoon(Clock.System.now().toEpochMilliseconds())) {
+        TmNotice(
+            kind = TmNoticeKind.WARNING,
+            title = "Certificate runs out soon",
+            text = "It stops working on ${formatDay(certificate.expiresAt)}. " +
+                if (certificate.generated) "Make a new one below and restart the server before then."
+                else "Replace the SSL_KEYSTORE file before then."
+        )
+    }
+
+    // A supplied certificate is replaced on the server, not from here
+    if (!certificate.generated) return
+
+    val pending = certificate.pendingFingerprint
+    if (pending != null) {
+        TmNotice(
+            kind = TmNoticeKind.INFO,
+            title = "New certificate waiting",
+            text = "Used from the next time the server starts" +
+                (certificate.pendingExpiresAt?.let { ", until ${formatDay(it)}" } ?: "") +
+                ". Devices will ask to trust it; check they show this fingerprint."
+        )
+        FingerprintText(label = "New fingerprint", fingerprint = pending)
+        TmButton(text = "Keep the current certificate", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = onCancelRenewal)
+    } else {
+        TmButton(text = "Make a new certificate", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = { confirmRenew = true })
+    }
+}
+
+@Composable
+private fun FingerprintText(label: String, fingerprint: String) {
     Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
-        Text(text = "Fingerprint", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+        Text(text = label, style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
         SelectionContainer {
             Column {
                 // Split the same way as on the device asking, so the two can be read off line by line
-                certificate.fingerprint.split(":").chunked(16).forEach { line ->
+                fingerprint.split(":").chunked(16).forEach { line ->
                     Text(text = line.joinToString(":"), style = TmTheme.typography.numeric, color = TmTheme.colors.text)
                 }
             }
@@ -196,7 +259,10 @@ private fun BackupCard(
             title = "Restore from ${file.name}?",
             message = "Next time the server starts, everything on it is replaced by this backup: tickets, " +
                 "customers, users and photos. Anything changed since the backup was made is set aside in a " +
-                "pre-restore folder on the server, not deleted.",
+                "pre-restore folder on the server, not deleted." +
+                // Database only backups are named that way when they're made
+                if (file.name.endsWith(DATABASE_ONLY_SUFFIX)) "\n\nThis looks like a backup without photos. Photos on " +
+                    "records won't load after restoring it." else "",
             confirmText = "Upload and restore",
             destructive = true,
             onConfirm = {
@@ -236,13 +302,27 @@ private fun BackupCard(
             leadingIcon = Res.drawable.download
         )
 
+        ScheduledBackupRows(serverInfo)
+
+        serverInfo?.lastRestore?.let { restored ->
+            TmNotice(
+                kind = if (restored.manifest.includesImages) TmNoticeKind.INFO else TmNoticeKind.WARNING,
+                title = "Restored ${formatDateTime(restored.restoredAt)}",
+                text = "From the backup of ${formatDateTime(restored.manifest.createdAt)}. The data it replaced is in " +
+                    "${restored.setAsideFolder} on the server for now." +
+                    if (restored.manifest.includesImages) "" else " That backup had no photos, so photos on records won't load."
+            )
+        }
+
         if (pendingRestore != null) {
             TmNotice(
                 kind = TmNoticeKind.WARNING,
                 title = "Restore waiting",
                 text = "The backup from ${formatDateTime(pendingRestore.manifest.createdAt)} " +
                     "(${formatBytes(pendingRestore.sizeBytes)}) replaces this server's data when it next starts. " +
-                    "Restart the server to finish."
+                    "Restart the server to finish." +
+                    if (pendingRestore.manifest.includesImages) "" else " It has no photos in it, so photos on " +
+                        "records won't load afterwards."
             )
             TmButton(text = "Cancel restore", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = onCancelRestore)
         } else {
@@ -254,6 +334,45 @@ private fun BackupCard(
                 leadingIcon = Res.drawable.upload
             )
         }
+    }
+}
+
+/** The daily backup set up on the server with BACKUP_DIR */
+@Composable
+private fun ScheduledBackupRows(serverInfo: ServerInfoResponse?) {
+    if (serverInfo == null) return
+    val schedule = serverInfo.scheduledBackup
+
+    if (schedule == null) {
+        Text(
+            text = "No daily backup. Set BACKUP_DIR on the server to have it make one every day.",
+            style = TmTheme.typography.caption,
+            color = TmTheme.colors.textMuted
+        )
+        return
+    }
+
+    TmDivider()
+
+    Column {
+        TmKeyValueRow(label = "Daily backup", value = schedule.lastBackupAt?.let { formatDateTime(it) } ?: "Not made yet")
+        schedule.lastSizeBytes?.let { TmKeyValueRow(label = "Size", value = formatBytes(it)) }
+        TmKeyValueRow(label = "Contents", value = if (schedule.includesImages) "Database and photos" else "Database only")
+        TmKeyValueRow(label = "Keeps", value = "The newest ${schedule.keep}")
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
+        Text(text = "Backup folder", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+        SelectionContainer {
+            Text(text = schedule.folder, style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+        }
+    }
+
+    schedule.lastFailedAt?.let { failed ->
+        TmNotice(
+            kind = TmNoticeKind.ERROR,
+            text = "The daily backup failed at ${formatDateTime(failed)}. Check the server log and that the folder can be written to."
+        )
     }
 }
 
@@ -415,6 +534,9 @@ private fun ShopProfileCard(
         )
     }
 }
+
+// End of the file name the server gives a backup made without photos
+private const val DATABASE_ONLY_SUFFIX = "-database.zip"
 
 // Days a repaired device can come back and be flagged as a repeat
 private val REPEAT_WINDOW_RANGE = 1..3650

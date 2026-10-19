@@ -71,12 +71,12 @@ Three helpers catch exceptions at the edge, log them, and return something the c
 | `networkRequest(tag) { ... }` | Client, `composeApp/.../network/Helpers.kt` | `Result<T, NetworkError>`: the value, or what kind of failure it was (timeout, no connection, unreadable response, unknown). Rethrows cancellation |
 | `networkErrorTryCatch(tag) { ... }` | Client, same file | The value, or `null` if it threw. For reads that only need to know whether it worked |
 | `dbQuery(tag) { ... }`, `dbWrite(tag) { ... }` | Server, `server/.../database/DbCall.kt` | The value or `null`; whether the write happened. See [Request lifecycle](../architecture/request-lifecycle.md) |
-| `appLogTryCatch(tag) { ... }` | Shared, `error/AppLogTryCatch.kt` | Nothing, or `T?`. The older pattern, see below |
+| `appLogTryCatch(tag) { ... }` | Shared, `error/AppLogTryCatch.kt` | Nothing, or `T?`. See below |
 
 `appLogTryCatch` comes in two forms. One takes a block returning a `Boolean` and only logs. The other takes a block
 returning `Pair<T, Boolean>`, logs success or failure from the `Boolean`, and returns the `T`, or `null` if it
-threw. Some older server databases (audit log, tokens, stations, invites, shop, stats, counter, images) still wrap
-`transaction { }` in it. New server code uses `dbQuery`/`dbWrite`, which do the same job with less ceremony.
+threw. The server's databases used to wrap `transaction { }` in it; they all use `dbQuery`/`dbWrite` now, which also
+join an outer transaction. Keep `appLogTryCatch` for shared code.
 
 ## Logging
 

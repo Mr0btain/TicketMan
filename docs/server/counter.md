@@ -36,11 +36,12 @@ Then, in one `transaction { }`:
 1. add the ticket (number and pickup time cleared, so the server assigns them),
 2. record its first status change,
 3. link the customer and tech,
-4. if there's a deposit, make the invoice (with the shop's tax rate) and add the payment,
-5. if there's a signature, save it with a copy of the shop's terms, the time, and who took it.
+4. if there's a deposit, make the invoice (with the shop's tax rate, which it keeps) and add the payment,
+5. if there's a signature, save it with a copy of the shop's terms, the time, and who took it,
+6. write the `CREATE` audit entry.
 
-If anything throws, none of it is saved. The response is `201` with a `CheckInResponse` (the saved ticket, with its
-number, and the invoice if one was made), and a `CREATE` audit entry.
+If anything throws, none of it is saved, the audit entry included. The response is `201` with a `CheckInResponse`
+(the saved ticket, with its number, and the invoice if one was made).
 
 `POST /api/counter/repeat-check` (Restricted) is called during check-in to warn about repeat repairs: it returns the
 customer's earlier tickets for the same device within the shop's `repeatWindowDays` (90 by default), matching on
@@ -67,7 +68,8 @@ Rules:
 - Every charge needs a description, a quantity over zero with at most two decimals, and a price that isn't negative.
 - A `PART` needs an inventory item that exists, and a whole number quantity.
 - Discounts and payments can't be negative; payments must be more than zero.
-- Saving charges re-reads the tax rate from the shop profile and recalculates the totals with `InvoiceMath`.
+- Saving charges recalculates the totals with `InvoiceMath`, using the tax rate stored on the invoice when it was
+  made. Changing the shop's rate later doesn't touch invoices that already exist.
 
 Voiding a paid invoice puts its parts back in stock. Voiding never changes the ticket.
 
@@ -93,7 +95,8 @@ Then, in one `transaction { }`:
 2. take each part's quantity out of stock (untracked items are left alone). If a count set by hand since step 4
    leaves too few, this throws, the whole transaction rolls back and the answer is the same `409`,
 3. mark the invoice `PAID` with the time,
-4. set the ticket's `pickedUpAt` and status `PICKED_UP`, and record the status change.
+4. set the ticket's `pickedUpAt` and status `PICKED_UP`, and record the status change,
+5. write the audit entry.
 
 The response is the paid invoice, which the client uses for the receipt.
 
@@ -147,8 +150,6 @@ read only:
 
 ## Gotchas
 
-- **The tax rate isn't locked at check-in.** An invoice made at check-in takes the rate then, but the next charge
-  update reads the shop's current rate. See [Money](../shared/money.md#gotchas).
 - **A throw inside check-in or pickup reaches the client as a `500`** from `StatusPages`, rolling the whole thing
   back. The exception is in the server's log, not the response.
   Check-in holds the numbering locks so it doesn't race itself, see [Numbering](numbering.md#inside-an-outer-transaction).

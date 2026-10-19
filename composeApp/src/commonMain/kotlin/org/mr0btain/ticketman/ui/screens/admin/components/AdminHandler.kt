@@ -522,6 +522,40 @@ class AdminHandler(
         }
     }
 
+    /** Makes a new HTTPS certificate on the server, which it switches to when it next starts */
+    fun renewCertificate() {
+        scope.launch {
+            _isLoading.value = true
+
+            when (val result = admin.renewCertificate()) {
+                is Result.Success -> {
+                    _serverInfo.value = _serverInfo.value?.copy(certificate = result.data)
+                    notify("New certificate made. Restart the server to use it")
+                }
+
+                is Result.Error -> notify("Couldn't make a new certificate: ${result.error.message}")
+            }
+
+            _isLoading.value = false
+        }
+    }
+
+    /** Drops the new certificate waiting for a restart */
+    fun cancelCertificateRenewal() {
+        scope.launch {
+            when (val result = admin.cancelCertificateRenewal()) {
+                is Result.Success -> {
+                    _serverInfo.value = _serverInfo.value?.let { info ->
+                        info.copy(certificate = info.certificate?.copy(pendingFingerprint = null, pendingExpiresAt = null))
+                    }
+                    notify("New certificate dropped")
+                }
+
+                is Result.Error -> notify(result.error.message)
+            }
+        }
+    }
+
     /** Fills a development server with mock data */
     fun seed(request: SeedRequest, onSuccess: () -> Unit) {
         scope.launch {

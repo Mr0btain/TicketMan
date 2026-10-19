@@ -20,8 +20,9 @@ data class BackupTicket(
 )
 
 /**
- * `manifest.json` inside every backup archive, next to `database.zip` (H2's own backup) and `images/`
- * (`images/<aa>/<id>/<variant>.jpg`, the same layout as on the server)
+ * `manifest.json` inside every backup archive, next to `database.zip` (H2's own backup), `images/`
+ * (`images/<aa>/<id>/<variant>.jpg`, the same layout as on the server) and `tls/` (the certificate the server made)
+ * @param includesCertificate Whether `tls/` is in it. Format 1 archives never have it
  */
 @Serializable
 data class BackupManifest(
@@ -31,13 +32,16 @@ data class BackupManifest(
     val databaseFile: String = DATABASE_FILE,
     val includesImages: Boolean,
     val imageCount: Int,
-    val imageBytes: Long
+    val imageBytes: Long,
+    val includesCertificate: Boolean = false
 ) {
     companion object {
-        const val CURRENT_FORMAT_VERSION = 1
+        /** 2 added `tls/` */
+        const val CURRENT_FORMAT_VERSION = 2
         const val FILE_NAME = "manifest.json"
         const val DATABASE_FILE = "database.zip"
         const val IMAGES_FOLDER = "images"
+        const val TLS_FOLDER = "tls"
     }
 }
 
@@ -51,4 +55,33 @@ data class PendingRestore(
     val manifest: BackupManifest,
     val sizeBytes: Long,
     val stagedAt: Long
+)
+
+/**
+ * The last restore applied, so the admin screen can say so. Kept as long as its `pre-restore-<time>` folder is
+ * @param restoredAt Epoch millis it was applied
+ * @param setAsideFolder The `pre-restore-<time>` folder the old data was moved to
+ */
+@Serializable
+data class RestoreRecord(
+    val manifest: BackupManifest,
+    val restoredAt: Long,
+    val setAsideFolder: String
+)
+
+/**
+ * The daily backup set up with `BACKUP_DIR`
+ * @param folder Where the backups are written, on the server
+ * @param keep How many are kept, older ones are deleted
+ * @param lastBackupAt Epoch millis of the newest one in [folder]
+ * @param lastFailedAt Epoch millis the last try failed, null if it hasn't since the server started
+ */
+@Serializable
+data class ScheduledBackupInfo(
+    val folder: String,
+    val keep: Int,
+    val includesImages: Boolean,
+    val lastBackupAt: Long? = null,
+    val lastSizeBytes: Long? = null,
+    val lastFailedAt: Long? = null
 )

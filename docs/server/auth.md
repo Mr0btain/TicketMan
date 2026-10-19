@@ -110,7 +110,8 @@ A session is a row in `TokenTable`: session id, user, its current refresh token,
 
 - **One per user per device.** The client makes a random device id on first start and sends it with every login.
   `TokenDatabase.add` deletes that user's existing session on that device before inserting, so logging in again on
-  the same device replaces its session and leaves other devices alone.
+  the same device replaces its session and leaves other devices alone. Logins with no device id (scripts, old
+  clients) can't be told apart, so only the newest 10 of those are kept per user (`MAX_UNNAMED_SESSIONS`).
 - **A token is only good while its session exists.** Every request checks that the token's `sid` is still in
   `TokenTable` for that user. That's what makes these take effect on the next request, without waiting for tokens
   to expire:
@@ -175,7 +176,8 @@ same hasher is used for passwords, PINs, invite codes and station secrets.
 ## Gotchas
 
 - **A blank device id never replaces a session.** Logins without one (old clients, scripts) add a new session every
-  time.
+  time, and the 11th drops the oldest, so a script that logs in on every run can log its own earlier runs out.
+  Send a fixed `deviceId` from scripts.
 - **A refresh whose answer is lost logs the device out.** The server has already swapped the token, so the one the
   device still holds is refused. The client then logs in with the saved password if it has one, or asks.
 - **Changing `SECRET`, or deleting `server/secret`, logs every device out**, since no token verifies any more.

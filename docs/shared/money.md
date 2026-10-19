@@ -60,9 +60,9 @@ is due. At pickup the payments have to cover the balance; the server refuses a s
   amounts around in code. Keep them as `Long` cents.
 - **Older inventory prices were text.** `InventoryDatabase.migrateLegacyPrices()` converts them to cents with
   `Money.parse` on start.
-- **The tax rate is read from the shop profile each time an invoice's charges are saved**, and stored on the
-  invoice. Changing the shop's tax rate changes open invoices the next time they're edited, and leaves paid ones as
-  they were.
+- **An invoice keeps the tax rate it was made with.** The rate is read from the shop profile once, when the invoice
+  is made (at check-in, or the first time it's opened), and stored on it. Changing the shop's tax rate only affects
+  invoices made after that. See [decisions](../decisions.md#invoices-keep-the-tax-rate-they-were-made-with).
 - **There's no currency.** `format` always prints a `$`.
 
 ## See also

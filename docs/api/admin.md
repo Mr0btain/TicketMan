@@ -101,8 +101,31 @@ Removes a station and signs out whoever is PINned in there.
 **Auth:** admin
 
 - **`200`** `ServerInfoResponse`: name, version, uptime, start time, data path, database and photo sizes, Java and
-  OS, development mode, and `certificate` (fingerprint, subject, expiry, whether the server made it, HTTPS port and
-  HTTP mode; null with HTTPS off).
+  OS, development mode, `certificate` (fingerprint, subject, expiry, whether the server made it, HTTPS port and
+  HTTP mode, and `pendingFingerprint`/`pendingExpiresAt` for a new one waiting for the next start; null with HTTPS
+  off), `scheduledBackup` (`ScheduledBackupInfo`: folder, how many are kept, whether photos are in them, the newest
+  one's time and size, and when the last try failed; null without `BACKUP_DIR`) and `lastRestore` (`RestoreRecord`:
+  the restored backup's manifest, when it was applied and the `pre-restore-<time>` folder; null once that folder has
+  been swept, or if there's been no restore).
+
+### `POST /api/admin/certificate/renew`
+
+**Auth:** admin
+
+Makes a new HTTPS certificate, used from the next time the server starts. Replaces one already waiting. Every device
+that trusted the old one will ask to trust the new one.
+
+- **`201`** `ServerCertificateInfo` with the new one in `pendingFingerprint`.
+- **`409`** the server uses a supplied certificate (`SSL_KEYSTORE`), or HTTPS is off.
+- **`500`** it couldn't be made.
+
+### `DELETE /api/admin/certificate/renew`
+
+**Auth:** admin
+
+Drops the certificate waiting for the next start.
+
+- **`202`** whether or not there was one.
 
 ## Backup and restore
 
@@ -136,7 +159,8 @@ Downloads a backup. The `token` in the link is the login, so a browser can open 
 
 Uploads a backup to restore on the next start. The body is the raw zip (`application/zip`), streamed to disk.
 
-- **`202`** `PendingRestore { manifest, sizeBytes, stagedAt }`. Restart the server to apply it.
+- **`202`** `PendingRestore { manifest, sizeBytes, stagedAt }`. Restart the server to apply it. A manifest with
+  `includesImages` false means photos on records won't load afterwards.
 - **`400`** cut off, or not a backup this server can restore (the text says why).
 - **`507`** not enough disk space: it needs room for the zip and for it unpacked.
 

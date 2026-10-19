@@ -126,8 +126,7 @@ the shared model, the server table and database class, the route, the client rep
 - iOS targets are commented out, so `iosApp` doesn't build.
 - Android and web compile but haven't been run end to end on a device or in a browser yet. See
   [Platforms](../client/platforms.md#known-gaps).
-- A few parts predate the current patterns: some databases use `appLogTryCatch` and `transaction` rather than
-  `dbQuery`/`dbWrite`, and some `TODO` comments describe ideas that were never started.
+- Some `TODO` comments describe ideas that were never started.
 
 ## See also
 

@@ -8,7 +8,6 @@ import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
@@ -21,7 +20,6 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.image.ImageProcessor
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.error.appLogTryCatch
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -56,56 +54,43 @@ class ImageDatabase {
         processed: ImageProcessor.Processed,
         folder: String
     ): StoredImage? =
-        appLogTryCatch<StoredImage?>(INSERT_TAG) {
-            transaction {
-                val entity = ImageEntity.new(identifier) {
-                    this.directory = folder
-                    this.description = description
-                    this.tags = emptyList()
-                    this.width = processed.width
-                    this.height = processed.height
-                    this.sizeBytes = processed.sizeBytes
-                    this.sha256 = processed.sha256
-                    this.uploadedBy = uploadedBy
-                    this.status = ImageStatus.PENDING.name
-                    this.statusChangedAt = System.currentTimeMillis()
-                }
-
-                Pair(entity.toStoredImage(), true)
+        dbQuery(INSERT_TAG) {
+            val entity = ImageEntity.new(identifier) {
+                this.directory = folder
+                this.description = description
+                this.tags = emptyList()
+                this.width = processed.width
+                this.height = processed.height
+                this.sizeBytes = processed.sizeBytes
+                this.sha256 = processed.sha256
+                this.uploadedBy = uploadedBy
+                this.status = ImageStatus.PENDING.name
+                this.statusChangedAt = System.currentTimeMillis()
             }
+
+            entity.toStoredImage()
         }
 
     /** A photo that hasn't been deleted, null if there's no such photo */
     fun getServable(identifier: Uuid): ImageRecord? =
-        appLogTryCatch<ImageRecord?>(GET_TAG) {
-            transaction {
-                val record = ImageEntity.findById(identifier)
-                    ?.takeIf { it.imageStatus != ImageStatus.DELETED }
-                    ?.let { ImageRecord(it.toStoredImage(), it.imageStatus, it.sha256, it.uploadedBy) }
-
-                Pair(record, record != null)
-            }
+        dbQuery(GET_TAG) {
+            ImageEntity.findById(identifier)
+                ?.takeIf { it.imageStatus != ImageStatus.DELETED }
+                ?.let { ImageRecord(it.toStoredImage(), it.imageStatus, it.sha256, it.uploadedBy) }
         }
 
     /** Ids of every row, deleted ones too, so the sweeper knows which folders on disk still belong to something */
     fun allIdentifiers(): Set<Uuid> =
-        appLogTryCatch<Set<Uuid>>(GET_TAG) {
-            transaction {
-                Pair(ImageTable.select(ImageTable.id).map { it[ImageTable.id].value }.toSet(), true)
-            }
+        dbQuery(GET_TAG) {
+            ImageTable.select(ImageTable.id).map { it[ImageTable.id].value }.toSet()
         } ?: emptySet()
 
     /** Ids of photos that aren't deleted, which are the ones a backup carries */
     fun liveIdentifiers(): List<Uuid> =
-        appLogTryCatch<List<Uuid>>(COUNT_TAG) {
-            transaction {
-                Pair(
-                    ImageTable.select(ImageTable.id)
-                        .where { ImageTable.status neq ImageStatus.DELETED.name }
-                        .map { it[ImageTable.id].value },
-                    true
-                )
-            }
+        dbQuery(COUNT_TAG) {
+            ImageTable.select(ImageTable.id)
+                .where { ImageTable.status neq ImageStatus.DELETED.name }
+                .map { it[ImageTable.id].value }
         } ?: emptyList()
 
     /**
@@ -115,23 +100,21 @@ class ImageDatabase {
      * @return Ids whose files should now be removed
      */
     fun sweep(now: Long, graceMillis: Long): List<Uuid> =
-        appLogTryCatch<List<Uuid>>(SWEEP_TAG) {
-            transaction {
-                markUnreferencedDeleted(now)
+        dbQuery(SWEEP_TAG) {
+            markUnreferencedDeleted(now)
 
-                val cutoff = now - graceMillis
-                val expired = ImageTable.select(ImageTable.id)
-                    .where {
-                        (ImageTable.status inList listOf(ImageStatus.PENDING.name, ImageStatus.DELETED.name)) and
-                            (ImageTable.statusChangedAt less cutoff)
-                    }
-                    .map { it[ImageTable.id].value }
+            val cutoff = now - graceMillis
+            val expired = ImageTable.select(ImageTable.id)
+                .where {
+                    (ImageTable.status inList listOf(ImageStatus.PENDING.name, ImageStatus.DELETED.name)) and
+                        (ImageTable.statusChangedAt less cutoff)
+                }
+                .map { it[ImageTable.id].value }
 
-                // Join rows go with them through their cascades
-                if (expired.isNotEmpty()) ImageTable.deleteWhere { ImageTable.id inList expired }
+            // Join rows go with them through their cascades
+            if (expired.isNotEmpty()) ImageTable.deleteWhere { ImageTable.id inList expired }
 
-                Pair(expired, true)
-            }
+            expired
         } ?: emptyList()
 
     private fun markUnreferencedDeleted(now: Long) {

@@ -97,32 +97,40 @@ Small, user visible, no design questions.
 
 ## Phase 3: Data and the server
 
-- [ ] **The tax rate isn't locked at check-in.** Saving an open invoice's lines reads the shop's current rate.
+- [x] **The tax rate isn't locked at check-in.** Saving an open invoice's lines reads the shop's current rate.
       Either keep the rate the invoice was made with, or keep updating it and show the change. **(decide)**
+      **Decided:** an invoice keeps the rate it was made with ([decisions](decisions.md#invoices-keep-the-tax-rate-they-were-made-with)).
       *Source:* [counter](server/counter.md#gotchas), [money](shared/money.md#gotchas)
-- [ ] **Invoice, charge and payment ids aren't v7.** They default to `Uuid.random()`. Make them `Uuid.generateV7()`
+- [x] **Invoice, charge and payment ids aren't v7.** They default to `Uuid.random()`. Make them `Uuid.generateV7()`
       like every other id, so times can be read from them consistently. *Source:* [domain models](shared/domain-models.md#gotchas)
-- [ ] **Audit entries are written in their own transaction**, so one inside a rolled back change still lands, and a
+- [x] **Audit entries are written in their own transaction**, so one inside a rolled back change still lands, and a
       failed write is only logged. Add a variant that joins the caller's transaction, and use it inside check-in and
-      pickup. *Source:* [audit log](server/audit-log.md#gotchas)
-- [ ] **The audit log is never trimmed.** Add a retention setting (say, two years) applied by the sweep.
+      pickup. *Done:* `log()` itself goes through `dbWrite`, so it joins any open transaction; check-in, pickup and
+      void log inside theirs. *Source:* [audit log](server/audit-log.md#gotchas)
+- [x] **The audit log is never trimmed.** Add a retention setting (say, two years) applied by the sweep.
+      *Done:* `AUDIT_LOG_DAYS`, 730 by default.
       *Source:* [audit log](server/audit-log.md#gotchas)
-- [ ] **Restore leftovers pile up.** Remove `pre-restore-*` folders and `restore/failed-*.zip` files older than a
-      set age, or list them on the admin screen with a delete button. *Source:* [operations](operations.md#known-gaps)
-- [ ] **`server/tls/` isn't in backups**, so a restored server on a new machine makes a new certificate and every
-      device asks again. Include it (it's secret, like the database). *Source:* [operations](operations.md#known-gaps)
-- [ ] **The made certificate isn't renewed.** It lasts ten years. Show its expiry on the admin Server tab with a
-      warning in the last year, and a way to make a new one. *Source:* [operations](operations.md#known-gaps)
-- [ ] **No scheduled backups.** Add a daily backup to a folder (and how many to keep) as a server setting.
+- [x] **Restore leftovers pile up.** Remove `pre-restore-*` folders and `restore/failed-*.zip` files older than a
+      set age, or list them on the admin screen with a delete button. *Done:* swept after `RESTORE_KEEP_DAYS` (30). *Source:* [operations](operations.md#known-gaps)
+- [x] **`server/tls/` isn't in backups**, so a restored server on a new machine makes a new certificate and every
+      device asks again. Include it (it's secret, like the database). *Done:* backup format 2, restored before the
+      certificate is read. *Source:* [operations](operations.md#known-gaps)
+- [x] **The made certificate isn't renewed.** It lasts ten years. Show its expiry on the admin Server tab with a
+      warning in the last year, and a way to make a new one. **Decided:** the new one waits in `tls/next/` and is
+      used from the next start (`POST /api/admin/certificate/renew`). *Source:* [operations](operations.md#known-gaps)
+- [x] **No scheduled backups.** Add a daily backup to a folder (and how many to keep) as a server setting.
+      **Decided:** environment variables, `BACKUP_DIR`, `BACKUP_KEEP`, `BACKUP_PHOTOS`, shown on the Server tab.
       *Source:* [operations](operations.md#known-gaps)
-- [ ] **A database only restore leaves photos missing.** Warn before restoring a backup without photos, and say
-      so on the restored server. *Source:* [backup](server/backup-restore.md#gotchas)
-- [ ] **Some databases predate `dbQuery`/`dbWrite`.** Move the ones still using `appLogTryCatch` + `transaction`
+- [x] **A database only restore leaves photos missing.** Warn before restoring a backup without photos, and say
+      so on the restored server. *Done:* the confirm dialog (by file name), the waiting restore (by manifest) and
+      the restored server's Server tab (`ServerInfoResponse.lastRestore`). *Source:* [backup](server/backup-restore.md#gotchas)
+- [x] **Some databases predate `dbQuery`/`dbWrite`.** Move the ones still using `appLogTryCatch` + `transaction`
       over, so failures are reported the same way. *Source:* [overview](architecture/overview.md#known-gaps)
-- [ ] **Some list routes answer `404` for a database error.** `/fetch` and `/search` on users, customers, tickets
+- [x] **Some list routes answer `404` for a database error.** `/fetch` and `/search` on users, customers, tickets
       and inventory turn a failed read into `404`; it should be `500`. *Source:* [API overview](api/README.md#status-codes)
-- [ ] **Logins without a device id add a session every time.** Old clients and scripts pile up sessions. Expired
-      session clean up (Phase 2) limits it; optionally refuse a blank `deviceId`. *Source:* [auth](server/auth.md#gotchas)
+- [x] **Logins without a device id add a session every time.** Old clients and scripts pile up sessions. Expired
+      session clean up (Phase 2) limits it; optionally refuse a blank `deviceId`. *Done:* not refused (scripts and
+      tests rely on it), but only the newest 10 such sessions are kept per user. *Source:* [auth](server/auth.md#gotchas)
 
 ## Phase 4: API and plumbing cleanup
 
@@ -245,7 +253,8 @@ the PR template.
 - An outer transaction that adds a ticket or invoice wraps itself in `tickets.whileNumbering { invoices.whileNumbering { ... } }`, ticket first. ([Numbering](server/numbering.md))
 - Never delete photo files directly; mark rows deleted and let the sweep do it. ([Photos](server/photos.md#gotchas))
 - Stream big bodies (`receiveChannel().copyToFile`, `respondFile`); never `receive<ByteArray>()` or `respondBytes`.
-- Write audit entries after a multi-step transaction commits, not inside it.
+- In a multi-step `transaction { }`, write the audit entry inside it as the last step, so it rolls back with the
+  change. ([Audit log](server/audit-log.md#writing-an-entry))
 - Check uploads, downloads and restore against a real `./gradlew :server:run`; the test engine isn't Netty.
 - Add fields to the server before any client sends them; the server refuses unknown fields.
 
