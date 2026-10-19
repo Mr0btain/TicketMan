@@ -127,7 +127,8 @@ Downloads a backup. The `token` in the link is the login, so a browser can open 
 - **Query:** `token`, from the ticket's `downloadPath`.
 - **`200`** the zip, as an attachment with `Cache-Control: no-store`. Range requests work, so a cut off download
   can carry on (`206`).
-- **`404`** unknown id, wrong token, or more than 30 minutes old.
+- **`404`** unknown id, wrong token, or expired: 30 minutes after the backup was made if the link hasn't been
+  used, otherwise 5 minutes after it was last used.
 
 ### `POST /api/admin/restore`
 

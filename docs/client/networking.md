@@ -34,7 +34,8 @@ flowchart TD
 ## Two HTTP clients
 
 - **`ServerUserClient`** uses a plain client with no auth plugin. It's for calls that make or renew tokens, so they
-  can't get caught in the auth plugin's own refresh loop.
+  can't get caught in the auth plugin's own refresh loop. It doesn't follow redirects, so it can see a server
+  sending plain HTTP to HTTPS (see [Connecting](#connecting)).
 - **`RemoteHandler.httpClient`** is the authenticated one, shared by every repository and by the photo loader so
   photo requests carry the same token. It installs:
   - **bearer auth**: `loadTokens` reads the access and refresh tokens from `LocalStorage`; `refreshTokens` calls
@@ -62,12 +63,17 @@ server answers there.
 `SessionHandler.connect(url)`, called on start with the saved server address and whenever it's changed in Settings,
 calls `RemoteHandler.setUrl(url)`:
 
-1. `GET <url>/api/ping` must answer `TicketMan`. Servers from before `/api/ping` answer 404, and then `GET <url>/`
+1. For an `http://` address, `ServerUserClient.httpsRedirectOf` asks `/api/ping` first. A server with
+   `HTTP_MODE=redirect` answers with a redirect; when it points at the same host's `/api/ping` on `https://`, the
+   rest of the steps use that address instead. `RemoteHandler.address` holds the address actually used, and
+   `SessionHandler` saves it through `onServerMoved` (to `SettingsHandler.rememberServerUrl`), so it's only moved
+   once. A redirect to another host isn't followed.
+2. `GET <url>/api/ping` must answer `TicketMan`. Servers from before `/api/ping` answer 404, and then `GET <url>/`
    counts if it isn't a web page (so the web client's dev server isn't taken for a server). If neither works, the
    result is `UNREACHABLE`, or `UNTRUSTED` when the server's certificate was refused (below). Nothing else changes.
-2. Every repository's `serverUrl` is set. Until then it's blank, and every repository call returns straight away
+3. Every repository's `serverUrl` is set. Until then it's blank, and every repository call returns straight away
    with a "No server set" error instead of hitting a relative URL.
-3. It tries to log in with the saved username and password. The result is `LOGGED_IN` or `CONNECTED`.
+4. It tries to log in with the saved username and password. The result is `LOGGED_IN` or `CONNECTED`.
 
 ## Trusting a server's certificate
 
@@ -131,6 +137,13 @@ flowchart TD
     E -- fails --> F
     F --> G[Login dialog, or kiosk lock screen]
 ```
+
+The server swaps the refresh token on every refresh, so `ServerUserClient.refreshTokens` saves the new one from
+`RefreshTokenResponse.refreshToken` along with the access token. The old one won't work again. A server from before
+rotation sends no refresh token, and the saved one is kept.
+
+A `403` isn't a token problem, so it isn't refreshed: the call fails with `NetworkError.FORBIDDEN` ("You don't have
+access to that").
 
 `credentialFallback` is on by default and turned off by kiosk mode, so an expired PIN session doesn't silently log
 the device's owner back in.
@@ -200,7 +213,8 @@ Repositories and handlers are tested in `composeApp/src/commonTest` with Ktor's 
   added to that list as well as constructed in `RemoteHandler`.
 - **Trust is per `host:port`.** The same server reached by its IP address and by its name is asked about twice.
 - **A login with credentials not remembered can't be refreshed by password.** Once the refresh token is refused the
-  user has to log in again.
+  user has to log in again. That includes a refresh whose answer was lost: the server had already swapped the
+  token, so the one the device kept is refused.
 
 ## See also
 

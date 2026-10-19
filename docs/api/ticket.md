@@ -122,14 +122,12 @@ Links the ticket to a customer, in place of any it had.
 
 **Auth:** normal
 
-Assigns the ticket to a technician, in place of whoever had it.
+Assigns the ticket to a technician, in place of whoever had it. Same rule as check-in: only active users with
+Normal access or higher take tickets.
 
-- **Body:** the user's id. **`202`** assigned. **`404`** no such ticket or user.
-
-## Known gaps
-
-- `/set/user` takes any user, even a Restricted or deactivated one. Check-in only takes technicians with Normal
-  access.
+- **Body:** the user's id. **`202`** assigned.
+- **`400`** `That technician can't take tickets`: no such user, or one who's Restricted, deactivated or not set up.
+- **`404`** no such ticket.
 
 ## See also
 

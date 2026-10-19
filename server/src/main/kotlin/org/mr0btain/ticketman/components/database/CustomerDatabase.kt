@@ -46,12 +46,6 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
     override fun count(): Long =
         dbQuery(COUNT_TAG) { CustomerEntity.count() } ?: 0L
 
-    override fun addAll(data: List<Customer>): Boolean =
-        dbWrite(ADD_ALL_TAG) {
-            data.forEach { item -> insertCustomer(item) }
-            true
-        }
-
     override fun remove(identifier: Uuid): Boolean =
         dbWrite(REMOVE_TAG) {
             val customerEntity = CustomerEntity.findById(identifier)

@@ -126,7 +126,7 @@ Hide the button for people who can't use it (`canEdit`) too; the server's check 
 ## 7. Tests
 
 - **Server**: in the area's test class, the happy path, each refusal (`404` for a missing ticket, `400` for a bad
-  value) and that a user without the access level gets a `401`. See [Testing](../testing.md#server-tests).
+  value) and that a user without the access level gets a `403`. See [Testing](../testing.md#server-tests).
 - **Client**: a `MockEngine` test that the handler sends the right request, and refuses when `canEdit()` is false.
   See [Testing](../testing.md#client-tests).
 

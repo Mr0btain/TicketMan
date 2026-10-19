@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.user.UsernameRules
@@ -232,6 +233,10 @@ fun Route.userRoute(
                     call.respond(HttpStatusCode.BadRequest, UsernameRules.problem(user.username)!!)
                 }
 
+                PasswordRules.problem(user.password) != null -> {
+                    call.respond(HttpStatusCode.BadRequest, PasswordRules.problem(user.password)!!)
+                }
+
                 database.getByUsername(user.username) != null -> {
                     call.respond(HttpStatusCode.Conflict, "Username is already taken")
                     AppLogger.i(ADD_TAG, "${user.username} already exists")
@@ -265,6 +270,11 @@ fun Route.userRoute(
                 existing == null -> call.respond(HttpStatusCode.NotFound)
 
                 user.username.isBlank() -> call.respond(HttpStatusCode.BadRequest, "Username is required")
+
+                // Only a changed username is checked, so older accounts named before the rules can still be edited
+                user.username.trim().lowercase() != existing.username && UsernameRules.problem(user.username) != null -> {
+                    call.respond(HttpStatusCode.BadRequest, UsernameRules.problem(user.username)!!)
+                }
 
                 sameUsername != null && sameUsername.identifier != user.identifier -> {
                     call.respond(HttpStatusCode.Conflict, "Username is already taken")
@@ -323,7 +333,9 @@ fun Route.userRoute(
             when {
                 identifier == null -> call.respond(HttpStatusCode.BadRequest)
 
-                request.password.isBlank() -> call.respond(HttpStatusCode.BadRequest, "Password is required")
+                PasswordRules.problem(request.password) != null -> {
+                    call.respond(HttpStatusCode.BadRequest, PasswordRules.problem(request.password)!!)
+                }
 
                 !database.updatePassword(identifier, request.password) -> call.respond(HttpStatusCode.NotFound)
 
@@ -335,26 +347,6 @@ fun Route.userRoute(
                     call.respond(HttpStatusCode.Accepted)
                     AppLogger.m(PASSWORD_TAG, "$identifier password reset")
                 }
-            }
-        }
-    }
-
-    // Bulk add mostly for syncing
-    authenticate("admin") {
-        post("/add/all") {
-            try {
-                val users = call.receive<List<User>>()
-
-                if (!database.addAll(users)) {
-                    call.respond(HttpStatusCode.InternalServerError)
-                    return@post
-                }
-
-                call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, details = "Bulk added ${users.size} users")
-                call.respond(HttpStatusCode.Accepted)
-            } catch (ex: Exception) {
-                AppLogger.e(ADD_TAG, "Bulk add failed", ex)
-                call.respond(HttpStatusCode.BadRequest)
             }
         }
     }

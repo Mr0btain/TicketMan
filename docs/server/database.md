@@ -60,8 +60,8 @@ so the shared routes and the client's `RemoteRepository` can treat them the same
 
 | Subclasses write | The base provides |
 |------------------|-------------------|
-| `add`, `addAll`, `update`, `remove` | `updateNote(note)`, `removeNote(id)` |
-| `getById`, `getPagedItems(PagedRequest)`, `count`, `search(query, limit)` | `addImagesToNote(id, images)`, `removeImage(id)` |
+| `add`, `update`, `remove` | `updateNote(note)`, `removeNote(id)` |
+| `getById`, `getPagedItems(PagedRequest)`, `count`, `search(query, limit)` | `addImagesToNote(id, images)` |
 | `addNote(id, note)`, `getNotes(id)` | `insertNote(note)` and `attachNote(...)` helpers for `addNote` |
 | `noteLinkColumn` | Tag constants (`GET_BY_ID_TAG`, `UPDATE_TAG`, ...) |
 
@@ -156,7 +156,6 @@ photos are marked deleted too. The [sweep](../operations.md#the-hourly-sweep) cl
   `components.database.Database<T>` (the base class). `LocalDatabase.kt` imports Exposed's.
 - **`DB_CLOSE_DELAY=-1`** keeps H2 open until the process ends. Tests have to run `SHUTDOWN` themselves before
   deleting a data folder, which `cleanupTestDataDir()` in the server tests does.
-- **`removeImage(id)` doesn't check the owner.** Unlike notes, it marks any photo with that id deleted.
 - **Take the notes before deleting the record.** Once the record is gone its join rows are too, and
   `entity.notes` comes back empty. A new record type's `remove` follows the same order.
 

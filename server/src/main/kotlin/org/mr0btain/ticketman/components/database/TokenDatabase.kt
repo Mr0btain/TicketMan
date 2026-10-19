@@ -1,14 +1,20 @@
 package org.mr0btain.ticketman.components.database
 
+import com.auth0.jwt.JWT
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greater
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.*
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.error.appLogTryCatch
 import org.mr0btain.ticketman.server.response.SessionKind
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Stores logged in sessions, a user can have one per device
@@ -25,6 +31,10 @@ class TokenDatabase() {
     private val GET_ALL_TAG = "$TAG:GetAll"
     private val COUNT_TAG = "$TAG:Count"
     private val CLEAR_LEGACY_TAG = "$TAG:ClearLegacy"
+    private val ROTATE_TAG = "$TAG:Rotate"
+    private val IDLE_TAG = "$TAG:ClearIdle"
+    private val EXPIRED_TAG = "$TAG:RemoveExpired"
+    private val BACKFILL_TAG = "$TAG:BackfillExpiry"
 
     fun findBySessionId(sessionId: String): StoredSession? {
         if (sessionId.isBlank()) return null
@@ -67,11 +77,93 @@ class TokenDatabase() {
                     row[kind] = session.kind.name
                     row[createdAt] = session.createdAt
                     row[lastUsedAt] = session.lastUsedAt
+                    row[expiresAt] = session.expiresAt
+                    row[idleTimeoutSeconds] = session.idleTimeoutSeconds
                 }
 
                 Pair(true, true)
             }
         } ?: false
+    }
+
+    /**
+     * Swaps a session's refresh token for a new one. Only works while [oldToken] is still the current one, so of
+     * two refreshes with the same token only the first gets through
+     * @return Whether it was swapped
+     */
+    fun rotate(sessionId: String, oldToken: String, newToken: String): Boolean {
+        return appLogTryCatch<Boolean>(ROTATE_TAG) {
+            transaction {
+                val swapped = TokenTable.update(where = { (TokenTable.sessionId eq sessionId) and (TokenTable.token eq oldToken) }) { row ->
+                    row[token] = newToken
+                    row[lastUsedAt] = Clock.System.now().toEpochMilliseconds()
+                } > 0
+
+                Pair(swapped, true)
+            }
+        } ?: false
+    }
+
+    /** Takes a session's idle limit off, for when an admin leaves kiosk mode and keeps using the device */
+    fun clearIdleLimit(sessionId: String): Boolean {
+        return appLogTryCatch<Boolean>(IDLE_TAG) {
+            transaction {
+                val changed = TokenTable.update(where = { TokenTable.sessionId eq sessionId }) { row ->
+                    row[idleTimeoutSeconds] = 0
+                } > 0
+
+                Pair(changed, changed)
+            }
+        } ?: false
+    }
+
+    /**
+     * Deletes sessions whose refresh token has run out, and kiosk PIN sessions left unused past their idle limit
+     * @return How many were removed
+     */
+    fun removeExpired(now: Long = Clock.System.now().toEpochMilliseconds()): Int {
+        return appLogTryCatch<Int>(EXPIRED_TAG) {
+            transaction {
+                var removed = TokenTable.deleteWhere { (TokenTable.expiresAt greater 0L) and (TokenTable.expiresAt less now) }
+
+                val idle = TokenTable.selectAll().where { TokenTable.idleTimeoutSeconds greater 0 }
+                    .map { it.toSession() }
+                    .filter { !it.isLive(now) }
+                    .map { it.sessionId }
+                if (idle.isNotEmpty()) removed += TokenTable.deleteWhere { TokenTable.sessionId inList idle }
+
+                Pair(removed, true)
+            }
+        } ?: 0
+    }
+
+    /** Fills in [TokenTable.expiresAt] for sessions saved before it was kept, from their refresh token */
+    fun backfillExpiry() {
+        appLogTryCatch(BACKFILL_TAG) {
+            transaction {
+                TokenTable.selectAll().where { TokenTable.expiresAt eq 0L }.forEach { row ->
+                    val fromToken = try {
+                        JWT.decode(row[TokenTable.token]).expiresAt?.time
+                    } catch (ex: Exception) {
+                        null
+                    }
+
+                    // A token that can't be read can't be refreshed either, so it may as well go now
+                    val expiry = fromToken ?: (row[TokenTable.createdAt] + LEGACY_LIFETIME.inWholeMilliseconds)
+                    TokenTable.update(where = { TokenTable.id eq row[TokenTable.id] }) { it[expiresAt] = expiry }
+                }
+            }
+
+            true
+        }
+    }
+
+    /**
+     * Marks a session as just used, unless that was done in the last [TOUCH_INTERVAL]. Called on every request,
+     * so a kiosk's idle limit only counts time nobody used it
+     */
+    fun touchIfStale(session: StoredSession, now: Long = Clock.System.now().toEpochMilliseconds()) {
+        if (now - session.lastUsedAt >= TOUCH_INTERVAL.inWholeMilliseconds) touch(session.sessionId)
     }
 
     /** Marks a session as just used */
@@ -163,6 +255,14 @@ class TokenDatabase() {
             deviceName = this[TokenTable.deviceName],
             kind = SessionKind.entries.firstOrNull { it.name == this[TokenTable.kind] } ?: SessionKind.PASSWORD,
             createdAt = this[TokenTable.createdAt],
-            lastUsedAt = this[TokenTable.lastUsedAt]
+            lastUsedAt = this[TokenTable.lastUsedAt],
+            expiresAt = this[TokenTable.expiresAt],
+            idleTimeoutSeconds = this[TokenTable.idleTimeoutSeconds]
         )
+
+    companion object {
+        private val TOUCH_INTERVAL = 30.seconds
+        // What refresh tokens lasted before the expiry was kept
+        private val LEGACY_LIFETIME = 365.days
+    }
 }

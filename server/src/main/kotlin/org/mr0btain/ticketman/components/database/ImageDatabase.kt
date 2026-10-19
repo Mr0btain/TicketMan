@@ -41,7 +41,8 @@ class ImageDatabase {
     data class ImageRecord(
         val image: StoredImage,
         val status: ImageStatus,
-        val sha256: String
+        val sha256: String,
+        val uploadedBy: Uuid?
     )
 
     /**
@@ -80,7 +81,7 @@ class ImageDatabase {
             transaction {
                 val record = ImageEntity.findById(identifier)
                     ?.takeIf { it.imageStatus != ImageStatus.DELETED }
-                    ?.let { ImageRecord(it.toStoredImage(), it.imageStatus, it.sha256) }
+                    ?.let { ImageRecord(it.toStoredImage(), it.imageStatus, it.sha256, it.uploadedBy) }
 
                 Pair(record, record != null)
             }

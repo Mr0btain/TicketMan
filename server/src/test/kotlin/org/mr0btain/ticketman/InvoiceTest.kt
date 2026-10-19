@@ -429,7 +429,7 @@ class InvoiceTest {
         assertEquals(4, InventoryDatabase().getById(part.identifier)!!.stock)
 
         // Only admins
-        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/invoice/${invoice.identifier}/void", "").status)
+        assertEquals(HttpStatusCode.Forbidden, postJson("/api/invoice/${invoice.identifier}/void", "").status)
 
         val voided = postJson("/api/invoice/${invoice.identifier}/void", "", adminToken)
         assertEquals(HttpStatusCode.OK, voided.status)
@@ -445,8 +445,8 @@ class InvoiceTest {
         val clerkToken = login(clerk)
 
         assertEquals(HttpStatusCode.OK, client.get("/api/invoice/ticket/${ticket.identifier}") { bearerAuth(clerkToken) }.status)
-        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/invoice/${invoice.identifier}/payments", json.encodeToString(PaymentRequest(PaymentMethod.CASH, 100)), clerkToken).status)
-        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/counter/pickup", json.encodeToString(PickupRequest(ticket.identifier)), clerkToken).status)
+        assertEquals(HttpStatusCode.Forbidden, postJson("/api/invoice/${invoice.identifier}/payments", json.encodeToString(PaymentRequest(PaymentMethod.CASH, 100)), clerkToken).status)
+        assertEquals(HttpStatusCode.Forbidden, postJson("/api/counter/pickup", json.encodeToString(PickupRequest(ticket.identifier)), clerkToken).status)
     }
 
     // ------------------------------------------ End of day ------------------------------------------
@@ -485,6 +485,6 @@ class InvoiceTest {
         assertEquals(0, yesterday.ticketsCheckedIn)
 
         assertEquals(HttpStatusCode.BadRequest, client.get("/api/admin/report/daily?date=yesterday") { bearerAuth(adminToken) }.status)
-        assertEquals(HttpStatusCode.Unauthorized, client.get("/api/admin/report/daily") { bearerAuth(token) }.status)
+        assertEquals(HttpStatusCode.Forbidden, client.get("/api/admin/report/daily") { bearerAuth(token) }.status)
     }
 }

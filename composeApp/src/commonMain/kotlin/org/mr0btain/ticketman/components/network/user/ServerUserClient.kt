@@ -218,27 +218,6 @@ class ServerUserClient(
     }
 
     /**
-     * Check if credentials are still good in database
-     */
-    suspend fun checkLoginCredentials(username: String, password: String): Boolean {
-        val response = networkErrorTryCatch(CHECK_CREDENTIALS_TAG) {
-            userHttpClient.post {
-                url("$serverUrl/api/auth/user")
-                contentType(ContentType.Application.Json)
-                setBody(LoginRequest(username, password))
-            }
-        }
-
-        return if (response != null && response.status == HttpStatusCode.Companion.Accepted) {
-            AppLogger.m(CHECK_CREDENTIALS_TAG, "SUCCESS")
-            true
-        } else {
-            AppLogger.i(CHECK_CREDENTIALS_TAG, "FAIL")
-            false
-        }
-    }
-
-    /**
      * Refresh tokens for authentication with server
      */
     suspend fun refreshTokens(token: String): Result<AuthResponse, NetworkError> {
@@ -250,11 +229,13 @@ class ServerUserClient(
                     setBody(RefreshTokenRequest(token))
                 }
             }?.let { response -> handleHttpResponse<RefreshTokenResponse>(REFRESH_TOKEN_TAG, response) }
-                ?.onSuccess { accessToken ->
-                    localStorage.accessToken = accessToken.token
+                ?.onSuccess { tokens ->
+                    localStorage.accessToken = tokens.token
+                    // The server swaps the refresh token each time, the one just sent won't work again
+                    tokens.refreshToken?.let { localStorage.refreshToken = it }
 
                     // We don't use UUID here so just slap whatever. Maybe make another data class for this??
-                    return Result.Success(AuthResponse(Uuid.generateV7(), accessToken.token, token))
+                    return Result.Success(AuthResponse(Uuid.generateV7(), tokens.token, tokens.refreshToken ?: token))
                 }
         }
 
@@ -265,6 +246,30 @@ class ServerUserClient(
      * Checks the connection with the stored server url
      */
     suspend fun checkServerConnection(): Boolean = checkServerConnection(serverUrl)
+
+    /**
+     * The `https://` address a plain `http://` [url] redirects to, when the server has `HTTP_MODE=redirect`.
+     * Null for an `https://` address, or one that answers without redirecting
+     */
+    suspend fun httpsRedirectOf(url: String): String? {
+        if (!url.startsWith("http://", ignoreCase = true)) return null
+        val base = url.trimEnd('/')
+
+        val ping = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base$SERVER_PING_PATH") }
+            ?: return null
+        if (ping.status.value !in 300..399) return null
+
+        // Only taken when it's the same server's ping on HTTPS, not somewhere else entirely
+        val target = ping.headers[HttpHeaders.Location]?.takeIf { it.endsWith(SERVER_PING_PATH) } ?: return null
+        val moved = target.removeSuffix(SERVER_PING_PATH)
+        val sameHost = try {
+            Url(moved).let { it.protocol == URLProtocol.HTTPS && it.host == Url(base).host }
+        } catch (ex: Exception) {
+            false
+        }
+
+        return moved.takeIf { sameHost }?.also { AppLogger.i(CHECK_SERVER_CONNECTION_URL_TAG, "$base redirects to $it") }
+    }
 
     /**
      * Whether a TicketMan server answers at [url]. Asks `/api/ping`, then `/` for servers older than that. Only a

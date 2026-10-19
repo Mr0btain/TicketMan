@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
+import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
@@ -49,7 +50,7 @@ class AccountService(
      */
     fun requestAccount(request: AccountRequest): AccountResult<User> {
         UsernameRules.problem(request.username)?.let { return AccountResult.Invalid(it) }
-        passwordProblem(request.password)?.let { return AccountResult.Invalid(it) }
+        PasswordRules.problem(request.password)?.let { return AccountResult.Invalid(it) }
 
         if (users.getByUsername(request.username) != null) return AccountResult.Conflict("Username is already taken")
 
@@ -155,7 +156,7 @@ class AccountService(
         val user = users.getById(identifier) ?: return AccountResult.NotFound
         if (!user.needsSetup) return AccountResult.Conflict("Your account is already set up")
         if (request.name.isBlank()) return AccountResult.Invalid("Your name is required")
-        if (request.password.isNotBlank()) passwordProblem(request.password)?.let { return AccountResult.Invalid(it) }
+        if (request.password.isNotBlank()) PasswordRules.problem(request.password)?.let { return AccountResult.Invalid(it) }
         PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
 
         if (!saveSetup(user, request.name, request.email, request.phone, request.password, request.pin)) return AccountResult.Invalid(SAVE_FAILED)
@@ -175,7 +176,7 @@ class AccountService(
             ?: return AccountResult.NotFound
 
         if (request.name.isBlank()) return AccountResult.Invalid("Your name is required")
-        passwordProblem(request.password)?.let { return AccountResult.Invalid(it) }
+        PasswordRules.problem(request.password)?.let { return AccountResult.Invalid(it) }
         PinRules.problem(request.pin)?.let { return AccountResult.Invalid(it) }
 
         if (!saveSetup(user, request.name, request.email, request.phone, request.password, request.pin)) return AccountResult.Invalid(SAVE_FAILED)
@@ -217,14 +218,10 @@ class AccountService(
             saved
         }
 
-    private fun passwordProblem(password: String): String? =
-        if (password.length < MIN_PASSWORD_LENGTH) "Password needs at least $MIN_PASSWORD_LENGTH characters" else null
-
     private fun randomSecret(): String =
         ByteArray(24).also { random.nextBytes(it) }.let { Base64.getUrlEncoder().encodeToString(it) }
 
     companion object {
-        const val MIN_PASSWORD_LENGTH = 8
         private const val MAX_WAITING_REQUESTS = 50
         private const val SAVE_SETUP_TAG = "AccountService:SaveSetup"
         private const val SAVE_FAILED = "Your account couldn't be saved, try again"

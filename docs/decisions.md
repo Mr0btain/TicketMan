@@ -58,15 +58,20 @@ its token would have run out.
 **Costs:** every authenticated request looks the session up. A device that logs in without a device id (old
 clients, scripts) adds a new session every time.
 
-### Refresh tokens last a year and aren't rotated
+### Refresh tokens last a year and are swapped on each use
 
-**Chosen:** a password session's refresh token lasts 365 days and stays the same for the whole session. PIN
-sessions last 12 hours.
+**Chosen:** a password session lasts 365 days and a PIN session 12 hours. Each refresh hands out a new refresh
+token with the same expiry and the old one stops working. Kiosk PIN sessions also end once no request has reached
+them for the station's idle timeout plus 10 minutes.
 
 **Why:** a shop's own computers should stay signed in, and the per-device session above means any one can still
-be ended from the admin screen. Tokens are typed (`typ`), so a refresh token can't be used as an access token.
+be ended from the admin screen. Swapping the token means a copied one stops working as soon as the real device
+refreshes, which is at most an hour later. Keeping the first expiry means refreshing never stretches a session.
+Tokens are typed (`typ`), so a refresh token can't be used as an access token.
 
-**Costs:** a stolen refresh token works until its session is ended or it expires. Rotation would shorten that.
+**Costs:** a refresh whose answer never arrives leaves the device holding a dead token, so it logs in again (with
+the saved password if it has one). Reusing an old token is only refused, not treated as a theft that ends the
+session, because that lost answer would look the same.
 
 **Revisit if:** the server is reachable from outside the shop.
 
@@ -120,8 +125,8 @@ ticket or invoice has to hold the locks until it commits.
 
 **Why:** simple, and nothing to clean up in the database.
 
-**Costs:** a restart clears the counts. Behind a reverse proxy every request has the proxy's address. A
-username's limit can be used to keep that user out of password login for a while.
+**Costs:** a restart clears the counts. Behind a reverse proxy every request has the proxy's address unless
+`TRUST_PROXY` is set. A username's limit can be used to keep that user out of password login for a while.
 
 ## The client
 

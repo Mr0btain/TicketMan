@@ -36,9 +36,10 @@ provider guards it (registered in `plugins/Security.kt`, see [Authentication and
 | `normal` | Normal access or higher. Used for changing things. This is `authenticate { }` with no name |
 | `admin` | Admins only |
 
-Every provider also needs the token to be an access token (not a refresh token) for a session that still exists.
-Failing any check is a `401` with the text body `Bad Token or Unauthorized`; there is no `403` for "logged in but
-not allowed". See [Request lifecycle](../architecture/request-lifecycle.md#gotchas) for how the client copes.
+Every provider also needs the token to be an access token (not a refresh token) for a session that still exists
+and hasn't expired. A bad, expired or revoked token is a `401` with the text body `Bad Token or Unauthorized`, and
+the client refreshes. A good token whose user doesn't have the access the route needs (or hasn't finished setup) is
+a `403` with `You don't have access to that`, which refreshing wouldn't fix.
 
 ## Bodies
 
@@ -67,7 +68,8 @@ The routes mostly use these:
 | `202 Accepted` | Done. Most writes answer this, usually with no body. It doesn't mean "queued" |
 | `204 No Content` | Nothing to report (only `GET /api/admin/restore`) |
 | `400 Bad Request` | A value the route checked was wrong, with the reason as the text body. Or the body couldn't be read at all: not JSON, an unknown or missing field, an id that isn't a UUID. That one always says `The server couldn't read that request` |
-| `401 Unauthorized` | Not logged in, or not allowed (see above). Also a wrong password |
+| `401 Unauthorized` | Not logged in, or the token is no good (see above). Also a wrong password or PIN |
+| `403 Forbidden` | Logged in, but not allowed: the access level is too low. Also an unknown or unapproved station, and seeding outside development mode |
 | `404 Not Found` | No such record, or an id in the path that isn't a UUID. Some list routes also use it for a database error |
 | `409 Conflict` | The change clashes with the current state: a taken username, a picked up ticket, stock that changed |
 | `413`, `415`, `423`, `429`, `507` | Too big an upload, a photo type that can't be read, a locked PIN, too many tries, no disk space |

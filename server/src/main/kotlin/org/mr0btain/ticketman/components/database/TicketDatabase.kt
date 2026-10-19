@@ -110,15 +110,6 @@ class TicketDatabase(
     override fun count(): Long =
         dbQuery(COUNT_TAG) { TicketEntity.count() } ?: 0L
 
-    // The lock goes around the whole transaction so a number is committed before the next one is picked
-    override fun addAll(data: List<Ticket>): Boolean =
-        synchronized(NUMBER_LOCK) {
-            dbWrite(ADD_ALL_TAG) {
-                data.forEach { item -> insertTicket(item) }
-                true
-            }
-        }
-
     override fun remove(identifier: Uuid): Boolean =
         dbWrite(REMOVE_TAG) {
             val ticketEntity = TicketEntity.findById(identifier)

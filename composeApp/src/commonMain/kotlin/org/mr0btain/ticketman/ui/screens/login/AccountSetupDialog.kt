@@ -4,9 +4,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
+import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
-import org.mr0btain.ticketman.ui.screens.login.components.MIN_PASSWORD_LENGTH
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
@@ -49,7 +49,7 @@ fun AccountSetupDialog(
     // Invites have to pick a password, approved requests already chose one
     val problem = when {
         firstName.isBlank() -> "Your name is required"
-        (isInvite || password.isNotEmpty()) && password.length < MIN_PASSWORD_LENGTH -> "Password needs at least $MIN_PASSWORD_LENGTH characters"
+        (isInvite || password.isNotEmpty()) && PasswordRules.problem(password) != null -> PasswordRules.problem(password)
         password != confirmPassword -> "Passwords don't match"
         PinRules.problem(pin) != null -> PinRules.problem(pin)
         pin != confirmPin -> "PINs don't match"

@@ -95,8 +95,8 @@ which fixes the set of operations every record type has:
 
 | Abstract in `Database` | Provided by `Database` |
 |------------------------|------------------------|
-| `add`, `addAll`, `update`, `remove` | `updateNote`, `removeNote` (checked against `noteLinkColumn`) |
-| `getById`, `getPagedItems`, `count`, `search` | `addImagesToNote`, `removeImage` |
+| `add`, `update`, `remove` | `updateNote`, `removeNote` (checked against `noteLinkColumn`) |
+| `getById`, `getPagedItems`, `count`, `search` | `addImagesToNote` |
 | `addNote`, `getNotes`, `noteLinkColumn` | helpers `insertNote`, `attachNote` for subclasses |
 
 On top of those, `TicketDatabase` adds what only tickets need: `getByNumber`, `getPagedItemsForUser`,

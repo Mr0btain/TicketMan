@@ -18,6 +18,10 @@ import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.server.request.LoginRequest
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
+import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
@@ -116,17 +120,6 @@ class AdminTest {
     }
 
     @Test
-    fun checkCredentialsRouteNeedsTheRightPassword() = testApplication {
-        setup()
-
-        val wrong = client.post("/api/auth/user") {
-            contentType(ContentType.Application.Json)
-            setBody(json.encodeToString(LoginRequest(admin.username, "nope")))
-        }
-        assertEquals(HttpStatusCode.Unauthorized, wrong.status)
-    }
-
-    @Test
     fun deactivatedUserCantLogInOrUseOldToken() = testApplication {
         val users = setup()
         val employeeToken = token(employee)
@@ -150,7 +143,7 @@ class AdminTest {
         // NONE's level number is the highest, it still must not count as admin
         users.update(outsider.copy(password = "", accessLevel = AccessLevel.NONE))
 
-        assertEquals(HttpStatusCode.Unauthorized, get("/api/admin/stats", outsiderToken).status)
+        assertEquals(HttpStatusCode.Forbidden, get("/api/admin/stats", outsiderToken).status)
     }
 
     @Test
@@ -158,9 +151,9 @@ class AdminTest {
         setup()
         val employeeToken = token(employee)
 
-        assertEquals(HttpStatusCode.Unauthorized, get("/api/admin/stats", employeeToken).status)
-        assertEquals(HttpStatusCode.Unauthorized, get("/api/admin/sessions", employeeToken).status)
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/user/add", json.encodeToString(User(username = "x", password = "y")), employeeToken).status)
+        assertEquals(HttpStatusCode.Forbidden, get("/api/admin/stats", employeeToken).status)
+        assertEquals(HttpStatusCode.Forbidden, get("/api/admin/sessions", employeeToken).status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/user/add", json.encodeToString(User(username = "x", password = "y")), employeeToken).status)
     }
 
     @Test
@@ -198,6 +191,8 @@ class AdminTest {
         assertEquals(HttpStatusCode.Created, post("/api/user/add", json.encodeToString(newUser), adminToken).status)
         assertEquals(HttpStatusCode.Conflict, post("/api/user/add", json.encodeToString(newUser.copy(identifier = Uuid.generateV7())), adminToken).status)
         assertEquals(HttpStatusCode.BadRequest, post("/api/user/add", json.encodeToString(User(username = "nopass")), adminToken).status)
+        assertEquals(HttpStatusCode.BadRequest, post("/api/user/add", json.encodeToString(User(username = "shorty", password = "seven77", accessLevel = AccessLevel.NORMAL)), adminToken).status)
+        assertEquals(HttpStatusCode.BadRequest, post("/api/user/add", json.encodeToString(User(username = "has space", password = "long_enough", accessLevel = AccessLevel.NORMAL)), adminToken).status)
 
         // Usernames are stored lowercase, logging in shouldn't care about case
         assertEquals(HttpStatusCode.Accepted, login("Newbie", "new_pass").status)
@@ -226,10 +221,31 @@ class AdminTest {
     }
 
     @Test
+    fun renamingAUserFollowsTheUsernameRules() = testApplication {
+        val users = setup()
+        val adminToken = token(admin)
+
+        val bad = employee.copy(password = "", username = "no spaces!")
+        assertEquals(HttpStatusCode.BadRequest, post("/api/user/update", json.encodeToString(bad), adminToken).status)
+
+        // A name from before the rules can stay as it is while other details change
+        transaction {
+            UserTable.update({ UserTable.id eq employee.identifier }) { it[username] = "old name" }
+        }
+        val kept = employee.copy(password = "", username = "old name", email = "kept@shop.test")
+        assertEquals(HttpStatusCode.Accepted, post("/api/user/update", json.encodeToString(kept), adminToken).status)
+        assertEquals("kept@shop.test", users.getById(employee.identifier)!!.email)
+    }
+
+    @Test
     fun passwordResetChangesPasswordAndEndsTheirSession() = testApplication {
         setup()
         val adminToken = token(admin)
         val employeeToken = token(employee)
+
+        val tooShort = post("/api/user/password/${employee.identifier}", json.encodeToString(PasswordResetRequest("short")), adminToken)
+        assertEquals(HttpStatusCode.BadRequest, tooShort.status)
+        assertEquals(HttpStatusCode.Accepted, login(employee.username, employee.password).status)
 
         val response = post("/api/user/password/${employee.identifier}", json.encodeToString(PasswordResetRequest("fresh_pass")), adminToken)
         assertEquals(HttpStatusCode.Accepted, response.status)
@@ -389,7 +405,7 @@ class AdminTest {
         val profile = ShopProfile(name = "Fix It Shop", phone = "555-0100", invoiceFooter = "Thanks!")
 
         assertEquals(ShopProfile(), json.decodeFromString<ShopProfile>(get("/api/shop", employeeToken).bodyAsText()))
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/shop/update", json.encodeToString(profile), employeeToken).status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/shop/update", json.encodeToString(profile), employeeToken).status)
         assertEquals(HttpStatusCode.Accepted, post("/api/shop/update", json.encodeToString(profile), adminToken).status)
         assertEquals(profile, json.decodeFromString<ShopProfile>(get("/api/shop", employeeToken).bodyAsText()))
 

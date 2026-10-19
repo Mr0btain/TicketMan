@@ -43,45 +43,57 @@ Small, user visible, no design questions.
 
 ## Phase 2: Security and accounts
 
-- [ ] **`/set/user` takes any user as a technician**, even Restricted or deactivated ones. Apply check-in's rule
-      (active, Normal access or higher). *Source:* [ticket API](api/ticket.md#known-gaps)
-- [ ] **Password and username rules aren't applied everywhere.** `POST /api/user/add` and `/password/{id}` don't
-      check the 8 character minimum, and `/update` doesn't check `UsernameRules`.
-      *Source:* [users and accounts](server/users-and-accounts.md#known-gaps)
-- [ ] **Remove unused routes and code** that skip the usual checks:
+- [x] **`/set/user` takes any user as a technician**, even Restricted or deactivated ones. Apply check-in's rule
+      (active, Normal access or higher). *Done:* `400 That technician can't take tickets`.
+      *Source:* [ticket API](api/ticket.md#post-apidataticketsetuseridentifier)
+- [x] **Password and username rules aren't applied everywhere.** `POST /api/user/add` and `/password/{id}` don't
+      check the 8 character minimum, and `/update` doesn't check `UsernameRules`. *Done:* `PasswordRules` in shared,
+      used by the server and the client's dialogs; `/update` only checks a changed username.
+      *Source:* [users and accounts](server/users-and-accounts.md#rules-shared-with-the-client)
+- [x] **Remove unused routes and code** that skip the usual checks:
   - `POST /api/user/add/all` (no username rules, no taken check; nothing calls it),
   - `POST /api/auth/user` and `ServerUserClient.checkLoginCredentials` (nothing calls it any more; `auth.md`
     wrongly says the client does),
   - `Database.removeImage(id)` (doesn't check the owner; nothing calls it).
 
-  Update `docs/api/` and run `check_api_docs.py`. *Source:* [user API](api/user.md#gotchas),
-  [auth](server/auth.md#gotchas), [database](server/database.md#gotchas)
-- [ ] **Pending photos can be fetched by anyone logged in** who knows the id. Only serve a `PENDING` photo to the user
-      who uploaded it. *Source:* [photos](server/photos.md#gotchas)
-- [ ] **The default `SECRET` is public.** Refuse to start outside development mode when `SECRET` isn't set (it
+  Update `docs/api/` and run `check_api_docs.py`. *Done:* also `Database.addAll` and its overrides, which only
+  `/add/all` used. *Source:* [user API](api/user.md#gotchas), [auth](server/auth.md#gotchas),
+  [database](server/database.md#gotchas)
+- [x] **Pending photos can be fetched by anyone logged in** who knows the id. Only serve a `PENDING` photo to the user
+      who uploaded it. *Source:* [photos](server/photos.md#3-serving)
+- [x] **The default `SECRET` is public.** Refuse to start outside development mode when `SECRET` isn't set (it
       only logs an error now), or make and keep a random one in the data folder like the certificate. **(decide)**
-      *Source:* [auth](server/auth.md#known-gaps), [configuration](configuration.md)
-- [ ] **Expired sessions are never removed.** `TokenTable` keeps a row per login until someone logs it out, even
+      **Decided:** make and keep one (`ServerSecret`, `<dataPath>/server/secret`). The yaml default is now blank.
+      *Source:* [auth](server/auth.md#tokens), [configuration](configuration.md#secret)
+- [x] **Expired sessions are never removed.** `TokenTable` keeps a row per login until someone logs it out, even
       after the refresh token has expired. Delete expired sessions in the hourly sweep or on start, and drop the
-      `TODO` in `Application.kt`. *Source:* found while checking the TODOs
-- [ ] **Refresh tokens aren't rotated.** Issue a new refresh token on each refresh and refuse the old one, so a
+      `TODO` in `Application.kt`. *Done:* `expiresAt` column, `removeExpired()` in the hourly sweep, expired
+      sessions refused straight away. *Source:* found while checking the TODOs
+- [x] **Refresh tokens aren't rotated.** Issue a new refresh token on each refresh and refuse the old one, so a
       stolen one stops working once the real device refreshes. The client already stores what it's given.
-      *Source:* [auth](server/auth.md#known-gaps), [decisions](decisions.md#refresh-tokens-last-a-year-and-arent-rotated)
-- [ ] **The backup download link is a bearer credential** for 30 minutes and lands in browser history. Make it
-      single use, or shorten its life once the download has started. *Source:* [backup](server/backup-restore.md#gotchas)
-- [ ] **Kiosk exit and idle lock are client only.** Tell the server when a kiosk is left, and give PIN sessions a
+      *Done:* it didn't store it, so `ServerUserClient.refreshTokens` does now. Tokens also got a `jti`, since two
+      made in the same second were identical.
+      *Source:* [auth](server/auth.md#tokens), [decisions](decisions.md#refresh-tokens-last-a-year-and-are-swapped-on-each-use)
+- [x] **The backup download link is a bearer credential** for 30 minutes and lands in browser history. Make it
+      single use, or shorten its life once the download has started. **Decided:** each use moves its expiry to 5
+      minutes from then (`RESUME_WINDOW`), so resuming still works. *Source:* [backup](server/backup-restore.md#gotchas)
+- [x] **Kiosk exit and idle lock are client only.** Tell the server when a kiosk is left, and give PIN sessions a
       server side idle expiry (say, the station's idle timeout plus a margin) so a switched off kiosk doesn't leave
-      someone signed in for 12 hours. *Source:* [PINs and stations](server/pins-and-stations.md#known-gaps),
-      [kiosk](ui/screens/kiosk.md#known-gaps)
-- [ ] **Rate limits behind a proxy.** Behind a reverse proxy every request has the proxy's address. Add an opt-in
+      someone signed in for 12 hours. *Done:* idle timeout plus 10 minutes, kept alive by the kiosk while in use;
+      `POST /api/auth/kiosk/leave`. *Source:* [PINs and stations](server/pins-and-stations.md#kiosk-sessions-on-the-server),
+      [kiosk](ui/screens/kiosk.md#leaving-kiosk-mode)
+- [x] **Rate limits behind a proxy.** Behind a reverse proxy every request has the proxy's address. Add an opt-in
       setting to trust `X-Forwarded-For` (Ktor's `XForwardedHeaders`). Keeping counts across restarts is optional.
-      *Source:* [auth](server/auth.md#known-gaps), [users and accounts](server/users-and-accounts.md#known-gaps)
-- [ ] **Not enough access answers `401`, not `403`.** A Restricted user hitting a write route looks like an expired
+      *Done:* `TRUST_PROXY`, taking the last address in the header. Counts still reset on restart.
+      *Source:* [auth](server/auth.md#wrong-password-limit), [configuration](configuration.md#trust_proxy)
+- [x] **Not enough access answers `401`, not `403`.** A Restricted user hitting a write route looks like an expired
       token, so the client tries a refresh first. Answer `403` when the token is fine but the access level isn't,
-      and have the client show "You don't have access" instead of asking for a login.
-      *Source:* [request lifecycle](architecture/request-lifecycle.md#gotchas), [auth](server/auth.md#gotchas)
-- [ ] **Plain HTTP is on by default.** Once devices have moved to `https://` addresses, default `HTTP_MODE` to
-      `redirect`. *Source:* [overview](architecture/overview.md#known-gaps), [operations](operations.md#plain-http)
+      and have the client show "You don't have access" instead of asking for a login. *Done:* `NetworkError.FORBIDDEN`
+      now reads "You don't have access to that". *Source:* [request lifecycle](architecture/request-lifecycle.md#gotchas),
+      [auth](server/auth.md#checking-each-request)
+- [x] **Plain HTTP is on by default.** Once devices have moved to `https://` addresses, default `HTTP_MODE` to
+      `redirect`. *Done:* blank means `redirect` (still `on` in development mode), and clients with an `http://`
+      address follow the redirect and save the `https://` one. *Source:* [operations](operations.md#plain-http)
 
 ## Phase 3: Data and the server
 

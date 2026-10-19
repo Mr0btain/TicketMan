@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman
 
+import com.auth0.jwt.JWT
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -13,6 +14,7 @@ import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.TokenTable
 import org.mr0btain.ticketman.components.database.UserDatabase
+import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
@@ -118,6 +120,71 @@ class SessionTest {
         assertEquals(HttpStatusCode.Accepted, refreshed.status)
         val newAccess = json.decodeFromString<RefreshTokenResponse>(refreshed.bodyAsText()).token
         assertEquals(HttpStatusCode.OK, me(newAccess))
+    }
+
+    private suspend fun ApplicationTestBuilder.refresh(token: String) =
+        client.post("/api/auth/refresh") {
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(RefreshTokenRequest(token)))
+        }
+
+    private fun sessionOf(token: String): String = JWT.decode(token).getClaim(JwtService.SESSION_CLAIM).asString()
+
+    @Test
+    fun refreshingSwapsTheRefreshToken() = testApplication {
+        setup()
+        val first = login(tech, "desk-1").refreshToken!!
+
+        val response = refresh(first)
+        assertEquals(HttpStatusCode.Accepted, response.status)
+        val second = json.decodeFromString<RefreshTokenResponse>(response.bodyAsText()).refreshToken!!
+        assertNotEquals(first, second)
+
+        // The old one is no good now, so a copy of it stops working once the real device refreshes
+        assertEquals(HttpStatusCode.Unauthorized, refresh(first).status)
+        assertEquals(HttpStatusCode.Accepted, refresh(second).status)
+
+        // Refreshing doesn't stretch the session, the new token runs out when the first one would have
+        assertEquals(JWT.decode(first).expiresAt, JWT.decode(second).expiresAt)
+        assertEquals(sessionOf(first), sessionOf(second))
+    }
+
+    @Test
+    fun expiredSessionsStopWorkingAndAreSwept() = testApplication {
+        setup()
+        val desk = login(tech, "desk-1")
+        val other = login(admin, "desk-2")
+        val sessionId = sessionOf(desk.accessToken!!)
+        val now = System.currentTimeMillis()
+
+        // The expiry is kept from the refresh token
+        val stored = TokenDatabase().findBySessionId(sessionId)!!
+        assertEquals(JWT.decode(desk.refreshToken).expiresAt.time, stored.expiresAt)
+
+        transaction {
+            TokenTable.update({ TokenTable.sessionId eq sessionId }) { it[expiresAt] = now - 1 }
+        }
+
+        assertEquals(HttpStatusCode.Unauthorized, me(desk.accessToken!!))
+        assertEquals(HttpStatusCode.Unauthorized, refresh(desk.refreshToken!!).status)
+
+        assertEquals(1, TokenDatabase().removeExpired(now))
+        assertNull(TokenDatabase().findBySessionId(sessionId))
+        assertEquals(HttpStatusCode.OK, me(other.accessToken!!))
+    }
+
+    @Test
+    fun sessionsFromBeforeExpiryWasKeptGetItFromTheirToken() = testApplication {
+        setup()
+        val desk = login(tech, "desk-1")
+        val sessionId = sessionOf(desk.accessToken!!)
+
+        transaction {
+            TokenTable.update({ TokenTable.sessionId eq sessionId }) { it[expiresAt] = 0 }
+        }
+        TokenDatabase().backfillExpiry()
+
+        assertEquals(JWT.decode(desk.refreshToken).expiresAt.time, TokenDatabase().findBySessionId(sessionId)!!.expiresAt)
     }
 
     @Test

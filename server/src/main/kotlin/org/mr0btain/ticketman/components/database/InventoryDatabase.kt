@@ -48,12 +48,6 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
     override fun count(): Long =
         dbQuery(COUNT_TAG) { InventoryEntity.count() } ?: 0L
 
-    override fun addAll(data: List<Inventory>): Boolean =
-        dbWrite(ADD_ALL_TAG) {
-            data.forEach { item -> insertInventory(item) }
-            true
-        }
-
     override fun remove(identifier: Uuid): Boolean =
         dbWrite(REMOVE_TAG) {
             val inventoryEntity = InventoryEntity.findById(identifier)

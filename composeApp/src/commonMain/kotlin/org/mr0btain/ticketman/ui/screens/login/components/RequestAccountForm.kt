@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.components.utils.joinName
+import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
@@ -13,9 +14,6 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
-
-/** Matches the server's minimum */
-const val MIN_PASSWORD_LENGTH = 8
 
 /**
  * Asks for an account. It waits for an admin to approve it
@@ -41,7 +39,7 @@ fun RequestAccountForm(
     val problem = UsernameRules.problem(username)
         ?: when {
             firstName.isBlank() -> "Your name is required"
-            password.length < MIN_PASSWORD_LENGTH -> "Password needs at least $MIN_PASSWORD_LENGTH characters"
+            PasswordRules.problem(password) != null -> PasswordRules.problem(password)
             password != confirmPassword -> "Passwords don't match"
             else -> null
         }

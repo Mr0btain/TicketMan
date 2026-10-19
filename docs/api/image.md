@@ -27,7 +27,7 @@ A body that says up front (`Content-Length`) it's over the limit is refused befo
 The photo's details, not the picture.
 
 - **`200`** `StoredImage { identifier, description, tags, width, height, sizeBytes }`. **`404`** no such photo,
-  or it's been deleted.
+  it's been deleted, or it's pending and someone else uploaded it.
 
 ### `GET /api/image/{identifier}/{variant}`
 
@@ -39,7 +39,8 @@ The picture itself, as a JPEG.
   `original` (up to 2560 px). Smaller photos are never enlarged.
 - **`200`** the file, with `Cache-Control: private, max-age=31536000, immutable` and an `ETag` made from the photo's
   hash. Photos never change once uploaded.
-- **`304`** when `If-None-Match` matches the `ETag`. **`404`** no such photo or variant, or it's been deleted.
+- **`304`** when `If-None-Match` matches the `ETag`. **`404`** no such photo or variant, it's been deleted, or it's
+  pending and someone else uploaded it.
 
 Images load in the client through Coil on the logged in HTTP client, so they carry the bearer token; a plain
 `<img src>` in a browser won't work. See [Transfers and photos](../client/transfers-and-photos.md).

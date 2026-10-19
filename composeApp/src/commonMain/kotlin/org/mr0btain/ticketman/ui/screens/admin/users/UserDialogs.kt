@@ -5,7 +5,9 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.user.AccessLevel
+import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
@@ -45,9 +47,9 @@ fun UserDialog(
     var confirmPassword by remember(user) { mutableStateOf("") }
 
     val error = when {
-        username.isBlank() -> "Username is required"
-        username.any { it.isWhitespace() } -> "Username can't have spaces"
-        isNew && password.isBlank() -> "Password is required"
+        // Older usernames from before the rules can stay as they are
+        (isNew || username != user.username) && UsernameRules.problem(username) != null -> UsernameRules.problem(username)
+        isNew && PasswordRules.problem(password) != null -> PasswordRules.problem(password)
         isNew && password != confirmPassword -> "Passwords don't match"
         else -> null
     }
@@ -133,7 +135,7 @@ fun ResetPasswordDialog(
     var confirmPassword by remember(user) { mutableStateOf("") }
 
     val error = when {
-        password.isBlank() -> "Password is required"
+        PasswordRules.problem(password) != null -> PasswordRules.problem(password)
         password != confirmPassword -> "Passwords don't match"
         else -> null
     }

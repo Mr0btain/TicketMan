@@ -8,12 +8,14 @@ route decides whether to let a caller in. PIN logins at stations build on this a
 
 | File | Does |
 |------|------|
-| `plugins/Security.kt` | Installs the four JWT auth providers |
-| `service/JwtService.kt` | Makes and checks tokens; the validators the providers call |
+| `plugins/Security.kt` | Installs the four JWT auth providers, and answers `401` or `403` when one turns a caller away |
+| `plugins/Proxy.kt` | Takes client addresses from `X-Forwarded-For` when `TRUST_PROXY` is on |
+| `service/JwtService.kt` | Makes and checks tokens; the checks the providers call |
+| `service/ServerSecret.kt` | The key tokens are signed with: `SECRET`, or one the server makes and keeps |
 | `service/UserService.kt` | Password and PIN login, starting sessions, refreshing, logging out |
 | `service/PasswordHasher.kt` | PBKDF2 hashing for passwords, PINs, invite codes and station secrets |
 | `database/TokenDatabase.kt`, `TokenTable.kt`, `StoredSession.kt` | Sessions, one row per user per device |
-| `routing/AuthRoute.kt` | `/api/auth`: login, refresh, logout, PIN login, account requests |
+| `routing/AuthRoute.kt` | `/api/auth`: login, refresh, logout, PIN login, leaving a kiosk, account requests |
 | `routing/Helpers.kt` | `getIdentifierFromToken()`, `getSessionIdFromToken()` for routes |
 
 ## Logging in
@@ -45,7 +47,7 @@ sequenceDiagram
 
 ### Wrong password limit
 
-`POST /api/auth` and `/api/auth/user` count failed logins in memory, in two `RequestLimiter`s in `AuthRoute.kt`:
+`POST /api/auth` counts failed logins in memory, in two `RequestLimiter`s in `AuthRoute.kt`:
 20 per address and 10 per username, each over 15 minutes. Once either is used up the route answers `429` before
 checking the password, so even the right password waits until the oldest failure is 15 minutes old. Good logins
 never count. The client shows `NetworkError.TOO_MANY_REQUESTS` ("Too many tries, wait a moment and try again").
@@ -53,6 +55,12 @@ never count. The client shows `NetworkError.TOO_MANY_REQUESTS` ("Too many tries,
 A username's count is shared by every address, so someone on the network can keep a user locked out of password
 login by guessing at it. PIN login and existing sessions aren't affected, and the counts reset when the server
 restarts.
+
+The address is the connection's, which behind a reverse proxy is the proxy's for every device. Setting
+`TRUST_PROXY=true` installs Ktor's `XForwardedHeaders` (`plugins/Proxy.kt`), so the address comes from
+`X-Forwarded-For` instead. It takes the last address in the header, the one the proxy added, since anything
+before it was sent by the client. Only turn it on behind a proxy: without one, anyone can send the header and pick
+their own address.
 
 A username that doesn't exist still runs a dummy hash check, so the response takes as long as a wrong password and
 can't be used to find out which usernames exist.
@@ -62,7 +70,7 @@ successful login re-saves the password hashed.
 
 ## Tokens
 
-Both tokens are HMAC-SHA256 JWTs signed with `jwt.secret`, carrying:
+Both tokens are HMAC-SHA256 JWTs signed with the server's secret, carrying:
 
 | Claim | Value |
 |-------|-------|
@@ -70,11 +78,22 @@ Both tokens are HMAC-SHA256 JWTs signed with `jwt.secret`, carrying:
 | `identifier` | The user's id |
 | `sid` | The session id, shared by the refresh token and every access token made from it |
 | `typ` | `access` or `refresh` (`JwtService.ACCESS_TYPE`, `REFRESH_TYPE`) |
+| `jti` | A random id, so two tokens made in the same second never match |
 | `exp` | Access: 1 hour. Refresh: 365 days, or 12 hours for a PIN session |
 
+The secret is `SECRET` when it's set. Otherwise `ServerSecret` makes a random one on first start and keeps it in
+`<dataPath>/server/secret`, readable only by the account running the server, like the certificate. It's kept
+because a new secret would log every device out. See [Configuration](../configuration.md#secret).
+
 The client sends the access token as `Authorization: Bearer ...`. When it gets a `401`, it posts the refresh token
-to `/api/auth/refresh`, which checks that the token verifies, is the one stored for its session, and belongs to an
-active user, then returns a new access token for the same session. The refresh token itself isn't replaced.
+to `/api/auth/refresh`, which checks that the token verifies, is the one stored for its session, belongs to an
+active user and that the session hasn't expired. It then returns a new access token **and a new refresh token**,
+and the one sent stops working.
+
+That swap is a compare and set (`TokenDatabase.rotate` only writes while the old token is still the stored one),
+so of two refreshes with the same token only the first gets through. A copied refresh token stops working as soon
+as the real device refreshes. The new refresh token runs out when the first one would have, so refreshing never
+stretches a session past its year (or 12 hours).
 
 Every auth provider only lets in tokens with `typ = access`, so a refresh token can't be used as a bearer token,
 and `/api/auth/refresh` refuses access tokens. Tokens made before `typ` was added have none: old access tokens are
@@ -86,8 +105,8 @@ provider and can only be spent on `/api/auth/setup/invite`.
 
 ## Sessions
 
-A session is a row in `TokenTable`: session id, user, refresh token, device id and name, kind (`PASSWORD` or
-`PIN`), created and last used times.
+A session is a row in `TokenTable`: session id, user, its current refresh token, device id and name, kind
+(`PASSWORD` or `PIN`), created and last used times, when it expires, and an idle limit.
 
 - **One per user per device.** The client makes a random device id on first start and sends it with every login.
   `TokenDatabase.add` deletes that user's existing session on that device before inserting, so logging in again on
@@ -101,7 +120,14 @@ A session is a row in `TokenTable`: session id, user, refresh token, device id a
   - a password reset by an admin (ends their sessions),
   - a new PIN login at a station (ends the previous PIN session on that device),
   - removing a station.
-- `lastUsedAt` is updated on each refresh, so the Sessions tab shows roughly when a device was last active.
+- **It also has to be live** (`StoredSession.isLive`): not past `expiresAt` (copied from the refresh token's `exp`),
+  and for a kiosk PIN session, not unused for longer than its `idleTimeoutSeconds`. See
+  [PINs and stations](pins-and-stations.md#kiosk-sessions-on-the-server).
+- `lastUsedAt` is updated by requests, at most every 30 seconds (`touchIfStale`), and on each refresh, so the
+  Sessions tab shows when a device was last active.
+- **Expired sessions are deleted** by `TokenDatabase.removeExpired()` in the hourly sweep, along with kiosk
+  sessions left past their idle limit. Sessions saved before `expiresAt` was kept get it from their refresh token
+  on start (`backfillExpiry`).
 
 ## Checking each request
 
@@ -110,16 +136,24 @@ JWT providers. All of them verify the signature, issuer, audience and expiry, th
 
 | Provider | Validator | Lets in | Used for |
 |----------|-----------|---------|----------|
-| default (`authenticate { }`) | `customValidator(NORMAL)` | Normal and Admin | Changing records |
-| `"restricted"` | `customValidator(RESTRICTED)` | Everyone set up | Reading records |
-| `"admin"` | `customValidator(ADMIN)` | Admin | `/api/admin`, user management, staff notes, shop profile |
+| default (`authenticate { }`) | `checkAccess(NORMAL)` | Normal and Admin | Changing records |
+| `"restricted"` | `checkAccess(RESTRICTED)` | Everyone set up | Reading records |
+| `"admin"` | `checkAccess(ADMIN)` | Admin | `/api/admin`, user management, staff notes, shop profile, leaving a kiosk |
 | `"setup"` | `setupValidator` | Any active user, set up or not | `/api/user/setup`, `/api/user/me`, `/api/auth/logout` |
 
-`customValidator` lets a caller in when the audience matches, the user `canAccess(level)` (active, setup finished,
-level high enough), and the session still exists. `setupValidator` skips the setup and level check, which is what
-lets a new user finish setting up and nothing else.
+`checkAccess` lets a caller in when the audience matches, it's an access token, the session exists and is live,
+and the user `canAccess(level)` (active, setup finished, level high enough). `setupValidator` skips the setup and
+level check, which is what lets a new user finish setting up and nothing else.
 
-A caller who fails gets `401 Unauthorized` from every provider, whatever the reason.
+A caller turned away gets one of two answers:
+
+| Why | Answer | What the client does |
+|-----|--------|----------------------|
+| No token, a bad or expired one, a refresh token, an ended session, or a deactivated user | `401` `Bad Token or Unauthorized` | Refreshes, then logs in again |
+| A good token, but the user's access level is too low or they haven't finished setup | `403` `You don't have access to that` | Shows the message. Refreshing wouldn't help |
+
+`checkAccess` returns `AccessCheck.Denied` for the second case, and the provider's `validate` marks the call so its
+`challenge` answers `403`.
 
 Inside a route, `call.getIdentifierFromToken()` gives the caller's user id and `call.getSessionIdFromToken()` their
 session id. Routes that act on "me" use these rather than taking an id from the request, so nobody can act as
@@ -127,7 +161,7 @@ someone else.
 
 ### Routes with no login
 
-`POST /api/auth` (login), `/api/auth/refresh`, `/api/auth/request-account`, `/api/auth/setup/invite`, the station
+`POST /api/auth` (login), `/api/auth/refresh`, `/api/auth/request-account`, `/api/auth/setup/invite`, `GET /api/ping`, the station
 routes `/api/auth/pin`, `/station/status`, `/station/staff` (which check the station's secret instead), `GET /`, and
 the backup download link (which checks a one off token in the URL).
 
@@ -140,20 +174,17 @@ same hasher is used for passwords, PINs, invite codes and station secrets.
 
 ## Gotchas
 
-- **Not enough access looks like a bad token.** Every provider answers `401`, never `403`. See
-  [Request lifecycle](../architecture/request-lifecycle.md#gotchas) for what the client does with it.
 - **A blank device id never replaces a session.** Logins without one (old clients, scripts) add a new session every
   time.
-- **`POST /api/auth/user`** checks a username and password and returns the access level without starting a session.
-  It's older than sessions; the client still uses it in `ServerUserClient.checkLoginCredentials`.
+- **A refresh whose answer is lost logs the device out.** The server has already swapped the token, so the one the
+  device still holds is refused. The client then logs in with the saved password if it has one, or asks.
+- **Changing `SECRET`, or deleting `server/secret`, logs every device out**, since no token verifies any more.
+- **`403` is only for access levels.** A deactivated user still gets `401`, since their sessions are already gone.
 
 ## Known gaps
 
 - **Login limits are per server run.** The wrong password counts live in memory, so restarting the server clears
-  them. Behind a reverse proxy every request comes from the proxy's address, so all devices share one address count.
-- **Refresh tokens aren't rotated.** The same one is used for the whole session.
-- **The `SECRET` default is public.** The server logs an error on start when `SECRET` isn't set. See
-  [Configuration](../configuration.md#secret).
+  them.
 
 ## See also
 

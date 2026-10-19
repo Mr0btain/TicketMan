@@ -70,16 +70,8 @@ Adds a user who can log in straight away (`ACTIVE`).
 
 - **Body:** `User` with a plain `password`, which the server hashes.
 - **`201`** `UserResponse { identifier, accessLevel }`.
-- **`400`** no username or password, a username `UsernameRules` refuses, or `accessLevel` `NONE`. **`409`**
-  the username is taken.
-
-### `POST /api/user/add/all`
-
-**Auth:** admin
-
-Adds a list of users at once, for syncing. Skips the checks `/add` makes.
-
-- **Body:** a list of `User`. **`202`** added. **`400`** the body didn't read. **`500`** they couldn't be saved.
+- **`400`** no username or password, a username `UsernameRules` refuses, a password `PasswordRules` refuses (under
+  8 characters), or `accessLevel` `NONE`. **`409`** the username is taken.
 
 ### `POST /api/user/update`
 
@@ -89,8 +81,9 @@ Changes everything but the password. Making someone anything other than `ACTIVE`
 
 - **Body:** `User`. Its `password` is ignored.
 - **`202`** saved.
-- **`400`** no username, `accessLevel` `NONE` (deactivate with `status` instead), or setting someone back to
-  `PENDING`. A pending user stays pending until approved, whatever is sent.
+- **`400`** no username, a new username `UsernameRules` refuses (an unchanged one is left alone, even if it's from
+  before the rules), `accessLevel` `NONE` (deactivate with `status` instead), or setting someone back to `PENDING`.
+  A pending user stays pending until approved, whatever is sent.
 - **`409`** the username is taken, you changed your own access or status, or it would leave no active admin.
 - **`404`** no such user.
 
@@ -101,7 +94,7 @@ Changes everything but the password. Making someone anything other than `ACTIVE`
 Sets a new password and logs that user out of every device (except this one, if it's your own).
 
 - **Body:** `PasswordResetRequest { password }`.
-- **`202`** done. **`400`** a blank password. **`404`** no such user.
+- **`202`** done. **`400`** a password under 8 characters. **`404`** no such user.
 
 ### `DELETE /api/user/remove/{identifier}`
 
@@ -179,7 +172,6 @@ Replaces an invite's code with a new one; the old one stops working.
 
 - **Restricted users can't list users.** `/get`, `/fetch` and `/search` need Normal access, unlike the other
   record types, where Restricted can read.
-- **`/add/all` skips `/add`'s checks**: no username rules, no taken check, and the status sent is kept.
 
 ## See also
 

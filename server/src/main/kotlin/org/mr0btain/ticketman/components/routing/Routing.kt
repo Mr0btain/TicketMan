@@ -64,7 +64,7 @@ fun Application.configureRouting(
         }
 
         route("/api/auth") {
-            authRoute(userService, accountService, localDatabase.stationDatabase, localDatabase.userDatabase)
+            authRoute(userService, accountService, localDatabase.stationDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase)
         }
 
         route("/api/user") {

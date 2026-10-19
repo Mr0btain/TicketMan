@@ -42,6 +42,10 @@ stateDiagram-v2
   underneath) and every key, and calls `recordActivity()`.
 - **Idle.** A loop checks once a second; when nobody has touched anything for the station's `idleTimeoutSeconds`,
   it locks.
+- **Keeping the session alive.** The server ends a kiosk's PIN session a while after the idle timeout if no
+  requests reach it, in case the device was switched off. So the same loop calls `RemoteHandler.keepKioskAlive()`
+  once a minute while someone has touched the screen in the last minute. See
+  [Kiosk sessions on the server](../../server/pins-and-stations.md#kiosk-sessions-on-the-server).
 - **Lock** shows the lock screen at once, clears what was loaded for the last person (`onSignedOut`), then ends
   their session on the server (`RemoteHandler.endSession`) and reloads the staff list.
 
@@ -60,7 +64,8 @@ shows.
 "Leave kiosk mode" on the lock screen asks for an admin to pick their name and PIN. `exit()` PINs them in, then:
 
 - an admin: the handler marks itself `suspended`, turns `active` off and the normal app comes back, still signed
-  in as that admin,
+  in as that admin. It tells the server (`RemoteHandler.leaveKiosk`), which stops their PIN session ending with the
+  kiosk's idle limit,
 - anyone else: signed straight back out with "Only an admin can leave kiosk mode".
 
 Leaving only lasts until the app restarts. Settings > Account and station > Counter station has a button that calls
@@ -92,8 +97,6 @@ Leaving only lasts until the app restarts. Settings > Account and station > Coun
 - Full screen isn't a lockdown. Desktop makes the window full screen, web asks the browser, and Android hides the
   status and navigation bars, which a swipe brings back for a moment. None of them stop someone leaving the app.
   Android and web haven't been tried end to end (see [Platforms](../../client/platforms.md#known-gaps)).
-- Leaving kiosk mode and the idle lock are client side only. See
-  [PINs and stations](../../server/pins-and-stations.md#known-gaps).
 
 ## See also
 

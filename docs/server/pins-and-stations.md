@@ -67,9 +67,25 @@ PIN sessions differ from password ones:
   belonged to. The previous person is signed out on their next request.
 - **12 hours.** The refresh token for a PIN session expires after 12 hours, so a shift's login can't linger for a
   year.
+- **On a kiosk, they end when left alone.** See below.
 - They show on the admin Sessions tab as `PIN`, with the station's name as the device.
 
 A user's password session on the same device isn't touched, since it's a different kind.
+
+### Kiosk sessions on the server
+
+The kiosk's idle lock is a timer on the device, so it can't help when the device is switched off or loses its
+connection with someone signed in. The server has its own limit for that:
+
+- A PIN login at a station with kiosk mode on stores an idle limit on the session: the station's idle timeout plus
+  `UserService.KIOSK_IDLE_MARGIN` (10 minutes). Stations without kiosk mode get none.
+- Every request moves the session's `lastUsedAt` on (at most every 30 seconds). Once it's older than the limit the
+  session isn't live: requests get `401`, and so does refreshing. The hourly sweep deletes it.
+- While someone is using the kiosk without loading anything, the client tells the server they're still there (see
+  below), so typing a long note doesn't end the session.
+- **Leaving kiosk mode** is reported with `POST /api/auth/kiosk/leave` (admin only). It takes the idle limit off the
+  admin's PIN session there, since they're carrying on with the app, and writes an audit entry ("Left kiosk mode at
+  Front Counter"). Their 12 hours still stand. A session that isn't a PIN session gets `404`.
 
 `POST /api/auth/station/staff` lists who can PIN in (active, set up, with a PIN that isn't locked), for the
 station's sign in screen.
@@ -90,15 +106,11 @@ turns kiosk mode on when the station is approved and `kioskEnabled`:
   device's owner back in with their saved password; it goes back to the lock screen,
 - touching or typing anything resets an idle timer; when it runs out (or someone locks it) the client logs the
   current person out on the server too (`RemoteHandler.endSession`) and shows the lock screen,
-- **leaving** kiosk mode needs an admin to PIN in. Anyone else is signed straight back out. Leaving only lasts until
-  the app restarts or `resume()` is called; the station is still a kiosk on the server.
-
-## Known gaps
-
-- Leaving kiosk mode is checked on the client only. The server doesn't know a kiosk was left, and an admin's PIN
-  session there is an ordinary one.
-- The idle lock is a client timer. If the device is switched off or loses its connection while someone is signed
-  in, their PIN session stays open on the server until the 12 hours are up or someone else PINs in there.
+- while someone is signed in and has touched it in the last minute, it calls `GET /api/user/me` at most once a
+  minute (`RemoteHandler.keepKioskAlive`), which keeps the server's idle limit from running out under them,
+- **leaving** kiosk mode needs an admin to PIN in. Anyone else is signed straight back out. The client then calls
+  `/api/auth/kiosk/leave`. Leaving only lasts until the app restarts or `resume()` is called; the station is still a
+  kiosk on the server.
 
 ## See also
 

@@ -76,7 +76,9 @@ to make a separate "delete photo" call: it just saves the list it wants.
 | `GET /api/image/{id}` | Restricted | The `StoredImage` |
 | `GET /api/image/{id}/{thumb\|display\|original}` | Restricted | The JPEG |
 
-Deleted photos are `404`. Because a photo's bytes never change, files are sent with
+Deleted photos are `404`. So are pending ones to anyone but the person who uploaded them (`uploadedBy`), since a
+photo that isn't on anything yet hasn't been shared with anyone. Once it's linked, everyone who can read records can
+see it. Because a photo's bytes never change, files are sent with
 `Cache-Control: private, max-age=31536000, immutable` and an ETag made from the hash and variant; a matching
 `If-None-Match` gets `304` with no body. The client's photo loader keeps them in a disk cache.
 
@@ -108,8 +110,6 @@ folder. The two character level keeps any one folder from holding tens of thousa
 
 - **Never delete photo files yourself.** Mark the rows deleted and let the sweep remove them, or a backup taken at
   the same time can end up inconsistent.
-- **Pending photos can be fetched.** Any logged in user who knows a pending photo's id can download it until it's
-  linked or purged.
 - **The in-process test engine doesn't cut off big uploads like Netty does.** Check upload changes against a real
   `:server:run`.
 

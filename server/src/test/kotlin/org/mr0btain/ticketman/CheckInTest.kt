@@ -209,6 +209,6 @@ class CheckInTest {
     fun restrictedUsersCantCheckIn() = testApplication {
         setup()
 
-        assertEquals(HttpStatusCode.Unauthorized, checkIn(request(), as_ = login(clerk)).status)
+        assertEquals(HttpStatusCode.Forbidden, checkIn(request(), as_ = login(clerk)).status)
     }
 }

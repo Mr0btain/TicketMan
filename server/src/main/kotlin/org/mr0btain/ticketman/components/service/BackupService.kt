@@ -151,8 +151,10 @@ class BackupService(
     }
 
     /**
-     * The archive for a download link and the name to save it as, null if the id or token is wrong or it has expired. The link can be used
-     * more than once until then, so an interrupted download can be resumed with a Range request
+     * The archive for a download link and the name to save it as, null if the id or token is wrong or it has
+     * expired. The link is a login in itself and ends up in browser history, so once it's used it only lasts
+     * [RESUME_WINDOW] past each request: long enough to resume a dropped download with a Range request, not long
+     * enough to be useful to someone finding it later
      */
     fun fileFor(id: String, token: String?, now: Long = Clock.System.now().toEpochMilliseconds()): Pair<File, String>? {
         val backup = prepared[id] ?: return null
@@ -161,7 +163,10 @@ class BackupService(
         // Constant time, so the token can't be guessed a character at a time
         if (!MessageDigest.isEqual(backup.token.encodeToByteArray(), token.encodeToByteArray())) return null
 
-        return backup.file.takeIf { it.isFile }?.let { it to backup.fileName }
+        val file = backup.file.takeIf { it.isFile } ?: return null
+        prepared[id] = backup.copy(expiresAt = now + RESUME_WINDOW.inWholeMilliseconds)
+
+        return file to backup.fileName
     }
 
     /**
@@ -191,8 +196,11 @@ class BackupService(
     companion object {
         const val DOWNLOAD_ROUTE = "/api/admin/backup/download"
 
-        /** How long a download link works */
+        /** How long a download link works if nobody uses it */
         val DOWNLOAD_WINDOW = 30.minutes
+
+        /** How long a download link keeps working after each time it's used */
+        val RESUME_WINDOW = 5.minutes
 
         private const val TOKEN_BYTES = 32
         private const val BUFFER_BYTES = 256 * 1024

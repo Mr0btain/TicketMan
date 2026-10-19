@@ -46,6 +46,7 @@ class KioskHandler(
     private var suspended = false
 
     private var lastActivity = now()
+    private var lastKeepAlive = 0L
     private var idleJob: Job? = null
 
     init {
@@ -118,6 +119,7 @@ class KioskHandler(
                         suspended = true
                         _locked.value = false
                         update()
+                        remoteHandler.leaveKiosk()
                         onResult(null)
                     } else {
                         lock()
@@ -169,12 +171,25 @@ class KioskHandler(
             while (true) {
                 delay(IDLE_CHECK_MILLIS)
 
-                if (!_locked.value && now() - lastActivity > timeoutSeconds * 1_000L) lock()
+                if (_locked.value) continue
+
+                val time = now()
+                when {
+                    time - lastActivity > timeoutSeconds * 1_000L -> lock()
+
+                    // The server ends a kiosk's PIN session once nothing has reached it for a while, so tell it
+                    // someone's still here even when they aren't loading anything
+                    time - lastActivity < KEEP_ALIVE_MILLIS && time - lastKeepAlive >= KEEP_ALIVE_MILLIS -> {
+                        lastKeepAlive = time
+                        launch { remoteHandler.keepKioskAlive() }
+                    }
+                }
             }
         }
     }
 
     companion object {
         private const val IDLE_CHECK_MILLIS = 1_000L
+        private const val KEEP_ALIVE_MILLIS = 60_000L
     }
 }

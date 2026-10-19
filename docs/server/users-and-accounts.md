@@ -118,16 +118,16 @@ no admins, with `ADMIN_PASSWORD` or a random password printed in the log. See
 
 ## Rules shared with the client
 
-`UsernameRules` (3 to 32 of `a-z 0-9 . _ -`, stored lowercase) and `PinRules` (6 digits, not repeated or a run) are in
-`shared`, so the client checks them before sending. Passwords need at least 8 characters
-(`AccountService.MIN_PASSWORD_LENGTH`), checked on the server only.
+`UsernameRules` (3 to 32 of `a-z 0-9 . _ -`, stored trimmed and lowercase), `PasswordRules` (at least 8 characters)
+and `PinRules` (6 digits, not repeated or a run) are in `shared`, so the client checks them before sending and the
+server checks them again on every route that takes one: requests, invites, setup, `POST /api/user/add`,
+`/password/{id}`, and `/update` when the username changes. A username from before the rules can stay as it is
+while the user's other details are edited.
 
 ## Known gaps
 
-- `POST /api/user/add` and `/password/{id}` don't apply the 8 character minimum, and `/update` doesn't apply
-  `UsernameRules`.
-- The request limiter is in memory, so restarting the server resets it, and it keys on the remote address, which
-  is the proxy's address if the server is behind one.
+- The request limiter is in memory, so restarting the server resets it. Behind a reverse proxy it needs
+  `TRUST_PROXY` (see [Configuration](../configuration.md#trust_proxy)).
 
 ## See also
 

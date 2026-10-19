@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchQuery
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -223,8 +224,15 @@ fun Route.ticketRoute(
             val identifier = call.uuidParameter("identifier")
             val user = call.receive<Uuid>()
 
+            // Same rule as check-in: only active users with Normal access or higher take tickets
+            val technician = userDatabase.getById(user)
+            if (technician == null || !technician.canAccess(AccessLevel.NORMAL)) {
+                call.respond(HttpStatusCode.BadRequest, "That technician can't take tickets")
+                return@post
+            }
+
             if (identifier != null && database.setUser(identifier, user)) {
-                call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Assigned to ${userDatabase.getById(user)?.username}")
+                call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Assigned to ${technician.username}")
                 call.respond(HttpStatusCode.Accepted)
             } else {
                 call.respond(HttpStatusCode.NotFound)

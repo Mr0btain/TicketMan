@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.service
 
+import com.auth0.jwt.JWT
 import com.auth0.jwt.interfaces.DecodedJWT
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InviteDatabase
@@ -18,10 +19,13 @@ import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.PinLoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.LoginStatus
+import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import org.mr0btain.ticketman.server.response.SessionKind
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 /** What came of a login attempt */
@@ -113,7 +117,10 @@ class UserService(
      * Makes a new session for a user on a device and hands back its tokens. A device logging in again replaces
      * its old session, other devices are left alone
      */
-    fun startSession(user: User, deviceId: String, deviceName: String, kind: SessionKind): AuthResponse? {
+    /**
+     * @param idleTimeoutSeconds How long the session lasts unused, 0 for no limit. Only kiosk PIN sessions have one
+     */
+    fun startSession(user: User, deviceId: String, deviceName: String, kind: SessionKind, idleTimeoutSeconds: Int = 0): AuthResponse? {
         // Only the last person to PIN in is signed in at a station, and not for long
         if (kind == SessionKind.PIN) tokenDatabase.removePinSessionsForDevice(deviceId)
         val lifetime = if (kind == SessionKind.PIN) PIN_SESSION_LIFETIME else 365.days
@@ -132,7 +139,10 @@ class UserService(
                 deviceName = deviceName.trim(),
                 kind = kind,
                 createdAt = now,
-                lastUsedAt = now
+                lastUsedAt = now,
+                // From the token itself, which only keeps whole seconds
+                expiresAt = JWT.decode(refreshToken).expiresAt.time,
+                idleTimeoutSeconds = idleTimeoutSeconds
             )
         )
 
@@ -173,19 +183,16 @@ class UserService(
             }
         }
 
-        val response = startSession(user, station.deviceId, station.name, SessionKind.PIN)
+        // On a kiosk the session ends a while after the screen would have locked, in case the device was
+        // switched off or lost its connection before it could say so
+        val idleLimit = if (station.kioskEnabled) station.idleTimeoutSeconds + KIOSK_IDLE_MARGIN.inWholeSeconds.toInt() else 0
+        val response = startSession(user, station.deviceId, station.name, SessionKind.PIN, idleLimit)
             ?: return PinLoginResult.Wrong(null)
 
         auditLog.log(user.identifier, AuditAction.LOGIN, "user", user.identifier.toString(), "PIN at ${station.name}")
 
         return PinLoginResult.Success(response)
     }
-
-    /**
-     * Checks credentials without starting a session
-     */
-    fun authenticateUser(loginRequest: LoginRequest): User? =
-        verifyCredentials(loginRequest)
 
     /**
      * Finds the user and checks their password. Only active users can log in.
@@ -209,22 +216,43 @@ class UserService(
         return foundUser
     }
 
-    fun refreshToken(token: String): String? {
+    /**
+     * Swaps a refresh token for a new access token and a new refresh token. The old refresh token stops working,
+     * so a copied one is no good once the real device has refreshed
+     */
+    fun refreshToken(token: String): RefreshTokenResponse? {
         val decoded = decodeJWT(token) ?: return null
         // Refresh tokens from before the type claim have none, they still match their stored session below
         if (decoded.getClaim(JwtService.TYPE_CLAIM).asString() == JwtService.ACCESS_TYPE) return null
         val session = tokenDatabase.findByToken(token) ?: return null
 
         if (!jwtService.audienceMatches(decoded.audience.first())) return null
+        if (!session.isLive(Clock.System.now().toEpochMilliseconds())) return null
 
         val foundUser = database.getById(Uuid.parse(session.userIdentifier)) ?: return null
         val idFromToken = decoded.getClaim("identifier").asString()
 
         if (foundUser.status != UserStatus.ACTIVE || idFromToken != session.userIdentifier) return null
 
-        tokenDatabase.touch(session.sessionId)
+        val expiresAt = Instant.fromEpochMilliseconds(decoded.expiresAt.time)
+        val newRefreshToken = jwtService.createRefreshToken(session.userIdentifier, session.sessionId, expiresAt)
+        if (!tokenDatabase.rotate(session.sessionId, token, newRefreshToken)) return null
 
-        return jwtService.createAccessToken(session.userIdentifier, session.sessionId)
+        return RefreshTokenResponse(
+            token = jwtService.createAccessToken(session.userIdentifier, session.sessionId),
+            refreshToken = newRefreshToken
+        )
+    }
+
+    /**
+     * An admin left kiosk mode on a station and is carrying on there, so their PIN session stops ending when
+     * the kiosk would have locked. Its 12 hours still stand
+     * @return The session's device name, null if [sessionId] isn't a PIN session
+     */
+    fun leaveKiosk(sessionId: String): String? {
+        val session = tokenDatabase.findBySessionId(sessionId)?.takeIf { it.kind == SessionKind.PIN } ?: return null
+        tokenDatabase.clearIdleLimit(sessionId)
+        return session.deviceName
     }
 
     /** Ends a session, used when logging out */
@@ -240,5 +268,8 @@ class UserService(
     companion object {
         /** PIN sessions are for a shift at the counter, not for keeping a device logged in */
         val PIN_SESSION_LIFETIME = 12.hours
+
+        /** How long past a kiosk's idle lock its PIN session lasts on the server */
+        val KIOSK_IDLE_MARGIN = 10.minutes
     }
 }

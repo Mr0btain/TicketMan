@@ -80,7 +80,7 @@ step("Admin approves them as NORMAL")
 
 _, first = call("POST", "/api/auth", {"username": "newtech", "password": "newtech_pass", "deviceId": "desk", "deviceName": "Back Desk"}, expect=202)
 check(first["status"] == "NEEDS_SETUP", "first login should need setup")
-call("POST", "/api/data/ticket/fetch", {"offset": 0, "itemsPerPage": 5}, first["accessToken"], expect=401)
+call("POST", "/api/data/ticket/fetch", {"offset": 0, "itemsPerPage": 5}, first["accessToken"], expect=403)
 call("POST", "/api/user/setup", {"name": "nina:tech", "email": "nina@shop.test", "pin": "246813"}, first["accessToken"], expect=202)
 _, ready = call("POST", "/api/auth", {"username": "newtech", "password": "newtech_pass", "deviceId": "desk", "deviceName": "Back Desk"}, expect=202)
 newtech = ready["accessToken"]
@@ -139,7 +139,7 @@ _, clerk_auth = call("POST", "/api/auth/pin", {"station": station, "userIdentifi
 clerk = clerk_auth["accessToken"]
 call("GET", "/api/user/me", token=pin, expect=401)
 call("GET", "/api/counter/queue", token=clerk, expect=200)
-call("POST", "/api/data/ticket/update", {**checked_in["ticket"], "status": {"status": "DONE", "time": 0}}, clerk, expect=401)
+call("POST", "/api/data/ticket/update", {**checked_in["ticket"], "status": {"status": "DONE", "time": 0}}, clerk, expect=403)
 step("Clerk PINs in (tech's PIN session ends); clerk can see the queue but can't change the ticket")
 
 _, pin_auth = call("POST", "/api/auth/pin", {"station": station, "userIdentifier": newtech_id, "pin": "246813"}, expect=202)

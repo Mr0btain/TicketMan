@@ -226,12 +226,31 @@ class ImageTest {
     @Test
     fun restrictedUsersCanViewButNotUpload() = testApplication {
         setup()
-        val image = uploadImage(token(tech))
+        val techToken = token(tech)
+        val image = uploadImage(techToken)
+        post("/api/data/customer/add/note/${newCustomer(techToken)}", json.encodeToString(Note(message = "Photo", images = listOf(image))), techToken)
         val viewerToken = token(viewer)
 
-        assertEquals(HttpStatusCode.Forbidden.value / 100, upload(viewerToken, png(10, 10)).status.value / 100)
+        assertEquals(HttpStatusCode.Forbidden, upload(viewerToken, png(10, 10)).status)
         assertEquals(HttpStatusCode.OK, client.get("/api/image/${image.identifier}/thumb") { bearerAuth(viewerToken) }.status)
         assertEquals(HttpStatusCode.Unauthorized, client.get("/api/image/${image.identifier}/thumb").status)
+    }
+
+    @Test
+    fun onlyTheUploaderSeesAPendingPhoto() = testApplication {
+        setup()
+        val techToken = token(tech)
+        val image = uploadImage(techToken)
+        val viewerToken = token(viewer)
+
+        assertEquals(HttpStatusCode.OK, client.get("/api/image/${image.identifier}/thumb") { bearerAuth(techToken) }.status)
+        assertEquals(HttpStatusCode.OK, client.get("/api/image/${image.identifier}") { bearerAuth(techToken) }.status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/image/${image.identifier}/thumb") { bearerAuth(viewerToken) }.status)
+        assertEquals(HttpStatusCode.NotFound, client.get("/api/image/${image.identifier}") { bearerAuth(viewerToken) }.status)
+
+        // Once it's on something, anyone logged in can see it
+        post("/api/data/customer/add/note/${newCustomer(techToken)}", json.encodeToString(Note(message = "Photo", images = listOf(image))), techToken)
+        assertEquals(HttpStatusCode.OK, client.get("/api/image/${image.identifier}/thumb") { bearerAuth(viewerToken) }.status)
     }
 
     @Test

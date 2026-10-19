@@ -91,7 +91,7 @@ class AccountTest {
         val token = first.accessToken!!
 
         assertEquals(HttpStatusCode.OK, client.get("/api/user/me") { bearerAuth(token) }.status)
-        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/data/ticket/fetch", json.encodeToString(PagedRequest(0, 5)), token).status)
+        assertEquals(HttpStatusCode.Forbidden, postJson("/api/data/ticket/fetch", json.encodeToString(PagedRequest(0, 5)), token).status)
 
         // A PIN is required
         val noPin = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person")), token)
@@ -150,7 +150,7 @@ class AccountTest {
         val tech = User(username = "tech", password = "tech_pass", accessLevel = AccessLevel.NORMAL).also { users.add(it) }
         val techToken = loginResult(tech.username, tech.password).accessToken!!
 
-        assertEquals(HttpStatusCode.Unauthorized, client.get("/api/user/pending") { bearerAuth(techToken) }.status)
+        assertEquals(HttpStatusCode.Forbidden, client.get("/api/user/pending") { bearerAuth(techToken) }.status)
     }
 
     // ------------------------------------------ Invites ------------------------------------------

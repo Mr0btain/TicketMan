@@ -79,6 +79,7 @@ ktor-server-partial-content = { module = "io.ktor:ktor-server-partial-content", 
 ktor-server-conditional-headers = { module = "io.ktor:ktor-server-conditional-headers", version.ref = "ktor" }
 ktor-server-http-redirect = { module = "io.ktor:ktor-server-http-redirect", version.ref = "ktor" }
 ktor-server-cors = { module = "io.ktor:ktor-server-cors", version.ref = "ktor" }
+ktor-server-forwarded-header = { module = "io.ktor:ktor-server-forwarded-header", version.ref = "ktor" }
 
 # Navigation
 compose-navigation = { group = "compose", module = "org.jetbrains.androidx.navigation:navigation-compose", version.ref = "compose-navigation" }
@@ -168,6 +169,7 @@ ktorServer = [
     "ktor-server-conditional-headers",
     "ktor-server-http-redirect",
     "ktor-server-cors",
+    "ktor-server-forwarded-header",
     "ktor-network-tls-certificates"
 ]
 ktorServerTesting = [

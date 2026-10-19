@@ -130,7 +130,8 @@ class MainViewModel(
             tickets.clear()
             inventory.clear()
             users.clear()
-        }
+        },
+        onServerMoved = { url -> settings.rememberServerUrl(url) }
     )
 
     val settings: SettingsHandler = SettingsHandler(

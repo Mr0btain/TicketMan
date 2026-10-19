@@ -6,6 +6,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import org.mr0btain.ticketman.components.database.ImageDatabase
+import org.mr0btain.ticketman.components.database.tables.image.ImageStatus
 import org.mr0btain.ticketman.components.image.ImageProcessor
 import org.mr0btain.ticketman.components.image.ImageStore
 import org.mr0btain.ticketman.data.image.ImageLimits
@@ -86,16 +87,24 @@ class ImageService(
         return result
     }
 
-    /** A photo's file and its hash for the ETag, null if it's deleted or missing */
-    fun fileFor(identifier: Uuid, variant: ImageVariant): Pair<File, String>? {
-        val record = database.getServable(identifier) ?: return null
+    /**
+     * A photo's file and its hash for the ETag, null if it's deleted, missing or not [viewer]'s to see
+     * @param viewer Who's asking, see [visibleTo]
+     */
+    fun fileFor(identifier: Uuid, variant: ImageVariant, viewer: Uuid?): Pair<File, String>? {
+        val record = database.getServable(identifier)?.takeIf { it.visibleTo(viewer) } ?: return null
         val file = store.fileFor(identifier, variant)
 
         return if (file.isFile) Pair(file, record.sha256.ifBlank { identifier.toString() }) else null
     }
 
-    /** A photo's details, null if there's no such photo or it's been deleted */
-    fun get(identifier: Uuid): StoredImage? = database.getServable(identifier)?.image
+    /** A photo's details, null if there's no such photo, it's been deleted or it's not [viewer]'s to see */
+    fun get(identifier: Uuid, viewer: Uuid?): StoredImage? =
+        database.getServable(identifier)?.takeIf { it.visibleTo(viewer) }?.image
+
+    /** A pending photo isn't on anything yet, so only the person who uploaded it can see it */
+    private fun ImageDatabase.ImageRecord.visibleTo(viewer: Uuid?): Boolean =
+        status != ImageStatus.PENDING || (viewer != null && uploadedBy == viewer)
 
     /**
      * Purges photos deleted or left pending a day ago, folders no row knows about, and stale temp files

@@ -41,6 +41,7 @@ class RemoteHandler(
     private val REFRESH_TOKENS_TAG = "$TAG:RefreshTokens"
     private val LOGIN_TAG = "$TAG:Login"
     private val LOGOUT_TAG = "$TAG:Logout"
+    private val KIOSK_TAG = "$TAG:Kiosk"
     val userClient = ServerUserClient(createUserHttpClient(engine), localStorage)
 
     // Shared with the photo loader so photos go out with the same tokens and refresh
@@ -71,6 +72,13 @@ class RemoteHandler(
     // Base url once a server has been reached, used for routes outside the repositories
     private var serverUrl = ""
 
+    /**
+     * The address the last [setUrl] went to. Not always the one it was given: a plain HTTP address the server
+     * redirects becomes its `https://` one
+     */
+    var address = ""
+        private set
+
     // Emits when the session can't be refreshed and the user needs to log in again
     private val _authExpired = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     val authExpired = _authExpired.asSharedFlow()
@@ -78,7 +86,11 @@ class RemoteHandler(
     /**
      * Sets url to the server in all clients and tries to log in with the stored credentials
      */
-    suspend fun setUrl(url: String): ConnectionResult {
+    suspend fun setUrl(requested: String): ConnectionResult {
+        // A server that only takes HTTPS redirects plain HTTP, so go straight to where it points
+        val url = userClient.httpsRedirectOf(requested) ?: requested
+        address = url
+
         if (url.isNotBlank()) {
             trust.clearRefused()
 
@@ -250,6 +262,27 @@ class RemoteHandler(
 
         localStorage.clearSession()
         httpClient.authProvider<BearerAuthProvider>()?.clearToken()
+    }
+
+    /**
+     * Lets the server know someone is still using this kiosk, so their PIN session doesn't run out while they
+     * work without loading anything. Any request does it, this one is small
+     */
+    suspend fun keepKioskAlive() {
+        if (serverUrl.isBlank() || localStorage.accessToken.isBlank()) return
+
+        networkErrorTryCatch(KIOSK_TAG) {
+            httpClient.get { url("$serverUrl/api/user/me") }
+        }
+    }
+
+    /** Tells the server an admin left kiosk mode here, so their PIN session stops ending with the idle lock */
+    suspend fun leaveKiosk() {
+        if (serverUrl.isBlank()) return
+
+        networkErrorTryCatch(KIOSK_TAG) {
+            httpClient.post { url("$serverUrl/api/auth/kiosk/leave") }
+        }?.let { response -> handlePlainHttpResponse(KIOSK_TAG, response) }
     }
 
     /** People who can PIN in at this station, empty if it isn't one */

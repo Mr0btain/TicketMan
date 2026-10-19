@@ -43,8 +43,10 @@ client can hand the URL to the browser or a file saver and let it download direc
 file in memory.
 
 - The token is 32 random bytes, compared in constant time.
-- The link works for 30 minutes and can be used more than once, so a dropped download can be resumed with a Range
-  request (the `PartialContent` plugin in `plugins/Transfers.kt`).
+- The link works for 30 minutes if nobody uses it (`DOWNLOAD_WINDOW`). Each request that gets the file moves its
+  expiry to 5 minutes from then (`RESUME_WINDOW`), so a dropped download can be resumed with a Range request (the
+  `PartialContent` plugin in `plugins/Transfers.kt`), but a link found in browser history later is dead. A download
+  already under way isn't cut off when the link expires; only new requests are refused.
 - The file is sent with `respondFile`, `Content-Disposition: attachment` and `Cache-Control: no-store`.
 
 Links are kept in memory. After a restart they're gone, and the sweep deletes the files.
@@ -94,7 +96,8 @@ The `pre-restore-*` folder is kept so a restore can be undone by hand.
 - **Test against a real server.** The in-process test engine handles big and cut off bodies differently from Netty.
   `RestoreTest` covers the logic by starting the server twice on one data folder, with an H2 `SHUTDOWN` between.
 - **Restoring a database only backup leaves `images/` empty**, so photos on restored records won't load.
-- **The download link is a bearer credential** for 30 minutes. It ends up in browser history and possibly proxy logs.
+- **The download link is a bearer credential** until it expires. It ends up in browser history and possibly proxy
+  logs, which is why it only lasts 5 minutes after it's used.
 
 ## See also
 

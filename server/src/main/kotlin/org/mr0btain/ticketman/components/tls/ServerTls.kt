@@ -20,17 +20,19 @@ import javax.security.auth.x500.X500Principal
 
 /** What the plain HTTP port does once HTTPS is on */
 enum class HttpMode {
-    /** Answers as usual, so devices saved with an `http://` address keep working */
+    /** Answers as usual. The default in development mode, for the web client's dev server and test scripts */
     ON,
 
-    /** Sends everything to the HTTPS port */
+    /** Sends everything to the HTTPS port. The default, clients follow it to the `https://` address */
     REDIRECT,
 
     /** Not opened at all */
     OFF;
 
     companion object {
-        fun parse(value: String?): HttpMode = entries.firstOrNull { it.name.equals(value?.trim(), ignoreCase = true) } ?: ON
+        /** @param default What a blank or unknown value means */
+        fun parse(value: String?, default: HttpMode = ON): HttpMode =
+            entries.firstOrNull { it.name.equals(value?.trim(), ignoreCase = true) } ?: default
     }
 }
 
@@ -52,13 +54,16 @@ data class TlsSettings(
     val enabled: Boolean get() = httpsPort > 0
 
     companion object {
-        /** Tests don't load application.yaml, so a missing section means HTTPS is off */
-        fun from(config: ApplicationConfig): TlsSettings {
+        /**
+         * Tests don't load application.yaml, so a missing section means HTTPS is off
+         * @param developmentMode Plain HTTP stays on by default in development mode, and redirects otherwise
+         */
+        fun from(config: ApplicationConfig, developmentMode: Boolean = false): TlsSettings {
             fun value(key: String) = config.propertyOrNull("tls.$key")?.getString()?.trim().orEmpty()
 
             return TlsSettings(
                 httpsPort = value("port").toIntOrNull() ?: 0,
-                httpMode = HttpMode.parse(value("httpMode")),
+                httpMode = HttpMode.parse(value("httpMode"), if (developmentMode) HttpMode.ON else HttpMode.REDIRECT),
                 keyStorePath = value("keyStore"),
                 keyStorePassword = value("keyStorePassword"),
                 keyAlias = value("keyAlias"),
@@ -200,7 +205,8 @@ object ServerTls {
     }
 
     // The keystore password sits next to it, so only the server's user should read either
-    private fun ownerOnly(file: File) {
+    /** Only the account running the server can read or change [file] */
+    internal fun ownerOnly(file: File) {
         file.setReadable(false, false)
         file.setReadable(true, true)
         file.setWritable(false, false)

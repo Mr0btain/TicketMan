@@ -100,7 +100,7 @@ fun Route.imageRoute(
 
     authenticate("restricted") {
         get("/{identifier}") {
-            val image = call.uuidParameter("identifier")?.let { service.get(it) }
+            val image = call.uuidParameter("identifier")?.let { service.get(it, call.getIdentifierFromToken()) }
 
             if (image == null) call.respond(HttpStatusCode.NotFound)
             else call.respond(HttpStatusCode.OK, image)
@@ -109,7 +109,7 @@ fun Route.imageRoute(
         get("/{identifier}/{variant}") {
             val identifier = call.uuidParameter("identifier")
             val variant = call.parameters["variant"]?.let { ImageVariant.fromPath(it) }
-            val found = if (identifier != null && variant != null) service.fileFor(identifier, variant) else null
+            val found = if (identifier != null && variant != null) service.fileFor(identifier, variant, call.getIdentifierFromToken()) else null
 
             if (found == null) {
                 call.respond(HttpStatusCode.NotFound)

@@ -36,7 +36,9 @@ class SessionHandler(
     private val localStorage: LocalStorage,
     private val scope: CoroutineScope,
     private val onLoggedIn: suspend () -> Unit,
-    private val onLoggedOut: () -> Unit
+    private val onLoggedOut: () -> Unit,
+    /** The server moved this device to another address (plain HTTP redirected to HTTPS), for saving it */
+    private val onServerMoved: (String) -> Unit = {}
 ) {
     private val _loginState: MutableStateFlow<LoginState> = MutableStateFlow(LoginState.LOGGED_OUT)
     val loginState = _loginState.asStateFlow()
@@ -123,6 +125,13 @@ class SessionHandler(
     suspend fun connect(url: String) {
         _serverUrl.value = url
         val result = remoteHandler.setUrl(url)
+
+        // Kept even when the certificate still needs trusting, since trusting connects to this address again
+        val address = remoteHandler.address
+        if (address.isNotBlank() && address != url) {
+            _serverUrl.value = address
+            onServerMoved(address)
+        }
 
         _serverConnected.value = result == ConnectionResult.CONNECTED || result == ConnectionResult.LOGGED_IN
 

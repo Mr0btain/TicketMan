@@ -84,7 +84,8 @@ Every repository shares the one `HttpClient` that `RemoteHandler` builds in
 It has:
 
 - **Bearer auth**: loads the access and refresh tokens from `LocalStorage` and adds `Authorization: Bearer ...`.
-  On a `401` it calls `RemoteHandler.refreshTokens()` and retries once.
+  On a `401` it calls `RemoteHandler.refreshTokens()` and retries once. Each refresh hands back a new refresh token
+  too, which replaces the saved one. A `403` isn't retried.
 - **Timeouts**: a 60 second request timeout. Long uploads and downloads lift it per request with
   `transferTimeout()`.
 - **Logging**: headers only, with `Authorization` hidden. Logging bodies would hold every photo and backup in
@@ -111,12 +112,13 @@ providers:
 | `"admin"` | Admin routes | `ADMIN` |
 | `"setup"` | First login setup | Any active user, even before setup is finished |
 
-Each one calls `JwtService.customValidator`, which checks three things: the token's audience matches, the user can
-access that level (`User.canAccess`: active, setup finished, level high enough), and the token's session (`sid`
-claim) still exists for that user. That last check is what makes logging out or ending a session from the admin
+Each one calls `JwtService.checkAccess`, which checks the token's audience and type, that its session (`sid` claim)
+still exists for that user and hasn't expired, and that the user can access that level (`User.canAccess`: active,
+setup finished, level high enough). The session check is what makes logging out or ending a session from the admin
 screen take effect straight away rather than when the token runs out.
 
-A caller who fails any check gets `401 Unauthorized`.
+A caller whose token is no good gets `401 Unauthorized`. One whose token is fine but whose access level isn't gets
+`403 Forbidden` with `You don't have access to that`.
 
 ### 6. The route handles the request
 
@@ -203,11 +205,9 @@ user is told which part didn't work.
 
 ## Gotchas
 
-- **Not enough access is a 401, not a 403.** Every provider's challenge answers `401`, so a Restricted user calling
-  a write route looks the same as an expired token. The client may try a token refresh before the call finally
-  fails, and the message says to log in again. The counter and records handlers avoid this by checking
-  `canEdit` before calling, and their screens hide the buttons that change things. New write actions should do the
-  same.
+- **Check access before calling.** A Restricted user calling a write route gets a `403`, shown as "You don't have
+  access to that". The counter and records handlers check `canEdit` before calling, and their screens hide the
+  buttons that change things, so it doesn't get that far. New write actions should do the same.
 - **Some reads return `null` or an empty list on failure** rather than a `Result`, so the screen can't always tell
   "nothing there" from "couldn't load".
 

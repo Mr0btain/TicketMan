@@ -167,5 +167,37 @@ class KioskHandlerTest {
         assertFalse(kiosk.active.value)
         assertFalse(AppWindow.fullscreen.value)
         assertTrue(remote.credentialFallback)
+
+        // The server is told, so the admin's PIN session stops ending with the idle lock
+        assertTrue("POST /api/auth/kiosk/leave" in requests)
+    }
+
+    @Test
+    fun someoneUsingTheKioskKeepsTheirSessionAlive() = runTest {
+        val kiosk = handler()
+        station.value = approvedKiosk.copy(idleTimeoutSeconds = 600)
+        runCurrent()
+        kiosk.unlock(member, "246813") { }
+        settle { !kiosk.locked.value }
+        requests.clear()
+
+        // Nobody has touched it for over a minute, so there's nothing to keep alive
+        clock += 120_000
+        advanceTimeBy(2_000)
+        assertFalse("GET /api/user/me" in requests)
+
+        // Touched recently, the server hears about it
+        kiosk.recordActivity()
+        clock += 10_000
+        advanceTimeBy(2_000)
+        settle { "GET /api/user/me" in requests }
+        assertEquals(1, requests.count { it == "GET /api/user/me" })
+
+        // But only once a minute
+        kiosk.recordActivity()
+        clock += 10_000
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertEquals(1, requests.count { it == "GET /api/user/me" })
     }
 }

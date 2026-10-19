@@ -201,10 +201,10 @@ class InventoryTest {
 
         assertEquals(HttpStatusCode.OK, get(screen.identifier, token).status)
         assertEquals(HttpStatusCode.OK, post("/api/data/inventory/fetch", json.encodeToString(PagedRequest(0, 10)), token).status)
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/inventory/add", json.encodeToString(battery), token).status)
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/inventory/update", json.encodeToString(screen.copy(name = "Changed")), token).status)
-        assertEquals(HttpStatusCode.Unauthorized, setStock(screen.identifier, 5, 0, token).status)
-        assertEquals(HttpStatusCode.Unauthorized, client.delete("/api/data/inventory/remove/${screen.identifier}") { bearerAuth(token) }.status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/data/inventory/add", json.encodeToString(battery), token).status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/data/inventory/update", json.encodeToString(screen.copy(name = "Changed")), token).status)
+        assertEquals(HttpStatusCode.Forbidden, setStock(screen.identifier, 5, 0, token).status)
+        assertEquals(HttpStatusCode.Forbidden, client.delete("/api/data/inventory/remove/${screen.identifier}") { bearerAuth(token) }.status)
     }
 
     @Test

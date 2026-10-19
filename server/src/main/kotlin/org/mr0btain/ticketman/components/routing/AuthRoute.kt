@@ -7,6 +7,7 @@ import io.ktor.server.plugins.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.StationDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.AccountResult
@@ -15,6 +16,7 @@ import org.mr0btain.ticketman.components.service.LoginResult
 import org.mr0btain.ticketman.components.service.PinLoginResult
 import org.mr0btain.ticketman.components.service.RequestLimiter
 import org.mr0btain.ticketman.components.service.UserService
+import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.data.station.StationStatus
@@ -25,7 +27,6 @@ import org.mr0btain.ticketman.server.request.PinLoginRequest
 import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.LoginStatus
-import org.mr0btain.ticketman.server.response.RefreshTokenResponse
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 
@@ -39,7 +40,8 @@ fun Route.authRoute(
     userService: UserService,
     accountService: AccountService,
     stationDatabase: StationDatabase,
-    userDatabase: UserDatabase
+    userDatabase: UserDatabase,
+    auditLog: AuditLogDatabase
 ) {
     // Anyone can ask for an account, so cap how often one address can
     val requestLimiter = RequestLimiter(maxAttempts = 5, window = 1.hours)
@@ -65,25 +67,6 @@ fun Route.authRoute(
                 loginLimiter.failed(call, received.username)
                 call.respond(HttpStatusCode.Unauthorized)
             }
-        }
-    }
-
-    // This is essentially the login. This will authenticate then hit back with the access level
-    post("/user") {
-        // Receive request body and parse it into a LoginRequest
-        val request = call.receive<LoginRequest>()
-
-        if (loginLimiter.refuse(call, request.username)) return@post
-
-        userService.authenticateUser(request)?.let { user ->
-
-            // Respond with HTTP 202 Accepted if authentication and key update are successful
-            call.respond(HttpStatusCode.Accepted, user.accessLevel)
-
-        } ?: run {
-            // Respond with 401 if authentication fails
-            loginLimiter.failed(call, request.username)
-            call.respond(HttpStatusCode.Unauthorized)
         }
     }
 
@@ -168,10 +151,26 @@ fun Route.authRoute(
         // Receive refresh token request
         val request = call.receive<RefreshTokenRequest>()
 
-        // Try to refresh the token using the provided refresh token
-        userService.refreshToken(request.token)?.let { newToken ->
-            call.respond(HttpStatusCode.Accepted, RefreshTokenResponse(newToken))
+        // Try to refresh the token using the provided refresh token, which gets swapped for a new one
+        userService.refreshToken(request.token)?.let { response ->
+            call.respond(HttpStatusCode.Accepted, response)
         } ?: call.respond(HttpStatusCode.Unauthorized)
+    }
+
+    // An admin left kiosk mode on a station. Their PIN session there stops ending with the kiosk's idle lock
+    authenticate("admin") {
+        post("/kiosk/leave") {
+            val sessionId = call.getSessionIdFromToken()
+            val station = sessionId?.let { userService.leaveKiosk(it) }
+
+            if (station == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            call.audit(auditLog, AuditAction.UPDATE, "station", details = "Left kiosk mode at $station")
+            call.respond(HttpStatusCode.Accepted)
+        }
     }
 }
 

@@ -6,7 +6,7 @@ enum class NetworkError(override val message: String) : Error {
     REQUEST_TIMEOUT("The request timed out"),
     BAD_REQUEST("The server rejected the request"),
     UNAUTHORIZED("Not allowed, try logging in again"),
-    FORBIDDEN("The server doesn't allow that"),
+    FORBIDDEN("You don't have access to that"),
     NOT_FOUND("Not found on the server"),
     CONFLICT("That conflicts with existing data"),
     TOO_MANY_REQUESTS("Too many tries, wait a moment and try again"),

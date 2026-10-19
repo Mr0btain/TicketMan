@@ -15,6 +15,7 @@ import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.hours
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.ExperimentalTime
+import kotlin.time.Instant
 import kotlin.time.toJavaInstant
 import kotlin.uuid.Uuid
 
@@ -22,14 +23,15 @@ import kotlin.uuid.Uuid
  * Makes and checks the server's JWTs: access tokens (an hour), refresh tokens (a year, or 12 hours for a PIN
  * session) and invite setup tokens (30 minutes). Every login token carries the user's identifier, its session
  * id (`sid`) and its kind (`typ`), and is only good while that session is stored in TokenTable.
- * [customValidator] and [setupValidator] are what the auth providers in Security.kt call
+ * [checkAccess] and [setupValidator] are what the auth providers in Security.kt call
  */
 class JwtService(
     private val application: Application,
     private val userDatabase: UserDatabase,
-    private val tokenDatabase: TokenDatabase
+    private val tokenDatabase: TokenDatabase,
+    /** From [ServerSecret.resolve] */
+    private val secret: String
 ) {
-    private val secret = getConfigProperty("jwt.secret")
     private val issuer = getConfigProperty("jwt.issuer")
     private val audience = getConfigProperty("jwt.audience")
 
@@ -52,7 +54,11 @@ class JwtService(
      */
 
     @OptIn(ExperimentalTime::class)
-    private fun createJwtToken(identifier: String, expiresIn: Duration, sessionId: String, type: String): String {
+    private fun createJwtToken(identifier: String, expiresIn: Duration, sessionId: String, type: String): String =
+        createJwtToken(identifier, Clock.System.now().plus(expiresIn), sessionId, type)
+
+    @OptIn(ExperimentalTime::class)
+    private fun createJwtToken(identifier: String, expiresAt: Instant, sessionId: String, type: String): String {
         val now = Clock.System.now()
 
         return JWT
@@ -62,8 +68,11 @@ class JwtService(
             .withClaim("identifier", identifier)
             .withClaim(SESSION_CLAIM, sessionId)
             .withClaim(TYPE_CLAIM, type)
+            // Times only go to the second, so without this two tokens made in the same second would match, and
+            // a refresh token swapped for itself would keep working
+            .withJWTId(Uuid.random().toString())
             .withIssuedAt(now.toJavaInstant())
-            .withExpiresAt(now.plus(expiresIn).toJavaInstant())
+            .withExpiresAt(expiresAt.toJavaInstant())
             .sign(Algorithm.HMAC256(secret))
     }
 
@@ -107,26 +116,40 @@ class JwtService(
         createJwtToken(identifier, lifetime, sessionId, REFRESH_TYPE)
 
     /**
-     * Verify credentials along with access level to verify if its legit and allowed.
-     * Only access tokens get in, a refresh token can only be spent on /api/auth/refresh.
-     * The token also has to belong to the user's current session, so revoking a session or logging in
-     * again cuts off older access tokens right away
+     * A refresh token replacing an older one in the same session. It runs out when the old one would have, so
+     * refreshing doesn't stretch a session
      */
+    fun createRefreshToken(identifier: String, sessionId: String, expiresAt: Instant): String =
+        createJwtToken(identifier, expiresAt, sessionId, REFRESH_TYPE)
 
-    fun customValidator(credential: JWTCredential, minAccessLevel: AccessLevel): JWTPrincipal? {
-        val id = extractId(credential)
-        val foundUser = id?.let { userDatabase.getById(Uuid.parse(it)) }
+    /**
+     * Checks a token for a route needing [minAccessLevel]. Only access tokens get in, a refresh token can only be
+     * spent on /api/auth/refresh. The token also has to belong to the user's current session, so revoking a
+     * session or logging in again cuts off older access tokens right away.
+     * A good token whose user can't use the route is [AccessCheck.Denied] (a 403, logging in again won't help),
+     * anything else turned away is [AccessCheck.Invalid] (a 401)
+     */
+    fun checkAccess(credential: JWTCredential, minAccessLevel: AccessLevel): AccessCheck {
+        val id = extractId(credential) ?: return AccessCheck.Invalid
+        val foundUser = userDatabase.getById(Uuid.parse(id)) ?: return AccessCheck.Invalid
 
-        return foundUser?.let {
-            if (
-                audienceMatches(credential) &&
-                isAccessToken(credential) &&
-                foundUser.canAccess(minAccessLevel) &&
-                isFromCurrentSession(id, credential)
-            ) {
-                JWTPrincipal(credential.payload)
-            } else null
+        if (!audienceMatches(credential) || !isAccessToken(credential) || !isFromCurrentSession(id, credential)) {
+            return AccessCheck.Invalid
         }
+
+        return when {
+            foundUser.canAccess(minAccessLevel) -> AccessCheck.Allowed(JWTPrincipal(credential.payload))
+            // Deactivated users' sessions are ended, so one still here is a 401 like any dead session
+            foundUser.status != UserStatus.ACTIVE -> AccessCheck.Invalid
+            else -> AccessCheck.Denied
+        }
+    }
+
+    /** What [checkAccess] made of a token */
+    sealed interface AccessCheck {
+        data class Allowed(val principal: JWTPrincipal) : AccessCheck
+        data object Denied : AccessCheck
+        data object Invalid : AccessCheck
     }
 
     /**
@@ -153,12 +176,17 @@ class JwtService(
     private fun isAccessToken(credential: JWTCredential): Boolean =
         credential.payload.getClaim(TYPE_CLAIM).asString() == ACCESS_TYPE
 
-    // Checks the token's session is still stored and belongs to this user
+    // Checks the token's session is still stored, live and belongs to this user, and counts it as used
+    @OptIn(ExperimentalTime::class)
     private fun isFromCurrentSession(id: String, credential: JWTCredential): Boolean {
         val sessionId = credential.payload.getClaim(SESSION_CLAIM).asString() ?: return false
         val session = tokenDatabase.findBySessionId(sessionId) ?: return false
+        val now = Clock.System.now().toEpochMilliseconds()
 
-        return session.userIdentifier == id
+        if (session.userIdentifier != id || !session.isLive(now)) return false
+
+        tokenDatabase.touchIfStale(session, now)
+        return true
     }
 
     /**

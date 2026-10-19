@@ -24,28 +24,18 @@ Logs in with a password, or an invite's setup code in place of the password.
 - **`429`** `Too many wrong logins, try again in a few minutes`: 20 failures from this address or 10 for this
   username in 15 minutes. Checked before the password, so the right one waits too.
 
-### `POST /api/auth/user`
-
-**Auth:** none
-
-Checks a username and password without starting a session.
-
-- **Body:** `LoginRequest`.
-- **`202`** the user's `AccessLevel`, like `"NORMAL"`. **`401`** wrong details. **`429`** as for `POST /api/auth`,
-  sharing the same counts.
-
-Older than sessions; the client still calls it from `ServerUserClient.checkLoginCredentials`.
-
 ### `POST /api/auth/refresh`
 
 **Auth:** none
 
-Swaps a refresh token for a new access token on the same session.
+Swaps a refresh token for a new access token and a new refresh token, on the same session. The one sent stops
+working.
 
 - **Body:** `RefreshTokenRequest { token }`.
-- **`202`** `RefreshTokenResponse { accessToken }`. The refresh token isn't replaced.
-- **`401`** the token doesn't verify, is an access token, isn't the one stored for its session (the session
-  ended), or its user isn't active.
+- **`202`** `RefreshTokenResponse { token, refreshToken }`: the new access token, and the refresh token to send next
+  time. It expires when the old one would have.
+- **`401`** the token doesn't verify, is an access token, isn't the one stored for its session (already used, or
+  the session ended), the session has expired or sat unused past a kiosk's idle limit, or its user isn't active.
 
 ### `POST /api/auth/logout`
 
@@ -96,6 +86,19 @@ Signs someone in at a station with their PIN. Ends the previous PIN session on t
 - **`401`** `Wrong PIN, 3 tries left` (or just `Wrong PIN` when it doesn't count, like no PIN set or not a user
   who can sign in). **`423`** the PIN is locked after five wrong tries.
 - **`403`** not a registered station, or not approved yet.
+
+At a station with kiosk mode on, the session also ends once no request has reached it for the station's idle
+timeout plus 10 minutes. See [Kiosk sessions on the server](../server/pins-and-stations.md#kiosk-sessions-on-the-server).
+
+### `POST /api/auth/kiosk/leave`
+
+**Auth:** admin
+
+An admin left kiosk mode on a station and is carrying on with the app there. Takes the idle limit off their PIN
+session, from the token's `sid`, so it doesn't end when the kiosk would have locked. The 12 hours still stand.
+
+- **`202`** done, with an audit entry `Left kiosk mode at <station>`.
+- **`404`** the calling session isn't a PIN session.
 
 ### `POST /api/auth/station/status`
 

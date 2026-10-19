@@ -11,6 +11,8 @@ import org.mr0btain.ticketman.error.Result
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
+import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
+import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -24,6 +26,7 @@ class ServerUserClientTest {
 
     // What the login route answers with, tests swap it for other outcomes
     private var loginBody = """{"id":null,"accessToken":"access","refreshToken":"refresh"}"""
+    private var refreshBody = """{"token":"new-access","refreshToken":"new-refresh"}"""
 
     private val engine = MockEngine { request ->
         requests += request.url.encodedPath
@@ -49,6 +52,14 @@ class ServerUserClientTest {
                 headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             )
 
+            SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
+
+            "/api/auth/refresh" -> respond(
+                content = refreshBody,
+                status = HttpStatusCode.Accepted,
+                headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
+            )
+
             "/api/auth/setup/invite" -> respond(
                 content = """{"id":null,"accessToken":"access","refreshToken":"refresh"}""",
                 status = HttpStatusCode.OK,
@@ -61,6 +72,48 @@ class ServerUserClientTest {
 
     private val client = ServerUserClient(createUserHttpClient(engine), localStorage).apply {
         changeServerUrl("http://localhost")
+    }
+
+    @Test
+    fun refreshingKeepsTheNewRefreshToken() = runTest {
+        assertIs<Result.Success<*>>(client.refreshTokens("refresh"))
+
+        assertEquals("new-access", localStorage.accessToken)
+        assertEquals("new-refresh", localStorage.refreshToken)
+    }
+
+    @Test
+    fun aServerThatDoesntRotateKeepsTheOldRefreshToken() = runTest {
+        localStorage.refreshToken = "refresh"
+        refreshBody = """{"token":"new-access"}"""
+
+        assertIs<Result.Success<*>>(client.refreshTokens("refresh"))
+        assertEquals("refresh", localStorage.refreshToken)
+    }
+
+    // A server with HTTP_MODE=redirect, answering plain HTTP with where to go instead
+    private fun redirecting(location: String) = ServerUserClient(
+        createUserHttpClient(MockEngine { request ->
+            if (request.url.protocol == URLProtocol.HTTP) respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, location))
+            else respond(SERVER_PING_BODY, HttpStatusCode.OK)
+        }),
+        localStorage
+    )
+
+    @Test
+    fun aPlainHttpAddressMovesToWhereTheServerRedirects() = runTest {
+        val redirecting = redirecting("https://shop.local:8443$SERVER_PING_PATH")
+
+        assertEquals("https://shop.local:8443", redirecting.httpsRedirectOf("http://shop.local:8080"))
+        assertNull(redirecting.httpsRedirectOf("https://shop.local:8443"))
+        assertNull(client.httpsRedirectOf("http://localhost"), "A server answering plain HTTP isn't moved")
+    }
+
+    @Test
+    fun aRedirectSomewhereElseIsntFollowed() = runTest {
+        assertNull(redirecting("https://elsewhere.test$SERVER_PING_PATH").httpsRedirectOf("http://shop.local:8080"))
+        assertNull(redirecting("http://shop.local:9000$SERVER_PING_PATH").httpsRedirectOf("http://shop.local:8080"))
+        assertNull(redirecting("https://shop.local:8443/login").httpsRedirectOf("http://shop.local:8080"))
     }
 
     @Test

@@ -37,7 +37,7 @@ Read [Entity layers](../architecture/entity-layers.md) first; it explains each l
 4. **Register the tables** in `LocalDatabase.tables`. New tables are created on the next start; they don't need
    `migratedTables` until they gain a column later.
 5. **Database class**: `SupplierDatabase` extending `Database<Supplier>("SupplierLocalDatabase")`. Implement each
-   abstract member (`add`, `addAll`, `update`, `remove`, `getById`, `getPagedItems`, `count`, `search`, `addNote`,
+   abstract member (`add`, `update`, `remove`, `getById`, `getPagedItems`, `count`, `search`, `addNote`,
    `getNotes`, `noteLinkColumn`) with `dbQuery` for reads and `dbWrite` for writes, copying `CustomerDatabase`:
    - `noteLinkColumn = SupplierNoteTable.note`, so note updates and removes are checked against this type,
    - `addNote` through the base class's `attachNote(...)`,

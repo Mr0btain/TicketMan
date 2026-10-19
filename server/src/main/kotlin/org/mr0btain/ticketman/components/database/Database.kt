@@ -5,7 +5,6 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -13,7 +12,6 @@ import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.error.Error
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
-import org.mr0btain.ticketman.error.ImageError
 import org.mr0btain.ticketman.error.NoteError
 import org.mr0btain.ticketman.logging.AppLogger
 import kotlin.uuid.ExperimentalUuidApi
@@ -38,7 +36,6 @@ import kotlin.uuid.Uuid
 abstract class Database<T : MainItem>(protected val tag: String) {
     protected val GET_BY_ID_TAG = "$tag:GetById"
     protected val GET_PAGED_ITEMS_TAG = "$tag:GetPagedItems"
-    protected val ADD_ALL_TAG = "$tag:AddAll"
     protected val REMOVE_TAG = "$tag:Remove"
     protected val ADD_TAG = "$tag:Add"
     protected val UPDATE_TAG = "$tag:Update"
@@ -47,7 +44,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
     protected val REMOVE_NOTE_TAG = "$tag:RemoveNote"
     protected val ADD_IMAGE_TO_NOTE_TAG = "$tag:AddImageToNote"
     protected val UPDATE_NOTE_TAG = "$tag:UpdateNote"
-    protected val REMOVE_IMAGE_TAG = "$tag:RemoveImage"
     protected val COUNT_TAG = "$tag:Count"
     protected val SEARCH_TAG = "$tag:Search"
 
@@ -69,13 +65,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * @return Whether it was saved
      */
     abstract fun add(data: T): Boolean
-
-    /**
-     * Adds all items, or none of them if one fails
-     * @param data Items to add
-     * @return Whether they were saved
-     */
-    abstract fun addAll(data: List<T>): Boolean
 
     /**
      * Links uploaded images onto a note, see [linkImages] for which are taken
@@ -173,20 +162,6 @@ abstract class Database<T : MainItem>(protected val tag: String) {
             noteEntity.message = note.message
             noteEntity.images = SizedCollection(linkImages(note.images, noteEntity.images.toList()))
 
-            true
-        }
-
-    /**
-     * Marks an image deleted, its files go with a later sweep
-     * @param identifier Identifier of image to remove
-     * @return Whether the image was found
-     */
-    fun removeImage(identifier: Uuid): Boolean =
-        dbWrite(REMOVE_IMAGE_TAG) {
-            val imageEntity = ImageEntity.findById(identifier)
-                ?: return@dbWrite false.also { AppLogger.i(REMOVE_IMAGE_TAG, ImageError.NOT_FOUND) }
-
-            markImagesDeleted(listOf(imageEntity))
             true
         }
 

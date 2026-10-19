@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureCors
 import org.mr0btain.ticketman.components.plugins.configureHttps
+import org.mr0btain.ticketman.components.plugins.configureProxy
 import org.mr0btain.ticketman.components.plugins.configureSecurity
 import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.configureRouting
@@ -25,6 +26,7 @@ import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
+import org.mr0btain.ticketman.components.service.ServerSecret
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.tls.HttpMode
 import org.mr0btain.ticketman.components.tls.ServerTls
@@ -39,7 +41,6 @@ import java.io.File
 import java.security.SecureRandom
 import java.util.Base64
 
-// TODO: Should also setup some sort of timeout for session tokens. So after so much time we clear them?
 
 /**
  * Main
@@ -56,7 +57,7 @@ fun main(args: Array<String>) {
 fun createServer(args: Array<String>): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val commandLine = CommandLineConfig(args)
     val config = commandLine.environment.config
-    val settings = TlsSettings.from(config)
+    val settings = TlsSettings.from(config, commandLine.rootConfig.developmentMode)
     val dataPath = resolveDataPath(config)
 
     val certificate = when {
@@ -104,11 +105,9 @@ fun Application.module() {
         AppLogger.e("SERVER", "No DATA_PATH set and no app data folder found, so there's nowhere to keep data")
     } else {
         AppLogger.m("SERVER", "Path for Files: $dataPath")
-        if (System.getenv("SECRET").isNullOrBlank()) {
-            AppLogger.e("SERVER", "SECRET isn't set, so tokens are signed with the public default in application.yaml. Set it on a real server")
-        }
         val database = configureDatabase(dataPath)
-        val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase)
+        val secret = ServerSecret.resolve(environment.config.propertyOrNull("jwt.secret")?.getString().orEmpty(), dataPath)
+        val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase, secret)
         val userService = UserService(
             database = database.userDatabase,
             jwtService = jwtService,
@@ -118,7 +117,7 @@ fun Application.module() {
             auditLog = database.auditLogDatabase
         )
         val accountService = AccountService(database.userDatabase, database.inviteDatabase, userService, jwtService, database.auditLogDatabase)
-        val tls = TlsSettings.from(environment.config)
+        val tls = TlsSettings.from(environment.config, developmentMode)
         val adminService = AdminService(
             database = database,
             serverName = environment.config.propertyOrNull("env.name")?.getString() ?: "Server",
@@ -130,6 +129,7 @@ fun Application.module() {
         configureContentNegotiation()
         configureSecurity(jwtService)
         configureTransfers()
+        configureProxy(environment.config.propertyOrNull("env.trustProxy")?.getString().toBoolean())
         configureHttps(tls)
         configureCors(environment.config.propertyOrNull("cors.hosts")?.getString().orEmpty())
         val invoiceService = InvoiceService(
@@ -164,12 +164,13 @@ fun Application.module() {
             restoreService, database
         )
 
-        // Clears out photos deleted or never saved a day ago, and backups whose link has run out. Stops with
-        // the application
+        // Clears out photos deleted or never saved a day ago, backups whose link has run out, and sessions that
+        // have expired. Stops with the application
         launch(Dispatchers.IO) {
             while (isActive) {
                 imageService.sweep()
                 backupService.sweep()
+                database.tokenDatabase.removeExpired()
                 delay(ImageService.SWEEP_INTERVAL)
             }
         }

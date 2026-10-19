@@ -136,6 +136,7 @@ class LocalDatabase (
         ticketDatabase.backfillNumbers()
         userDatabase.migrateDeactivatedUsers()
         tokenDatabase.clearLegacySessions()
+        tokenDatabase.backfillExpiry()
         inventoryDatabase.migrateLegacyPrices()
         removeDetachedNotes()
     }

@@ -1,11 +1,18 @@
 package org.mr0btain.ticketman
 
+import com.auth0.jwt.JWT
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
+import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.TokenDatabase
+import org.mr0btain.ticketman.components.database.TokenTable
+import org.mr0btain.ticketman.components.service.JwtService
+import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.station.KioskSettings
@@ -17,6 +24,7 @@ import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.PinLoginRequest
+import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.request.SetPinRequest
 import org.mr0btain.ticketman.server.request.StationRegistrationRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
@@ -238,7 +246,74 @@ class StationTest {
         setup()
 
         val response = postJson("/api/station/register", json.encodeToString(StationRegistrationRequest("x", "Mine")), login(clerk))
-        assertEquals(HttpStatusCode.Unauthorized, response.status)
+        assertEquals(HttpStatusCode.Forbidden, response.status)
+    }
+
+    private fun sessionOf(token: String): String = JWT.decode(token).getClaim(JwtService.SESSION_CLAIM).asString()
+
+    // Makes a session look like nobody has used it for a while
+    private fun leaveUnused(token: String, seconds: Long) {
+        val sessionId = sessionOf(token)
+        transaction {
+            TokenTable.update({ TokenTable.sessionId eq sessionId }) { it[lastUsedAt] = System.currentTimeMillis() - seconds * 1_000 }
+        }
+    }
+
+    private suspend fun ApplicationTestBuilder.kioskStation(idleSeconds: Int = 90): StationCredentials {
+        val station = register()
+        val on = postJson("/api/admin/stations/${station.stationId}/kiosk", json.encodeToString(KioskSettings(true, idleTimeoutSeconds = idleSeconds)), adminToken)
+        assertEquals(HttpStatusCode.Accepted, on.status)
+        return station
+    }
+
+    @Test
+    fun aKioskPinSessionEndsWhenLeftAlone() = testApplication {
+        setup()
+        val station = kioskStation(idleSeconds = 90)
+        val tokens = json.decodeFromString<AuthResponse>(pin(station, tech, "246813").bodyAsText())
+        val access = tokens.accessToken!!
+
+        val stored = TokenDatabase().findBySessionId(sessionOf(access))!!
+        assertEquals(90 + UserService.KIOSK_IDLE_MARGIN.inWholeSeconds.toInt(), stored.idleTimeoutSeconds)
+
+        // Being used keeps it going
+        leaveUnused(access, 60)
+        assertEquals(HttpStatusCode.OK, client.get("/api/user/me") { bearerAuth(access) }.status)
+
+        // Switched off with someone signed in: the server ends it a while after the kiosk would have locked
+        leaveUnused(access, stored.idleTimeoutSeconds + 1L)
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/api/user/me") { bearerAuth(access) }.status)
+        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/auth/refresh", json.encodeToString(RefreshTokenRequest(tokens.refreshToken!!))).status)
+
+        assertEquals(1, TokenDatabase().removeExpired())
+    }
+
+    @Test
+    fun pinSessionsAwayFromAKioskHaveNoIdleLimit() = testApplication {
+        setup()
+        val station = register()
+        val token = json.decodeFromString<AuthResponse>(pin(station, tech, "246813").bodyAsText()).accessToken!!
+
+        assertEquals(0, TokenDatabase().findBySessionId(sessionOf(token))!!.idleTimeoutSeconds)
+    }
+
+    @Test
+    fun anAdminLeavingAKioskKeepsTheirSession() = testApplication {
+        setup()
+        users.setPin(admin.identifier, "975310")
+        val station = kioskStation()
+
+        // Only admins leave kiosk mode, and only from a PIN session
+        val techPin = json.decodeFromString<AuthResponse>(pin(station, tech, "246813").bodyAsText()).accessToken!!
+        assertEquals(HttpStatusCode.Forbidden, client.post("/api/auth/kiosk/leave") { bearerAuth(techPin) }.status)
+        assertEquals(HttpStatusCode.NotFound, client.post("/api/auth/kiosk/leave") { bearerAuth(adminToken) }.status)
+
+        val adminPin = json.decodeFromString<AuthResponse>(pin(station, admin, "975310").bodyAsText()).accessToken!!
+        assertEquals(HttpStatusCode.Accepted, client.post("/api/auth/kiosk/leave") { bearerAuth(adminPin) }.status)
+        assertEquals(0, TokenDatabase().findBySessionId(sessionOf(adminPin))!!.idleTimeoutSeconds)
+
+        leaveUnused(adminPin, 3_600)
+        assertEquals(HttpStatusCode.OK, client.get("/api/user/me") { bearerAuth(adminPin) }.status)
     }
 
     @Test
@@ -262,6 +337,6 @@ class StationTest {
         assertEquals(90, status.idleTimeoutSeconds)
 
         // Only admins
-        assertEquals(HttpStatusCode.Unauthorized, postJson("/api/admin/stations/${station.stationId}/kiosk", json.encodeToString(KioskSettings(false)), login(tech)).status)
+        assertEquals(HttpStatusCode.Forbidden, postJson("/api/admin/stations/${station.stationId}/kiosk", json.encodeToString(KioskSettings(false)), login(tech)).status)
     }
 }

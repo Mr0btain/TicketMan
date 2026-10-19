@@ -35,6 +35,11 @@ class SessionHandlerTest {
         requests += "${request.method.value} ${request.url.encodedPath}"
         if (!reachable) throw IOException("Server is down")
 
+        // A server with HTTP_MODE=redirect
+        if (request.url.host == "shop.local" && request.url.protocol == URLProtocol.HTTP) {
+            return@MockEngine respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://shop.local:8443${request.url.encodedPath}"))
+        }
+
         when (request.url.encodedPath) {
             SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
@@ -46,6 +51,7 @@ class SessionHandlerTest {
 
     private var loggedIn = 0
     private var loggedOut = 0
+    private var movedTo: String? = null
 
     // Requests finish on the mock engine's threads, keep running the test's coroutines until done
     private suspend fun TestScope.settle(done: () -> Boolean) {
@@ -65,7 +71,8 @@ class SessionHandlerTest {
             localStorage = LocalStorage(InMemoryKeyValueStore()),
             scope = backgroundScope,
             onLoggedIn = { loggedIn++ },
-            onLoggedOut = { loggedOut++ }
+            onLoggedOut = { loggedOut++ },
+            onServerMoved = { movedTo = it }
         ).also { session ->
             if (connect) session.connect("http://localhost")
             requests.clear()
@@ -79,6 +86,24 @@ class SessionHandlerTest {
         assertTrue(session.serverConnected.value)
         assertEquals(LoginState.LOGGED_OUT, session.loginState.value)
         assertNull(session.currentUser.value)
+    }
+
+    @Test
+    fun aServerThatRedirectsToHttpsMovesTheSavedAddress() = runTest {
+        val session = handler(connect = false)
+
+        session.connect("http://shop.local:8080")
+        runCurrent()
+
+        assertTrue(session.serverConnected.value)
+        assertTrue(session.connectionSecure.value, "Now on the https:// address")
+        assertEquals("https://shop.local:8443", movedTo)
+    }
+
+    @Test
+    fun anAddressThatDoesntRedirectStaysPut() = runTest {
+        handler()
+        assertNull(movedTo)
     }
 
     @Test

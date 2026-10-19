@@ -13,6 +13,10 @@ fun createUserHttpClient(
 ): HttpClient {
     // TODO: Secure the storage of these, maybe encrypt?
     return HttpClient(engine) {
+        // A server with HTTP_MODE=redirect answers plain HTTP with a redirect, which ServerUserClient reads to move
+        // to its https:// address. Followed, it would land on a certificate this device may not trust yet
+        followRedirects = false
+
         // Not bodies, these carry passwords and PINs
         install(Logging) {
             level = LogLevel.HEADERS

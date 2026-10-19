@@ -13,36 +13,51 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 |---------|---------|---------|--------------|
 | `ktor.deployment.port` | `PORT` | `8080` | Port for plain HTTP, on all interfaces |
 | `tls.port` | `SSL_PORT` | `8443` | Port for HTTPS. `0` turns HTTPS off |
-| `tls.httpMode` | `HTTP_MODE` | `on` | What the plain HTTP port does once HTTPS is on: `on`, `redirect` or `off` |
+| `tls.httpMode` | `HTTP_MODE` | blank | What the plain HTTP port does once HTTPS is on: `on`, `redirect` or `off`. Blank means `redirect`, or `on` in development mode |
 | `tls.keyStore` | `SSL_KEYSTORE` | blank | A PKCS12 file with the certificate to use. Blank means the server makes its own |
 | `tls.keyStorePassword` | `SSL_KEYSTORE_PASSWORD` | blank | Password for `SSL_KEYSTORE` |
 | `tls.keyAlias` | `SSL_KEY_ALIAS` | blank | Which key in `SSL_KEYSTORE` to use. Blank means the first one |
 | `tls.privateKeyPassword` | `SSL_KEY_PASSWORD` | blank | Only when the key's password isn't the keystore's |
 | `cors.hosts` | `CORS_HOSTS` | blank | Development mode only: hosts allowed to call the server from a browser, like `localhost:8080`. Blank allows any |
-| `jwt.secret` | `SECRET` | a fixed string in the file | Signs every access and refresh token |
+| `jwt.secret` | `SECRET` | blank | Signs every access and refresh token. Blank means the server makes one and keeps it |
 | `jwt.audience` | - | `my-audience` | Put in tokens and checked on every request |
 | `jwt.issuer` | - | `http://localhost` | Put in tokens and checked by the verifier |
 | `jwt.realm` | - | `TicketMan Server` | Realm the auth providers report |
 | `env.name` | `NAME` | `Server` | Server name shown on the admin screen's Server tab |
 | `env.dataPath` | `DATA_PATH` | blank | Folder for the database, photos, backups and restores. Blank means the platform's app data folder |
 | `env.adminPassword` | `ADMIN_PASSWORD` | blank | Password for the `admin` user made when no admin exists. Blank means a random one is logged |
+| `env.trustProxy` | `TRUST_PROXY` | `false` | `true` behind a reverse proxy, so client addresses come from `X-Forwarded-For` |
 
 Settings with no env var can only be changed by editing the file.
 
 ### `SECRET`
 
-The default secret is in the repo, so anyone can forge tokens for a server that keeps it. Always set `SECRET` to a
-long random string on a real server, and keep it the same across restarts. Changing it signs everyone out, since
-every existing token stops verifying.
+Tokens are signed with `SECRET` when it's set. When it isn't, the server makes a random 64 byte secret on first
+start, keeps it in `<DATA_PATH>/server/secret` (readable only by the account running the server) and logs
+`SECRET isn't set, made one in ...`. Later starts read the same file.
 
-The server logs an error on start when `SECRET` isn't set. The IDE's **Server[Run]** configuration doesn't set it,
-so that's expected while developing.
+Either way, keep it the same across restarts: changing `SECRET` or deleting the file signs everyone out, since every
+existing token stops verifying. A backup doesn't include the file, so a server restored onto a new machine makes a
+new one and devices log in once more.
+
+Servers from before this used a fixed default written in `application.yaml`. The first start after upgrading makes
+a secret instead, so devices that relied on that default log in once more.
 
 ### HTTPS
 
 The HTTPS connector is added in `createServer()` in `Application.kt`, not through Ktor's own `ktor.security`
 settings, because the certificate may have to be made before the server starts. It listens on the same host as
 plain HTTP. See [Running a server](operations.md#https) for setting up certificates and trusting them on devices.
+
+`HTTP_MODE` left blank redirects plain HTTP to HTTPS. In development mode it stays `on` instead, so the web client's
+dev server and `scripts/counter_e2e.py` can keep using `http://`. See [Plain HTTP](operations.md#plain-http).
+
+### `TRUST_PROXY`
+
+Behind a reverse proxy, every request reaches the server from the proxy's address, so the wrong login and account
+request limits count every device together. `TRUST_PROXY=true` takes the client's address from the last entry in
+`X-Forwarded-For`, the one the proxy added. Leave it off when there's no proxy: anyone could send the header and
+pick their own address.
 
 ### `DATA_PATH`
 
@@ -81,7 +96,8 @@ Once an admin exists, the setting does nothing. It isn't a way to reset a passwo
 - allows `POST /api/admin/seed`, which the admin screen's Server tab uses to fill the database with made up
   customers, tickets, inventory and users (up to 5000 of each). On any other server the route answers `403`,
 - turns on CORS, so the web client's dev server (`wasmJsBrowserDevelopmentRun`, on its own port) can call the
-  server. `CORS_HOSTS` narrows it to listed hosts. A real server serves the web client itself and never needs it.
+  server. `CORS_HOSTS` narrows it to listed hosts. A real server serves the web client itself and never needs it,
+- keeps plain HTTP answering when `HTTP_MODE` isn't set, instead of redirecting it to HTTPS.
 
 ### Seeding on start
 

@@ -10,14 +10,15 @@ jwt:
     audience: "my-audience"
     issuer: "http://localhost"
     realm: "TicketMan Server"
-    secret: "$SECRET:ojSNROVNOnwerowNEOIFOIonwerowNEOIFOIonwerowNEOIFOIo"
+    # Blank makes the server generate one and keep it in <DATA_PATH>/server/secret
+    secret: "$SECRET:"
 
 # HTTPS listens next to plain HTTP. The certificate is made in <DATA_PATH>/server/tls/ on first start unless
 # SSL_KEYSTORE points at a PKCS12 file. SSL_PORT=0 turns HTTPS off
 tls:
     port: "$SSL_PORT:8443"
-    # on, redirect (to HTTPS) or off
-    httpMode: "$HTTP_MODE:on"
+    # on, redirect (to HTTPS) or off. Blank means redirect, or on in development mode
+    httpMode: "$HTTP_MODE:"
     keyStore: "$SSL_KEYSTORE:"
     keyStorePassword: "$SSL_KEYSTORE_PASSWORD:"
     keyAlias: "$SSL_KEY_ALIAS:"
@@ -34,6 +35,9 @@ env:
     dataPath: "$DATA_PATH:"
     # Password for the "admin" user made on first start, a random one is logged if blank
     adminPassword: "$ADMIN_PASSWORD:"
+    # true behind a reverse proxy, so client addresses come from X-Forwarded-For. Leave off otherwise, anyone
+    # could send that header
+    trustProxy: "$TRUST_PROXY:false"
 # postgres:
 #  url: "jdbc:postgresql://localhost/default"
 #  user: username

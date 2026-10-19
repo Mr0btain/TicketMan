@@ -17,4 +17,9 @@ object TokenTable: IntIdTable("token") {
     val kind = text("kind").default("PASSWORD")
     val createdAt = long("created_at").default(0)
     val lastUsedAt = long("last_used_at").default(0)
+
+    /** Epoch millis the refresh token runs out, 0 for rows from before this was kept (filled in on start) */
+    val expiresAt = long("expires_at").default(0)
+    /** A kiosk PIN session ends after this long unused, 0 for none */
+    val idleTimeoutSeconds = integer("idle_timeout_seconds").default(0)
 }

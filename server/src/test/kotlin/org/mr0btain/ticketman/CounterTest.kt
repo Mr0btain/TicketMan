@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
@@ -117,7 +118,20 @@ class CounterTest {
         val user = json.decodeFromString<EntityReference>(get("/api/data/ticket/get/user/${ticket.identifier}").bodyAsText())
         assertEquals(tech.identifier, user.identifier)
 
-        assertEquals(HttpStatusCode.NotFound, post("/api/data/ticket/set/user/${ticket.identifier}", json.encodeToString(Uuid.random())).status)
+        assertEquals(HttpStatusCode.BadRequest, post("/api/data/ticket/set/user/${ticket.identifier}", json.encodeToString(Uuid.random())).status)
+    }
+
+    @Test
+    fun onlyActiveTechniciansWithNormalAccessTakeTickets() = testApplication {
+        setup()
+        val ticket = addTicket()
+        val gone = User(username = "gone", password = "gone_pass", accessLevel = AccessLevel.NORMAL, status = UserStatus.DEACTIVATED)
+        UserDatabase().add(gone)
+
+        assertEquals(HttpStatusCode.BadRequest, post("/api/data/ticket/set/user/${ticket.identifier}", json.encodeToString(viewer.identifier)).status)
+        assertEquals(HttpStatusCode.BadRequest, post("/api/data/ticket/set/user/${ticket.identifier}", json.encodeToString(gone.identifier)).status)
+        assertEquals(HttpStatusCode.NotFound, post("/api/data/ticket/set/user/${Uuid.random()}", json.encodeToString(tech.identifier)).status)
+        assertEquals(HttpStatusCode.Accepted, post("/api/data/ticket/set/user/${ticket.identifier}", json.encodeToString(admin.identifier)).status)
     }
 
     @Test
@@ -160,10 +174,10 @@ class CounterTest {
         assertEquals(HttpStatusCode.OK, get("/api/counter/queue", viewerToken).status)
         assertEquals(HttpStatusCode.OK, post("/api/counter/search", json.encodeToString(SearchQuery("1", 10)), viewerToken).status)
 
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/ticket/add", json.encodeToString(Ticket()), viewerToken).status)
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/ticket/update", json.encodeToString(ticket), viewerToken).status)
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/customer/add", json.encodeToString(Customer()), viewerToken).status)
-        assertEquals(HttpStatusCode.Unauthorized, post("/api/data/ticket/add/note/${ticket.identifier}", json.encodeToString(Note()), viewerToken).status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/data/ticket/add", json.encodeToString(Ticket()), viewerToken).status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/data/ticket/update", json.encodeToString(ticket), viewerToken).status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/data/customer/add", json.encodeToString(Customer()), viewerToken).status)
+        assertEquals(HttpStatusCode.Forbidden, post("/api/data/ticket/add/note/${ticket.identifier}", json.encodeToString(Note()), viewerToken).status)
     }
 
     // ------------------------------------------ Search ------------------------------------------

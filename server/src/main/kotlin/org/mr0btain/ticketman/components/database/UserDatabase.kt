@@ -82,12 +82,6 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     override fun count(): Long =
         dbQuery(COUNT_TAG) { UserEntity.count() } ?: 0L
 
-    override fun addAll(data: List<User>): Boolean =
-        dbWrite(ADD_ALL_TAG) {
-            data.forEach { item -> insertUser(item) }
-            true
-        }
-
     override fun remove(identifier: Uuid): Boolean =
         dbWrite(REMOVE_TAG) {
             val userEntity = UserEntity.findById(identifier)
@@ -137,7 +131,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     // Must be called inside a transaction
     private fun insertUser(data: User) {
         UserEntity.new(data.identifier) {
-            username = data.username.lowercase()
+            username = data.username.trim().lowercase()
             password = PasswordHasher.hashIfNeeded(data.password)
             name = data.name.lowercase()
             email = data.email.lowercase()
@@ -150,7 +144,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
 
     override fun update(data: User): Boolean =
         updateUser(UPDATE_TAG, data.identifier) {
-            username = data.username.lowercase()
+            username = data.username.trim().lowercase()
             // Clients never get the password back, so a blank one means leave it alone
             if (data.password.isNotBlank()) password = PasswordHasher.hashIfNeeded(data.password)
             name = data.name.lowercase()

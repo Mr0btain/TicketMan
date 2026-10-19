@@ -6,8 +6,9 @@ page says where, and what happens on the server behind it.
 
 ## First start
 
-1. Start the server with `SECRET` and `DATA_PATH` set, and `ADMIN_PASSWORD` if you want to choose the first password
-   (see [Configuration](configuration.md)).
+1. Start the server with `DATA_PATH` set, and `ADMIN_PASSWORD` if you want to choose the first password (see
+   [Configuration](configuration.md)). Without `SECRET` the server makes its own and keeps it in the data folder.
+   Behind a reverse proxy, also set `TRUST_PROXY=true`.
 2. Watch the log for `Responding at https://0.0.0.0:8443`, the certificate fingerprint, and the `admin` user's
    password if you didn't set one.
 3. Point a client at the server (Settings > Server and data), like `192.168.1.20:8443`. It asks you to check the
@@ -31,6 +32,7 @@ server/
 │       ├── display.jpg
 │       └── thumb.jpg
 ├── tls/                       The certificate the server made for HTTPS, and its keystore password
+├── secret                     What tokens are signed with, when SECRET isn't set. Deleting it logs every device out
 ├── backups/                   Backups waiting to be downloaded, removed once their link runs out
 ├── restore/                   An uploaded backup waiting for the next restart
 └── pre-restore-<time>/        What a restore replaced, kept so it can be undone by hand
@@ -78,10 +80,14 @@ machine without copying `server/tls/` does the same, since backups don't include
 
 ### Plain HTTP
 
-`HTTP_MODE` sets what the HTTP port does: `on` (the default, so devices saved with an `http://` address keep
-working), `redirect` (sends everything to HTTPS) or `off`. Move every device to its `https://` address before
-switching to `redirect`, because a redirected POST arrives as a GET and fails. Devices saved before HTTPS existed
-keep `http://` until their address is changed in Settings.
+`HTTP_MODE` sets what the HTTP port does: `redirect` (the default, sends everything to HTTPS), `on` (answers as
+usual) or `off`. Development mode defaults to `on`.
+
+Devices saved with an `http://` address move themselves: when they connect, the app sees the redirect, switches to
+the `https://` address it points to and saves it, then asks to trust the certificate like any first connection. That
+happens when the app starts or the address is saved, since a redirected POST arrives as a GET and fails, so the
+app checks before it sends anything else. Scripts and other tools calling the API need an `https://` address, or
+`HTTP_MODE=on`.
 
 ## Web client
 
@@ -157,8 +163,9 @@ On the admin screen's **Server** tab, choose whether to include photos and make 
 
 1. writes a zip to `backups/` with a `manifest.json`, `database.zip` (H2's online `BACKUP`, so the server keeps
    running) and, if asked for, an `images/` folder,
-2. hands back a download link that works for 30 minutes and doesn't need a login, so the browser can download it
-   directly. It supports resuming.
+2. hands back a download link that doesn't need a login, so the browser can download it directly. It works for 30
+   minutes, or until 5 minutes after it was last used: enough to resume a dropped download, not enough to be of use
+   to someone who finds the link in the browser's history later.
 
 Download it straight away. When the link runs out the hourly sweep deletes the file, and any backup file left from
 before a restart is deleted too. The server doesn't keep a history of backups, so store them somewhere else.
@@ -191,6 +198,8 @@ While the server runs it sweeps once an hour:
 - **Photos** marked deleted, or uploaded but never saved onto a note or item, are purged once they've been that way
   for a day. Folders under `images/` with no database row are removed after an hour.
 - **Backups** whose download link has run out are deleted.
+- **Sessions** whose refresh token has expired, and kiosk PIN sessions left unused past their idle limit, are
+  deleted.
 
 Photos are deleted a day late on purpose. A backup copies the database first and the photos after, and the delay
 means a photo the database still lists can't vanish between the two.

@@ -126,8 +126,6 @@ the shared model, the server table and database class, the route, the client rep
 - iOS targets are commented out, so `iosApp` doesn't build.
 - Android and web compile but haven't been run end to end on a device or in a browser yet. See
   [Platforms](../client/platforms.md#known-gaps).
-- Plain HTTP is still on next to HTTPS by default, so older saved addresses keep working. See
-  [Running a server](../operations.md#plain-http).
 - A few parts predate the current patterns: some databases use `appLogTryCatch` and `transaction` rather than
   `dbQuery`/`dbWrite`, and some `TODO` comments describe ideas that were never started.
 

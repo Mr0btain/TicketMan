@@ -75,9 +75,9 @@ class StaffNoteTest {
         setup()
         val token = token(tech)
 
-        assertEquals(HttpStatusCode.Unauthorized, staffNotes(token).status)
+        assertEquals(HttpStatusCode.Forbidden, staffNotes(token).status)
         assertEquals(
-            HttpStatusCode.Unauthorized,
+            HttpStatusCode.Forbidden,
             post("/api/user/add/note/${tech.identifier}", json.encodeToString(Note(message = "Promote me")), token).status
         )
     }
