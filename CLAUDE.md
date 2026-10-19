@@ -31,7 +31,10 @@ PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pde
 python3 scripts/counter_e2e.py http://localhost:8098
 
 python3 scripts/check_api_docs.py            # docs/api against the route files (--list prints every endpoint)
+python3 scripts/check_doc_links.py           # every relative link and anchor in docs/ and CLAUDE.md resolves
 ```
+
+CI (`.gitea/workflows/ci.yml`) runs the three test tasks, compiles web and Android, and runs both doc checks on every pull request.
 
 There is no lint task configured; `docs/testing.md` covers the test helpers in detail. Server tests live in `server/src/test`, client tests in `composeApp/src/commonTest` (network repos use Ktor's `MockEngine`; handlers take a `RemoteHandler` built on one) and `composeApp/src/desktopTest` (Java2D printing, ZXing-checked QR codes, UI renders, and `UiKitRulesTest`). `KitGalleryRenderTest` and `ScreenRenderTest` draw the component gallery and the main screens with sample data to PNGs in `composeApp/build/kit-gallery` and `composeApp/build/screen-renders`, which is the quickest way to look over a UI change without running the app. `testApplication` doesn't load `application.yaml`, so server tests use the helpers in `server/src/test/.../TestServer.kt`: `createTestDataDir()`, `configureTestServer(dataDir)` (supplies `env.dataPath` and `jwt.*` via `MapApplicationConfig`), and `cleanupTestDataDir(dataDir)` in `@AfterTest` (shuts H2 down, then deletes the dir). `AuthTest.kt` shows the login → bearer request → refresh flow. `RestoreTest` shows how to restart the server on the same data dir (two `testApplication` blocks with an H2 `SHUTDOWN` between). The in-process test engine doesn't behave like Netty for big or cut-off request bodies, so check upload and download changes against a real `:server:run` too.
 

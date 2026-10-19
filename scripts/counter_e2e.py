@@ -111,7 +111,7 @@ pin = pin_auth["accessToken"]
 step("Kiosk lists who can PIN in; the tech PINs in")
 
 # ------------------------------------------ Check in at the counter ------------------------------------------
-call("POST", "/api/data/customer/add", {"identifier": (jane := uid()), "name": "jane:doe", "phone": "(555) 123-4567"}, pin, expect=201)
+call("POST", "/api/data/customer/add", {"identifier": (jane := uid()), "name": "Jane Doe", "phone": "(555) 123-4567"}, pin, expect=201)
 signature = {"strokes": [[{"x": 0.1, "y": 0.5}, {"x": 0.5, "y": 0.3}, {"x": 0.9, "y": 0.6}]], "aspectRatio": 3.0, "signedName": "Jane Doe"}
 ticket_one = {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "iPhone 14", "serial": "SN123"}, "problem": "Cracked screen",
               "accessories": "Case", "estimateCents": 15000, "priority": {"priority": "NORMAL", "time": 0}}

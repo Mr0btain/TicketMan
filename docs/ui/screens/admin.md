@@ -50,7 +50,8 @@ their sessions. A new invite's setup code is shown once in `InviteCodeDialog` an
 replaced by renewing.
 
 The backup and restore card streams both ways: the backup downloads through `saveDownload` and the restore uploads
-through `fileBody`, so neither is held in memory. See [Transfers and photos](../../client/transfers-and-photos.md).
+through `fileBody`, so neither is held in memory (except on web, which reads a restore whole and refuses one over
+512 MB). See [Transfers and photos](../../client/transfers-and-photos.md).
 
 ## Where it lives
 

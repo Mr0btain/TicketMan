@@ -30,11 +30,37 @@ class OffsetPagerTest {
         assertTrue(pager.items.value.isEmpty())
         assertEquals(NetworkError.SERVER_ERROR.message, pager.loadError.value)
 
-        // Scrolling on tries again, and a page that loads clears the error
+        // Scrolling on tries again, from the first page, and a page that loads clears the error
         failing = false
         pager.loadNext()
         assertNull(pager.loadError.value)
-        assertTrue(pager.items.value.isNotEmpty())
+        assertEquals(listOf(0, 1), pager.items.value)
+    }
+
+    @Test
+    fun aFailedFirstPageStopsTheFirstLoad() = runTest {
+        total = 10
+        failing = true
+        pager.refresh()
+
+        // Not followed by asking for the pages after it, which would also fail (or leave a gap)
+        assertEquals(listOf(0), fetched)
+    }
+
+    @Test
+    fun aFailedLaterPageStopsTheFirstLoadThere() = runTest {
+        total = 10
+        var calls = 0
+        val pager = OffsetPager<Int>("TestPager", OffsetPagerConfig(pageSize = 2, initialLoadSize = 3)) { page, pageSize ->
+            fetched += page
+            if (++calls == 2) TmResult.Error(NetworkError.SERVER_ERROR)
+            else TmResult.Success((page * pageSize..<(page + 1) * pageSize).toList())
+        }
+
+        pager.refresh()
+
+        assertEquals(listOf(0, 1), fetched)
+        assertEquals(listOf(0, 1), pager.items.value)
     }
 
     @Test

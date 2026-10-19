@@ -54,7 +54,7 @@ fun TicketDialog(
 
     TmEditNoteDialog(
         seed = noteSeed,
-        label = if (noteSeed.message.isBlank()) "Add update" else "Edit update",
+        label = if (noteSeed.isNew) "Add update" else "Edit update",
         isVisible = showNoteDialog,
         onConfirm = { seed.saveNote(noteSeed.note) },
         onDelete = { seed.deleteNote(noteSeed.identifier) },

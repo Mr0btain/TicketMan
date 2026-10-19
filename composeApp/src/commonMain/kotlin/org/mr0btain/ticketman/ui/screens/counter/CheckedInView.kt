@@ -6,7 +6,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import org.mr0btain.ticketman.components.utils.formatDay
+import org.mr0btain.ticketman.components.utils.formatDayInSentence
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -49,7 +49,7 @@ fun CheckedInView(
         Text(text = ticket.device.toString(), style = TmTheme.typography.title, color = colors.text)
 
         val details = listOfNotNull(
-            ticket.promisedAt?.let { "Promised ${formatDay(it).lowercase()}" },
+            ticket.promisedAt?.let { "Promised ${formatDayInSentence(it)}" },
             result.invoice?.let { "Deposit taken ${formatMoney(it.paidCents)}" }
         )
         if (details.isNotEmpty()) {

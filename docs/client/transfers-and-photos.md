@@ -24,13 +24,14 @@ Per platform:
 | | `saveDownload` | `fileBody` |
 |-|----------------|------------|
 | Desktop, Android | FileKit's save dialog, then `downloadTo` the chosen file. A failed download deletes the partial file | Streams from the file |
-| Web | Hands the URL to the browser as a download link. Progress isn't reported (`HandedToBrowser`) | Reads the whole file, since the browser can't stream a picked file here |
+| Web | Hands the URL to the browser as a download link. Progress isn't reported (`HandedToBrowser`) | Reads the whole file, since Ktor's browser engine builds the body before sending it. `fileBodyLimitBytes` caps it at 512 MB |
 
 The web version works because backup download links carry their own token in the URL instead of needing the login
 header.
 
-`AdminServer` (`admin.server`) is the user of all of this: downloading a backup with `saveDownload`, and uploading a restore with
-`fileBody` as the raw request body.
+`AdminServer` (`admin.server`) is the user of all of this: downloading a backup with `saveDownload`, and uploading a
+restore with `fileBody` as the raw request body. Before uploading, `isTooBigToSend(file)` checks the limit; the
+backup card shows "Too big for the browser" instead of the restore prompt, pointing at the desktop app.
 
 `saveFile(bytes, name, extension)` (`components/data/SaveFile.kt`, `expect`) saves bytes already in memory. Nothing
 calls it at the moment; prefer `saveDownload` for anything from the server.

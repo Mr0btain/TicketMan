@@ -249,32 +249,44 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
 
 ## Phase 7: Platforms, CI and docs
 
-- [ ] **Run Android end to end** on a device: login, records, counter, photos, printing, kiosk. Fix what breaks and
-      update [Platforms](client/platforms.md). Needs compileSdk 37 and an AAPT2 that runs on the build machine.
-      *Source:* [platforms](client/platforms.md#known-gaps)
-- [ ] **Run the web client end to end** in a browser, served by `-PwithWeb`. Same list as Android.
-      *Source:* [platforms](client/platforms.md#known-gaps)
-- [ ] **Check `AppDir` on macOS and Windows.** The per OS data folders (`~/Library/Application Support/TicketMan`,
-      `%APPDATA%/TicketMan`) have only been tried on Linux. Run the desktop client and a server without `DATA_PATH`
-      on each. *Source:* `AppDir.jvm.kt`'s old `TODO`s
-- [ ] **Kiosk lockdown on Android.** Use Android's lock task mode so a kiosk can't be swiped out of.
-      *Source:* [kiosk](ui/screens/kiosk.md#known-gaps)
-- [ ] **Large uploads on web** are read into memory whole. Stream them if Kotlin/Wasm allows, or cap the size the
-      web client offers. *Source:* [add platform code](how-to/add-a-platform-actual.md#gotchas)
-- [ ] **iOS.** The targets are commented out and `iosApp` doesn't build. Decide whether to support it; if not,
-      remove the `iosMain` source sets and `iosApp`. **(decide)** *Source:* [platforms](client/platforms.md#known-gaps)
-- [ ] **CI.** A Gitea Actions workflow that runs `:server:test`, `:shared:jvmTest`, `:composeApp:desktopTest`,
+- [x] **Run the web client end to end** in a browser, served by `-PwithWeb`. Same list as Android.
+      *Source:* [platforms](client/platforms.md#known-gaps) *Done:* in headless Chromium (Playwright): login,
+      records, a note with a photo, counter search and ticket card, the whole check-in wizard with a drawn
+      signature, printing a receipt (the iframe's HTML checked), backup download, restore upload and the restart
+      that applies it, the admin tabs, settings, registering a station, kiosk mode and PIN sign in. Fixed along the
+      way, on every platform: a failed first page made `OffsetPager` ask for the next one three times (and a later
+      scroll skipped page 0); the lists showed "Couldn't load" under the "not logged in" banner; the ticket card
+      showed change given as "Balance -$0.10"; note dialogs said "Edit note" once typing started; "Promised thu oct
+      22" lowercased day names; a station the server no longer knows wasn't forgotten (the API docs said it was);
+      the suggested device name was "Java 21" / "Web with Kotlin/Wasm"; `counter_e2e.py` still sent `first:last`
+      names. On web only: kiosk full screen is refused without a click, which left an uncaught promise error; it
+      now asks again on the next click or key press. Escape didn't close dialogs in the browser; `TmDialog` handles
+      it itself now.
+- [x] **Large uploads on web** are read into memory whole. Stream them if Kotlin/Wasm allows, or cap the size the
+      web client offers. *Done:* capped. Ktor's browser engine builds the whole body before sending, so it can't
+      stream; `fileBodyLimitBytes` is 512 MB on web (none elsewhere) and the restore card says when a backup is
+      too big, pointing at the desktop app. *Source:* [add platform code](how-to/add-a-platform-actual.md#gotchas)
+- [x] **iOS.** The targets are commented out and `iosApp` doesn't build. Decide whether to support it; if not,
+      remove the `iosMain` source sets and `iosApp`. **(decide)** *Done:* parked, files kept
+      ([decisions](decisions.md#ios-parked-not-removed)). *Source:* [platforms](client/platforms.md#known-gaps)
+- [x] **CI.** A Gitea Actions workflow that runs `:server:test`, `:shared:jvmTest`, `:composeApp:desktopTest`,
       `check_api_docs.py` and the docs link check (from [STYLE.md](STYLE.md#keeping-them-current)) on every PR.
-      Add `:composeApp:wasmJsBrowserTest` if a headless browser is available there.
+      Add `:composeApp:wasmJsBrowserTest` if a headless browser is available there. *Done:*
+      `.gitea/workflows/ci.yml`, with the link check now `scripts/check_doc_links.py`; it also compiles web and
+      Android and keeps the render PNGs. No `wasmJsBrowserTest`, since the runner has no Chrome.
       *Source:* [testing](testing.md#gotchas)
-- [ ] **Font licence.** `composeApp/licenses/` has Barlow's and Atkinson's but not JetBrains Mono's (also OFL).
-      Add it. *Source:* found while writing [add a theme or font](how-to/add-a-theme-or-font.md)
-- [ ] **Docs to correct:**
+- [x] **Font licence.** `composeApp/licenses/` has Barlow's and Atkinson's but not JetBrains Mono's (also OFL).
+      Add it. *Done:* `JetBrainsMono-OFL.txt`. *Source:* found while writing [add a theme or font](how-to/add-a-theme-or-font.md)
+- [x] **Docs to correct:**
   - `server/auth.md` says the client still calls `POST /api/auth/user`; it doesn't (fixed by removing it in Phase 2),
   - `server/migrations.md` says the order of `LocalDatabase.tables` matters because of foreign keys; check whether
     Exposed's `SchemaUtils.create` sorts tables by reference (the list already has `CustomerNoteTable` before
     `NoteTable`) and correct the page.
-- [ ] **Dokka** (optional): a generated API site from the KDoc. *Source:* [PLAN.md](PLAN.md)
+
+  *Done:* `auth.md` was already right after Phase 2. Exposed 1.5's `SchemaUtils.create` does sort by reference
+  (`sortTablesByReferences`), so `migrations.md` now says the order doesn't matter.
+- [x] **Dokka** (optional): a generated API site from the KDoc. *Done:* skipped; the `docs/` pages and KDoc in
+      the IDE cover it. *Source:* [PLAN.md](PLAN.md)
 
 ## Phase 8: Behind a reverse proxy by default
 
@@ -389,6 +401,23 @@ the user types the address and logs in. These cover what goes wrong around that.
       since the backup `?token=` is a credential); the HTTPS section becomes "Without a proxy". Add the Docker
       build to `CLAUDE.md`.
 
+## Phase 11: Android, and other machines
+
+Last, on a machine that can build and run them: the Android SDK tools Gradle downloads are x86, so ARM Linux
+can't build the APK, and there's no emulator for it.
+
+- [ ] **Run Android end to end** on a device: login, records, counter, photos, printing, kiosk. Fix what breaks and
+      update [Platforms](client/platforms.md). Needs compileSdk 37 and an AAPT2 that runs on the build machine.
+      *Source:* [platforms](client/platforms.md#known-gaps)
+- [ ] **Kiosk lockdown on Android.** Use Android's lock task mode (`startLockTask()` when kiosk mode turns on,
+      `stopLockTask()` when an admin leaves it) so a kiosk can't be swiped out of. Without being the device owner
+      Android asks the user to pin the screen first; say so on the kiosk screen.
+      *Source:* [kiosk](ui/screens/kiosk.md#known-gaps)
+- [ ] **Check `AppDir` on macOS and Windows.** `AppDirTest` pins down the per OS folders
+      (`~/Library/Application Support/TicketMan`, `%APPDATA%\TicketMan`), but only Linux has been run. Start the
+      desktop client and a server without `DATA_PATH` on each and check where the files go.
+      *Source:* `AppDir.jvm.kt`'s old `TODO`s
+
 ## Ideas
 
 Features that came up as `TODO` comments but were never started. Not planned; pick one up, or drop it, when
@@ -438,6 +467,6 @@ the PR template.
 - The counter's F-keys and Escape are taken by the counter; fields there can't use them.
 
 **Docs**
-- Fix the doc page in the same PR as the change; run `check_api_docs.py` after route changes and the link check
-  after moving pages. ([STYLE.md](STYLE.md#keeping-them-current))
+- Fix the doc page in the same PR as the change; run `check_api_docs.py` after route changes and
+  `check_doc_links.py` after moving pages (CI runs both). ([STYLE.md](STYLE.md#keeping-them-current))
 - Add a [decisions](decisions.md) entry for a choice someone might want to undo later.

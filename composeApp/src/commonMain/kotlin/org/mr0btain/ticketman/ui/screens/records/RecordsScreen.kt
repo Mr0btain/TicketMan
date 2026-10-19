@@ -39,6 +39,8 @@ fun RecordsScreen(
     // Tab for switching between panels
     val tabIndex = viewModel.selectedMainTabIndex.collectAsState()
     val loginState = viewModel.session.loginState.collectAsState()
+    // Logged out, the banner already says why the lists are empty
+    val loggedIn = loginState.value == LoginState.LOGGED_IN
     // Restricted users can look but not change anything, so no add, edit or delete
     val canEdit by viewModel.session.canEdit.collectAsState()
 
@@ -248,7 +250,7 @@ fun RecordsScreen(
                 pendingId = pendingCustomer,
                 customerList = customerPagedItems.value,
                 customerLazyListState = customerLazyListState,
-                loadError = customerLoadError
+                loadError = customerLoadError.takeIf { loggedIn }
             )
 
             1 -> TicketPanel(
@@ -275,7 +277,7 @@ fun RecordsScreen(
                 ticketScope = ticketScope,
                 ticketListState = ticketLazyListState,
                 onImageClick = { id, page -> showNoteImages(ticketSeed.notes, id, page) },
-                loadError = ticketLoadError
+                loadError = ticketLoadError.takeIf { loggedIn }
             )
 
             2 -> InventoryPanel(
@@ -297,7 +299,7 @@ fun RecordsScreen(
                     showConfirmDeleteDialog = true
                 },
                 inventoryListState = inventoryLazyListState,
-                loadError = inventoryLoadError
+                loadError = inventoryLoadError.takeIf { loggedIn }
             )
         }
     }

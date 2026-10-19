@@ -15,12 +15,14 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.data.local.InMemoryKeyValueStore
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.SessionHandler
 import kotlin.test.*
+import kotlin.uuid.Uuid
 
 class SessionHandlerTest {
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -29,6 +31,8 @@ class SessionHandlerTest {
     private var reachable = true
     private var loginBody = """{"id":null,"accessToken":"access","refreshToken":"refresh"}"""
     private var loginStatus = HttpStatusCode.Accepted
+    private var stationStatus = HttpStatusCode.NotFound
+    private val storage = LocalStorage(InMemoryKeyValueStore())
     private var me = User(username = "sam", name = "Sam Tech", accessLevel = AccessLevel.NORMAL)
 
     private val engine = MockEngine { request ->
@@ -45,6 +49,7 @@ class SessionHandlerTest {
             "/" -> respond("", HttpStatusCode.OK)
             "/api/auth" -> respond(loginBody, loginStatus, jsonHeaders)
             "/api/user/me" -> respond(Json.encodeToString(me), HttpStatusCode.OK, jsonHeaders)
+            "/api/auth/station/status" -> respond("", stationStatus)
             else -> respond("", HttpStatusCode.Accepted)
         }
     }
@@ -68,7 +73,7 @@ class SessionHandlerTest {
 
         return SessionHandler(
             remoteHandler = remote,
-            localStorage = LocalStorage(InMemoryKeyValueStore()),
+            localStorage = storage,
             scope = backgroundScope,
             onLoggedIn = { loggedIn++ },
             onLoggedOut = { loggedOut++ },
@@ -77,6 +82,32 @@ class SessionHandlerTest {
             if (connect) session.connect("http://localhost")
             requests.clear()
         }
+    }
+
+    @Test
+    fun aStationTheServerDoesntKnowIsForgotten() = runTest {
+        val session = handler()
+        storage.stationCredentials = StationCredentials(Uuid.random(), "secret")
+
+        // Removed by an admin, or restored away
+        session.refreshStation()
+        settle { storage.stationCredentials == null }
+
+        assertNull(session.station.value)
+    }
+
+    @Test
+    fun aStationIsKeptWhenTheServerCantBeReached() = runTest {
+        val session = handler()
+        val credentials = StationCredentials(Uuid.random(), "secret")
+        storage.stationCredentials = credentials
+
+        reachable = false
+        session.refreshStation()
+        settle { requests.any { it.endsWith("/station/status") } }
+        runCurrent()
+
+        assertEquals(credentials, storage.stationCredentials)
     }
 
     @Test

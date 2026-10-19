@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.ui.screens.admin.components
 
 import io.github.vinceglb.filekit.PlatformFile
 import io.github.vinceglb.filekit.name
+import io.github.vinceglb.filekit.size
 import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -9,6 +10,8 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.transfer.DownloadOutcome
 import org.mr0btain.ticketman.components.network.transfer.fileBody
+import org.mr0btain.ticketman.components.network.transfer.fileBodyLimitBytes
+import org.mr0btain.ticketman.components.network.transfer.isTooBigToSend
 import org.mr0btain.ticketman.components.network.transfer.saveDownload
 import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.data.shop.ShopProfile
@@ -124,6 +127,11 @@ class AdminServer(
      * it starts, keeping the current data aside
      */
     fun restoreFrom(file: PlatformFile) {
+        if (isTooBigToSend(file)) {
+            support.notify(tooBigToRestoreMessage(file))
+            return
+        }
+
         scope.launch {
             support.loading {
                 _backupProgress.value = BackupProgress("Uploading ${file.name}", 0f)
@@ -215,6 +223,11 @@ class AdminServer(
         _shopProfile.value = null
     }
 }
+
+/** Said when a backup is too big for this client to upload, which only happens in the browser */
+fun tooBigToRestoreMessage(file: PlatformFile): String =
+    "${file.name} is ${formatBytes(file.size())}, more than the ${formatBytes(fileBodyLimitBytes ?: 0)} a browser can " +
+        "upload. Restore it from the desktop app instead"
 
 /**
  * A running backup, for the backup card

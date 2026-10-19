@@ -28,7 +28,7 @@ In `composeApp` (`composeApp/src/commonMain/.../`):
 | `printDocument(document, paper)` | `components/print/PrintDocument.kt` | Java2D `PrinterJob` | `WebView` + `PrintManager` | Hidden iframe |
 | `saveFile(bytes, name, ext)` | `components/data/SaveFile.kt` | FileKit save dialog | FileKit save dialog | Browser download |
 | `saveDownload(...)` | `components/network/transfer/Download.kt` | Save dialog, then stream | Save dialog, then stream | Browser download of the link |
-| `fileBody(file, type)` | `components/network/transfer/Upload.kt` | Streams the file | Streams the file | Reads it whole |
+| `fileBody(file, type)`, `fileBodyLimitBytes` | `components/network/transfer/Upload.kt` | Streams the file, no limit | Streams the file, no limit | Reads it whole, up to 512 MB |
 | `shrinkForUpload(bytes)` | `components/image/ImageClient.kt` | Sends as is | Scales photos over 1.5 MB to 2560px JPEG | Sends as is |
 | `imageDiskCache(context, size)` | `components/image/ImageClient.kt` | Coil disk cache in FileKit's cache dir | Coil disk cache in the app cache dir | None, the browser caches |
 | `alwaysWide` | `ui/screens/navigation/AlwaysWide.kt` | `true`: always the nav rail | `false`: the window's width decides | `false` |
@@ -64,11 +64,16 @@ if a TicketMan server answers there. Logs go to the browser console.
 
 ## Known gaps
 
-- **Android and web haven't been run end to end yet.** Both compile, and the web client is served by a real server,
-  but neither has been opened on a device or in a browser while these docs were written.
+- **Android hasn't been run end to end yet.** It compiles, but hasn't been opened on a device. That's the
+  [fix plan's last phase](../FIX-PLAN.md#phase-11-android-and-other-machines).
+- **Web has been run in headless Chromium only**, served by `-PwithWeb`: login, records, a note with a photo, the
+  counter search, ticket card, check-in, printing (the hidden iframe gets the right receipt), backup download and
+  restore upload, the admin tabs and settings all worked. Firefox and Safari haven't been tried, and neither has
+  kiosk mode's full screen, which a headless browser can't show.
 - **`androidApp` needs compileSdk 37** (FileKit 0.16 requires it). Building the APK also needs an AAPT2 that runs
   on the build machine: Gradle downloads the x86 Linux one, which fails on ARM Linux.
-- **iOS** source sets exist but the targets are commented out.
+- **iOS is parked.** The source sets and `iosApp` exist but the targets are commented out, and the `iosMain`
+  files lack several `actual`s. See [decisions](../decisions.md#ios-parked-not-removed).
 
 ## See also
 

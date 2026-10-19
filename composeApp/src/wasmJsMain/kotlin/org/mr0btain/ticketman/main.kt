@@ -7,6 +7,7 @@ import eu.anifantakis.lib.ksafe.awaitCacheReady
 import kotlinx.browser.document
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import org.w3c.dom.events.Event
 import org.mr0btain.ticketman.components.injection.initKoin
 import org.mr0btain.ticketman.ui.AppWindow
 
@@ -23,15 +24,22 @@ fun main() {
         }
     }
 
-    // Kiosk mode asks for fullscreen. Browsers may refuse until the page has been clicked, which is fine
+    // Kiosk mode asks for fullscreen. Browsers refuse unless it's asked from a click or key press, so a kiosk
+    // started on page load (or left by pressing Escape) asks again on the next one
     MainScope().launch {
         AppWindow.fullscreen.collect { fullscreen ->
-            try {
-                if (fullscreen && document.fullscreenElement == null) document.documentElement?.requestFullscreen()
-                if (!fullscreen && document.fullscreenElement != null) document.exitFullscreen()
-            } catch (ex: Throwable) {
-                println("Fullscreen not allowed: $ex")
-            }
+            if (fullscreen) enterFullscreen()
+            else if (document.fullscreenElement != null) document.exitFullscreen()
         }
     }
+
+    val retry: (Event) -> Unit = { if (AppWindow.fullscreen.value) enterFullscreen() }
+    document.addEventListener("pointerdown", retry)
+    document.addEventListener("keydown", retry)
+}
+
+// A refusal comes back as a rejected promise, not a throw, so it's caught there or the page logs an uncaught error
+private fun enterFullscreen() {
+    if (document.fullscreenElement != null) return
+    document.documentElement?.requestFullscreen()?.catch { null }
 }

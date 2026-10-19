@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.mr0btain.ticketman.components.utils.formatDay
+import org.mr0btain.ticketman.components.utils.formatDayInSentence
 import org.mr0btain.ticketman.components.utils.isBeforeToday
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -26,7 +26,7 @@ fun TicketRow(
 ) {
     val details = listOfNotNull(
         customerName?.takeIf { it.isNotBlank() },
-        ticket.promisedAt?.let { (if (ticket.isOverdue) "overdue, was due " else "due ") + formatDay(it).lowercase() }
+        ticket.promisedAt?.let { (if (ticket.isOverdue) "overdue, was due " else "due ") + formatDayInSentence(it) }
     )
 
     TmListRow(

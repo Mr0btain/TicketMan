@@ -138,7 +138,7 @@ change, and the sessions list. It stops at the first response it didn't expect.
 - **Server tests don't read `application.yaml`.** They use the helpers in `server/src/test/.../TestServer.kt`
   instead. The in-process test engine also handles big or cut-off request bodies differently from Netty, so check
   upload and download changes against a real `:server:run`.
-- **iOS doesn't build.** Its targets are commented out.
+- **iOS doesn't build.** Its targets are commented out; iOS is parked (see [decisions](decisions.md#ios-parked-not-removed)).
 
 ## See also
 

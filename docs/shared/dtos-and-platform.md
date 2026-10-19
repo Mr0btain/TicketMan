@@ -67,7 +67,7 @@ from the main thread only.
 |-------------|---------------|--------------|
 | `AppLogger` (`logging/`) | Logging, see [Results and errors](results-and-errors.md#logging) | JVM: `java.util.logging` and stdout. Android and Wasm: their own consoles |
 | `AppDir` (`util/`) | `path`: where the app keeps its files. `currentPlatform` | JVM: per OS app data folder ([table](../configuration.md#data_path)). Android: the app's data dir. Wasm: `null`, a browser has no folder |
-| `getPlatform()` (root) | A `Platform` with a display `name` | One per target |
+| `getPlatform()` (root) | A `Platform` whose `name` is the suggested device name | JVM: `COMPUTERNAME` or `HOSTNAME`, else "<OS> computer". Android: the maker and model. Wasm: "Web browser" |
 | `util.Platform` enum | `Linux`, `MacOS`, `Windows`, `Android`, `IOS`, `WasmJs` | - |
 
 There are two things named `Platform`: the interface returned by `getPlatform()` (in the root package) and the enum

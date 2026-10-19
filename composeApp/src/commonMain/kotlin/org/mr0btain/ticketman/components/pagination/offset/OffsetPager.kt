@@ -103,14 +103,7 @@ class OffsetPager<Value>(
         clear()
         reachedStart = true
 
-        // Fetch data
-        (0..<config.initialLoadSize).forEach { page ->
-            // This check is needed so we can load the first page properly, else well end up fetching the second page first
-            if (page == 0)
-                load(page = 0, append = true, prepend = false)
-            else
-                loadNext()
-        }
+        loadInitialPages(start = 0)
 
         isRefreshing = false
 
@@ -132,25 +125,29 @@ class OffsetPager<Value>(
         val start = firstPage
         lastPage = start
 
-        // Fetch data
-        (start..<start + config.initialLoadSize).forEach { page ->
-            if (page == start)
-                load(page = start, append = true, prepend = false)
-            else
-                loadNext()
-        }
+        loadInitialPages(start)
 
         isRefreshing = false
 
         AppLogger.m(REFRESH_TAG, SimpleResult.SUCCESS)
     }
 
-    /** Load the next items in database */
+    // The first few pages from start. Stops at the first that fails, so a refused or failed first page isn't
+    // followed by asking for the ones after it (which would leave a gap if they did load)
+    private suspend fun loadInitialPages(start: Int) {
+        if (!load(page = start, append = true, prepend = false)) return
+
+        repeat(config.initialLoadSize - 1) {
+            if (reachedEnd || !load(page = lastPage + 1, append = true, prepend = false)) return
+        }
+    }
+
+    /** Load the next items in database. Nothing loaded yet (the first page failed) means the first page */
     suspend fun loadNext() {
         if (isLoading || reachedEnd) return
 
         load(
-            page = lastPage + 1,
+            page = if (deque.isEmpty()) firstPage else lastPage + 1,
             append = true,
             prepend = false
         )
@@ -198,12 +195,12 @@ class OffsetPager<Value>(
         }
     }
 
-    /** Loads a page and inserts the data into the deque */
+    /** Loads a page and inserts the data into the deque. Returns whether it loaded */
     private suspend fun load(
         page: Int,
         append: Boolean,
         prepend: Boolean
-    ) {
+    ): Boolean {
         isLoading = true
 
         val tag = if (append) LOAD_NEXT_TAG else LOAD_PREVIOUS_TAG
@@ -215,7 +212,7 @@ class OffsetPager<Value>(
                 is TmResult.Error -> {
                     _loadError.value = fetched.error.message
                     AppLogger.i(tag, "${SimpleResult.FAIL}: ${fetched.error.message}")
-                    return
+                    return false
                 }
             }
 
@@ -254,8 +251,10 @@ class OffsetPager<Value>(
             publish()
 
             AppLogger.m(tag, SimpleResult.SUCCESS)
+            return true
         } catch (ex: Exception) {
             AppLogger.e(tag, SimpleResult.FAIL, ex)
+            return false
         } finally {
             isLoading = false
         }

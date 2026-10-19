@@ -10,6 +10,9 @@ import kotlinx.io.buffered
 
 private const val CHUNK_BYTES = 64 * 1024
 
+// Streamed from disk, so any size goes
+actual val fileBodyLimitBytes: Long? = null
+
 actual suspend fun fileBody(file: PlatformFile, contentType: ContentType): OutgoingContent =
     object : OutgoingContent.WriteChannelContent() {
         override val contentType: ContentType = contentType

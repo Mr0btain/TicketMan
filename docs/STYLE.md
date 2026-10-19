@@ -72,25 +72,9 @@ When a change makes a page wrong, fix the page in the same PR. When a page is ad
 - The pull request template (`.gitea/pull_request_template.md`) asks "Docs updated?" on every PR.
 - The API pages are checked against the routes by `python3 scripts/check_api_docs.py`. Run it after any route
   change.
-- Run the link check below after moving or renaming a page or heading.
+- Every relative link and heading anchor in `docs/` and `CLAUDE.md` is checked by
+  `python3 scripts/check_doc_links.py`. Run it after moving or renaming a page or heading.
+- CI (`.gitea/workflows/ci.yml`) runs both checks on every pull request, with the tests.
 - A choice someone might want to undo later gets an entry in [`decisions.md`](decisions.md).
 - KDoc on the code covers what a class or function does; these pages cover how the pieces fit and why. Don't
   copy one into the other.
-
-A quick check that every relative link and heading anchor in `docs/` resolves:
-
-```bash
-python3 - <<'PY'
-import re, os, glob
-def anchors(path):
-    return {re.sub(r'[^\w\- ]', '', m.group(1).strip().lower()).replace(' ', '-')
-            for m in (re.match(r'^#+\s+(.*)', l) for l in open(path)) if m}
-for f in glob.glob('docs/**/*.md', recursive=True):
-    for link in re.findall(r'\]\(([^)\s]+)\)', open(f).read()):
-        if link.startswith('http'): continue
-        path, _, anchor = link.partition('#')
-        target = os.path.normpath(os.path.join(os.path.dirname(f), path)) if path else f
-        if not os.path.exists(target) or (anchor and target.endswith('.md') and anchor not in anchors(target)):
-            print(f, link)
-PY
-```

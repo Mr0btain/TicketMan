@@ -26,6 +26,12 @@ class FormattingTest {
     }
 
     @Test
+    fun midSentenceOnlyCloseDaysAreLowercase() {
+        assertEquals("today", formatDayInSentence(promiseTimeInDays(0)))
+        assertEquals("Mon Jan 1 2001", formatDayInSentence(local("2001-01-01T12:00")))
+    }
+
+    @Test
     fun promisesAreFivePmOnTheDay() {
         val promised = Instant.fromEpochMilliseconds(promiseTimeInDays(3)).toLocalDateTime(zone)
 

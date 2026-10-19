@@ -174,8 +174,20 @@ wrong clock makes records with the wrong creation time.
 
 **Why:** one UI to build and fix. Desktop is the main target, since a counter PC is where the app mostly runs.
 
-**Costs:** Android and web compile but haven't been run end to end, and some things are weaker there (web reads
-uploads whole; Android's full screen can be swiped away).
+**Costs:** Android hasn't been run end to end, and some things are weaker off desktop (web caps restore uploads
+at 512 MB since it reads them whole; Android's full screen can be swiped away).
+
+### iOS parked, not removed
+
+**Chosen:** the iOS targets stay commented out, with the `iosMain` source sets and `iosApp` left in the repository
+as they are.
+
+**Why:** shops run the app on counter PCs, Android tablets and browsers, and building iOS needs a Mac. Keeping the
+files means picking it up later starts from the Xcode project and the few `actual`s already there.
+
+**Costs:** the `iosMain` files don't compile and fall behind as `expect`s are added (they already lack several).
+Turning iOS on means writing those `actual`s first. If it's clear iOS won't happen, delete them rather than keep
+fixing around them.
 
 ### Handlers on one view model
 

@@ -31,8 +31,8 @@ Steps 1 to 4 run in one transaction. The data fixes run after, each in its own.
 ## Adding a table
 
 1. Make the table object under `tables/<area>/`.
-2. Add it to `LocalDatabase.tables`, **after** any table it references. `SchemaUtils.create` makes them in that
-   order and a foreign key can't point at a table that doesn't exist yet.
+2. Add it to `LocalDatabase.tables`. The order doesn't matter: `SchemaUtils.create` sorts the tables so each one
+   is made after the tables its foreign keys point at (`sortTablesByReferences`).
 
 That's all. `SchemaUtils.create` skips tables that already exist.
 
@@ -137,7 +137,7 @@ database runs them too, on nothing.
 - [ ] New column has a default or is nullable
 - [ ] Its table is in `migratedTables`, or it's in `addUserColumns()` for `user`
 - [ ] Column name isn't a reserved word
-- [ ] New table is in `tables`, after what it references
+- [ ] New table is in `tables`
 - [ ] Indexes on existing tables are created with `IF NOT EXISTS` in `initDatabase()`
 - [ ] Data fixes can run twice safely, or go in `runOnce`
 - [ ] There's a test that starts on an old shaped database, if the change is risky. `RestoreTest` shows how to start

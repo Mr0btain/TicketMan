@@ -161,17 +161,17 @@ class ServerUserClient(
     }
 
     /** This station's record, null if it isn't registered or the server doesn't know it */
-    suspend fun stationStatus(station: StationCredentials): Station? {
-        val response = networkErrorTryCatch(STATION_TAG) {
+    suspend fun stationStatus(station: StationCredentials): TmResult<Station, ServerError> {
+        val response = networkRequest(STATION_TAG) {
             userHttpClient.post {
                 url("$serverUrl${ApiRoutes.AUTH}${AuthPaths.STATION_STATUS}")
                 contentType(ContentType.Application.Json)
                 setBody(station)
             }
-        } ?: return null
+        }
 
-        handleHttpResponse<Station>(STATION_TAG, response).onSuccess { return it }
-        return null
+        // NOT_FOUND means the server doesn't know this station (removed, or a restore from before it was made)
+        return handleDataHttpResponse(STATION_TAG, response)
     }
 
     /** People who can PIN in here */

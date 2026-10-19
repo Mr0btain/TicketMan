@@ -221,6 +221,22 @@ the audit log.
 - **A new screen or kit component**: add it to `ScreenRenderTest` or the gallery, and look at the render.
 - **Money, rules and other shared logic**: a plain test in `shared/src/commonTest/`.
 
+## CI
+
+[`.gitea/workflows/ci.yml`](../.gitea/workflows/ci.yml) runs on every pull request and on pushes to `master`, in
+two jobs:
+
+| Job | Runs |
+|-----|------|
+| Doc checks | `scripts/check_api_docs.py` and `scripts/check_doc_links.py` |
+| Tests | `:server:test`, `:shared:jvmTest`, `:composeApp:desktopTest`, then compiles the web and Android clients |
+
+The Tests job installs JDK 21 and an Android SDK with the `compileSdk` platform, because `shared` and `composeApp`
+build an Android library and Gradle won't configure them without one. When it fails it keeps the HTML test
+reports as the `test-reports` artifact, and it always keeps the render tests' PNGs as `screen-renders`, so a UI
+change can be looked over from the pull request. Bump `platforms;android-37` in the workflow when `compileSdk`
+changes.
+
 ## Gotchas
 
 - **Paths are relative to the module.** Gradle runs each module's tests from that module's folder, which
@@ -228,8 +244,8 @@ the audit log.
   directory can fail or write elsewhere.
 - **`desktopTest` runs `commonTest` too.** A failure listed under `desktopTest` may be in a common test.
 - **Android isn't tested, and web barely.** The commands above run the common tests on the JVM. Gradle also has
-  `:composeApp:wasmJsBrowserTest`, which runs them in a headless browser, but it isn't part of the usual run, and
-  nothing runs on an Android device. See [Platforms](client/platforms.md#known-gaps).
+  `:composeApp:wasmJsBrowserTest`, which runs them in headless Chrome, but it isn't part of the usual run or CI
+  (the runner has no Chrome), and nothing runs on an Android device. CI does compile both. See [Platforms](client/platforms.md#known-gaps).
 
 ## See also
 

@@ -52,7 +52,7 @@ fun CustomerDialog(
 
     TmEditNoteDialog(
         seed = noteSeed,
-        label = if (noteSeed.message.isBlank()) "Add note" else "Edit note",
+        label = if (noteSeed.isNew) "Add note" else "Edit note",
         isVisible = showNoteDialog,
         onConfirm = { seed.saveNote(noteSeed.note) },
         onDelete = { seed.deleteNote(noteSeed.identifier) },

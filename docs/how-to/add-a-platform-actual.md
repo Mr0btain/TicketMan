@@ -88,7 +88,8 @@ platform does.
 - **Web can't block.** There are no threads to wait on in the browser, so an `actual` doing I/O there has to be
   `suspend` or callback based. Make the `expect` `suspend` if any platform needs it.
 - **Web reads files whole.** Browser files can't be streamed from Kotlin/Wasm the way the JVM streams them, which
-  is why `fileBody` on web reads the file into memory. Keep that in mind for anything large.
+  is why `fileBody` on web reads the file into memory and `fileBodyLimitBytes` caps it. Check `isTooBigToSend`
+  before uploading anything large.
 - **Desktop is also "jvm".** `shared`'s jvm target is used by both the desktop client and the server, so it can't
   tell them apart. For something only the desktop client does, put the `actual` in `composeApp`'s `desktopMain`,
   like `alwaysWide`, rather than checking `getPlatform().name`.

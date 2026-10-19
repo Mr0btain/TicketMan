@@ -28,6 +28,8 @@ import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.ui.screens.admin.components.BackupProgress
+import org.mr0btain.ticketman.ui.screens.admin.components.tooBigToRestoreMessage
+import org.mr0btain.ticketman.components.network.transfer.isTooBigToSend
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
@@ -255,7 +257,17 @@ private fun BackupCard(
     var restoreFile by remember { mutableStateOf<PlatformFile?>(null) }
     val picker = rememberFilePickerLauncher(type = FileKitType.File("zip")) { file -> restoreFile = file }
 
-    restoreFile?.let { file ->
+    restoreFile?.takeIf { isTooBigToSend(it) }?.let { file ->
+        TmConfirmDialog(
+            title = "Too big for the browser",
+            message = tooBigToRestoreMessage(file),
+            confirmText = "OK",
+            onConfirm = { restoreFile = null },
+            onDismissRequest = { restoreFile = null }
+        )
+    }
+
+    restoreFile?.takeUnless { isTooBigToSend(it) }?.let { file ->
         TmConfirmDialog(
             title = "Restore from ${file.name}?",
             message = "Next time the server starts, everything on it is replaced by this backup: tickets, " +

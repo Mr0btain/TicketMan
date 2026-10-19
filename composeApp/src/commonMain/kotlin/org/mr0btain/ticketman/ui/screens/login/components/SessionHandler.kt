@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.TmResult
+import org.mr0btain.ticketman.components.network.isNotFound
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.AccountRequest
 import org.mr0btain.ticketman.server.request.AccountSetupRequest
@@ -332,7 +333,14 @@ class SessionHandler(
         }
 
         scope.launch {
-            _station.value = remoteHandler.userClient.stationStatus(credentials)
+            when (val status = remoteHandler.userClient.stationStatus(credentials)) {
+                is TmResult.Success -> _station.value = status.data
+                is TmResult.Error -> {
+                    _station.value = null
+                    // The server has no such station any more, so stop asking. Couldn't connect keeps them for next time
+                    if (status.error.isNotFound) localStorage.stationCredentials = null
+                }
+            }
         }
     }
 

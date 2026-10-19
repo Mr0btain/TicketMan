@@ -94,6 +94,8 @@ When `DATA_PATH` is blank the server uses `AppDir` from `shared`:
 | macOS | `$HOME/Library/Application Support/TicketMan` |
 | Windows | `%APPDATA%\TicketMan` |
 
+`AppDirTest` pins these down, but only the Linux folder has been tried on a real machine.
+
 The server logs `Path for Files: ...` on start with the folder it's using. If `DATA_PATH` is blank and there's no
 app data folder either, it logs an error and starts without a database.
 

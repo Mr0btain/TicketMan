@@ -42,7 +42,11 @@ val pager = OffsetPager<Ticket>(tag = "TicketPager", config = pagerConfig) { pag
 - It keeps at most `maxSize` items (200) loaded, dropping pages from the far end, and keeps the last `cacheSize`
   pages it fetched (10) so scrolling back to a dropped page doesn't refetch it.
 - It **doesn't load on its own**. Call `refresh()` for the first load; `MainViewModel` does after connecting and
-  logging in.
+  logging in. The first load fetches `initialLoadSize` pages and stops at the first that fails, so a refused list
+  (logged out) costs one request, not one per page.
+- A page that fails sets `loadError` and isn't taken as the end of the list. The next `loadNext()` tries again,
+  from the first page if nothing has loaded yet. The records screen hides `loadError` while logged out, since the
+  "not logged in" banner already says why.
 - `refreshCurrentData()` reloads the pages on screen after a save, so the list shows the new values.
 - One pager lives as long as its handler. Change its size with `setPageSize` and empty it with `clear()`, rather than
   making a new one, so screens already collecting `items` keep getting updates.
