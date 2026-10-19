@@ -35,9 +35,9 @@ class CheckInTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val admin = User(username = "boss", password = "boss_pass", accessLevel = AccessLevel.ADMIN)
-    private val tech = User(username = "tech", password = "tech_pass", name = "terry:tech", accessLevel = AccessLevel.NORMAL)
+    private val tech = User(username = "tech", password = "tech_pass", name = "Terry Tech", accessLevel = AccessLevel.NORMAL)
     private val clerk = User(username = "clerk", password = "clerk_pass", accessLevel = AccessLevel.RESTRICTED)
-    private val customer = Customer(name = "jane:doe", phone = "555-0100")
+    private val customer = Customer(name = "Jane Doe", phone = "555-0100")
 
     private val signature = SignatureInput(
         strokes = listOf(listOf(SignaturePoint(0.1f, 0.5f), SignaturePoint(0.4f, 0.3f), SignaturePoint(0.9f, 0.6f))),

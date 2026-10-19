@@ -52,6 +52,7 @@ import kotlin.uuid.Uuid
  * State and actions for the admin screen. Owned by the main view model so it lives as long as the app does.
  * @param localStorage Where the low stock threshold is kept between runs
  * @param onUsersChanged Called after a user is added, changed or removed so lists can reload
+ * @param onShopChanged Called after the shop profile is saved, so its currency shows everywhere
  */
 @Suppress("PrivatePropertyName")
 class AdminHandler(
@@ -59,7 +60,8 @@ class AdminHandler(
     private val scope: CoroutineScope,
     private val snackBarHost: SnackbarHostState,
     private val localStorage: LocalStorage,
-    private val onUsersChanged: (Uuid?) -> Unit
+    private val onUsersChanged: (Uuid?) -> Unit,
+    private val onShopChanged: (ShopProfile) -> Unit = {}
 ) {
     private val TAG = "AdminHandler"
     private val BACKUP_TAG = "$TAG:Backup"
@@ -113,28 +115,40 @@ class AdminHandler(
 
     // ------------------------------------------ Loading ------------------------------------------
 
-    /** Reloads everything the admin screen shows */
-    fun refreshAll() {
+    /**
+     * Reloads what [tab] shows, plus the waiting account requests, which badge the Users tab from any tab.
+     * The invoices tab loads its own list through the counter
+     */
+    fun refresh(tab: AdminTab) {
         scope.launch {
             _isLoading.value = true
 
-            loadOverview()
-            loadLowStock()
-            _dailyReport.value = admin.getDailyReport(null)
             _pending.value = users.getPending()
-            _stations.value = admin.getStations()
-            _sessions.value = admin.getSessions()
-            _serverInfo.value = admin.getServerInfo()
-            _pendingRestore.value = admin.getPendingRestore()
-            _shopProfile.value = admin.getShopProfile()
-            loadAudit(reset = true)
+
+            when (tab) {
+                AdminTab.OVERVIEW -> {
+                    loadOverview()
+                    _dailyReport.value = admin.getDailyReport(null)
+                    // For the report's default paper size
+                    _shopProfile.value = admin.getShopProfile()
+                }
+
+                AdminTab.USERS, AdminTab.INVOICES -> Unit
+                AdminTab.SESSIONS -> _sessions.value = admin.getSessions()
+                AdminTab.STATIONS -> _stations.value = admin.getStations()
+                AdminTab.LOW_STOCK -> loadLowStock()
+
+                AdminTab.SERVER -> {
+                    _serverInfo.value = admin.getServerInfo()
+                    _pendingRestore.value = admin.getPendingRestore()
+                    _shopProfile.value = admin.getShopProfile()
+                }
+
+                AdminTab.AUDIT -> loadAudit(reset = true)
+            }
 
             _isLoading.value = false
         }
-    }
-
-    fun refreshOverview() {
-        scope.launch { loadOverview() }
     }
 
     /**
@@ -168,21 +182,6 @@ class AdminHandler(
             loadLowStock()
             loadOverview()
         }
-    }
-
-    fun refreshSessions() {
-        scope.launch { _sessions.value = admin.getSessions() }
-    }
-
-    fun refreshServerInfo() {
-        scope.launch {
-            _serverInfo.value = admin.getServerInfo()
-            _pendingRestore.value = admin.getPendingRestore()
-        }
-    }
-
-    fun refreshAudit() {
-        scope.launch { loadAudit(reset = true) }
     }
 
     /** Loads the next page of the audit log, unless the last one was the end */
@@ -433,6 +432,7 @@ class AdminHandler(
         scope.launch {
             report(admin.updateShopProfile(profile), "Shop profile saved") {
                 _shopProfile.value = profile
+                onShopChanged(profile)
             }
         }
     }

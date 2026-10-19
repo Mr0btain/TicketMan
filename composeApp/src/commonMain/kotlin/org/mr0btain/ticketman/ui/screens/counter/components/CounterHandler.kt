@@ -111,7 +111,7 @@ class CounterHandler(
     val priceResults = _priceResults.asStateFlow()
 
     private val _shop = MutableStateFlow(ShopProfile())
-    /** Terms customers sign at check in, loaded with the queue */
+    /** Terms customers sign at check in, the currency and paper size. Loaded at login and with the queue */
     val shop = _shop.asStateFlow()
 
     // Customer to start a check in with, when it's started from their card
@@ -166,6 +166,16 @@ class CounterHandler(
     }
 
     fun clearSearch() = setQuery("")
+
+    /** Loads the shop profile, done at login since amounts everywhere use its currency */
+    fun refreshShop() {
+        scope.launch { remoteHandler.adminRepo.getShopProfile()?.let { _shop.value = it } }
+    }
+
+    /** An admin saved the shop profile on this device */
+    fun shopChanged(profile: ShopProfile) {
+        _shop.value = profile
+    }
 
     /** Reloads the queue, and the shop profile with it so new terms and paper sizes show up */
     fun refreshQueue() {
@@ -555,6 +565,7 @@ class CounterHandler(
         _lastPickup.value = null
         _invoices.value = emptyList()
         _invoicesEndReached.value = false
+        _shop.value = ShopProfile()
     }
 
     private fun notify(message: String) {

@@ -3,19 +3,23 @@ package org.mr0btain.ticketman.ui.screens.settings
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
-import org.mr0btain.ticketman.ui.kit.containers.TmLazyColumn
+import org.mr0btain.ticketman.ui.kit.containers.TmScrollColumn
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
@@ -29,7 +33,9 @@ import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import ticketman.composeapp.generated.resources.*
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 
-// For now, I think well be fine with using this on every screen size/ platform as it should fit just fine
+/**
+ * This device's settings and the logged in account. Saved as soon as they're changed, see [SettingsHandler]
+ */
 @Composable
 fun SettingsScreen(
     modifier: Modifier = Modifier,
@@ -93,23 +99,11 @@ fun SettingsScreen(
                         true
                     },
                     type = SettingType.SWITCH
-                ),
-                SettingItem(
-                    icon = painterResource(Res.drawable.home),
-                    description = "Main screen tab shown on start",
-                    label = "Start tab",
-                    enabled = true,
-                    initialState = tabNames.getOrElse(defaultTab.value) { "" },
-                    onClick = {
-                        viewModel.settings.setDefaultTab(defaultTab.value + 1)
-                        true
-                    },
-                    type = SettingType.CLICKABLE_TEXT
                 )
             )
         ),
         SettingItemGroup(
-            label = "Server and data",
+            label = "Server",
             icon = Res.drawable.server,
             items = listOf(
                 SettingItem(
@@ -140,6 +134,24 @@ fun SettingsScreen(
                         true
                     },
                     type = SettingType.TEXT
+                )
+            )
+        ),
+        SettingItemGroup(
+            label = "Records",
+            icon = Res.drawable.list,
+            items = listOf(
+                SettingItem(
+                    icon = painterResource(Res.drawable.home),
+                    description = "Records tab shown on start",
+                    label = "Start tab",
+                    enabled = true,
+                    initialState = tabNames.getOrElse(defaultTab.value) { "" },
+                    options = tabNames,
+                    onClick = { name ->
+                        tabNames.indexOf(name).takeIf { it >= 0 }?.let { viewModel.settings.setDefaultTab(it); true } ?: false
+                    },
+                    type = SettingType.CHOICE
                 ),
                 SettingItem(
                     icon = painterResource(Res.drawable.list),
@@ -171,7 +183,7 @@ fun SettingsScreen(
                 ),
                 SettingItem(
                     icon = painterResource(Res.drawable.database),
-                    description = "Max items kept in each cache, applies on restart " +
+                    description = "Opened records kept so going back to them is quick " +
                             "(${SettingsHandler.CACHE_SIZE_RANGE.first}-${SettingsHandler.CACHE_SIZE_RANGE.last})",
                     label = "Cache size",
                     enabled = true,
@@ -228,35 +240,68 @@ fun SettingsScreen(
 
     val apiMismatch = viewModel.session.apiMismatch.collectAsState()
 
-    TmLazyColumn(
-        modifier = modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)
-    ) {
-        item {
-            AccountPanel(
-                user = currentUser.value,
-                onLogin = { viewModel.session.changeShowLogin(true) },
-                onLogout = { viewModel.session.logout() },
-                apiMismatch = apiMismatch.value
-            )
-        }
+    val account: @Composable () -> Unit = {
+        AccountPanel(
+            user = currentUser.value,
+            onLogin = { viewModel.session.changeShowLogin(true) },
+            onLogout = { viewModel.session.logout() },
+            apiMismatch = apiMismatch.value
+        )
+    }
 
-        item {
-            AppearanceSettings(
-                palette = palette.value,
-                onPaletteChange = viewModel.settings::setPalette,
-                darkTheme = darkMode.value,
-                onDarkThemeChange = { dark -> if (dark != darkMode.value) viewModel.settings.toggleDarkMode() },
-                font = font.value,
-                onFontChange = viewModel.settings::setFont,
-                reduceTransparency = reduceTransparency.value,
-                onReduceTransparencyChange = { viewModel.settings.toggleReduceTransparency() },
-                onOpenGallery = onOpenGallery
-            )
-        }
+    val appearance: @Composable () -> Unit = {
+        AppearanceSettings(
+            palette = palette.value,
+            onPaletteChange = viewModel.settings::setPalette,
+            darkTheme = darkMode.value,
+            onDarkThemeChange = { dark -> if (dark != darkMode.value) viewModel.settings.toggleDarkMode() },
+            font = font.value,
+            onFontChange = viewModel.settings::setFont,
+            reduceTransparency = reduceTransparency.value,
+            onReduceTransparencyChange = { viewModel.settings.toggleReduceTransparency() },
+            onOpenGallery = onOpenGallery
+        )
+    }
 
-        items(settingsGroups) { group ->
-            SettingsGroup(settingItemGroup = group)
+    SettingsLayout(
+        modifier = modifier,
+        first = {
+            account()
+            appearance()
+        },
+        second = {
+            settingsGroups.forEach { group -> SettingsGroup(settingItemGroup = group) }
+        }
+    )
+}
+
+/** Wider than this, settings sit in two columns */
+private val TWO_COLUMN_WIDTH = 1000.dp
+
+/**
+ * Settings in two columns side by side on wide windows, [first] then [second] in one column on narrow ones
+ */
+@Composable
+fun SettingsLayout(
+    modifier: Modifier = Modifier,
+    first: @Composable ColumnScope.() -> Unit,
+    second: @Composable ColumnScope.() -> Unit
+) {
+    val spacing = TmTheme.spacing
+
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val twoColumns = maxWidth >= TWO_COLUMN_WIDTH
+
+        TmScrollColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+            if (twoColumns) {
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.md), content = first)
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(spacing.md), content = second)
+                }
+            } else {
+                first()
+                second()
+            }
         }
     }
 }

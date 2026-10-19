@@ -13,6 +13,13 @@ class MoneyTest {
     }
 
     @Test
+    fun formatsWithTheShopsSymbol() {
+        assertEquals("£12.34", Money.format(1234, "£"))
+        assertEquals("-CHF 5.00", Money.format(-500, "CHF "))
+        assertEquals("0.05", Money.format(5, ""))
+    }
+
+    @Test
     fun readsWhatPeopleType() {
         assertEquals(1250, Money.parse("12.5"))
         assertEquals(1250, Money.parse("$12.50"))

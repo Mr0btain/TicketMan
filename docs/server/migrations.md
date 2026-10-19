@@ -20,7 +20,9 @@ transaction {
 ticketDatabase.backfillNumbers()       // 5. data fixes
 userDatabase.migrateDeactivatedUsers()
 tokenDatabase.clearLegacySessions()
+tokenDatabase.backfillExpiry()
 inventoryDatabase.migrateLegacyPrices()
+runOnce("legacy-names") { ... }         // 6. data fixes that only run once
 removeDetachedNotes()
 ```
 
@@ -112,10 +114,23 @@ already fixed database, they should find nothing to do.
 | `TicketDatabase.backfillNumbers()` | Gives tickets from before ticket numbers a number, in creation order, in the year they were made |
 | `UserDatabase.migrateDeactivatedUsers()` | Users deactivated the old way (`AccessLevel.NONE`) become `DEACTIVATED` with `RESTRICTED` access |
 | `TokenDatabase.clearLegacySessions()` | Drops sessions from before sessions had ids. Those users just log in again |
+| `TokenDatabase.backfillExpiry()` | Fills in `expiresAt` for sessions saved before it was kept, from their refresh token |
 | `InventoryDatabase.migrateLegacyPrices()` | Text prices into cents, as above |
 | `LocalDatabase.removeDetachedNotes()` | Deletes notes no record links to, left by deleting customers, tickets and items before `remove` took their notes. The next sweep marks their photos deleted |
 
 Add a new one by writing the method on the right database class and calling it after the others.
+
+### Fixes that run once
+
+Some old data can't be told apart from data typed later, so fixing it on every start would change what people
+typed. Those go in `runOnce(name) { ... }`, which runs the block only if `name` isn't in the `data_fix` table
+(`DataFixTable`), and adds it in the same transaction, so a fix that fails runs again next start. The database
+methods it calls use `dbWrite` as usual; inside the outer transaction their throws roll the whole fix back. A new
+database runs them too, on nothing.
+
+| Name | What it does |
+|------|--------------|
+| `legacy-names` | `CustomerDatabase.migrateLegacyNames()` and `UserDatabase.migrateLegacyNames()`: names older versions stored as `first:last` or lowercased (`isLegacyName`) are rewritten as they were shown, `jane:doe` as `Jane Doe` (`legacyName` in `LegacyName.kt`) |
 
 ## Checklist
 
@@ -124,7 +139,7 @@ Add a new one by writing the method on the right database class and calling it a
 - [ ] Column name isn't a reserved word
 - [ ] New table is in `tables`, after what it references
 - [ ] Indexes on existing tables are created with `IF NOT EXISTS` in `initDatabase()`
-- [ ] Data fixes can run twice safely
+- [ ] Data fixes can run twice safely, or go in `runOnce`
 - [ ] There's a test that starts on an old shaped database, if the change is risky. `RestoreTest` shows how to start
       the server twice on one data folder
 

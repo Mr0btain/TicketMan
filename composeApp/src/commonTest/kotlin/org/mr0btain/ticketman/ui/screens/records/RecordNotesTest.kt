@@ -24,7 +24,7 @@ import org.mr0btain.ticketman.ui.screens.records.components.syncNotes
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
-/** [syncNotes] sends only what changed between the server's notes and the ones on screen */
+/** [syncNotes] sends only what this device changed since the record was opened */
 class RecordNotesTest {
     private val json = Json { ignoreUnknownKeys = true }
     private val ticket = Uuid.random()
@@ -38,6 +38,9 @@ class RecordNotesTest {
     private val bodies = mutableListOf<String>()
     private var failWrites = false
     private var serverNotes = listOf(kept, edited, dropped)
+
+    /** The notes as the record was opened with */
+    private val loaded = listOf(kept, edited, dropped)
 
     private val repo = TicketRemoteRepository(
         HttpClient(MockEngine { request ->
@@ -63,7 +66,7 @@ class RecordNotesTest {
         val withPhoto = edited.copy(images = listOf(StoredImage(width = 40, height = 30)))
         val snackBar = SnackbarHostState()
 
-        syncNotes(ticket, listOf(kept, withPhoto, added), repo, snackBar)
+        syncNotes(ticket, listOf(kept, withPhoto, added), loaded, repo, snackBar)
 
         assertEquals(
             setOf(
@@ -89,7 +92,7 @@ class RecordNotesTest {
         seed.saveNote(noteSeed.note)
         assertTrue(seed.isDirty)
 
-        syncNotes(ticket, seed.notes, repo, SnackbarHostState())
+        syncNotes(ticket, seed.notes, seed.savedNotes, repo, SnackbarHostState())
 
         assertEquals(listOf("POST /update/note/${edited.identifier}"), calls)
         assertTrue(json.decodeFromString<Note>(bodies.single()).images.isEmpty())
@@ -100,14 +103,57 @@ class RecordNotesTest {
         val seed = TicketSeed().also { it.setTicket(Ticket(identifier = ticket), listOf(kept, edited, dropped)) }
 
         seed.deleteNote(dropped.identifier)
-        syncNotes(ticket, seed.notes, repo, SnackbarHostState())
+        syncNotes(ticket, seed.notes, seed.savedNotes, repo, SnackbarHostState())
 
         assertEquals(listOf("DELETE /remove/note/${dropped.identifier}"), calls)
     }
 
     @Test
     fun nothingIsSentWhenNothingChanged() = runTest {
-        syncNotes(ticket, listOf(kept, edited, dropped), repo, SnackbarHostState())
+        syncNotes(ticket, listOf(kept, edited, dropped), loaded, repo, SnackbarHostState())
+
+        assertTrue(calls.isEmpty())
+    }
+
+    @Test
+    fun aNoteAddedOnAnotherDeviceIsKept() = runTest {
+        serverNotes = loaded + Note(author = "Priya", message = "Added at the counter")
+
+        syncNotes(ticket, listOf(kept, edited.copy(message = "Parts here")), loaded, repo, SnackbarHostState())
+
+        assertEquals(
+            setOf("POST /update/note/${edited.identifier}", "DELETE /remove/note/${dropped.identifier}"),
+            calls.toSet()
+        )
+        assertEquals(2, calls.size)
+    }
+
+    @Test
+    fun aNoteChangedOnAnotherDeviceIsntOverwritten() = runTest {
+        // Edited there, then edited here; and deleted here after being edited there
+        serverNotes = listOf(kept, edited.copy(message = "Edited there"), dropped.copy(message = "Also edited there"))
+        val snackBar = SnackbarHostState()
+
+        val sync = launch { syncNotes(ticket, listOf(kept, edited.copy(message = "Edited here")), loaded, repo, snackBar) }
+
+        withContext(Dispatchers.Default) {
+            withTimeout(5_000) { while (snackBar.currentSnackbarData == null) delay(10) }
+        }
+
+        assertTrue(calls.isEmpty())
+        assertEquals(
+            "2 notes were changed on another device since this was opened, so your changes to them weren't saved",
+            snackBar.currentSnackbarData?.visuals?.message
+        )
+        snackBar.currentSnackbarData?.dismiss()
+        sync.join()
+    }
+
+    @Test
+    fun aNoteAlreadyGoneIsntRemovedAgain() = runTest {
+        serverNotes = listOf(kept, edited)
+
+        syncNotes(ticket, listOf(kept, edited), loaded, repo, SnackbarHostState())
 
         assertTrue(calls.isEmpty())
     }
@@ -118,7 +164,7 @@ class RecordNotesTest {
         val snackBar = SnackbarHostState()
 
         // Showing a snackbar waits for it to go away, so sync in the background and look while it's up
-        val sync = launch { syncNotes(ticket, listOf(kept, Note(message = "New")), repo, snackBar) }
+        val sync = launch { syncNotes(ticket, listOf(kept, Note(message = "New")), loaded, repo, snackBar) }
 
         // The mock engine answers on its own threads, so wait on a real clock
         withContext(Dispatchers.Default) {

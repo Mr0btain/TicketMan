@@ -24,7 +24,7 @@ import kotlin.test.*
  * Deleting a record waits for the server, and a record that's gone from the server stops being shown
  */
 class RecordsRemoveTest {
-    private val jane = Customer(name = "jane:doe", phone = "5550142")
+    private val jane = Customer(name = "Jane Doe", phone = "5550142")
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
     // What the server does with a delete, and whether Jane is still there

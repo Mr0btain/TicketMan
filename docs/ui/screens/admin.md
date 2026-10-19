@@ -13,10 +13,10 @@ documented in [the server pages](#see-also).
 checks `session.isAdmin`. Anyone else who gets here sees "Admin access required" (with a Log in button if they're
 logged out); the server refuses their requests anyway.
 
-For an admin it shows `TmTabs` and a **Refresh** button. Opening the screen calls `AdminHandler.refreshAll()`,
-which loads every tab's data at once: overview, low stock, the daily report, pending accounts, stations, sessions,
-server info, any waiting restore, the shop profile and the first page of the audit log. Refresh does the same and
-reloads the record lists. The Users tab shows a badge with the number of accounts waiting.
+For an admin it shows `TmTabs` and a **Refresh** button. Opening a tab calls `AdminHandler.refresh(tab)`, which
+loads only what that tab shows, plus the accounts waiting on someone: the Users tab shows a badge with their number
+from any tab. The Users tab also reloads the users list, and the Invoices tab loads its own list through the
+counter. Refresh does the same for the open tab.
 
 All the state is in
 [`AdminHandler`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/admin/components/AdminHandler.kt);
@@ -32,7 +32,7 @@ the users list itself comes from the shared `UserRecords` pager and seed, like t
 | **Stations** | Devices that asked to be counter stations | Approve, remove, turn kiosk mode on and set its idle timeout | [PINs and stations](../../server/pins-and-stations.md) |
 | **Low stock** | Tracked items at or below a threshold (5 by default, saved on this device) | Change the threshold; click an item to open it on the records screen | |
 | **Invoices** | Every invoice, newest first, with its status, total, paid and balance | Click one to open its ticket at the counter; void any that isn't void yet; load older ones | `GET /api/invoice/fetch`, [Invoices API](../../api/invoice.md) |
-| **Server and data** | Server address, name, version, uptime, database and photo sizes, Java and OS, mode, HTTPS settings, the certificate's fingerprint and expiry (warned in its last year) and a new one waiting; the shop profile; backup and restore, the daily backup's folder and last run, and the last restore (warned when it had no photos); mock data on development servers | Edit the shop profile (name, contact, tax rate, invoice footer, repair terms, repeat window, default paper), download a backup, upload one to restore on next start (warned when the file looks database only), cancel a waiting restore, make a new certificate for the next start or drop it, seed test data | [Backup and restore](../../server/backup-restore.md), [Running a server](../../operations.md) |
+| **Server and data** | Server address, name, version, uptime, database and photo sizes, Java and OS, mode, HTTPS settings, the certificate's fingerprint and expiry (warned in its last year) and a new one waiting; the shop profile; backup and restore, the daily backup's folder and last run, and the last restore (warned when it had no photos); mock data on development servers | Edit the shop profile (name, contact, tax rate, currency symbol, invoice footer, repair terms, repeat window, default paper), download a backup, upload one to restore on next start (warned when the file looks database only), cancel a waiting restore, make a new certificate for the next start or drop it, seed test data | [Backup and restore](../../server/backup-restore.md), [Running a server](../../operations.md) |
 | **Audit log** | Who did what, newest first, colored by action | Load more | [Audit log](../../server/audit-log.md) |
 
 ![The Users tab](../../images/admin-users.png)
@@ -54,6 +54,7 @@ through `fileBody`, so neither is held in memory. See [Transfers and photos](../
 |------|-------|
 | Screen, tabs, users dialogs | `ui/screens/admin/AdminScreen.kt` |
 | State and actions | `ui/screens/admin/components/AdminHandler.kt` |
+| The tabs, in order | `ui/screens/admin/components/AdminTab.kt` |
 | Shared bits (user state chip, access level dropdown) | `ui/screens/admin/components/AdminCommon.kt` |
 | One folder per tab | `ui/screens/admin/<overview|users|sessions|stations|inventory|invoices|server|audit>/` |
 | Render tests | `ScreenRenderTest.adminOverview()`, `adminUsers()` |
@@ -61,8 +62,8 @@ through `fileBody`, so neither is held in memory. See [Transfers and photos](../
 
 ## Adding a tab
 
-1. Add an entry to the `AdminTab` enum with its label. The enum order is the tab order.
-2. Add its state and loading to `AdminHandler`, and load it in `refreshAll()`.
+1. Add an entry to the `AdminTab` enum (`components/AdminTab.kt`) with its label. The enum order is the tab order.
+2. Add its state and loading to `AdminHandler`, and a branch for it in `refresh(tab)`.
 3. Put the tab's composable in its own folder under `ui/screens/admin/` and add a branch for it in
    `AdminContent`'s `when`.
 4. Wrap the server routes it uses in `authenticate("admin")`.
@@ -80,7 +81,7 @@ through `fileBody`, so neither is held in memory. See [Transfers and photos](../
 
 ## Known gaps
 
-- Everything reloads on every visit and every Refresh, one request per tab, even for tabs that aren't open.
+- A tab reloads every time it's opened, even if it was loaded a moment ago.
 - `AdminHandler` is over 500 lines. A new tab with much state should get its own handler.
 
 ## See also

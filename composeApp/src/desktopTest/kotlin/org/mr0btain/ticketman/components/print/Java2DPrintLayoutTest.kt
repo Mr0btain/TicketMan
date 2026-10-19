@@ -70,7 +70,7 @@ class Java2DPrintLayoutTest {
 
     @Test
     fun receiptSizedClaimSlipIsOneLongPageWithAScannableQr() {
-        val slip = PrintTemplates.claimSlip(shop, ticket, Customer(name = "jane:doe", phone = "555-0199"), null, signature)
+        val slip = PrintTemplates.claimSlip(shop, ticket, Customer(name = "Jane Doe", phone = "555-0199"), null, signature)
         val layout = Java2DPrintLayout(slip, PaperSize.RECEIPT_80MM)
 
         assertEquals(1, layout.pageCount)
@@ -86,7 +86,7 @@ class Java2DPrintLayoutTest {
 
     @Test
     fun letterClaimSlipFitsOnOnePage() {
-        val slip = PrintTemplates.claimSlip(shop, ticket, Customer(name = "jane:doe"), null, signature)
+        val slip = PrintTemplates.claimSlip(shop, ticket, Customer(name = "Jane Doe"), null, signature)
         val layout = Java2DPrintLayout(slip, PaperSize.LETTER)
 
         assertEquals(1, layout.pageCount)
@@ -109,7 +109,7 @@ class Java2DPrintLayoutTest {
 
     @Test
     fun deviceTagRendersOnAReceipt() {
-        val layout = Java2DPrintLayout(PrintTemplates.deviceTag(ticket, Customer(name = "jane:doe")), PaperSize.RECEIPT_80MM)
+        val layout = Java2DPrintLayout(PrintTemplates.deviceTag(ticket, Customer(name = "Jane Doe")), PaperSize.RECEIPT_80MM)
         assertEquals("26-00000042", scanQr(render(layout, PaperSize.RECEIPT_80MM)))
     }
 }

@@ -2,16 +2,23 @@ package org.mr0btain.ticketman.data.money
 
 import kotlin.math.abs
 import kotlin.math.roundToLong
+import org.mr0btain.ticketman.data.shop.ShopProfile
 
 /**
  * Money is kept as whole cents everywhere so sums don't drift. These turn cents into text and back
  */
 object Money {
-    /** 1234 as "$12.34", negative as "-$12.34" */
-    fun format(cents: Long): String {
+    /** What [format] puts before amounts unless told otherwise. A shop can pick its own, [ShopProfile.currencySymbol] */
+    const val DEFAULT_SYMBOL = "$"
+
+    /** Longest currency symbol a shop can set */
+    const val MAX_SYMBOL_LENGTH = 4
+
+    /** 1234 as "$12.34", negative as "-$12.34", with [symbol] in place of "$" */
+    fun format(cents: Long, symbol: String = DEFAULT_SYMBOL): String {
         val sign = if (cents < 0) "-" else ""
         val value = abs(cents)
-        return "$sign$${value / 100}.${(value % 100).toString().padStart(2, '0')}"
+        return "$sign$symbol${value / 100}.${(value % 100).toString().padStart(2, '0')}"
     }
 
     /**

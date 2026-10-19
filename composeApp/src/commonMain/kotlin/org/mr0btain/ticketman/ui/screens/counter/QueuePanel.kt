@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
+import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPaneHeader
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
@@ -30,8 +31,6 @@ fun QueuePanel(
     queue: CounterQueueResponse?,
     onTicketClick: (Uuid) -> Unit
 ) {
-    val colors = TmTheme.colors
-
     TmSurface(modifier = modifier) {
         Column {
             TmPaneHeader(title = "Queue", icon = Res.drawable.inbox)
@@ -42,17 +41,49 @@ fun QueuePanel(
                 return@Column
             }
 
-            Column(
+            QueueSections(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(TmTheme.spacing.sm)
-            ) {
-                QueueSection("Ready for pickup", queue.readyForPickup, colors.success, onTicketClick)
-                QueueSection("Overdue", queue.overdue, colors.danger, onTicketClick)
-                QueueSection("Due today", queue.dueToday, colors.warning, onTicketClick)
-                QueueSection("Just checked in", queue.recentlyCheckedIn, colors.neutral, onTicketClick)
-            }
+                    .padding(TmTheme.spacing.sm),
+                queue = queue,
+                onTicketClick = onTicketClick
+            )
         }
+    }
+}
+
+/**
+ * The queue in a dialog, for windows too narrow to keep [QueuePanel] beside everything else
+ */
+@Composable
+fun QueueDialog(
+    queue: CounterQueueResponse?,
+    onTicketClick: (Uuid) -> Unit,
+    onDismissRequest: () -> Unit
+) {
+    TmDialog(title = "Queue", onDismissRequest = onDismissRequest) {
+        if (queue == null) {
+            TmLoading(modifier = Modifier.fillMaxWidth(), text = "Loading the queue")
+        } else {
+            QueueSections(queue = queue, onTicketClick = onTicketClick)
+        }
+    }
+}
+
+/** Each part of the queue under its heading. Doesn't scroll, the panel or dialog it's in does */
+@Composable
+private fun QueueSections(
+    queue: CounterQueueResponse,
+    onTicketClick: (Uuid) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val colors = TmTheme.colors
+
+    Column(modifier) {
+        QueueSection("Ready for pickup", queue.readyForPickup, colors.success, onTicketClick)
+        QueueSection("Overdue", queue.overdue, colors.danger, onTicketClick)
+        QueueSection("Due today", queue.dueToday, colors.warning, onTicketClick)
+        QueueSection("Just checked in", queue.recentlyCheckedIn, colors.neutral, onTicketClick)
     }
 }
 

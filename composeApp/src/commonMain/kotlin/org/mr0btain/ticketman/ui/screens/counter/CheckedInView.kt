@@ -1,12 +1,12 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import org.mr0btain.ticketman.components.utils.formatDay
-import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -50,7 +50,7 @@ fun CheckedInView(
 
         val details = listOfNotNull(
             ticket.promisedAt?.let { "Promised ${formatDay(it).lowercase()}" },
-            result.invoice?.let { "Deposit taken ${Money.format(it.paidCents)}" }
+            result.invoice?.let { "Deposit taken ${formatMoney(it.paidCents)}" }
         )
         if (details.isNotEmpty()) {
             Text(text = details.joinToString(". "), style = TmTheme.typography.bodyLarge, color = colors.textMuted)

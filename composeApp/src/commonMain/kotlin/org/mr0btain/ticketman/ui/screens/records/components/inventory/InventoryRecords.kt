@@ -116,6 +116,7 @@ class InventoryRecords(
         val inventory = seed.inventory
         val loadedStock = seed.loadedStock
         val notes = seed.notes.toList()
+        val loadedNotes = seed.savedNotes
         val images = seed.images.toList()
         val changed = seed.getChangedFields().toSet()
         val isNew = seed.isNew
@@ -139,7 +140,7 @@ class InventoryRecords(
                 if (stock is Result.Error) snackBarHost.showSnackbar("Stock not saved: ${stock.error.message}")
             }
 
-            if (isNew || ChangedField.NOTE in changed) syncNotes(inventory.identifier, notes, repo, snackBarHost)
+            if (isNew || ChangedField.NOTE in changed) syncNotes(inventory.identifier, notes, loadedNotes, repo, snackBarHost)
 
             if (isNew || ChangedField.IMAGE in changed) {
                 val photos = repo.setImages(inventory.identifier, images)

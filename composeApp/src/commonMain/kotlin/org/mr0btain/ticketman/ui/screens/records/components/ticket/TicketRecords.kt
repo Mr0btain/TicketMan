@@ -142,6 +142,7 @@ class TicketRecords(
 
         val ticket = seed.ticket
         val notes = seed.notes.toList()
+        val loadedNotes = seed.savedNotes
         val customer = seed.customer
         val user = seed.user
         val changed = seed.getChangedFields().toSet()
@@ -173,7 +174,7 @@ class TicketRecords(
                 }
             }
 
-            if (isNew || ChangedField.NOTE in changed) syncNotes(ticket.identifier, notes, repo, snackBarHost)
+            if (isNew || ChangedField.NOTE in changed) syncNotes(ticket.identifier, notes, loadedNotes, repo, snackBarHost)
 
             if (customer != null && (isNew || ChangedField.CUSTOMER in changed)) {
                 val linked = repo.setCustomer(ticket.identifier, customer.identifier)

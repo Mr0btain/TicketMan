@@ -3,7 +3,6 @@ package org.mr0btain.ticketman.ui.screens.login.components
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.UsernameRules
 import org.mr0btain.ticketman.server.request.AccountRequest
@@ -26,8 +25,7 @@ fun RequestAccountForm(
     onBack: () -> Unit
 ) {
     var username by remember { mutableStateOf("") }
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -38,7 +36,7 @@ fun RequestAccountForm(
 
     val problem = UsernameRules.problem(username)
         ?: when {
-            firstName.isBlank() -> "Your name is required"
+            name.isBlank() -> "Your name is required"
             PasswordRules.problem(password) != null -> PasswordRules.problem(password)
             password != confirmPassword -> "Passwords don't match"
             else -> null
@@ -55,10 +53,7 @@ fun RequestAccountForm(
             label = "Username"
         )
 
-        TmFieldPair(
-            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
-            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
-        )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = name, onValueChange = { name = it }, label = "Name")
 
         TmFieldPair(
             { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
@@ -90,13 +85,11 @@ fun RequestAccountForm(
                 submitting = true
                 serverError = null
 
-                val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
                 onSubmit(
                     AccountRequest(
                         username = username,
                         password = password,
-                        name = joinName(name).lowercase(),
+                        name = name.trim(),
                         email = email.trim(),
                         phone = phone.trim()
                     )

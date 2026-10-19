@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 import androidx.compose.foundation.background
@@ -20,7 +21,6 @@ import org.mr0btain.ticketman.components.utils.promiseTimeInDays
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
-import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.time.timestampMillis
@@ -89,7 +89,7 @@ private class CheckInForm(customer: Customer?) {
     var technician by mutableStateOf<SearchResult?>(null)
     var strokes by mutableStateOf<List<List<SignaturePoint>>>(emptyList())
     var aspectRatio by mutableStateOf(3f)
-    var signedName by mutableStateOf(customer?.cleanName().orEmpty())
+    var signedName by mutableStateOf(customer?.name.orEmpty())
 
     val device: Device
         get() = Device(manufacturer.trim(), model.trim(), serial.trim())
@@ -251,7 +251,7 @@ private fun CustomerStep(
 
     form.customer?.let { customer ->
         TmPanel(
-            title = customer.cleanName(),
+            title = customer.name,
             subtitle = listOf(customer.phone, customer.email).filter { it.isNotBlank() }.joinToString(", "),
             icon = Res.drawable.user,
             actions = { TmButton(text = "Change customer", onClick = { form.customer = null }, variant = TmButtonVariant.SECONDARY) }
@@ -266,7 +266,7 @@ private fun CustomerStep(
                     onResult(problem)
                     if (saved != null) {
                         form.customer = saved
-                        form.signedName = saved.cleanName()
+                        form.signedName = saved.name
                         adding = false
                     }
                 }
@@ -296,11 +296,11 @@ private fun CustomerStep(
         Column {
             matches.forEach { customer ->
                 TmListRow(
-                    title = customer.cleanName(),
+                    title = customer.name,
                     subtitle = listOf(customer.phone, customer.email).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null },
                     onClick = {
                         form.customer = customer
-                        form.signedName = customer.cleanName()
+                        form.signedName = customer.name
                     }
                 )
             }
@@ -546,16 +546,16 @@ private fun SignStep(form: CheckInForm, terms: String) {
 private fun ReviewStep(form: CheckInForm, needsSignature: Boolean) {
     TmPanel(title = "Check everything over", icon = Res.drawable.check_square) {
         Column {
-            TmKeyValueRow(label = "Customer", value = form.customer?.cleanName().orEmpty())
+            TmKeyValueRow(label = "Customer", value = form.customer?.name.orEmpty())
             TmKeyValueRow(label = "Device", value = form.device.toString().trim())
             if (form.serial.isNotBlank()) TmKeyValueRow(label = "Serial", value = form.serial, numeric = true)
             TmKeyValueRow(label = "Problem", value = form.problem.trim())
             if (form.condition.isNotBlank()) TmKeyValueRow(label = "Condition", value = form.condition.trim())
             if (form.accessories.isNotBlank()) TmKeyValueRow(label = "Left with it", value = form.accessories.trim())
             TmKeyValueRow(label = "Priority", value = formatEnumName(form.priority.priority.name))
-            if (form.estimateCents > 0) TmKeyValueRow(label = "Estimate", value = Money.format(form.estimateCents), numeric = true)
+            if (form.estimateCents > 0) TmKeyValueRow(label = "Estimate", value = formatMoney(form.estimateCents), numeric = true)
             TmKeyValueRow(label = "Promised", value = form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")
-            form.depositCents?.let { TmKeyValueRow(label = "Deposit", value = "${Money.format(it)} by ${formatEnumName(form.depositMethod.name).lowercase()}") }
+            form.depositCents?.let { TmKeyValueRow(label = "Deposit", value = "${formatMoney(it)} by ${formatEnumName(form.depositMethod.name).lowercase()}") }
             TmKeyValueRow(label = "Technician", value = form.technician?.text ?: "Not assigned")
             if (needsSignature) TmKeyValueRow(label = "Signed by", value = form.signedName)
         }

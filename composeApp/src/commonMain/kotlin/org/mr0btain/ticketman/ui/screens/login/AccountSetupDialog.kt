@@ -1,9 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.login
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.mr0btain.ticketman.components.utils.joinName
-import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
@@ -33,9 +33,7 @@ fun AccountSetupDialog(
         is AccountSetup.Invite -> setup.username
     }
 
-    val existingName = existing?.name?.let { splitName(it) }.orEmpty()
-    var firstName by remember(setup) { mutableStateOf(existingName.firstOrNull().orEmpty().replaceFirstChar { it.titlecase() }) }
-    var lastName by remember(setup) { mutableStateOf(existingName.drop(1).joinToString(" ").replaceFirstChar { it.titlecase() }) }
+    var name by remember(setup) { mutableStateOf(existing?.name.orEmpty()) }
     var email by remember(setup) { mutableStateOf(existing?.email.orEmpty()) }
     var phone by remember(setup) { mutableStateOf(existing?.phone.orEmpty()) }
     var password by remember(setup) { mutableStateOf("") }
@@ -48,7 +46,7 @@ fun AccountSetupDialog(
 
     // Invites have to pick a password, approved requests already chose one
     val problem = when {
-        firstName.isBlank() -> "Your name is required"
+        name.isBlank() -> "Your name is required"
         (isInvite || password.isNotEmpty()) && PasswordRules.problem(password) != null -> PasswordRules.problem(password)
         password != confirmPassword -> "Passwords don't match"
         PinRules.problem(pin) != null -> PinRules.problem(pin)
@@ -75,9 +73,7 @@ fun AccountSetupDialog(
                     submitting = true
                     serverError = null
 
-                    val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
-                    onFinish(joinName(name).lowercase(), email.trim(), phone.trim(), password, pin) { error ->
+                    onFinish(name.trim(), email.trim(), phone.trim(), password, pin) { error ->
                         submitting = false
                         serverError = error
                     }
@@ -85,10 +81,7 @@ fun AccountSetupDialog(
             )
         }
     ) {
-        TmFieldPair(
-            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
-            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
-        )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = name, onValueChange = { name = it }, label = "Name")
         TmFieldPair(
             { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
             { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") }

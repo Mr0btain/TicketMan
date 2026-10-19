@@ -16,15 +16,38 @@ package org.mr0btain.ticketman.data.cache
  *
  * @param K the type of keys maintained by this cache.
  * @param V the type of values maintained by this cache.
- * @param maxSize the maximum number of entries the cache can contain.
+ * @param maxSize the maximum number of entries the cache can contain. Can be changed later with [resize].
  */
 class LruCache<K, V>(
-    private val maxSize: Int
+    maxSize: Int
 ) {
 
     init {
         require(maxSize > 0) {
             "maxSize must be greater than 0"
+        }
+    }
+
+    /**
+     * The most entries kept. Set through [resize]
+     */
+    var maxSize: Int = maxSize
+        private set
+
+    /**
+     * Changes how many entries are kept. Shrinking drops the least recently used entries until it fits.
+     *
+     * @param newMaxSize the new maximum, greater than 0.
+     */
+    fun resize(newMaxSize: Int) {
+        require(newMaxSize > 0) {
+            "maxSize must be greater than 0"
+        }
+
+        maxSize = newMaxSize
+
+        while (map.size > maxSize) {
+            removeLeastRecentlyUsed()
         }
     }
 

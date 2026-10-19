@@ -43,7 +43,7 @@ fun CustomerListPane(
         items(customerList, key = { it.identifier }) { customer ->
             TmTableRow(COLUMNS, selected = customer.identifier == selectedId, onClick = { onClick(customer.identifier) }) { column ->
                 val (text, primary) = when (column) {
-                    0 -> customer.cleanName() to true
+                    0 -> customer.name to true
                     1 -> customer.phone to false
                     2 -> customer.email to false
                     else -> customer.address.street to false

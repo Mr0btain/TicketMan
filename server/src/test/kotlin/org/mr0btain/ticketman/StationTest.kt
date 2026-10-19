@@ -43,8 +43,8 @@ class StationTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val admin = User(username = "boss", password = "boss_pass", accessLevel = AccessLevel.ADMIN)
-    private val tech = User(username = "tech", password = "tech_pass", name = "terry:tech", accessLevel = AccessLevel.NORMAL)
-    private val clerk = User(username = "clerk", password = "clerk_pass", name = "cleo:clerk", accessLevel = AccessLevel.RESTRICTED)
+    private val tech = User(username = "tech", password = "tech_pass", name = "Terry Tech", accessLevel = AccessLevel.NORMAL)
+    private val clerk = User(username = "clerk", password = "clerk_pass", name = "Cleo Clerk", accessLevel = AccessLevel.RESTRICTED)
 
     private lateinit var users: UserDatabase
     private lateinit var adminToken: String

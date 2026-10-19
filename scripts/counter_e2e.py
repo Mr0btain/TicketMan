@@ -68,7 +68,7 @@ call("POST", "/api/data/inventory/add", {"identifier": (screen := uid()), "name"
 step("Shop profile (8.25% tax, terms, letter paper) and a screen in stock (5 at $120)")
 
 # ------------------------------------------ New employee asks for an account ------------------------------------------
-call("POST", "/api/auth/request-account", {"username": "newtech", "password": "newtech_pass", "name": "nina:tech"}, expect=202)
+call("POST", "/api/auth/request-account", {"username": "newtech", "password": "newtech_pass", "name": "Nina Tech"}, expect=202)
 _, pending_login = call("POST", "/api/auth", {"username": "newtech", "password": "newtech_pass"}, expect=202)
 check(pending_login["status"] == "PENDING_APPROVAL", "login before approval should say pending")
 step("Employee requests an account; logging in says it's waiting for approval")
@@ -81,17 +81,17 @@ step("Admin approves them as NORMAL")
 _, first = call("POST", "/api/auth", {"username": "newtech", "password": "newtech_pass", "deviceId": "desk", "deviceName": "Back Desk"}, expect=202)
 check(first["status"] == "NEEDS_SETUP", "first login should need setup")
 call("GET", "/api/data/ticket/fetch?offset=0&limit=5", token=first["accessToken"], expect=403)
-call("POST", "/api/user/setup", {"name": "nina:tech", "email": "nina@shop.test", "pin": "246813"}, first["accessToken"], expect=202)
+call("POST", "/api/user/setup", {"name": "Nina Tech", "email": "nina@shop.test", "pin": "246813"}, first["accessToken"], expect=202)
 _, ready = call("POST", "/api/auth", {"username": "newtech", "password": "newtech_pass", "deviceId": "desk", "deviceName": "Back Desk"}, expect=202)
 newtech = ready["accessToken"]
 check(ready["status"] == "OK", "after setup login should be OK")
 step("First login is held to setup (other routes refused) until they set details and a PIN")
 
 # ------------------------------------------ Invited clerk ------------------------------------------
-_, invite = call("POST", "/api/user/invite", {"username": "clerk", "name": "cleo:clerk", "accessLevel": "RESTRICTED"}, admin, expect=201)
+_, invite = call("POST", "/api/user/invite", {"username": "clerk", "name": "Cleo Clerk", "accessLevel": "RESTRICTED"}, admin, expect=201)
 _, via_code = call("POST", "/api/auth", {"username": "clerk", "password": invite["code"]}, expect=202)
 check(via_code["status"] == "INVITE_SETUP", "setup code should start invite setup")
-call("POST", "/api/auth/setup/invite", {"setupToken": via_code["setupToken"], "password": "clerk_password", "name": "cleo:clerk", "pin": "135792"}, expect=202)
+call("POST", "/api/auth/setup/invite", {"setupToken": via_code["setupToken"], "password": "clerk_password", "name": "Cleo Clerk", "pin": "135792"}, expect=202)
 step(f"Admin invites a Restricted clerk (code {invite['code']}); clerk sets password and PIN with it")
 
 # ------------------------------------------ Counter station and kiosk ------------------------------------------

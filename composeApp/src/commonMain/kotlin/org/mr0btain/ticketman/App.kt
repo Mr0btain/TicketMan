@@ -5,6 +5,7 @@ import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import org.mr0btain.ticketman.ui.kit.data.LocalCurrencySymbol
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -38,7 +39,6 @@ import ticketman.composeapp.generated.resources.settings
 // TODO: All main data classes have the ability to have images of their own. We should set that up
 
 // the focus upon opening dialog.
-// TODO: Update name in dialogs and such to handle middle names
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -94,8 +94,12 @@ fun App() {
     // Photos load through the app's http client so they carry the login, and are cached in memory and on disk
     setSingletonImageLoaderFactory { context -> mainViewModel.imageClient.newImageLoader(context) }
 
-    // Photos anywhere below can upload and load through the server
-    CompositionLocalProvider(LocalImageClient provides mainViewModel.imageClient) {
+    // Photos anywhere below can upload and load through the server.
+    // Amounts anywhere below show the shop's currency
+    CompositionLocalProvider(
+        LocalImageClient provides mainViewModel.imageClient,
+        LocalCurrencySymbol provides mainViewModel.counter.shop.collectAsState().value.currencySymbol
+    ) {
         TmTheme(
             palette = mainViewModel.settings.palette.collectAsState().value,
             font = mainViewModel.settings.font.collectAsState().value,

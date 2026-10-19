@@ -41,7 +41,7 @@ fun AccountPanel(
             )
         } else {
             TmListRow(
-                title = user.cleanName().trim().ifBlank { user.username },
+                title = user.name.trim().ifBlank { user.username },
                 subtitle = "${user.username}, ${formatEnumName(user.accessLevel.name)} access",
                 trailing = {
                     TmButton(text = "Log out", onClick = onLogout, variant = TmButtonVariant.SECONDARY, leadingIcon = Res.drawable.log_out)

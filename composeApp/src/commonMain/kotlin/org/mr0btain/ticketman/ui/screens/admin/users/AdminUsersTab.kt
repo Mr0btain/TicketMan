@@ -151,7 +151,7 @@ private fun UserListPane(
             TmTableRow(COLUMNS, selected = selected == user.identifier, onClick = { onClick(user.identifier) }) { column ->
                 when (column) {
                     0 -> Text(user.username, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    1 -> Text(user.cleanName(), style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    1 -> Text(user.name, style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     2 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                         UserStateChip(user)
                         if (user.pinLocked) TmBadge(text = "PIN", tone = colors.danger, dot = false)
@@ -185,7 +185,7 @@ private fun UserInfoPane(
     val pinLocked = listed?.pinLocked == true
 
     RecordDetail(
-        title = user.cleanName().ifBlank { user.username },
+        title = user.name.ifBlank { user.username },
         subtitle = if (isSelf) "This is you" else user.username,
         icon = Res.drawable.user,
         isEmpty = seed.isNew,

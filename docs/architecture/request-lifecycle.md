@@ -184,7 +184,8 @@ message on the `NetworkError`. That message is what ends up in the snackbar, lik
 
 After a successful update `save()`:
 
-1. syncs notes if they changed (`syncNotes` in `RecordNotes.kt` adds, updates and removes notes to match the seed),
+1. syncs notes if they changed (`syncNotes` in `RecordNotes.kt` sends the notes added, edited and removed since the
+   record was opened, leaving other devices' changes alone),
 2. sets the customer and tech if those changed,
 3. drops the ticket from the cache and calls `select()`, which reloads it from the server and calls `markClean()`,
    so the seed now matches what the server has,

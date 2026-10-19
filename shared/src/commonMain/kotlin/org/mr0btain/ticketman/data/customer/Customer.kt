@@ -13,12 +13,4 @@ data class Customer(
     val address: Address = Address(),
     val email: String = "",
     val phone: String = ""
-): MainItem() {
-    fun cleanName(): String {
-        return name.split(":").joinToString(" ") { n ->
-            n.replaceFirstChar {
-                if (it.isLowerCase()) it.titlecase() else it.toString()
-            }
-        }
-    }
-}
+): MainItem()

@@ -136,9 +136,9 @@ Deletes a note. The id is the note's.
 
 ## Gotchas
 
-- **Reading notes is a `POST`** with the id as the body too, to match the client. The path's id is the one used.
 - **Records save notes when they're saved.** The client's dialogs only call these when the record itself is saved
-  (`syncNotes`), except staff notes, saved straight away. See [Records](../client/records.md#saving).
+  (`syncNotes`), sending only what that device changed since it opened the record, except staff notes, saved
+  straight away. See [Records](../client/records.md#saving).
 
 ## See also
 

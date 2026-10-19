@@ -2,11 +2,15 @@ package org.mr0btain.ticketman.components.database
 
 import org.jetbrains.exposed.v1.jdbc.Database as ExposedDatabase
 import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
+import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.mr0btain.ticketman.components.database.tables.DataFixTable
 import org.mr0btain.ticketman.components.database.tables.audit.AuditLogTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
@@ -43,6 +47,7 @@ class LocalDatabase (
     private val INIT_TAG = "$TAG:Init"
     private val BACKUP_TAG = "$TAG:Backup"
     private val DETACHED_NOTES_TAG = "$TAG:RemoveDetachedNotes"
+    private val DATA_FIX_TAG = "$TAG:DataFix"
 
     /** Folder holding the H2 files */
     val databaseDirectory = File("$appDir/database")
@@ -102,7 +107,8 @@ class LocalDatabase (
         StationTable,
         InvoiceTable,
         InvoiceChargeTable,
-        InvoicePaymentTable
+        InvoicePaymentTable,
+        DataFixTable
     )
 
     /**
@@ -144,7 +150,32 @@ class LocalDatabase (
         tokenDatabase.clearLegacySessions()
         tokenDatabase.backfillExpiry()
         inventoryDatabase.migrateLegacyPrices()
+        runOnce("legacy-names") {
+            customerDatabase.migrateLegacyNames()
+            userDatabase.migrateLegacyNames()
+        }
         removeDetachedNotes()
+    }
+
+    /**
+     * Runs [fix] unless it already ran on this database, for fixes that would wrongly change data typed later if
+     * run every start. The fix and the note that it ran are one transaction, so a failed fix runs again next start
+     */
+    private fun runOnce(name: String, fix: () -> Unit) {
+        try {
+            transaction {
+                if (DataFixTable.selectAll().where { DataFixTable.name eq name }.empty()) {
+                    fix()
+                    DataFixTable.insert { row ->
+                        row[DataFixTable.name] = name
+                        row[ranAt] = System.currentTimeMillis()
+                    }
+                    AppLogger.m(DATA_FIX_TAG, "Ran $name")
+                }
+            }
+        } catch (ex: Exception) {
+            AppLogger.e(DATA_FIX_TAG, "$name: ${SimpleResult.FAIL}", ex)
+        }
     }
 
     /**

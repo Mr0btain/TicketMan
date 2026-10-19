@@ -47,9 +47,8 @@ fun CustomerDialog(
     var showNoteDialog by remember { mutableStateOf(false) }
     val noteSeed = remember { NoteSeed() }
 
-    var firstName by remember { mutableStateOf(seed.firstName) }
-    var lastName by remember { mutableStateOf(seed.lastName) }
-    val nameChanged = firstName != seed.firstName || lastName != seed.lastName
+    var name by remember { mutableStateOf(seed.name) }
+    val nameChanged = name.trim() != seed.name
     val spacing = TmTheme.spacing
 
     TmEditNoteDialog(
@@ -75,18 +74,18 @@ fun CustomerDialog(
     )
 
     TmDialog(
-        title = if (seed.isNew) "New customer" else "Edit ${seed.name.joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }.trim()}",
+        title = if (seed.isNew) "New customer" else "Edit ${seed.name}",
         onDismissRequest = onDismiss,
         maxWidth = 640.dp,
         dismissOnOutsideClick = false,
         actions = {
             TmButtonRow(
                 confirmText = if (seed.isNew) "Add customer" else "Save customer",
-                confirmEnabled = firstName.isNotBlank() && (seed.isDirty || nameChanged),
+                confirmEnabled = name.isNotBlank() && (seed.isDirty || nameChanged),
                 onCancel = onDismiss,
                 onConfirm = {
                     // Name is only applied on save so a half typed name doesn't flicker into the list
-                    if (nameChanged) seed.changeName(listOf(firstName, lastName))
+                    if (nameChanged) seed.changeName(name.trim())
 
                     onContinue()
                 }
@@ -94,10 +93,7 @@ fun CustomerDialog(
         }
     ) {
         TmSectionLabel("Name")
-        TmFieldPair(
-            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
-            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
-        )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = name, onValueChange = { name = it }, label = "Name")
 
         TmSectionLabel("Contact")
         TmFieldPair(

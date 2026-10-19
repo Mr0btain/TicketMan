@@ -65,6 +65,11 @@ abstract class DataSeed(tag: String) {
             ChangedField.IMAGE to _images.toList()
         )
 
+    /** The notes as they were when last loaded or saved, to tell this device's changes from another's */
+    @Suppress("UNCHECKED_CAST")
+    val savedNotes: List<Note>
+        get() = saved[ChangedField.NOTE] as? List<Note> ?: emptyList()
+
     /** Whether anything differs from when it was last loaded or saved */
     val isDirty: Boolean
         get() = snapshot() != saved

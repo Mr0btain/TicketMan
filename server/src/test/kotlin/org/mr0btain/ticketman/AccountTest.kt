@@ -54,7 +54,7 @@ class AccountTest {
     }
 
     private suspend fun ApplicationTestBuilder.request(username: String, password: String = "new_password") =
-        postJson("/api/auth/request-account", json.encodeToString(AccountRequest(username, password, name = "new:person")))
+        postJson("/api/auth/request-account", json.encodeToString(AccountRequest(username, password, name = "New Person")))
 
     private suspend fun ApplicationTestBuilder.pending(): List<PendingUserResponse> =
         json.decodeFromString(client.get("/api/user/pending") { bearerAuth(adminToken) }.bodyAsText())
@@ -94,10 +94,10 @@ class AccountTest {
         assertEquals(HttpStatusCode.Forbidden, client.get("/api/data/ticket/fetch?limit=5") { bearerAuth(token) }.status)
 
         // A PIN is required
-        val noPin = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person")), token)
+        val noPin = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "New Person")), token)
         assertEquals(HttpStatusCode.BadRequest, noPin.status)
 
-        val setup = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "new:person", email = "n@shop.test", pin = "246813")), token)
+        val setup = postJson("/api/user/setup", json.encodeToString(AccountSetupRequest(name = "New Person", email = "n@shop.test", pin = "246813")), token)
         assertEquals(HttpStatusCode.Accepted, setup.status)
 
         assertEquals(HttpStatusCode.OK, client.get("/api/data/ticket/fetch?limit=5") { bearerAuth(token) }.status)
@@ -176,7 +176,7 @@ class AccountTest {
 
         val finish = postJson(
             "/api/auth/setup/invite",
-            json.encodeToString(InviteSetupRequest(setupToken, password = "my_new_password", name = "invited:person", pin = "246813"))
+            json.encodeToString(InviteSetupRequest(setupToken, password = "my_new_password", name = "Invited Person", pin = "246813"))
         )
         assertEquals(HttpStatusCode.Accepted, finish.status)
         val session = json.decodeFromString<AuthResponse>(finish.bodyAsText())

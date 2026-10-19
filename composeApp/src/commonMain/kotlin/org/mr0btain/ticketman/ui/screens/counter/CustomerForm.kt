@@ -8,7 +8,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
@@ -31,8 +30,7 @@ fun CustomerForm(
     onSave: (Customer, (String?) -> Unit) -> Unit,
     onCancel: () -> Unit
 ) {
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var street by remember { mutableStateOf("") }
@@ -44,16 +42,13 @@ fun CustomerForm(
     val spacing = TmTheme.spacing
 
     val problem = when {
-        firstName.isBlank() -> "Enter their name"
+        name.isBlank() -> "Enter their name"
         phone.isBlank() && email.isBlank() -> "Enter a phone number or email so they can be reached"
         else -> null
     }
 
     TmPanel(modifier = modifier.widthIn(max = 640.dp), title = title, icon = Res.drawable.user_plus) {
-        TmFieldPair(
-            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
-            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
-        )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = name, onValueChange = { name = it }, label = "Name")
         TmFieldPair(
             { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") },
             { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") }
@@ -65,7 +60,7 @@ fun CustomerForm(
             TmTextField(modifier = Modifier.weight(1f), value = zip, onValueChange = { zip = it }, label = "Zip")
         }
 
-        (error ?: problem.takeIf { firstName.isNotEmpty() || phone.isNotEmpty() })?.let {
+        (error ?: problem.takeIf { name.isNotEmpty() || phone.isNotEmpty() })?.let {
             TmNotice(text = it, kind = if (error != null) TmNoticeKind.ERROR else TmNoticeKind.WARNING)
         }
 
@@ -78,11 +73,9 @@ fun CustomerForm(
                 saving = true
                 error = null
 
-                val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
                 onSave(
                     Customer(
-                        name = joinName(name).lowercase(),
+                        name = name.trim(),
                         phone = phone.trim(),
                         email = email.trim(),
                         address = Address(street.trim(), city.trim(), state.trim(), zip.trim())

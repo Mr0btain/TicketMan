@@ -9,7 +9,8 @@ device. Touch this when adding a setting. How settings are stored is in [Storage
 ## How it works
 
 [`SettingsScreen`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/settings/SettingsScreen.kt)
-is a `TmLazyColumn` of panels:
+is a column of panels, laid out by `SettingsLayout`: Account and Appearance beside the rest on windows 1000 dp and
+wider, one under the other on narrower ones.
 
 | Panel | Setting | What it does |
 |-------|---------|--------------|
@@ -20,12 +21,12 @@ is a `TmLazyColumn` of panels:
 | | Reduce transparency | Draws glass as solid |
 | | Component gallery | Opens the [kit gallery](../kit.md#the-component-gallery) |
 | **Login** | Remember login | Keeps the username and password after logging in, so the app can log back in when a refresh token is refused. Off on shared devices |
-| | Start tab | Which records tab opens first. Clicking cycles Customers → Tickets → Inventory |
-| **Server and data** | Server address | Where the server is. No scheme means `https://`. Saving it reconnects (`session.changeServer`) |
+| **Server** | Server address | Where the server is. No scheme means `https://`. Saving it reconnects (`session.changeServer`) |
 | | Device name | What admins see for this device on the Sessions tab, from the next login. Also the suggested name when registering a station |
+| **Records** | Start tab | Which records tab opens first, picked from a dropdown |
 | | Page size | Records loaded per page, 5 to 100. Reloads the lists |
 | | Search result limit | 1 to 100 |
-| | Cache size | Records kept in each cache, 1 to 200. Applies on the next start |
+| | Cache size | Opened records kept in each cache, 1 to 200. Resizes the caches straight away |
 | **Account and station** | Change PIN | Opens `ChangePinDialog`, which asks for your password as well. Says when your PIN is locked |
 | | Counter station | Opens `StationDialog`: register this device as a station, see if it's approved, refresh it, or go back to kiosk mode after an admin left it |
 
@@ -44,7 +45,8 @@ drawn by `SettingsGroup`, and each item is a `SettingItem<T>`:
 |--------|-----|----------|-----------|
 | `SWITCH` | `Boolean` | A `TmListRow` with a `TmSwitch`; the whole row toggles | Gets the new value |
 | `TEXT` | `String` | A row showing the value; clicking opens a `TmTextEditDialog` | Gets the typed text. Return `false` to keep the dialog open and show `description` as the error |
-| `CLICKABLE_TEXT` | `String` | A row showing the value with a chevron | Gets the current value. Used to open a dialog or cycle a value |
+| `CLICKABLE_TEXT` | `String` | A row showing the value with a chevron | Gets the current value. Used to open a dialog |
+| `CHOICE` | `String` | A row with a `TmDropdown` of the item's `options` | Gets the picked option |
 
 `initialState` is the value shown, read from the handler's state, so the row updates when the setting changes.
 
@@ -66,14 +68,12 @@ drawn by `SettingsGroup`, and each item is a `SettingItem<T>`:
 | Appearance panel and theme cards | `ui/screens/settings/components/AppearanceSettings.kt` |
 | Row model and drawing | `SettingItem.kt`, `SettingItemGroup.kt`, `SettingType.kt`, `SettingsGroup.kt` |
 | PIN and station dialogs | `ui/screens/settings/components/AccountDialogs.kt` |
-| Render test | `KitGalleryRenderTest.appearanceSettings()` |
+| Render tests | `ScreenRenderTest.settings()` (two columns), `KitGalleryRenderTest.appearanceSettings()` |
 
 ## Gotchas
 
 - **`SettingItem` is cast by `type`.** `SettingsGroup` uses `runIfType<String>` or `runIfType<Boolean>`, and an
   item whose `type` doesn't match its `T` is quietly not drawn.
-- **Start tab sits under Login**, and cycles on click rather than offering a choice.
-- **The screen is the same on every size.** It's one column of full width panels.
 
 ## Known gaps
 

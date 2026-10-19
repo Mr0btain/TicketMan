@@ -53,7 +53,6 @@ import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.DailyReport
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
-import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.foundation.TmBackdrop
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.foundation.glassSource
@@ -63,8 +62,8 @@ import org.mr0btain.ticketman.ui.kit.search.TmSearchField
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.counter.CheckInWizard
+import org.mr0btain.ticketman.ui.screens.counter.CounterLayout
 import org.mr0btain.ticketman.ui.screens.counter.PickupScreen
-import org.mr0btain.ticketman.ui.screens.counter.QueuePanel
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
 import org.mr0btain.ticketman.ui.screens.kiosk.LockScreen
@@ -84,7 +83,16 @@ import java.io.File
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
+import org.mr0btain.ticketman.ui.screens.settings.SettingsLayout
 import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
+import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingType
+import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
+import org.mr0btain.ticketman.ui.kit.theme.TmFonts
+import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
+import org.jetbrains.compose.resources.painterResource
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -96,12 +104,15 @@ import kotlin.time.Duration.Companion.hours
  */
 class ScreenRenderTest {
     private val outputDir = File("build/screen-renders").apply { mkdirs() }
+
+    /** About a phone held upright */
+    private val NARROW_WIDTH = 420
     private val now = Clock.System.now().toEpochMilliseconds()
 
     // ------------------------------------------ Sample data ------------------------------------------
 
-    private val dana = Customer(name = "dana:whitfield", phone = "555 0142", email = "dana@example.com", address = Address("41 Mill Rd", "Ashford", "CT", "06278"))
-    private val marcus = Customer(name = "marcus:oyelaran", phone = "555 0199", email = "marcus@example.com")
+    private val dana = Customer(name = "Dana Whitfield", phone = "555 0142", email = "dana@example.com", address = Address("41 Mill Rd", "Ashford", "CT", "06278"))
+    private val marcus = Customer(name = "Marcus Oyelaran", phone = "555 0199", email = "marcus@example.com")
 
     private fun ticket(seq: Long, device: Device, status: TicketStatusType, priority: TicketPriorityType, hoursAgo: Int = 2, problem: String = "") =
         Ticket(
@@ -151,7 +162,7 @@ class ScreenRenderTest {
     private val detail = TicketDetail(
         ticket = iphone,
         customer = dana,
-        technician = EntityReference(dana.identifier, "priya:raman"),
+        technician = EntityReference(dana.identifier, "Priya Raman"),
         notes = sampleNotes,
         history = listOf(
             TicketStatusChange(TicketStatusType.IN_PROGRESS, now - 7_200_000, "dana"),
@@ -197,9 +208,9 @@ class ScreenRenderTest {
         return File(outputDir, "$name-${if (dark) "dark" else "light"}.png").apply { writeBytes(bytes) }
     }
 
-    private fun bothModes(name: String, height: Int = 900, content: @Composable () -> Unit) {
+    private fun bothModes(name: String, width: Int = 1440, height: Int = 900, content: @Composable () -> Unit) {
         listOf(true, false).forEach { dark ->
-            val file = render(name, dark, height = height, content = content)
+            val file = render(name, dark, width = width, height = height, content = content)
             assertTrue(file.length() > 0, "${file.name} should have been drawn")
         }
     }
@@ -213,70 +224,97 @@ class ScreenRenderTest {
     @Test
     fun counterTicketShort() = bothModes("counter-ticket-short", height = 640) { CounterTicket() }
 
+    /** Phone width: the buttons are icons and the queue is behind its own button */
+    @Test
+    fun counterTicketNarrow() = bothModes("counter-ticket-narrow", width = NARROW_WIDTH, height = 860) {
+        Phone { CounterTicketLayout() }
+    }
+
+    @Test
+    fun pickupNarrow() = bothModes("pickup-narrow", width = NARROW_WIDTH, height = 860) {
+        Phone { Pickup() }
+    }
+
+    @Test
+    fun checkInNarrow() = bothModes("check-in-narrow", width = NARROW_WIDTH, height = 860) {
+        Phone { CheckIn() }
+    }
+
+    /** A phone sized frame, no rail */
+    @Composable
+    private fun Phone(content: @Composable () -> Unit) {
+        TmBackdrop(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxSize().padding(8.dp).glassSource()) { content() }
+        }
+    }
+
     @Composable
     private fun CounterTicket() {
-        Shell("Counter") {
-            Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
-                    TmSearchField(
-                        modifier = Modifier.weight(1f),
-                        query = "",
-                        onQueryChange = {},
-                        placeholder = "Search tickets and customers  (F2)",
-                        size = TmControlSize.LARGE
-                    )
-                    TmButton(text = "Check in  (F3)", onClick = {}, size = TmControlSize.LARGE, leadingIcon = Res.drawable.plus)
-                    TmButton(text = "Price check  (F4)", onClick = {}, size = TmControlSize.LARGE, variant = TmButtonVariant.SECONDARY)
-                }
-
-                Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
-                    Box(Modifier.weight(1f)) {
-                        TicketCard(
-                            detail = detail,
-                            canEdit = true,
-                            onStatusChange = {},
-                            onAddNote = {},
-                            onCustomerClick = {},
-                            onBack = {},
-                            extraActions = { TmButton(text = "Pick up  (F5)", onClick = {}, size = TmControlSize.LARGE) }
-                        )
-                    }
-
-                    QueuePanel(modifier = Modifier.width(360.dp).fillMaxHeight(), queue = queue, onTicketClick = {})
-                }
-            }
-        }
+        Shell("Counter") { CounterTicketLayout() }
     }
 
-    @Test
-    fun pickup() = bothModes("pickup") {
-        Shell("Counter") {
-            PickupScreen(
+    @Composable
+    private fun CounterTicketLayout() {
+        CounterLayout(
+            searchField = { modifier ->
+                TmSearchField(
+                    modifier = modifier,
+                    query = "",
+                    onQueryChange = {},
+                    placeholder = "Search tickets and customers  (F2)",
+                    size = TmControlSize.LARGE
+                )
+            },
+            canEdit = true,
+            queue = queue,
+            onCheckIn = {},
+            onNewCustomer = {},
+            onPriceCheck = {},
+            onQueueTicketClick = {}
+        ) {
+            TicketCard(
                 detail = detail,
-                onSearchParts = { emptyList() },
-                onSave = { _, _, _ -> },
-                onRemovePayment = {},
-                onFinish = { _, _, _, _ -> },
-                onBack = {}
+                canEdit = true,
+                onStatusChange = {},
+                onAddNote = {},
+                onCustomerClick = {},
+                onBack = {},
+                extraActions = { TmButton(text = "Pick up  (F5)", onClick = {}, size = TmControlSize.LARGE) }
             )
         }
     }
 
     @Test
-    fun checkIn() = bothModes("check-in") {
-        Shell("Counter") {
-            CheckInWizard(
-                startingCustomer = dana,
-                terms = "We aren't responsible for data loss.",
-                onSearchCustomers = { emptyList() },
-                onAddCustomer = { _, _ -> },
-                onSearchTechnicians = { emptyList() },
-                onRepeatCheck = { _, _, _ -> emptyList() },
-                onOpenTicket = {},
-                onSubmit = { _, _ -> },
-                onCancel = {}
-            )
-        }
+    fun pickup() = bothModes("pickup") { Shell("Counter") { Pickup() } }
+
+    @Composable
+    private fun Pickup() {
+        PickupScreen(
+            detail = detail,
+            onSearchParts = { emptyList() },
+            onSave = { _, _, _ -> },
+            onRemovePayment = {},
+            onFinish = { _, _, _, _ -> },
+            onBack = {}
+        )
+    }
+
+    @Test
+    fun checkIn() = bothModes("check-in") { Shell("Counter") { CheckIn() } }
+
+    @Composable
+    private fun CheckIn() {
+        CheckInWizard(
+            startingCustomer = dana,
+            terms = "We aren't responsible for data loss.",
+            onSearchCustomers = { emptyList() },
+            onAddCustomer = { _, _ -> },
+            onSearchTechnicians = { emptyList() },
+            onRepeatCheck = { _, _, _ -> emptyList() },
+            onOpenTicket = {},
+            onSubmit = { _, _ -> },
+            onCancel = {}
+        )
     }
 
     @Test
@@ -284,7 +322,7 @@ class ScreenRenderTest {
         TmBackdrop(Modifier.fillMaxSize()) {
             LockScreen(
                 stationName = "Front counter",
-                staff = listOf("dana:whitfield", "priya:raman", "marcus:oyelaran", "june:kowalski").map { StaffMember(kotlin.uuid.Uuid.random(), it.substringBefore(":"), it) },
+                staff = listOf("Dana Whitfield", "Priya Raman", "Marcus Oyelaran", "June Kowalski").map { StaffMember(kotlin.uuid.Uuid.random(), it.substringBefore(" ").lowercase(), it) },
                 onRefresh = {},
                 onUnlock = { _, _, _ -> },
                 onExit = { _, _, _ -> }
@@ -379,9 +417,9 @@ class ScreenRenderTest {
 
     @Test
     fun adminUsers() {
-        val boss = User(username = "dana", name = "dana:whitfield", email = "dana@example.com", accessLevel = AccessLevel.ADMIN)
-        val tech = User(username = "marcus", name = "marcus:oyelaran", phone = "5550142", accessLevel = AccessLevel.NORMAL, hasPin = true)
-        val viewer = User(username = "june", name = "june:kowalski", accessLevel = AccessLevel.RESTRICTED)
+        val boss = User(username = "dana", name = "Dana Whitfield", email = "dana@example.com", accessLevel = AccessLevel.ADMIN)
+        val tech = User(username = "marcus", name = "Marcus Oyelaran", phone = "5550142", accessLevel = AccessLevel.NORMAL, hasPin = true)
+        val viewer = User(username = "june", name = "June Kowalski", accessLevel = AccessLevel.RESTRICTED)
         val seed = UserSeed().apply {
             setUser(tech, listOf(
                 Note(author = "Dana Whitfield", message = "Trained on Apple board repair, can take micro soldering jobs."),
@@ -422,13 +460,13 @@ class ScreenRenderTest {
     fun records() {
         val customerSeed = CustomerSeed().apply { setCustomer(dana, sampleNotes, listOf(iphone, pixel)) }
         val ticketSeed = TicketSeed().apply {
-            setTicket(iphone, sampleNotes, EntityReference(dana.identifier, dana.name), EntityReference(dana.identifier, "priya:raman"))
+            setTicket(iphone, sampleNotes, EntityReference(dana.identifier, dana.name), EntityReference(dana.identifier, "Priya Raman"))
         }
 
         bothModes("records-customers") {
             Shell("Records") {
                 CustomerPanel(
-                    customerList = listOf(dana, marcus, Customer(name = "priya:raman", phone = "555 0110"), Customer(name = "tomás:herrera", email = "tomas@example.com")),
+                    customerList = listOf(dana, marcus, Customer(name = "Priya Raman", phone = "555 0110"), Customer(name = "Tomás Herrera", email = "tomas@example.com")),
                     seed = customerSeed,
                     onAddCustomer = {},
                     onEditCustomer = {},
@@ -502,11 +540,54 @@ class ScreenRenderTest {
         }
     }
 
+    /** Two columns on a wide window, with the start tab as a dropdown under Records */
+    @Test
+    fun settings() = bothModes("settings") {
+        Shell("Settings") {
+            SettingsLayout(
+                first = {
+                    AccountPanel(user = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
+                    AppearanceSettings(
+                        palette = TmPalettes.default,
+                        onPaletteChange = {},
+                        darkTheme = true,
+                        onDarkThemeChange = {},
+                        font = TmFonts.default,
+                        onFontChange = {},
+                        reduceTransparency = false,
+                        onReduceTransparencyChange = {},
+                        onOpenGallery = {}
+                    )
+                },
+                second = {
+                    val tabs = listOf("Customers", "Tickets", "Inventory")
+                    val icon = painterResource(Res.drawable.settings)
+
+                    SettingsGroup(
+                        settingItemGroup = SettingItemGroup(
+                            label = "Login",
+                            items = listOf(SettingItem(icon, "Save username and password after logging in", "Remember login", true, true, type = SettingType.SWITCH))
+                        )
+                    )
+                    SettingsGroup(
+                        settingItemGroup = SettingItemGroup(
+                            label = "Records",
+                            items = listOf(
+                                SettingItem(icon, "Records tab shown on start", "Start tab", true, "Tickets", type = SettingType.CHOICE, options = tabs),
+                                SettingItem(icon, "Number of items loaded per page (10-200)", "Page size", true, "50", type = SettingType.TEXT)
+                            )
+                        )
+                    )
+                }
+            )
+        }
+    }
+
     @Test
     fun settingsAccount() = bothModes("settings-account", height = 360) {
         Shell("Settings") {
             Column(Modifier.width(720.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                AccountPanel(user = User(username = "dana", name = "dana:whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
+                AccountPanel(user = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
                 AccountPanel(user = null, onLogin = {}, onLogout = {})
             }
         }

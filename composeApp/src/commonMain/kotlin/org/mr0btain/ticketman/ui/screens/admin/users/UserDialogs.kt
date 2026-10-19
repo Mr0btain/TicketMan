@@ -1,9 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.admin.users
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import org.mr0btain.ticketman.components.utils.joinName
-import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.PasswordRules
 import org.mr0btain.ticketman.data.user.User
@@ -36,8 +36,7 @@ fun UserDialog(
 
     // Keyed on the user so opening it for someone else starts fresh
     var username by remember(user) { mutableStateOf(user.username) }
-    var firstName by remember(user) { mutableStateOf(splitName(user.name).first()) }
-    var lastName by remember(user) { mutableStateOf(splitName(user.name).drop(1).joinToString(" ")) }
+    var name by remember(user) { mutableStateOf(user.name) }
     var email by remember(user) { mutableStateOf(user.email) }
     var phone by remember(user) { mutableStateOf(user.phone) }
     var accessLevel by remember(user) {
@@ -65,12 +64,10 @@ fun UserDialog(
                 confirmEnabled = error == null,
                 onCancel = onDismiss,
                 onConfirm = {
-                    val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
                     onConfirm(
                         user.copy(
                             username = username,
-                            name = joinName(name),
+                            name = name.trim(),
                             email = email.trim(),
                             phone = phone.trim(),
                             accessLevel = accessLevel
@@ -92,10 +89,7 @@ fun UserDialog(
                 )
             }
         )
-        TmFieldPair(
-            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
-            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
-        )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = name, onValueChange = { name = it }, label = "Name")
         TmFieldPair(
             { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
             { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") }

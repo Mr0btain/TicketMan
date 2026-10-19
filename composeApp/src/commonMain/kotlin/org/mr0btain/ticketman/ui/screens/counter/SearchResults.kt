@@ -75,7 +75,7 @@ fun SearchResults(
             Column {
                 results.customers.forEach { customer ->
                     TmListRow(
-                        title = customer.cleanName(),
+                        title = customer.name,
                         subtitle = listOf(customer.phone, customer.email).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null },
                         onClick = { onCustomerClick(customer.identifier) }
                     )

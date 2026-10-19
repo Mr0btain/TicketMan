@@ -104,10 +104,13 @@ Every `save()` follows the same steps (see `TicketRecords.save()`):
 2. Read everything from the seed up front, then launch.
 3. New record: `add` (or `create` for tickets, which returns the server's number). Existing record: `update`, only if
    a field of the record itself changed. Link and note changes go through their own calls.
-4. Notes: `syncNotes(id, notes, repo, snackbar)` in
+4. Notes: `syncNotes(id, notes, seed.savedNotes, repo, snackbar)` in
    [`RecordNotes.kt`](../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/records/components/RecordNotes.kt)
-   fetches the server's notes and adds, updates and removes to match the seed. Notes are only sent when the record is
-   saved, so cancelling the dialog drops note edits too.
+   sends what this device changed since the record was opened: the difference between the seed's notes and
+   `savedNotes`, the notes as they were loaded. It fetches the server's notes first, so notes another device added
+   meanwhile are left alone, and a note another device changed or deleted meanwhile isn't overwritten; a snackbar
+   says how many of this device's changes were skipped for that. Notes are only sent when the record is saved, so
+   cancelling the dialog drops note edits too.
 5. Links (a ticket's customer and tech) and inventory photos are set if they changed. So is an item's stock count,
    which `update` leaves alone: `setStock(id, seed.loadedStock, stock)` sends the count the item was opened at with
    the new one, and the server refuses it with a `409` if a pickup has taken stock since. The snackbar says so, and
@@ -134,8 +137,8 @@ their place), and a ticket clicked on a customer opens on the Tickets tab instea
   the seed and the list reloads, rather than keeping a copy that can't be saved.
 - **`ChangedField` is one enum for every record type.** Add a value when a seed gains a field that needs its own
   change detection.
-- **`syncNotes` refetches the server's notes on every save** to work out the difference, so a note added on another
-  device since the record was opened survives, but one edited there is overwritten.
+- **A note changed on two devices keeps the first save.** The second device's edit to it is skipped with a
+  snackbar, and its other changes still go through. Reopening the record shows the other device's version.
 
 ## See also
 

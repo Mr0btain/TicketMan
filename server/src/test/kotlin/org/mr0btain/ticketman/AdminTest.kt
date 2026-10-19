@@ -186,7 +186,7 @@ class AdminTest {
     fun adminCanAddUserWhoCanThenLogIn() = testApplication {
         setup()
         val adminToken = token(admin)
-        val newUser = User(username = "Newbie", password = "new_pass", name = "new:person", accessLevel = AccessLevel.RESTRICTED)
+        val newUser = User(username = "Newbie", password = "new_pass", name = "New Person", accessLevel = AccessLevel.RESTRICTED)
 
         assertEquals(HttpStatusCode.Created, post("/api/user/add", json.encodeToString(newUser), adminToken).status)
         assertEquals(HttpStatusCode.Conflict, post("/api/user/add", json.encodeToString(newUser.copy(identifier = Uuid.generateV7())), adminToken).status)

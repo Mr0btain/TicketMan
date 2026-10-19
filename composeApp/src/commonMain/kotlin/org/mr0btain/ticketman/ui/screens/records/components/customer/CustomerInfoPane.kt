@@ -30,7 +30,7 @@ fun CustomerInfoPane(
     val seed = selectedCustomer
 
     RecordDetail(
-        title = seed.name.joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }.trim().ifBlank { "Unnamed customer" },
+        title = seed.name.ifBlank { "Unnamed customer" },
         subtitle = "Customer since ${formatDateTime(seed.time.toEpochMilliseconds())}",
         icon = Res.drawable.user,
         isEmpty = seed.isNew,

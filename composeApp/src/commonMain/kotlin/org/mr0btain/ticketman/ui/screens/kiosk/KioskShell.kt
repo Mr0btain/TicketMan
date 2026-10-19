@@ -71,7 +71,7 @@ fun KioskShell(viewModel: MainViewModel) {
             ) {
                 TmTopBar(
                     title = station?.name.orEmpty().ifBlank { "Counter" },
-                    subtitle = currentUser?.let { user -> "Signed in as ${user.cleanName().ifBlank { user.username }}" },
+                    subtitle = currentUser?.let { user -> "Signed in as ${user.name.ifBlank { user.username }}" },
                     actions = {
                         TmButton(
                             text = "Lock",

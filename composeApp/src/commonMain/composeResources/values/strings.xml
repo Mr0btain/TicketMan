@@ -14,5 +14,4 @@
     <string name="access_token_preference_key">AccessToken</string>
     <string name="image_directory">Client/Images</string>
 
-    <string name="name_divider_character">:</string>
 </resources>

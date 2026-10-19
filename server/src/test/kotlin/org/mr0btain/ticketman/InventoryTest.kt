@@ -211,13 +211,13 @@ class InventoryTest {
     fun customersCanBeUpdated() = testApplication {
         setup()
         val token = token(tech)
-        val customer = Customer(name = "Jane:Doe", phone = "5550100")
+        val customer = Customer(name = "Jane Doe", phone = "5550100")
         assertEquals(HttpStatusCode.Created, post("/api/data/customer/add", json.encodeToString(customer), token).status)
 
         val moved = customer.copy(phone = "5550199", email = "jane@example.com")
         assertEquals(HttpStatusCode.Accepted, post("/api/data/customer/update", json.encodeToString(moved), token).status)
         // Names are kept lowercase and capitalised for display
-        assertEquals(moved.copy(name = "jane:doe"), json.decodeFromString<Customer>(client.get("/api/data/customer/get/${customer.identifier}") { bearerAuth(token) }.bodyAsText()))
+        assertEquals(moved.copy(name = "Jane Doe"), json.decodeFromString<Customer>(client.get("/api/data/customer/get/${customer.identifier}") { bearerAuth(token) }.bodyAsText()))
 
         assertEquals(HttpStatusCode.NotFound, post("/api/data/customer/update", json.encodeToString(Customer(name = "Nobody")), token).status)
     }

@@ -11,7 +11,7 @@ import kotlin.uuid.Uuid
 
 class PrintTemplatesTest {
     private val shop = ShopProfile(name = "Fix It Shop", street = "1 Main St", city = "Springfield", phone = "555-0100", invoiceFooter = "Thanks <3")
-    private val customer = Customer(name = "jane:doe", phone = "555-0199")
+    private val customer = Customer(name = "Jane Doe", phone = "555-0199")
     private val ticket = Ticket(
         number = TicketNumber(2026, 42),
         device = Device("Apple", "iPhone 14", "SN1"),

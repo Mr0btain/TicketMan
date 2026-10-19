@@ -22,6 +22,7 @@ import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -35,9 +36,13 @@ class AdminHandlerTest {
     private var auditLeft = 0
     private var auditOffsets = mutableListOf<Long>()
 
+    /** Reads, as their path */
+    private val reads = mutableListOf<String>()
+
     private val engine = MockEngine { request ->
         val path = request.url.encodedPath
         val body = (request.body as? TextContent)?.text ?: ""
+        if (request.method == HttpMethod.Get) reads += path
 
         when {
             path == SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
@@ -63,7 +68,7 @@ class AdminHandlerTest {
     private val snackBar = SnackbarHostState()
     private val storage = LocalStorage(InMemoryKeyValueStore())
     private val usersChanged = mutableListOf<Uuid?>()
-    private val sam = User(username = "sam", name = "Sam:Tech", accessLevel = AccessLevel.NORMAL, password = "old-hash")
+    private val sam = User(username = "sam", name = "Sam Tech", accessLevel = AccessLevel.NORMAL, password = "old-hash")
 
     // Requests finish on the mock engine's threads, keep running the test's coroutines until done
     private suspend fun TestScope.settle(done: () -> Boolean) {
@@ -79,7 +84,7 @@ class AdminHandlerTest {
         val remote = RemoteHandler(engine, LocalStorage(InMemoryKeyValueStore()))
         remote.setUrl("http://localhost")
 
-        return AdminHandler(remote, backgroundScope, snackBar, storage) { usersChanged += it }
+        return AdminHandler(remote, backgroundScope, snackBar, storage, onUsersChanged = { usersChanged += it })
     }
 
     @Test
@@ -151,7 +156,7 @@ class AdminHandlerTest {
         auditLeft = 70
         val admin = handler()
 
-        admin.refreshAudit()
+        admin.refresh(AdminTab.AUDIT)
         settle { admin.auditEntries.value.size == 50 }
         assertFalse(admin.auditEndReached.value)
 
@@ -166,10 +171,21 @@ class AdminHandlerTest {
     }
 
     @Test
+    fun aTabOnlyLoadsWhatItShows() = runTest {
+        val admin = handler()
+        reads.clear()
+
+        admin.refresh(AdminTab.SESSIONS)
+        settle { !admin.isLoading.value && reads.isNotEmpty() }
+
+        assertEquals(listOf("/api/user/pending", "/api/admin/sessions"), reads)
+    }
+
+    @Test
     fun clearForgetsEverythingLoaded() = runTest {
         auditLeft = 3
         val admin = handler()
-        admin.refreshAudit()
+        admin.refresh(AdminTab.AUDIT)
         settle { admin.auditEntries.value.isNotEmpty() }
 
         admin.clear()

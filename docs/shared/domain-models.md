@@ -110,7 +110,7 @@ The bytes live on the server's disk. A photo never changes once uploaded, so rep
 | `Charge` | One line: `LABOR` (quantity is hours), `PART` (linked to an inventory item) or `OTHER`, with a unit price and whether it's taxable |
 | `Payment` | Money taken: method (`CASH`, `CARD`, `CHECK`, `OTHER`), amount, when and by whom |
 | `TicketSummary` | A ticket with its customer and tech as `EntityReference`s, for lists that would otherwise need extra lookups |
-| `ShopProfile` | The shop's name, address, contact details, tax rate, invoice footer, repair terms, repeat repair window and default paper size |
+| `ShopProfile` | The shop's name, address, contact details, tax rate, currency symbol, invoice footer, repair terms, repeat repair window and default paper size |
 
 There's one invoice per ticket. Totals are worked out by `InvoiceMath`, see [Money](money.md).
 
@@ -138,10 +138,8 @@ There's one invoice per ticket. Totals are worked out by `InvoiceMath`, see [Mon
 - **Older invoice ids aren't time based.** `Invoice`, `Charge` and `Payment` default to `Uuid.generateV7()` like
   everything else, but rows saved before that have random ids, and a charge keeps whatever id the client sent. Read
   times from `Invoice.createdAt` and `Payment.receivedAt`, not from their ids.
-- **`Address.fromString` and `Device.fromString` split on spaces**, so a two word street or model name is cut up.
-  Nothing in the app calls them now; don't start.
-- **`Customer.cleanName()` and `User.cleanName()`** treat `:` as a name separator, left over from an older way of
-  storing names.
+- **Names are stored as typed**, one string, shown as they are. Older versions kept `first:last` in lowercase; the
+  server rewrites those once on start (see [data fixes](../server/migrations.md#data-fixes)).
 
 ## See also
 

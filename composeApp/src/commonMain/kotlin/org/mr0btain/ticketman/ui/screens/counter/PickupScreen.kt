@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,13 +10,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.min
 import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.*
-import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -44,6 +45,9 @@ import ticketman.composeapp.generated.resources.package_icon
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
 import kotlin.uuid.Uuid
+
+/** Narrower than this, invoice lines take two rows */
+private val INVOICE_MIN_WIDTH = 560.dp
 
 /** A line being edited. Quantity stays text so a half typed number like "1." isn't thrown away */
 private class ChargeDraft(charge: Charge) {
@@ -114,7 +118,7 @@ fun PickupScreen(
     ) {
         TmPageHeader(
             title = "Pickup",
-            subtitle = listOfNotNull(invoice.label, detail.customer?.cleanName()).joinToString(", "),
+            subtitle = listOfNotNull(invoice.label, detail.customer?.name).joinToString(", "),
             onBack = onBack,
             titleContent = {
                 Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
@@ -124,174 +128,180 @@ fun PickupScreen(
             }
         )
 
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            verticalArrangement = Arrangement.spacedBy(spacing.md)
-        ) {
-            // ------------------------------------------ Lines ------------------------------------------
-            TmPanel(
-                modifier = Modifier.widthIn(min = 560.dp, max = 760.dp),
-                title = "Invoice",
-                subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else "${drafts.size} lines",
-                icon = Res.drawable.file_text
+        // Side by side when there's room. On narrow windows each panel takes the width and each line takes two rows
+        BoxWithConstraints {
+            val compact = maxWidth < INVOICE_MIN_WIDTH
+            val paymentWidth = min(400.dp, maxWidth)
+
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                verticalArrangement = Arrangement.spacedBy(spacing.md)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                    drafts.forEach { draft -> ChargeRow(draft, onRemove = { drafts.remove(draft) }) }
-                }
+                // ------------------------------------------ Lines ------------------------------------------
+                TmPanel(
+                    modifier = if (compact) Modifier.fillMaxWidth() else Modifier.widthIn(min = INVOICE_MIN_WIDTH, max = 760.dp),
+                    title = "Invoice",
+                    subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else "${drafts.size} lines",
+                    icon = Res.drawable.file_text
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        drafts.forEach { draft -> ChargeRow(draft, compact = compact, onRemove = { drafts.remove(draft) }) }
+                    }
 
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                    TmButton(
-                        text = "Add labor",
-                        variant = TmButtonVariant.SECONDARY,
-                        leadingIcon = Res.drawable.plus,
-                        onClick = {
-                            drafts.add(ChargeDraft(Charge(type = ChargeType.LABOR, description = "Labor", unitPriceCents = ticket.estimateCents ?: 0)))
-                        }
-                    )
-
-                    TmButton(
-                        text = "Add other",
-                        variant = TmButtonVariant.SECONDARY,
-                        leadingIcon = Res.drawable.plus,
-                        onClick = { drafts.add(ChargeDraft(Charge(type = ChargeType.OTHER, description = ""))) }
-                    )
-                }
-
-                PartPicker(onSearch = onSearchParts) { part ->
-                    drafts.add(
-                        ChargeDraft(
-                            Charge(type = ChargeType.PART, description = part.name, unitPriceCents = part.priceCents, inventoryIdentifier = part.identifier)
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        TmButton(
+                            text = "Add labor",
+                            variant = TmButtonVariant.SECONDARY,
+                            leadingIcon = Res.drawable.plus,
+                            onClick = {
+                                drafts.add(ChargeDraft(Charge(type = ChargeType.LABOR, description = "Labor", unitPriceCents = ticket.estimateCents ?: 0)))
+                            }
                         )
+
+                        TmButton(
+                            text = "Add other",
+                            variant = TmButtonVariant.SECONDARY,
+                            leadingIcon = Res.drawable.plus,
+                            onClick = { drafts.add(ChargeDraft(Charge(type = ChargeType.OTHER, description = ""))) }
+                        )
+                    }
+
+                    PartPicker(onSearch = onSearchParts) { part ->
+                        drafts.add(
+                            ChargeDraft(
+                                Charge(type = ChargeType.PART, description = part.name, unitPriceCents = part.priceCents, inventoryIdentifier = part.identifier)
+                            )
+                        )
+                    }
+
+                    TmMoneyField(
+                        modifier = Modifier.width(200.dp),
+                        label = "Discount",
+                        cents = discountCents,
+                        onCentsChange = { discountCents = it }
                     )
                 }
 
-                TmMoneyField(
-                    modifier = Modifier.width(200.dp),
-                    label = "Discount",
-                    cents = discountCents,
-                    onCentsChange = { discountCents = it }
-                )
-            }
-
-            // ------------------------------------------ Totals and payment ------------------------------------------
-            TmPanel(modifier = Modifier.width(400.dp), title = "Payment", icon = Res.drawable.credit_card) {
-                Column {
-                    TmKeyValueRow(label = "Subtotal") { TmMoneyText(totals.subtotalCents) }
-                    if (totals.discountCents > 0) TmKeyValueRow(label = "Discount") { TmMoneyText(-totals.discountCents, signed = true) }
-                    TmKeyValueRow(label = "Tax, ${invoice.taxRateBasisPoints / 100.0}%") { TmMoneyText(totals.taxCents) }
-                    TmKeyValueRow(label = "Total") { TmMoneyText(totals.totalCents, style = TmTheme.typography.numericLarge) }
-                }
-
-                if (invoice.payments.isNotEmpty() || pending.isNotEmpty()) {
-                    TmDivider()
-
+                // ------------------------------------------ Totals and payment ------------------------------------------
+                TmPanel(modifier = Modifier.width(paymentWidth), title = "Payment", icon = Res.drawable.credit_card) {
                     Column {
-                        // Deposits and anything else already taken
-                        invoice.payments.forEach { payment ->
-                            PaymentRow(
-                                amountCents = payment.amountCents,
-                                method = payment.method,
-                                detail = listOfNotNull(payment.note.ifBlank { null }, formatDateTime(payment.receivedAt)).joinToString(", "),
-                                onRemove = { onRemovePayment(payment) }
-                            )
-                        }
+                        TmKeyValueRow(label = "Subtotal") { TmMoneyText(totals.subtotalCents) }
+                        if (totals.discountCents > 0) TmKeyValueRow(label = "Discount") { TmMoneyText(-totals.discountCents, signed = true) }
+                        TmKeyValueRow(label = "Tax, ${invoice.taxRateBasisPoints / 100.0}%") { TmMoneyText(totals.taxCents) }
+                        TmKeyValueRow(label = "Total") { TmMoneyText(totals.totalCents, style = TmTheme.typography.numericLarge) }
+                    }
 
-                        // Taken now, sent with the pickup
-                        pending.forEach { payment ->
-                            PaymentRow(
-                                amountCents = payment.amountCents,
-                                method = payment.method,
-                                detail = "Taking now",
-                                onRemove = { pending.remove(payment) }
-                            )
+                    if (invoice.payments.isNotEmpty() || pending.isNotEmpty()) {
+                        TmDivider()
+
+                        Column {
+                            // Deposits and anything else already taken
+                            invoice.payments.forEach { payment ->
+                                PaymentRow(
+                                    amountCents = payment.amountCents,
+                                    method = payment.method,
+                                    detail = listOfNotNull(payment.note.ifBlank { null }, formatDateTime(payment.receivedAt)).joinToString(", "),
+                                    onRemove = { onRemovePayment(payment) }
+                                )
+                            }
+
+                            // Taken now, sent with the pickup
+                            pending.forEach { payment ->
+                                PaymentRow(
+                                    amountCents = payment.amountCents,
+                                    method = payment.method,
+                                    detail = "Taking now",
+                                    onRemove = { pending.remove(payment) }
+                                )
+                            }
                         }
                     }
-                }
 
-                TmDivider()
+                    TmDivider()
 
-                // The number the person at the till is looking for
-                TmKeyValueRow(label = if (balance >= 0) "Balance due" else "Change due") {
-                    TmMoneyText(
-                        cents = if (balance >= 0) balance else -balance,
-                        style = TmTheme.typography.numericDisplay,
-                        color = if (balance > 0) colors.danger.color else colors.success.color
-                    )
-                }
+                    // The number the person at the till is looking for
+                    TmKeyValueRow(label = if (balance >= 0) "Balance due" else "Change due") {
+                        TmMoneyText(
+                            cents = if (balance >= 0) balance else -balance,
+                            style = TmTheme.typography.numericDisplay,
+                            color = if (balance > 0) colors.danger.color else colors.success.color
+                        )
+                    }
 
-                TmSegmented(
-                    label = "Paid by",
-                    options = PaymentMethod.entries,
-                    selected = paymentMethod,
-                    onSelect = { paymentMethod = it },
-                    optionLabel = { formatEnumName(it.name) }
-                )
-
-                // Leaving it at 0.00 takes whatever is still owed
-                val amount = if (paymentCents == 0L) balance.takeIf { it > 0 } else paymentCents
-
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.Bottom) {
-                    TmMoneyField(
-                        modifier = Modifier.weight(1f),
-                        label = "Amount",
-                        cents = paymentCents,
-                        onCentsChange = { paymentCents = it }
+                    TmSegmented(
+                        label = "Paid by",
+                        options = PaymentMethod.entries,
+                        selected = paymentMethod,
+                        onSelect = { paymentMethod = it },
+                        optionLabel = { formatEnumName(it.name) }
                     )
 
-                    TmButton(
-                        text = amount?.let { "Take ${Money.format(it)}" } ?: "Take",
-                        enabled = amount != null,
-                        variant = TmButtonVariant.SECONDARY,
-                        onClick = {
-                            amount?.let { pending.add(PaymentRequest(paymentMethod, it)) }
-                            paymentCents = 0
-                        }
-                    )
-                }
+                    // Leaving it at 0.00 takes whatever is still owed
+                    val amount = if (paymentCents == 0L) balance.takeIf { it > 0 } else paymentCents
 
-                if (balance > 0) {
-                    Text(
-                        text = "Leave it at 0.00 to take the full ${Money.format(balance)}",
-                        style = TmTheme.typography.caption,
-                        color = colors.textMuted
-                    )
-                }
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.Bottom) {
+                        TmMoneyField(
+                            modifier = Modifier.weight(1f),
+                            label = "Amount",
+                            cents = paymentCents,
+                            onCentsChange = { paymentCents = it }
+                        )
 
-                (message ?: chargesProblem)?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
-
-                TmDivider()
-
-                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                    TmButton(
-                        text = "Save invoice",
-                        enabled = unsaved && !busy,
-                        variant = TmButtonVariant.GHOST,
-                        size = TmControlSize.LARGE,
-                        onClick = {
-                            busy = true
-                            message = null
-                            onSave(validCharges, discountCents) { problem ->
-                                busy = false
-                                message = problem
+                        TmButton(
+                            text = amount?.let { "Take ${formatMoney(it)}" } ?: "Take",
+                            enabled = amount != null,
+                            variant = TmButtonVariant.SECONDARY,
+                            onClick = {
+                                amount?.let { pending.add(PaymentRequest(paymentMethod, it)) }
+                                paymentCents = 0
                             }
-                        }
-                    )
+                        )
+                    }
 
-                    TmButton(
-                        modifier = Modifier.weight(1f),
-                        text = "Finish pickup",
-                        enabled = chargesProblem == null && balance <= 0,
-                        loading = busy,
-                        size = TmControlSize.LARGE,
-                        onClick = {
-                            busy = true
-                            message = null
-                            onFinish(validCharges, discountCents, pending.toList()) { problem ->
-                                busy = false
-                                message = problem
+                    if (balance > 0) {
+                        Text(
+                            text = "Leave it at 0.00 to take the full ${formatMoney(balance)}",
+                            style = TmTheme.typography.caption,
+                            color = colors.textMuted
+                        )
+                    }
+
+                    (message ?: chargesProblem)?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
+
+                    TmDivider()
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                        TmButton(
+                            text = "Save invoice",
+                            enabled = unsaved && !busy,
+                            variant = TmButtonVariant.GHOST,
+                            size = TmControlSize.LARGE,
+                            onClick = {
+                                busy = true
+                                message = null
+                                onSave(validCharges, discountCents) { problem ->
+                                    busy = false
+                                    message = problem
+                                }
                             }
-                        }
-                    )
+                        )
+
+                        TmButton(
+                            modifier = Modifier.weight(1f),
+                            text = "Finish pickup",
+                            enabled = chargesProblem == null && balance <= 0,
+                            loading = busy,
+                            size = TmControlSize.LARGE,
+                            onClick = {
+                                busy = true
+                                message = null
+                                onFinish(validCharges, discountCents, pending.toList()) { problem ->
+                                    busy = false
+                                    message = problem
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }
@@ -308,50 +318,99 @@ private fun PaymentRow(amountCents: Long, method: PaymentMethod, detail: String,
     )
 }
 
+/**
+ * One invoice line to edit
+ * @param compact Puts the numbers on a second row under the description, for narrow windows
+ */
 @Composable
-private fun ChargeRow(draft: ChargeDraft, onRemove: () -> Unit) {
-    val charge = draft.toCharge()
+private fun ChargeRow(draft: ChargeDraft, compact: Boolean, onRemove: () -> Unit) {
     val spacing = TmTheme.spacing
+
+    if (compact) {
+        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ChargeTypeBadge(draft)
+                ChargeDescription(draft, Modifier.weight(1f))
+                RemoveCharge(onRemove)
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ChargeNumbers(draft, Modifier.weight(1f))
+            }
+        }
+        return
+    }
 
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(spacing.sm),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        TmBadge(modifier = Modifier.width(64.dp), text = formatEnumName(draft.type.name), tone = TmTheme.colors.neutral, dot = false)
-
-        TmTextField(
-            modifier = Modifier.weight(1f),
-            value = draft.description,
-            onValueChange = { draft.description = it },
-            placeholder = "Description",
-            // Part names come from inventory
-            readOnly = draft.type == ChargeType.PART
-        )
-
-        TmTextField(
-            modifier = Modifier.width(80.dp),
-            value = draft.quantity,
-            onValueChange = { draft.quantity = it },
-            placeholder = if (draft.type == ChargeType.LABOR) "Hours" else "Qty",
-            textStyle = TmTheme.typography.numeric,
-            error = if (draft.quantity.toDoubleOrNull()?.let { it > 0 } == true) null else ""
-        )
-
-        TmMoneyField(
-            modifier = Modifier.width(120.dp),
-            cents = draft.priceCents,
-            onCentsChange = { draft.priceCents = it }
-        )
-
-        TmCheckbox(checked = draft.taxable, onCheckedChange = { draft.taxable = it }, label = "Tax")
-
-        Box(Modifier.width(88.dp), contentAlignment = Alignment.CenterEnd) {
-            if (charge != null) TmMoneyText(charge.totalCents) else Text("", style = TmTheme.typography.numeric)
-        }
-
-        TmIconButton(icon = Res.drawable.x, contentDescription = "Remove line", onClick = onRemove, size = TmControlSize.SMALL)
+        ChargeTypeBadge(draft)
+        ChargeDescription(draft, Modifier.weight(1f))
+        ChargeNumbers(draft)
+        RemoveCharge(onRemove)
     }
+}
+
+@Composable
+private fun ChargeTypeBadge(draft: ChargeDraft) {
+    TmBadge(modifier = Modifier.width(64.dp), text = formatEnumName(draft.type.name), tone = TmTheme.colors.neutral, dot = false)
+}
+
+@Composable
+private fun ChargeDescription(draft: ChargeDraft, modifier: Modifier) {
+    TmTextField(
+        modifier = modifier,
+        value = draft.description,
+        onValueChange = { draft.description = it },
+        placeholder = "Description",
+        // Part names come from inventory
+        readOnly = draft.type == ChargeType.PART
+    )
+}
+
+/**
+ * Quantity, price, taxable and the line's total
+ * @param totalModifier Lets the total take the spare room on a row of its own
+ */
+@Composable
+private fun RowScope.ChargeNumbers(draft: ChargeDraft, totalModifier: Modifier = Modifier.width(88.dp)) {
+    val charge = draft.toCharge()
+
+    TmTextField(
+        modifier = Modifier.width(80.dp),
+        value = draft.quantity,
+        onValueChange = { draft.quantity = it },
+        placeholder = if (draft.type == ChargeType.LABOR) "Hours" else "Qty",
+        textStyle = TmTheme.typography.numeric,
+        error = if (draft.quantity.toDoubleOrNull()?.let { it > 0 } == true) null else ""
+    )
+
+    TmMoneyField(
+        modifier = Modifier.width(120.dp),
+        cents = draft.priceCents,
+        onCentsChange = { draft.priceCents = it }
+    )
+
+    TmCheckbox(checked = draft.taxable, onCheckedChange = { draft.taxable = it }, label = "Tax")
+
+    Box(totalModifier, contentAlignment = Alignment.CenterEnd) {
+        if (charge != null) TmMoneyText(charge.totalCents) else Text("", style = TmTheme.typography.numeric)
+    }
+}
+
+@Composable
+private fun RemoveCharge(onRemove: () -> Unit) {
+    TmIconButton(icon = Res.drawable.x, contentDescription = "Remove line", onClick = onRemove, size = TmControlSize.SMALL)
 }
 
 /** Searches inventory and adds the picked part as a line */
@@ -417,7 +476,7 @@ fun PickedUpView(
         TmBadge(text = "Picked up", tone = colors.success)
         TmTicketIdText(number = invoice.label, style = TmTheme.typography.numericDisplay)
         Text(
-            text = "Total ${Money.format(invoice.totalCents)}, paid ${Money.format(invoice.paidCents)}",
+            text = "Total ${formatMoney(invoice.totalCents)}, paid ${formatMoney(invoice.paidCents)}",
             style = TmTheme.typography.bodyLarge,
             color = colors.textMuted
         )

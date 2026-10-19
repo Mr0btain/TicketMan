@@ -27,7 +27,7 @@ import kotlin.uuid.Uuid
 class KioskHandlerTest {
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
     private val requests = mutableListOf<String>()
-    private val member = StaffMember(Uuid.random(), "tech", "terry:tech")
+    private val member = StaffMember(Uuid.random(), "tech", "Terry Tech")
 
     private val engine = MockEngine { request ->
         requests += "${request.method.value} ${request.url.encodedPath}"
@@ -36,7 +36,7 @@ class KioskHandlerTest {
             SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
             "/api/auth/pin" -> respond("""{"id":null,"accessToken":"pin","refreshToken":"pin-refresh"}""", HttpStatusCode.Accepted, jsonHeaders)
-            "/api/auth/station/staff" -> respond("""[{"identifier":"${member.identifier}","username":"tech","name":"terry:tech"}]""", HttpStatusCode.OK, jsonHeaders)
+            "/api/auth/station/staff" -> respond("""[{"identifier":"${member.identifier}","username":"tech","name":"Terry Tech"}]""", HttpStatusCode.OK, jsonHeaders)
             else -> respond("", HttpStatusCode.Accepted)
         }
     }

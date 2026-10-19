@@ -66,7 +66,7 @@ class DatabaseWriteTest {
     fun addingTheSameItemTwiceFails() = testApplication {
         setup()
         val customers = CustomerDatabase()
-        val customer = Customer(name = "jane:doe")
+        val customer = Customer(name = "Jane Doe")
 
         assertTrue(customers.add(customer))
         assertFalse(customers.add(customer))
@@ -76,21 +76,21 @@ class DatabaseWriteTest {
     fun aThrowInsideAnOuterTransactionRollsAllOfItBack() = testApplication {
         setup()
         val customers = CustomerDatabase()
-        val first = Customer(name = "first:one")
+        val first = Customer(name = "First One")
 
         assertTrue(customers.add(first))
 
         // The second customer reuses the first one's id, so its insert throws and the new one goes with it
-        val fresh = Customer(name = "fresh:one")
+        val fresh = Customer(name = "Fresh One")
         assertFails {
             transaction {
                 customers.add(fresh)
-                customers.add(first.copy(name = "again:one"))
+                customers.add(first.copy(name = "Again One"))
             }
         }
 
         assertNull(customers.getById(fresh.identifier))
-        assertEquals("first:one", customers.getById(first.identifier)?.name)
+        assertEquals("First One", customers.getById(first.identifier)?.name)
     }
 
     @Test
@@ -105,7 +105,7 @@ class DatabaseWriteTest {
     @Test
     fun addingADuplicateCustomerIsAnError() = testApplication {
         val token = setup()
-        val customer = Customer(name = "jane:doe")
+        val customer = Customer(name = "Jane Doe")
 
         suspend fun add() = client.post("/api/data/customer/add") {
             contentType(ContentType.Application.Json)

@@ -100,7 +100,7 @@ fun Route.customerRoute(
                 return@post
             }
 
-            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, saved.identifier, saved.cleanName())
+            call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, saved.identifier, saved.name)
             call.respond(HttpStatusCode.Created, saved)
         }
 
@@ -117,7 +117,7 @@ fun Route.customerRoute(
                 return@post
             }
 
-            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.cleanName())
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)
         }
 

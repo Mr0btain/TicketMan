@@ -117,6 +117,7 @@ class CustomerRecords(
 
         val customer = seed.customer
         val notes = seed.notes.toList()
+        val loadedNotes = seed.savedNotes
         val tickets = seed.tickets.toList()
         val changed = seed.getChangedFields().toSet()
         val isNew = seed.isNew
@@ -135,7 +136,7 @@ class CustomerRecords(
                 return@launch
             }
 
-            if (isNew || ChangedField.NOTE in changed) syncNotes(customer.identifier, notes, repo, snackBarHost)
+            if (isNew || ChangedField.NOTE in changed) syncNotes(customer.identifier, notes, loadedNotes, repo, snackBarHost)
 
             // Tickets can be linked here, unlinking happens by giving the ticket to another customer
             if (isNew || ChangedField.TICKET in changed) {

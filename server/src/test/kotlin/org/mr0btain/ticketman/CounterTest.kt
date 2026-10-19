@@ -41,7 +41,7 @@ class CounterTest {
     private val json = Json { ignoreUnknownKeys = true }
 
     private val admin = User(username = "boss", password = "boss_pass", accessLevel = AccessLevel.ADMIN)
-    private val tech = User(username = "tech", password = "tech_pass", name = "terry:tech", accessLevel = AccessLevel.NORMAL)
+    private val tech = User(username = "tech", password = "tech_pass", name = "Terry Tech", accessLevel = AccessLevel.NORMAL)
     private val viewer = User(username = "viewer", password = "viewer_pass", accessLevel = AccessLevel.RESTRICTED)
 
     private lateinit var token: String
@@ -95,8 +95,8 @@ class CounterTest {
     @Test
     fun ticketsLinkToOneCustomerAndOneTech() = testApplication {
         setup()
-        val jane = addCustomer(Customer(name = "jane:doe"))
-        val john = addCustomer(Customer(name = "john:roe"))
+        val jane = addCustomer(Customer(name = "Jane Doe"))
+        val john = addCustomer(Customer(name = "John Roe"))
         val ticket = addTicket()
 
         link(ticket, jane)
@@ -138,7 +138,7 @@ class CounterTest {
     fun notesCanBeAddedReadAndRemoved() = testApplication {
         setup()
         val ticket = addTicket()
-        val customer = addCustomer(Customer(name = "jane:doe"))
+        val customer = addCustomer(Customer(name = "Jane Doe"))
 
         listOf("ticket" to ticket.identifier, "customer" to customer.identifier).forEach { (type, identifier) ->
             val note = Note(message = "Called about $type")
@@ -191,8 +191,8 @@ class CounterTest {
     @Test
     fun customersAreFoundByFullNameAndPhoneDigits() = testApplication {
         setup()
-        val jane = addCustomer(Customer(name = "jane:doe", phone = "(555) 123-4567"))
-        addCustomer(Customer(name = "john:roe", phone = "555-999-0000"))
+        val jane = addCustomer(Customer(name = "Jane Doe", phone = "(555) 123-4567"))
+        addCustomer(Customer(name = "John Roe", phone = "555-999-0000"))
 
         suspend fun search(query: String) =
             json.decodeFromString<List<SearchResult>>(client.get("/api/data/customer/search") { bearerAuth(token); parameter("query", query); parameter("limit", 10) }.bodyAsText())
@@ -208,7 +208,7 @@ class CounterTest {
     @Test
     fun counterSearchBringsUpACustomersTickets() = testApplication {
         setup()
-        val jane = addCustomer(Customer(name = "jane:doe", phone = "555-123-4567"))
+        val jane = addCustomer(Customer(name = "Jane Doe", phone = "555-123-4567"))
         val first = addTicket(Ticket(device = Device("Apple", "iPhone 14")))
         val second = addTicket(Ticket(device = Device("Dell", "XPS 13")))
         link(first, jane)
@@ -258,7 +258,7 @@ class CounterTest {
     @Test
     fun repeatCheckMatchesSerialOrModelWithinTheWindow() = testApplication {
         setup()
-        val jane = addCustomer(Customer(name = "jane:doe"))
+        val jane = addCustomer(Customer(name = "Jane Doe"))
         val phone = addTicket(Ticket(device = Device("Apple", "iPhone 14", "SN1")))
         val laptop = addTicket(Ticket(device = Device("Dell", "XPS 13")))
         link(phone, jane)

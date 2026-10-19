@@ -29,7 +29,7 @@ class SessionHandlerTest {
     private var reachable = true
     private var loginBody = """{"id":null,"accessToken":"access","refreshToken":"refresh"}"""
     private var loginStatus = HttpStatusCode.Accepted
-    private var me = User(username = "sam", name = "Sam:Tech", accessLevel = AccessLevel.NORMAL)
+    private var me = User(username = "sam", name = "Sam Tech", accessLevel = AccessLevel.NORMAL)
 
     private val engine = MockEngine { request ->
         requests += "${request.method.value} ${request.url.encodedPath}"

@@ -56,7 +56,7 @@ class InvoiceService(
         val saved = invoices.setCharges(identifier, request.charges, request.discountCents, invoice.taxRateBasisPoints)
             ?: return AccountResult.Invalid("Couldn't save the invoice")
 
-        auditLog.log(actor, AuditAction.UPDATE, "invoice", identifier.toString(), "Invoice ${invoice.label} total ${Money.format(saved.totalCents)}")
+        auditLog.log(actor, AuditAction.UPDATE, "invoice", identifier.toString(), "Invoice ${invoice.label} total ${money(saved.totalCents)}")
         return AccountResult.Done(saved)
     }
 
@@ -68,7 +68,7 @@ class InvoiceService(
 
         val saved = invoices.addPayment(identifier, request.toPayment(receivedBy)) ?: return AccountResult.Invalid("Couldn't save the payment")
 
-        auditLog.log(actor, AuditAction.CREATE, "payment", identifier.toString(), "${Money.format(request.amountCents)} ${request.method.name.lowercase()} on ${invoice.label}")
+        auditLog.log(actor, AuditAction.CREATE, "payment", identifier.toString(), "${money(request.amountCents)} ${request.method.name.lowercase()} on ${invoice.label}")
         return AccountResult.Done(saved)
     }
 
@@ -101,7 +101,7 @@ class InvoiceService(
 
         val paying = request.payments.sumOf { it.amountCents }
         val owed = invoice.balanceCents - paying
-        if (owed > 0) return AccountResult.Conflict("${Money.format(owed)} is still owed on ${invoice.label}")
+        if (owed > 0) return AccountResult.Conflict("${money(owed)} is still owed on ${invoice.label}")
 
         val parts = partsUsed(invoice)
         parts.forEach { (identifier, quantity) ->
@@ -125,7 +125,7 @@ class InvoiceService(
                 tickets.recordStatusChange(ticket.identifier, TicketStatusType.PICKED_UP, receivedBy)
 
                 // Part of the transaction, so it's only there if the pickup is
-                auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${Money.format(invoice.totalCents)}")
+                auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${money(invoice.totalCents)}")
             }
         } catch (ex: ShortOfStock) {
             return shortOf(ex.identifier)
@@ -169,6 +169,9 @@ class InvoiceService(
 
     // Tax rate from the shop profile, nothing if it's blank or not a number
     private fun taxRate(): Int = Money.percentToBasisPoints(shop.get().taxRate) ?: 0
+
+    // An amount in the shop's currency, for messages and the audit log
+    private fun money(cents: Long): String = Money.format(cents, shop.get().currencySymbol)
 
     private fun chargesProblem(charges: List<Charge>): String? {
         charges.forEach { charge ->

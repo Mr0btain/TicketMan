@@ -118,7 +118,7 @@ class CheckInService(
             val label = tickets.getById(ticket.identifier)?.label ?: ticket.label
             auditLog.log(
                 actor, AuditAction.CREATE, "ticket", ticket.identifier.toString(),
-                "Checked in $label" + (request.deposit?.let { " with a ${Money.format(it.amountCents)} deposit" } ?: "")
+                "Checked in $label" + (request.deposit?.let { " with a ${Money.format(it.amountCents, shopProfile.currencySymbol)} deposit" } ?: "")
             )
         }
     }

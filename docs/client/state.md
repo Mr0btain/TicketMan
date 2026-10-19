@@ -104,7 +104,6 @@ Every handler gets `viewModelScope` to launch work in and, where it shows messag
 
 ## Gotchas
 
-- **Cache size changes apply on the next start.** Caches are built once, with the view model.
 - **Handlers are big.** `CounterHandler` and `AdminHandler` are each over 500 lines. New screens should split their
   state into smaller handlers rather than grow these.
 

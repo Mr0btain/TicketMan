@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.network.isSecureServerAddress
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatDay
 import org.mr0btain.ticketman.components.utils.formatDuration
+import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.server.request.SeedRequest
@@ -442,6 +443,10 @@ private fun ShopProfileCard(
     var profile by remember(loaded) { mutableStateOf(loaded) }
     // Kept as text while typing so the field can be cleared, saved as a number
     var repeatDays by remember(loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
+    // The server checks this too
+    val symbolProblem = profile.currencySymbol.trim().let { symbol ->
+        if (symbol.isEmpty() || symbol.length > Money.MAX_SYMBOL_LENGTH || symbol.any { it.isDigit() }) "1 to ${Money.MAX_SYMBOL_LENGTH} characters, no digits" else null
+    }
     val spacing = TmTheme.spacing
 
     TmPanel(
@@ -452,7 +457,7 @@ private fun ShopProfileCard(
         actions = {
             TmButton(
                 text = "Save profile",
-                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE,
+                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null,
                 onClick = { onSave(profile) }
             )
         }
@@ -492,6 +497,20 @@ private fun ShopProfileCard(
             {
                 TmTextField(
                     modifier = it,
+                    value = profile.currencySymbol,
+                    onValueChange = { text -> profile = profile.copy(currencySymbol = text.take(Money.MAX_SYMBOL_LENGTH)) },
+                    label = "Currency symbol",
+                    supportingText = "Put before every amount, like \$ or £",
+                    error = symbolProblem,
+                    textStyle = TmTheme.typography.numeric
+                )
+            }
+        )
+
+        TmFieldPair(
+            {
+                TmTextField(
+                    modifier = it,
                     value = repeatDays,
                     onValueChange = { text ->
                         repeatDays = text.filter { c -> c.isDigit() }.take(4)
@@ -503,7 +522,8 @@ private fun ShopProfileCard(
                     textStyle = TmTheme.typography.numeric,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
-            }
+            },
+            { Spacer(it) }
         )
 
         TmTextField(

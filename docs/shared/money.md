@@ -10,7 +10,7 @@ the server use them, so a total shown on the counter is worked out the same way 
 
 | Function | Does |
 |----------|------|
-| `format(cents)` | `1234` → `"$12.34"`, `-1234` → `"-$12.34"` |
+| `format(cents, symbol)` | `1234` → `"$12.34"`, `-1234` → `"-$12.34"`, with `symbol` (default `$`) in place of the `$` |
 | `parse(text)` | `"12.5"`, `"$12.50"`, `"$12.3456"` → cents, rounded. Ignores everything except digits, one dot and a leading minus. `null` if there's no number |
 | `fromDollars(d)`, `toDollars(c)` | For the few fields that edit dollars |
 | `percentToBasisPoints("7.5")` | → `750`. Accepts a trailing `%`. `null` unless 0 to 100 |
@@ -22,6 +22,15 @@ needs it.
 
 On screen, money is typed into the kit's `TmMoneyField`, which edits cents directly, and shown with the kit's money
 text, in the `numeric*` (monospace) text styles.
+
+### Currency
+
+The shop profile's `currencySymbol` (default `$`, 1 to 4 characters with no digits, checked by `/api/shop/update`)
+goes before every amount. On the client, `App` provides it as the kit's `LocalCurrencySymbol` from
+`CounterHandler.shop`, which loads at login and updates when an admin saves the profile. `TmMoneyText`,
+`TmMoneyField` and the kit's `formatMoney(cents)` (for amounts inside a sentence) read it; screens use those rather
+than calling `Money.format` themselves. Printouts pass `shop.currencySymbol`, and the server uses it in its pickup
+messages and audit entries.
 
 ## `InvoiceMath`
 
@@ -63,7 +72,7 @@ is due. At pickup the payments have to cover the balance; the server refuses a s
 - **An invoice keeps the tax rate it was made with.** The rate is read from the shop profile once, when the invoice
   is made (at check-in, or the first time it's opened), and stored on it. Changing the shop's tax rate only affects
   invoices made after that. See [decisions](../decisions.md#invoices-keep-the-tax-rate-they-were-made-with).
-- **There's no currency.** `format` always prints a `$`.
+- **The symbol always goes first**, with a dot before the cents. Shops that write `12,34 €` get `€12.34`.
 
 ## See also
 

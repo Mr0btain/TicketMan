@@ -122,7 +122,10 @@ class MainViewModel(
         remoteHandler = remoteHandler,
         localStorage = localStorage,
         scope = viewModelScope,
-        onLoggedIn = { refreshPagers() },
+        onLoggedIn = {
+            refreshPagers()
+            counter.refreshShop()
+        },
         onLoggedOut = {
             admin.clear()
             counter.clear()
@@ -138,7 +141,8 @@ class MainViewModel(
         localStorage = localStorage,
         scope = viewModelScope,
         onServerUrlChanged = { url -> session.changeServer(url) },
-        onPageSizeChanged = { size -> changePageSize(size) }
+        onPageSizeChanged = { size -> changePageSize(size) },
+        onCacheSizeChanged = { size -> listOf(customers.cache, tickets.cache, inventory.cache, users.cache).forEach { it.resize(size) } }
     )
 
     /** ----------------------------------------------COUNTER------------------------------------------------------------------- */
@@ -164,7 +168,8 @@ class MainViewModel(
             if (identifier != null && identifier == session.currentUser.value?.identifier) {
                 viewModelScope.launch { session.reloadCurrentUser() }
             }
-        }
+        },
+        onShopChanged = { profile -> counter.shopChanged(profile) }
     )
 
     /** ----------------------------------------------KIOSK------------------------------------------------------------------- */

@@ -42,7 +42,7 @@ fun CustomerCard(
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
-        TmPageHeader(title = customer.cleanName(), onBack = onBack, actions = actions)
+        TmPageHeader(title = customer.name, onBack = onBack, actions = actions)
 
         FlowRow(
             horizontalArrangement = Arrangement.spacedBy(spacing.md),

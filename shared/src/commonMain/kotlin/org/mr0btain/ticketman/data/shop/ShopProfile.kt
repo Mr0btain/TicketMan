@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.shop
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.money.Money
 
 /**
  * Shop details used on invoices and anything else customer facing
@@ -22,7 +23,9 @@ data class ShopProfile(
     /** What customers agree to when they sign at check in, blank skips the signature */
     val repairTerms: String = "",
     /** Paper the counter prints on unless someone picks another */
-    val defaultPaper: PaperSize = PaperSize.RECEIPT_80MM
+    val defaultPaper: PaperSize = PaperSize.RECEIPT_80MM,
+    /** Put before every amount shown or printed, like "$" or "£" */
+    val currencySymbol: String = Money.DEFAULT_SYMBOL
 ) {
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90

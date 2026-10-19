@@ -24,7 +24,7 @@ import kotlin.test.*
 /** Staff notes save straight away and come back from the server, and only for admins */
 class UserRecordsTest {
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
-    private val sam = User(username = "sam", name = "Sam:Tech")
+    private val sam = User(username = "sam", name = "Sam Tech")
     private val serverNotes = mutableListOf<Note>()
     private val writes = mutableListOf<String>()
 

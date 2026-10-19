@@ -7,8 +7,6 @@ import androidx.compose.runtime.setValue
 import org.mr0btain.ticketman.components.data.DataSeed
 import org.mr0btain.ticketman.components.data.operations.ChangedField
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.components.utils.joinName
-import org.mr0btain.ticketman.components.utils.splitName
 import org.mr0btain.ticketman.data.customer.Address
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shared.Note
@@ -22,15 +20,9 @@ class CustomerSeed: DataSeed("CustomerSeed") {
     private val ADD_TICKET_TAG = "ADD_TICKET"
     private val DELETE_TICKET_TAG = "DELETE_TICKET"
 
-    // Name
-    private val _name = mutableStateListOf("")
-    val name: List<String>
-        get() = _name
-
-    val firstName: String
-        get() = _name.firstOrNull() ?: ""
-    val lastName: String
-        get() = if (_name.size > 1) _name.last() else ""
+    /** As typed */
+    var name: String by mutableStateOf("")
+        private set
 
     // Address
     var street by mutableStateOf("")
@@ -56,13 +48,10 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         get() = Address(street, city, state, zip)
 
     val customer: Customer
-        get() = Customer(identifier, joinName(_name), address, email, phone)
+        get() = Customer(identifier, name, address, email, phone)
 
-    fun changeName(newName: List<String>) {
-        if (_name.toList() != newName) {
-            _name.clear()
-            _name.addAll(newName)
-        }
+    fun changeName(newName: String) {
+        name = newName
     }
 
     fun changeStreet(newStreet: String) {
@@ -117,9 +106,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         // Identifier
         identifier = customer.identifier
 
-        // Name
-        _name.clear()
-        _name.addAll(splitName(customer.name))
+        name = customer.name
 
         // Address
         street = customer.address.street
@@ -142,7 +129,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
     }
 
     override fun fields() = mapOf(
-        ChangedField.NAME to _name.toList(),
+        ChangedField.NAME to name,
         ChangedField.STREET to street,
         ChangedField.CITY to city,
         ChangedField.STATE to state,
@@ -154,7 +141,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
 
     override fun clear() {
         identifier = Uuid.generateV7()
-        _name.clear()
+        name = ""
         street = ""
         city = ""
         state = ""
@@ -170,5 +157,5 @@ class CustomerSeed: DataSeed("CustomerSeed") {
     }
 
     override fun toString(): String =
-        "CustomerSeed(Name=${splitName(customer.name).joinToString(" ")}, Address=$street $city $state $zip, Email=$email, Phone=$phone, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
+        "CustomerSeed(Name=$name, Address=$street $city $state $zip, Email=$email, Phone=$phone, Tickets=${_tickets.toList()}, Notes=${_notes.toList()})"
 }

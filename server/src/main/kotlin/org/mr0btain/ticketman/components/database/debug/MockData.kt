@@ -23,7 +23,7 @@ import kotlin.uuid.Uuid
  */
 fun generateMockCustomer(): Pair<Customer, List<Note>> = Pair(
     Customer(
-        name = generateRandomName().joinToString(":"),
+        name = generateRandomName().joinToString(" "),
         address = generateRandomAddress(),
         email = generateEmail(),
         phone = generatePhoneNumber()
@@ -76,7 +76,7 @@ fun generateMockUser(name: List<String> = generateRandomName()): Pair<User, List
     User(
         username = "${name.first()}_${name.last()}",
         password = name.last(),
-        name = name.joinToString(":"),
+        name = name.joinToString(" "),
         phone = generatePhoneNumber(),
         email = generateEmail(),
         accessLevel = AccessLevel.entries.random()

@@ -16,15 +16,4 @@ data class Device(
     override fun toString(): String {
         return "$manufacturer $model"
     }
-
-    companion object {
-        fun fromString(device: String): Device {
-            val result = device.split(" ").map { it.trim() }
-
-            return Device(
-                manufacturer = result.getOrElse(0, {""}),
-                model = result.getOrElse(1, {""})
-            )
-        }
-    }
 }

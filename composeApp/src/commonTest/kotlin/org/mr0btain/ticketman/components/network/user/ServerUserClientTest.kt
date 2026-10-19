@@ -47,7 +47,7 @@ class ServerUserClientTest {
             ) else respond("Wrong PIN, 4 tries left", HttpStatusCode.Unauthorized)
 
             "/api/auth/station/staff" -> respond(
-                content = """[{"identifier":"00000000-0000-7000-8000-000000000001","username":"tech","name":"terry:tech"}]""",
+                content = """[{"identifier":"00000000-0000-7000-8000-000000000001","username":"tech","name":"Terry Tech"}]""",
                 status = HttpStatusCode.OK,
                 headers = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
             )
@@ -180,7 +180,7 @@ class ServerUserClientTest {
 
     @Test
     fun finishingAnInviteStoresTheSession() = runTest {
-        val result = client.completeInviteSetup("user", InviteSetupRequest("setup", "new_password", "user:name"))
+        val result = client.completeInviteSetup("user", InviteSetupRequest("setup", "new_password", "User Name"))
 
         assertIs<Result.Success<Unit>>(result)
         assertEquals("access", localStorage.accessToken)

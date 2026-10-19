@@ -9,7 +9,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.components.utils.joinName
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.data.user.User
@@ -63,7 +62,7 @@ fun PendingUsersCard(
                 val isRequest = entry.kind == PendingKind.REQUEST
 
                 TmListRow(
-                    title = listOf(user.cleanName(), user.username).filter { it.isNotBlank() }.distinct().joinToString(", "),
+                    title = listOf(user.name, user.username).filter { it.isNotBlank() }.distinct().joinToString(", "),
                     subtitle = if (isRequest) {
                         listOf("Requested ${formatTimeAgo(user.identifier.timestampMillis())}", user.email, user.phone)
                             .filter { it.isNotBlank() }.joinToString(", ")
@@ -130,8 +129,7 @@ fun InviteDialog(
     if (!isVisible) return
 
     var username by remember { mutableStateOf("") }
-    var firstName by remember { mutableStateOf("") }
-    var lastName by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var accessLevel by remember { mutableStateOf(AccessLevel.RESTRICTED) }
@@ -150,12 +148,10 @@ fun InviteDialog(
                 confirmEnabled = problem == null,
                 onCancel = onDismiss,
                 onConfirm = {
-                    val name = listOf(firstName.trim(), lastName.trim()).filter { it.isNotEmpty() }
-
                     onInvite(
                         InviteRequest(
                             username = username,
-                            name = joinName(name).lowercase(),
+                            name = name.trim(),
                             email = email.trim(),
                             phone = phone.trim(),
                             accessLevel = accessLevel
@@ -177,10 +173,7 @@ fun InviteDialog(
             },
             { AccessLevelDropDown(modifier = it, accessLevel = accessLevel, onSelect = { level -> accessLevel = level }) }
         )
-        TmFieldPair(
-            { TmTextField(modifier = it, value = firstName, onValueChange = { v -> firstName = v }, label = "First name") },
-            { TmTextField(modifier = it, value = lastName, onValueChange = { v -> lastName = v }, label = "Last name") }
-        )
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = name, onValueChange = { name = it }, label = "Name")
         TmFieldPair(
             { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
             { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") }

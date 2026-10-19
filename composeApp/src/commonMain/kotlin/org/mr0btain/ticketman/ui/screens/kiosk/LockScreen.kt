@@ -25,7 +25,6 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.screens.counter.components.cleanName
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.users
 
@@ -67,7 +66,7 @@ fun LockScreen(
             text = when {
                 selected == null && exiting -> "Admin, pick your name to leave kiosk mode"
                 selected == null -> "Who's at the counter?"
-                else -> "Hi ${cleanName(selected!!.name).ifBlank { selected!!.username }}, enter your PIN"
+                else -> "Hi ${selected!!.name.ifBlank { selected!!.username }}, enter your PIN"
             },
             style = TmTheme.typography.display,
             color = colors.text,
@@ -106,7 +105,7 @@ fun LockScreen(
                             modifier = Modifier
                                 .align(Alignment.CenterStart)
                                 .padding(horizontal = spacing.lg),
-                            text = cleanName(person.name).ifBlank { person.username },
+                            text = person.name.ifBlank { person.username },
                             style = TmTheme.typography.title,
                             color = colors.text
                         )

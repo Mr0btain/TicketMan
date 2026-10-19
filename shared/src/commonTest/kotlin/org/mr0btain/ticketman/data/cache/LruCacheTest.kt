@@ -45,4 +45,25 @@ class LruCacheTest {
         cache.put("c", 3)
         assertEquals(3, cache["c"])
     }
+
+    @Test
+    fun shrinkingDropsTheLeastRecentlyUsed() {
+        val cache = LruCache<String, Int>(3)
+        cache.put("a", 1)
+        cache.put("b", 2)
+        cache.put("c", 3)
+        cache["a"]
+
+        cache.resize(2)
+
+        assertEquals(2, cache.size)
+        assertFalse(cache.containsKey("b"))
+        assertTrue(cache.containsKey("a"))
+
+        // Growing keeps what's there and makes room
+        cache.resize(4)
+        cache.put("d", 4)
+        cache.put("e", 5)
+        assertEquals(4, cache.size)
+    }
 }

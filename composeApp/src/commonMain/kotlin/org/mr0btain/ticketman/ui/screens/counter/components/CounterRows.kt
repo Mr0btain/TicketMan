@@ -40,15 +40,11 @@ fun TicketRow(
 
 @Composable
 fun TicketSummaryRow(summary: TicketSummary, showStatus: Boolean = true, onClick: () -> Unit) =
-    TicketRow(summary.ticket, summary.customer?.text?.let { cleanName(it) }, showStatus, onClick)
+    TicketRow(summary.ticket, summary.customer?.text, showStatus, onClick)
 
 /** Promised before today and still being worked on */
 val Ticket.isOverdue: Boolean
     get() = status.status.isOpen && promisedAt?.let { isBeforeToday(it) } == true
-
-/** Names are stored as first:last */
-fun cleanName(name: String): String =
-    name.split(":").joinToString(" ") { part -> part.replaceFirstChar { it.titlecase() } }.trim()
 
 /** Picked up tickets can't be changed from the counter */
 val Ticket.isClosed: Boolean

@@ -11,7 +11,10 @@ with a check-in or a pickup is in [Counter: check-in, invoices and pickup](../..
 
 [`CounterScreen`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/counter/CounterScreen.kt)
 is a top bar (search, Check in, New customer, Price check), a main area, and the `QueuePanel` (360 dp) on the
-right. What the main area shows is `CounterHandler.view`, one `CounterView` at a time:
+right, laid out by `CounterLayout`. Under 900 dp wide the buttons become icons and the queue moves into a dialog
+opened from its own button (`QueueDialog`); the main area stays put when the window crosses that width, so a half
+done check-in isn't lost. The ticket card, pickup and check-in wrap and stack their panels to fit a phone. What
+the main area shows is `CounterHandler.view`, one `CounterView` at a time:
 
 ```mermaid
 stateDiagram-v2
@@ -128,12 +131,13 @@ buttons, the ticket's status switch and Pick up are hidden, a "View only" badge 
 
 | What | Where |
 |------|-------|
-| Screen, top bar, shortcuts, view switching | `ui/screens/counter/CounterScreen.kt` |
+| Screen, shortcuts, view switching | `ui/screens/counter/CounterScreen.kt` |
+| Top bar and queue placement, wide and narrow | `ui/screens/counter/CounterLayout.kt` |
 | State and every action | `ui/screens/counter/components/CounterHandler.kt` |
-| Ticket and customer rows, `cleanName`, `isOverdue`, `isClosed` | `ui/screens/counter/components/CounterRows.kt` |
-| Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt`, `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `CustomerForm.kt` (new customer), `PickupScreen.kt` (with `PickedUpView`) |
+| Ticket and customer rows, `isOverdue`, `isClosed` | `ui/screens/counter/components/CounterRows.kt` |
+| Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt` (with `QueueDialog`), `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `CustomerForm.kt` (new customer), `PickupScreen.kt` (with `PickedUpView`) |
 | Print button | `ui/screens/counter/PrintButton.kt` |
-| Render tests | `ScreenRenderTest.counterTicket()`, `pickup()`, `checkIn()` |
+| Render tests | `ScreenRenderTest.counterTicket()`, `pickup()`, `checkIn()`, and `counterTicketNarrow()`, `pickupNarrow()`, `checkInNarrow()` at phone width |
 | Handler tests | `composeApp/src/commonTest/.../ui/screens/counter/CounterHandlerTest.kt` |
 
 ## Gotchas
@@ -148,8 +152,8 @@ buttons, the ticket's status switch and Pick up are hidden, a "View only" badge 
 
 ## Known gaps
 
-- The layout isn't made for narrow windows: the queue panel is always 360 dp beside the main area, and the top bar
-  doesn't wrap. It works on a desktop or a tablet, not a phone.
+- On a phone the check-in stepper scrolls sideways rather than fitting, and the F-key hints stay in the search
+  box's placeholder.
 - `CounterHandler` is over 500 lines. New counter features should get their own handler.
 
 ## See also

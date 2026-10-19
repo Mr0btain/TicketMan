@@ -11,7 +11,7 @@ page says where, and what happens on the server behind it.
    Behind a reverse proxy, also set `TRUST_PROXY=true`.
 2. Watch the log for `Responding at https://0.0.0.0:8443`, the certificate fingerprint, and the `admin` user's
    password if you didn't set one.
-3. Point a client at the server (Settings > Server and data), like `192.168.1.20:8443`. It asks you to check the
+3. Point a client at the server (Settings > Server), like `192.168.1.20:8443`. It asks you to check the
    certificate's fingerprint against the one in the log (see [HTTPS](#https)), then log in as `admin`.
 4. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
    paper size). Tax and everything printed come from it, so do this before taking money.

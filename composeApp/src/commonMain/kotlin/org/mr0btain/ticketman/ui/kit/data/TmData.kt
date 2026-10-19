@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.TextAutoSize
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -148,6 +149,15 @@ fun TmCountBar(
 }
 
 /**
+ * The shop's currency symbol, put before every amount. Provided from the shop profile in `App`, `$` until it loads
+ */
+val LocalCurrencySymbol = staticCompositionLocalOf { Money.DEFAULT_SYMBOL }
+
+/** An amount in cents as text, with the shop's currency symbol, for amounts inside a sentence */
+@Composable
+fun formatMoney(cents: Long): String = Money.format(cents, LocalCurrencySymbol.current)
+
+/**
  * Money from cents, in the monospace face so amounts line up
  * @param signed Shows negative amounts in the danger color
  */
@@ -162,7 +172,7 @@ fun TmMoneyText(
     val colors = TmTheme.colors
     Text(
         modifier = modifier,
-        text = Money.format(cents),
+        text = formatMoney(cents),
         style = style,
         color = when {
             color.isSpecified -> color

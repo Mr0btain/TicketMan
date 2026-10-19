@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.ui.kit.data.LocalCurrencySymbol
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
@@ -53,7 +54,8 @@ fun TmMoneyField(
     size: TmControlSize = TmControlSize.MEDIUM,
     keyboardActions: KeyboardActions = KeyboardActions.Default
 ) {
-    val text = Money.format(cents).removePrefix("$")
+    val symbol = LocalCurrencySymbol.current
+    val text = Money.format(cents, symbol = "")
 
     TmTextField(
         // Cursor stays at the end since digits always go in from the right
@@ -69,7 +71,7 @@ fun TmMoneyField(
         enabled = enabled,
         readOnly = readOnly,
         size = size,
-        prefix = "$",
+        prefix = symbol,
         textStyle = if (size == TmControlSize.LARGE) TmTheme.typography.numericLarge else TmTheme.typography.numeric,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         keyboardActions = keyboardActions

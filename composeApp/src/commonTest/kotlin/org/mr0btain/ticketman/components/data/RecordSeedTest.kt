@@ -159,7 +159,7 @@ class RecordSeedTest {
     // ------------------------------------------ Customer ------------------------------------------
 
     private val customer = Customer(
-        name = "Jane:Doe",
+        name = "Jane Doe",
         address = Address("1 Main St", "Springfield", "IL", "62701"),
         email = "jane@example.com",
         phone = "5550100"
@@ -171,8 +171,7 @@ class RecordSeedTest {
 
         assertFalse(seed.isDirty)
         assertEquals(customer, seed.customer)
-        assertEquals("Jane", seed.firstName)
-        assertEquals("Doe", seed.lastName)
+        assertEquals("Jane Doe", seed.name)
         assertEquals(listOf(ticket), seed.tickets)
     }
 
@@ -208,14 +207,13 @@ class RecordSeedTest {
     }
 
     @Test
-    fun aOnePartNameHasNoLastName() {
-        val customerSeed = CustomerSeed().also { it.setCustomer(customer.copy(name = "Jane")) }
-        val userSeed = UserSeed().also { it.setUser(user.copy(name = "Jane"), emptyList()) }
+    fun aNameIsKeptAsTyped() {
+        val seed = CustomerSeed().also { it.setCustomer(customer) }
 
-        assertEquals("Jane", customerSeed.firstName)
-        assertEquals("", customerSeed.lastName)
-        assertEquals("Jane", userSeed.firstName)
-        assertEquals("", userSeed.lastName)
+        seed.changeName("Mary Ann de la Cruz")
+
+        assertEquals("Mary Ann de la Cruz", seed.customer.name)
+        assertEquals(listOf(ChangedField.NAME), seed.getChangedFields())
     }
 
     @Test
@@ -224,8 +222,7 @@ class RecordSeedTest {
 
         seed.clear()
 
-        assertEquals("", seed.firstName)
-        assertEquals("", seed.lastName)
+        assertEquals("", seed.name)
         assertTrue(seed.isNew)
     }
 
@@ -259,7 +256,7 @@ class RecordSeedTest {
 
     // ------------------------------------------ User ------------------------------------------
 
-    private val user = User(username = "jdoe", name = "Jane:Doe", email = "jane@example.com", phone = "5550100", accessLevel = AccessLevel.NORMAL)
+    private val user = User(username = "jdoe", name = "Jane Doe", email = "jane@example.com", phone = "5550100", accessLevel = AccessLevel.NORMAL)
 
     @Test
     fun aLoadedUserIsCleanAndComesBackOut() {
@@ -267,8 +264,7 @@ class RecordSeedTest {
 
         assertFalse(seed.isDirty)
         assertEquals(user, seed.user)
-        assertEquals("Jane", seed.firstName)
-        assertEquals("Doe", seed.lastName)
+        assertEquals("Jane Doe", seed.name)
     }
 
     @Test
@@ -276,11 +272,10 @@ class RecordSeedTest {
         val seed = UserSeed().also { it.setUser(user, emptyList()) }
 
         seed.changeAccessLevel(AccessLevel.ADMIN)
-        seed.changeName(emptyList())
-        seed.changeName(listOf("Jane", "Smith"))
+        seed.changeName("Jane Smith")
 
         assertEquals(setOf(ChangedField.ACCESS_LEVEL, ChangedField.NAME), seed.getChangedFields().toSet())
-        assertEquals("Jane:Smith", seed.user.name)
+        assertEquals("Jane Smith", seed.user.name)
     }
 
     @Test
@@ -289,8 +284,7 @@ class RecordSeedTest {
 
         seed.clear()
 
-        assertEquals("", seed.firstName)
-        assertEquals("", seed.lastName)
+        assertEquals("", seed.name)
         assertTrue(seed.isNew)
         assertEquals(AccessLevel.RESTRICTED, seed.accessLevel)
     }

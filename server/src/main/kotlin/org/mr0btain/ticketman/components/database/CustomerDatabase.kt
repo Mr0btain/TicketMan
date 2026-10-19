@@ -28,6 +28,7 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTa
 @OptIn(ExperimentalUuidApi::class)
 open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
     private val ADD_TICKET_TAG = "$tag:AddTicket"
+    private val MIGRATE_NAMES_TAG = "$tag:MigrateNames"
 
     override fun getById(identifier: Uuid): Customer? =
         dbQuery(GET_BY_ID_TAG) {
@@ -59,11 +60,18 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
             true
         }
 
+    /** Rewrites names older versions stored as `first:last` or lowercased, see [legacyName]. Run once */
+    fun migrateLegacyNames(): Boolean =
+        dbWrite(MIGRATE_NAMES_TAG) {
+            CustomerEntity.all().filter { isLegacyName(it.name) }.forEach { it.name = legacyName(it.name) }
+            true
+        }
+
     override fun search(query: String, limit: Int): List<SearchResult>? =
         searchCustomers(query, limit)?.map { customer ->
             SearchResult(
                 identifier = customer.identifier,
-                text = listOf(customer.cleanName(), customer.phone).filter { it.isNotBlank() }.joinToString(" - ")
+                text = listOf(customer.name, customer.phone).filter { it.isNotBlank() }.joinToString(" - ")
             )
         }
 
@@ -76,7 +84,7 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
             val text = query.trim().lowercase()
             val digits = text.filter { it.isDigit() }
 
-            // Names are stored as first:last, so spaces in the query can match the divider
+            // Spaces in the query match anything between words, so "jane doe" finds "Jane A. Doe"
             val namePattern = "%${text.replace(' ', '%')}%"
 
             // Phone numbers are stored however they were typed, compare digits only
@@ -98,7 +106,7 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
                             phoneMatch
                 }
                 .orderBy(
-                    CustomerTable.name to SortOrder.ASC,
+                    CustomerTable.name.lowerCase() to SortOrder.ASC,
                     CustomerTable.email to SortOrder.ASC,
                     CustomerTable.id to SortOrder.ASC
                 )
@@ -115,7 +123,7 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
     // Must be called inside a transaction
     private fun insertCustomer(data: Customer) {
         CustomerEntity.new(data.identifier) {
-            name = data.name.lowercase()
+            name = data.name.trim()
             address = data.address
             email = data.email.lowercase()
             phone = data.phone
@@ -128,7 +136,7 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
                 ?: return@dbWrite false.also { AppLogger.i(UPDATE_TAG, CustomerError.NOT_FOUND) }
 
             customerEntity.apply {
-                name = data.name.lowercase()
+                name = data.name.trim()
                 address = data.address
                 email = data.email.lowercase()
                 phone = data.phone

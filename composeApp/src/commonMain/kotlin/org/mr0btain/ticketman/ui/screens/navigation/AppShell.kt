@@ -150,7 +150,7 @@ fun PhoneAppShell(
 @Composable
 private fun UserMenu(user: User, expanded: Boolean, onOpenSettings: () -> Unit, onLogout: () -> Unit) {
     var open by remember { mutableStateOf(false) }
-    val name = user.name.split(":").joinToString(" ") { it.replaceFirstChar { c -> c.titlecase() } }.trim().ifBlank { user.username }
+    val name = user.name.trim().ifBlank { user.username }
 
     Box {
         if (expanded) {

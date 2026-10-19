@@ -253,6 +253,24 @@ class InvoiceTest {
         assertTrue(json.decodeFromString<Invoice>(removed.bodyAsText()).payments.isEmpty())
     }
 
+    @Test
+    fun theShopsCurrencyIsUsedAndChecked() = testApplication {
+        setup()
+
+        assertEquals(HttpStatusCode.Accepted, postJson("/api/shop/update", json.encodeToString(ShopProfile(currencySymbol = " £ ")), adminToken).status)
+        assertEquals("£", json.decodeFromString<ShopProfile>(client.get("/api/shop") { bearerAuth(token) }.bodyAsText()).currencySymbol)
+
+        val ticket = newTicket()
+        val invoice = invoiceFor(ticket)
+        setCharges(invoice, listOf(Charge(type = ChargeType.LABOR, description = "Install", unitPriceCents = 4_000)))
+        assertEquals("£40.00 is still owed on ${invoice.number}", pickup(ticket).bodyAsText())
+
+        listOf("", "12", "TOOLONG").forEach { symbol ->
+            val refused = postJson("/api/shop/update", json.encodeToString(ShopProfile(currencySymbol = symbol)), adminToken)
+            assertEquals(HttpStatusCode.BadRequest, refused.status, "\"$symbol\" should be refused")
+        }
+    }
+
     // ------------------------------------------ Pickup ------------------------------------------
 
     @Test

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.overview
 
+import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -13,7 +14,6 @@ import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
-import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
@@ -233,13 +233,13 @@ private fun DailyReportCard(
             // Tiles share the row so a busy day shrinks them instead of wrapping one onto its own line
             val tile = Modifier.widthIn(min = 150.dp).weight(1f)
 
-            TmStatTile(modifier = tile, label = "Taken", value = Money.format(report.takenCents), icon = Res.drawable.dollar_sign, caption = "${report.paymentCount} payments")
+            TmStatTile(modifier = tile, label = "Taken", value = formatMoney(report.takenCents), icon = Res.drawable.dollar_sign, caption = "${report.paymentCount} payments")
 
             PaymentMethod.entries.filter { (report.takenByMethod[it] ?: 0) > 0 }.forEach { method ->
-                TmStatTile(modifier = tile, label = formatEnumName(method.name), value = Money.format(report.takenByMethod[method] ?: 0), icon = Res.drawable.credit_card)
+                TmStatTile(modifier = tile, label = formatEnumName(method.name), value = formatMoney(report.takenByMethod[method] ?: 0), icon = Res.drawable.credit_card)
             }
 
-            TmStatTile(modifier = tile, label = "Sales", value = Money.format(report.salesCents), icon = Res.drawable.file_text, caption = "${report.invoicesPaid} invoices paid")
+            TmStatTile(modifier = tile, label = "Sales", value = formatMoney(report.salesCents), icon = Res.drawable.file_text, caption = "${report.invoicesPaid} invoices paid")
             TmStatTile(modifier = tile, label = "Checked in", value = report.ticketsCheckedIn.toString(), icon = Res.drawable.log_in)
             TmStatTile(modifier = tile, label = "Picked up", value = report.ticketsPickedUp.toString(), icon = Res.drawable.log_out)
             TmStatTile(modifier = tile, label = "Waiting now", value = report.waitingForPickupNow.toString(), icon = Res.drawable.clock)

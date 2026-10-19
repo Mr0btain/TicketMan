@@ -31,12 +31,6 @@ data class User(
     fun canAccess(minimum: AccessLevel): Boolean =
         status == UserStatus.ACTIVE && !needsSetup && accessLevel.meets(minimum)
 
-    fun cleanName(): String {
-        return name.split(":").joinToString(" ") { n ->
-            n.replaceFirstChar { it.titlecase() }
-        }
-    }
-
     /** Copy that's safe to send over the network */
     fun withoutPassword(): User = copy(password = "")
 }

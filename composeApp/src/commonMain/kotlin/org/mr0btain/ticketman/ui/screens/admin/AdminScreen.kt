@@ -9,6 +9,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerLoader
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.user.User
@@ -20,6 +21,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
+import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
@@ -37,17 +39,6 @@ import org.mr0btain.ticketman.ui.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.refresh_cw
 import ticketman.composeapp.generated.resources.shield
-
-private enum class AdminTab(val label: String) {
-    OVERVIEW("Overview"),
-    USERS("Users"),
-    SESSIONS("Sessions"),
-    STATIONS("Stations"),
-    LOW_STOCK("Low stock"),
-    INVOICES("Invoices"),
-    SERVER("Server and data"),
-    AUDIT("Audit log")
-}
 
 /**
  * Admin dashboard. Only usable by admins, the server enforces this as well
@@ -80,6 +71,7 @@ private fun AdminContent(
     val admin = viewModel.admin
 
     var selectedTab by rememberSaveable { mutableStateOf(AdminTab.OVERVIEW) }
+    val scope = rememberCoroutineScope()
 
     val isLoading by admin.isLoading.collectAsState()
     val pendingUser by viewModel.users.selection.pending.collectAsState()
@@ -138,10 +130,10 @@ private fun AdminContent(
         onDismiss = { shownInvite = null }
     )
 
-    // Fresh numbers whenever the screen is opened
-    LaunchedEffect(Unit) {
-        admin.refreshAll()
-        viewModel.users.pager.refresh()
+    // Fresh numbers whenever a tab is opened, only for that tab
+    LaunchedEffect(selectedTab) {
+        admin.refresh(selectedTab)
+        if (selectedTab == AdminTab.USERS) viewModel.users.pager.refresh()
     }
 
     UserDialog(
@@ -202,9 +194,12 @@ private fun AdminContent(
                 variant = TmButtonVariant.SECONDARY,
                 leadingIcon = Res.drawable.refresh_cw,
                 onClick = {
-                    admin.refreshAll()
-                    viewModel.refreshPagers()
-                    if (selectedTab == AdminTab.INVOICES) viewModel.counter.loadInvoices(reset = true)
+                    admin.refresh(selectedTab)
+                    when (selectedTab) {
+                        AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
+                        AdminTab.INVOICES -> viewModel.counter.loadInvoices(reset = true)
+                        else -> Unit
+                    }
                 }
             )
         }

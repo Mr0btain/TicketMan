@@ -102,7 +102,7 @@ class StaffNoteTest {
     fun aCustomerNoteCanOnlyBeChangedAsACustomerNote() = testApplication {
         setup()
         val token = token(tech)
-        val customer = Customer(name = "Jane:Doe")
+        val customer = Customer(name = "Jane Doe")
         post("/api/data/customer/add", json.encodeToString(customer), token)
         val note = Note(message = "Prefers texts")
         post("/api/data/customer/add/note/${customer.identifier}", json.encodeToString(note), token)

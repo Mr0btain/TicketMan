@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
@@ -18,6 +19,8 @@ import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.ui.kit.containers.TmTextEditDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import org.mr0btain.ticketman.ui.kit.selection.TmSwitch
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem.Companion.runIfType
@@ -37,6 +40,7 @@ fun SettingsGroup(
                     SettingType.TEXT -> settingItem.runIfType<String> { TextSettingRow(it) }
                     SettingType.CLICKABLE_TEXT -> settingItem.runIfType<String> { ClickableSettingRow(it) }
                     SettingType.SWITCH -> settingItem.runIfType<Boolean> { SwitchSettingRow(it) }
+                    SettingType.CHOICE -> settingItem.runIfType<String> { ChoiceSettingRow(it) }
                 }
             }
         }
@@ -78,6 +82,27 @@ private fun SwitchSettingRow(settingItem: SettingItem<Boolean>) {
         onClick = toggle,
         trailing = {
             TmSwitch(checked = settingItem.initialState, onCheckedChange = { toggle() }, enabled = settingItem.enabled)
+        }
+    )
+}
+
+@Composable
+private fun ChoiceSettingRow(settingItem: SettingItem<String>) {
+    TmListRow(
+        title = settingItem.label,
+        subtitle = settingItem.description,
+        enabled = settingItem.enabled,
+        leading = { SettingIcon(settingItem) },
+        trailing = {
+            TmDropdown(
+                modifier = Modifier.width(180.dp),
+                options = settingItem.options,
+                selected = settingItem.initialState,
+                onSelect = { settingItem.onClick?.invoke(it) },
+                optionLabel = { it },
+                enabled = settingItem.enabled,
+                size = TmControlSize.SMALL
+            )
         }
     )
 }

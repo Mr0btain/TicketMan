@@ -2,8 +2,8 @@
 
 Everything the docs found that should change, gathered from every page's **Known gaps** and **Gotchas**, the
 `TODO` comments in the code, and issues found while writing the docs. Grouped into phases, roughly in the order
-they're worth doing: bugs people will hit first, then security, data, API cleanup, the client, code health and
-platforms.
+they're worth doing: bugs people will hit first, then security, data, API cleanup, the client, code health,
+platforms, and running behind a reverse proxy in Docker.
 
 Tick an item when it's merged. When one is done, also fix the doc page it came from (its **Source**), usually by
 taking it out of that page's Known gaps. Things that aren't problems, just rules to follow, are in
@@ -164,27 +164,39 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
 - [x] **No API versioning.** Fine while client and server ship together. Revisit if a shop could run mismatched
       versions. **Decided:** a version check, not versioned routes: `X-TicketMan-Api` on `/api/ping`, and the client
       warns on a mismatch ([API overview](api/README.md#versions)). *Source:* [API overview](api/README.md#versions)
-
+ 
 ## Phase 5: The client
 
-- [ ] **Counter on narrow windows.** The queue panel is always 360 dp beside the main area and the top bar doesn't
-      wrap. Stack them, or move the queue behind a button, on narrow widths. *Source:* [counter](ui/screens/counter.md#known-gaps)
-- [ ] **Admin screen reloads everything** on every visit and every Refresh, one request per tab. Load a tab's data
-      when it's opened. *Source:* [admin](ui/screens/admin.md#known-gaps)
-- [ ] **Settings:** move Start tab out of the Login group and make it a dropdown rather than click to cycle; lay
-      the panels out in two columns on wide windows. *Source:* [settings](ui/screens/settings.md#gotchas)
-- [ ] **Notes edited on two devices.** `syncNotes` overwrites a note edited elsewhere since the record was opened.
+- [x] **Counter on narrow windows.** The queue panel is always 360 dp beside the main area and the top bar doesn't
+      wrap. Stack them, or move the queue behind a button, on narrow widths. *Done:* `CounterLayout`: under 900 dp
+      the buttons are icons and the queue is a dialog behind its own button. The ticket card, pickup and check-in
+      wrap and stack to fit a phone, with narrow render tests. *Source:* [counter](ui/screens/counter.md#known-gaps)
+- [x] **Admin screen reloads everything** on every visit and every Refresh, one request per tab. Load a tab's data
+      when it's opened. *Done:* `AdminHandler.refresh(tab)`, plus the waiting accounts for the Users badge.
+      *Source:* [admin](ui/screens/admin.md#known-gaps)
+- [x] **Settings:** move Start tab out of the Login group and make it a dropdown rather than click to cycle; lay
+      the panels out in two columns on wide windows. *Done:* a Records group (start tab, page size, search limit,
+      cache size) with a `CHOICE` setting type; Server and data is now Server; two columns from 1000 dp
+      (`SettingsLayout`). *Source:* [settings](ui/screens/settings.md#gotchas)
+- [x] **Notes edited on two devices.** `syncNotes` overwrites a note edited elsewhere since the record was opened.
       Warn when a note changed on the server since it was loaded, or send the version it was edited from.
+      *Done:* `syncNotes` diffs against the notes as loaded (`seed.savedNotes`): another device's edit or delete
+      isn't overwritten (a snackbar says so), and notes it added are no longer deleted, which they were.
       *Source:* [client records](client/records.md#gotchas)
-- [ ] **Old name format.** `cleanName()` treats `:` as a name separator, left from an older way of storing names,
+- [x] **Old name format.** `cleanName()` treats `:` as a name separator, left from an older way of storing names,
       and there's a `TODO` about middle names. Store names as typed and drop the `:` handling, with a data fix for
-      old rows. *Source:* [domain models](shared/domain-models.md#gotchas), `App.kt` TODO
-- [ ] **`Address.fromString` and `Device.fromString`** cut two word values apart. Nothing calls them; delete them.
+      old rows. *Done:* one Name field in every form, names stored and shown as typed (the server no longer
+      lowercases them), user search ignores case, and a one time fix (`runOnce("legacy-names")`, the new
+      `DataFixTable`) rewrites old `first:last` and lowercase names. `API_VERSION` is 3, since older clients still
+      write the old format. *Source:* [domain models](shared/domain-models.md#gotchas), `App.kt` TODO
+- [x] **`Address.fromString` and `Device.fromString`** cut two word values apart. Nothing calls them; delete them.
       *Source:* [domain models](shared/domain-models.md#gotchas)
-- [ ] **Currency is always `$`.** Add a currency symbol (or locale) to the shop profile and use it in `Money.format`.
-      *Source:* [money](shared/money.md#gotchas)
-- [ ] **Cache size changes apply on the next start.** Either rebuild the caches when it changes or say so in the
-      setting's description (it does say "applies on restart" now; keep or fix). *Source:* [state](client/state.md#gotchas)
+- [x] **Currency is always `$`.** Add a currency symbol (or locale) to the shop profile and use it in `Money.format`.
+      *Done:* `ShopProfile.currencySymbol` and `Money.format(cents, symbol)`; the client reads it through the kit's
+      `LocalCurrencySymbol`. The symbol always goes first with a dot before the cents. *Source:* [money](shared/money.md#gotchas)
+- [x] **Cache size changes apply on the next start.** Either rebuild the caches when it changes or say so in the
+      setting's description (it does say "applies on restart" now; keep or fix). *Done:* `LruCache.resize`, applied
+      straight away. *Source:* [state](client/state.md#gotchas)
 
 ## Phase 6: Code health
 
@@ -245,6 +257,119 @@ These change both sides, so do them together, and check `check_api_docs.py` afte
     Exposed's `SchemaUtils.create` sorts tables by reference (the list already has `CustomerNoteTable` before
     `NoteTable`) and correct the page.
 - [ ] **Dokka** (optional): a generated API site from the KDoc. *Source:* [PLAN.md](PLAN.md)
+
+## Phase 8: Behind a reverse proxy by default
+
+The normal setup is now the server in a Docker container behind a reverse proxy that handles HTTPS, usually with
+a public certificate. The server's own HTTPS and pinned certificate stay as the "direct" setup. Development mode
+keeps working outside a container with no proxy, so the server and client can be tried from the repo as they
+are now. Do this phase before 9 and 10.
+
+- [ ] **A `PROXY` setting** (`env.proxy`). It only changes defaults; a variable set by hand still wins:
+
+  | | `PROXY=on` (default) | `PROXY=off` (direct) |
+  |---|---|---|
+  | `SSL_PORT` | `0` | `8443` |
+  | `HTTP_MODE` | `on` | `redirect` |
+  | Forwarded headers | from `TRUSTED_PROXIES` | ignored |
+
+  Development mode (`-Pdevelopment`) defaults to `off`, with plain HTTP on as now, so `:server:run -Pdevelopment`
+  still answers on `http://localhost:8080` and `https://localhost:8443`. Put it in a `ProxySettings` next to
+  `TlsSettings`, read by both `createServer` and `module()`. If HTTPS is turned on in proxy mode, `HttpsRedirect`
+  mustn't send people to `:8443`. *Source:* reverse proxy plan
+- [ ] **`TRUSTED_PROXIES`.** A list of IPs and CIDR ranges. Forwarded headers are only used when
+      `call.request.local.remoteAddress` is in it (our own small plugin in place of `XForwardedHeaders`, keeping
+      the last proxy rule). `TRUST_PROXY=true` stays as a deprecated "trust any address" with a warning.
+      **(decide)** the default: loopback plus private ranges (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`)
+      works on any Docker network, but lets a LAN device fake its address if someone publishes the port; loopback
+      only is safer but needs setting in every container. *Source:* [auth](server/auth.md#wrong-password-limit)
+- [ ] **Startup log.** In proxy mode, say HTTPS is the proxy's job and list the trusted ranges instead of the
+      fingerprint lines. Warn when the time zone is UTC and `TZ` isn't set: `CounterDatabase`, `TicketDatabase`
+      and `StatsDatabase` use `ZoneId.systemDefault()`, so "today" and the yearly number rollover would follow UTC.
+- [ ] **Diagnostics on the admin screen.** Add `proxy`, `clientAddress` (what the server sees for this request),
+      `forwarded` (whether the forwarded headers were used) and `timeZone` to `ServerInfoResponse`, all with
+      defaults so `API_VERSION` stays. Lets an admin see the proxy setup works: a phone showing `127.0.0.1` means
+      it doesn't.
+- [ ] **Existing installs.** Changing the default turns off HTTPS on 8443, so devices pinned to `https://ip:8443`
+      would stop connecting. **(decide)** stay direct when `PROXY` isn't set and `server/tls/` already holds a made
+      certificate (with a warning to set `PROXY`), or skip this if there are no installs yet.
+- [ ] **Develop and test outside a container.**
+  - Desktop debug builds (`-DticketmanDebug=true`) default the server address to `http://localhost:8080`
+    (`defaultServerAddress` is blank on desktop now), so `:server:run -Pdevelopment` plus `:composeApp:run`
+    connects with nothing typed.
+  - `scripts/dev_proxy.sh`: runs Caddy (installed on the machine, no Docker) in front of a dev server, using a
+    `scripts/dev/Caddyfile` with `https://localhost:8444 { tls internal; reverse_proxy localhost:8080 }` and a
+    small `request_body max_size` path to try a `413`. Starts the server with `PROXY=on HTTP_MODE=on
+    TRUSTED_PROXIES=127.0.0.1,::1` and `-Pdevelopment`.
+  - Testing the public certificate path: Caddy's local CA isn't in the JVM's trust store, so the client shows the
+    trust dialog (the self-signed proxy case). For the no-dialog case, the script exports Caddy's root into
+    `build/dev-truststore.p12`, and `:composeApp:run -PdevTrustStore=<file>` passes it as
+    `javax.net.ssl.trustStore`, which `PinningTrustManager`'s system check reads.
+  - `counter_e2e.py` takes the proxy address too (`python3 scripts/counter_e2e.py https://localhost:8444
+    --insecure`) and adds a big photo upload, a backup download and a restore upload, since those are what
+    proxies break.
+  - Write this up in [getting started](getting-started.md) and [testing](testing.md), and add the commands to
+    `CLAUDE.md`.
+- [ ] **Tests.** `ProxySettings`/`TlsSettings` defaults in each mode, in development mode, and overrides winning;
+      trusted proxies in and out of the list, IPv4 and IPv6 CIDRs, the last proxy rule, and old `TRUST_PROXY`;
+      the new `ServerInfoResponse` fields.
+- [ ] **Docs.** [Configuration](configuration.md): `PROXY`, `TRUSTED_PROXIES`, `TZ`, the proxy mode defaults,
+      `TRUST_PROXY` deprecated. [Auth](server/auth.md): the trusted proxy rule. [Decisions](decisions.md): a
+      "Behind a reverse proxy by default" entry (why, the trusted range costs), and the "Its own certificate"
+      entry reworded as the direct option. `CLAUDE.md`: the config paragraph and the HTTPS bullet.
+
+## Phase 9: The client behind a proxy
+
+With a public certificate the system check in `PinningTrustManager` passes and the trust dialog never shows, so
+the user types the address and logs in. These cover what goes wrong around that.
+
+- [ ] **Address hints.** The placeholder (`ServerAddressField`) and Settings description say `192.168.1.20:8443`.
+      Change them to the proxy form (`tickets.myshop.com`), with the IP and port as the no-proxy example.
+- [ ] **Connecting by the wrong name.** Typing the IP when the certificate is for a domain passes the trust check
+      but fails `PinningHostnameVerifier`. Nothing reaches `ServerTrust.refuse`, so it shows as "unreachable".
+      Record the names the certificate covers and say "This server's certificate is for `tickets.myshop.com`,
+      connect with that name".
+- [ ] **Errors the proxy makes.** These come back as HTML. Map `413` to "Bigger than the proxy allows" (photos,
+      restore) and `502`/`503`/`504` to "The proxy is up but the TicketMan server isn't answering", and let
+      `setUrl` tell that apart from unreachable.
+- [ ] **Admin Server tab.** When `proxy` is on, show "HTTPS: handled by reverse proxy", the client address, whether
+      it was forwarded, and the time zone. Hide the fingerprint, expiry and Renew rows, which describe a
+      certificate devices don't see. Add render tests for both modes.
+- [ ] **Trust dialog wording.** It now only appears for a self-signed certificate, which in proxy mode isn't on the
+      admin screen. Say "the fingerprint your administrator gave you" when it can't be checked there.
+- [ ] **Timeouts.** Check the backup create call and `transferTimeout()` uploads against a proxy's read timeout
+      (nginx's default is 60s). If making a backup can take longer, make it start then poll.
+- [ ] **Android 7.0.** `minSdk` is 24, which lacks Let's Encrypt's root (added in 7.1.1).
+      **(decide)** raise `minSdk` to 25, or say so in [platforms](client/platforms.md).
+- [ ] **Docs.** [Networking](client/networking.md): public certificates, the hostname error, proxy errors.
+      [Settings](ui/screens/settings.md) and [admin](ui/screens/admin.md) for the new wording and rows.
+
+## Phase 10: Docker image
+
+- [ ] **Build the server without the Android SDK.** The Gradle build loads the Android plugin, which likely fails
+      in a plain container. **(decide)** build on the host or in CI and copy `server/build/install/server` into the
+      image, or add a property that leaves out `androidApp` and the Android targets so the build can run inside
+      Docker. Do this first; the rest needs it.
+- [ ] **`server/Dockerfile`.** `eclipse-temurin` JRE, amd64 and arm64. Runs `bin/server` from
+      `:server:installDist -PwithWeb`. `DATA_PATH=/data` as a volume, `PORT=8080` exposed, `PROXY=on`,
+      `JAVA_OPTS=-XX:MaxRAMPercentage=75`, a non-root user owning `/data`, and a `HEALTHCHECK` on `/api/ping`
+      (the JRE image has no curl). Check `docker stop` shuts H2 down cleanly.
+- [ ] **`docker-compose.yml` example** with Caddy (public certificate with no setup): volumes for `/data` and
+      `/backups` (`BACKUP_DIR`), `TZ`, `restart: unless-stopped`, the server on `expose` rather than `ports`, and a
+      named network with a fixed subnet that `TRUSTED_PROXIES` is set to exactly. A note on joining Traefik's or
+      Nginx Proxy Manager's network instead.
+- [ ] **Restart from the admin screen.** A restore needs a restart, which an admin can't do in a container.
+      `POST /api/admin/restart` (admin, audited) answers `202` then exits non-zero so the restart policy brings it
+      back. Only offered when `RESTART_ON_EXIT=true` (the image sets it). The exit goes through something tests
+      can replace. Add the button next to a waiting restore, and the path to `ApiRoutes.kt` and `docs/api/admin.md`.
+- [ ] **Smoke test.** `scripts/docker_smoke.sh`: `docker compose up` with Caddy on its local CA, wait for the health
+      check, run `counter_e2e.py` through it, restore with the restart button, check the data came back.
+- [ ] **Docs.** [Operations](operations.md): First start becomes `docker compose up`, open the address, log in as
+      `admin` (password from `ADMIN_PASSWORD` or `docker logs`); a "Behind another proxy" section with nginx
+      settings (`client_max_body_size`, `proxy_request_buffering off` for restore and upload, `proxy_buffering
+      off` for backup downloads, longer timeouts, forwarded headers, query strings kept out of the access log
+      since the backup `?token=` is a credential); the HTTPS section becomes "Without a proxy". Add the Docker
+      build to `CLAUDE.md`.
 
 ## Rules to keep
 

@@ -9,6 +9,7 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.logging.AppLogger
 
@@ -37,7 +38,13 @@ fun Route.shopRoute(
                 return@post
             }
 
-            if (database.update(profile)) {
+            val symbol = profile.currencySymbol.trim()
+            if (symbol.isEmpty() || symbol.length > Money.MAX_SYMBOL_LENGTH || symbol.any { it.isDigit() }) {
+                call.respond(HttpStatusCode.BadRequest, "Currency symbol must be 1 to ${Money.MAX_SYMBOL_LENGTH} characters, no digits")
+                return@post
+            }
+
+            if (database.update(profile.copy(currencySymbol = symbol))) {
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "shop", details = "Updated shop profile")
                 call.respond(HttpStatusCode.Accepted)
             } else {

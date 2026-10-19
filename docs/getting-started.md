@@ -42,7 +42,7 @@ All server settings are on the [configuration](configuration.md) page.
 ./gradlew :composeApp:run
 ```
 
-On first start, set the server address (`http://localhost:8098`) under Settings > Server and data, then log in as
+On first start, set the server address (`http://localhost:8098`) under Settings > Server, then log in as
 `admin` from the foot of the nav rail. The desktop client is the
 main target and the most complete.
 

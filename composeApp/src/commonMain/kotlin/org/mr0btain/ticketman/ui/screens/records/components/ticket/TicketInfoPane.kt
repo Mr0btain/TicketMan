@@ -13,7 +13,6 @@ import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
-import org.mr0btain.ticketman.ui.screens.counter.components.cleanName
 import org.mr0btain.ticketman.ui.screens.records.components.DetailSection
 import org.mr0btain.ticketman.ui.screens.records.components.RecordDetail
 import ticketman.composeapp.generated.resources.Res
@@ -45,8 +44,8 @@ fun TicketInfoPane(
 
         DetailSection("Details") {
             Column {
-                TmKeyValueRow(label = "Customer", value = seed.customer?.text?.let { cleanName(it) } ?: "None")
-                TmKeyValueRow(label = "Technician", value = seed.user?.text?.let { cleanName(it) } ?: "Not assigned")
+                TmKeyValueRow(label = "Customer", value = seed.customer?.text ?: "None")
+                TmKeyValueRow(label = "Technician", value = seed.user?.text ?: "Not assigned")
                 TmKeyValueRow(label = "Make", value = ticket.device.manufacturer.ifBlank { "Not set" })
                 TmKeyValueRow(label = "Model", value = ticket.device.model.ifBlank { "Not set" })
                 if (ticket.device.serial.isNotBlank()) TmKeyValueRow(label = "Serial", value = ticket.device.serial, numeric = true)

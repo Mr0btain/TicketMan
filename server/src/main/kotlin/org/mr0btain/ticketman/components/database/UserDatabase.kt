@@ -9,6 +9,7 @@ import org.jetbrains.exposed.v1.core.VarCharColumnType
 import org.jetbrains.exposed.v1.core.castTo
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.like
+import org.jetbrains.exposed.v1.core.lowerCase
 import org.jetbrains.exposed.v1.core.or
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -40,6 +41,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     private val UPDATE_PASSWORD_TAG = "$tag:UpdatePassword"
     private val COUNT_BY_ACCESS_TAG = "$tag:CountByAccess"
     private val MIGRATE_TAG = "$tag:MigrateDeactivated"
+    private val MIGRATE_NAMES_TAG = "$tag:MigrateNames"
     private val SET_STATE_TAG = "$tag:SetState"
     private val GET_PENDING_TAG = "$tag:GetPending"
     private val GET_ADMIN_TAG = "$tag:GetAdmin"
@@ -105,7 +107,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
 
             UserEntity
                 .find {
-                    (UserTable.name like pattern) or
+                    (UserTable.name.lowerCase() like pattern) or
                             (UserTable.id.castTo(VarCharColumnType()) like pattern) or
                             (UserTable.username like pattern)
                 }
@@ -135,7 +137,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
         UserEntity.new(data.identifier) {
             username = data.username.trim().lowercase()
             password = PasswordHasher.hashIfNeeded(data.password)
-            name = data.name.lowercase()
+            name = data.name.trim()
             email = data.email.lowercase()
             phone = data.phone
             access = data.accessLevel
@@ -149,7 +151,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             username = data.username.trim().lowercase()
             // Clients never get the password back, so a blank one means leave it alone
             if (data.password.isNotBlank()) password = PasswordHasher.hashIfNeeded(data.password)
-            name = data.name.lowercase()
+            name = data.name.trim()
             email = data.email.lowercase()
             phone = data.phone
             access = data.accessLevel
@@ -287,6 +289,13 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             true
         }
     }
+
+    /** Rewrites names older versions stored as `first:last` or lowercased, see [legacyName]. Run once */
+    fun migrateLegacyNames(): Boolean =
+        dbWrite(MIGRATE_NAMES_TAG) {
+            UserEntity.all().filter { isLegacyName(it.name) }.forEach { it.name = legacyName(it.name) }
+            true
+        }
 
     /** Number of users with this access level */
     fun countByAccessLevel(accessLevel: AccessLevel): Long =

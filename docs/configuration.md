@@ -140,9 +140,10 @@ The client has no config file. What it needs is set from the app and saved on th
 
 | Setting | Set from |
 |---------|----------|
-| Server address, device name, page size, search result limit, cache size | Settings > Server and data |
+| Server address, device name | Settings > Server |
+| Start tab, page size, search result limit, cache size | Settings > Records |
 | Trusted server certificates | Saying yes when asked to trust one |
-| Remember login, start tab | Settings > Login |
+| Remember login | Settings > Login |
 | Saved username and password, tokens | Logging in |
 | Theme, font, dark mode, reduce transparency | Settings > Appearance |
 | Ticket list scope (mine or all) | Records screen |

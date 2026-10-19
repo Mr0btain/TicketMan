@@ -16,12 +16,14 @@ import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
  * [localStorage] right away
  * @param onServerUrlChanged Connects to the new server
  * @param onPageSizeChanged Reloads lists with the new size
+ * @param onCacheSizeChanged Resizes the record caches
  */
 class SettingsHandler(
     private val localStorage: LocalStorage,
     private val scope: CoroutineScope,
     private val onServerUrlChanged: (String) -> Unit,
-    private val onPageSizeChanged: (Int) -> Unit
+    private val onPageSizeChanged: (Int) -> Unit,
+    private val onCacheSizeChanged: (Int) -> Unit = {}
 ) {
     private val _darkMode: MutableStateFlow<Boolean> = MutableStateFlow(LocalStorage.DEFAULT_DARK_MODE)
     val darkMode = _darkMode.asStateFlow()
@@ -147,11 +149,12 @@ class SettingsHandler(
         localStorage.searchLimit = value
     }
 
-    /** Caches are only built on start, so this applies on next start */
+    /** Sets how many opened records each cache keeps, clamped to [CACHE_SIZE_RANGE]. Applies straight away */
     fun setCacheSize(size: Int) {
         val value = size.coerceIn(CACHE_SIZE_RANGE)
         _cacheSize.value = value
         localStorage.cacheSize = value
+        onCacheSizeChanged(value)
     }
 
     companion object {
