@@ -31,6 +31,10 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.log_in
 import ticketman.composeapp.generated.resources.refresh_cw
 import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketWorkSection
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.WorkDialog
+import org.mr0btain.ticketman.ui.screens.CheckForUpdates
 
 @Composable
 fun RecordsScreen(
@@ -72,6 +76,12 @@ fun RecordsScreen(
     // For ticket dialog
     var showTicketDialog by remember { mutableStateOf(false) }
 
+    // The open ticket's work log, and logging more
+    val workEntries by viewModel.tickets.work.entries.collectAsState()
+    val workLoadError by viewModel.tickets.work.loadError.collectAsState()
+    val shop by viewModel.counter.shop.collectAsState()
+    var showWorkDialog by remember { mutableStateOf(false) }
+
     // For Inventory panel
     val inventorySeed = viewModel.inventory.seed
     val inventoryPagedItems = viewModel.inventory.pager.items.collectAsState()
@@ -91,6 +101,17 @@ fun RecordsScreen(
 
     // For image viewing
     var showImagePopup by remember { mutableStateOf(false) }
+
+    // Changes from other devices: the list in view, and the open record unless something is being edited
+    val updateInterval by viewModel.settings.updateInterval.collectAsState()
+    val dialogOpen = showCustomerDialog || showTicketDialog || showInventoryDialog || showConfirmDeleteDialog || showImagePopup || showWorkDialog
+    CheckForUpdates(interval = updateInterval, enabled = loggedIn && !dialogOpen) {
+        when (tabIndex.value) {
+            0 -> viewModel.customers.run { pager.refreshCurrentData(); reloadSelected() }
+            1 -> viewModel.tickets.run { pager.refreshCurrentData(); reloadSelected() }
+            2 -> viewModel.inventory.run { pager.refreshCurrentData(); reloadSelected() }
+        }
+    }
     val imagePopupList = remember { mutableStateListOf<StoredImage>() }
     var imagePopupPage by remember { mutableIntStateOf(0) }
 
@@ -121,7 +142,9 @@ fun RecordsScreen(
         onContinue = {
             viewModel.customers.save()
             showCustomerDialog = false
-        }
+        },
+        onTicketSearchQuery = { query -> viewModel.tickets.search(query) },
+        onFindTicket = { identifier -> viewModel.customers.ticketToLink(identifier) }
     )
 
     // For ticket adding or editing
@@ -139,8 +162,19 @@ fun RecordsScreen(
             viewModel.tickets.select(ticketSeed.identifier)
         },
         onCustomerSearchQuery = { query -> viewModel.customers.search(query) },
-        onUserSearchQuery = { query -> viewModel.users.search(query) }
+        onUserSearchQuery = { query -> viewModel.users.search(query) },
+        onAddCustomer = { customer, onResult -> viewModel.customers.addCustomer(customer, onResult) }
     )
+
+    if (showWorkDialog) {
+        WorkDialog(
+            laborRateCents = shop.laborRateCents,
+            onPartSearch = { viewModel.inventory.search(it) },
+            onFindPart = { viewModel.inventory.get(it) },
+            onSave = { request, onResult -> viewModel.tickets.work.log(request, onResult) },
+            onDismissRequest = { showWorkDialog = false }
+        )
+    }
 
     // For inventory adding or editing
     InventoryDialog(
@@ -277,7 +311,16 @@ fun RecordsScreen(
                 ticketScope = ticketScope,
                 ticketListState = ticketLazyListState,
                 onImageClick = { id, page -> showNoteImages(ticketSeed.notes, id, page) },
-                loadError = ticketLoadError.takeIf { loggedIn }
+                loadError = ticketLoadError.takeIf { loggedIn },
+                work = {
+                    TicketWorkSection(
+                        entries = workEntries,
+                        loadError = workLoadError,
+                        canChange = canEdit && ticketSeed.status.status != TicketStatusType.PICKED_UP,
+                        onLog = { showWorkDialog = true },
+                        onRemove = { viewModel.tickets.work.remove(it) }
+                    )
+                }
             )
 
             2 -> InventoryPanel(

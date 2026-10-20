@@ -62,6 +62,12 @@ class AdminServer(
         reloadShopProfile()
     }
 
+    /** The server's details and any restore waiting, without the shop profile, which may be half edited */
+    suspend fun reloadStatus() {
+        admin.getServerInfo()?.let { _serverInfo.value = it }
+        _pendingRestore.value = admin.getPendingRestore()
+    }
+
     suspend fun reloadShopProfile() {
         _shopProfile.value = admin.getShopProfile()
     }

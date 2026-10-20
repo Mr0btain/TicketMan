@@ -33,6 +33,29 @@ A page of every invoice, newest first.
 - **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
 - **`200`** a list of `Invoice`.
 
+### `GET /api/invoice/{identifier}/pdf`
+
+**Auth:** restricted
+
+The invoice as a PDF on a letter page, laid out like the printed one (`PrintTemplates.invoice`), to email or file.
+Streamed, with `Content-Disposition: attachment; filename=INV-26-00000042.pdf`.
+
+- **`200`** `application/pdf`. **`404`** no such invoice, or its ticket is gone.
+
+### `GET /api/invoice/export`
+
+**Auth:** admin
+
+Invoices made between two days, in the shop's time zone, as CSV for the books. Audited (`BACKUP` on `invoices`, with
+the count and days).
+
+- **Query:** `from` and `to`, days like `2026-10-01`, both included. **`400`** either missing, not a day, or `to`
+  before `from`.
+- **`200`** `text/csv`, one row per invoice, oldest number first: `Invoice, Date, Status, Paid on, Ticket,
+  Customer, Subtotal, Discount, Tax, Total, Paid, Balance`. Amounts are plain numbers (`159.90`) so a spreadsheet adds
+  them up. Cells are quoted as spreadsheets expect, and typed text starting with `=`, `+`, `-` or `@` gets a leading
+  `'` so it isn't run as a formula.
+
 ## Changing
 
 ### `POST /api/invoice/ticket/{ticketIdentifier}`

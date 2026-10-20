@@ -221,6 +221,32 @@ Cancels a waiting restore.
 
 - **`202`** whether or not there was one.
 
+## Import
+
+Customers or inventory from another system. The client reads the CSV and sends records; the server decides what's
+already here (`ImportService`), so a dry run is the preview and can't disagree with the import. New identifiers are
+made on the server. Audited as a `CREATE` on `customers` or `inventory` with the counts.
+
+### `POST /api/admin/import/customers`
+
+**Auth:** admin
+
+- **Body:** a list of `Customer`, at most 20,000.
+- **Query:** `dryRun=true` to only say what would happen.
+- **`200`** `ImportResult { rows, added, dryRun }`, a row for each record sent (`ImportRowResult { row, outcome,
+  message }`). `ADD` is new; `MATCH` is skipped because a customer here, or earlier in the list, has the same phone
+  number (compared by its digits, 7 or more) or email (ignoring case); `ERROR` has no name or an email without `@`.
+  The `ADD` rows are added in one transaction.
+- **`400`** more than 20,000.
+
+### `POST /api/admin/import/inventory`
+
+**Auth:** admin
+
+The same for a list of `Inventory`: `MATCH` is an item with the same name, ignoring case and spaces at the ends;
+`ERROR` has no name, a negative price or cost, or negative stock. Stock comes in as sent (`Int.MAX_VALUE` is not
+counted).
+
 ## Test data
 
 ### `POST /api/admin/seed`

@@ -38,6 +38,11 @@ fun Route.shopRoute(
                 return@post
             }
 
+            if (profile.laborRateCents < 0) {
+                call.respond(HttpStatusCode.BadRequest, "Labor rate can't be negative")
+                return@post
+            }
+
             val symbol = profile.currencySymbol.trim()
             if (symbol.isEmpty() || symbol.length > Money.MAX_SYMBOL_LENGTH || symbol.any { it.isDigit() }) {
                 call.respond(HttpStatusCode.BadRequest, "Currency symbol must be 1 to ${Money.MAX_SYMBOL_LENGTH} characters, no digits")

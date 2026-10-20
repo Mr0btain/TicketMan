@@ -32,6 +32,7 @@ class InvoiceRemoteRepository(
     private val TAG = "InvoiceRemoteRepository"
     private val GET_TAG = "$TAG:Get"
     private val CHANGE_TAG = "$TAG:Change"
+    private val FILE_TAG = "$TAG:File"
 
     private var baseUrl = ""
 
@@ -96,6 +97,33 @@ class InvoiceRemoteRepository(
         }
 
         return handleDataHttpResponse(GET_TAG, response)
+    }
+
+    /**
+     * The invoice as a PDF, made on the server. Read whole: it's a few KB, and it needs the login header, which a
+     * browser download wouldn't send
+     */
+    suspend fun pdf(identifier: Uuid): TmResult<ByteArray, ServerError> =
+        file(FILE_TAG) { client.get { url("$baseUrl${InvoicePaths.PDF.fill(identifier)}") } }
+
+    /**
+     * Invoices made between two days as CSV, admin only
+     * @param from First day, like 2026-10-01
+     * @param to Last day, included
+     */
+    suspend fun export(from: String, to: String): TmResult<ByteArray, ServerError> =
+        file(FILE_TAG) {
+            client.get {
+                url("$baseUrl${InvoicePaths.EXPORT}")
+                parameter("from", from)
+                parameter("to", to)
+            }
+        }
+
+    private suspend fun file(tag: String, request: suspend () -> HttpResponse): TmResult<ByteArray, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(tag, networkRequest(tag) { request() })
     }
 
     // Runs a request that answers with the invoice as it now stands

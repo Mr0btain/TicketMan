@@ -3,24 +3,29 @@
 The counter prints claim slips, device tags and receipts, and the admin screen prints the end of day report. A
 printout is described once, as platform neutral blocks, and each platform lays those blocks out for the paper and
 sends them to its own print system. So one template works on an 80mm receipt printer and on a letter page, on
-desktop, Android and the web.
+desktop, Android and the web. The server lays out the same documents as PDFs, so an invoice that's emailed looks
+like the printed one.
 
 ## How it fits together
 
 ```mermaid
 flowchart LR
-    T["PrintTemplates<br/>claimSlip, receipt, deviceTag, dailyReport"] --> D["PrintDocument<br/>title + List&lt;PrintBlock&gt;"]
+    T["PrintTemplates<br/>claimSlip, receipt, invoice, deviceTag, dailyReport"] --> D["PrintDocument<br/>title + List&lt;PrintBlock&gt;"]
     D --> P["printDocument(document, paper)<br/>expect"]
     P --> J["Desktop: Java2DPrintLayout + PrinterJob"]
     P --> W["Web: HtmlPrintRenderer in a hidden iframe"]
     P --> A["Android: HtmlPrintRenderer in a WebView + PrintManager"]
+    D --> S["Server: Java2DPrintLayout drawn into PDFBox (InvoiceDocuments)"]
 ```
 
-All in `composeApp/.../components/print/`, with the platform files beside them in each source set.
+The document, the templates, `QrCode` and the date helpers (`components/utils/Formatting.kt`) are in `shared`'s
+`commonMain`, and `Java2DPrintLayout` in `shared`'s `jvmMain`, so the server can use them. `printDocument`, its
+platform files and `HtmlPrintRenderer` stay in `composeApp/.../components/print/`. The packages didn't change when
+they moved, so imports are the same on both sides.
 
 ## The document
 
-[`PrintDocument`](../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/components/print/PrintDocument.kt)
+[`PrintDocument`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/components/print/PrintDocument.kt)
 is a title and a list of blocks, top to bottom:
 
 | Block | Draws |
@@ -37,13 +42,14 @@ Blocks say what goes on the page, not where. Sizes, wrapping and page breaks are
 
 ## The templates
 
-[`PrintTemplates`](../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/components/print/PrintTemplates.kt):
+[`PrintTemplates`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/components/print/PrintTemplates.kt):
 
 | Template | Printed from | Holds |
 |----------|--------------|-------|
 | `claimSlip(shop, ticket, customer, invoice, signature)` | Counter ticket card, after check-in | Shop header, ticket number large with a QR of it, customer and device, check-in and promised times, deposit, the repair terms and signature |
 | `deviceTag(ticket, customer)` | Counter ticket card | Number and QR, customer, device, due date. Stuck to the device |
 | `receipt(shop, ticket, customer, invoice)` | Counter, after pickup | Shop header, charges, discount, tax, total, payments, change, invoice footer |
+| `invoice(shop, ticket, customer, invoice)` | The server, as a PDF (`GET /api/invoice/{id}/pdf`) | Like the receipt, with the status (due, paid, void), the customer's address, phone and email, and what's still owed |
 | `dailyReport(shop, report)` | Admin overview | The day's takings by payment method, sales, tax and ticket counts |
 
 `CounterPrinter` (`counter.printer`) and `AdminHandler` build the document and call `printDocument(document, paper)`, with the paper
@@ -59,6 +65,16 @@ or cancelled, or a message saying what went wrong.
 | Desktop | `Java2DPrintLayout` measures and draws the blocks with Java2D as a `Printable`. On 80mm paper it's one page as long as the content; on letter it splits across pages. The dialog runs on the Swing thread, printing on IO |
 | Web | `HtmlPrintRenderer` turns the document into an HTML page, loaded in a hidden iframe that's then printed, bringing up the browser's dialog |
 | Android | The same HTML in a `WebView`, handed to `PrintManager`. Needs the current activity, which `MainActivity` passes with `AndroidPrintHost.attach(this)` |
+
+### PDFs on the server
+
+[`InvoiceDocuments`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/service/InvoiceDocuments.kt)
+lays a document out with the same `Java2DPrintLayout` on letter paper and draws each page through PDFBox's
+`PdfBoxGraphics2D` (the `de.rototor.pdfbox:graphics2d` bridge). Text the standard PDF fonts can show stays real text,
+so a PDF is a few KB and searchable; anything else is drawn as shapes. Measuring text needs fonts on the machine,
+which the Docker image's base has (DejaVu). The client saves it with **Save PDF** at the counter and on the admin
+Invoices tab (`CounterPrinter.savePdf`), reading it whole, since the route needs the login header that a browser
+download wouldn't send.
 
 QR codes come from `QrCode`, an in-house encoder (byte mode, medium error correction, up to version 10, 213 bytes),
 so no QR library is needed on any platform.

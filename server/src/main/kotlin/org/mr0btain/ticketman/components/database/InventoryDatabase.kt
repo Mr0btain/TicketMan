@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryEntity
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
@@ -30,6 +31,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
     private val UPDATE_STOCK_TAG = "$tag:UpdateStock"
     private val SET_STOCK_TAG = "$tag:SetStock"
     private val MIGRATE_PRICES_TAG = "$tag:MigrateLegacyPrices"
+    private val NAMES_TAG = "$tag:Names"
 
     override fun getById(identifier: Uuid): Inventory? =
         dbQuery(GET_BY_ID_TAG) {
@@ -85,6 +87,12 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                         }
                     )
                 }
+        }
+
+    /** Every item's name, for an import to find ones already there. Null when the read failed */
+    fun names(): List<String>? =
+        dbQuery(NAMES_TAG) {
+            InventoryTable.select(InventoryTable.name).map { it[InventoryTable.name] }
         }
 
     override fun add(data: Inventory): Boolean =

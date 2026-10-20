@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.records.components.inventory
 
 import org.mr0btain.ticketman.error.getOrDefault
+import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.asEmptyDataResult
 import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.components.network.isNotFound
@@ -58,8 +59,8 @@ class InventoryRecords(
     /** Item being loaded after a click, the list highlights it until it's in the seed */
     val selection = RecordSelection(scope)
 
-    /** Opens an item in the seed, from the cache if it's there */
-    fun select(identifier: Uuid) {
+    /** Opens an item in the seed, from the cache if it's there. [quiet] says nothing when it can't be loaded */
+    fun select(identifier: Uuid, quiet: Boolean = false) {
         if (selection.pending.value == identifier) return
 
         selection.select(identifier) {
@@ -78,10 +79,21 @@ class InventoryRecords(
                 )
             }
 
-            val (inventory, notes, images) = loaded.valueOr { return@select loadFailed(identifier, it) }
+            val (inventory, notes, images) = loaded.valueOr { return@select loadFailed(identifier, it, quiet) }
 
             return@select { seed.setInitial(inventory, notes, images) }
         }
+    }
+
+    /**
+     * Loads the open item again from the server, for the periodic check for updates. Leaves a new or changed one
+     * alone and says nothing if the server can't be reached; one deleted on another device is still dropped
+     */
+    fun reloadSelected() {
+        if (seed.isNew || seed.isDirty) return
+
+        cache.remove(seed.identifier)
+        select(seed.identifier, quiet = true)
     }
 
     /** Empties the seed for a new item, dropping any item still loading */
@@ -103,8 +115,9 @@ class InventoryRecords(
         }) else null
 
     // Loading failed: a record that's gone is forgotten, anything else is said and what's shown stays
-    private fun loadFailed(identifier: Uuid, error: ServerError): (() -> Unit)? =
+    private fun loadFailed(identifier: Uuid, error: ServerError, quiet: Boolean = false): (() -> Unit)? =
         if (error.isNotFound) forgetIfOpen(identifier)
+        else if (quiet) null
         else null.also { scope.launch { snackBarHost.showSnackbar("That item couldn't be loaded: ${error.message}") } }
 
     /** Saves the seed: the item, its stock count, its notes and its photos */
@@ -154,6 +167,11 @@ class InventoryRecords(
     }
 
     /** Items matching [query], at most the search limit setting */
+    /** An item from the cache, or the server if it isn't cached. Null if neither has it */
+    suspend fun get(identifier: Uuid): Inventory? =
+        cache.get(identifier)?.inventory
+            ?: remoteHandler.inventoryRepo.get(identifier).getOrNull()
+
     suspend fun search(query: String) =
         remoteHandler.inventoryRepo.search(query, searchLimit()).getOrDefault(emptyList())
 

@@ -31,6 +31,7 @@ import kotlin.uuid.Uuid
  * @param localStorage Where the low stock threshold is kept between runs
  * @param onUsersChanged Called after a user is added, changed or removed so lists can reload
  * @param onShopChanged Called after the shop profile is saved, so its currency shows everywhere
+ * @param onImported Called after customers or inventory are imported, so the lists reload
  */
 class AdminHandler(
     private val remoteHandler: RemoteHandler,
@@ -38,7 +39,8 @@ class AdminHandler(
     snackBarHost: SnackbarHostState,
     private val localStorage: LocalStorage,
     onUsersChanged: (Uuid?) -> Unit,
-    onShopChanged: (ShopProfile) -> Unit = {}
+    onShopChanged: (ShopProfile) -> Unit = {},
+    onImported: () -> Unit = {}
 ) {
     private val admin get() = remoteHandler.adminRepo
 
@@ -61,6 +63,12 @@ class AdminHandler(
     val server = AdminServer(remoteHandler, support, onShopChanged, onSeeded = {
         onUsersChanged(null)
         loadOverview()
+        loadLowStock()
+    })
+
+    /** Server tab: customers and inventory from a CSV */
+    val import = AdminImport(remoteHandler, support, onImported = {
+        onImported()
         loadLowStock()
     })
 
@@ -106,6 +114,26 @@ class AdminHandler(
                     AdminTab.SERVER -> server.reload()
                     AdminTab.AUDIT -> loadAudit(reset = true)
                 }
+            }
+        }
+    }
+
+    /**
+     * The periodic check for updates on [tab]: like [refresh] but with no loading spinner, and leaving alone what
+     * would lose someone's place: the audit log and invoices (reloading starts them from the top), the end of day
+     * report (they may be looking at another day) and the shop profile (it may be half edited)
+     */
+    fun checkForUpdates(tab: AdminTab) {
+        scope.launch {
+            accounts.reloadPending()
+
+            when (tab) {
+                AdminTab.OVERVIEW -> loadOverview()
+                AdminTab.SESSIONS -> devices.reloadSessions()
+                AdminTab.STATIONS -> devices.reloadStations()
+                AdminTab.LOW_STOCK -> loadLowStock()
+                AdminTab.SERVER -> server.reloadStatus()
+                AdminTab.USERS, AdminTab.INVOICES, AdminTab.AUDIT -> Unit
             }
         }
     }
@@ -185,6 +213,7 @@ class AdminHandler(
         accounts.clear()
         devices.clear()
         server.clear()
+        import.close()
     }
 
     companion object {

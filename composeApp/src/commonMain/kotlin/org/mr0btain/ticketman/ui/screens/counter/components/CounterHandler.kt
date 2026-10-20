@@ -176,13 +176,17 @@ class CounterHandler(
         }
     }
 
-    /** Reloads whatever ticket is open, after something changed it */
-    fun reloadTicket() {
+    /**
+     * Reloads whatever ticket is open, after something changed it
+     * @param quiet For the periodic check: says nothing when it can't be reached
+     */
+    fun reloadTicket(quiet: Boolean = false) {
         val identifier = _ticket.value?.ticket?.identifier ?: return
         scope.launch {
             when (val loaded = remoteHandler.loadTicketDetail(identifier)) {
-                is TmResult.Success -> _ticket.value = loaded.data
-                is TmResult.Error -> support.notify("Couldn't reload the ticket: ${loaded.error.message}")
+                // Only if it's still the one open
+                is TmResult.Success -> if (_ticket.value?.ticket?.identifier == identifier) _ticket.value = loaded.data
+                is TmResult.Error -> if (!quiet) support.notify("Couldn't reload the ticket: ${loaded.error.message}")
             }
         }
     }

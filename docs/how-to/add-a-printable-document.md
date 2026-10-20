@@ -7,7 +7,7 @@ repair. [Printing](../client/printing.md) explains the pieces.
 
 ## 1. Build the document
 
-Add a function to `PrintTemplates` (`composeApp/.../components/print/PrintTemplates.kt`) that returns a
+Add a function to `PrintTemplates` (`shared/.../components/print/PrintTemplates.kt`, in `shared` so the server can make PDFs of it too) that returns a
 `PrintDocument`: a title (used for the print job's name) and its blocks, top to bottom.
 
 ```kotlin
@@ -72,7 +72,7 @@ and returns null when it was sent or cancelled, or what went wrong.
 Only if none of the blocks above will do. Add it to the `PrintBlock` sealed interface, then draw it in both
 renderers:
 
-- `Java2DPrintLayout.layout(block)` in `desktopMain/.../print/PrintDocument.desktop.kt`, for desktop,
+- `Java2DPrintLayout.layout(block)` in `shared/src/jvmMain/.../print/Java2DPrintLayout.kt`, for desktop and the server's PDFs,
 - `HtmlPrintRenderer.block(block, paper)` in `commonMain/.../print/HtmlPrintRenderer.kt`, for web and Android.
 
 Both are exhaustive `when`s over the sealed interface, so the build tells you if one is missing. Check the HTML

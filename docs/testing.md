@@ -204,10 +204,10 @@ scripts/dev_proxy.sh
 python3 scripts/counter_e2e.py https://localhost:8444 --insecure
 ```
 
-Its 20 steps cover: the admin setting up the shop and stock; an account request approved and set up; an invited
+Its 21 steps cover: the admin setting up the shop and stock; an account request approved and set up; an invited
 Restricted clerk; registering a station and turning on kiosk mode; PIN logins; a check-in refused without a
 signature, then made with a deposit; search, lookup by number and the repeat check; the clerk refused a change; a
-pickup refused while money is owed, then paid with change and stock taken; the end of day report; sessions; the
+pickup refused while money is owed, then paid with change and stock taken; the end of day report; the invoice as a PDF and in the CSV export; sessions; the
 audit log; and the big transfers: a 13 MB photo upload put on a note, a backup with photos downloaded whole and
 by range and checked against its sha256, and uploaded back to restore (then cancelled).
 

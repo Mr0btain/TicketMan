@@ -32,6 +32,10 @@ dependencies {
 
     // Photo resizing
     implementation(libs.thumbnailator)
+
+    // Invoice PDFs: the print layout drawn through a Graphics2D that writes PDF
+    implementation(libs.pdfbox)
+    implementation(libs.pdfbox.graphics2d)
 }
 // -PwithWeb builds the web client into the server, which then serves it at /. Off by default because the Wasm
 // build is slow. The big files get a gzipped copy next to them, which the server sends to browsers that accept it

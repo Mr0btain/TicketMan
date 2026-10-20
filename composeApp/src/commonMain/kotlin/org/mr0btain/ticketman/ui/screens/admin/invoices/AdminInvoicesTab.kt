@@ -29,6 +29,7 @@ import org.mr0btain.ticketman.ui.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.file_text
 import ticketman.composeapp.generated.resources.refresh_cw
+import ticketman.composeapp.generated.resources.download
 import kotlin.uuid.Uuid
 
 private val COLUMNS = listOf(
@@ -38,6 +39,7 @@ private val COLUMNS = listOf(
     TmColumn("Total", width = 104.dp, end = true),
     TmColumn("Paid", width = 104.dp, end = true),
     TmColumn("Balance", width = 104.dp, end = true),
+    TmColumn("", width = 64.dp, end = true),
     TmColumn("", width = 72.dp, end = true)
 )
 
@@ -57,6 +59,14 @@ fun AdminInvoicesTab(
     val spacing = TmTheme.spacing
 
     var voiding by remember { mutableStateOf<Invoice?>(null) }
+    var exporting by remember { mutableStateOf(false) }
+
+    if (exporting) {
+        InvoiceExportDialog(
+            onExport = { from, to, onResult -> counter.invoices.export(from, to, onResult) },
+            onDismissRequest = { exporting = false }
+        )
+    }
 
     LaunchedEffect(Unit) {
         counter.invoices.load(reset = true)
@@ -87,12 +97,20 @@ fun AdminInvoicesTab(
             subtitle = "Newest first, click one to open its ticket at the counter",
             icon = Res.drawable.file_text,
             actions = {
-                TmButton(
-                    text = "Refresh",
-                    onClick = { counter.invoices.load(reset = true) },
-                    variant = TmButtonVariant.SECONDARY,
-                    leadingIcon = Res.drawable.refresh_cw
-                )
+                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    TmButton(
+                        text = "Export CSV",
+                        onClick = { exporting = true },
+                        variant = TmButtonVariant.SECONDARY,
+                        leadingIcon = Res.drawable.download
+                    )
+                    TmButton(
+                        text = "Refresh",
+                        onClick = { counter.invoices.load(reset = true) },
+                        variant = TmButtonVariant.SECONDARY,
+                        leadingIcon = Res.drawable.refresh_cw
+                    )
+                }
             }
         ) {
             if (invoices.isEmpty()) {
@@ -123,7 +141,8 @@ fun AdminInvoicesTab(
                             3 -> TmMoneyText(invoice.totalCents)
                             4 -> TmMoneyText(invoice.paidCents, color = colors.textMuted)
                             5 -> TmMoneyText(invoice.balanceCents, color = if (invoice.balanceCents > 0) colors.danger.color else colors.text)
-                            6 -> if (invoice.status != InvoiceStatus.VOID) {
+                            6 -> TmButton(text = "PDF", onClick = { counter.printer.savePdf(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                            7 -> if (invoice.status != InvoiceStatus.VOID) {
                                 TmButton(text = "Void", onClick = { voiding = invoice }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                             }
                         }

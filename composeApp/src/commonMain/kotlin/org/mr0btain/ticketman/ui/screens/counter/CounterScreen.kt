@@ -1,13 +1,14 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import androidx.compose.foundation.layout.*
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.*
-import kotlinx.coroutines.delay
+import org.mr0btain.ticketman.ui.screens.CheckForUpdates
 import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterView
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
@@ -51,14 +52,18 @@ fun CounterScreen(
     val canEdit = viewModel.session.canEdit.collectAsState().value
     val searchFocus = remember { FocusRequester() }
 
-    // Keep the queue fresh while the counter is open
+    // The queue when the counter opens, then changes from other devices on the interval set in Settings. Not in the
+    // middle of a check-in or pickup, which have their own state
     LaunchedEffect(loginState) {
-        if (loginState != LoginState.LOGGED_IN) return@LaunchedEffect
-
-        while (true) {
-            counter.refreshQueue()
-            delay(QUEUE_REFRESH_MILLIS)
-        }
+        if (loginState == LoginState.LOGGED_IN) counter.refreshQueue()
+    }
+    val updateInterval by viewModel.settings.updateInterval.collectAsState()
+    CheckForUpdates(
+        interval = updateInterval,
+        enabled = loginState == LoginState.LOGGED_IN && view in setOf(CounterView.HOME, CounterView.TICKET, CounterView.CUSTOMER)
+    ) {
+        counter.refreshQueue()
+        if (view == CounterView.TICKET) counter.reloadTicket(quiet = true)
     }
 
     Box(
@@ -147,16 +152,19 @@ fun CounterScreen(
                         onCustomerClick = { detail.customer?.let { counter.openCustomer(it.identifier) } },
                         onBack = { counter.goHome() },
                         printAction = {
-                            PrintButton(
-                                size = TmControlSize.LARGE,
-                                templates = listOfNotNull(
-                                    PrintTemplate.CLAIM_SLIP,
-                                    PrintTemplate.DEVICE_TAG,
-                                    PrintTemplate.RECEIPT.takeIf { detail.invoice != null }
-                                ),
-                                defaultPaper = shop.defaultPaper,
-                                onPrint = { template, paper, onResult -> counter.printer.print(detail.ticket.identifier, template, paper, onResult) }
-                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                                PrintButton(
+                                    size = TmControlSize.LARGE,
+                                    templates = listOfNotNull(
+                                        PrintTemplate.CLAIM_SLIP,
+                                        PrintTemplate.DEVICE_TAG,
+                                        PrintTemplate.RECEIPT.takeIf { detail.invoice != null }
+                                    ),
+                                    defaultPaper = shop.defaultPaper,
+                                    onPrint = { template, paper, onResult -> counter.printer.print(detail.ticket.identifier, template, paper, onResult) }
+                                )
+                                detail.invoice?.let { invoice -> SavePdfButton { counter.printer.savePdf(invoice) } }
+                            }
                         },
                         extraActions = {
                             TmButton(
@@ -241,6 +249,7 @@ fun CounterScreen(
                                 defaultPaper = shop.defaultPaper,
                                 onPrint = { template, paper, onResult -> counter.printer.print(invoice.ticketIdentifier, template, paper, onResult) }
                             )
+                            SavePdfButton { counter.printer.savePdf(invoice) }
                         }
                     )
                 }
@@ -264,4 +273,3 @@ fun CounterScreen(
     }
 }
 
-private const val QUEUE_REFRESH_MILLIS = 60_000L

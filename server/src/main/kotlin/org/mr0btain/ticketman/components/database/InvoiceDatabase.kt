@@ -4,6 +4,8 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -37,6 +39,7 @@ class InvoiceDatabase(
     private val PAYMENT_TAG = "$TAG:Payment"
     private val STATUS_TAG = "$TAG:Status"
     private val PAGED_TAG = "$TAG:Paged"
+    private val RANGE_TAG = "$TAG:Range"
 
     fun getById(identifier: Uuid): Invoice? =
         dbQuery(GET_TAG) {
@@ -146,6 +149,19 @@ class InvoiceDatabase(
                 row[InvoiceTable.status] = status.name
                 if (paidAt != null) row[InvoiceTable.paidAt] = paidAt
             } > 0
+        }
+
+    /**
+     * Invoices made from [fromMillis] up to but not including [toMillis], oldest number first, for the export.
+     * Null when the read failed
+     */
+    fun getCreatedBetween(fromMillis: Long, toMillis: Long): List<Invoice>? =
+        dbQuery(RANGE_TAG) {
+            InvoiceTable
+                .selectAll()
+                .where { (InvoiceTable.createdAt greaterEq fromMillis) and (InvoiceTable.createdAt less toMillis) }
+                .orderBy(InvoiceTable.numberYear to SortOrder.ASC, InvoiceTable.numberSequence to SortOrder.ASC)
+                .map { it.toInvoice() }
         }
 
     /** Newest first */

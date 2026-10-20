@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 3
+const val API_VERSION = 4
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -73,6 +73,13 @@ object TicketPaths {
     const val GET_USER = "/get/user/{identifier}"
     const val SET_CUSTOMER = "/set/customer/{identifier}"
     const val SET_USER = "/set/user/{identifier}"
+
+    /** The ticket's work log, oldest first */
+    const val GET_WORK = "/get/work/{identifier}"
+    const val ADD_WORK = "/add/work/{identifier}"
+
+    /** Takes the work entry with this identifier off, and its invoice line */
+    const val REMOVE_WORK = "/remove/work/{identifier}"
 }
 
 object InventoryPaths {
@@ -128,6 +135,12 @@ object AdminPaths {
     const val RESTART = "/restart"
     const val SEED = "/seed"
 
+    /** A list of customers to add, `?dryRun=true` to only say what would happen */
+    const val IMPORT_CUSTOMERS = "/import/customers"
+
+    /** A list of inventory items to add, `?dryRun=true` to only say what would happen */
+    const val IMPORT_INVENTORY = "/import/inventory"
+
     /** A page of the audit log, `?offset=&limit=` */
     const val AUDIT = "/audit/fetch"
 }
@@ -152,6 +165,12 @@ object InvoicePaths {
     const val PAYMENTS = "/{identifier}/payments"
     const val PAYMENT = "/{identifier}/payments/{paymentIdentifier}"
     const val VOID = "/{identifier}/void"
+
+    /** The invoice as a PDF, laid out like the printed one */
+    const val PDF = "/{identifier}/pdf"
+
+    /** Invoices made in a range as CSV, `?from=2026-10-01&to=2026-10-31`, both days included */
+    const val EXPORT = "/export"
 }
 
 object StationPaths {

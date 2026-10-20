@@ -8,19 +8,54 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
+import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.service.InvoiceDocuments
+import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.logging.AppLogger
+import java.time.LocalDate
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 
 /**
- * Invoice routes. Anyone logged in can look, NORMAL and up can change open invoices, only admins can void
+ * Invoice routes. Anyone logged in can look, NORMAL and up can change open invoices, only admins can void and export
  */
 fun Route.invoiceRoute(
     database: InvoiceDatabase,
     service: InvoiceService,
-    userDatabase: UserDatabase
+    userDatabase: UserDatabase,
+    documents: InvoiceDocuments,
+    auditLog: AuditLogDatabase
 ) {
+    val TAG = "InvoiceRoute"
+    val PDF_TAG = "$TAG:Pdf"
+    val EXPORT_TAG = "$TAG:Export"
+
     authenticate("restricted") {
+        // Laid out like the printed one on a letter page, to email or file
+        get(InvoicePaths.PDF) {
+            val pdf = call.uuidParameter("identifier")?.let { documents.pdf(it) }
+
+            if (pdf == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@get
+            }
+
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, pdf.fileName).toString()
+            )
+            call.respondOutputStream(ContentType.Application.Pdf) {
+                try {
+                    documents.writePdf(pdf.document, this)
+                } catch (ex: Exception) {
+                    // Headers are gone by now, so the download is cut short rather than answered 500
+                    AppLogger.e(PDF_TAG, "Couldn't make ${pdf.fileName}", ex)
+                    throw ex
+                }
+            }
+        }
+
         get(InvoicePaths.FOR_TICKET) {
             val invoice = call.uuidParameter("ticketIdentifier")?.let { database.getByTicket(it) }
 
@@ -92,6 +127,31 @@ fun Route.invoiceRoute(
     }
 
     authenticate("admin") {
+        // For the books: one row per invoice made between two days
+        get(InvoicePaths.EXPORT) {
+            val from = call.queryParameters["from"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            val to = call.queryParameters["to"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+
+            if (from == null || to == null || to < from) {
+                call.respondText("Give from and to as days like 2026-10-01, from first", status = HttpStatusCode.BadRequest)
+                return@get
+            }
+
+            val list = documents.inRange(from, to)
+            if (list == null) {
+                call.respond(HttpStatusCode.InternalServerError)
+                return@get
+            }
+
+            call.audit(auditLog, AuditAction.BACKUP, "invoices", details = "Exported ${list.size} invoices, $from to $to")
+            call.response.header(
+                HttpHeaders.ContentDisposition,
+                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, "invoices-$from-to-$to.csv").toString()
+            )
+            call.respondTextWriter(ContentType.Text.CSV.withCharset(Charsets.UTF_8)) { documents.writeCsv(list, this) }
+            AppLogger.m(EXPORT_TAG, "${list.size} invoices, $from to $to")
+        }
+
         post(InvoicePaths.VOID) {
             val identifier = call.uuidParameter("identifier")
 

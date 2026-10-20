@@ -23,6 +23,7 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _pageSize: Int = DEFAULT_PAGE_SIZE
     private var _searchLimit: Int = DEFAULT_SEARCH_LIMIT
     private var _cacheSize: Int = DEFAULT_CACHE_SIZE
+    private var _updateInterval: UpdateInterval = UpdateInterval.DEFAULT
     private var _deviceId: String = ""
     private var _deviceName: String = ""
 
@@ -151,6 +152,14 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(SEARCH_LIMIT_KEY, value.toString())
         }
 
+    /** How often open screens check for changes from other devices */
+    var updateInterval: UpdateInterval
+        get() = _updateInterval
+        set(value) {
+            _updateInterval = value
+            store.putString(UPDATE_INTERVAL_KEY, value.name)
+        }
+
     /** Max number of items held in each entity cache */
     var cacheSize: Int
         get() = _cacheSize
@@ -208,6 +217,7 @@ class LocalStorage(private val store: KeyValueStore) {
         _pageSize = getInt(PAGE_SIZE_KEY, DEFAULT_PAGE_SIZE)
         _searchLimit = getInt(SEARCH_LIMIT_KEY, DEFAULT_SEARCH_LIMIT)
         _cacheSize = getInt(CACHE_SIZE_KEY, DEFAULT_CACHE_SIZE)
+        _updateInterval = UpdateInterval.byName(store.getString(UPDATE_INTERVAL_KEY, ""))
 
         _deviceId = store.getString(DEVICE_ID_KEY, "")
         _deviceName = store.getString(DEVICE_NAME_KEY, "").ifBlank { defaultDeviceName() }
@@ -271,6 +281,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val PAGE_SIZE_KEY = "page_size"
         private const val SEARCH_LIMIT_KEY = "search_limit"
         private const val CACHE_SIZE_KEY = "cache_size"
+        private const val UPDATE_INTERVAL_KEY = "update_interval"
         private const val DEVICE_ID_KEY = "device_id"
         private const val DEVICE_NAME_KEY = "device_name"
         private const val STATION_ID_KEY = "station_id"

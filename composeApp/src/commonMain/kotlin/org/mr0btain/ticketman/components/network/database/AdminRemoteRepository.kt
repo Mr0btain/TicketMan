@@ -22,6 +22,8 @@ import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.server.response.ImportResult
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.station.KioskSettings
@@ -61,6 +63,7 @@ class AdminRemoteRepository(
     private val BACKUP_TAG = "$TAG:Backup"
     private val RESTORE_TAG = "$TAG:Restore"
     private val RESTART_TAG = "$TAG:Restart"
+    private val IMPORT_TAG = "$TAG:Import"
     private val CERTIFICATE_TAG = "$TAG:Certificate"
     private val SEED_TAG = "$TAG:Seed"
     private val AUDIT_TAG = "$TAG:Audit"
@@ -288,6 +291,34 @@ class AdminRemoteRepository(
         }
 
         return handleActionHttpResponse(RESTART_TAG, response)
+    }
+
+    /**
+     * Adds customers read from a file, skipping ones already there
+     * @param dryRun Only says what would happen, for the preview
+     */
+    suspend fun importCustomers(customers: List<Customer>, dryRun: Boolean): TmResult<ImportResult, ServerError> =
+        import(AdminPaths.IMPORT_CUSTOMERS, customers, dryRun)
+
+    /** [importCustomers] for inventory items */
+    suspend fun importInventory(items: List<Inventory>, dryRun: Boolean): TmResult<ImportResult, ServerError> =
+        import(AdminPaths.IMPORT_INVENTORY, items, dryRun)
+
+    private suspend inline fun <reified T> import(path: String, records: List<T>, dryRun: Boolean): TmResult<ImportResult, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkRequest(IMPORT_TAG) {
+            client.post {
+                url("$adminUrl$path")
+                if (dryRun) parameter("dryRun", "true")
+                contentType(ContentType.Application.Json)
+                setBody(records)
+                // Thousands of rows are added in one go
+                transferTimeout()
+            }
+        }
+
+        return handleDataHttpResponse(IMPORT_TAG, response)
     }
 
     /** Has the server make a new HTTPS certificate, used from its next start */

@@ -47,6 +47,9 @@ class TicketRecords(
 
     val cache = TicketCache(cacheSize)
 
+    /** The open ticket's work log, loaded with it */
+    val work = TicketWork(remoteHandler, scope, snackBarHost, canEdit)
+
     private val _scope = MutableStateFlow(TicketScope.DEFAULT)
     /** Whether the list shows the user's tickets or everyone's */
     val listScope = _scope.asStateFlow()
@@ -82,8 +85,8 @@ class TicketRecords(
         scope.launch { pager.refresh() }
     }
 
-    /** Opens a ticket in the seed, from the cache if it's there */
-    fun select(identifier: Uuid) {
+    /** Opens a ticket in the seed, from the cache if it's there. [quiet] says nothing when it can't be loaded */
+    fun select(identifier: Uuid, quiet: Boolean = false) {
         if (selection.pending.value == identifier) return
 
         selection.select(identifier) {
@@ -104,16 +107,31 @@ class TicketRecords(
                 )
             }
 
-            val (ticket, notes, customer, user) = loaded.valueOr { return@select loadFailed(identifier, it) }
+            val (ticket, notes, customer, user) = loaded.valueOr { return@select loadFailed(identifier, it, quiet) }
 
-            return@select { seed.setTicket(ticket, notes, customer, user) }
+            return@select {
+                seed.setTicket(ticket, notes, customer, user)
+                work.load(ticket.identifier, quiet)
+            }
         }
+    }
+
+    /**
+     * Loads the open ticket again from the server, for the periodic check for updates. Leaves a new or changed one
+     * alone and says nothing if the server can't be reached; one deleted on another device is still dropped
+     */
+    fun reloadSelected() {
+        if (seed.isNew || seed.isDirty) return
+
+        cache.remove(seed.identifier)
+        select(seed.identifier, quiet = true)
     }
 
     /** Empties the seed for a new ticket, dropping any ticket still loading */
     fun clearSelection() {
         selection.cancel()
         seed.clear()
+        work.clear()
     }
 
     // Loading the open ticket found nothing, like reloading it after Cancel when another device deleted it. Stop
@@ -121,6 +139,7 @@ class TicketRecords(
     private fun forgetIfOpen(identifier: Uuid): (() -> Unit)? =
         if (seed.identifier == identifier && !seed.isNew) ({
             seed.clear()
+            work.clear()
             cache.remove(identifier)
             scope.launch {
                 pager.refreshCurrentData()
@@ -129,8 +148,9 @@ class TicketRecords(
         }) else null
 
     // Loading failed: a record that's gone is forgotten, anything else is said and what's shown stays
-    private fun loadFailed(identifier: Uuid, error: ServerError): (() -> Unit)? =
+    private fun loadFailed(identifier: Uuid, error: ServerError, quiet: Boolean = false): (() -> Unit)? =
         if (error.isNotFound) forgetIfOpen(identifier)
+        else if (quiet) null
         else null.also { scope.launch { snackBarHost.showSnackbar("That ticket couldn't be loaded: ${error.message}") } }
 
     /** Saves the seed: the ticket, its notes, and who it belongs to and is assigned to */

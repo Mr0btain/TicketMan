@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
+import org.mr0btain.ticketman.components.service.InvoiceDocuments
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
@@ -111,7 +112,14 @@ fun Application.configureRouting(
             invoiceRoute(
                 database = localDatabase.invoiceDatabase,
                 service = invoiceService,
-                userDatabase = localDatabase.userDatabase
+                userDatabase = localDatabase.userDatabase,
+                documents = InvoiceDocuments(
+                    invoices = localDatabase.invoiceDatabase,
+                    tickets = localDatabase.ticketDatabase,
+                    customers = localDatabase.customerDatabase,
+                    shop = localDatabase.shopDatabase
+                ),
+                auditLog = localDatabase.auditLogDatabase
             )
         }
 
@@ -151,7 +159,9 @@ fun Application.configureRouting(
             ticketRoute(
                 database = localDatabase.ticketDatabase,
                 userDatabase = localDatabase.userDatabase,
-                auditLog = localDatabase.auditLogDatabase
+                auditLog = localDatabase.auditLogDatabase,
+                workDatabase = localDatabase.workDatabase,
+                invoiceService = invoiceService
             )
         }
 

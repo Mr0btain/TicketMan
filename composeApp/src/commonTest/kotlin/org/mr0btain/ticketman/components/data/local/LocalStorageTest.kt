@@ -89,6 +89,7 @@ class LocalStorageTest {
         assertEquals(LocalStorage.DEFAULT_PAGE_SIZE, localStorage.pageSize)
         assertEquals(LocalStorage.DEFAULT_SEARCH_LIMIT, localStorage.searchLimit)
         assertEquals(LocalStorage.DEFAULT_CACHE_SIZE, localStorage.cacheSize)
+        assertEquals(UpdateInterval.SECONDS_30, localStorage.updateInterval)
     }
 
     @Test
@@ -98,6 +99,7 @@ class LocalStorageTest {
         localStorage.pageSize = 50
         localStorage.searchLimit = 10
         localStorage.cacheSize = 75
+        localStorage.updateInterval = UpdateInterval.MINUTES_5
 
         val reloaded = LocalStorage(store)
 
@@ -106,6 +108,7 @@ class LocalStorageTest {
         assertEquals(50, reloaded.pageSize)
         assertEquals(10, reloaded.searchLimit)
         assertEquals(75, reloaded.cacheSize)
+        assertEquals(UpdateInterval.MINUTES_5, reloaded.updateInterval)
     }
 
     @Test
@@ -113,12 +116,14 @@ class LocalStorageTest {
         store.putString("remember_login", "maybe")
         store.putString("page_size", "lots")
         store.putString("search_limit", "")
+        store.putString("update_interval", "SOMETIMES")
 
         val reloaded = LocalStorage(store)
 
         assertEquals(LocalStorage.DEFAULT_REMEMBER_LOGIN, reloaded.rememberLogin)
         assertEquals(LocalStorage.DEFAULT_PAGE_SIZE, reloaded.pageSize)
         assertEquals(LocalStorage.DEFAULT_SEARCH_LIMIT, reloaded.searchLimit)
+        assertEquals(UpdateInterval.DEFAULT, reloaded.updateInterval)
     }
 
     @Test

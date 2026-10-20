@@ -6,6 +6,7 @@ import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
@@ -53,6 +54,50 @@ object PrintTemplates {
      * Given to the customer at pickup: every charge, the totals and how it was paid
      */
     fun receipt(shop: ShopProfile, ticket: Ticket, customer: Customer?, invoice: Invoice): PrintDocument {
+        val details = listOfNotNull(
+            PrintBlock.Field("Invoice", invoice.label),
+            PrintBlock.Field("Ticket", ticket.label),
+            PrintBlock.Field("Date", formatDateTime(invoice.paidAt ?: invoice.createdAt)),
+            customer?.let { PrintBlock.Field("Customer", it.name) },
+            PrintBlock.Field("Device", ticket.device.toString().trim())
+        )
+
+        return PrintDocument("Receipt ${invoice.label}", shopHeader(shop) + PrintBlock.Divider + PrintBlock.Heading("Receipt") + details + money(shop, invoice))
+    }
+
+    /**
+     * The invoice on its own, to email or file: like the [receipt], with the customer's contact details and what's
+     * still owed. Made on the server as a PDF (`GET /api/invoice/{id}/pdf`)
+     */
+    fun invoice(shop: ShopProfile, ticket: Ticket, customer: Customer?, invoice: Invoice): PrintDocument {
+        val address = customer?.address?.let { listOf(it.street, listOf(it.city, it.state, it.zip).filter(String::isNotBlank).joinToString(" ")) }
+            ?.filter { it.isNotBlank() }?.joinToString("\n").orEmpty()
+
+        val details = listOfNotNull(
+            PrintBlock.Field("Invoice", invoice.label),
+            PrintBlock.Field("Date", formatDate(invoice.createdAt)),
+            PrintBlock.Field(
+                "Status",
+                when (invoice.status) {
+                    InvoiceStatus.PAID -> "Paid ${invoice.paidAt?.let { formatDate(it) }.orEmpty()}".trim()
+                    InvoiceStatus.VOID -> "Void"
+                    InvoiceStatus.OPEN -> "Due"
+                }
+            ),
+            PrintBlock.Field("Ticket", ticket.label),
+            PrintBlock.Field("Device", ticket.device.toString().trim().ifBlank { "-" }),
+            PrintBlock.Gap,
+            customer?.let { PrintBlock.Field("Bill to", it.name) },
+            address.takeIf { it.isNotBlank() }?.let { PrintBlock.Field("", it) },
+            customer?.phone?.takeIf { it.isNotBlank() }?.let { PrintBlock.Field("Phone", it) },
+            customer?.email?.takeIf { it.isNotBlank() }?.let { PrintBlock.Field("Email", it) }
+        )
+
+        return PrintDocument("Invoice ${invoice.label}", shopHeader(shop) + PrintBlock.Divider + PrintBlock.Heading("Invoice") + details + money(shop, invoice))
+    }
+
+    // The charges, totals, payments and the shop's footer, the same on a receipt and an invoice
+    private fun money(shop: ShopProfile, invoice: Invoice): List<PrintBlock> {
         val charges = invoice.charges.map { charge ->
             val quantity = if (charge.quantity == 1.0) "" else "${formatQuantity(charge.quantity)} x "
             AmountRow("$quantity${charge.description}", Money.format(charge.totalCents, shop.currencySymbol))
@@ -72,14 +117,7 @@ object PrintTemplates {
             invoice.balanceCents.takeIf { it > 0 }?.let { AmountRow("Still owed", Money.format(it, shop.currencySymbol), bold = true) }
         )
 
-        val blocks = shopHeader(shop) + listOfNotNull(
-            PrintBlock.Divider,
-            PrintBlock.Heading("Receipt"),
-            PrintBlock.Field("Invoice", invoice.label),
-            PrintBlock.Field("Ticket", ticket.label),
-            PrintBlock.Field("Date", formatDateTime(invoice.paidAt ?: invoice.createdAt)),
-            customer?.let { PrintBlock.Field("Customer", it.name) },
-            PrintBlock.Field("Device", ticket.device.toString().trim()),
+        return listOfNotNull(
             PrintBlock.Divider,
             PrintBlock.Amounts(charges.ifEmpty { listOf(AmountRow("No charge", Money.format(0, shop.currencySymbol))) }),
             PrintBlock.Divider,
@@ -88,8 +126,6 @@ object PrintTemplates {
         ) + listOfNotNull(
             shop.invoiceFooter.takeIf { it.isNotBlank() }?.let { PrintBlock.Text(it, small = true, centered = true) }
         ).let { footer -> if (footer.isEmpty()) footer else listOf(PrintBlock.Divider) + footer }
-
-        return PrintDocument("Receipt ${invoice.label}", blocks)
     }
 
     /**

@@ -32,7 +32,8 @@ fun TicketPanel(
     onDeleteTicket: () -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
     ticketListState: LazyListState,
-    loadError: String? = null
+    loadError: String? = null,
+    work: @Composable () -> Unit = {}
 ) {
     RecordsLayout(
         toolbar = {
@@ -66,7 +67,7 @@ fun TicketPanel(
             )
         },
         detail = {
-            TicketInfoPane(seed = seed, onEditClick = onEditTicket, canEdit = canEdit, onImageClick = onImageClick)
+            TicketInfoPane(seed = seed, onEditClick = onEditTicket, canEdit = canEdit, onImageClick = onImageClick, work = work)
         }
     )
 }

@@ -76,6 +76,21 @@ Voiding a paid invoice puts its parts back in stock. Voiding never changes the t
 `InvoiceService` returns an `AccountResult` (`Done`, `Invalid`, `Conflict`, `NotFound`, the same type the account
 code uses), and routes turn it into a status with `respondAccount()`: `400`, `409`, `404`, or the success code.
 
+## Work log
+
+Time and parts logged on a ticket as it's worked on, in `ticket_work` (`TicketWorkTable`, `WorkDatabase`), through
+`InvoiceService.logWork` and `removeWork` (routes under `/api/data/ticket`, see the [ticket API](../api/ticket.md#work-log)).
+
+- Logging one makes the invoice if the ticket has none, and adds a `LABOR` or `PART` charge whose identifier is the
+  entry's. Both are written in one transaction, under the same `CHANGE_LOCK` as pickup.
+- The price is the one sent, or the shop profile's `laborRateCents` for time and the item's price for a part. Labor
+  isn't taxed and parts are, which can be changed on the invoice.
+- Removing an entry takes its charge off too, if it's still there. Neither works once the invoice is paid or void or
+  the ticket is picked up (`409`), so the log matches what was charged.
+- Stock is taken at pickup as for any part on the invoice, not when it's logged.
+- Editing the invoice at the counter replaces its lines as a whole, so a line taken off there leaves its entry in
+  the log, and an entry logged while someone has the invoice open at the counter is dropped if they then save it.
+
 ## Pickup
 
 `POST /api/counter/pickup` with a `PickupRequest(ticketIdentifier, payments)`, Normal access.

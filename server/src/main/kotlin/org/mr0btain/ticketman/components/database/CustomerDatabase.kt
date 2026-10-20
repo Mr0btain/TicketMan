@@ -4,6 +4,7 @@ import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.SizedCollection
+import org.jetbrains.exposed.v1.jdbc.select
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerEntity
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable.address
@@ -29,6 +30,7 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTa
 open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
     private val ADD_TICKET_TAG = "$tag:AddTicket"
     private val MIGRATE_NAMES_TAG = "$tag:MigrateNames"
+    private val CONTACTS_TAG = "$tag:Contacts"
 
     override fun getById(identifier: Uuid): Customer? =
         dbQuery(GET_BY_ID_TAG) {
@@ -112,6 +114,16 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
                 )
                 .limit(limit)
                 .map { customerEntity -> customerEntity.toCustomer() }
+        }
+
+    /**
+     * Every customer's name, phone and email, for an import to find ones already there. Null when the read failed
+     */
+    fun contacts(): List<Triple<String, String, String>>? =
+        dbQuery(CONTACTS_TAG) {
+            CustomerTable
+                .select(CustomerTable.name, CustomerTable.phone, CustomerTable.email)
+                .map { Triple(it[CustomerTable.name], it[CustomerTable.phone], it[CustomerTable.email]) }
         }
 
     override fun add(data: Customer): Boolean =

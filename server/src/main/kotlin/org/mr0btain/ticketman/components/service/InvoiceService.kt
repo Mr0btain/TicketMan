@@ -13,20 +13,26 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
+import org.mr0btain.ticketman.server.request.WorkRequest
+import org.mr0btain.ticketman.data.ticket.WorkEntry
+import org.mr0btain.ticketman.data.ticket.WorkType
+import org.mr0btain.ticketman.components.database.WorkDatabase
+import org.mr0btain.ticketman.components.utils.formatQuantity
 import kotlin.math.abs
 import kotlin.math.roundToLong
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
- * Building invoices, taking payments and picking up tickets
+ * Building invoices, taking payments, logging work on tickets and picking up tickets
  */
 class InvoiceService(
     private val invoices: InvoiceDatabase,
     private val tickets: TicketDatabase,
     private val inventory: InventoryDatabase,
     private val shop: ShopDatabase,
-    private val auditLog: AuditLogDatabase
+    private val auditLog: AuditLogDatabase,
+    private val work: WorkDatabase = WorkDatabase()
 ) {
     /** The ticket's invoice, made if it doesn't have one */
     fun forTicket(ticketIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
@@ -152,6 +158,90 @@ class InvoiceService(
 
         return AccountResult.Done(invoices.getById(identifier)!!)
     }
+
+    // ------------------------------------------ Work log ------------------------------------------
+
+    /**
+     * Logs time or a part on a ticket and puts the matching line on its invoice, made then if it has none. Both are
+     * saved together. Stock is still taken at pickup, from the invoice's lines
+     * @param userIdentifier Who's logging it, kept on the entry with [userName]
+     */
+    fun logWork(ticketIdentifier: Uuid, request: WorkRequest, userIdentifier: Uuid?, userName: String): AccountResult<WorkEntry> = synchronized(CHANGE_LOCK) {
+        val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
+        if (ticket.status.status == TicketStatusType.PICKED_UP) return AccountResult.Conflict("Ticket ${ticket.label} was picked up, its work can't change")
+
+        val item = request.inventoryIdentifier?.let { inventory.getById(it) ?: return AccountResult.Invalid("That inventory item doesn't exist") }
+        if (request.type == WorkType.PART && item == null) return AccountResult.Invalid("Pick the part from inventory")
+
+        val entry = WorkEntry(
+            type = request.type,
+            description = request.description.trim().ifBlank { item?.name.orEmpty() },
+            quantity = request.quantity,
+            unitPriceCents = request.unitPriceCents ?: if (request.type == WorkType.PART) item!!.priceCents else shop.get().laborRateCents,
+            inventoryIdentifier = item?.identifier,
+            userIdentifier = userIdentifier,
+            userName = userName,
+            workedAt = Clock.System.now().toEpochMilliseconds()
+        )
+        val charge = entry.toCharge()
+        chargesProblem(listOf(charge))?.let { return AccountResult.Invalid(it) }
+
+        val invoice = when (val result = forTicket(ticketIdentifier, userIdentifier)) {
+            is AccountResult.Done -> result.value
+            else -> return AccountResult.Invalid("Couldn't find or make the invoice")
+        }
+        if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}, work can't be added to it")
+
+        transaction {
+            work.add(ticketIdentifier, entry)
+            invoices.setCharges(invoice.identifier, invoice.charges + charge, invoice.discountCents, invoice.taxRateBasisPoints)
+            auditLog.log(userIdentifier, AuditAction.CREATE, "ticket", ticketIdentifier.toString(), "Logged ${describe(entry)} on ${ticket.label}")
+        }
+
+        return AccountResult.Done(entry)
+    }
+
+    /**
+     * Takes a work entry off its ticket, and its line off the invoice. Not once the invoice is paid or void, since
+     * the work log should match what was charged
+     */
+    fun removeWork(identifier: Uuid, actor: Uuid?): AccountResult<Unit> = synchronized(CHANGE_LOCK) {
+        val (ticketIdentifier, entry) = work.get(identifier) ?: return AccountResult.NotFound
+        val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
+        if (ticket.status.status == TicketStatusType.PICKED_UP) return AccountResult.Conflict("Ticket ${ticket.label} was picked up, its work can't change")
+
+        val invoice = invoices.getByTicket(ticketIdentifier)
+        if (invoice != null && invoice.status != InvoiceStatus.OPEN) {
+            return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}, its work can't change")
+        }
+
+        transaction {
+            work.remove(identifier)
+            // Taken off by hand at the counter already is fine, there's nothing to take off then
+            if (invoice != null && invoice.charges.any { it.identifier == identifier }) {
+                invoices.setCharges(invoice.identifier, invoice.charges.filter { it.identifier != identifier }, invoice.discountCents, invoice.taxRateBasisPoints)
+            }
+            auditLog.log(actor, AuditAction.DELETE, "ticket", ticketIdentifier.toString(), "Removed ${describe(entry)} from ${ticket.label}")
+        }
+
+        return AccountResult.Done(Unit)
+    }
+
+    // Labor isn't taxed and parts are, which can be changed on the invoice afterwards
+    private fun WorkEntry.toCharge(): Charge =
+        Charge(
+            identifier = identifier,
+            type = if (type == WorkType.PART) ChargeType.PART else ChargeType.LABOR,
+            description = description,
+            quantity = quantity,
+            unitPriceCents = unitPriceCents,
+            inventoryIdentifier = inventoryIdentifier,
+            taxable = type == WorkType.PART
+        )
+
+    private fun describe(entry: WorkEntry): String =
+        if (entry.type == WorkType.PART) "${formatQuantity(entry.quantity)} x ${entry.description}"
+        else "${formatQuantity(entry.quantity)}h ${entry.description}"
 
     private class ShortOfStock(val identifier: Uuid) : Exception()
 

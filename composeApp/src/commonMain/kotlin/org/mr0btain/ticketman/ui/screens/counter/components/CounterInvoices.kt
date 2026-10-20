@@ -7,6 +7,7 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.valueOr
+import org.mr0btain.ticketman.components.data.saveFile
 
 /** The invoice list, newest first, shown on the admin screen's Invoices tab */
 class CounterInvoices(
@@ -44,6 +45,22 @@ class CounterInvoices(
 
                 is TmResult.Error -> support.notify(result.error.message)
             }
+        }
+    }
+
+    /**
+     * Saves the invoices made from [from] to [to] (days like 2026-10-01, both included) as CSV for the books
+     * @param onResult Gets null when it was saved or they cancelled, otherwise what went wrong
+     */
+    fun export(from: String, to: String, onResult: (String?) -> Unit) {
+        support.scope.launch {
+            val bytes = remoteHandler.invoiceRepo.export(from, to).valueOr { error ->
+                onResult("Couldn't export: ${error.message}")
+                return@launch
+            }
+
+            if (saveFile(bytes, "invoices-$from-to-$to", "csv")) support.notify("Invoices saved")
+            onResult(null)
         }
     }
 

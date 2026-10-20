@@ -47,8 +47,8 @@ sequenceDiagram
 
 | Tab | List columns | Details | Dialog |
 |-----|--------------|---------|--------|
-| Customers | Name, phone, email, street | Contact, their tickets (click to open), notes | `CustomerDialog`: first and last name, phone, email, address, their tickets, notes |
-| Tickets | Number, device, priority, status | Status and priority badges, customer, technician, device, created, estimate, problem, updates | `TicketDialog`: customer and technician search, device, problem, status, priority, updates |
+| Customers | Name, phone, email, street | Contact, their tickets (click to open), notes | `CustomerDialog`: first and last name, phone, email, address, their tickets and a search to link more, notes |
+| Tickets | Number, device, priority, status | Status and priority badges, customer, technician, device, created, estimate, problem, work log (`TicketWorkSection`, with Log work), updates | `TicketDialog`: customer and technician search, New customer, device, problem, status, priority, updates |
 | Inventory | Name, description, stock, cost, price | Description, price, cost, stock, photos, notes | `InventoryDialog`: name, description, stock (or untracked), cost, price, photos, notes |
 
 Users are records too (`UserRecords`), but they're managed on the [admin screen](admin.md), not here.
@@ -71,7 +71,35 @@ it, and the dialog's Save stays off until `seed.isDirty`.
   `remove()` with the selected record. The record stays selected until the server agrees; if it refuses, a
   snackbar says why ("Customer not deleted: ...").
 
+- **New customer** in the ticket dialog opens the kit's `TmCustomerDialog` on top. Saving it adds the customer
+  straight away through `CustomerRecords.addCustomer()` (so it stays even if the ticket is then cancelled) and picks
+  it as the ticket's customer.
+- **Linking tickets** to a customer: the dialog's ticket search adds the picked ticket to `seed.tickets`, after
+  `CustomerRecords.ticketToLink()` loads it and the customer it's on now. A ticket on someone else asks first
+  ("Move 26-00000042?"), since a ticket has one customer and linking moves it. Save sends
+  `POST /api/data/customer/add/ticket/{id}` for each one not linked yet. Saving never unlinks, so only tickets
+  picked in this dialog have an X (shown as "Linked when saved"); a ticket leaves a customer by being linked to
+  another.
+
 Clicking a photo anywhere on the screen opens one shared `TmImageView` at that photo.
+
+### Work log
+
+The ticket details show its work log, loaded with the ticket by `TicketRecords.work` (`TicketWork`), with the total.
+**Log work** opens `WorkDialog`: time (what was done, hours, rate per hour starting at the shop's labor rate) or a
+part (picked from an inventory search, how many, price each starting at the item's). Entries are saved straight
+away, not with the ticket, since each one changes the invoice; taking one off asks first. Restricted users see the
+log without the buttons, and a picked up ticket's can't change.
+
+### Checking for updates
+
+[`CheckForUpdates`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/CheckForUpdates.kt)
+runs a check on the interval set in Settings (`SettingsHandler.updateInterval`, 30 seconds by default), while the
+window has focus and the screen is on. A window back after longer than the interval checks straight away. The
+records screen reloads the open tab's list (`pager.refreshCurrentData()`) and the open record
+(`reloadSelected()`), and skips it all while any dialog is open. `reloadSelected()` leaves a new or changed seed
+alone, and loads with `quiet = true`, so a server that can't be reached doesn't pop a snackbar every 30 seconds; a
+record deleted elsewhere is still dropped. The counter and admin screens use the same composable.
 
 ### View only
 

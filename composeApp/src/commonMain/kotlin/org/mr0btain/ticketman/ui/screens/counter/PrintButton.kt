@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.printer
+import ticketman.composeapp.generated.resources.download
 
 /**
  * Print button that asks which slip and which paper, starting on the shop's default paper
@@ -84,4 +85,16 @@ fun PrintButton(
 
         error?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
     }
+}
+
+/** Saves the invoice as a PDF from the server, to email to the customer or keep */
+@Composable
+fun SavePdfButton(size: TmControlSize = TmControlSize.LARGE, onClick: () -> Unit) {
+    TmButton(
+        text = "Save PDF",
+        onClick = onClick,
+        variant = TmButtonVariant.SECONDARY,
+        size = size,
+        leadingIcon = Res.drawable.download
+    )
 }

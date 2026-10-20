@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.ticket.SignatureInput
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.ticket.WorkType
 import kotlin.uuid.Uuid
 
 /** Replaces an open invoice's lines and discount, totals are worked out by the server */
@@ -44,4 +45,20 @@ data class CheckInRequest(
 data class PickupRequest(
     val ticketIdentifier: Uuid,
     val payments: List<PaymentRequest> = emptyList()
+)
+
+/**
+ * Logs work on a ticket
+ * @param description What was done. For a part, blank means the item's name
+ * @param quantity Hours for labor, how many for a part
+ * @param unitPriceCents Null for the shop's labor rate, or the item's price for a part
+ * @param inventoryIdentifier The item a part came from, needed for parts
+ */
+@Serializable
+data class WorkRequest(
+    val type: WorkType,
+    val description: String = "",
+    val quantity: Double,
+    val unitPriceCents: Long? = null,
+    val inventoryIdentifier: Uuid? = null
 )

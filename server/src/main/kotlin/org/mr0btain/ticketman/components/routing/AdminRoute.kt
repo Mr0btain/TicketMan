@@ -13,6 +13,9 @@ import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.RestoreService
+import org.mr0btain.ticketman.components.service.ImportService
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.components.service.copyToFile
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.station.KioskSettings
@@ -43,6 +46,7 @@ fun Route.adminRoute(
     val AUDIT_TAG = "$TAG:Audit"
 
     val auditLog = database.auditLogDatabase
+    val importService = ImportService(database.customerDatabase, database.inventoryDatabase, auditLog)
 
     // The token in the link is the login here, so a browser can download it directly. Range requests work, so
     // a dropped download can carry on
@@ -350,6 +354,26 @@ fun Route.adminRoute(
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "server", details = details)
             }
             call.respond(HttpStatusCode.Accepted)
+        }
+
+        // Customers or inventory from another system, read from a CSV by the client. Ones already here are skipped.
+        // ?dryRun=true answers what would happen without adding anything, for the preview
+        post(AdminPaths.IMPORT_CUSTOMERS) {
+            val list = call.receive<List<Customer>>()
+            if (list.size > ImportService.MAX_ROWS) return@post call.respondText("At most ${ImportService.MAX_ROWS} at once", status = HttpStatusCode.BadRequest)
+
+            importService.customers(list, call.queryParameters["dryRun"] == "true", call.getIdentifierFromToken())
+                ?.let { call.respond(HttpStatusCode.OK, it) }
+                ?: call.respond(HttpStatusCode.InternalServerError)
+        }
+
+        post(AdminPaths.IMPORT_INVENTORY) {
+            val list = call.receive<List<Inventory>>()
+            if (list.size > ImportService.MAX_ROWS) return@post call.respondText("At most ${ImportService.MAX_ROWS} at once", status = HttpStatusCode.BadRequest)
+
+            importService.inventory(list, call.queryParameters["dryRun"] == "true", call.getIdentifierFromToken())
+                ?.let { call.respond(HttpStatusCode.OK, it) }
+                ?: call.respond(HttpStatusCode.InternalServerError)
         }
 
         // Mock data, only on servers started in development mode

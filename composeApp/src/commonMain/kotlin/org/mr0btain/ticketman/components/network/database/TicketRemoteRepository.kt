@@ -2,6 +2,11 @@ package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
 import io.ktor.client.request.get
+import io.ktor.client.request.delete
+import org.mr0btain.ticketman.components.network.handleActionHttpResponse
+import org.mr0btain.ticketman.data.ticket.WorkEntry
+import org.mr0btain.ticketman.server.request.WorkRequest
+import org.mr0btain.ticketman.error.EmptyResult
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
 import io.ktor.client.request.url
@@ -42,6 +47,7 @@ class TicketRemoteRepository(
     private val GET_HISTORY_TAG = "$tag:GetHistory"
     private val GET_SIGNATURE_TAG = "$tag:GetSignature"
     private val FETCH_MINE_TAG = "$tag:FetchMine"
+    private val WORK_TAG = "$tag:Work"
 
     /** A page of the tickets assigned to whoever is logged in, newest first */
     suspend fun fetchMine(offset: Long, limit: Int): TmResult<List<Ticket>, ServerError> =
@@ -95,4 +101,34 @@ class TicketRemoteRepository(
 
     suspend fun setUser(identifier: Uuid, userId: Uuid) =
         setEntity(SET_USER_TAG, userId, "$serverUrl${TicketPaths.SET_USER.fill(identifier)}")
+
+    /** The ticket's work log, oldest first */
+    suspend fun getWork(identifier: Uuid): TmResult<List<WorkEntry>, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(WORK_TAG, networkRequest(WORK_TAG) { client.get { url("$serverUrl${TicketPaths.GET_WORK.fill(identifier)}") } })
+    }
+
+    /** Logs work, which also goes on the ticket's invoice. Answers with the entry as saved */
+    suspend fun addWork(identifier: Uuid, request: WorkRequest): TmResult<WorkEntry, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(
+            WORK_TAG,
+            networkRequest(WORK_TAG) {
+                client.post {
+                    url("$serverUrl${TicketPaths.ADD_WORK.fill(identifier)}")
+                    contentType(ContentType.Application.Json)
+                    setBody(request)
+                }
+            }
+        )
+    }
+
+    /** Takes a work entry off, and its invoice line */
+    suspend fun removeWork(workIdentifier: Uuid): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+
+        return handleActionHttpResponse(WORK_TAG, networkRequest(WORK_TAG) { client.delete { url("$serverUrl${TicketPaths.REMOVE_WORK.fill(workIdentifier)}") } })
+    }
 }

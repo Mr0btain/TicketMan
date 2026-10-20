@@ -46,6 +46,7 @@ import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import org.mr0btain.ticketman.ui.kit.selection.TmFilterChip
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerForm
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.alert_triangle
 import ticketman.composeapp.generated.resources.check_square
@@ -260,7 +261,7 @@ private fun CustomerStep(
     }
 
     if (adding) {
-        CustomerForm(
+        TmCustomerForm(
             onSave = { customer, onResult ->
                 onAdd(customer) { saved, problem ->
                     onResult(problem)

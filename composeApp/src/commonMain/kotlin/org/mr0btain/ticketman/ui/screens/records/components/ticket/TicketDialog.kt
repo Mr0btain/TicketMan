@@ -32,10 +32,15 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
+import ticketman.composeapp.generated.resources.user_plus
+import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerDialog
 
 /**
  * Adds or edits a ticket. Changes go straight onto [seed]
  * @param onContinue Saves the seed and closes the dialog. Cancelling goes through onDismiss, which reloads the record
+ * @param onAddCustomer Saves a customer made with New customer, calling back with it or what went wrong. The customer
+ * is saved straight away, even if the ticket is then cancelled
  */
 @Composable
 fun TicketDialog(
@@ -43,11 +48,13 @@ fun TicketDialog(
     isVisible: Boolean,
     onCustomerSearchQuery: suspend (String) -> List<SearchResult>,
     onUserSearchQuery: suspend (String) -> List<SearchResult>,
+    onAddCustomer: (Customer, (Customer?, String?) -> Unit) -> Unit,
     onContinue: () -> Unit,
     onDismiss: () -> Unit
 ) {
     if (!isVisible) return
 
+    var addingCustomer by remember { mutableStateOf(false) }
     var showNoteDialog by remember { mutableStateOf(false) }
     val noteSeed = remember { NoteSeed() }
     val colors = TmTheme.colors
@@ -64,6 +71,21 @@ fun TicketDialog(
         }
     )
 
+    if (addingCustomer) {
+        TmCustomerDialog(
+            onSave = { customer, onResult ->
+                onAddCustomer(customer) { saved, problem ->
+                    onResult(problem)
+                    if (saved != null) {
+                        seed.changeCustomer(EntityReference(saved.identifier, saved.name))
+                        addingCustomer = false
+                    }
+                }
+            },
+            onDismissRequest = { addingCustomer = false }
+        )
+    }
+
     TmDialog(
         title = if (seed.isNew) "New ticket" else "Edit ${seed.ticket.label}",
         onDismissRequest = onDismiss,
@@ -78,17 +100,29 @@ fun TicketDialog(
             )
         }
     ) {
-        TmSectionLabel("People")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { TmSectionLabel("People") }
+            TmButton(
+                text = "New customer",
+                variant = TmButtonVariant.SECONDARY,
+                size = TmControlSize.SMALL,
+                leadingIcon = Res.drawable.user_plus,
+                onClick = { addingCustomer = true }
+            )
+        }
         TmFieldPair(
             {
-                TmSearchBar(
-                    modifier = it,
-                    label = "Customer",
-                    placeholder = "Search customers",
-                    initialQuery = seed.customer?.text ?: "",
-                    onPick = { result -> seed.changeCustomer(EntityReference(result.identifier, result.text)) },
-                    onQuery = onCustomerSearchQuery
-                )
+                // Keyed so a customer added with New customer shows in the field
+                key(seed.customer?.identifier) {
+                    TmSearchBar(
+                        modifier = it,
+                        label = "Customer",
+                        placeholder = "Search customers",
+                        initialQuery = seed.customer?.text ?: "",
+                        onPick = { result -> seed.changeCustomer(EntityReference(result.identifier, result.text)) },
+                        onQuery = onCustomerSearchQuery
+                    )
+                }
             },
             {
                 TmSearchBar(

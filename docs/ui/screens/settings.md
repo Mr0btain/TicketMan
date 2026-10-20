@@ -24,6 +24,7 @@ wider, one under the other on narrower ones.
 | **Server** | Server address | Where the server is, like `tickets.myshop.com`, or `192.168.1.20:8443` without a proxy. No scheme means `https://`. Saving it reconnects (`session.changeServer`); if that fails, the Account panel says why (**Can't connect**) |
 | | Device name | What admins see for this device on the Sessions tab, from the next login. Also the suggested name when registering a station |
 | **Records** | Start tab | Which records tab opens first, picked from a dropdown |
+| | Check for updates every | Off, 15 seconds, 30 seconds (the default), 1 minute or 5 minutes (`UpdateInterval`). How often open screens pick up changes from other devices, see [records](records.md#checking-for-updates) |
 | | Page size | Records loaded per page, 5 to 100. Reloads the lists |
 | | Search result limit | 1 to 100 |
 | | Cache size | Opened records kept in each cache, 1 to 200. Resizes the caches straight away |

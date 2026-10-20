@@ -25,7 +25,9 @@ data class ShopProfile(
     /** Paper the counter prints on unless someone picks another */
     val defaultPaper: PaperSize = PaperSize.RECEIPT_80MM,
     /** Put before every amount shown or printed, like "$" or "£" */
-    val currencySymbol: String = Money.DEFAULT_SYMBOL
+    val currencySymbol: String = Money.DEFAULT_SYMBOL,
+    /** Per hour, for time logged on a ticket's work log. 0 until it's set */
+    val laborRateCents: Long = 0
 ) {
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90

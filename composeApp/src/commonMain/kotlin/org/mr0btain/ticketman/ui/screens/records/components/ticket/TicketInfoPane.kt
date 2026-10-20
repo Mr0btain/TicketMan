@@ -24,7 +24,8 @@ fun TicketInfoPane(
     seed: TicketSeed,
     onEditClick: () -> Unit,
     canEdit: Boolean = true,
-    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
+    work: @Composable () -> Unit = {}
 ) {
     val ticket = seed.ticket
 
@@ -59,6 +60,8 @@ fun TicketInfoPane(
                 Text(text = ticket.problem, style = TmTheme.typography.body, color = TmTheme.colors.text)
             }
         }
+
+        work()
 
         DetailSection("Updates") {
             TmNoteBlock(notes = seed.notes, onImageClick = onImageClick, emptyText = "No updates yet")

@@ -46,6 +46,9 @@ kotlin {
             // Serialization
             implementation(libs.kotlinx.serialization.json)
 
+            // Times on printouts and the screen (components/utils/Formatting.kt)
+            implementation(libs.kotlinx.datetime)
+
             // FileOps
             //implementation(libs.bundles.fileOps)
             implementation(libs.kotlinx.io)

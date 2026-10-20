@@ -28,6 +28,7 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.screens.settings.components.StationDialog
 import ticketman.composeapp.generated.resources.*
+import org.mr0btain.ticketman.components.data.local.UpdateInterval
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingsHandler
 
 /**
@@ -48,6 +49,7 @@ fun SettingsScreen(
     val defaultTab = viewModel.settings.defaultTab.collectAsState()
     val pageSize = viewModel.settings.pageSize.collectAsState()
     val searchLimit = viewModel.settings.searchLimit.collectAsState()
+    val updateInterval = viewModel.settings.updateInterval.collectAsState()
     val cacheSize = viewModel.settings.cacheSize.collectAsState()
     val deviceName = viewModel.settings.deviceName.collectAsState()
     val station = viewModel.session.station.collectAsState()
@@ -128,6 +130,16 @@ fun SettingsScreen(
                     options = tabNames,
                     onSelect = { name ->
                         tabNames.indexOf(name).takeIf { it >= 0 }?.let { viewModel.settings.setDefaultTab(it) }
+                    }
+                ),
+                SettingItem.Choice(
+                    icon = painterResource(Res.drawable.refresh_cw),
+                    label = "Check for updates every",
+                    description = "How often open lists, records, the counter queue and the admin screen pick up changes from other devices",
+                    selected = updateInterval.value.label,
+                    options = UpdateInterval.entries.map { it.label },
+                    onSelect = { label ->
+                        UpdateInterval.entries.firstOrNull { it.label == label }?.let { viewModel.settings.setUpdateInterval(it) }
                     }
                 ),
                 numberSetting(

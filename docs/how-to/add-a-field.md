@@ -114,7 +114,7 @@ dialog's Save stays off and the change is never sent.
   ```
 
 - **A list column**, if it earns one: a `TmColumn` in the list pane's `COLUMNS` and a cell for it.
-- Anywhere else that shows customers and should have it: the counter's `CustomerCard` and `CustomerForm`, and the
+- Anywhere else that shows customers and should have it: the counter's `CustomerCard` and the kit's `TmCustomerForm` (new customers at the counter, at check-in and from the ticket dialog), and the
   print templates (`PrintTemplates.customerFields`).
 
 ## 7. Tests

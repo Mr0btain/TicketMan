@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.normalizeServerAddress
 import org.mr0btain.ticketman.components.data.local.LocalStorage
+import org.mr0btain.ticketman.components.data.local.UpdateInterval
 import org.mr0btain.ticketman.ui.kit.theme.TmFont
 import org.mr0btain.ticketman.ui.kit.theme.TmFonts
 import org.mr0btain.ticketman.ui.kit.theme.TmPalette
@@ -55,6 +56,10 @@ class SettingsHandler(
     private val _cacheSize: MutableStateFlow<Int> = MutableStateFlow(LocalStorage.DEFAULT_CACHE_SIZE)
     val cacheSize = _cacheSize.asStateFlow()
 
+    private val _updateInterval: MutableStateFlow<UpdateInterval> = MutableStateFlow(UpdateInterval.DEFAULT)
+    /** How often open screens check for changes, see CheckForUpdates */
+    val updateInterval = _updateInterval.asStateFlow()
+
     // Name shown to admins in the session list, sent at login
     private val _deviceName: MutableStateFlow<String> = MutableStateFlow(localStorage.deviceName)
     val deviceName = _deviceName.asStateFlow()
@@ -71,6 +76,7 @@ class SettingsHandler(
         _pageSize.value = localStorage.pageSize
         _searchLimit.value = localStorage.searchLimit
         _cacheSize.value = localStorage.cacheSize
+        _updateInterval.value = localStorage.updateInterval
     }
 
     /** Takes effect on the next login */
@@ -155,6 +161,12 @@ class SettingsHandler(
         _cacheSize.value = value
         localStorage.cacheSize = value
         onCacheSizeChanged(value)
+    }
+
+    /** Applies straight away, the screens restart their timers */
+    fun setUpdateInterval(interval: UpdateInterval) {
+        _updateInterval.value = interval
+        localStorage.updateInterval = interval
     }
 
     companion object {

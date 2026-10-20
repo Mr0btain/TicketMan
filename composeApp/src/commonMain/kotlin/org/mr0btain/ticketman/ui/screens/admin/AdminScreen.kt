@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerLoader
@@ -36,6 +37,9 @@ import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.refresh_cw
+import org.mr0btain.ticketman.ui.screens.CheckForUpdates
+import org.mr0btain.ticketman.ui.screens.admin.server.ImportCard
+import org.mr0btain.ticketman.ui.screens.admin.server.ImportDialog
 import ticketman.composeapp.generated.resources.shield
 
 /**
@@ -126,10 +130,37 @@ private fun AdminContent(
         onDismiss = { shownInvite = null }
     )
 
+    val importSheet by admin.import.sheet.collectAsState()
+    val importMapping by admin.import.mapping.collectAsState()
+    val importPreview by admin.import.preview.collectAsState()
+    val importProblem by admin.import.problem.collectAsState()
+    val importing by admin.import.importing.collectAsState()
+
+    importSheet?.let { sheet ->
+        ImportDialog(
+            sheet = sheet,
+            mapping = importMapping,
+            preview = importPreview,
+            problem = importProblem,
+            importing = importing,
+            onMap = { field, column -> admin.import.map(field, column) },
+            onImport = { admin.import.import {} },
+            onDismiss = { admin.import.close() }
+        )
+    }
+
     // Fresh numbers whenever a tab is opened, only for that tab
     LaunchedEffect(selectedTab) {
         admin.refresh(selectedTab)
         if (selectedTab == AdminTab.USERS) viewModel.users.pager.refresh()
+    }
+
+    // Then changes from other devices, on the interval set in Settings, unless a dialog here is open
+    val updateInterval by viewModel.settings.updateInterval.collectAsState()
+    val dialogOpen = importSheet != null || showUserDialog || showResetPasswordDialog || showDeleteDialog || showInviteDialog || approving != null || shownInvite != null
+    CheckForUpdates(interval = updateInterval, enabled = !dialogOpen && !isLoading) {
+        admin.checkForUpdates(selectedTab)
+        if (selectedTab == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
     }
 
     UserDialog(
@@ -293,7 +324,14 @@ private fun AdminContent(
                 onRestart = { admin.server.restartServer() },
                 onRenewCertificate = { admin.server.renewCertificate() },
                 onCancelCertificateRenewal = { admin.server.cancelCertificateRenewal() },
-                onSeed = { request -> admin.server.seed(request, onSuccess = { viewModel.refreshPagers() }) }
+                onSeed = { request -> admin.server.seed(request, onSuccess = { viewModel.refreshPagers() }) },
+                importCard = {
+                    ImportCard(
+                        modifier = Modifier.width(440.dp),
+                        isBusy = isLoading,
+                        onPicked = { kind, file -> admin.import.openFile(kind, file) }
+                    )
+                }
             )
 
             AdminTab.AUDIT -> AdminAuditTab(

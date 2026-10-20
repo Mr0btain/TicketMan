@@ -20,9 +20,10 @@ Everyone reads it, to print invoices and slips and show the terms at check-in.
 Replaces the profile. A new tax rate applies to invoices made after it, and to open invoices the next time their
 lines are saved. Paid and void invoices keep the rate they had.
 
-- **Body:** `ShopProfile`. `currencySymbol` is saved trimmed.
-- **`202`** saved. **`400`** `repeatWindowDays` outside 1 to 3650, or `currencySymbol` blank, longer than 4
-  characters or holding a digit.
+- **Body:** `ShopProfile`. `currencySymbol` is saved trimmed. `laborRateCents` is per hour, the price time logged on
+  a ticket's work log starts at.
+- **`202`** saved. **`400`** `repeatWindowDays` outside 1 to 3650, `currencySymbol` blank, longer than 4
+  characters or holding a digit, or a negative `laborRateCents`.
 
 ## See also
 

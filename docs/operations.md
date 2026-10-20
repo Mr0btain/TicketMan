@@ -344,6 +344,17 @@ While the server runs it sweeps once an hour:
 Photos are deleted a day late on purpose. A backup copies the database first and the photos after, and the delay
 means a photo the database still lists can't vanish between the two.
 
+## Importing from another system
+
+The admin screen's **Server** tab can add customers or inventory from a CSV, like a spreadsheet saved as CSV or an
+export from the system the shop used before. It needs a header row; columns are matched to fields by their names
+("Mobile" is a phone, "Postcode" a zip, "Retail price" a price, ...) and can be changed in the dialog. Customers can
+come with one Name column or First and Last name. A preview shows each row as **Add**, **Already here** (a customer
+with the same phone or email, an item with the same name) or **Problem**, and only the new ones are added, all
+together. Running the same file again adds nothing.
+
+Notes, tickets and photos aren't imported, and existing records aren't updated from the file.
+
 ## Seeding test data
 
 On a server started with `-Pdevelopment`, the **Server** tab can add made up customers, tickets, inventory and

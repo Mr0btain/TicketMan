@@ -64,7 +64,9 @@ is focused when the counter opens.
 
 - **Search** waits 300 ms after the last key, then asks `/api/counter/search` for up to 20 tickets and customers.
   `SearchResults` lists both.
-- **Queue** reloads every 60 seconds while the counter is open and logged in, and after a check-in or pickup. Its
+- **Queue** loads when the counter opens, after a check-in or pickup, and on the Settings interval (`CheckForUpdates`)
+  while the counter shows home, a ticket or a customer; an open ticket card reloads with it (`reloadTicket(quiet =
+  true)`). Not during a check-in or pickup. Its
   four sections are Ready for pickup, Overdue, Due today and Just checked in, each in its status tone.
 
 ### Ticket
@@ -122,6 +124,9 @@ server's message.
 
 ### Printing
 
+**Save PDF** sits next to Print on a ticket with an invoice and after pickup: `CounterPrinter.savePdf` has the
+server make the invoice as a PDF (`GET /api/invoice/{id}/pdf`) and saves it, to email to the customer.
+
 `PrintButton` asks which slip (claim slip, device tag, receipt) and which paper, starting on the shop's default
 paper, then calls `counter.printer.print`, which loads the ticket fresh so the printout matches the server. See
 [Printing](../../client/printing.md).
@@ -141,7 +146,7 @@ the handler and its parts refuse those actions anyway.
 | State and every action | `ui/screens/counter/components/CounterHandler.kt`, and its parts `CounterCheckIn.kt`, `CounterPickup.kt`, `CounterInvoices.kt`, `CounterPrinter.kt`, `CounterSupport.kt` |
 | `TicketDetail`, `CustomerDetail` and loading a ticket's card | `ui/screens/counter/components/TicketDetail.kt` |
 | Ticket and customer rows, `isOverdue`, `isClosed` | `ui/screens/counter/components/CounterRows.kt` |
-| Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt` (with `QueueDialog`), `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `CustomerForm.kt` (new customer), `PickupScreen.kt` (with `PickedUpView`) |
+| Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt` (with `QueueDialog`), `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `NewCustomerScreen.kt` (new customer, the kit's `TmCustomerForm` under a header), `PickupScreen.kt` (with `PickedUpView`) |
 | Print button | `ui/screens/counter/PrintButton.kt` |
 | Render tests | `ScreenRenderTest.counterTicket()`, `pickup()`, `checkIn()`, and `counterTicketNarrow()`, `pickupNarrow()`, `checkInNarrow()` at phone width |
 | Handler tests | `composeApp/src/commonTest/.../ui/screens/counter/CounterHandlerTest.kt` |

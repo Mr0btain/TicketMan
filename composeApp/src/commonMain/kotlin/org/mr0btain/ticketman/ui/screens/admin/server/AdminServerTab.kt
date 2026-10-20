@@ -42,6 +42,7 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.feedback.TmProgressBar
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
@@ -77,7 +78,8 @@ fun AdminServerTab(
     onRestart: () -> Unit,
     onRenewCertificate: () -> Unit,
     onCancelCertificateRenewal: () -> Unit,
-    onSeed: (SeedRequest) -> Unit
+    onSeed: (SeedRequest) -> Unit,
+    importCard: @Composable () -> Unit = {}
 ) {
     val spacing = TmTheme.spacing
 
@@ -94,6 +96,8 @@ fun AdminServerTab(
                 ServerInfoCard(serverInfo, serverUrl, isBusy, onRenewCertificate, onCancelCertificateRenewal)
 
                 BackupCard(isBusy, backupProgress, pendingRestore, serverInfo, onBackup, onRestore, onCancelRestore, onRestart)
+
+                importCard()
 
                 // Mock data is only allowed on servers started with -Pdevelopment
                 if (serverInfo?.developmentMode == true) {
@@ -604,7 +608,15 @@ private fun ShopProfileCard(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
             },
-            { Spacer(it) }
+            {
+                TmMoneyField(
+                    modifier = it,
+                    cents = profile.laborRateCents,
+                    onCentsChange = { cents -> profile = profile.copy(laborRateCents = cents) },
+                    label = "Labor rate",
+                    supportingText = "Per hour, for time logged on tickets"
+                )
+            }
         )
 
         TmTextField(

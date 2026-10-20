@@ -221,6 +221,14 @@ check(report["takenByMethod"] == {"CARD": 5000, "CASH": 11000}, f"taken {report[
 check(report["ticketsCheckedIn"] == 1 and report["ticketsPickedUp"] == 1 and report["invoicesPaid"] == 1, f"report {report}")
 step(f"End of day: card $50.00, cash $110.00, sales ${report['salesCents'] / 100:.2f}, 1 in, 1 out")
 
+status, pdf, headers = send(urllib.request.Request(f"{BASE}/api/invoice/{paid['identifier']}/pdf", headers={"Authorization": "Bearer " + pin}))
+check(status == 200 and pdf[:5] == b"%PDF-" and headers.get("Content-Type", "").startswith("application/pdf"), f"invoice PDF answered {status}")
+day = report["date"]
+status, csv, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}", headers={"Authorization": "Bearer " + admin}))
+rows = csv.decode().strip().split("\r\n")
+check(status == 200 and len(rows) == 2 and rows[1].startswith(f"INV-{paid['number']['year'] % 100:02d}-{paid['number']['sequence']:08d},") and ",paid," in rows[1] and ",159.90," in rows[1], f"export answered {status}: {rows}")
+step(f"The invoice comes back as a {len(pdf) // 1000 or 1} KB PDF, and today's CSV export has it, paid, at $159.90")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

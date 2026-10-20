@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.error.getOrDefault
 import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.components.network.isNotFound
+import org.mr0btain.ticketman.components.network.orNullIfNotFound
 import org.mr0btain.ticketman.components.network.ServerError
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
@@ -19,6 +20,8 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.shared.EntityReference
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.screens.records.components.syncNotes
 import kotlin.uuid.Uuid
@@ -59,8 +62,8 @@ class CustomerRecords(
     /** Customer being loaded after a click, the list highlights it until it's in the seed */
     val selection = RecordSelection(scope)
 
-    /** Opens a customer in the seed, from the cache if it's there */
-    fun select(identifier: Uuid) {
+    /** Opens a customer in the seed, from the cache if it's there. [quiet] says nothing when it can't be loaded */
+    fun select(identifier: Uuid, quiet: Boolean = false) {
         if (selection.pending.value == identifier) return
 
         selection.select(identifier) {
@@ -79,10 +82,21 @@ class CustomerRecords(
                 )
             }
 
-            val (customer, notes, tickets) = loaded.valueOr { return@select loadFailed(identifier, it) }
+            val (customer, notes, tickets) = loaded.valueOr { return@select loadFailed(identifier, it, quiet) }
 
             return@select { seed.setCustomer(customer, notes, tickets) }
         }
+    }
+
+    /**
+     * Loads the open customer again from the server, for the periodic check for updates. Leaves a new or changed one
+     * alone and says nothing if the server can't be reached; one deleted on another device is still dropped
+     */
+    fun reloadSelected() {
+        if (seed.isNew || seed.isDirty) return
+
+        cache.remove(seed.identifier)
+        select(seed.identifier, quiet = true)
     }
 
     /** Empties the seed for a new customer, dropping any customer still loading */
@@ -104,8 +118,9 @@ class CustomerRecords(
         }) else null
 
     // Loading failed: a record that's gone is forgotten, anything else is said and what's shown stays
-    private fun loadFailed(identifier: Uuid, error: ServerError): (() -> Unit)? =
+    private fun loadFailed(identifier: Uuid, error: ServerError, quiet: Boolean = false): (() -> Unit)? =
         if (error.isNotFound) forgetIfOpen(identifier)
+        else if (quiet) null
         else null.also { scope.launch { snackBarHost.showSnackbar("That customer couldn't be loaded: ${error.message}") } }
 
     /** Saves the seed: the customer, its notes, and any tickets linked to it */
@@ -154,10 +169,50 @@ class CustomerRecords(
         }
     }
 
+    /**
+     * Adds a customer made somewhere other than the customer dialog, like the ticket dialog's New customer, leaving
+     * what's open alone
+     * @param onResult Gets the saved customer, or what went wrong
+     */
+    fun addCustomer(customer: Customer, onResult: (Customer?, String?) -> Unit) {
+        if (!canEdit()) {
+            onResult(null, "You can only look, not change things")
+            return
+        }
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.add(customer)) {
+                is TmResult.Success -> {
+                    onResult(result.data, null)
+                    pager.refreshCurrentData()
+                }
+                is TmResult.Error -> onResult(null, result.error.message)
+            }
+        }
+    }
+
     /** A customer from the cache, or the server if it isn't cached. Null if neither has it */
     suspend fun get(identifier: Uuid): Customer? =
         cache.get(identifier)?.customer
             ?: remoteHandler.customerRepo.get(identifier).getOrNull()
+
+    /**
+     * A ticket picked in the customer dialog to link to this customer, with the customer it's on now, so the dialog
+     * can say linking moves it
+     */
+    suspend fun ticketToLink(identifier: Uuid): TmResult<TicketToLink, ServerError> = coroutineScope {
+        val tickets = remoteHandler.ticketRepo
+        val ticket = async { tickets.get(identifier) }
+        // A ticket with no customer answers 404
+        val current = async { tickets.getCustomer(identifier).orNullIfNotFound() }
+
+        TmResult.Success(
+            TicketToLink(
+                ticket = ticket.await().valueOr { return@coroutineScope TmResult.Error(it) },
+                currentCustomer = current.await().valueOr { return@coroutineScope TmResult.Error(it) }
+            )
+        )
+    }
 
     /** Customers matching [query], at most the search limit setting. Nothing when the search fails */
     suspend fun search(query: String) =
@@ -192,3 +247,12 @@ class CustomerRecords(
         pager.clear()
     }
 }
+
+/**
+ * A ticket to link from the customer dialog
+ * @param currentCustomer The customer it's on now, null when it has none
+ */
+data class TicketToLink(
+    val ticket: Ticket,
+    val currentCustomer: EntityReference?
+)

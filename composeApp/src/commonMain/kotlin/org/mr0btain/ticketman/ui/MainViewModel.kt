@@ -170,7 +170,8 @@ class MainViewModel(
                 viewModelScope.launch { session.reloadCurrentUser() }
             }
         },
-        onShopChanged = { profile -> counter.shopChanged(profile) }
+        onShopChanged = { profile -> counter.shopChanged(profile) },
+        onImported = { refreshPagers() }
     )
 
     /** ----------------------------------------------KIOSK------------------------------------------------------------------- */

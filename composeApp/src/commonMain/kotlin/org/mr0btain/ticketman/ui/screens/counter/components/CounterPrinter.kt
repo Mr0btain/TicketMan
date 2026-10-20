@@ -6,6 +6,8 @@ import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.components.print.PrintTemplates
 import org.mr0btain.ticketman.components.print.printDocument
 import org.mr0btain.ticketman.data.shop.PaperSize
+import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.components.data.saveFile
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.error.valueOr
 import kotlin.uuid.Uuid
@@ -42,6 +44,18 @@ class CounterPrinter(
             }
 
             onResult(printDocument(document, paper))
+        }
+    }
+
+    /** Saves the invoice as a PDF the server makes, to email or file. Says how it went */
+    fun savePdf(invoice: Invoice) {
+        support.scope.launch {
+            val bytes = remoteHandler.invoiceRepo.pdf(invoice.identifier).valueOr { error ->
+                support.notify("Couldn't make the PDF: ${error.message}")
+                return@launch
+            }
+
+            if (saveFile(bytes, invoice.label, "pdf")) support.notify("Saved ${invoice.label}.pdf")
         }
     }
 }

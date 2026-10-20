@@ -8,6 +8,9 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
+import org.mr0btain.ticketman.components.database.WorkDatabase
+import org.mr0btain.ticketman.components.service.InvoiceService
+import org.mr0btain.ticketman.server.request.WorkRequest
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -24,7 +27,9 @@ import kotlin.uuid.Uuid
 fun Route.ticketRoute(
     database: TicketDatabase,
     userDatabase: UserDatabase,
-    auditLog: AuditLogDatabase
+    auditLog: AuditLogDatabase,
+    workDatabase: WorkDatabase,
+    invoiceService: InvoiceService
 ) {
     val TAG = "TicketRoute"
     val GET_TAG = "$TAG:Get"
@@ -137,6 +142,40 @@ fun Route.ticketRoute(
             val result = call.uuidParameter("identifier")?.let { database.getUser(it) }
 
             if (result != null) call.respond(HttpStatusCode.OK, result) else call.respond(HttpStatusCode.NotFound)
+        }
+    }
+
+    // ------------------------------------------ Work log ------------------------------------------
+
+    authenticate("restricted") {
+        get(TicketPaths.GET_WORK) {
+            val identifier = call.uuidParameter("identifier")
+
+            when {
+                identifier == null || database.getById(identifier) == null -> call.respond(HttpStatusCode.NotFound)
+                else -> workDatabase.getForTicket(identifier)
+                    ?.let { call.respond(HttpStatusCode.OK, it) }
+                    ?: call.respond(HttpStatusCode.InternalServerError)
+            }
+        }
+    }
+
+    authenticate {
+        // Answers with the entry as saved, its price and who logged it filled in. It's on the invoice too
+        post(TicketPaths.ADD_WORK) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+
+            call.respondAccount(
+                invoiceService.logWork(identifier, call.receive<WorkRequest>(), call.getIdentifierFromToken(), call.username(userDatabase)),
+                HttpStatusCode.Created
+            )
+        }
+
+        // The identifier is the work entry's
+        delete(TicketPaths.REMOVE_WORK) {
+            val identifier = call.uuidParameter("identifier") ?: return@delete call.respond(HttpStatusCode.NotFound)
+
+            call.respondAccount(invoiceService.removeWork(identifier, call.getIdentifierFromToken()))
         }
     }
 

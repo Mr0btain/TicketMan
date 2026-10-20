@@ -7,9 +7,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
-import org.mr0btain.ticketman.components.data.operations.DataType
+import androidx.compose.material3.Text
+import kotlinx.coroutines.launch
+import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
-import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDeleteDialog
+import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
+import org.mr0btain.ticketman.ui.kit.search.TmSearchBar
 import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
@@ -31,6 +36,8 @@ import kotlin.uuid.Uuid
 /**
  * Adds or edits a customer. Most changes go straight onto [seed], the name is applied when saved
  * @param onContinue Saves the seed and closes the dialog. Cancelling goes through onDismiss, which reloads the record
+ * @param onTicketSearchQuery Tickets matching what's typed in Link a ticket
+ * @param onFindTicket Loads a picked ticket and the customer it's on now
  */
 @Composable
 fun CustomerDialog(
@@ -38,11 +45,21 @@ fun CustomerDialog(
     isVisible: Boolean,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
-    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit
+    onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
+    onTicketSearchQuery: suspend (String) -> List<SearchResult>,
+    onFindTicket: suspend (Uuid) -> TmResult<TicketToLink, ServerError>
 ) {
     if (!isVisible) return
 
-    var ticketToRemove by remember { mutableStateOf<Uuid?>(null) }
+    // Saving links tickets but never unlinks them (a ticket leaves by going to another customer), so only links
+    // made in this dialog can be taken back
+    val savedTickets = remember { seed.tickets.map { it.identifier }.toSet() }
+    // A ticket already on someone else, waiting for the move to be confirmed
+    var ticketToMove by remember { mutableStateOf<TicketToLink?>(null) }
+    var linkError by remember { mutableStateOf<String?>(null) }
+    // Bumped after a pick, which clears the search
+    var linkSearchKey by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
     var showNoteDialog by remember { mutableStateOf(false) }
     val noteSeed = remember { NoteSeed() }
 
@@ -62,15 +79,19 @@ fun CustomerDialog(
         }
     )
 
-    TmConfirmDeleteDialog(
-        itemName = DataType.TICKET.stringName,
-        isVisible = ticketToRemove != null,
-        onConfirm = {
-            ticketToRemove?.let { seed.deleteTicket(it) }
-            ticketToRemove = null
-        },
-        onCancel = { ticketToRemove = null }
-    )
+    ticketToMove?.let { move ->
+        TmConfirmDialog(
+            title = "Move ${move.ticket.label}?",
+            message = "It's on ${move.currentCustomer?.text?.ifBlank { null } ?: "another customer"} now. Saving moves it to " +
+                "${seed.name.ifBlank { "this customer" }}.",
+            confirmText = "Move here",
+            onConfirm = {
+                seed.addTicket(move.ticket)
+                ticketToMove = null
+            },
+            onDismissRequest = { ticketToMove = null }
+        )
+    }
 
     TmDialog(
         title = if (seed.isNew) "New customer" else "Edit ${seed.name}",
@@ -108,20 +129,48 @@ fun CustomerDialog(
             TmTextField(modifier = Modifier.weight(1f), value = seed.zip, onValueChange = { seed.changeZip(it) }, label = "Zip")
         }
 
+        TmSectionLabel("Tickets")
+        key(linkSearchKey) {
+            TmSearchBar(
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = "Link a ticket by number, device or problem",
+                onQuery = onTicketSearchQuery,
+                onPick = { result ->
+                    linkError = null
+                    linkSearchKey++
+                    if (seed.tickets.any { it.identifier == result.identifier }) return@TmSearchBar
+
+                    scope.launch {
+                        when (val found = onFindTicket(result.identifier)) {
+                            is TmResult.Error -> linkError = "Couldn't load that ticket: ${found.error.message}"
+                            is TmResult.Success -> {
+                                val current = found.data.currentCustomer
+                                if (current == null || current.identifier == seed.identifier) seed.addTicket(found.data.ticket)
+                                else ticketToMove = found.data
+                            }
+                        }
+                    }
+                }
+            )
+        }
+        linkError?.let { Text(text = it, style = TmTheme.typography.caption, color = TmTheme.colors.danger.color) }
+
         if (seed.tickets.isNotEmpty()) {
-            TmSectionLabel("Tickets")
             Column {
                 seed.tickets.forEach { ticket ->
                     TmListRow(
                         title = ticket.device.toString().ifBlank { "Unknown device" },
+                        subtitle = if (ticket.identifier in savedTickets) null else "Linked when saved",
                         leading = { TmTicketIdText(ticket.label, Modifier.width(104.dp)) },
-                        trailing = {
-                            TmIconButton(
-                                icon = Res.drawable.x,
-                                contentDescription = "Remove ticket from customer",
-                                onClick = { ticketToRemove = ticket.identifier },
-                                size = TmControlSize.SMALL
-                            )
+                        trailing = if (ticket.identifier in savedTickets) null else {
+                            {
+                                TmIconButton(
+                                    icon = Res.drawable.x,
+                                    contentDescription = "Don't link this ticket",
+                                    onClick = { seed.deleteTicket(ticket.identifier) },
+                                    size = TmControlSize.SMALL
+                                )
+                            }
                         }
                     )
                 }

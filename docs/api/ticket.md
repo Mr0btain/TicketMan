@@ -108,7 +108,7 @@ number and pickup time stay the server's. A status change is added to the histor
 
 **Auth:** normal
 
-Deletes the ticket with its notes, invoice, signature, history and technician link. Note photos are cleared up by
+Deletes the ticket with its notes, invoice, work log, signature, history and technician link. Note photos are cleared up by
 the next sweep.
 
 - **`202`** deleted. **`404`** no such ticket.
@@ -131,6 +131,40 @@ Normal access or higher take tickets.
 - **Body:** the user's id. **`202`** assigned.
 - **`400`** `That technician can't take tickets`: no such user, or one who's Restricted, deactivated or not set up.
 - **`404`** no such ticket.
+
+## Work log
+
+What was done on a ticket: time and parts. Each entry puts a line with the same identifier on the ticket's invoice,
+see [Counter: work log](../server/counter.md#work-log).
+
+### `GET /api/data/ticket/get/work/{identifier}`
+
+**Auth:** restricted
+
+- **`200`** a list of `WorkEntry { identifier, type, description, quantity, unitPriceCents, inventoryIdentifier,
+  userIdentifier, userName, workedAt }`, oldest first. **`404`** no such ticket.
+
+### `POST /api/data/ticket/add/work/{identifier}`
+
+**Auth:** normal
+
+Logs work and adds its line to the ticket's invoice, making the invoice if there isn't one. Both are saved together.
+
+- **Body:** `WorkRequest { type, description, quantity, unitPriceCents, inventoryIdentifier }`. `type` is `LABOR`
+  (`quantity` in hours) or `PART` (`quantity` a whole number, `inventoryIdentifier` needed). A null
+  `unitPriceCents` uses the shop's `laborRateCents`, or the item's price. A part's blank description is the item's
+  name. Labor lines aren't taxed and parts are; that can be changed on the invoice.
+- **`201`** the saved `WorkEntry`, with who logged it and when. **`400`** a part without an item, an item that
+  doesn't exist, a blank labor description, a quantity of zero or less or with more than two decimals, or a negative
+  price. **`404`** no such ticket. **`409`** the ticket is picked up, or its invoice is paid or void.
+
+### `DELETE /api/data/ticket/remove/work/{identifier}`
+
+**Auth:** normal
+
+Takes the work entry with this identifier off, and its line off the invoice if it's still there.
+
+- **`202`** removed. **`404`** no such entry. **`409`** the ticket is picked up, or its invoice is paid or void.
 
 ## See also
 

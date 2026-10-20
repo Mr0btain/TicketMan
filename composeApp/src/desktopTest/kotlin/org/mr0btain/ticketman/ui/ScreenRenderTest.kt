@@ -69,6 +69,26 @@ import org.mr0btain.ticketman.ui.screens.counter.TicketCard
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
 import org.mr0btain.ticketman.ui.screens.kiosk.LockScreen
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerPanel
+import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerDialog
+import org.mr0btain.ticketman.ui.screens.admin.invoices.InvoiceExportDialog
+import org.mr0btain.ticketman.ui.screens.admin.server.ImportDialog
+import org.mr0btain.ticketman.ui.screens.admin.server.ImportCard
+import org.mr0btain.ticketman.ui.screens.admin.components.ImportPreview
+import org.mr0btain.ticketman.ui.screens.admin.components.ImportPreviewRow
+import org.mr0btain.ticketman.ui.screens.admin.components.PreviewDetails
+import org.mr0btain.ticketman.components.data.importing.ImportKind
+import org.mr0btain.ticketman.components.data.importing.ImportSheet
+import org.mr0btain.ticketman.server.response.ImportOutcome
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketDialog
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketInfoPane
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketWorkSection
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.WorkDialog
+import org.mr0btain.ticketman.data.ticket.WorkEntry
+import org.mr0btain.ticketman.data.ticket.WorkType
+import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.server.NetworkError
+import org.mr0btain.ticketman.error.TmResult
+import androidx.compose.runtime.LaunchedEffect
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketPanel
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryDialog
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryPanel
@@ -357,7 +377,7 @@ class ScreenRenderTest {
         val now = System.currentTimeMillis()
         val manifest = BackupManifest(serverVersion = "1.0.0", createdAt = now - 3 * day, includesImages = false, imageCount = 0, imageBytes = 0)
 
-        bothModes("admin-server", height = 1300) {
+        bothModes("admin-server", height = 1700) {
             Shell("Admin") {
                 AdminServerTab(
                     serverInfo = ServerInfoResponse(
@@ -384,7 +404,8 @@ class ScreenRenderTest {
                     onRestart = {},
                     onRenewCertificate = {},
                     onCancelCertificateRenewal = {},
-                    onSeed = {}
+                    onSeed = {},
+                    importCard = { ImportCard(modifier = Modifier.width(440.dp), isBusy = false, onPicked = { _, _ -> }) }
                 )
             }
         }
@@ -498,6 +519,116 @@ class ScreenRenderTest {
                     onSaveNote = {},
                     onRemoveNote = {},
                     onDelete = {}
+                )
+            }
+        }
+    }
+
+    /** A ticket's work log in its details, and logging a part */
+    @Test
+    fun ticketWork() {
+        val hour = 60L * 60 * 1000
+        val now = System.currentTimeMillis()
+        val entries = listOf(
+            WorkEntry(type = WorkType.LABOR, description = "Diagnosed, swollen battery", quantity = 0.5, unitPriceCents = 8_000, userName = "priya", workedAt = now - 3 * hour),
+            WorkEntry(type = WorkType.PART, description = "iPhone 13 Battery", quantity = 1.0, unitPriceCents = 5_500, userName = "priya", workedAt = now - 2 * hour),
+            WorkEntry(type = WorkType.LABOR, description = "Replaced the battery, tested charging", quantity = 1.25, unitPriceCents = 8_000, userName = "priya", workedAt = now - hour)
+        )
+        val ticketSeed = TicketSeed().apply {
+            setTicket(iphone, sampleNotes, EntityReference(dana.identifier, dana.name), EntityReference(dana.identifier, "Priya Raman"))
+        }
+
+        bothModes("records-ticket-work", height = 1100) {
+            Shell("Records") {
+                TicketInfoPane(
+                    seed = ticketSeed,
+                    onEditClick = {},
+                    onImageClick = { _, _ -> },
+                    work = { TicketWorkSection(entries = entries, loadError = null, canChange = true, onLog = {}, onRemove = {}) }
+                )
+            }
+        }
+
+        bothModes("records-ticket-work-dialog") {
+            Shell("Records") {
+                WorkDialog(laborRateCents = 8_000, onPartSearch = { emptyList() }, onFindPart = { null }, onSave = { _, _ -> }, onDismissRequest = {})
+            }
+        }
+    }
+
+    /** Importing customers: the columns matched from the headers and what each row would do */
+    @Test
+    fun importCustomers() {
+        val sheet = ImportSheet.read(
+            ImportKind.CUSTOMERS,
+            "First Name,Last Name,Mobile,Email,Address,City\nAmos,Burton,555-0101,amos@example.com,,Tycho\n" +
+                "Dana,Whitfield,555-0142,,41 Mill Rd,Ashford\n,,555-0111,,,\nNaomi,Nagata,,naomi@example.com,,Ceres\nAlex,Kamal,555-0101,,,Mars"
+        )!!
+        val preview = ImportPreview(
+            listOf(
+                ImportPreviewRow(2, PreviewDetails("Amos Burton", "555-0101, amos@example.com"), ImportOutcome.ADD, ""),
+                ImportPreviewRow(3, PreviewDetails("Dana Whitfield", "555-0142"), ImportOutcome.MATCH, "Dana Whitfield has that phone number"),
+                ImportPreviewRow(4, PreviewDetails(""), ImportOutcome.ERROR, "No name"),
+                ImportPreviewRow(5, PreviewDetails("Naomi Nagata", "naomi@example.com"), ImportOutcome.ADD, ""),
+                ImportPreviewRow(6, PreviewDetails("Alex Kamal", "555-0101"), ImportOutcome.MATCH, "Same phone number as row 1")
+            )
+        )
+
+        bothModes("admin-import", height = 1000) {
+            Shell("Admin") {
+                ImportDialog(
+                    sheet = sheet, mapping = sheet.mapping, preview = preview, problem = null, importing = false,
+                    onMap = { _, _ -> }, onImport = {}, onDismiss = {}
+                )
+            }
+        }
+    }
+
+    /** Choosing the days for the invoice CSV */
+    @Test
+    fun invoiceExport() = bothModes("admin-invoice-export") {
+        Shell("Admin") {
+            InvoiceExportDialog(onExport = { _, _, _ -> }, onDismissRequest = {})
+        }
+    }
+
+    /** Editing a customer with one ticket linked already and one picked in the dialog, waiting for Save */
+    @Test
+    fun customerDialog() {
+        // Remembered from what's linked when the dialog opens, so the pixel is added after it's drawn once
+        val seed = CustomerSeed().apply { setCustomer(dana, sampleNotes, listOf(iphone)) }
+        bothModes("records-customer-dialog", height = 1100) {
+            Shell("Records") {
+                CustomerDialog(
+                    seed = seed,
+                    isVisible = true,
+                    onDismiss = {},
+                    onContinue = {},
+                    onImageClick = { _, _ -> },
+                    onTicketSearchQuery = { emptyList() },
+                    onFindTicket = { TmResult.Error(ServerError(NetworkError.NOT_FOUND)) }
+                )
+                LaunchedEffect(Unit) { seed.addTicket(pixel) }
+            }
+        }
+    }
+
+    /** Editing a ticket, with New customer next to the customer search */
+    @Test
+    fun ticketDialog() {
+        val seed = TicketSeed().apply {
+            setTicket(iphone, sampleNotes, EntityReference(dana.identifier, dana.name), EntityReference(dana.identifier, "Priya Raman"))
+        }
+        bothModes("records-ticket-dialog", height = 1000) {
+            Shell("Records") {
+                TicketDialog(
+                    seed = seed,
+                    isVisible = true,
+                    onCustomerSearchQuery = { emptyList() },
+                    onUserSearchQuery = { emptyList() },
+                    onAddCustomer = { _, _ -> },
+                    onContinue = {},
+                    onDismiss = {}
                 )
             }
         }

@@ -75,6 +75,8 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
 import org.mr0btain.ticketman.ui.kit.inputs.TmPinField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerForm
+import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerDialog
 import org.mr0btain.ticketman.ui.kit.navigation.TmBottomNav
 import org.mr0btain.ticketman.ui.kit.navigation.TmNavItem
 import org.mr0btain.ticketman.ui.kit.navigation.TmNavRail
@@ -280,6 +282,7 @@ private fun FieldsSection() {
     var price by remember { mutableLongStateOf(12999L) }
     var pin by remember { mutableStateOf("1234") }
     var password by remember { mutableStateOf("bench") }
+    var customerDialog by remember { mutableStateOf(false) }
 
     GallerySection(title = "Fields", description = "Label above, help or error below") {
         Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
@@ -323,6 +326,25 @@ private fun FieldsSection() {
             )
             TmButton(text = "Find customer", onClick = {}, size = TmControlSize.LARGE)
         }
+
+        Specimen("New customer, on a panel or as TmCustomerDialog") {
+            TmCustomerForm(
+                modifier = Modifier.width(560.dp),
+                onSave = { _, onResult -> onResult(null) },
+                onCancel = {}
+            )
+            TmButton(text = "Open as a dialog", onClick = { customerDialog = true }, variant = TmButtonVariant.SECONDARY)
+        }
+    }
+
+    if (customerDialog) {
+        TmCustomerDialog(
+            onSave = { _, onResult ->
+                onResult(null)
+                customerDialog = false
+            },
+            onDismissRequest = { customerDialog = false }
+        )
     }
 }
 
