@@ -71,16 +71,24 @@ calls `RemoteHandler.setUrl(url)`:
    once. A redirect to another host isn't followed.
 2. `GET <url>/api/ping` must answer `TicketMan`. Servers from before `/api/ping` answer 404, and then `GET <url>/`
    counts if it isn't a web page (so the web client's dev server isn't taken for a server). If neither works, the
-   result is `UNREACHABLE`, or `UNTRUSTED` when the server's certificate was refused (below). Nothing else changes.
+   result is `UNREACHABLE`, `UNTRUSTED` when the server's certificate was refused, `WRONG_NAME` when its
+   certificate is trusted but for another name (both below), or `SERVER_NOT_ANSWERING` when the ping got a `502`,
+   `503` or `504`: a reverse proxy is up but the server behind it isn't (`ServerUserClient.checkServer`). Nothing
+   else changes.
 3. Every repository's `serverUrl` is set. Until then it's blank, and every repository call returns straight away
    with a "No server set" error instead of hitting a relative URL.
 4. It tries to log in with the saved username and password. The result is `LOGGED_IN` or `CONNECTED`.
 
 ## Trusting a server's certificate
 
-A server usually makes its own certificate (see [Running a server](../operations.md#https)), which no authority
-vouches for. On desktop and Android the engine trusts it the first time someone checks it, then only that
-certificate from that address. It's the same idea as SSH remembering a host's key.
+Behind a reverse proxy with a public certificate the system's trust store vouches for it, the check passes and
+nothing is asked: the user types the address and logs in. What can still go wrong there is the name (below) and the
+proxy's own errors ([Errors a proxy makes](#errors-a-proxy-makes)).
+
+A server doing its own HTTPS makes its own certificate (see [Running a server](../operations.md#https)), which no
+authority vouches for, and so does a proxy with a self-signed one. On desktop and Android the engine trusts it the
+first time someone checks it, then only that certificate from that address. It's the same idea as SSH remembering
+a host's key.
 
 ```mermaid
 flowchart TD
@@ -97,7 +105,14 @@ flowchart TD
   one fingerprint (SHA-256 of the certificate) `ServerTrust` holds for that `host:port`. Anything else is passed to
   `ServerTrust.refuse()` and the handshake fails.
 - `PinningHostnameVerifier` runs OkHttp's usual name check, and lets a trusted fingerprint through even when the
-  certificate doesn't list the name the server was reached by.
+  certificate doesn't list the name the server was reached by. Anything else it turns down goes to
+  `ServerTrust.refuseName()` with the names the certificate is for (`WrongServerName`), and `setUrl` returns
+  `WRONG_NAME`. That's a public certificate reached by the wrong name, like a proxy's `tickets.myshop.com`
+  certificate reached at `10.0.0.5`: nothing to trust, so no dialog, but "This server's certificate is for
+  `tickets.myshop.com`. Connect with that name."
+- `SessionHandler.connectionProblem` says why the last address didn't connect (unreachable, or the wrong name), and
+  is null when it connected or is waiting on the trust dialog. The login dialog shows it under the address field
+  and Settings > Account as a **Can't connect** notice.
 - `SessionHandler.untrustedCertificate` is the refused certificate for the current server, and `App` shows
   `ServerTrustDialog` for it, above the login popup. The dialog shows the fingerprint in two lines to read off
   against the admin Server tab or the server's log. A **changed** certificate (a different one from an address
@@ -208,13 +223,28 @@ suspend fun getTickets(identifier: Uuid): TmResult<List<Ticket>, ServerError> {
 
 See [Request lifecycle](../architecture/request-lifecycle.md) for what each helper does with errors.
 
+### Errors a proxy makes
+
+A reverse proxy in front of the server answers some failures itself, with an HTML page (nginx) or nothing (Caddy)
+where the server sends a short plain text reason. `handleActionHttpResponse` never shows a page or JSON as the
+reason, and:
+
+| Status | Becomes | Why |
+|--------|---------|-----|
+| `413` with no plain text reason | `PROXY_TOO_LARGE`, "Bigger than the proxy allows" | The proxy's body limit (nginx's `client_max_body_size` is 1 MB by default) turned a photo or restore away before the server saw it. The server's own `413`s always say why, `StatusPages` included |
+| `502`, `503`, `504` | `PROXY_SERVER_DOWN`, "The proxy is up but the TicketMan server isn't answering" | The server never sends these itself |
+
+Try them against `scripts/dev_proxy.sh`: anything under `/tiny/` has a 1 KB limit, and stopping the server behind
+Caddy gives a `502`.
+
 ## Testing
 
 Repositories and handlers are tested in `composeApp/src/commonTest` with Ktor's `MockEngine`: build a
 `RemoteHandler` on a `MockEngine` that answers the routes under test, and an `InMemoryKeyValueStore` for
 `LocalStorage`. The mock has to answer `SERVER_PING_PATH` with `SERVER_PING_BODY`, or connecting fails. Reads are
 `GET`s with the id in the path (`/api/data/customer/get/<id>`), so match on the whole path.
-`PinnedHttpsTest` (desktopTest) runs a real HTTPS server with a self-made certificate against the OkHttp engine.
+`PinnedHttpsTest` (desktopTest) runs a real HTTPS server with a self-made certificate against the OkHttp engine;
+`pinnedHttpEngine(trust, system)` takes the system trust manager, so a test can make a certificate "public".
 
 ## Gotchas
 

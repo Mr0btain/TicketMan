@@ -31,15 +31,26 @@ class PinnedHttpsTest {
         servers.forEach { it.stop(0) }
     }
 
-    private fun certificate(domains: List<String> = listOf("localhost")): KeyStore = buildKeyStore {
+    private fun certificate(
+        domains: List<String> = listOf("localhost"),
+        ips: List<InetAddress> = listOf(InetAddress.getByName("127.0.0.1"))
+    ): KeyStore = buildKeyStore {
         certificate("server") {
             password = "pass"
             hash = HashAlgorithm.SHA256
             keySizeInBits = 2048
             this.domains = domains
-            ipAddresses = listOf(InetAddress.getByName("127.0.0.1"))
+            ipAddresses = ips
         }
     }
+
+    // A system that trusts this certificate, the way a public one behind a proxy is trusted
+    private fun systemTrusting(keyStore: KeyStore) = systemTrustManager(
+        KeyStore.getInstance("PKCS12").apply {
+            load(null, null)
+            setCertificateEntry("public", keyStore.getCertificate("server"))
+        }
+    )
 
     /** Starts a server answering 200 on [port] (0 picks one) and returns its port */
     private fun serve(keyStore: KeyStore, port: Int = 0): Int {
@@ -119,6 +130,27 @@ class PinnedHttpsTest {
         assertFalse(reachable(client, "https://localhost:$port/"))
         trust.trust(trust.refused.value!!)
         assertTrue(reachable(client, "https://localhost:$port/"))
+    }
+
+    @Test
+    fun aPublicCertificateReachedByTheWrongNameSaysWhichNameItsFor() = runBlocking {
+        val keyStore = certificate(domains = listOf("localhost"), ips = emptyList())
+        val port = serve(keyStore)
+        val storage = LocalStorage(InMemoryKeyValueStore())
+        val trust = ServerTrust(storage)
+        val remote = RemoteHandler(pinnedHttpEngine(trust, systemTrusting(keyStore)), storage, trust)
+
+        // By IP: the certificate passes the system check but isn't for 127.0.0.1
+        assertEquals(ConnectionResult.WRONG_NAME, remote.setUrl("https://127.0.0.1:$port"))
+        assertNull(trust.refused.value, "Nothing to trust, so no trust dialog")
+        val wrongName = assertNotNull(trust.wrongName.value)
+        assertEquals("127.0.0.1:$port", wrongName.address)
+        assertEquals(listOf("localhost"), wrongName.names)
+        assertEquals("This server's certificate is for localhost. Connect with that name.", wrongName.message)
+
+        // By the name it's for, no dialog and nothing left over
+        assertEquals(ConnectionResult.CONNECTED, remote.setUrl("https://localhost:$port"))
+        assertNull(trust.wrongName.value)
     }
 
     @Test

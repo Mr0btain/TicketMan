@@ -12,7 +12,9 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.content.*
+import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.components.network.isNotFound
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
@@ -32,6 +34,8 @@ import org.mr0btain.ticketman.server.request.BackupRequest
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.request.StationRegistrationRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
+import org.mr0btain.ticketman.server.response.BackupJob
+import org.mr0btain.ticketman.server.response.BackupJobState
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.DailyReport
@@ -171,12 +175,48 @@ class AdminRemoteRepository(
         getJson(SERVER_INFO_TAG, "$adminUrl${AdminPaths.SERVER}")
 
     /**
-     * Has the server build a backup archive. Can take minutes with lots of photos, so there's no overall timeout
+     * Has the server build a backup archive. Can take minutes with lots of photos, longer than a reverse proxy waits
+     * on one request, so it's started on the server and asked after every [BACKUP_POLL_MILLIS] until it's built
      * @param includeImages Photos too, off for a quick database only copy
      */
     suspend fun prepareBackup(includeImages: Boolean): TmResult<BackupTicket, ServerError> {
         if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
+        val started = networkRequest(BACKUP_TAG) {
+            client.post {
+                url("$adminUrl${AdminPaths.BACKUP_START}")
+                contentType(ContentType.Application.Json)
+                setBody(BackupRequest(includeImages))
+            }
+        }
+
+        var job = when (val result = handleDataHttpResponse<BackupJob>(BACKUP_TAG, started)) {
+            is TmResult.Success -> result.data
+            // A server from before BACKUP_START builds it in one request
+            is TmResult.Error -> return if (result.error.isNotFound) prepareBackupInOneRequest(includeImages) else result
+        }
+
+        // A dropped answer or two while it's building isn't worth giving up over
+        var failures = 0
+        while (job.state == BackupJobState.RUNNING) {
+            delay(BACKUP_POLL_MILLIS)
+
+            val status = networkRequest(BACKUP_TAG) { client.get { url("$adminUrl${AdminPaths.BACKUP_STATUS.fill(job.id)}") } }
+            when (val result = handleDataHttpResponse<BackupJob>(BACKUP_TAG, status)) {
+                is TmResult.Success -> {
+                    job = result.data
+                    failures = 0
+                }
+                is TmResult.Error -> if (result.error.isNotFound || ++failures >= BACKUP_POLL_FAILURES) return result
+            }
+        }
+
+        return job.ticket?.let { TmResult.Success(it) }
+            ?: TmResult.Error(ServerError(NetworkError.SERVER_ERROR, job.error))
+    }
+
+    // Older servers: one request that answers once the archive is built
+    private suspend fun prepareBackupInOneRequest(includeImages: Boolean): TmResult<BackupTicket, ServerError> {
         val response = networkRequest(BACKUP_TAG) {
             client.post {
                 url("$adminUrl${AdminPaths.BACKUP}")
@@ -321,3 +361,9 @@ class AdminRemoteRepository(
     private val noServerError: EmptyResult<ServerError>
         get() = TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 }
+
+/** How often a backup being built on the server is asked after */
+internal const val BACKUP_POLL_MILLIS = 2_000L
+
+/** Asking after a backup fails this many times in a row before giving up on it */
+private const val BACKUP_POLL_FAILURES = 5

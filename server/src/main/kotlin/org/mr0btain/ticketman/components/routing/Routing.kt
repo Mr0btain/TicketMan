@@ -42,6 +42,13 @@ fun Application.configureRouting(
             call.respondText(text = BAD_REQUEST_MESSAGE, status = HttpStatusCode.BadRequest)
         }
 
+        // A body over one of Ktor's limits. Always with a reason, since clients take a 413 without one as their
+        // reverse proxy's
+        exception<PayloadTooLargeException> { call, cause ->
+            AppLogger.i(BAD_REQUEST_TAG, "${call.request.httpMethod.value} ${call.request.path()}: ${cause.message}")
+            call.respondText(text = TOO_LARGE_MESSAGE, status = HttpStatusCode.PayloadTooLarge)
+        }
+
         exception<Throwable> { call, cause ->
             AppLogger.e(SERVER_ERROR_TAG, "${call.request.httpMethod.value} ${call.request.path()}", cause)
             call.respondText(text = SERVER_ERROR_MESSAGE, status = HttpStatusCode.InternalServerError)
@@ -166,6 +173,9 @@ const val BAD_REQUEST_MESSAGE = "The server couldn't read that request"
 
 /** Sent when a route throws. What went wrong is in the server's log, not the response */
 const val SERVER_ERROR_MESSAGE = "Something went wrong on the server"
+
+/** Sent for a body over one of Ktor's limits */
+const val TOO_LARGE_MESSAGE = "That's bigger than the server takes"
 
 // Ktor wraps the serializer's message ("Field 'password' is required") a couple of levels down
 private fun Throwable.rootMessage(): String =

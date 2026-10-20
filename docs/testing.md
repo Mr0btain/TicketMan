@@ -178,7 +178,7 @@ app:
 | Test | Writes to | Draws |
 |------|-----------|-------|
 | `KitGalleryRenderTest` | `composeApp/build/kit-gallery/` | The gallery in every theme and mode, every font, with reduce transparency, and 720 px wide; the Appearance settings |
-| `ScreenRenderTest` | `composeApp/build/screen-renders/` | Counter ticket, pickup, check-in, kiosk lock, server trust, admin overview and users, the records tabs and view only, each in dark and light |
+| `ScreenRenderTest` | `composeApp/build/screen-renders/` | Counter ticket, pickup, check-in, kiosk lock, server trust, admin overview, users and server (direct and behind a proxy), the records tabs and view only, each in dark and light |
 
 - **They only check a file was written.** Nothing compares pixels. Open the PNGs and look.
 - **Screens are drawn with sample data**, built in the test from the real models, and with the screen

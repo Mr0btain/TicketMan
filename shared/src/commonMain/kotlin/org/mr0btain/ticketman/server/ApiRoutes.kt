@@ -122,6 +122,8 @@ object AdminPaths {
     const val CERTIFICATE_RENEW = "/certificate/renew"
     const val BACKUP = "/backup"
     const val BACKUP_DOWNLOAD = "/backup/download/{id}"
+    const val BACKUP_START = "/backup/start"
+    const val BACKUP_STATUS = "/backup/status/{id}"
     const val RESTORE = "/restore"
     const val SEED = "/seed"
 

@@ -14,8 +14,10 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 
 /**
- * Asks whether to trust a server that made its own certificate, after checking its fingerprint against the one on
- * the server. A changed certificate gets a warning, since it can mean something is pretending to be the server
+ * Asks whether to trust a server whose certificate no authority vouches for, after checking its fingerprint against
+ * the one the admin gave out. That's a server doing its own HTTPS, or a proxy with a self-signed certificate, whose
+ * fingerprint isn't on the admin screen. A changed certificate gets a warning, since it can mean something is
+ * pretending to be the server
  */
 @Composable
 fun ServerTrustDialog(
@@ -27,9 +29,9 @@ fun ServerTrustDialog(
 
     TmDialog(
         title = if (certificate.changed) "This server's certificate changed" else "Check this server",
-        description = "${certificate.address} made its own certificate, so this device can't tell it's the shop's " +
-                "server on its own. Check the code below matches the one on the server's admin screen (Admin, Server) " +
-                "or in its log.",
+        description = "${certificate.address} has a certificate no authority vouches for, so this device can't tell " +
+                "it's the shop's server on its own. Check the code below matches the fingerprint your administrator " +
+                "gave you. When the server does its own HTTPS, it's also on the admin Server tab and in the server's log.",
         onDismissRequest = onDismiss,
         dismissOnOutsideClick = false,
         maxWidth = 520.dp,
@@ -46,8 +48,9 @@ fun ServerTrustDialog(
         if (certificate.changed) {
             TmNotice(
                 kind = TmNoticeKind.WARNING,
-                text = "Only trust it if the server's certificate was replaced on purpose, like after moving it to a " +
-                        "new machine. Otherwise something on the network may be pretending to be the server."
+                text = "Only trust it if the certificate was replaced on purpose, like after moving the server to a " +
+                        "new machine or renewing the proxy's certificate. Otherwise something on the network may be " +
+                        "pretending to be the server."
             )
         }
 

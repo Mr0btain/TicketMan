@@ -55,4 +55,21 @@ class ServerTrustTest {
         // A fresh start reads it back
         assertTrue(ServerTrust(LocalStorage(store)).isTrusted("shop:8443", "AA:BB"))
     }
+
+    @Test
+    fun aWrongNameSaysWhatTheCertificateIsFor() {
+        assertEquals(
+            "This server's certificate is for tickets.myshop.com or www.myshop.com. Connect with that name.",
+            WrongServerName("10.0.0.5:443", listOf("tickets.myshop.com", "www.myshop.com")).message
+        )
+        assertEquals(
+            "This server's certificate isn't for 10.0.0.5. Check the address with your admin.",
+            WrongServerName("10.0.0.5:443", emptyList()).message
+        )
+
+        val trust = ServerTrust(LocalStorage(InMemoryKeyValueStore()))
+        trust.refuseName(WrongServerName("10.0.0.5:443", listOf("tickets.myshop.com")))
+        trust.clearRefused()
+        assertNull(trust.wrongName.value)
+    }
 }

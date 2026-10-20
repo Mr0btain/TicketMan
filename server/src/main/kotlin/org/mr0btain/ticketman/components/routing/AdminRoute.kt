@@ -242,7 +242,8 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
-        // Builds a backup archive on the server and returns a link to download it from. Can take a while
+        // Builds a backup archive on the server and returns a link to download it from. Can take a while, longer
+        // than a proxy waits, so clients use BACKUP_START. Kept for older clients
         post(AdminPaths.BACKUP) {
             val request = call.receive<BackupRequest>()
             val ticket = backupService.prepare(request.includeImages)
@@ -256,6 +257,32 @@ fun Route.adminRoute(
             val contents = if (ticket.includesImages) "database and photos" else "database only"
             call.audit(auditLog, AuditAction.BACKUP, "database", details = "$contents, ${ticket.sizeBytes} bytes")
             call.respond(HttpStatusCode.Created, ticket)
+        }
+
+        // Starts building a backup and answers straight away; the client asks after it with BACKUP_STATUS. A proxy
+        // would give up on POST BACKUP while a big one is being built
+        post(AdminPaths.BACKUP_START) {
+            val request = call.receive<BackupRequest>()
+            val actor = call.getIdentifierFromToken()
+
+            val job = backupService.start(request.includeImages) { ticket ->
+                if (ticket == null) {
+                    AppLogger.i(BACKUP_TAG, "Backup failed")
+                    return@start
+                }
+                val contents = if (ticket.includesImages) "database and photos" else "database only"
+                auditLog.log(actor, AuditAction.BACKUP, "database", null, "$contents, ${ticket.sizeBytes} bytes")
+            }
+
+            call.respond(HttpStatusCode.Accepted, job)
+        }
+
+        get(AdminPaths.BACKUP_STATUS) {
+            val id = call.parameters["id"].orEmpty()
+            val job = backupService.job(id)
+
+            if (job == null) call.respond(HttpStatusCode.NotFound)
+            else call.respond(HttpStatusCode.OK, job)
         }
 
         // Upload a backup archive (the raw zip as the body) to restore from on the next start

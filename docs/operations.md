@@ -57,6 +57,23 @@ Behind a reverse proxy, HTTPS is the proxy's job and the rest of this section do
 (`PROXY=off`), the server listens for HTTPS on `SSL_PORT` (8443) next to plain HTTP on `PORT` (8080). Devices should
 use the HTTPS one, since passwords, tokens and backup links can be read off the network over plain HTTP.
 
+### Behind a reverse proxy
+
+The proxy does HTTPS, usually with a public certificate, and devices connect to its name (`tickets.myshop.com`).
+Three things to set on the proxy:
+
+- **Body size.** Photos are up to 25 MB, and a restore upload is the size of the backup. nginx refuses anything
+  over 1 MB unless `client_max_body_size` is raised (`0` turns the limit off). The app says "Bigger than the proxy
+  allows" when this happens.
+- **Timeouts** can stay at their defaults. Backups are built in the background and asked after, and uploads and
+  downloads keep data moving.
+- **`X-Forwarded-For`.** The server only believes it from `TRUSTED_PROXIES`; the admin Server tab shows whether it
+  works (see [Configuration](configuration.md#trusted_proxies)).
+
+Devices have to use a name the certificate is for. Connecting by IP to a proxy whose certificate is for a domain
+fails with "This server's certificate is for ...". Android needs 7.1.1 or newer for Let's Encrypt certificates,
+which is also the app's minimum.
+
 ### The certificate
 
 With no `SSL_KEYSTORE` set, the server makes its own certificate on first start and keeps it in `server/tls/`. It

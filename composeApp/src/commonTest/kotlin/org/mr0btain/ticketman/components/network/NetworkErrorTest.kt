@@ -61,6 +61,40 @@ class NetworkErrorTest {
         assertEquals(NetworkError.TOO_MANY_REQUESTS, errorFrom(MockEngine { respondError(HttpStatusCode.TooManyRequests) }))
     }
 
+    private suspend fun serverErrorFrom(engine: MockEngine): ServerError =
+        (handleActionHttpResponse("Test", networkRequest("Test") { client(engine).get("http://server/") }) as TmResult.Error).error
+
+    // What nginx sends for a body over client_max_body_size
+    private val nginxTooLarge = "<html>\r\n<head><title>413 Request Entity Too Large</title></head>\r\n<body>\r\n" +
+        "<center><h1>413 Request Entity Too Large</h1></center>\r\n<hr><center>nginx</center>\r\n</body>\r\n</html>\r\n"
+
+    @Test
+    fun aProxysTooLargeIsTheProxys() = runTest {
+        val html = headersOf(HttpHeaders.ContentType, ContentType.Text.Html.toString())
+        val nginx = serverErrorFrom(MockEngine { respond(nginxTooLarge, HttpStatusCode.PayloadTooLarge, html) })
+        assertEquals(NetworkError.PROXY_TOO_LARGE, nginx.type)
+        assertEquals(NetworkError.PROXY_TOO_LARGE.message, nginx.message, "Never the page itself")
+
+        // Caddy's request_body limit sends nothing
+        assertEquals(NetworkError.PROXY_TOO_LARGE, serverErrorFrom(MockEngine { respond("", HttpStatusCode.PayloadTooLarge) }).type)
+    }
+
+    @Test
+    fun theServersTooLargeKeepsItsReason() = runTest {
+        val error = serverErrorFrom(MockEngine { respond("That photo is too big", HttpStatusCode.PayloadTooLarge) })
+        assertEquals(NetworkError.PAYLOAD_TOO_LARGE, error.type)
+        assertEquals("That photo is too big", error.message)
+    }
+
+    @Test
+    fun aProxyWithNoServerBehindItSaysSo() = runTest {
+        listOf(HttpStatusCode.BadGateway, HttpStatusCode.ServiceUnavailable, HttpStatusCode.GatewayTimeout).forEach { status ->
+            val error = serverErrorFrom(MockEngine { respond("<html><body>$status</body></html>", status) })
+            assertEquals(NetworkError.PROXY_SERVER_DOWN, error.type, "$status")
+            assertEquals(NetworkError.PROXY_SERVER_DOWN.message, error.message)
+        }
+    }
+
     @Test
     fun cancellationIsLetThrough() {
         assertFailsWith<CancellationException> {

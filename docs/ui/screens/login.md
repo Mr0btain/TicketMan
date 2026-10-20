@@ -41,7 +41,7 @@ stateDiagram-v2
 
 | State | Shows | Notes |
 |-------|-------|-------|
-| `Address` | `ServerAddressField` | Saving it calls `settings.setServerUrl`, which connects. Errors only show after an attempt |
+| `Address` | `ServerAddressField` | Saving it calls `settings.setServerUrl`, which connects. The hint is the proxy form (`tickets.myshop.com`), with the IP and port as the no-proxy example. Errors (`session.connectionProblem`: unreachable, or the certificate's for another name) only show after an attempt |
 | `Login` | `LoginField`: username, password, and a link to request an account | A new user with an invite types their setup code as the password |
 | `Request` | `RequestAccountForm`: username, first and last name, email, phone, password (8 or more) and confirm | The server rate limits these. The admin approves or rejects on the Users tab |
 | `Loading` | A spinner | While `loginState` is `LOADING` |
@@ -74,8 +74,10 @@ The rest of the app sits behind it until it's done.
 
 When the server uses a certificate it made itself, `setUrl` comes back `UNTRUSTED` and
 [`ServerTrustDialog`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/login/ServerTrustDialog.kt)
-shows its SHA-256 fingerprint, split into two lines to read off against the admin screen's Server tab or the
-server's log. A **changed** certificate gets a warning and a red confirm button. Trusting saves the fingerprint
+shows its SHA-256 fingerprint, split into two lines to read off against the one the administrator gave out. That's
+a server doing its own HTTPS (also on the admin screen's Server tab and in the server's log) or a proxy with a
+self-signed certificate (not on the admin screen, since the server never sees it), and the dialog can't tell which
+before logging in, so it names both. A **changed** certificate gets a warning and a red confirm button. Trusting saves the fingerprint
 for that address; see [Trusting a server's certificate](../../client/networking.md#trusting-a-servers-certificate).
 
 ![The server trust dialog](../../images/server-trust.png)

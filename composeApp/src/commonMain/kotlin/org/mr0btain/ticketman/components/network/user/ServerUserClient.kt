@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
+import org.mr0btain.ticketman.components.network.networkErrorFor
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.error.EmptyResult
@@ -285,20 +286,37 @@ class ServerUserClient(
      * reply that isn't a web page counts from `/`, so the web client's dev server isn't mistaken for one. Also notes
      * the server's [serverApiVersion]
      */
-    suspend fun checkServerConnection(url: String): Boolean {
+    suspend fun checkServerConnection(url: String): Boolean = checkServer(url) == ServerCheck.UP
+
+    /** Like [checkServerConnection], also saying when a reverse proxy answered for a server that didn't */
+    suspend fun checkServer(url: String): ServerCheck {
         serverApiVersion = null
-        if (url.isBlank()) return false
+        if (url.isBlank()) return ServerCheck.DOWN
         val base = url.trimEnd('/')
 
         val ping = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base$SERVER_PING_PATH") }
-            ?: return false
+            ?: return ServerCheck.DOWN
         if (ping.status == HttpStatusCode.OK) {
             serverApiVersion = ping.headers[API_VERSION_HEADER]?.trim()?.toIntOrNull()
-            return ping.bodyAsText().trim() == SERVER_PING_BODY
+            return if (ping.bodyAsText().trim() == SERVER_PING_BODY) ServerCheck.UP else ServerCheck.DOWN
         }
-        if (ping.status != HttpStatusCode.NotFound) return false
+        if (networkErrorFor(ping.status.value) == NetworkError.PROXY_SERVER_DOWN) return ServerCheck.PROXY_ONLY
+        if (ping.status != HttpStatusCode.NotFound) return ServerCheck.DOWN
 
-        val root = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base/") } ?: return false
-        return root.status == HttpStatusCode.OK && root.contentType()?.match(ContentType.Text.Html) != true
+        val root = networkErrorTryCatch(CHECK_SERVER_CONNECTION_URL_TAG) { userHttpClient.get("$base/") } ?: return ServerCheck.DOWN
+        val up = root.status == HttpStatusCode.OK && root.contentType()?.match(ContentType.Text.Html) != true
+        return if (up) ServerCheck.UP else ServerCheck.DOWN
     }
+}
+
+/** What answered at an address, from [ServerUserClient.checkServer] */
+enum class ServerCheck {
+    /** A TicketMan server */
+    UP,
+
+    /** A reverse proxy, saying the server behind it isn't answering (502, 503, 504) */
+    PROXY_ONLY,
+
+    /** Nothing, or something that isn't TicketMan */
+    DOWN
 }

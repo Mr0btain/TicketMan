@@ -23,6 +23,21 @@ data class UntrustedCertificate(
 }
 
 /**
+ * A server whose certificate is one this device trusts, but for other names than the one it was reached by, like a
+ * proxy's public certificate for `tickets.myshop.com` reached by its IP address
+ * @param address `host:port` as it was reached, from [ServerTrust.addressOf]
+ * @param names The names (and addresses) the certificate is for
+ */
+data class WrongServerName(val address: String, val names: List<String>) {
+    /** What to tell someone, naming what to connect with instead */
+    val message: String
+        get() = when {
+            names.isEmpty() -> "This server's certificate isn't for ${address.substringBeforeLast(':')}. Check the address with your admin."
+            else -> "This server's certificate is for ${names.joinToString(" or ")}. Connect with that name."
+        }
+}
+
+/**
  * Which server certificates this device trusts on top of the ones a public authority vouches for. A server that
  * made its own certificate is trusted the first time someone checks its fingerprint and says yes, then only that
  * certificate is accepted from that address. Only desktop and Android check through this, browsers decide for
@@ -38,6 +53,11 @@ class ServerTrust(private val localStorage: LocalStorage) {
     /** The last certificate refused, until it's trusted or cleared */
     val refused = _refused.asStateFlow()
 
+    private val _wrongName = MutableStateFlow<WrongServerName?>(null)
+
+    /** The last server turned down for its name, until cleared */
+    val wrongName = _wrongName.asStateFlow()
+
     fun trustedFingerprint(address: String): String? = trusted[address]
 
     fun isTrusted(address: String, fingerprint: String): Boolean =
@@ -48,8 +68,15 @@ class ServerTrust(private val localStorage: LocalStorage) {
         _refused.value = certificate
     }
 
+    /** Called by the HTTP engine when a certificate it trusts doesn't cover the name the server was reached by */
+    fun refuseName(wrongName: WrongServerName) {
+        _wrongName.value = wrongName
+    }
+
+    /** Forgets the last refused certificate and the last wrong name */
     fun clearRefused() {
         _refused.value = null
+        _wrongName.value = null
     }
 
     /** Trusts this certificate for its address from now on, replacing any trusted before */

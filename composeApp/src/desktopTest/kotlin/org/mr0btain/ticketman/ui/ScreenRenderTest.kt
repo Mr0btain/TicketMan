@@ -85,6 +85,7 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.screens.admin.users.AdminUsersTab
 import org.mr0btain.ticketman.ui.screens.settings.SettingsLayout
 import org.mr0btain.ticketman.ui.screens.settings.components.AccountPanel
+import org.mr0btain.ticketman.components.network.WrongServerName
 import org.mr0btain.ticketman.ui.screens.settings.components.AppearanceSettings
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItem
 import org.mr0btain.ticketman.ui.screens.settings.components.SettingItemGroup
@@ -387,6 +388,42 @@ class ScreenRenderTest {
         }
     }
 
+    /** The Server tab behind a reverse proxy, one that forwards and one the server doesn't trust */
+    @Test
+    fun adminServerBehindProxy() {
+        val day = 24L * 60 * 60 * 1000
+        val now = System.currentTimeMillis()
+        val proxied = ServerInfoResponse(
+            name = "Front shop", version = "1.0.0", startedAt = now - day, uptimeMillis = day,
+            dataPath = "/data", databaseSizeBytes = 48_000_000, imagesSizeBytes = 2_400_000_000,
+            javaVersion = "21.0.4", operatingSystem = "Linux 6.8", developmentMode = false,
+            proxy = true, trustedProxies = listOf("127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"),
+            clientAddress = "192.168.1.42", forwarded = true, timeZone = "America/New_York"
+        )
+
+        listOf("admin-server-proxy" to proxied, "admin-server-proxy-untrusted" to proxied.copy(clientAddress = "172.18.0.3", forwarded = false, trustedProxies = listOf("127.0.0.1"))).forEach { (name, info) ->
+            bothModes(name, height = 900) {
+                Shell("Admin") {
+                    AdminServerTab(
+                        serverInfo = info,
+                        serverUrl = "https://tickets.myshop.com",
+                        shopProfile = null,
+                        isBusy = false,
+                        backupProgress = null,
+                        pendingRestore = null,
+                        onSaveShopProfile = {},
+                        onBackup = {},
+                        onRestore = {},
+                        onCancelRestore = {},
+                        onRenewCertificate = {},
+                        onCancelCertificateRenewal = {},
+                        onSeed = {}
+                    )
+                }
+            }
+        }
+    }
+
     @Test
     fun adminOverview() = bothModes("admin-overview") {
         Shell("Admin") {
@@ -583,11 +620,14 @@ class ScreenRenderTest {
     }
 
     @Test
-    fun settingsAccount() = bothModes("settings-account", height = 360) {
+    fun settingsAccount() = bothModes("settings-account", height = 480) {
         Shell("Settings") {
             Column(Modifier.width(720.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AccountPanel(user = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
-                AccountPanel(user = null, onLogin = {}, onLogout = {})
+                AccountPanel(
+                    user = null, onLogin = {}, onLogout = {},
+                    connectionProblem = WrongServerName("10.0.0.5:443", listOf("tickets.myshop.com")).message
+                )
             }
         }
     }

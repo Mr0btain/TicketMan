@@ -15,6 +15,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.data.local.InMemoryKeyValueStore
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.WrongServerName
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
@@ -35,9 +36,20 @@ class SessionHandlerTest {
     private val storage = LocalStorage(InMemoryKeyValueStore())
     private var me = User(username = "sam", name = "Sam Tech", accessLevel = AccessLevel.NORMAL)
 
+    private lateinit var remote: RemoteHandler
+
     private val engine = MockEngine { request ->
         requests += "${request.method.value} ${request.url.encodedPath}"
         if (!reachable) throw IOException("Server is down")
+
+        // A proxy with a public certificate for tickets.myshop.com, reached by its IP: what the hostname check does
+        if (request.url.host == "10.0.0.5") {
+            remote.trust.refuseName(WrongServerName("10.0.0.5:443", listOf("tickets.myshop.com")))
+            throw IOException("Hostname 10.0.0.5 not verified")
+        }
+
+        // A proxy whose server is stopped
+        if (request.url.host == "proxy.local") return@MockEngine respond("<html>502 Bad Gateway</html>", HttpStatusCode.BadGateway)
 
         // A server with HTTP_MODE=redirect
         if (request.url.host == "shop.local" && request.url.protocol == URLProtocol.HTTP) {
@@ -69,7 +81,7 @@ class SessionHandlerTest {
     }
 
     private suspend fun TestScope.handler(connect: Boolean = true): SessionHandler {
-        val remote = RemoteHandler(engine, LocalStorage(InMemoryKeyValueStore()))
+        remote = RemoteHandler(engine, LocalStorage(InMemoryKeyValueStore()))
 
         return SessionHandler(
             remoteHandler = remote,
@@ -144,6 +156,29 @@ class SessionHandlerTest {
 
         assertFalse(session.serverConnected.value)
         assertEquals(LoginState.LOGGED_OUT, session.loginState.value)
+        assertEquals(SessionHandler.UNREACHABLE_MESSAGE, session.connectionProblem.value)
+    }
+
+    @Test
+    fun aProxyWithItsServerDownIsntUnreachable() = runTest {
+        val session = handler(connect = false)
+
+        session.connect("https://proxy.local")
+        assertFalse(session.serverConnected.value)
+        assertEquals(SessionHandler.SERVER_NOT_ANSWERING_MESSAGE, session.connectionProblem.value)
+    }
+
+    @Test
+    fun theWrongNameSaysWhichNameToUse() = runTest {
+        val session = handler(connect = false)
+
+        session.connect("https://10.0.0.5")
+        assertFalse(session.serverConnected.value)
+        assertEquals("This server's certificate is for tickets.myshop.com. Connect with that name.", session.connectionProblem.value)
+        assertNull(session.untrustedCertificate.value, "Nothing to trust")
+
+        session.connect("http://localhost")
+        assertNull(session.connectionProblem.value)
     }
 
     @Test

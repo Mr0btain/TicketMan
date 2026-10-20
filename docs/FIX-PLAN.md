@@ -373,26 +373,45 @@ are now. Do this phase before 9 and 10.
 With a public certificate the system check in `PinningTrustManager` passes and the trust dialog never shows, so
 the user types the address and logs in. These cover what goes wrong around that.
 
-- [ ] **Address hints.** The placeholder (`ServerAddressField`) and Settings description say `192.168.1.20:8443`.
+- [x] **Address hints.** The placeholder (`ServerAddressField`) and Settings description say `192.168.1.20:8443`.
       Change them to the proxy form (`tickets.myshop.com`), with the IP and port as the no-proxy example.
-- [ ] **Connecting by the wrong name.** Typing the IP when the certificate is for a domain passes the trust check
+      *Done:* the placeholder is `tickets.myshop.com` with the IP and port as the field's supporting text.
+- [x] **Connecting by the wrong name.** Typing the IP when the certificate is for a domain passes the trust check
       but fails `PinningHostnameVerifier`. Nothing reaches `ServerTrust.refuse`, so it shows as "unreachable".
       Record the names the certificate covers and say "This server's certificate is for `tickets.myshop.com`,
-      connect with that name".
-- [ ] **Errors the proxy makes.** These come back as HTML. Map `413` to "Bigger than the proxy allows" (photos,
+      connect with that name". *Done:* the verifier hands `ServerTrust.refuseName` a `WrongServerName` (the
+      certificate's DNS and IP names), `setUrl` returns `WRONG_NAME`, and `SessionHandler.connectionProblem` shows
+      it in the login dialog and on Settings > Account. `PinnedHttpsTest` checks it over real TLS, with a test
+      system trust store handed to `pinnedHttpEngine`.
+- [x] **Errors the proxy makes.** These come back as HTML. Map `413` to "Bigger than the proxy allows" (photos,
       restore) and `502`/`503`/`504` to "The proxy is up but the TicketMan server isn't answering", and let
-      `setUrl` tell that apart from unreachable.
-- [ ] **Admin Server tab.** When `proxy` is on, show "HTTPS: handled by reverse proxy", the client address, whether
+      `setUrl` tell that apart from unreachable. *Done:* `NetworkError.PROXY_TOO_LARGE` (a `413` with no plain text
+      reason; the server's own always have one, and `StatusPages` now answers Ktor's `PayloadTooLargeException` with
+      one) and `PROXY_SERVER_DOWN`; HTML is never shown as a reason. `checkServer` gives `PROXY_ONLY`, and `setUrl`
+      `SERVER_NOT_ANSWERING`. Checked through Caddy with the real OkHttp engine: `/tiny/` gives `PROXY_TOO_LARGE`,
+      and with the server stopped `setUrl` gives `SERVER_NOT_ANSWERING`.
+- [x] **Admin Server tab.** When `proxy` is on, show "HTTPS: handled by reverse proxy", the client address, whether
       it was forwarded, and the time zone. Hide the fingerprint, expiry and Renew rows, which describe a
-      certificate devices don't see. Add render tests for both modes.
-- [ ] **Trust dialog wording.** It now only appears for a self-signed certificate, which in proxy mode isn't on the
-      admin screen. Say "the fingerprint your administrator gave you" when it can't be checked there.
-- [ ] **Timeouts.** Check the backup create call and `transferTimeout()` uploads against a proxy's read timeout
+      certificate devices don't see. Add render tests for both modes. *Done:* `ProxyRows`, with a warning when the
+      address wasn't forwarded and the trusted list under its label; the time zone shows in both modes.
+      `adminServerBehindProxy` renders a forwarding proxy and an untrusted one, next to the direct `adminServer`.
+- [x] **Trust dialog wording.** It now only appears for a self-signed certificate, which in proxy mode isn't on the
+      admin screen. Say "the fingerprint your administrator gave you" when it can't be checked there. *Done:* the
+      dialog shows before login, so it can't know the mode; it asks for the fingerprint the administrator gave out
+      and says it's also on the Server tab and in the log when the server does its own HTTPS.
+- [x] **Timeouts.** Check the backup create call and `transferTimeout()` uploads against a proxy's read timeout
       (nginx's default is 60s). If making a backup can take longer, make it start then poll.
-- [ ] **Android 7.0.** `minSdk` is 24, which lacks Let's Encrypt's root (added in 7.1.1).
+      *Done:* backups now start then poll (`POST /api/admin/backup/start`, `GET /api/admin/backup/status/{id}`,
+      `BackupService.start`/`job`); the old `POST /backup` stays for older clients and the client falls back to it,
+      so `API_VERSION` stays. Uploads were fine: the proxy's read timeout only runs once the body is sent, and
+      staging a restore only reads the zip's directory, and processing a photo takes seconds.
+- [x] **Android 7.0.** `minSdk` is 24, which lacks Let's Encrypt's root (added in 7.1.1).
       **(decide)** raise `minSdk` to 25, or say so in [platforms](client/platforms.md).
-- [ ] **Docs.** [Networking](client/networking.md): public certificates, the hostname error, proxy errors.
+      *Done:* raised to 25 (decided), and `composeApp` now sets it too.
+- [x] **Docs.** [Networking](client/networking.md): public certificates, the hostname error, proxy errors.
       [Settings](ui/screens/settings.md) and [admin](ui/screens/admin.md) for the new wording and rows.
+      *Done:* plus [Running a server](operations.md#behind-a-reverse-proxy) (body size, timeouts, names), the
+      backup routes in the [admin API](api/admin.md) and [backup and restore](server/backup-restore.md).
 
 ## Phase 10: Docker image
 

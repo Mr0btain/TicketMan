@@ -137,6 +137,7 @@ private fun ServerInfoCard(
             TmKeyValueRow(label = "Java", value = serverInfo.javaVersion)
             TmKeyValueRow(label = "OS", value = serverInfo.operatingSystem)
             TmKeyValueRow(label = "Mode", value = if (serverInfo.developmentMode) "Development" else "Production")
+            if (serverInfo.timeZone.isNotBlank()) TmKeyValueRow(label = "Time zone", value = serverInfo.timeZone)
         }
 
         Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
@@ -147,7 +148,51 @@ private fun ServerInfoCard(
         }
 
         TmDivider()
-        CertificateRows(serverInfo.certificate, isBusy, onRenewCertificate, onCancelCertificateRenewal)
+        // Behind a proxy devices only ever see the proxy's certificate, so the server's own isn't worth showing
+        if (serverInfo.proxy) ProxyRows(serverInfo)
+        else CertificateRows(serverInfo.certificate, isBusy, onRenewCertificate, onCancelCertificateRenewal)
+    }
+}
+
+/**
+ * Behind a reverse proxy: who does HTTPS, and whether the proxy says who each device is. A proxy the server doesn't
+ * trust makes every device look like the proxy, so wrong password limits count them all together
+ */
+@Composable
+private fun ProxyRows(serverInfo: ServerInfoResponse) {
+    Column {
+        TmKeyValueRow(label = "HTTPS", value = "Handled by reverse proxy")
+        TmKeyValueRow(label = "This device") {
+            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                if (serverInfo.forwarded) TmBadge(text = "Forwarded", tone = TmTheme.colors.success)
+                else TmBadge(text = "Not forwarded", tone = TmTheme.colors.warning)
+                Text(text = serverInfo.clientAddress.ifBlank { "Unknown" }, style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+            }
+        }
+        // A proxy can still talk HTTPS to the server
+        serverInfo.certificate?.let { TmKeyValueRow(label = "Server's own HTTPS port", value = it.httpsPort.toString(), numeric = true) }
+    }
+
+    // Can be a long list, so under its label rather than beside it
+    Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
+        Text(text = "Trusted proxies (TRUSTED_PROXIES)", style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
+        SelectionContainer {
+            Text(
+                text = serverInfo.trustedProxies.joinToString(", ").ifBlank { "None" },
+                style = TmTheme.typography.numeric,
+                color = TmTheme.colors.text
+            )
+        }
+    }
+
+    if (!serverInfo.forwarded) {
+        TmNotice(
+            kind = TmNoticeKind.WARNING,
+            title = "The proxy isn't saying who devices are",
+            text = "The server sees ${serverInfo.clientAddress.ifBlank { "this device" }} and no forwarded address from a trusted " +
+                "proxy, so every device may count as one for wrong password limits. If that's the proxy's address, add it " +
+                "to TRUSTED_PROXIES and check the proxy sends X-Forwarded-For."
+        )
     }
 }
 

@@ -21,11 +21,11 @@ import ticketman.composeapp.generated.resources.server_address_string
 
 /**
  * Asks for the server's address
- * @param error Marks the address as unreachable, after a try
+ * @param error Why the address tried didn't connect, null before a try
  */
 @Composable
 fun ServerAddressField(
-    error: Boolean,
+    error: String?,
     onContinue: (String) -> Unit
 ) {
     var address by remember { mutableStateOf("") }
@@ -37,10 +37,11 @@ fun ServerAddressField(
             value = address,
             onValueChange = { address = it },
             label = stringResource(Res.string.server_address_string),
-            placeholder = "192.168.1.20:8443",
+            placeholder = "tickets.myshop.com",
+            supportingText = if (error == null) "Or the server's IP and port without a proxy, like 192.168.1.20:8443" else null,
             leadingIcon = Res.drawable.server,
             size = TmControlSize.LARGE,
-            error = if (error) "Couldn't reach a server there. Check the address and that the server is running." else null,
+            error = error,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go),
             keyboardActions = KeyboardActions(onGo = { onContinue(address) })
         )

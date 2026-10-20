@@ -2,6 +2,25 @@ package org.mr0btain.ticketman.server.response
 
 import kotlinx.serialization.Serializable
 
+/** Where a backup started with `POST /api/admin/backup/start` is up to */
+@Serializable
+enum class BackupJobState { RUNNING, DONE, FAILED }
+
+/**
+ * A backup being built in the background, so the request that starts it answers straight away. A reverse proxy
+ * gives up on a request the server is quiet on for long (nginx after 60s), and a backup with photos can take longer
+ * @param ticket Set once it's [BackupJobState.DONE]
+ * @param error Why it [BackupJobState.FAILED]
+ */
+@Serializable
+data class BackupJob(
+    val id: String,
+    val state: BackupJobState,
+    val startedAt: Long,
+    val ticket: BackupTicket? = null,
+    val error: String? = null
+)
+
 /**
  * A built backup waiting to be downloaded. The download needs no login, the token in [downloadPath] is the key,
  * so a browser can save it straight to disk. It stops working at [expiresAt]

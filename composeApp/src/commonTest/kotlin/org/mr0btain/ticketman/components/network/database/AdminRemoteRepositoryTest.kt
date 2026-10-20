@@ -19,6 +19,9 @@ import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.BackupManifest
+import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.server.response.BackupJob
+import org.mr0btain.ticketman.server.response.BackupJobState
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.PendingRestore
 import kotlin.test.*
@@ -47,6 +50,12 @@ class AdminRemoteRepositoryTest {
         stagedAt = 6
     )
     private var hasPendingRestore = false
+
+    // False for a server from before backups were built in the background
+    private var backgroundBackups = true
+    private var backupStatusAsks = 0
+    private var backupFails = false
+    private val runningBackup = BackupJob(id = "j1", state = BackupJobState.RUNNING, startedAt = 1)
     private val restoreBodies = mutableListOf<Pair<String, ByteArray>>()
 
     private val json = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -57,6 +66,19 @@ class AdminRemoteRepositoryTest {
         when (request.url.encodedPath) {
             "/api/admin/stats" -> respond(Json.encodeToString(AdminStatsResponse(openTickets = 3, totalTickets = 5)), HttpStatusCode.OK, json)
             "/api/admin/backup" -> respond(Json.encodeToString(backupTicket), HttpStatusCode.Created, json)
+            "/api/admin/backup/start" -> if (backgroundBackups) respond(Json.encodeToString(runningBackup), HttpStatusCode.Accepted, json)
+                else respond("", HttpStatusCode.NotFound)
+            // Still building the first time it's asked
+            "/api/admin/backup/status/j1" -> respond(
+                Json.encodeToString(
+                    when {
+                        backupStatusAsks++ == 0 -> runningBackup
+                        backupFails -> runningBackup.copy(state = BackupJobState.FAILED, error = "The backup couldn't be made, check the server log")
+                        else -> runningBackup.copy(state = BackupJobState.DONE, ticket = backupTicket)
+                    }
+                ),
+                HttpStatusCode.OK, json
+            )
             "/api/admin/backup/download/b1" -> respond(backupBytes, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/zip"))
             "/api/admin/restore" -> when (request.method) {
                 HttpMethod.Post -> {
@@ -96,7 +118,7 @@ class AdminRemoteRepositoryTest {
         val prepared = admin.prepareBackup(includeImages = false)
 
         assertIs<TmResult.Success<BackupTicket>>(prepared)
-        assertEquals("POST /api/admin/backup", requests.single())
+        assertEquals(listOf("POST /api/admin/backup/start", "GET /api/admin/backup/status/j1", "GET /api/admin/backup/status/j1"), requests)
         assertEquals("http://localhost/api/admin/backup/download/b1?token=t", admin.backupDownloadUrl(prepared.data))
 
         val file = Buffer()
@@ -109,6 +131,24 @@ class AdminRemoteRepositoryTest {
         assertContentEquals(backupBytes, file.readByteArray())
         // Written as it arrived, not all at the end
         assertTrue(progress.size > 1, "$progress")
+    }
+
+    @Test
+    fun aBackupThatFailsOnTheServerSaysWhy() = runTest {
+        backupFails = true
+        val prepared = admin.prepareBackup(includeImages = true)
+
+        assertIs<TmResult.Error<ServerError>>(prepared)
+        assertEquals("The backup couldn't be made, check the server log", prepared.error.message)
+    }
+
+    @Test
+    fun anOlderServerBuildsTheBackupInOneRequest() = runTest {
+        backgroundBackups = false
+        val prepared = admin.prepareBackup(includeImages = false)
+
+        assertEquals(TmResult.Success(backupTicket), prepared)
+        assertEquals(listOf("POST /api/admin/backup/start", "POST /api/admin/backup"), requests)
     }
 
     @Test

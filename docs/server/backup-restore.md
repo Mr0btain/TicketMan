@@ -27,8 +27,13 @@ using a supplied certificate (`SSL_KEYSTORE`) leaves it out.
 
 ## Building
 
-`POST /api/admin/backup` (`BackupRequest(includeImages)`), admin only, calls
-[`BackupService.prepare`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/service/BackupService.kt):
+`POST /api/admin/backup/start` (`BackupRequest(includeImages)`), admin only, calls
+[`BackupService.start`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/service/BackupService.kt),
+which answers straight away with a `RUNNING` `BackupJob` and builds it on the service's own scope through
+`prepare`. The client asks `GET /api/admin/backup/status/{id}` every two seconds until it's `DONE` (with the
+ticket) or `FAILED`; a reverse proxy would give up on one request that stays quiet while a big backup is built.
+Jobs are kept in memory for an hour. The older `POST /api/admin/backup` calls `prepare` and answers when it's done,
+and the client falls back to it when a server doesn't know `/backup/start`.
 
 1. Only one backup is built at a time (a `Mutex`), on the IO dispatcher.
 2. **The database first.** `LocalDatabase.backupTo()` runs H2's `BACKUP TO`, which copies a consistent snapshot
@@ -38,7 +43,7 @@ using a supplied certificate (`SSL_KEYSTORE`) leaves it out.
 4. Everything is written into one zip on disk under `server/backups/`. The manifest is compressed; the database copy
    and JPEGs are stored as is, since they're already compressed. A SHA-256 of the archive is worked out as it's
    written.
-5. The response is a `BackupTicket`: id, file name, size, hash, expiry and a `downloadPath` of
+5. The result is a `BackupTicket`: id, file name, size, hash, expiry and a `downloadPath` of
    `/api/admin/backup/download/{id}?token=<random>`.
 
 Why the order matters: photos are only purged a day after they're deleted (see [Photos](photos.md)). So every photo

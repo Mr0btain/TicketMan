@@ -142,11 +142,35 @@ How backups are built and restores applied is in [Backup and restore](../server/
 
 **Auth:** admin
 
-Builds a backup zip on the server and hands back a link to it. Can take a while with photos.
+Builds a backup zip on the server and hands back a link to it, answering once it's built. Can take a while with
+photos, long enough for a reverse proxy to give up, so clients use `POST /api/admin/backup/start`. Kept for older
+clients.
 
 - **Body:** `BackupRequest { includeImages }`.
 - **`201`** `BackupTicket { id, fileName, sizeBytes, sha256, downloadPath, expiresAt, includesImages }`.
 - **`500`** the backup couldn't be made.
+
+### `POST /api/admin/backup/start`
+
+**Auth:** admin
+
+Starts building a backup in the background and answers straight away. A reverse proxy gives up on a request the
+server is quiet on for long (nginx after 60 seconds), and a backup with photos can take longer than that, so the
+client uses this and asks after it with `GET /api/admin/backup/status/{id}`.
+
+- **Body:** `BackupRequest { includeImages }`.
+- **`202`** `BackupJob { id, state, startedAt, ticket, error }`, with `state` `RUNNING`. Logged to the audit log once
+  it's built.
+
+### `GET /api/admin/backup/status/{id}`
+
+**Auth:** admin
+
+How a backup started with `POST /api/admin/backup/start` is going. Ask every couple of seconds until it isn't
+`RUNNING`.
+
+- **`200`** `BackupJob`: `RUNNING`; `DONE` with the `ticket` to download it with; or `FAILED` with an `error`.
+- **`404`** no such backup, or it finished more than an hour ago. Forgotten on restart.
 
 ### `GET /api/admin/backup/download/{id}`
 

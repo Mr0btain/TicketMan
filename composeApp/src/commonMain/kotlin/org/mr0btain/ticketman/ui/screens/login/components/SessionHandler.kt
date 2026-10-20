@@ -73,6 +73,14 @@ class SessionHandler(
     private val _serverConnected: MutableStateFlow<Boolean> = MutableStateFlow(false)
     val serverConnected = _serverConnected.asStateFlow()
 
+    private val _connectionProblem: MutableStateFlow<String?> = MutableStateFlow(null)
+
+    /**
+     * Why the last address tried didn't connect, to show next to it. Null when it connected, when nothing was tried,
+     * and when its certificate is waiting to be trusted (the trust dialog asks instead)
+     */
+    val connectionProblem = _connectionProblem.asStateFlow()
+
     // Set when the server and this app are from different versions, see RemoteHandler.apiMismatch
     private val _apiMismatch: MutableStateFlow<String?> = MutableStateFlow(null)
 
@@ -141,6 +149,12 @@ class SessionHandler(
         }
 
         _serverConnected.value = result == ConnectionResult.CONNECTED || result == ConnectionResult.LOGGED_IN
+        _connectionProblem.value = when (result) {
+            ConnectionResult.UNREACHABLE -> if (url.isBlank()) null else UNREACHABLE_MESSAGE
+            ConnectionResult.WRONG_NAME -> remoteHandler.trust.wrongName.value?.message
+            ConnectionResult.SERVER_NOT_ANSWERING -> SERVER_NOT_ANSWERING_MESSAGE
+            ConnectionResult.UNTRUSTED, ConnectionResult.CONNECTED, ConnectionResult.LOGGED_IN -> null
+        }
         _apiMismatch.value = if (_serverConnected.value) remoteHandler.apiMismatch else null
 
         if (result == ConnectionResult.LOGGED_IN) {
@@ -360,5 +374,10 @@ class SessionHandler(
                 is TmResult.Error -> onResult(result.error.message)
             }
         }
+    }
+
+    companion object {
+        const val UNREACHABLE_MESSAGE = "Couldn't reach a server there. Check the address and that the server is running."
+        const val SERVER_NOT_ANSWERING_MESSAGE = "The proxy is up but the TicketMan server isn't answering. Check the server is running."
     }
 }

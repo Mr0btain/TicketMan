@@ -1,7 +1,8 @@
 [versions]
 agp = "9.1.1"
 android-compileSdk = "37"
-android-minSdk = "24"
+# 25 (7.1.1) is the first with Let's Encrypt's ISRG Root X1, which most proxies' public certificates chain to
+android-minSdk = "25"
 android-targetSdk = "37"
 androidx-activity = "1.13.0"
 androidx-appcompat = "1.8.0"

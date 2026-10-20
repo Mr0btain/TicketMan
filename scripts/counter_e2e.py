@@ -222,13 +222,21 @@ status, display, _ = send(urllib.request.Request(f"{BASE}/api/image/{image['iden
 check(status == 200 and display[:2] == b"\xff\xd8", f"display size answered {status}")
 step(f"A {len(photo) / 1_000_000:.1f} MB photo uploads, goes on the ticket's note and comes back as a {len(display) // 1000} KB JPEG")
 
-_, backup = call("POST", "/api/admin/backup", {"includeImages": True}, admin, expect=201)
+# Started in the background and asked after, like the client, so a proxy never waits on the build
+_, job = call("POST", "/api/admin/backup/start", {"includeImages": True}, admin, expect=202)
+for _ in range(300):
+    if job["state"] != "RUNNING":
+        break
+    time.sleep(1)
+    _, job = call("GET", f"/api/admin/backup/status/{job['id']}", token=admin, expect=200)
+check(job["state"] == "DONE", f"backup ended {job}")
+backup = job["ticket"]
 status, archive, headers = send(urllib.request.Request(BASE + backup["downloadPath"]))
 check(status == 200 and len(archive) == backup["sizeBytes"], f"backup download answered {status} with {len(archive)} of {backup['sizeBytes']} bytes")
 check(hashlib.sha256(archive).hexdigest() == backup["sha256"], "backup download doesn't match its sha256")
 status, part, _ = send(urllib.request.Request(BASE + backup["downloadPath"], headers={"Range": "bytes=100-199"}))
 check(status == 206 and part == archive[100:200], f"a range of the backup answered {status}")
-step(f"Backup with photos ({len(archive) / 1_000_000:.1f} MB) downloads whole and matches its sha256; a range of it works too")
+step(f"Backup with photos built in the background ({len(archive) / 1_000_000:.1f} MB) downloads whole and matches its sha256; a range of it works too")
 
 _, pending = call("POST", "/api/admin/restore", token=admin, raw=archive, content_type="application/zip", expect=202)
 check(pending["sizeBytes"] == len(archive) and pending["manifest"]["includesImages"], f"restore staged {pending}")

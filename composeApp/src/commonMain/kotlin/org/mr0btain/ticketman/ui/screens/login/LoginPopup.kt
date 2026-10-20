@@ -32,6 +32,7 @@ fun LoginPopup(
     val loginState by viewModel.session.loginState.collectAsState()
     val serverConnected by viewModel.session.serverConnected.collectAsState()
     val loginMessage by viewModel.session.loginMessage.collectAsState()
+    val connectionProblem by viewModel.session.connectionProblem.collectAsState()
 
     // Swaps the login form for the account request form
     var requestingAccount by remember { mutableStateOf(false) }
@@ -56,6 +57,7 @@ fun LoginPopup(
     LoginDialog(
         state = state,
         error = error,
+        addressError = if (addressAttempted) connectionProblem else null,
         initialUsername = viewModel.session.savedUsername,
         message = loginMessage,
         onLoginConfirm = { user, pass -> viewModel.session.login(user, pass) },
@@ -74,6 +76,7 @@ fun LoginPopup(
 private fun LoginDialog(
     state: LoginDialogState,
     error: Boolean,
+    addressError: String?,
     initialUsername: String,
     message: String?,
     onAddressConfirm: (String) -> Unit,
@@ -105,7 +108,7 @@ private fun LoginDialog(
             label = "Login step"
         ) { targetState ->
             when (targetState) {
-                LoginDialogState.Address -> ServerAddressField(onContinue = onAddressConfirm, error = error)
+                LoginDialogState.Address -> ServerAddressField(onContinue = onAddressConfirm, error = addressError)
 
                 LoginDialogState.Login -> LoginField(
                     error = error,

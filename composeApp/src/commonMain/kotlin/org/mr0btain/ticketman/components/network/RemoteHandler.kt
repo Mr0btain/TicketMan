@@ -28,6 +28,7 @@ import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.components.network.user.ServerCheck
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 
@@ -115,7 +116,8 @@ class RemoteHandler(
             trust.clearRefused()
 
             // Check if we can establish a connection with this address, if success then set it.
-            if (userClient.checkServerConnection(url)) {
+            val check = userClient.checkServer(url)
+            if (check == ServerCheck.UP) {
                 userClient.changeServerUrl(url)
                 serverUrl = url.trimEnd('/')
                 repositories.forEach { it.serverUrl = url }
@@ -132,11 +134,23 @@ class RemoteHandler(
                     ConnectionResult.CONNECTED
                 }
             }
+            if (check == ServerCheck.PROXY_ONLY) {
+                AppLogger.i(SET_SERVER_URL_TAG, "A proxy answered at $url, but not the server behind it")
+                return ConnectionResult.SERVER_NOT_ANSWERING
+            }
+
             // Reached, but its certificate needs someone to check it first
             val refused = trust.refused.value
             if (refused != null && refused.address == trustAddressOf(url)) {
                 AppLogger.i(SET_SERVER_URL_TAG, "Certificate for ${refused.address} isn't trusted yet")
                 return ConnectionResult.UNTRUSTED
+            }
+
+            // Reached by a name its certificate doesn't cover
+            val wrongName = trust.wrongName.value
+            if (wrongName != null && wrongName.address == trustAddressOf(url)) {
+                AppLogger.i(SET_SERVER_URL_TAG, "Certificate for ${wrongName.address} is for ${wrongName.names}")
+                return ConnectionResult.WRONG_NAME
             }
         } else {
             AppLogger.m(SET_SERVER_URL_TAG, "FAIL: Url is empty")

@@ -1,7 +1,10 @@
 package org.mr0btain.ticketman.components.service
 
 import io.ktor.server.config.*
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -18,6 +21,8 @@ import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.AdminPaths
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.fill
+import org.mr0btain.ticketman.server.response.BackupJob
+import org.mr0btain.ticketman.server.response.BackupJobState
 import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.ScheduledBackupInfo
@@ -76,6 +81,10 @@ class BackupService(
     // Lost on restart, which is fine: the sweep then removes the files
     private val prepared = ConcurrentHashMap<String, Prepared>()
 
+    // Backups started with start(), also lost on restart
+    private val jobs = ConcurrentHashMap<String, BackupJob>()
+    private val jobScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+
     @Volatile
     private var lastScheduledFailure: Long? = null
 
@@ -93,6 +102,39 @@ class BackupService(
     suspend fun prepare(includeImages: Boolean): BackupTicket? = building.withLock {
         withContext(Dispatchers.IO) { build(includeImages) }
     }
+
+    /**
+     * Starts building an archive in the background and returns straight away, for [job] to be asked after. Waits its
+     * turn behind any backup already being built
+     * @param onFinished Called with the ticket, or null if it couldn't be made, like for the audit log
+     */
+    fun start(includeImages: Boolean, onFinished: (BackupTicket?) -> Unit = {}): BackupJob {
+        val now = Clock.System.now().toEpochMilliseconds()
+
+        // Finished ones are only worth asking about while their download lasts
+        jobs.values.removeIf { it.state != BackupJobState.RUNNING && it.startedAt < now - JOB_KEPT.inWholeMilliseconds }
+
+        val job = BackupJob(id = Uuid.generateV7().toString(), state = BackupJobState.RUNNING, startedAt = now)
+        jobs[job.id] = job
+
+        jobScope.launch {
+            val ticket = try {
+                prepare(includeImages)
+            } catch (ex: Exception) {
+                AppLogger.e(PREPARE_TAG, SimpleResult.FAIL, ex)
+                null
+            }
+
+            jobs[job.id] = if (ticket != null) job.copy(state = BackupJobState.DONE, ticket = ticket)
+            else job.copy(state = BackupJobState.FAILED, error = "The backup couldn't be made, check the server log")
+            onFinished(ticket)
+        }
+
+        return job
+    }
+
+    /** A backup [start]ed earlier, null if there's no such one or it finished too long ago */
+    fun job(id: String): BackupJob? = jobs[id]
 
     private fun build(includeImages: Boolean): BackupTicket? {
         val now = Clock.System.now().toEpochMilliseconds()
@@ -323,6 +365,9 @@ class BackupService(
     companion object {
         /** How long a download link works if nobody uses it */
         val DOWNLOAD_WINDOW = 30.minutes
+
+        /** How long a backup started in the background can be asked about, its build plus its download */
+        val JOB_KEPT = DOWNLOAD_WINDOW * 2
 
         /** How long a download link keeps working after each time it's used */
         val RESUME_WINDOW = 5.minutes

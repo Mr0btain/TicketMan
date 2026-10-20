@@ -12,6 +12,12 @@ enum class NetworkError(override val message: String) : Error {
     TOO_MANY_REQUESTS("Too many tries, wait a moment and try again"),
     NO_INTERNET("Couldn't reach the server"),
     PAYLOAD_TOO_LARGE("That's too big to send"),
+
+    /** A reverse proxy in front of the server turned the request down for its size, before the server saw it */
+    PROXY_TOO_LARGE("Bigger than the proxy allows. Ask your admin to raise the proxy's upload limit"),
+
+    /** A reverse proxy answered (502, 503, 504) but couldn't get through to the server behind it */
+    PROXY_SERVER_DOWN("The proxy is up but the TicketMan server isn't answering"),
     SERVER_ERROR("The server had an error"),
     SERIALIZATION("The server sent something the app couldn't read"),
     UNKNOWN("Something went wrong");

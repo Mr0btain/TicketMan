@@ -10,6 +10,12 @@ enum class ConnectionResult {
     /** The server answered with a certificate this device doesn't trust yet, see [ServerTrust.refused] */
     UNTRUSTED,
 
+    /** A reverse proxy answered at the url, but the server behind it didn't */
+    SERVER_NOT_ANSWERING,
+
+    /** The server's certificate is trusted but for another name, see [ServerTrust.wrongName] */
+    WRONG_NAME,
+
     /** Server is reachable but logging in with the stored credentials failed */
     CONNECTED,
 

@@ -4,6 +4,7 @@ import io.ktor.client.call.*
 import io.ktor.client.network.sockets.*
 import io.ktor.client.plugins.*
 import io.ktor.client.statement.*
+import io.ktor.http.*
 import io.ktor.util.network.*
 import io.ktor.serialization.*
 import io.ktor.util.reflect.*
@@ -97,6 +98,8 @@ fun networkErrorFor(statusCode: Int): NetworkError =
         409 -> NetworkError.CONFLICT
         413 -> NetworkError.PAYLOAD_TOO_LARGE
         429 -> NetworkError.TOO_MANY_REQUESTS
+        // The server never sends these itself, only a proxy in front of it does
+        502, 503, 504 -> NetworkError.PROXY_SERVER_DOWN
         in 500..599 -> NetworkError.SERVER_ERROR
         else -> NetworkError.UNKNOWN
     }
@@ -127,17 +130,29 @@ suspend fun handleActionHttpResponse(tag: String, response: HttpResponse): Empty
         return TmResult.Success(Unit)
     }
 
-    val error = networkErrorFor(response.status.value)
+    val body = try {
+        response.bodyAsText()
+    } catch (ex: Exception) {
+        ""
+    }
 
     // Only take short plain text bodies, anything else is a page or json we don't want in a snackbar
-    val reason = try {
-        response.bodyAsText().takeIf { it.isNotBlank() && it.length < 200 && !it.trimStart().startsWith("{") }
-    } catch (ex: Exception) {
-        null
+    val reason = body.takeIf { it.isNotBlank() && it.length < 200 && !isPageOrJson(response, it) }
+
+    // The server says why it turns a body down for its size; a proxy sends a page or nothing
+    val error = when {
+        response.status == HttpStatusCode.PayloadTooLarge && reason == null -> NetworkError.PROXY_TOO_LARGE
+        else -> networkErrorFor(response.status.value)
     }
 
     AppLogger.i(tag, "${error.name}${reason?.let { ": $it" } ?: ""}")
     return TmResult.Error(ServerError(error, reason))
+}
+
+/** An HTML page (a proxy's error page) or JSON, neither of which is a reason to show someone */
+private fun isPageOrJson(response: HttpResponse, body: String): Boolean {
+    val start = body.trimStart()
+    return response.contentType()?.match(ContentType.Text.Html) == true || start.startsWith("<") || start.startsWith("{")
 }
 
 /**

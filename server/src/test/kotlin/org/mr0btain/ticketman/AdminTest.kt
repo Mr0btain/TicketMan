@@ -28,6 +28,8 @@ import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.BackupManifest
+import org.mr0btain.ticketman.server.response.BackupJob
+import org.mr0btain.ticketman.server.response.BackupJobState
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
@@ -361,6 +363,31 @@ class AdminTest {
         val rest = client.get(ticket.downloadPath) { header(HttpHeaders.Range, "bytes=10-") }
         assertEquals(HttpStatusCode.PartialContent, rest.status)
         assertEquals(bytes.size - 10, rest.readRawBytes().size)
+    }
+
+    @Test
+    fun aBackupStartedInTheBackgroundIsAskedAfterUntilBuilt() = testApplication {
+        setup()
+        val adminToken = token(admin)
+
+        // Answers straight away, so a proxy never waits on the build
+        val started = post("/api/admin/backup/start", json.encodeToString(BackupRequest(includeImages = false)), adminToken)
+        assertEquals(HttpStatusCode.Accepted, started.status)
+        var job = json.decodeFromString<BackupJob>(started.bodyAsText())
+
+        repeat(200) {
+            if (job.state != BackupJobState.RUNNING) return@repeat
+            Thread.sleep(50)
+            job = json.decodeFromString(get("/api/admin/backup/status/${job.id}", adminToken).bodyAsText())
+        }
+
+        assertEquals(BackupJobState.DONE, job.state)
+        val ticket = assertNotNull(job.ticket)
+        assertEquals(HttpStatusCode.OK, client.get(ticket.downloadPath).status)
+
+        assertEquals(HttpStatusCode.NotFound, get("/api/admin/backup/status/nope", adminToken).status)
+        val employeeAttempt = post("/api/admin/backup/start", json.encodeToString(BackupRequest()), token(employee))
+        assertEquals(HttpStatusCode.Forbidden.value / 100, employeeAttempt.status.value / 100)
     }
 
     @Test

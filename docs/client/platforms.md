@@ -53,6 +53,11 @@ same module as its `expect`, so `androidApp` can't supply one.
 
 ## Android
 
+`minSdk` is 25 (Android 7.1), set once in `gradle/libs.versions.toml` for `shared`, `composeApp` and
+`androidApp`. Android 7.0 doesn't trust Let's Encrypt's root (ISRG Root X1, added in 7.1.1), so it couldn't connect
+to a proxy with the usual public certificate. 7.1.0 is also API 25 without it, but it only shipped on Pixel and
+Nexus devices, which all got 7.1.1.
+
 The manifest asks for `INTERNET` and allows plain HTTP (`usesCleartextTraffic`), since a server can still be
 reached on its HTTP port. Remove that once servers redirect HTTP to HTTPS everywhere.
 

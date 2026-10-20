@@ -21,6 +21,7 @@ import ticketman.composeapp.generated.resources.user
  * it; on wide screens it's the same as the menu at the foot of the nav rail
  * @param user Whoever is signed in, null when nobody is
  * @param apiMismatch Why this app and the server may not work together, null when they're the same version
+ * @param connectionProblem Why the server address didn't connect, null when it did
  */
 @Composable
 fun AccountPanel(
@@ -28,9 +29,11 @@ fun AccountPanel(
     onLogin: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    apiMismatch: String? = null
+    apiMismatch: String? = null,
+    connectionProblem: String? = null
 ) {
     TmPanel(modifier = modifier.fillMaxWidth(), title = "Account", icon = Res.drawable.user) {
+        connectionProblem?.let { TmNotice(kind = TmNoticeKind.ERROR, title = "Can't connect", text = it) }
         apiMismatch?.let { TmNotice(kind = TmNoticeKind.WARNING, title = "Different versions", text = it) }
 
         if (user == null) {
