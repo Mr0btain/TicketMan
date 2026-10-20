@@ -85,7 +85,7 @@ Small, user visible, no design questions.
 - [x] **Rate limits behind a proxy.** Behind a reverse proxy every request has the proxy's address. Add an opt-in
       setting to trust `X-Forwarded-For` (Ktor's `XForwardedHeaders`). Keeping counts across restarts is optional.
       *Done:* `TRUST_PROXY`, taking the last address in the header. Counts still reset on restart.
-      *Source:* [auth](server/auth.md#wrong-password-limit), [configuration](configuration.md#trust_proxy)
+      *Source:* [auth](server/auth.md#wrong-password-limit), [configuration](configuration.md#trusted_proxies)
 - [x] **Not enough access answers `401`, not `403`.** A Restricted user hitting a write route looks like an expired
       token, so the client tries a refresh first. Answer `403` when the token is fine but the access level isn't,
       and have the client show "You don't have access" instead of asking for a login. *Done:* `NetworkError.FORBIDDEN`
@@ -295,7 +295,7 @@ a public certificate. The server's own HTTPS and pinned certificate stay as the 
 keeps working outside a container with no proxy, so the server and client can be tried from the repo as they
 are now. Do this phase before 9 and 10.
 
-- [ ] **A `PROXY` setting** (`env.proxy`). It only changes defaults; a variable set by hand still wins:
+- [x] **A `PROXY` setting** (`env.proxy`). It only changes defaults; a variable set by hand still wins:
 
   | | `PROXY=on` (default) | `PROXY=off` (direct) |
   |---|---|---|
@@ -307,19 +307,31 @@ are now. Do this phase before 9 and 10.
   still answers on `http://localhost:8080` and `https://localhost:8443`. Put it in a `ProxySettings` next to
   `TlsSettings`, read by both `createServer` and `module()`. If HTTPS is turned on in proxy mode, `HttpsRedirect`
   mustn't send people to `:8443`. *Source:* reverse proxy plan
-- [ ] **`TRUSTED_PROXIES`.** A list of IPs and CIDR ranges. Forwarded headers are only used when
+
+  *Done:* `ProxySettings` in `components/tls/`; `TlsSettings.from` takes the mode for its blank defaults (a missing
+  `tls.port`, as in tests, is still off). Behind a proxy `HttpsRedirect` is never installed, and `HTTP_MODE=redirect`
+  is logged as ignored.
+- [x] **`TRUSTED_PROXIES`.** A list of IPs and CIDR ranges. Forwarded headers are only used when
       `call.request.local.remoteAddress` is in it (our own small plugin in place of `XForwardedHeaders`, keeping
       the last proxy rule). `TRUST_PROXY=true` stays as a deprecated "trust any address" with a warning.
       **(decide)** the default: loopback plus private ranges (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`)
       works on any Docker network, but lets a LAN device fake its address if someone publishes the port; loopback
       only is safer but needs setting in every container. *Source:* [auth](server/auth.md#wrong-password-limit)
-- [ ] **Startup log.** In proxy mode, say HTTPS is the proxy's job and list the trusted ranges instead of the
+      *Done:* loopback plus private ranges (decided). `plugins/Proxy.kt` checks the connection's address against
+      the list (`IpRange`, IPv4 and IPv6, no name lookups) before using the last `X-Forwarded-For` entry and
+      `X-Forwarded-Proto`, and marks the call `ForwardedByProxy` for the diagnostics item. Bad entries are logged.
+- [x] **Startup log.** In proxy mode, say HTTPS is the proxy's job and list the trusted ranges instead of the
       fingerprint lines. Warn when the time zone is UTC and `TZ` isn't set: `CounterDatabase`, `TicketDatabase`
       and `StatsDatabase` use `ZoneId.systemDefault()`, so "today" and the yearly number rollover would follow UTC.
-- [ ] **Diagnostics on the admin screen.** Add `proxy`, `clientAddress` (what the server sees for this request),
+      *Done:* `startupNotes` (`StartupLog.kt`), logged from `createServer`, with warnings for `TRUST_PROXY`, bad
+      `TRUSTED_PROXIES` entries, an empty trusted list and UTC without `TZ`. `ProxyTest` covers the settings, the
+      plugin over the test engine, and the log; checked against a real `:server:run` too.
+- [x] **Diagnostics on the admin screen.** Add `proxy`, `clientAddress` (what the server sees for this request),
       `forwarded` (whether the forwarded headers were used) and `timeZone` to `ServerInfoResponse`, all with
       defaults so `API_VERSION` stays. Lets an admin see the proxy setup works: a phone showing `127.0.0.1` means
-      it doesn't.
+      it doesn't. *Done:* the four fields plus `trustedProxies`, filled from the request (`request.origin` and the
+      `ForwardedByProxy` mark `plugins/Proxy.kt` sets). `ProxyTest` checks them through a trusted proxy, an untrusted
+      one and direct. Showing them on the Server tab is Phase 9's "Admin Server tab" item.
 - [ ] **Existing installs.** Changing the default turns off HTTPS on 8443, so devices pinned to `https://ip:8443`
       would stop connecting. **(decide)** stay direct when `PROXY` isn't set and `server/tls/` already holds a made
       certificate (with a warning to set `PROXY`), or skip this if there are no installs yet.
@@ -418,17 +430,20 @@ can't build the APK, and there's no emulator for it.
       desktop client and a server without `DATA_PATH` on each and check where the files go.
       *Source:* `AppDir.jvm.kt`'s old `TODO`s
 
+## Phase 12: Added ideas
+- [ ] Import data into the database from a file (a CSV of customers or inventory from another system).
+- [ ] Assign existing tickets to a customer from the customer dialog.
+- [ ] Hours worked and parts used recorded on a ticket as it's worked on, feeding its invoice.
+- [ ] Allow exporting invoices (CSV or PDF) for the books, add a PDF option from counter so it can be emailed.
+- [ ] Option to make a new customer from the ticket dialog, the way check in does.
+- [ ] Instead of refresh buttons on admin screen, record and others that may need to refresh, Lets 
+      make the app periodically check for updates from the server over an adjustable interval.
+
 ## Ideas
 
 Features that came up as `TODO` comments but were never started. Not planned; pick one up, or drop it, when
 deciding what's next.
-
-- Import data into the database from a file (a CSV of customers or inventory from another system).
 - Photos on every record type, not just notes and inventory. Customers, tickets and users already have the shape.
-- Assign existing tickets to a customer from the customer dialog.
-- Start a new customer from the ticket dialog, the way check in does.
-- Hours worked and parts used recorded on a ticket as it's worked on, feeding its invoice.
-- Export invoices (CSV or PDF) for the books.
 - A reorder prompt when an item's stock drops to a set level, at login or when it happens.
 
 ## Rules to keep
