@@ -9,7 +9,7 @@ route decides whether to let a caller in. PIN logins at stations build on this a
 | File | Does |
 |------|------|
 | `plugins/Security.kt` | Installs the four JWT auth providers, and answers `401` or `403` when one turns a caller away |
-| `plugins/Proxy.kt` | Takes client addresses from `X-Forwarded-For` when `TRUST_PROXY` is on |
+| `plugins/Proxy.kt` | Takes client addresses from `X-Forwarded-For` on requests from a trusted proxy (`TRUSTED_PROXIES`) |
 | `service/JwtService.kt` | Makes and checks tokens; the checks the providers call |
 | `service/ServerSecret.kt` | The key tokens are signed with: `SECRET`, or one the server makes and keeps |
 | `service/UserService.kt` | Password and PIN login, starting sessions, refreshing, logging out |
@@ -56,11 +56,13 @@ A username's count is shared by every address, so someone on the network can kee
 login by guessing at it. PIN login and existing sessions aren't affected, and the counts reset when the server
 restarts.
 
-The address is the connection's, which behind a reverse proxy is the proxy's for every device. Setting
-`TRUST_PROXY=true` installs Ktor's `XForwardedHeaders` (`plugins/Proxy.kt`), so the address comes from
-`X-Forwarded-For` instead. It takes the last address in the header, the one the proxy added, since anything
-before it was sent by the client. Only turn it on behind a proxy: without one, anyone can send the header and pick
-their own address.
+The address is the connection's, which behind a reverse proxy is the proxy's for every device. So behind a proxy
+(`PROXY=on`, the default) `plugins/Proxy.kt` takes it from `X-Forwarded-For` instead, but only when the connection
+itself comes from an address in `TRUSTED_PROXIES` (loopback and the private ranges unless set). It takes the last
+address in the header, the one the nearest proxy added, since anything before it was sent by the client. From
+anywhere else the header is ignored, so a device that reaches the server directly can't pick its own address. It's
+our own small plugin rather than Ktor's `XForwardedHeaders`, which believes the header from anyone. The deprecated
+`TRUST_PROXY=true` still does that, and logs a warning. See [Configuration](../configuration.md#trusted_proxies).
 
 A username that doesn't exist still runs a dummy hash check, so the response takes as long as a wrong password and
 can't be used to find out which usernames exist.

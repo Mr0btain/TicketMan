@@ -13,11 +13,12 @@ jwt:
     # Blank makes the server generate one and keep it in <DATA_PATH>/server/secret
     secret: "$SECRET:"
 
-# HTTPS listens next to plain HTTP. The certificate is made in <DATA_PATH>/server/tls/ on first start unless
-# SSL_KEYSTORE points at a PKCS12 file. SSL_PORT=0 turns HTTPS off
+# The server's own HTTPS, for running without a reverse proxy (PROXY=off). It listens next to plain HTTP, with a
+# certificate made in <DATA_PATH>/server/tls/ on first start unless SSL_KEYSTORE points at a PKCS12 file.
+# Blank port means off behind a proxy and 8443 direct, 0 always turns it off
 tls:
-    port: "$SSL_PORT:8443"
-    # on, redirect (to HTTPS) or off. Blank means redirect, or on in development mode
+    port: "$SSL_PORT:"
+    # on, redirect (to HTTPS) or off. Blank means on behind a proxy or in development mode, redirect direct
     httpMode: "$HTTP_MODE:"
     keyStore: "$SSL_KEYSTORE:"
     keyStorePassword: "$SSL_KEYSTORE_PASSWORD:"
@@ -35,8 +36,13 @@ env:
     dataPath: "$DATA_PATH:"
     # Password for the "admin" user made on first start, a random one is logged if blank
     adminPassword: "$ADMIN_PASSWORD:"
-    # true behind a reverse proxy, so client addresses come from X-Forwarded-For. Leave off otherwise, anyone
-    # could send that header
+    # on (the default) when a reverse proxy does HTTPS in front of the server, off to have the server do HTTPS
+    # itself on 8443. Blank means off in development mode. It only changes defaults, settings given still win
+    proxy: "$PROXY:"
+    # Behind a proxy, client addresses come from X-Forwarded-For, but only on requests from these addresses or CIDR
+    # ranges (comma separated). Blank means loopback and the private ranges, which covers a Docker network
+    trustedProxies: "$TRUSTED_PROXIES:"
+    # Deprecated: true trusts X-Forwarded-For from any address. Use TRUSTED_PROXIES
     trustProxy: "$TRUST_PROXY:false"
 
 # A backup made once a day into a folder, like a USB drive or a synced folder. Blank turns it off

@@ -107,6 +107,13 @@ Removes a station and signs out whoever is PINned in there.
   one's time and size, and when the last try failed; null without `BACKUP_DIR`) and `lastRestore` (`RestoreRecord`:
   the restored backup's manifest, when it was applied and the `pre-restore-<time>` folder; null once that folder has
   been swept, or if there's been no restore).
+- It also says how this request reached the server, so an admin can check a reverse proxy is set up right: `proxy`
+  (`PROXY=on`), `trustedProxies` (`TRUSTED_PROXIES` as given, empty when forwarded headers are ignored),
+  `clientAddress` (the address the server sees for the device asking), `forwarded` (whether that came from a
+  trusted proxy's `X-Forwarded-For`) and `timeZone` (what "today" and the yearly number rollover use). Behind a
+  working proxy `clientAddress` is the device's own address and `forwarded` is true; the proxy's address with
+  `forwarded` false means the proxy isn't in `trustedProxies` or doesn't send the header. All five have defaults, so
+  older clients ignore them.
 
 ### `POST /api/admin/certificate/renew`
 

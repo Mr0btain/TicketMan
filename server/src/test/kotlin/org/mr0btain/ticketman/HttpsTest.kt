@@ -107,8 +107,8 @@ class HttpsTest {
         assertEquals(HttpMode.REDIRECT, settings.httpMode)
         assertEquals(HttpMode.ON, HttpMode.parse("nonsense"))
 
-        // Left blank, plain HTTP redirects, except in development mode
-        val blank = MapApplicationConfig("tls.port" to "8443", "tls.httpMode" to "")
+        // Left blank and direct, plain HTTP redirects, except in development mode. ProxyTest covers proxy mode
+        val blank = MapApplicationConfig("tls.port" to "8443", "tls.httpMode" to "", "env.proxy" to "off")
         assertEquals(HttpMode.REDIRECT, TlsSettings.from(blank).httpMode)
         assertEquals(HttpMode.ON, TlsSettings.from(blank, developmentMode = true).httpMode)
         assertEquals(HttpMode.OFF, TlsSettings.from(MapApplicationConfig("tls.port" to "8443", "tls.httpMode" to "off"), developmentMode = true).httpMode)
@@ -128,6 +128,8 @@ class HttpsTest {
             arrayOf(
                 "-port=0",
                 "-P:tls.port=$httpsPort",
+                // The server doing HTTPS itself, without a reverse proxy
+                "-P:env.proxy=off",
                 "-P:env.dataPath=${dataDir.invariantSeparatorsPathString}",
                 "-P:jwt.secret=test-secret"
             )
@@ -156,7 +158,7 @@ class HttpsTest {
             val plain = URI("https://localhost:$httpsPort/").toURL().openConnection() as HttpsURLConnection
             assertFailsWith<SSLHandshakeException> { plain.responseCode }
 
-            // Plain HTTP redirects to HTTPS by default, outside development mode
+            // Direct, plain HTTP redirects to HTTPS by default outside development mode
             val http = server.engine.resolvedConnectors().first { it.type == ConnectorType.HTTP }
             val redirected = URI("http://localhost:${http.port}/api/ping").toURL().openConnection() as java.net.HttpURLConnection
             redirected.instanceFollowRedirects = false

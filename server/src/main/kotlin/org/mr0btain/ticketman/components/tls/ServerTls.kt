@@ -20,10 +20,13 @@ import javax.security.auth.x500.X500Principal
 
 /** What the plain HTTP port does once HTTPS is on */
 enum class HttpMode {
-    /** Answers as usual. The default in development mode, for the web client's dev server and test scripts */
+    /**
+     * Answers as usual. The default behind a reverse proxy, which talks plain HTTP to the server, and in development
+     * mode, for the web client's dev server and test scripts
+     */
     ON,
 
-    /** Sends everything to the HTTPS port. The default, clients follow it to the `https://` address */
+    /** Sends everything to the HTTPS port. The default when direct, clients follow it to the `https://` address */
     REDIRECT,
 
     /** Not opened at all */
@@ -54,16 +57,31 @@ data class TlsSettings(
     val enabled: Boolean get() = httpsPort > 0
 
     companion object {
+        /** `SSL_PORT` when it's blank and the server does HTTPS itself */
+        const val DEFAULT_HTTPS_PORT = 8443
+
         /**
-         * Tests don't load application.yaml, so a missing section means HTTPS is off
-         * @param developmentMode Plain HTTP stays on by default in development mode, and redirects otherwise
+         * Blank values take their defaults from [proxy]: behind a reverse proxy HTTPS is off and plain HTTP answers,
+         * direct it's HTTPS on [DEFAULT_HTTPS_PORT] with plain HTTP redirecting. Development mode keeps plain HTTP on.
+         * Tests don't load application.yaml, so a missing `tls.port` means HTTPS is off whatever the mode
+         * @param proxy `PROXY`, read from [config] unless given
          */
-        fun from(config: ApplicationConfig, developmentMode: Boolean = false): TlsSettings {
+        fun from(
+            config: ApplicationConfig,
+            developmentMode: Boolean = false,
+            proxy: Boolean = ProxySettings.enabled(config, developmentMode)
+        ): TlsSettings {
             fun value(key: String) = config.propertyOrNull("tls.$key")?.getString()?.trim().orEmpty()
 
+            val port = config.propertyOrNull("tls.port")?.getString()?.trim()
+
             return TlsSettings(
-                httpsPort = value("port").toIntOrNull() ?: 0,
-                httpMode = HttpMode.parse(value("httpMode"), if (developmentMode) HttpMode.ON else HttpMode.REDIRECT),
+                httpsPort = when {
+                    port == null -> 0
+                    port.isEmpty() -> if (proxy) 0 else DEFAULT_HTTPS_PORT
+                    else -> port.toIntOrNull() ?: 0
+                },
+                httpMode = HttpMode.parse(value("httpMode"), if (developmentMode || proxy) HttpMode.ON else HttpMode.REDIRECT),
                 keyStorePath = value("keyStore"),
                 keyStorePassword = value("keyStorePassword"),
                 keyAlias = value("keyAlias"),

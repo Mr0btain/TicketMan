@@ -75,9 +75,24 @@ session, because that lost answer would look the same.
 
 **Revisit if:** the server is reachable from outside the shop.
 
-### Its own certificate, pinned by the devices
+### Behind a reverse proxy by default
 
-**Chosen:** without a supplied certificate the server makes one, once, kept in `<dataPath>/server/tls/` for ten
+**Chosen:** the normal setup is the server in a container behind a reverse proxy (Caddy, nginx, Traefik) that does
+HTTPS, usually with a public certificate. `PROXY=on` is the default: the server's own HTTPS is off, plain HTTP
+answers, and client addresses come from `X-Forwarded-For` sent by a trusted proxy. The server's own pinned
+certificate (next entry) is the direct option, `PROXY=off`, and what development mode uses.
+
+**Why:** a public certificate means no trust dialog on any device and no browser warning on the web client, and a
+proxy is how most self-hosted services are run. `PROXY` only changes defaults, so either setup is one setting away.
+
+**Costs:** the forwarded headers are believed from loopback and the private ranges unless `TRUSTED_PROXIES` narrows
+it, so a proxy on any Docker network works with nothing set. If the server's own port is also reachable from the
+shop network, a device there could pick its own address for the login limits. The default was chosen over
+loopback only, which is safer but would need setting in every container.
+
+### Its own certificate, pinned by the devices (the direct setup)
+
+**Chosen:** with `PROXY=off` and no supplied certificate the server makes one, once, kept in `<dataPath>/server/tls/` for ten
 years. Desktop and Android ask staff to check its fingerprint the first time, then trust exactly that
 certificate for that address.
 
@@ -152,8 +167,8 @@ routes), a failed entry is only logged to the console and the change stays.
 
 **Why:** simple, and nothing to clean up in the database.
 
-**Costs:** a restart clears the counts. Behind a reverse proxy every request has the proxy's address unless
-`TRUST_PROXY` is set. A username's limit can be used to keep that user out of password login for a while.
+**Costs:** a restart clears the counts. Behind a reverse proxy they rely on its `X-Forwarded-For`, believed only
+from `TRUSTED_PROXIES`; a proxy outside that list makes every device count as one. A username's limit can be used to keep that user out of password login for a while.
 
 ## The client
 

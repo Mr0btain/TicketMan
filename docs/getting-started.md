@@ -21,8 +21,10 @@ dependencies and takes a while.
 PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
 ```
 
-- `PORT` defaults to 8080. HTTPS listens on `SSL_PORT`, 8443 by default, with a certificate the server makes in
-  `DATA_PATH` the first time. Clients ask you to check its fingerprint (printed in the log) before trusting it.
+- `PORT` defaults to 8080. In development mode the server also does HTTPS itself on `SSL_PORT`, 8443 by default,
+  with a certificate it makes in `DATA_PATH` the first time. Clients ask you to check its fingerprint (printed in the
+  log) before trusting it. Outside development mode it expects a reverse proxy to do HTTPS instead (`PROXY`, see
+  [Configuration](configuration.md#proxy)).
 - `DATA_PATH` is where the database and photos go. Leave it out and the server uses the platform's app data
   folder (`~/.local/share/TicketMan` on Linux), which is probably not what you want for a scratch server.
 - `ADMIN_PASSWORD` sets the password of the `admin` user made on first start. Without it a random password is
@@ -66,7 +68,7 @@ This starts a webpack dev server and opens the app in the browser, with hot relo
 with `-Pdevelopment` (so it allows the dev server's origin, see [Configuration](configuration.md#development-mode))
 on another `PORT`, using the server's `http://` address: the browser hasn't been told to trust the server's own
 certificate. To try the web client the way a shop gets it, served by the server itself, run
-`./gradlew :server:run -PwithWeb` and open `https://localhost:8443` (see
+`./gradlew :server:run -PwithWeb -Pdevelopment` and open `https://localhost:8443` (see
 [Running a server](operations.md#web-client)).
 
 ### Android

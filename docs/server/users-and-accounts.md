@@ -126,8 +126,9 @@ while the user's other details are edited.
 
 ## Known gaps
 
-- The request limiter is in memory, so restarting the server resets it. Behind a reverse proxy it needs
-  `TRUST_PROXY` (see [Configuration](../configuration.md#trust_proxy)).
+- The request limiter is in memory, so restarting the server resets it. Behind a reverse proxy it counts the
+  address the proxy forwards, which needs the proxy in `TRUSTED_PROXIES` (see
+  [Configuration](../configuration.md#trusted_proxies)).
 
 ## See also
 

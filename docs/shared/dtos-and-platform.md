@@ -45,7 +45,7 @@ The [API reference](../PLAN.md) (Phase 4d) will list every route with its body.
 | `SessionResponse` | `/api/admin/sessions` | One session: who, which device, `SessionKind` (`PASSWORD` or `PIN`), times |
 | `StationRegistrationResponse` | Station register | The station and its credentials (the only time the secret is sent) |
 | `BackupTicket`, `BackupManifest`, `PendingRestore` | Backup and restore | Download link details; what's in a backup; a restore waiting for restart |
-| `ServerInfoResponse` | `/api/admin/server` | Name, version, uptime, data path and sizes, Java and OS, dev mode |
+| `ServerInfoResponse` | `/api/admin/server` | Name, version, uptime, data path and sizes, Java and OS, dev mode, certificate, backups, and the proxy diagnostics (`proxy`, `trustedProxies`, `clientAddress`, `forwarded`, `timeZone`) |
 
 `BackupManifest.CURRENT_FORMAT_VERSION` is the backup format. Bump it when the archive layout changes; the server
 refuses to restore backups with a newer version than it knows.

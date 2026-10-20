@@ -6,13 +6,18 @@ page says where, and what happens on the server behind it.
 
 ## First start
 
+The server expects a reverse proxy in front of it doing HTTPS (`PROXY=on`, the default). To have it do HTTPS itself
+with its own certificate, the direct setup, set `PROXY=off` (see [Configuration](configuration.md#proxy)).
+
 1. Start the server with `DATA_PATH` set, and `ADMIN_PASSWORD` if you want to choose the first password (see
    [Configuration](configuration.md)). Without `SECRET` the server makes its own and keeps it in the data folder.
-   Behind a reverse proxy, also set `TRUST_PROXY=true`.
-2. Watch the log for `Responding at https://0.0.0.0:8443`, the certificate fingerprint, and the `admin` user's
-   password if you didn't set one.
-3. Point a client at the server (Settings > Server), like `192.168.1.20:8443`. It asks you to check the
-   certificate's fingerprint against the one in the log (see [HTTPS](#https)), then log in as `admin`.
+   In a container, set `TZ` to the shop's time zone.
+2. Watch the log for the `admin` user's password if you didn't set one. Behind a proxy it also says which plain HTTP
+   port the proxy should send to and which proxy addresses it trusts; direct, look for
+   `Responding at https://0.0.0.0:8443` and the certificate fingerprint.
+3. Point a client at the server (Settings > Server): the proxy's address, or direct something like
+   `192.168.1.20:8443`, which asks you to check the certificate's fingerprint against the one in the log (see
+   [HTTPS](#https)). Then log in as `admin`.
 4. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
    paper size). Tax and everything printed come from it, so do this before taking money.
 5. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
@@ -48,8 +53,9 @@ folders are managed by the sweep below.
 
 ## HTTPS
 
-The server listens for HTTPS on `SSL_PORT` (8443) next to plain HTTP on `PORT` (8080). Devices should use the
-HTTPS one, since passwords, tokens and backup links can be read off the network over plain HTTP.
+Behind a reverse proxy, HTTPS is the proxy's job and the rest of this section doesn't apply. Direct
+(`PROXY=off`), the server listens for HTTPS on `SSL_PORT` (8443) next to plain HTTP on `PORT` (8080). Devices should
+use the HTTPS one, since passwords, tokens and backup links can be read off the network over plain HTTP.
 
 ### The certificate
 
@@ -110,7 +116,8 @@ A server built with `-PwithWeb` serves the web client at `/`, on the same addres
 ./gradlew :server:run -PwithWeb          # or :server:buildFatJar -PwithWeb for a jar to deploy
 ```
 
-Staff then open `https://<server>:8443` in a browser, accept the certificate once, and log in. There's no address
+Staff then open the proxy's address in a browser (direct: `https://<server>:8443`, accepting the certificate once),
+and log in. There's no address
 to type, since the page is already on the server. The build gzips the big files (the `.wasm` ones are about 15 MB,
 4 MB gzipped), and browsers check for a new version on each load, which costs a 304 when nothing changed.
 

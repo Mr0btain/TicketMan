@@ -31,6 +31,7 @@ import org.mr0btain.ticketman.components.service.JwtService
 import org.mr0btain.ticketman.components.service.ServerSecret
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.tls.HttpMode
+import org.mr0btain.ticketman.components.tls.ProxySettings
 import org.mr0btain.ticketman.components.tls.ServerTls
 import org.mr0btain.ticketman.components.tls.TlsSettings
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -41,6 +42,7 @@ import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.util.AppDir
 import java.io.File
 import java.security.SecureRandom
+import java.time.ZoneId
 import java.util.Base64
 
 
@@ -59,7 +61,9 @@ fun main(args: Array<String>) {
 fun createServer(args: Array<String>): EmbeddedServer<NettyApplicationEngine, NettyApplicationEngine.Configuration> {
     val commandLine = CommandLineConfig(args)
     val config = commandLine.environment.config
-    val settings = TlsSettings.from(config, commandLine.rootConfig.developmentMode)
+    val developmentMode = commandLine.rootConfig.developmentMode
+    val proxy = ProxySettings.from(config, developmentMode)
+    val settings = TlsSettings.from(config, developmentMode, proxy.enabled)
     val dataPath = resolveDataPath(config)
 
     // A waiting restore can bring the certificate back too, so it goes in before the certificate is read
@@ -72,10 +76,16 @@ fun createServer(args: Array<String>): EmbeddedServer<NettyApplicationEngine, Ne
         else -> ServerTls.load(settings, dataPath)
     }
 
-    if (certificate != null) {
-        AppLogger.m("SERVER:Https", "HTTPS on port ${settings.httpsPort}, plain HTTP is ${settings.httpMode.name.lowercase()}")
-        AppLogger.m("SERVER:Https", "Certificate fingerprint (devices are asked to check this): ${certificate.fingerprint}")
-    }
+    logStartupNotes(
+        startupNotes(
+            proxy = proxy,
+            tls = settings,
+            httpPort = commandLine.engineConfig.connectors.firstOrNull()?.port ?: 8080,
+            fingerprint = certificate?.fingerprint,
+            zone = ZoneId.systemDefault(),
+            tzSet = !System.getenv("TZ").isNullOrBlank()
+        )
+    )
 
     return EmbeddedServer(commandLine.rootConfig, Netty) {
         takeFrom(commandLine.engineConfig)
@@ -123,13 +133,14 @@ fun Application.module() {
             auditLog = database.auditLogDatabase
         )
         val accountService = AccountService(database.userDatabase, database.inviteDatabase, userService, jwtService, database.auditLogDatabase)
-        val tls = TlsSettings.from(environment.config, developmentMode)
+        val proxy = ProxySettings.from(environment.config, developmentMode)
+        val tls = TlsSettings.from(environment.config, developmentMode, proxy.enabled)
 
         configureContentNegotiation()
         configureSecurity(jwtService)
         configureTransfers()
-        configureProxy(environment.config.propertyOrNull("env.trustProxy")?.getString().toBoolean())
-        configureHttps(tls)
+        configureProxy(proxy)
+        configureHttps(tls, proxy.enabled)
         configureCors(environment.config.propertyOrNull("cors.hosts")?.getString().orEmpty())
         val invoiceService = InvoiceService(
             invoices = database.invoiceDatabase,
@@ -169,7 +180,8 @@ fun Application.module() {
             certificate = certificate,
             tlsFolder = ServerTls.folder(dataPath).takeIf { certificate?.generated == true },
             backupService = backupService,
-            restoreService = restoreService
+            restoreService = restoreService,
+            proxy = proxy
         )
         val housekeeping = Housekeeping.from(environment.config)
 

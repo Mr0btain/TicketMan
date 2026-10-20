@@ -2,12 +2,14 @@ package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.JWT
 import org.mr0btain.ticketman.components.database.LocalDatabase
+import org.mr0btain.ticketman.components.tls.ProxySettings
 import org.mr0btain.ticketman.components.tls.ServerTls
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.server.response.SessionResponse
 import java.io.File
+import java.time.ZoneId
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -16,6 +18,7 @@ import kotlin.uuid.Uuid
  * @param dataPath Folder the server was started with, shown on the admin screen
  * @param certificate The certificate HTTPS started with, null when HTTPS is off
  * @param tlsFolder Where a made certificate is kept, null when it's supplied, so it can't be renewed here
+ * @param proxy How the server sits behind a reverse proxy, for the Server tab's diagnostics
  */
 @Suppress("PrivatePropertyName")
 class AdminService(
@@ -26,7 +29,8 @@ class AdminService(
     private val certificate: ServerCertificateInfo? = null,
     private val tlsFolder: File? = null,
     private val backupService: BackupService? = null,
-    private val restoreService: RestoreService? = null
+    private val restoreService: RestoreService? = null,
+    private val proxy: ProxySettings = ProxySettings(enabled = false)
 ) {
     private val TAG = "AdminService"
     private val SESSIONS_TAG = "$TAG:Sessions"
@@ -63,8 +67,13 @@ class AdminService(
         }.sortedByDescending { it.lastUsedAt ?: 0 }
     }
 
-    /** What the admin screen's Server tab shows: name, version, uptime, data sizes, Java and OS, mode and certificate */
-    fun getServerInfo(): ServerInfoResponse {
+    /**
+     * What the admin screen's Server tab shows: name, version, uptime, data sizes, Java and OS, mode, certificate, and
+     * how the request reached the server, so an admin can see a reverse proxy is set up right
+     * @param clientAddress The asking device's address as the server sees it (`request.origin.remoteHost`)
+     * @param forwarded Whether that came from a trusted proxy's forwarded headers
+     */
+    fun getServerInfo(clientAddress: String = "", forwarded: Boolean = false): ServerInfoResponse {
         val now = Clock.System.now().toEpochMilliseconds()
 
         return ServerInfoResponse(
@@ -80,7 +89,12 @@ class AdminService(
             developmentMode = developmentMode,
             certificate = certificateInfo(),
             scheduledBackup = backupService?.scheduleInfo(),
-            lastRestore = restoreService?.lastRestore()
+            lastRestore = restoreService?.lastRestore(),
+            proxy = proxy.enabled,
+            trustedProxies = if (proxy.trustAny) listOf("any address (TRUST_PROXY)") else if (proxy.enabled) proxy.trusted.map { it.text } else emptyList(),
+            clientAddress = clientAddress,
+            forwarded = forwarded,
+            timeZone = ZoneId.systemDefault().id
         )
     }
 

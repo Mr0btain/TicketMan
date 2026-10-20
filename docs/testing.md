@@ -40,7 +40,7 @@ folder, and call it over HTTP with the test client.
 | Helper | Does |
 |--------|------|
 | `createTestDataDir()` | A temp folder for the test's database and photos |
-| `configureTestServer(dataDir, developmentMode = true, extraConfig = emptyMap())` | Sets `env.dataPath` and the `jwt.*` settings (secret `test-secret`, audience `test-audience`), adds any `extraConfig` entries (like `"env.trustProxy" to "true"`), and runs `module()`. HTTPS is off, since there's no `tls.port` |
+| `configureTestServer(dataDir, developmentMode = true, extraConfig = emptyMap())` | Sets `env.dataPath` and the `jwt.*` settings (secret `test-secret`, audience `test-audience`), adds any `extraConfig` entries (like `"env.proxy" to "on"`), and runs `module()`. HTTPS is off, since there's no `tls.port` |
 | `cleanupTestDataDir(dataDir)` | Shuts H2 down, deletes the folder, and fails if it couldn't |
 
 The usual shape:

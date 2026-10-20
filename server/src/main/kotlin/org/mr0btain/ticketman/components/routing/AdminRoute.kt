@@ -6,7 +6,9 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.plugins.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
+import org.mr0btain.ticketman.components.plugins.ForwardedByProxy
 import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
@@ -208,7 +210,11 @@ fun Route.adminRoute(
         }
 
         get(AdminPaths.SERVER) {
-            call.respond(HttpStatusCode.OK, adminService.getServerInfo())
+            val info = adminService.getServerInfo(
+                clientAddress = call.request.origin.remoteHost,
+                forwarded = call.attributes.getOrNull(ForwardedByProxy) == true
+            )
+            call.respond(HttpStatusCode.OK, info)
         }
 
         // Makes a new HTTPS certificate, used from the next start. Only for one the server made itself
