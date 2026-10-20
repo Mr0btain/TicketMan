@@ -54,7 +54,8 @@ class MainViewModel(
             _selectedMainTabIndex.value = localStorage.defaultTab
 
             // Set url in all our handlers and log in with any stored credentials. With nothing saved, the web
-            // client tries the server it was loaded from and keeps that address if a server answers there
+            // client tries the server it was loaded from (a desktop debug build, a development server on this
+            // machine) and keeps that address if a server answers there
             val savedUrl = localStorage.serverUrl
             val url = savedUrl.ifBlank { defaultServerAddress() }
             session.connect(url)

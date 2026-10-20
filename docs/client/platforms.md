@@ -21,7 +21,7 @@ In `composeApp` (`composeApp/src/commonMain/.../`):
 | Declaration | File | Desktop | Android | Web |
 |-------------|------|---------|---------|-----|
 | `getHttpEngine(trust)` | `components/network/HttpEngine.kt` | OkHttp that checks certificates with `ServerTrust` (shared, `jvmSharedMain`) | Same as desktop | Ktor's Js engine, the browser checks certificates |
-| `defaultServerAddress()` | `components/network/DefaultServerAddress.kt` | Blank (shared, `jvmSharedMain`) | Blank | The page's own origin |
+| `defaultServerAddress()` | `components/network/DefaultServerAddress.kt` | `http://localhost:8080` on a debug build, blank otherwise | Blank | The page's own origin |
 | `BuildConfigImpl.isDebug()` | `components/debug/IsDebug.kt` | `-DticketmanDebug=true` system property | The app is debuggable (a debug build) | The page came from `localhost` |
 | `platformModule` | `components/injection/PlatformModule.kt` | `KSafe` | `KSafe` with the app `Context` | `KSafe` |
 | `initAppDir()` | `components/injection/InitAppDir.kt` | `AppDir()` | `AppDir(context)` | `AppDir()`, with no folder |

@@ -22,7 +22,8 @@ In `composeApp/src/commonMain/.../<package>/<Name>.kt`, with a KDoc saying what 
 ```kotlin
 /**
  * Where to look for a server before one is saved. On web that's the address the page came from, since the server
- * serves the web client itself. Blank elsewhere
+ * serves the web client itself. On a desktop debug build it's a development server on this machine
+ * (`http://localhost:8080`). Blank elsewhere
  */
 expect fun defaultServerAddress(): String
 ```
@@ -42,15 +43,18 @@ Same package, one file per source set, named `<Name>.<platform>.kt`:
 | `jvmSharedMain` | `composeApp/src/jvmSharedMain/kotlin/...` | Desktop **and** Android |
 
 When desktop and Android do the same thing, write one `actual` in `jvmSharedMain` instead of two. That's what
-`defaultServerAddress` does:
+`getHttpEngine` does, since both use OkHttp:
 
 ```kotlin
-// jvmSharedMain/.../components/network/DefaultServerAddress.jvmShared.kt
-actual fun defaultServerAddress(): String = ""
+// jvmSharedMain/.../components/network/HttpEngine.jvmShared.kt
+actual fun getHttpEngine(trust: ServerTrust): HttpClientEngine = OkHttp.create { ... }
 
-// wasmJsMain/.../components/network/DefaultServerAddress.wasmJs.kt
-actual fun defaultServerAddress(): String = window.location.origin
+// wasmJsMain/.../components/network/HttpEngine.wasmJs.kt
+actual fun getHttpEngine(trust: ServerTrust): HttpClientEngine = Js.create()
 ```
+
+`defaultServerAddress` is the other way round: desktop and Android differ (a debug desktop build looks for a
+server on `localhost`), so each has its own `actual` in `desktopMain` and `androidMain`.
 
 `jvmSharedMain` is set up in `composeApp/build.gradle.kts` (`applyDefaultHierarchyTemplate { group("jvmShared") }`)
 and has OkHttp as a dependency. A platform needing a library adds it to that source set's dependencies there.

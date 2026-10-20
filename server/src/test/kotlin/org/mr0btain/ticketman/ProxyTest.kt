@@ -240,6 +240,22 @@ class ProxyTest {
     }
 
     @Test
+    fun theOldSettingBelievesAnyoneEvenDirect() = testApplication {
+        val dataDir = createTestDataDir()
+
+        try {
+            // localhost isn't in the list and the server isn't behind a proxy, but TRUST_PROXY still wins
+            configureTestServer(dataDir, extraConfig = mapOf("env.proxy" to "off", "env.trustedProxies" to "172.20.0.2", "env.trustProxy" to "true"))
+            startApplication()
+
+            val statuses = (1..6).map { n -> requestFrom("203.0.113.$n", n) }
+            assertEquals(List(6) { HttpStatusCode.Accepted }, statuses)
+        } finally {
+            cleanupTestDataDir(dataDir)
+        }
+    }
+
+    @Test
     fun headersFromAnAddressNotInTheListAreIgnored() = testApplication {
         val dataDir = createTestDataDir()
 

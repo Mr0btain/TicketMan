@@ -197,18 +197,27 @@ server over HTTP, the way the client calls it, and stops at the first surprise:
 ```bash
 PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
 python3 scripts/counter_e2e.py http://localhost:8098
+
+# Or behind Caddy, the way a shop runs it (see Getting started > Behind a proxy)
+scripts/dev_proxy.sh
+python3 scripts/counter_e2e.py https://localhost:8444 --insecure
 ```
 
-Its 17 steps cover: the admin setting up the shop and stock; an account request approved and set up; an invited
+Its 20 steps cover: the admin setting up the shop and stock; an account request approved and set up; an invited
 Restricted clerk; registering a station and turning on kiosk mode; PIN logins; a check-in refused without a
 signature, then made with a deposit; search, lookup by number and the repeat check; the clerk refused a change; a
-pickup refused while money is owed, then paid with change and stock taken; the end of day report; sessions; and
-the audit log.
+pickup refused while money is owed, then paid with change and stock taken; the end of day report; sessions; the
+audit log; and the big transfers: a 13 MB photo upload put on a note, a backup with photos downloaded whole and
+by range and checked against its sha256, and uploaded back to restore (then cancelled).
 
 - **Start on an empty data folder.** The script makes fixed usernames and expects the `admin` that
   `ADMIN_PASSWORD` creates on a first start. A second run on the same folder stops at step 3 with `Username is
-  already taken`. Delete the folder (or pick a new `DATA_PATH`) between runs.
+  already taken`. Delete the folder (or pick a new `DATA_PATH`) between runs; for `dev_proxy.sh` that's
+  `build/dev-proxy-data`.
 - It only needs Python's standard library.
+- **Run it through the proxy after changing uploads, downloads or the proxy settings.** The test engine isn't
+  Netty, and a proxy adds its own limits; `scripts/dev_proxy.sh` is the closest to a shop's setup without Docker.
+  `--insecure` is for Caddy's local certificate.
 - Run it after changing check-in, pickup, invoices, stations or PIN login. It's what catches a change that passes
   each unit test but breaks the flow between them.
 

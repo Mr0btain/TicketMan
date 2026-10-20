@@ -55,8 +55,9 @@ an address means HTTPS. Addresses saved before HTTPS had no scheme and always we
 `LocalStorage` adds `http://` to them once when it loads (`migrateSavedServerAddress`) and they keep working.
 `SessionHandler.connectionSecure` is false on `http://`, and the admin Server tab shows a **Not secure** badge.
 
-On web, with no address saved, `MainViewModel` tries `defaultServerAddress()` (the page's origin) and saves it if a
-server answers there.
+With no address saved, `MainViewModel` tries `defaultServerAddress()` and saves it if a server answers there. On
+web that's the page's origin; on a desktop debug build it's `http://localhost:8080`, where `:server:run
+-Pdevelopment` answers.
 
 ## Connecting
 

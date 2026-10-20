@@ -184,6 +184,14 @@ compose.desktop {
 
         tasks.withType<JavaExec>().configureEach {
             systemProperty("ticketmanDebug", System.getProperty("ticketmanDebug"))
+
+            // -PdevTrustStore=<file>: trust the CA in that PKCS12 file (scripts/dev_proxy.sh makes one from
+            // Caddy's local CA) in place of the system's, to try a proxy with a "public" certificate
+            (project.findProperty("devTrustStore") as String?)?.let { store ->
+                systemProperty("javax.net.ssl.trustStore", rootProject.file(store).absolutePath)
+                systemProperty("javax.net.ssl.trustStoreType", "PKCS12")
+                systemProperty("javax.net.ssl.trustStorePassword", "changeit")
+            }
         }
 
     }

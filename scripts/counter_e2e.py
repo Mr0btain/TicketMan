@@ -6,28 +6,49 @@ Start a development server on an empty data folder first, with ADMIN_PASSWORD=ad
     PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
 then:
     python3 scripts/counter_e2e.py http://localhost:8098
+
+Or through a reverse proxy (scripts/dev_proxy.sh), whose certificate it can't check:
+    python3 scripts/counter_e2e.py https://localhost:8444 --insecure
+
+The last steps send a big photo, download a backup and upload it to restore, since those are what proxies break.
 """
+import argparse
+import hashlib
 import json
-import sys
+import os
+import ssl
+import struct
 import time
 import urllib.request
 import uuid
+import zlib
 
-BASE = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8098"
+parser = argparse.ArgumentParser(description="Walk check-in to pickup against a fresh TicketMan server")
+parser.add_argument("base", nargs="?", default="http://localhost:8098", help="the server's (or proxy's) address")
+parser.add_argument("--insecure", action="store_true", help="don't check the HTTPS certificate")
+args = parser.parse_args()
+
+BASE = args.base.rstrip("/")
+CONTEXT = ssl._create_unverified_context() if args.insecure else None
 step_number = 0
 
 
-def call(method, path, body=None, token=None, expect=None):
-    data = None if body is None else json.dumps(body).encode()
+def send(request):
+    try:
+        with urllib.request.urlopen(request, context=CONTEXT, timeout=300) as response:
+            return response.status, response.read(), response.headers
+    except urllib.error.HTTPError as error:
+        return error.code, error.read(), error.headers
+
+
+def call(method, path, body=None, token=None, expect=None, raw=None, content_type="application/json"):
+    data = raw if raw is not None else None if body is None else json.dumps(body).encode()
     request = urllib.request.Request(BASE + path, data=data, method=method)
-    request.add_header("Content-Type", "application/json")
+    request.add_header("Content-Type", content_type)
     if token:
         request.add_header("Authorization", "Bearer " + token)
-    try:
-        with urllib.request.urlopen(request) as response:
-            status, text = response.status, response.read().decode()
-    except urllib.error.HTTPError as error:
-        status, text = error.code, error.read().decode()
+    status, content, _ = send(request)
+    text = content.decode(errors="replace")
     if expect is not None and status != expect:
         raise SystemExit(f"FAIL {method} {path}: expected {expect}, got {status}: {text[:300]}")
     try:
@@ -45,6 +66,15 @@ def step(text):
 def check(condition, message):
     if not condition:
         raise SystemExit("FAIL " + message)
+
+
+def noise_png(width, height):
+    # Random pixels don't compress, so the file is about width * height * 3 bytes, like a big phone photo
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    rows = b"".join(b"\0" + os.urandom(width * 3) for _ in range(height))
+    header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
+    return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows, 1)) + chunk(b"IEND", b"")
 
 
 def uid():
@@ -179,5 +209,32 @@ _, audit = call("GET", "/api/admin/audit/fetch?offset=0&limit=100", token=admin,
 by_tech = [e for e in audit if e["actorName"] == "newtech"]
 check(any("Checked in" in e["details"] for e in by_tech) and any("picked up" in e["details"] for e in by_tech), "audit should credit the tech")
 step(f"Audit log credits the tech's PIN session for check-in and pickup ({len(by_tech)} entries by newtech)")
+
+# ------------------------------------------ Big transfers, what proxies break ------------------------------------------
+photo = noise_png(2400, 1800)
+boundary = uuid.uuid4().hex
+multipart = (f"--{boundary}\r\nContent-Disposition: form-data; name=\"image\"; filename=\"bench.png\"\r\n"
+             f"Content-Type: image/png\r\n\r\n").encode() + photo + f"\r\n--{boundary}--\r\n".encode()
+_, image = call("POST", "/api/image/upload", token=pin, raw=multipart, content_type=f"multipart/form-data; boundary={boundary}", expect=201)
+check(image["width"] == 2400 and image["height"] == 1800, f"photo came back {image['width']}x{image['height']}")
+call("POST", f"/api/data/ticket/add/note/{ticket_one['identifier']}", {"identifier": uid(), "message": "Before photo", "images": [image]}, pin, expect=201)
+status, display, _ = send(urllib.request.Request(f"{BASE}/api/image/{image['identifier']}/display", headers={"Authorization": "Bearer " + pin}))
+check(status == 200 and display[:2] == b"\xff\xd8", f"display size answered {status}")
+step(f"A {len(photo) / 1_000_000:.1f} MB photo uploads, goes on the ticket's note and comes back as a {len(display) // 1000} KB JPEG")
+
+_, backup = call("POST", "/api/admin/backup", {"includeImages": True}, admin, expect=201)
+status, archive, headers = send(urllib.request.Request(BASE + backup["downloadPath"]))
+check(status == 200 and len(archive) == backup["sizeBytes"], f"backup download answered {status} with {len(archive)} of {backup['sizeBytes']} bytes")
+check(hashlib.sha256(archive).hexdigest() == backup["sha256"], "backup download doesn't match its sha256")
+status, part, _ = send(urllib.request.Request(BASE + backup["downloadPath"], headers={"Range": "bytes=100-199"}))
+check(status == 206 and part == archive[100:200], f"a range of the backup answered {status}")
+step(f"Backup with photos ({len(archive) / 1_000_000:.1f} MB) downloads whole and matches its sha256; a range of it works too")
+
+_, pending = call("POST", "/api/admin/restore", token=admin, raw=archive, content_type="application/zip", expect=202)
+check(pending["sizeBytes"] == len(archive) and pending["manifest"]["includesImages"], f"restore staged {pending}")
+call("DELETE", "/api/admin/restore", token=admin, expect=202)
+status, _ = call("GET", "/api/admin/restore", token=admin)
+check(status == 204, f"restore still waiting after cancelling ({status})")
+step("The backup uploads to restore and is waiting for a restart; cancelled so the server starts as it is")
 
 print("\nAll steps passed")

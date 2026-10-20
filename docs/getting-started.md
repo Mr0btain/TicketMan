@@ -11,6 +11,7 @@ How to build and run each part of TicketMan, run the tests, and look over UI cha
 | Android SDK with platform 37 | Android builds only | FileKit 0.16 needs `compileSdk` 37. Point `sdk.dir` in `local.properties` at the SDK |
 | A recent browser | The web client | Chrome or Firefox, with Wasm GC support |
 | Python 3 | The end to end script | Standard library only |
+| Caddy | Trying the server behind a proxy (optional) | [caddyserver.com/docs/install](https://caddyserver.com/docs/install). No Docker needed |
 
 Use `./gradlew` in Git Bash, macOS or Linux, and `.\gradlew.bat` in PowerShell. The first build downloads a lot of
 dependencies and takes a while.
@@ -47,6 +48,10 @@ All server settings are on the [configuration](configuration.md) page.
 On first start, set the server address (`http://localhost:8098`) under Settings > Server, then log in as
 `admin` from the foot of the nav rail. The desktop client is the
 main target and the most complete.
+
+A debug build (`./gradlew :composeApp:run -DticketmanDebug=true`) with no address saved tries
+`http://localhost:8080`, so a server started with `./gradlew :server:run -Pdevelopment` and the default `PORT`
+connects with nothing typed. The address is saved once a server answers there.
 
 ### Desktop with hot reload
 
@@ -87,6 +92,41 @@ To only check that the shared code compiles for Android, without the app: `./gra
 
 `./gradlew :composeApp:packageDistributionForCurrentOS` builds a `.deb`, `.msi` or `.dmg` for the machine you're on.
 
+### Behind a proxy
+
+Shops normally run the server behind a reverse proxy that does HTTPS ([Configuration](configuration.md#proxy)).
+To try that setup from the repo, without Docker, install Caddy and run:
+
+```bash
+scripts/dev_proxy.sh
+```
+
+It starts a development server on `http://localhost:8080` with `PROXY=on HTTP_MODE=on
+TRUSTED_PROXIES=127.0.0.1,::1`, then Caddy on `https://localhost:8444` in front of it
+([`scripts/dev/Caddyfile`](../scripts/dev/Caddyfile)). Ctrl+C stops both. `--no-server` starts only Caddy, in
+front of a server you already have on `SERVER_PORT`. The data goes in `build/dev-proxy-data` unless `DATA_PATH`
+says otherwise, and the admin password is `admin_pass`.
+
+Point a client at `https://localhost:8444`:
+
+- **Self-signed proxy.** Caddy's certificate comes from its own local CA, which nothing trusts, so the desktop
+  client shows the trust dialog, like it would for a proxy with a self-signed certificate. The script never adds
+  the CA to the system's trust store.
+- **Public certificate.** The script exports Caddy's CA to `build/dev-truststore.p12`. Run the client with it as
+  the only trusted CA and the certificate passes the system check, with no dialog, the way a public certificate
+  does:
+
+  ```bash
+  ./gradlew :composeApp:run -DticketmanDebug=true -PdevTrustStore=build/dev-truststore.p12
+  ```
+
+- **A proxy's 413.** Anything under `https://localhost:8444/tiny/` reaches the server with the prefix taken off,
+  but Caddy refuses bodies over 1 KB, so a photo upload there shows how the client takes a proxy turning a big
+  request away.
+
+The admin Server tab (`GET /api/admin/server`) should show `forwarded` true and the client's address as `::1` or
+`127.0.0.1`. The [end to end script](#end-to-end) runs through the proxy too.
+
 ## Run the tests
 
 ```bash
@@ -125,11 +165,14 @@ With a fresh dev server running (`ADMIN_PASSWORD=admin_pass` on an empty `DATA_P
 
 ```bash
 python3 scripts/counter_e2e.py http://localhost:8098
+python3 scripts/counter_e2e.py https://localhost:8444 --insecure   # through scripts/dev_proxy.sh
 ```
 
 It walks a day at the counter over HTTP the way the client does: shop setup, an account request and approval,
 first login setup, registering and approving a station, PIN logins, check-in, the queue, pickup with tax and
-change, and the sessions list. It stops at the first response it didn't expect.
+change, and the sessions list. Then it uploads a 13 MB photo, downloads a backup and uploads it to restore, which
+are what a proxy's body limits and timeouts break. It stops at the first response it didn't expect. `--insecure`
+skips checking the certificate, for Caddy's local one.
 
 ## Gotchas
 

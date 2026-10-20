@@ -1,0 +1,26 @@
+# A reverse proxy in front of a development server, for trying the server behind a proxy without Docker.
+# Run by scripts/dev_proxy.sh; see docs/getting-started.md#behind-a-proxy
+{
+	# Leave the local CA out of the system's trust store, so the client shows its trust dialog like it would
+	# for a self-signed proxy. dev_proxy.sh exports the CA for -PdevTrustStore instead
+	skip_install_trust
+	# Java sends no SNI for a name without a dot, like localhost, and Caddy refuses a handshake it can't match
+	default_sni localhost
+	auto_https disable_redirects
+	admin off
+}
+
+https://localhost:{$PROXY_PORT:8444} {
+	tls internal
+
+	# Anything under /tiny/ reaches the server with the prefix taken off, but with a 1 KB body limit, to try how
+	# the client takes a proxy's 413 (a photo upload to https://localhost:8444/tiny/api/image/upload)
+	handle_path /tiny/* {
+		request_body {
+			max_size 1KB
+		}
+		reverse_proxy localhost:{$SERVER_PORT:8080}
+	}
+
+	reverse_proxy localhost:{$SERVER_PORT:8080}
+}

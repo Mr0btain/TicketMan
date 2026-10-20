@@ -30,6 +30,11 @@ Use `./gradlew` (Git Bash) or `.\gradlew.bat` (PowerShell).
 PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
 python3 scripts/counter_e2e.py http://localhost:8098
 
+# Behind a reverse proxy without Docker (needs Caddy): dev server with PROXY=on on 8080, Caddy on https://localhost:8444
+scripts/dev_proxy.sh                                     # Ctrl+C stops both; --no-server for Caddy only
+python3 scripts/counter_e2e.py https://localhost:8444 --insecure   # also runs the big photo, backup and restore steps
+./gradlew :composeApp:run -DticketmanDebug=true -PdevTrustStore=build/dev-truststore.p12  # trust Caddy's CA, no dialog
+
 python3 scripts/check_api_docs.py            # docs/api against the route files (--list prints every endpoint)
 python3 scripts/check_doc_links.py           # every relative link and anchor in docs/ and CLAUDE.md resolves
 ```
@@ -89,7 +94,7 @@ Each main entity (Customer, Ticket, Inventory, User) extends `MainItem` (shared)
 - `LocalStorage` persists settings/tokens through a `KeyValueStore` (KSafe-backed; `InMemoryKeyValueStore` in tests).
 - UI: every screen is built from the UI kit (below). `ui/screens/navigation/AppShell.kt` frames the app: a glass nav rail on wide windows (`WideAppShell`, with the user menu and log out at its foot) or a glass bottom bar on phones (`PhoneAppShell`), the backdrop behind everything and the snackbar host. The records screen (`ui/screens/records/`, `Destination.RECORDS`) is one `RecordsLayout` per entity: toolbar (the kit's `TmPanelTopBar`), list, and details, stacking on narrow windows.
 - Server trust: addresses with no scheme mean `https://` (`normalizeServerAddress`); addresses saved before HTTPS get `http://` added once when `LocalStorage` loads. Desktop and Android share `jvmSharedMain` (a `jvmShared` group in `applyDefaultHierarchyTemplate`), which holds the OkHttp engine: `PinningTrustManager` accepts what the system trusts plus the one fingerprint `ServerTrust` holds per `host:port`, and refuses anything else into `ServerTrust.refused`. `setUrl` then returns `ConnectionResult.UNTRUSTED`, and `App` shows `ServerTrustDialog` for `SessionHandler.untrustedCertificate`; trusting saves the fingerprint (`trusted_certificates`). Web uses Ktor's Js engine and the browser decides. Test mocks must answer `SERVER_PING_PATH` with `SERVER_PING_BODY`.
-- Platform specifics go through `expect`/`actual` (`getHttpEngine`, `defaultServerAddress`, `IsDebug`, `alwaysWide` (desktop always gets the nav rail), `InitAppDir`, `TmVerticalScrollbar`, `AppLogger`, `saveFile`, `printDocument`, `shrinkForUpload`, `imageDiskCache`, `saveDownload`, `fileBody`).
+- Platform specifics go through `expect`/`actual` (`getHttpEngine`, `defaultServerAddress` (`http://localhost:8080` on a desktop debug build), `IsDebug`, `alwaysWide` (desktop always gets the nav rail), `InitAppDir`, `TmVerticalScrollbar`, `AppLogger`, `saveFile`, `printDocument`, `shrinkForUpload`, `imageDiskCache`, `saveDownload`, `fileBody`).
 - `androidApp` currently needs compileSdk 37 to build (FileKit 0.16 requires it); `shared` and `composeApp` compile for Android with `:composeApp:compileAndroidMain`. Building the APK needs an AAPT2 that runs on the build machine (the x86 Linux one Gradle downloads fails on ARM Linux). Android and web compile but haven't been run end to end yet. `isDebug()` is the debuggable flag on Android, a `localhost` page on web, and `-DticketmanDebug=true` on desktop.
 
 ### UI kit

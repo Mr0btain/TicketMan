@@ -332,10 +332,11 @@ are now. Do this phase before 9 and 10.
       it doesn't. *Done:* the four fields plus `trustedProxies`, filled from the request (`request.origin` and the
       `ForwardedByProxy` mark `plugins/Proxy.kt` sets). `ProxyTest` checks them through a trusted proxy, an untrusted
       one and direct. Showing them on the Server tab is Phase 9's "Admin Server tab" item.
-- [ ] **Existing installs.** Changing the default turns off HTTPS on 8443, so devices pinned to `https://ip:8443`
+- [x] **Existing installs.** Changing the default turns off HTTPS on 8443, so devices pinned to `https://ip:8443`
       would stop connecting. **(decide)** stay direct when `PROXY` isn't set and `server/tls/` already holds a made
       certificate (with a warning to set `PROXY`), or skip this if there are no installs yet.
-- [ ] **Develop and test outside a container.**
+      *Done:* skipped, there are no installs yet (decided).
+- [x] **Develop and test outside a container.**
   - Desktop debug builds (`-DticketmanDebug=true`) default the server address to `http://localhost:8080`
     (`defaultServerAddress` is blank on desktop now), so `:server:run -Pdevelopment` plus `:composeApp:run`
     connects with nothing typed.
@@ -352,10 +353,17 @@ are now. Do this phase before 9 and 10.
     proxies break.
   - Write this up in [getting started](getting-started.md) and [testing](testing.md), and add the commands to
     `CLAUDE.md`.
-- [ ] **Tests.** `ProxySettings`/`TlsSettings` defaults in each mode, in development mode, and overrides winning;
+
+  *Done:* `defaultServerAddress` now has its own desktop and Android `actual`s. `dev_proxy.sh` keeps Caddy's CA and
+  config in `build/dev-caddy`, and the Caddyfile needs `default_sni localhost`, since Java sends no SNI for a name
+  without a dot. `/tiny/` is the 1 KB path. `counter_e2e.py` gained steps 18 to 20 (a 13 MB photo, the backup
+  download whole and by range, the restore upload, then cancelled). Checked with Caddy 2.10: the e2e passes
+  direct and through the proxy, `/tiny/` answers `413`, and Java trusts the proxy only with the trust store.
+- [x] **Tests.** `ProxySettings`/`TlsSettings` defaults in each mode, in development mode, and overrides winning;
       trusted proxies in and out of the list, IPv4 and IPv6 CIDRs, the last proxy rule, and old `TRUST_PROXY`;
-      the new `ServerInfoResponse` fields.
-- [ ] **Docs.** [Configuration](configuration.md): `PROXY`, `TRUSTED_PROXIES`, `TZ`, the proxy mode defaults,
+      the new `ServerInfoResponse` fields. *Done:* in `ProxyTest`, with the old `TRUST_PROXY` also checked over the
+      test engine.
+- [x] **Docs.** [Configuration](configuration.md): `PROXY`, `TRUSTED_PROXIES`, `TZ`, the proxy mode defaults,
       `TRUST_PROXY` deprecated. [Auth](server/auth.md): the trusted proxy rule. [Decisions](decisions.md): a
       "Behind a reverse proxy by default" entry (why, the trusted range costs), and the "Its own certificate"
       entry reworded as the direct option. `CLAUDE.md`: the config paragraph and the HTTPS bullet.
