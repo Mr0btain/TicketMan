@@ -28,6 +28,7 @@ import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
+import org.mr0btain.ticketman.components.service.ServerRestart
 import org.mr0btain.ticketman.components.service.ServerSecret
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.tls.HttpMode
@@ -122,6 +123,8 @@ fun Application.module() {
     } else {
         AppLogger.m("SERVER", "Path for Files: $dataPath")
         val database = configureDatabase(dataPath)
+        // Ktor stops on SIGTERM (docker stop) and on a restart, after the last requests are answered
+        monitor.subscribe(ApplicationStopped) { database.close() }
         val secret = ServerSecret.resolve(environment.config.propertyOrNull("jwt.secret")?.getString().orEmpty(), dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase, secret)
         val userService = UserService(
@@ -181,7 +184,8 @@ fun Application.module() {
             tlsFolder = ServerTls.folder(dataPath).takeIf { certificate?.generated == true },
             backupService = backupService,
             restoreService = restoreService,
-            proxy = proxy
+            proxy = proxy,
+            restart = ServerRestart.from(environment.config)
         )
         val housekeeping = Housekeeping.from(environment.config)
 

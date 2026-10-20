@@ -85,7 +85,7 @@ Behind a reverse proxy with a public certificate the system's trust store vouche
 nothing is asked: the user types the address and logs in. What can still go wrong there is the name (below) and the
 proxy's own errors ([Errors a proxy makes](#errors-a-proxy-makes)).
 
-A server doing its own HTTPS makes its own certificate (see [Running a server](../operations.md#https)), which no
+A server doing its own HTTPS makes its own certificate (see [Running a server](../operations.md#without-a-proxy)), which no
 authority vouches for, and so does a proxy with a self-signed one. On desktop and Android the engine trusts it the
 first time someone checks it, then only that certificate from that address. It's the same idea as SSH remembering
 a host's key.

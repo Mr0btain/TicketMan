@@ -36,7 +36,7 @@ and seed, like the record lists.
 | **Stations** | Devices that asked to be counter stations | Approve, remove, turn kiosk mode on and set its idle timeout | [PINs and stations](../../server/pins-and-stations.md) |
 | **Low stock** | Tracked items at or below a threshold (5 by default, saved on this device) | Change the threshold; click an item to open it on the records screen | |
 | **Invoices** | Every invoice, newest first, with its status, total, paid and balance | Click one to open its ticket at the counter; void any that isn't void yet; load older ones | `GET /api/invoice/fetch`, [Invoices API](../../api/invoice.md) |
-| **Server and data** | Server address, name, version, uptime, database and photo sizes, Java and OS, mode, time zone, HTTPS settings, the certificate's fingerprint and expiry (warned in its last year) and a new one waiting, or behind a proxy (`proxy`) "Handled by reverse proxy", this device's address as the server sees it with whether it was forwarded (warned when not) and the trusted proxies in place of the certificate rows; the shop profile; backup and restore, the daily backup's folder and last run, and the last restore (warned when it had no photos); mock data on development servers | Edit the shop profile (name, contact, tax rate, currency symbol, invoice footer, repair terms, repeat window, default paper), download a backup, upload one to restore on next start (warned when the file looks database only), cancel a waiting restore, make a new certificate for the next start or drop it, seed test data | [Backup and restore](../../server/backup-restore.md), [Running a server](../../operations.md) |
+| **Server and data** | Server address, name, version, uptime, database and photo sizes, Java and OS, mode, time zone, HTTPS settings, the certificate's fingerprint and expiry (warned in its last year) and a new one waiting, or behind a proxy (`proxy`) "Handled by reverse proxy", this device's address as the server sees it with whether it was forwarded (warned when not) and the trusted proxies in place of the certificate rows; the shop profile; backup and restore, the daily backup's folder and last run, and the last restore (warned when it had no photos); mock data on development servers | Edit the shop profile (name, contact, tax rate, currency symbol, invoice footer, repair terms, repeat window, default paper), download a backup, upload one to restore on next start (warned when the file looks database only), cancel a waiting restore or restart the server to apply it (when `canRestart`), make a new certificate for the next start or drop it, seed test data | [Backup and restore](../../server/backup-restore.md), [Running a server](../../operations.md) |
 | **Audit log** | Who did what, newest first, colored by action | Load more | [Audit log](../../server/audit-log.md) |
 
 ![The Users tab](../../images/admin-users.png)
@@ -52,6 +52,11 @@ replaced by renewing.
 The backup and restore card streams both ways: the backup downloads through `saveDownload` and the restore uploads
 through `fileBody`, so neither is held in memory (except on web, which reads a restore whole and refuses one over
 512 MB). See [Transfers and photos](../../client/transfers-and-photos.md).
+
+**Restart now** (next to a waiting restore, only when the server says `canRestart`) asks for confirmation, then
+`AdminServer.restartServer()` calls `POST /api/admin/restart` and waits: first for `/api/ping` to stop answering
+(up to 15 seconds), then for it to answer again (up to 3 minutes, since unpacking a big restore takes a while),
+showing "Restarting the server" in the card meanwhile. Then it reloads the tab, which shows the restore.
 
 ## Where it lives
 
@@ -83,6 +88,8 @@ through `fileBody`, so neither is held in memory (except on web, which reads a r
   list (`load`, `void`).
   The screen's Refresh reloads it when that tab is open.
 - **The Users tab is the only place users are edited.** The records screen has no users tab.
+- **After a restart to restore, the device may have to log in again.** The sessions table comes from the backup, so
+  this device's session is only there if it was when the backup was made.
 - **The mock data card only shows on development servers** (`ServerInfoResponse.developmentMode`), and the server
   refuses the request on any other.
 

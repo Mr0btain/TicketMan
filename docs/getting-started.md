@@ -127,6 +127,13 @@ Point a client at `https://localhost:8444`:
 The admin Server tab (`GET /api/admin/server`) should show `forwarded` true and the client's address as `::1` or
 `127.0.0.1`. The [end to end script](#end-to-end) runs through the proxy too.
 
+### In Docker
+
+The shop setup itself, the image behind Caddy from [`docker-compose.yml`](../docker-compose.yml), is tried with
+`scripts/docker_smoke.sh` (see [Testing](testing.md#docker)), which needs Docker and a user that can run it. To keep
+it running afterwards at `https://localhost:8445` (admin / `admin_pass`), add `--keep`. Building and running the
+image for a shop is on [Running a server](operations.md#the-docker-image).
+
 ## Run the tests
 
 ```bash

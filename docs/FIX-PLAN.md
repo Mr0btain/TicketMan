@@ -415,30 +415,49 @@ the user types the address and logs in. These cover what goes wrong around that.
 
 ## Phase 10: Docker image
 
-- [ ] **Build the server without the Android SDK.** The Gradle build loads the Android plugin, which likely fails
+- [x] **Build the server without the Android SDK.** The Gradle build loads the Android plugin, which likely fails
       in a plain container. **(decide)** build on the host or in CI and copy `server/build/install/server` into the
       image, or add a property that leaves out `androidApp` and the Android targets so the build can run inside
       Docker. Do this first; the rest needs it.
-- [ ] **`server/Dockerfile`.** `eclipse-temurin` JRE, amd64 and arm64. Runs `bin/server` from
+      *Done:* built on the host (decided), with a root `.dockerignore` sending only `server/build/install/server`. Why
+      is in [decisions](decisions.md#the-docker-image-is-built-from-the-hosts-build).
+- [x] **`server/Dockerfile`.** `eclipse-temurin` JRE, amd64 and arm64. Runs `bin/server` from
       `:server:installDist -PwithWeb`. `DATA_PATH=/data` as a volume, `PORT=8080` exposed, `PROXY=on`,
       `JAVA_OPTS=-XX:MaxRAMPercentage=75`, a non-root user owning `/data`, and a `HEALTHCHECK` on `/api/ping`
       (the JRE image has no curl). Check `docker stop` shuts H2 down cleanly.
-- [ ] **`docker-compose.yml` example** with Caddy (public certificate with no setup): volumes for `/data` and
+      *Done:* `eclipse-temurin:21-jre`, user `ticketman` (uid 10001) owning `/data` and `/backups`, the health check
+      through bash's `/dev/tcp`. H2's own exit hook is off (`DB_CLOSE_ON_EXIT=FALSE`) and `ApplicationStopped` runs
+      `LocalDatabase.close()` once Ktor has answered what's in flight; checked with SIGTERM on `bin/server` (exit 143,
+      `Database closed`).
+- [x] **`docker-compose.yml` example** with Caddy (public certificate with no setup): volumes for `/data` and
       `/backups` (`BACKUP_DIR`), `TZ`, `restart: unless-stopped`, the server on `expose` rather than `ports`, and a
       named network with a fixed subnet that `TRUSTED_PROXIES` is set to exactly. A note on joining Traefik's or
       Nginx Proxy Manager's network instead.
-- [ ] **Restart from the admin screen.** A restore needs a restart, which an admin can't do in a container.
+      *Done:* `docker-compose.yml` and `docker/Caddyfile`; settings come from a `.env` (`DOMAIN`, `TZ` required,
+      `ADMIN_PASSWORD`), and `SUBNET`/`HTTP_PORT`/`HTTPS_PORT` let a second copy run alongside. The note is in
+      [operations](operations.md#behind-another-proxy).
+- [x] **Restart from the admin screen.** A restore needs a restart, which an admin can't do in a container.
       `POST /api/admin/restart` (admin, audited) answers `202` then exits non-zero so the restart policy brings it
       back. Only offered when `RESTART_ON_EXIT=true` (the image sets it). The exit goes through something tests
       can replace. Add the button next to a waiting restore, and the path to `ApiRoutes.kt` and `docs/api/admin.md`.
-- [ ] **Smoke test.** `scripts/docker_smoke.sh`: `docker compose up` with Caddy on its local CA, wait for the health
+      *Done:* `ServerRestart` (exit code 3 a second after answering, on its own thread; `ServerRestart.exit` for
+      tests), `canRestart` on `ServerInfoResponse` (defaulted, so `API_VERSION` stays), **Restart now** with a confirm,
+      then the client waits for `/api/ping` to go and come back. `AdminTest` and `AdminRemoteRepositoryTest` cover it,
+      and `counter_e2e.py --restart` restored through it with `bin/server` in a shell loop.
+- [x] **Smoke test.** `scripts/docker_smoke.sh`: `docker compose up` with Caddy on its local CA, wait for the health
       check, run `counter_e2e.py` through it, restore with the restart button, check the data came back.
-- [ ] **Docs.** [Operations](operations.md): First start becomes `docker compose up`, open the address, log in as
+      *Done:* its own compose project (`ticketman-smoke`, `https://localhost:8445`, its own subnet), the restore by
+      `counter_e2e.py --restart`, then checks Docker restarted it and that a stop exits 143 with `Database closed`
+      last in the log. Passes on arm64 with Docker 29 and Caddy 2.10.
+- [x] **Docs.** [Operations](operations.md): First start becomes `docker compose up`, open the address, log in as
       `admin` (password from `ADMIN_PASSWORD` or `docker logs`); a "Behind another proxy" section with nginx
       settings (`client_max_body_size`, `proxy_request_buffering off` for restore and upload, `proxy_buffering
       off` for backup downloads, longer timeouts, forwarded headers, query strings kept out of the access log
       since the backup `?token=` is a credential); the HTTPS section becomes "Without a proxy". Add the Docker
       build to `CLAUDE.md`.
+      *Done:* plus `RESTART_ON_EXIT` in [configuration](configuration.md#restart_on_exit), the restart in the
+      [admin API](api/admin.md), [backup and restore](server/backup-restore.md) and the [admin screen](ui/screens/admin.md),
+      [testing](testing.md#docker), and two [decisions](decisions.md) entries.
 
 ## Phase 11: Android, and other machines
 

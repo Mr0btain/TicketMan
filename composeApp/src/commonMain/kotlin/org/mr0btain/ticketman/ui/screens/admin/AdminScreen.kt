@@ -290,6 +290,7 @@ private fun AdminContent(
                 onBackup = { includeImages -> admin.server.downloadBackup(includeImages) },
                 onRestore = { file -> admin.server.restoreFrom(file) },
                 onCancelRestore = { admin.server.cancelRestore() },
+                onRestart = { admin.server.restartServer() },
                 onRenewCertificate = { admin.server.renewCertificate() },
                 onCancelCertificateRenewal = { admin.server.cancelCertificateRenewal() },
                 onSeed = { request -> admin.server.seed(request, onSuccess = { viewModel.refreshPagers() }) }

@@ -29,6 +29,7 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 | `env.dataPath` | `DATA_PATH` | blank | Folder for the database, photos, backups and restores. Blank means the platform's app data folder |
 | `env.adminPassword` | `ADMIN_PASSWORD` | blank | Password for the `admin` user made when no admin exists. Blank means a random one is logged |
 | `env.trustProxy` | `TRUST_PROXY` | `false` | Deprecated: `true` believes `X-Forwarded-For` from any address. Use `TRUSTED_PROXIES` |
+| `env.restartOnExit` | `RESTART_ON_EXIT` | `false` | `true` when something starts the server again after it exits, so admins can restart it from the Server tab. The Docker image sets it |
 | - | `TZ` | the machine's | The time zone "today", due dates and the yearly number rollover use. Set it in a container, which is UTC otherwise |
 | `backup.folder` | `BACKUP_DIR` | blank | Folder for a backup made once a day. Blank turns it off |
 | `backup.keep` | `BACKUP_KEEP` | `7` | How many daily backups to keep, the oldest are deleted |
@@ -101,7 +102,7 @@ isn't set. Set it to the shop's, like `TZ=America/New_York`.
 
 The HTTPS connector is added in `createServer()` in `Application.kt`, not through Ktor's own `ktor.security`
 settings, because the certificate may have to be made before the server starts. It listens on the same host as
-plain HTTP. See [Running a server](operations.md#https) for setting up certificates and trusting them on devices.
+plain HTTP. See [Running a server](operations.md#without-a-proxy) for setting up certificates and trusting them on devices.
 
 Direct (`PROXY=off`), `HTTP_MODE` left blank redirects plain HTTP to HTTPS. In development mode it stays `on`
 instead, so the web client's dev server and `scripts/counter_e2e.py` can keep using `http://`. See
@@ -116,6 +117,14 @@ you can (a USB drive or network share), and keep it private: backups hold custom
 
 It can't be the server's own `<DATA_PATH>/server/backups/`, which is emptied by the hourly sweep. See
 [Running a server](operations.md#daily-backups).
+
+### `RESTART_ON_EXIT`
+
+A restore, and a new certificate, only take effect when the server starts again. With `RESTART_ON_EXIT=true` the
+Server tab offers **Restart now** next to a waiting restore, which calls `POST /api/admin/restart`: the server answers,
+then exits with code 3 and leaves starting it again to whatever runs it. The Docker image sets it, and the compose
+file's `restart: unless-stopped` does the starting. Under systemd, `Restart=on-failure` does the same. Leave it off
+anywhere nothing would, or the button stops the server for good.
 
 ### Housekeeping
 

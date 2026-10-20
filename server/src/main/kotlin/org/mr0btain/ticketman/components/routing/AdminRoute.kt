@@ -333,6 +333,25 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
+        // Exits so whatever runs the server starts it again, applying a waiting restore or certificate. Answers first.
+        // Only when RESTART_ON_EXIT says something will, or the server would just stay down
+        post(AdminPaths.RESTART) {
+            if (!adminService.restart.enabled) {
+                call.respondText(
+                    "This server can't restart itself. Restart it by hand, or set RESTART_ON_EXIT=true where something starts it again",
+                    status = HttpStatusCode.Conflict
+                )
+                return@post
+            }
+
+            // A second ask while one is on its way is answered the same, without logging it again
+            if (adminService.restart.request()) {
+                val details = if (restoreService.pending() != null) "Restart to restore a backup" else "Restart"
+                call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "server", details = details)
+            }
+            call.respond(HttpStatusCode.Accepted)
+        }
+
         // Mock data, only on servers started in development mode
         post(AdminPaths.SEED) {
             if (!call.application.developmentMode) {

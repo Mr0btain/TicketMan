@@ -45,6 +45,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.BackupManifest
+import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.RestoreRecord
 import org.mr0btain.ticketman.server.response.ScheduledBackupInfo
 import org.mr0btain.ticketman.server.response.ServerCertificateInfo
@@ -380,6 +381,7 @@ class ScreenRenderTest {
                     onBackup = {},
                     onRestore = {},
                     onCancelRestore = {},
+                    onRestart = {},
                     onRenewCertificate = {},
                     onCancelCertificateRenewal = {},
                     onSeed = {}
@@ -388,7 +390,10 @@ class ScreenRenderTest {
         }
     }
 
-    /** The Server tab behind a reverse proxy, one that forwards and one the server doesn't trust */
+    /**
+     * The Server tab behind a reverse proxy, one that forwards and one the server doesn't trust. The forwarding one is
+     * in the Docker image, so it can restart itself to finish the restore waiting
+     */
     @Test
     fun adminServerBehindProxy() {
         val day = 24L * 60 * 60 * 1000
@@ -398,11 +403,16 @@ class ScreenRenderTest {
             dataPath = "/data", databaseSizeBytes = 48_000_000, imagesSizeBytes = 2_400_000_000,
             javaVersion = "21.0.4", operatingSystem = "Linux 6.8", developmentMode = false,
             proxy = true, trustedProxies = listOf("127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"),
-            clientAddress = "192.168.1.42", forwarded = true, timeZone = "America/New_York"
+            clientAddress = "192.168.1.42", forwarded = true, timeZone = "America/New_York", canRestart = true
+        )
+        val waiting = PendingRestore(
+            manifest = BackupManifest(serverVersion = "1.0.0", createdAt = now - 2 * day, includesImages = true, imageCount = 1800, imageBytes = 2_300_000_000),
+            sizeBytes = 2_350_000_000,
+            stagedAt = now
         )
 
-        listOf("admin-server-proxy" to proxied, "admin-server-proxy-untrusted" to proxied.copy(clientAddress = "172.18.0.3", forwarded = false, trustedProxies = listOf("127.0.0.1"))).forEach { (name, info) ->
-            bothModes(name, height = 900) {
+        listOf("admin-server-proxy" to proxied, "admin-server-proxy-untrusted" to proxied.copy(clientAddress = "172.18.0.3", forwarded = false, trustedProxies = listOf("127.0.0.1"), canRestart = false)).forEach { (name, info) ->
+            bothModes(name, height = 1100) {
                 Shell("Admin") {
                     AdminServerTab(
                         serverInfo = info,
@@ -410,11 +420,12 @@ class ScreenRenderTest {
                         shopProfile = null,
                         isBusy = false,
                         backupProgress = null,
-                        pendingRestore = null,
+                        pendingRestore = waiting.takeIf { info.canRestart },
                         onSaveShopProfile = {},
                         onBackup = {},
                         onRestore = {},
                         onCancelRestore = {},
+                        onRestart = {},
                         onRenewCertificate = {},
                         onCancelCertificateRenewal = {},
                         onSeed = {}

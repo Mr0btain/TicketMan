@@ -19,6 +19,7 @@ import kotlin.uuid.Uuid
  * @param certificate The certificate HTTPS started with, null when HTTPS is off
  * @param tlsFolder Where a made certificate is kept, null when it's supplied, so it can't be renewed here
  * @param proxy How the server sits behind a reverse proxy, for the Server tab's diagnostics
+ * @param restart Restarting from the admin screen, when something will start the server again
  */
 @Suppress("PrivatePropertyName")
 class AdminService(
@@ -30,7 +31,8 @@ class AdminService(
     private val tlsFolder: File? = null,
     private val backupService: BackupService? = null,
     private val restoreService: RestoreService? = null,
-    private val proxy: ProxySettings = ProxySettings(enabled = false)
+    private val proxy: ProxySettings = ProxySettings(enabled = false),
+    val restart: ServerRestart = ServerRestart(enabled = false)
 ) {
     private val TAG = "AdminService"
     private val SESSIONS_TAG = "$TAG:Sessions"
@@ -94,7 +96,8 @@ class AdminService(
             trustedProxies = if (proxy.trustAny) listOf("any address (TRUST_PROXY)") else if (proxy.enabled) proxy.trusted.map { it.text } else emptyList(),
             clientAddress = clientAddress,
             forwarded = forwarded,
-            timeZone = ZoneId.systemDefault().id
+            timeZone = ZoneId.systemDefault().id,
+            canRestart = restart.enabled
         )
     }
 

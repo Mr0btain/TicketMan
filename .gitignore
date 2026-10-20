@@ -11,3 +11,5 @@ shared/build/kotlinProjectStructureMetadata/kotlin-project-structure-metadata.js
 /androidApp/build/
 /build/
 /kotlin-js-store/
+# docker-compose.yml settings
+/.env

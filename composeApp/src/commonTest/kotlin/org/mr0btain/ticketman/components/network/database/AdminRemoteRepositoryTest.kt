@@ -50,6 +50,7 @@ class AdminRemoteRepositoryTest {
         stagedAt = 6
     )
     private var hasPendingRestore = false
+    private var canRestart = true
 
     // False for a server from before backups were built in the background
     private var backgroundBackups = true
@@ -89,6 +90,8 @@ class AdminRemoteRepositoryTest {
                     else respond("", HttpStatusCode.NoContent)
                 else -> respond("", HttpStatusCode.Accepted)
             }
+            "/api/admin/restart" -> if (canRestart) respond("", HttpStatusCode.Accepted)
+                else respond("This server can't restart itself", HttpStatusCode.Conflict)
             "/api/admin/seed" -> respond("Seeding is only allowed in development mode", HttpStatusCode.Forbidden)
             "/api/shop" -> respond(Json.encodeToString(ShopProfile(name = "Shop")), HttpStatusCode.OK, json)
             "/api/user/me" -> respond(Json.encodeToString(User(username = "me")), HttpStatusCode.OK, json)
@@ -167,6 +170,17 @@ class AdminRemoteRepositoryTest {
 
         hasPendingRestore = true
         assertEquals(pendingRestore, admin.getPendingRestore())
+    }
+
+    @Test
+    fun restartPostsAndSaysWhyWhenItCant() = runTest {
+        assertIs<TmResult.Success<*>>(admin.restartServer())
+        assertEquals(listOf("POST /api/admin/restart"), requests)
+
+        canRestart = false
+        val refused = admin.restartServer()
+        assertIs<TmResult.Error<*>>(refused)
+        assertEquals("This server can't restart itself", (refused as TmResult.Error).error.message)
     }
 
     @Test

@@ -114,6 +114,18 @@ Removes a station and signs out whoever is PINned in there.
   working proxy `clientAddress` is the device's own address and `forwarded` is true; the proxy's address with
   `forwarded` false means the proxy isn't in `trustedProxies` or doesn't send the header. All five have defaults, so
   older clients ignore them.
+- `canRestart`: whether [`POST /api/admin/restart`](#post-apiadminrestart) works (`RESTART_ON_EXIT=true`). Defaults
+  to false.
+
+### `POST /api/admin/restart`
+
+**Auth:** admin
+
+Restarts the server, which applies a waiting restore or certificate. It answers, then exits with code 3 about a
+second later and leaves starting it again to whatever runs it (Docker's restart policy). Audited, once per restart.
+
+- **`202`** it's on its way, also when it already was.
+- **`409`** `RESTART_ON_EXIT` isn't on, so nothing would start it again (the text says so).
 
 ### `POST /api/admin/certificate/renew`
 

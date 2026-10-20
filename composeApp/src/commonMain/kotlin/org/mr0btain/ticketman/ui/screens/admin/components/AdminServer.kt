@@ -6,7 +6,9 @@ import io.github.vinceglb.filekit.size
 import io.ktor.http.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.transfer.DownloadOutcome
 import org.mr0btain.ticketman.components.network.transfer.fileBody
@@ -171,6 +173,49 @@ class AdminServer(
         }
     }
 
+    /**
+     * Has the server restart, which applies a waiting restore, then waits for it to come back and reloads. Only
+     * offered when [ServerInfoResponse.canRestart]
+     */
+    fun restartServer() {
+        scope.launch {
+            support.loading {
+                when (val result = admin.restartServer()) {
+                    is TmResult.Error -> support.notify("Couldn't restart the server: ${result.error.message}")
+
+                    is TmResult.Success -> {
+                        _backupProgress.value = BackupProgress("Restarting the server")
+                        val back = waitForRestart()
+                        _backupProgress.value = null
+
+                        if (back) {
+                            support.notify("Server restarted")
+                            reload()
+                            support.auditChanged()
+                        } else {
+                            support.notify("The server hasn't come back yet. Check its log")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // It answers before it exits, so first wait for it to go, then for it to answer again. A restore unpacks
+    // before it starts listening, which takes a while with lots of photos
+    private suspend fun waitForRestart(): Boolean {
+        val users = remoteHandler.userClient
+
+        withTimeoutOrNull(RESTART_GONE_MILLIS) {
+            while (users.checkServerConnection()) delay(RESTART_POLL_MILLIS)
+        }
+
+        return withTimeoutOrNull(RESTART_BACK_MILLIS) {
+            while (!users.checkServerConnection()) delay(RESTART_POLL_MILLIS)
+            true
+        } ?: false
+    }
+
     // ------------------------------------------ Certificate ------------------------------------------
 
     /** Makes a new HTTPS certificate on the server, which it switches to when it next starts */
@@ -223,6 +268,10 @@ class AdminServer(
         _shopProfile.value = null
     }
 }
+
+private const val RESTART_POLL_MILLIS = 1_000L
+private const val RESTART_GONE_MILLIS = 15_000L
+private const val RESTART_BACK_MILLIS = 180_000L
 
 /** Said when a backup is too big for this client to upload, which only happens in the browser */
 fun tooBigToRestoreMessage(file: PlatformFile): String =

@@ -74,6 +74,7 @@ fun AdminServerTab(
     onBackup: (includeImages: Boolean) -> Unit,
     onRestore: (PlatformFile) -> Unit,
     onCancelRestore: () -> Unit,
+    onRestart: () -> Unit,
     onRenewCertificate: () -> Unit,
     onCancelCertificateRenewal: () -> Unit,
     onSeed: (SeedRequest) -> Unit
@@ -92,7 +93,7 @@ fun AdminServerTab(
             Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
                 ServerInfoCard(serverInfo, serverUrl, isBusy, onRenewCertificate, onCancelCertificateRenewal)
 
-                BackupCard(isBusy, backupProgress, pendingRestore, serverInfo, onBackup, onRestore, onCancelRestore)
+                BackupCard(isBusy, backupProgress, pendingRestore, serverInfo, onBackup, onRestore, onCancelRestore, onRestart)
 
                 // Mock data is only allowed on servers started with -Pdevelopment
                 if (serverInfo?.developmentMode == true) {
@@ -296,10 +297,12 @@ private fun BackupCard(
     serverInfo: ServerInfoResponse?,
     onBackup: (includeImages: Boolean) -> Unit,
     onRestore: (PlatformFile) -> Unit,
-    onCancelRestore: () -> Unit
+    onCancelRestore: () -> Unit,
+    onRestart: () -> Unit
 ) {
     var includeImages by remember { mutableStateOf(true) }
     var restoreFile by remember { mutableStateOf<PlatformFile?>(null) }
+    var confirmRestart by remember { mutableStateOf(false) }
     val picker = rememberFilePickerLauncher(type = FileKitType.File("zip")) { file -> restoreFile = file }
 
     restoreFile?.takeIf { isTooBigToSend(it) }?.let { file ->
@@ -328,6 +331,21 @@ private fun BackupCard(
                 restoreFile = null
             },
             onDismissRequest = { restoreFile = null }
+        )
+    }
+
+    if (confirmRestart) {
+        TmConfirmDialog(
+            title = "Restart the server?",
+            message = "Everyone is disconnected while it restarts and restores the backup, which can take a few " +
+                "minutes with lots of photos. Devices may need to log in again afterwards.",
+            confirmText = "Restart",
+            destructive = true,
+            onConfirm = {
+                onRestart()
+                confirmRestart = false
+            },
+            onDismissRequest = { confirmRestart = false }
         )
     }
 
@@ -382,7 +400,13 @@ private fun BackupCard(
                     if (pendingRestore.manifest.includesImages) "" else " It has no photos in it, so photos on " +
                         "records won't load afterwards."
             )
-            TmButton(text = "Cancel restore", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = onCancelRestore)
+            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                // Only when something starts the server again after it exits (RESTART_ON_EXIT, set in the Docker image)
+                if (serverInfo?.canRestart == true) {
+                    TmButton(text = "Restart now", enabled = !isBusy, onClick = { confirmRestart = true })
+                }
+                TmButton(text = "Cancel restore", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = onCancelRestore)
+            }
         } else {
             TmButton(
                 text = "Restore from backup",

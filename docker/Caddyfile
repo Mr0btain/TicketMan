@@ -1,0 +1,12 @@
+# Caddy in front of TicketMan, for docker-compose.yml. A real domain gets a public certificate on its own;
+# localhost gets one from Caddy's local CA. Caddy streams uploads and downloads, has no body size limit and no
+# timeout on a slow request, and sends X-Forwarded-For, so this is all TicketMan needs. See docs/operations.md
+{
+	# Java sends no SNI for a name without a dot, like localhost, and Caddy refuses a handshake it can't match.
+	# Harmless for a real domain
+	default_sni {$DOMAIN:localhost}
+}
+
+{$DOMAIN:localhost} {
+	reverse_proxy ticketman:8080
+}

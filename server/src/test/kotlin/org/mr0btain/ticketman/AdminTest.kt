@@ -7,6 +7,7 @@ import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.PasswordHasher
+import org.mr0btain.ticketman.components.service.ServerRestart
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.audit.AuditEntry
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -36,6 +37,7 @@ import org.mr0btain.ticketman.server.response.SessionResponse
 import java.io.ByteArrayInputStream
 import java.security.MessageDigest
 import java.util.zip.ZipInputStream
+import kotlin.system.exitProcess
 import kotlin.test.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -54,8 +56,11 @@ class AdminTest {
     @AfterTest
     fun cleanup() = cleanupTestDataDir(dataDir)
 
-    private suspend fun ApplicationTestBuilder.setup(developmentMode: Boolean = true): UserDatabase {
-        configureTestServer(dataDir, developmentMode)
+    private suspend fun ApplicationTestBuilder.setup(
+        developmentMode: Boolean = true,
+        extraConfig: Map<String, String> = emptyMap()
+    ): UserDatabase {
+        configureTestServer(dataDir, developmentMode, extraConfig)
         startApplication()
 
         return UserDatabase().apply {
@@ -330,6 +335,51 @@ class AdminTest {
         val info = json.decodeFromString<ServerInfoResponse>(get("/api/admin/server", adminToken).bodyAsText())
         assertTrue(info.databaseSizeBytes > 0)
         assertTrue(info.developmentMode)
+    }
+
+    @Test
+    fun restartIsRefusedWhenNothingWouldStartTheServerAgain() = testApplication {
+        setup()
+        val adminToken = token(admin)
+        val exits = mutableListOf<Int>()
+        ServerRestart.exit = { exits += it }
+
+        try {
+            val info = json.decodeFromString<ServerInfoResponse>(get("/api/admin/server", adminToken).bodyAsText())
+            assertFalse(info.canRestart)
+            assertEquals(HttpStatusCode.Conflict, post("/api/admin/restart", "", adminToken).status)
+            Thread.sleep(ServerRestart.EXIT_DELAY_MILLIS + 500)
+            assertEquals(emptyList(), exits)
+        } finally {
+            ServerRestart.exit = { exitProcess(it) }
+        }
+    }
+
+    @Test
+    fun restartAnswersThenExitsOnce() = testApplication {
+        setup(extraConfig = mapOf("env.restartOnExit" to "true"))
+        val adminToken = token(admin)
+        val exits = mutableListOf<Int>()
+        ServerRestart.exit = { synchronized(exits) { exits += it } }
+
+        try {
+            val info = json.decodeFromString<ServerInfoResponse>(get("/api/admin/server", adminToken).bodyAsText())
+            assertTrue(info.canRestart)
+
+            assertEquals(HttpStatusCode.Forbidden, post("/api/admin/restart", "", token(employee)).status)
+            assertEquals(HttpStatusCode.Accepted, post("/api/admin/restart", "", adminToken).status)
+            // Answered before it exits, and asking again doesn't exit twice
+            assertEquals(emptyList(), synchronized(exits) { exits.toList() })
+            assertEquals(HttpStatusCode.Accepted, post("/api/admin/restart", "", adminToken).status)
+
+            Thread.sleep(ServerRestart.EXIT_DELAY_MILLIS + 1000)
+            assertEquals(listOf(ServerRestart.EXIT_CODE), synchronized(exits) { exits.toList() })
+
+            val audit = json.decodeFromString<List<AuditEntry>>(get("/api/admin/audit/fetch?offset=0&limit=50", adminToken).bodyAsText())
+            assertEquals(1, audit.count { it.entityType == "server" && it.action == AuditAction.SETTINGS_UPDATE })
+        } finally {
+            ServerRestart.exit = { exitProcess(it) }
+        }
     }
 
     @Test

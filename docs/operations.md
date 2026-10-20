@@ -6,21 +6,98 @@ page says where, and what happens on the server behind it.
 
 ## First start
 
-The server expects a reverse proxy in front of it doing HTTPS (`PROXY=on`, the default). To have it do HTTPS itself
-with its own certificate, the direct setup, set `PROXY=off` (see [Configuration](configuration.md#proxy)).
+The usual setup is the server in Docker behind a reverse proxy that does HTTPS. The repo's
+[`docker-compose.yml`](../docker-compose.yml) runs it behind Caddy, which gets a public certificate by itself.
 
-1. Start the server with `DATA_PATH` set, and `ADMIN_PASSWORD` if you want to choose the first password (see
-   [Configuration](configuration.md)). Without `SECRET` the server makes its own and keeps it in the data folder.
-   In a container, set `TZ` to the shop's time zone.
-2. Watch the log for the `admin` user's password if you didn't set one. Behind a proxy it also says which plain HTTP
-   port the proxy should send to and which proxy addresses it trusts; direct, look for
-   `Responding at https://0.0.0.0:8443` and the certificate fingerprint.
-3. Point a client at the server (Settings > Server): the proxy's address, or direct something like
-   `192.168.1.20:8443`, which asks you to check the certificate's fingerprint against the one in the log (see
-   [HTTPS](#https)). Then log in as `admin`.
-4. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
+1. Point a domain (`tickets.myshop.com`) at the machine, with ports 80 and 443 reaching it from the internet so
+   Caddy can get the certificate.
+2. Next to `docker-compose.yml`, make a `.env` file with `DOMAIN=tickets.myshop.com`, `TZ=` the shop's time zone
+   (like `America/New_York`), and `ADMIN_PASSWORD=` if you want to choose the first password.
+3. Build the server and start it (see [The Docker image](#the-docker-image) for why the build is on the host):
+
+   ```bash
+   ./gradlew :server:installDist -PwithWeb
+   docker compose up -d --build
+   ```
+
+4. Open `https://tickets.myshop.com` in a browser, or point a client at it (Settings > Server), and log in as
+   `admin`. Without `ADMIN_PASSWORD` the password is in `docker compose logs ticketman`.
+5. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
    paper size). Tax and everything printed come from it, so do this before taking money.
-5. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
+6. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
+
+Without Docker, start `bin/server` from `:server:installDist` (or `./gradlew :server:run`) with `DATA_PATH` set,
+and `TZ` if the machine's clock is on UTC (see [Configuration](configuration.md)). The log says which plain HTTP port
+the proxy should send to and which proxy addresses it trusts. Without a proxy at all, set `PROXY=off` and see
+[Without a proxy](#without-a-proxy). Either way, without `SECRET` the server makes its own and keeps it in the data
+folder.
+
+## The Docker image
+
+[`server/Dockerfile`](../server/Dockerfile) copies in the server built on the host, rather than building it inside
+Docker, because the Gradle build needs the Android SDK even for the server (`shared` builds for Android too). The
+copied files are plain JVM jars, so the same build makes an amd64 or an arm64 image:
+
+```bash
+./gradlew :server:installDist -PwithWeb
+docker build -f server/Dockerfile -t ticketman .          # or docker compose build
+docker buildx build --platform linux/amd64,linux/arm64 -f server/Dockerfile -t <registry>/ticketman .
+```
+
+Build it from the repo root; [`.dockerignore`](../.dockerignore) sends only `server/build/install/server`. Don't
+build it with `-Pdevelopment`, which bakes development mode into the start script.
+
+| What | In the image |
+|------|--------------|
+| Base | `eclipse-temurin:21-jre` |
+| Runs | `/app/bin/server` as user `ticketman` (uid 10001) |
+| Data | `/data` (`DATA_PATH`), a volume |
+| Backups | `/backups`, owned by `ticketman`, for `BACKUP_DIR=/backups` |
+| Port | `8080` (`PORT`), plain HTTP for the proxy |
+| Set | `PROXY=on`, `RESTART_ON_EXIT=true`, `JAVA_OPTS=-XX:MaxRAMPercentage=75` |
+| Health check | `GET /api/ping` every 30 seconds, through bash since the image has no curl |
+
+Named volumes take the folder's owner from the image. A host folder mounted at `/data` or `/backups` has to be owned
+by uid 10001 first (`sudo chown 10001:10001 /mnt/usb/ticketman`), or the server can't write to it.
+
+`docker stop` sends SIGTERM to Java, which finishes the requests in flight and then closes H2 cleanly (the log
+says `Database closed`). The compose file's `restart: unless-stopped` brings the server back after a crash, a reboot
+and the admin screen's restart (see [Restore](#restore)).
+
+In [`docker-compose.yml`](../docker-compose.yml) the server is only on `expose`, so nothing outside reaches it except
+through Caddy. The two share a network with a fixed range (`172.30.80.0/24`, `SUBNET` changes it), and
+`TRUSTED_PROXIES` is set to exactly that range.
+
+### Behind another proxy
+
+Already running Traefik or Nginx Proxy Manager? Leave the `caddy` service out, put the `ticketman` service on that
+proxy's Docker network (`networks: [proxy]`, with the network declared `external: true`), and set `TRUSTED_PROXIES`
+to that network's range (`docker network inspect <name>` shows it). Point the proxy at `http://ticketman:8080`.
+
+nginx, or Nginx Proxy Manager's advanced settings, needs a few changes from its defaults:
+
+```nginx
+location / {
+    proxy_pass http://ticketman:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    client_max_body_size 0;          # photos are up to 25 MB, a restore is the size of the backup
+    proxy_request_buffering off;     # send uploads on as they arrive, not after writing them to disk
+    proxy_buffering off;             # same for backup downloads
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+}
+
+# The backup download link's ?token= is its password, so keep query strings out of the access log
+log_format ticketman '$remote_addr - $remote_user [$time_local] "$request_method $uri $server_protocol" '
+                     '$status $body_bytes_sent';
+access_log /var/log/nginx/ticketman.log ticketman;
+```
+
+`log_format` goes in the `http` block, the rest in the site's `server` block. Traefik streams bodies and has no size
+limit by default; check its access log doesn't record query strings either.
 
 ## The data folder
 
@@ -51,28 +128,32 @@ details (owner, size, hash, status) are in the database.
 Don't edit or delete files in here while the server is running. H2 holds the database open, and the photo
 folders are managed by the sweep below.
 
-## HTTPS
-
-Behind a reverse proxy, HTTPS is the proxy's job and the rest of this section doesn't apply. Direct
-(`PROXY=off`), the server listens for HTTPS on `SSL_PORT` (8443) next to plain HTTP on `PORT` (8080). Devices should
-use the HTTPS one, since passwords, tokens and backup links can be read off the network over plain HTTP.
-
-### Behind a reverse proxy
+## Behind a reverse proxy
 
 The proxy does HTTPS, usually with a public certificate, and devices connect to its name (`tickets.myshop.com`).
 Three things to set on the proxy:
 
 - **Body size.** Photos are up to 25 MB, and a restore upload is the size of the backup. nginx refuses anything
   over 1 MB unless `client_max_body_size` is raised (`0` turns the limit off). The app says "Bigger than the proxy
-  allows" when this happens.
+  allows" when this happens. Caddy has no limit.
 - **Timeouts** can stay at their defaults. Backups are built in the background and asked after, and uploads and
   downloads keep data moving.
 - **`X-Forwarded-For`.** The server only believes it from `TRUSTED_PROXIES`; the admin Server tab shows whether it
   works (see [Configuration](configuration.md#trusted_proxies)).
 
+[Behind another proxy](#behind-another-proxy) has the nginx settings.
+
 Devices have to use a name the certificate is for. Connecting by IP to a proxy whose certificate is for a domain
 fails with "This server's certificate is for ...". Android needs 7.1.1 or newer for Let's Encrypt certificates,
 which is also the app's minimum.
+
+## Without a proxy
+
+With `PROXY=off` (the direct setup, see [Configuration](configuration.md#proxy)) the server does HTTPS itself. It
+listens for HTTPS on `SSL_PORT` (8443) next to plain HTTP on `PORT` (8080). Devices should use the HTTPS one, since
+passwords, tokens and backup links can be read off the network over plain HTTP. On first start look for
+`Responding at https://0.0.0.0:8443` and the certificate fingerprint in the log, and point clients at something like
+`192.168.1.20:8443`, which asks to check that fingerprint.
 
 ### The certificate
 
@@ -130,7 +211,7 @@ app checks before it sends anything else. Scripts and other tools calling the AP
 A server built with `-PwithWeb` serves the web client at `/`, on the same address as the API:
 
 ```bash
-./gradlew :server:run -PwithWeb          # or :server:buildFatJar -PwithWeb for a jar to deploy
+./gradlew :server:run -PwithWeb          # or :server:installDist -PwithWeb, which the Docker image uses
 ```
 
 Staff then open the proxy's address in a browser (direct: `https://<server>:8443`, accepting the certificate once),
@@ -230,7 +311,10 @@ Restoring always needs a restart, because H2's files can't be swapped under a ru
    newer server, it has a database, and it has nothing unexpected in it) and parks it in `restore/`. There must be
    free disk space of at least twice the zip's size.
 2. The tab shows the restore as waiting. It can be cancelled until the restart.
-3. Restart the server. Before opening the database it moves `database/` and `images/` (and `tls/`, if the backup
+3. Restart the server. In Docker (or anywhere `RESTART_ON_EXIT=true`), **Restart now** next to the waiting restore
+   does it: the server answers, exits with code 3, and the restart policy starts it again. The app waits for it to
+   come back, and devices may have to log in again, since the sessions come from the backup. Otherwise restart it
+   by hand. Before opening the database it moves `database/` and `images/` (and `tls/`, if the backup
    has the certificate) into `pre-restore-<time>/`, then unpacks the backup in their place.
 4. If unpacking fails, it moves the old folders back and renames the backup to `restore/failed-<time>.zip`, so the
    server starts on its old data.

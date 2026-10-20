@@ -44,6 +44,9 @@ env:
     trustedProxies: "$TRUSTED_PROXIES:"
     # Deprecated: true trusts X-Forwarded-For from any address. Use TRUSTED_PROXIES
     trustProxy: "$TRUST_PROXY:false"
+    # true when something starts the server again after it exits (Docker's restart policy, systemd), so admins can
+    # restart it from the admin screen to finish a restore. The Docker image sets it
+    restartOnExit: "$RESTART_ON_EXIT:false"
 
 # A backup made once a day into a folder, like a USB drive or a synced folder. Blank turns it off
 backup:

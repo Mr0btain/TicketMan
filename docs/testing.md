@@ -26,6 +26,7 @@ passing run prints nothing.
 | Client logic | `composeApp/src/commonTest/` | Handlers, repositories, seeds, pagers, storage, print templates, formatting. Network calls go to a `MockEngine` |
 | Client, desktop only | `composeApp/src/desktopTest/` | Things that need the JVM: Java2D printing, QR codes checked with ZXing, the pinned HTTPS engine, streaming file bodies, render tests, `UiKitRulesTest` |
 | End to end | `scripts/counter_e2e.py` | The whole counter flow against a real server, over HTTP |
+| Docker | `scripts/docker_smoke.sh` | The image and `docker-compose.yml` behind Caddy: the end to end walk, a restore finished by restarting, and a clean stop |
 
 ## Server tests
 
@@ -210,6 +211,12 @@ pickup refused while money is owed, then paid with change and stock taken; the e
 audit log; and the big transfers: a 13 MB photo upload put on a note, a backup with photos downloaded whole and
 by range and checked against its sha256, and uploaded back to restore (then cancelled).
 
+With `--restart` the restore isn't cancelled. A customer added after the backup was made should vanish: the script
+calls `POST /api/admin/restart`, waits for `/api/ping` to go and come back, logs in again and checks the restore
+was applied, Jane and the photo are back and the later customer is gone. It needs a server that something starts
+again (`RESTART_ON_EXIT=true`), like the Docker image, or a shell loop around `bin/server` that runs it again when it
+exits with code 3.
+
 - **Start on an empty data folder.** The script makes fixed usernames and expects the `admin` that
   `ADMIN_PASSWORD` creates on a first start. A second run on the same folder stops at step 3 with `Username is
   already taken`. Delete the folder (or pick a new `DATA_PATH`) between runs; for `dev_proxy.sh` that's
@@ -220,6 +227,22 @@ by range and checked against its sha256, and uploaded back to restore (then canc
   `--insecure` is for Caddy's local certificate.
 - Run it after changing check-in, pickup, invoices, stations or PIN login. It's what catches a change that passes
   each unit test but breaks the flow between them.
+
+### Docker
+
+[`scripts/docker_smoke.sh`](../scripts/docker_smoke.sh) builds the server (`:server:installDist -PwithWeb`) and the
+image, starts [`docker-compose.yml`](../docker-compose.yml) as its own project (`ticketman-smoke`, on
+`https://localhost:8445` with Caddy's local CA and its own network range), waits for the health check, runs
+`counter_e2e.py --insecure --restart` through Caddy, checks Docker started the server again, and stops it the way
+`docker stop` does, expecting exit code 143 and `Database closed` in the log. It removes its containers and volumes
+afterwards; `--keep` leaves them running, `--no-build` skips both builds' Gradle step.
+
+```bash
+scripts/docker_smoke.sh
+```
+
+Run it after changing the Dockerfile, the compose file, the restart route, or anything about how the server starts
+and stops. Your user has to be able to run `docker`.
 
 ## Adding tests
 

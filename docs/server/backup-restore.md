@@ -88,7 +88,13 @@ being built.
 
 ## Restoring
 
-Swapping H2's files under a running server isn't safe, so a restore is split in two by a restart.
+Swapping H2's files under a running server isn't safe, so a restore is split in two by a restart. With
+`RESTART_ON_EXIT=true` (the Docker image) an admin can do that restart from the Server tab: `POST
+/api/admin/restart` has
+[`ServerRestart`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/service/ServerRestart.kt) exit with
+code 3 a second after answering, on its own thread, and the restart policy starts the server again. Exiting runs
+the JVM's shutdown hooks, so Ktor stops and `LocalDatabase.close()` shuts H2 down first, the same as `docker stop`.
+Tests replace `ServerRestart.exit` so the test JVM keeps running.
 
 ### 1. Staging, while running
 

@@ -33,5 +33,7 @@ data class ServerInfoResponse(
     /** Whether [clientAddress] came from a trusted proxy's forwarded headers */
     val forwarded: Boolean = false,
     /** The time zone "today", due dates and the yearly number rollover use, like `America/New_York` */
-    val timeZone: String = ""
+    val timeZone: String = "",
+    /** Whether `POST /api/admin/restart` works, because something starts the server again (`RESTART_ON_EXIT`) */
+    val canRestart: Boolean = false
 )

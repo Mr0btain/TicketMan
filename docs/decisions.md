@@ -104,6 +104,32 @@ instead of the app's. So the certificate is put in backups (a server restored on
 makes a backup something that can impersonate the server. A new one can be made from the admin screen ahead of time
 but only takes over on a restart.
 
+### The Docker image is built from the host's build
+
+**Chosen:** `server/Dockerfile` copies in `server/build/install/server` from `:server:installDist -PwithWeb` run on
+the host (or in CI), rather than running Gradle inside Docker.
+
+**Why:** the Gradle build loads the Android plugin for `shared` and `composeApp`, so even the server needs the
+Android SDK to configure. Installing the SDK in a builder stage, or a property that leaves out the Android targets,
+would both work, but the first makes a slow, gigabyte sized build stage and the second means conditional plugins in
+two build scripts that can drift. The copied jars run on any CPU, so one host build makes amd64 and arm64 images.
+
+**Costs:** `docker build` from a fresh clone fails until the server has been built, and the image is only as fresh
+as that build. Nothing stops building it with `-Pdevelopment` by mistake.
+
+**Revisit if:** the server stops depending on `shared`'s Android target, or the image is built and published by CI.
+
+### Restarting is left to whatever runs the server
+
+**Chosen:** `POST /api/admin/restart` exits the process with code 3 and relies on Docker's restart policy (or
+systemd) to start it again. It's only offered when `RESTART_ON_EXIT=true` says something will.
+
+**Why:** a restore and a new certificate need a fresh start, which an admin can't do from inside a container. A
+process can't cleanly start itself again, and restarting Ktor in place would leave H2 and the restore half done.
+
+**Costs:** set `RESTART_ON_EXIT` without a restart policy and the button stops the server for good. Devices are
+cut off while it starts, longer with a big restore to unpack.
+
 ### Money in cents, totals from one place
 
 **Chosen:** every amount is a `Long` of cents. Invoice totals are worked out only by `InvoiceMath` in `shared`,

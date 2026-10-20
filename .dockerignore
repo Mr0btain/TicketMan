@@ -1,0 +1,3 @@
+# Only the server built on the host goes into the image (server/Dockerfile)
+*
+!server/build/install/server

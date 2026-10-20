@@ -60,6 +60,7 @@ class AdminRemoteRepository(
     private val SERVER_INFO_TAG = "$TAG:ServerInfo"
     private val BACKUP_TAG = "$TAG:Backup"
     private val RESTORE_TAG = "$TAG:Restore"
+    private val RESTART_TAG = "$TAG:Restart"
     private val CERTIFICATE_TAG = "$TAG:Certificate"
     private val SEED_TAG = "$TAG:Seed"
     private val AUDIT_TAG = "$TAG:Audit"
@@ -273,6 +274,20 @@ class AdminRemoteRepository(
         }
 
         return handleActionHttpResponse(RESTORE_TAG, response)
+    }
+
+    /**
+     * Has the server exit so whatever runs it starts it again, finishing a waiting restore. Only works when
+     * [ServerInfoResponse.canRestart]; `409` otherwise
+     */
+    suspend fun restartServer(): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkRequest(RESTART_TAG) {
+            client.post { url("$adminUrl${AdminPaths.RESTART}") }
+        }
+
+        return handleActionHttpResponse(RESTART_TAG, response)
     }
 
     /** Has the server make a new HTTPS certificate, used from its next start */

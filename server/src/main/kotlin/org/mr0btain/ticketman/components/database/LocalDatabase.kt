@@ -52,11 +52,22 @@ class LocalDatabase (
     /** Folder holding the H2 files */
     val databaseDirectory = File("$appDir/database")
 
+    /** Shuts H2 down cleanly, writing everything out and letting go of its files. Run when the server stops */
+    fun close() {
+        try {
+            transaction(db) { exec("SHUTDOWN") }
+        } catch (_: Exception) {
+            // Committing after SHUTDOWN fails, the database is closed either way
+        }
+        AppLogger.m(TAG, "Database closed")
+    }
+
     /** Photo files, kept out of H2 so the database stays small and quick to back up */
     val imageStore = ImageStore(File("$appDir/images"))
 
-    // Connect to the local database. Might not need this as a value
-    private val db = ExposedDatabase.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;", "org.h2.Driver")
+    // Connect to the local database. Not closed by H2's own shutdown hook, which would race requests still being
+    // answered while the server stops; close() does it once Ktor has stopped
+    private val db = ExposedDatabase.connect("jdbc:h2:$appDir/database/database;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;", "org.h2.Driver")
 
     //Database.connect("jdbc:sqlite:$appDir/testData.db", "org.sqlite.JDBC")
     // Database.connect("jdbc:h2:$appDir/testData.db", "org.h2.Driver")

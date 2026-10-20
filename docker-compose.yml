@@ -1,0 +1,73 @@
+# TicketMan behind Caddy, which gets a public certificate for DOMAIN on its own (ports 80 and 443 have to reach
+# this machine from the internet, and DOMAIN has to point at it). Put the settings in a .env file next to this one:
+#
+#   DOMAIN=tickets.myshop.com
+#   TZ=America/New_York
+#   ADMIN_PASSWORD=...              (optional, for the admin user made on the first start)
+#
+# Build the server first, then start both:
+#
+#   ./gradlew :server:installDist -PwithWeb
+#   docker compose up -d --build
+#   docker compose logs ticketman     # the admin password, when ADMIN_PASSWORD isn't set
+#
+# With DOMAIN left as localhost, Caddy uses its own local CA instead, which clients ask to trust
+# (scripts/docker_smoke.sh does that). See docs/operations.md
+name: ticketman
+
+services:
+  ticketman:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    image: ticketman
+    restart: unless-stopped
+    environment:
+      # The shop's time zone: "today", due dates and the yearly number rollover follow it
+      TZ: ${TZ:?Set TZ to the shop's time zone, like TZ=America/New_York}
+      # The only address allowed to say who a request is from: the network below, which holds just the proxy and
+      # the server. The image already sets DATA_PATH=/data, PORT=8080, PROXY=on and RESTART_ON_EXIT=true
+      TRUSTED_PROXIES: ${SUBNET:-172.30.80.0/24}
+      BACKUP_DIR: /backups
+      # The admin user's password on the first start. Blank logs a random one
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    volumes:
+      - ticketman-data:/data
+      # A host folder works too, like /mnt/usb/ticketman:/backups, once it's owned by uid 10001
+      # (sudo chown 10001:10001 /mnt/usb/ticketman)
+      - ticketman-backups:/backups
+    # Only the proxy reaches it, never the network outside
+    expose:
+      - "8080"
+    networks:
+      - ticketman
+
+  caddy:
+    image: caddy:2.10
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Caddy's certificates and its local CA, kept so they aren't made again on every start
+      - caddy-data:/data
+      - caddy-config:/config
+    networks:
+      - ticketman
+
+networks:
+  # A fixed range, so TRUSTED_PROXIES can name it exactly. SUBNET changes it if it's taken on this machine
+  ticketman:
+    ipam:
+      config:
+        - subnet: ${SUBNET:-172.30.80.0/24}
+
+volumes:
+  ticketman-data:
+  ticketman-backups:
+  caddy-data:
+  caddy-config:

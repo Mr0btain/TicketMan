@@ -11,6 +11,8 @@ Or through a reverse proxy (scripts/dev_proxy.sh), whose certificate it can't ch
     python3 scripts/counter_e2e.py https://localhost:8444 --insecure
 
 The last steps send a big photo, download a backup and upload it to restore, since those are what proxies break.
+With --restart, against a server started with RESTART_ON_EXIT=true and something to start it again (the Docker
+image, scripts/docker_smoke.sh), the restore isn't cancelled: the server restarts to apply it and the data is checked.
 """
 import argparse
 import hashlib
@@ -26,6 +28,7 @@ import zlib
 parser = argparse.ArgumentParser(description="Walk check-in to pickup against a fresh TicketMan server")
 parser.add_argument("base", nargs="?", default="http://localhost:8098", help="the server's (or proxy's) address")
 parser.add_argument("--insecure", action="store_true", help="don't check the HTTPS certificate")
+parser.add_argument("--restart", action="store_true", help="finish the restore by restarting the server from the admin route")
 args = parser.parse_args()
 
 BASE = args.base.rstrip("/")
@@ -75,6 +78,24 @@ def noise_png(width, height):
     rows = b"".join(b"\0" + os.urandom(width * 3) for _ in range(height))
     header = struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)
     return b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", header) + chunk(b"IDAT", zlib.compress(rows, 1)) + chunk(b"IEND", b"")
+
+
+def server_up():
+    try:
+        status, content, _ = send(urllib.request.Request(BASE + "/api/ping"))
+        return status == 200 and content.decode(errors="replace").strip() == "TicketMan"
+    except (OSError, urllib.error.URLError):
+        # Refused or cut off while it restarts. Behind a proxy it's a 502 instead
+        return False
+
+
+def wait_for(up, seconds):
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if server_up() == up:
+            return True
+        time.sleep(1)
+    return False
 
 
 def uid():
@@ -238,11 +259,41 @@ status, part, _ = send(urllib.request.Request(BASE + backup["downloadPath"], hea
 check(status == 206 and part == archive[100:200], f"a range of the backup answered {status}")
 step(f"Backup with photos built in the background ({len(archive) / 1_000_000:.1f} MB) downloads whole and matches its sha256; a range of it works too")
 
+# Made after the backup, so the restore takes it away
+call("POST", "/api/data/customer/add", {"identifier": (late := uid()), "name": "After Backup"}, admin, expect=201)
 _, pending = call("POST", "/api/admin/restore", token=admin, raw=archive, content_type="application/zip", expect=202)
 check(pending["sizeBytes"] == len(archive) and pending["manifest"]["includesImages"], f"restore staged {pending}")
-call("DELETE", "/api/admin/restore", token=admin, expect=202)
+
+if not args.restart:
+    call("DELETE", "/api/admin/restore", token=admin, expect=202)
+    status, _ = call("GET", "/api/admin/restore", token=admin)
+    check(status == 204, f"restore still waiting after cancelling ({status})")
+    step("The backup uploads to restore and is waiting for a restart; cancelled so the server starts as it is")
+    print("\nAll steps passed")
+    raise SystemExit(0)
+
+step("The backup uploads to restore and is waiting for a restart")
+
+# ------------------------------------------ Restart to restore ------------------------------------------
+_, info = call("GET", "/api/admin/server", token=admin, expect=200)
+check(info.get("canRestart"), "server says it can't restart itself; is RESTART_ON_EXIT=true set?")
+started_at = info["startedAt"]
+call("POST", "/api/admin/restart", token=admin, expect=202)
+check(wait_for(False, 30), "server didn't stop after being asked to restart")
+check(wait_for(True, 180), "server didn't come back after restarting")
+step("Admin restarts the server; it goes away and comes back")
+
+_, auth = call("POST", "/api/auth", {"username": "admin", "password": "admin_pass", "deviceId": "office", "deviceName": "Office PC"}, expect=202)
+admin = auth["accessToken"]
+_, info = call("GET", "/api/admin/server", token=admin, expect=200)
+check(info["startedAt"] > started_at, "server reports the same start time, so it didn't restart")
+check(info.get("lastRestore") and info["lastRestore"]["manifest"]["createdAt"] == pending["manifest"]["createdAt"], f"last restore {info.get('lastRestore')}")
 status, _ = call("GET", "/api/admin/restore", token=admin)
-check(status == 204, f"restore still waiting after cancelling ({status})")
-step("The backup uploads to restore and is waiting for a restart; cancelled so the server starts as it is")
+check(status == 204, f"restore still waiting after the restart ({status})")
+call("GET", f"/api/data/customer/get/{jane}", token=admin, expect=200)
+call("GET", f"/api/data/customer/get/{late}", token=admin, expect=404)
+status, restored_photo, _ = send(urllib.request.Request(f"{BASE}/api/image/{image['identifier']}/display", headers={"Authorization": "Bearer " + admin}))
+check(status == 200 and restored_photo == display, f"photo after the restore answered {status}")
+step("Restored: Jane and the photo are back, the customer added after the backup is gone, and the Server tab shows the restore")
 
 print("\nAll steps passed")

@@ -125,6 +125,7 @@ object AdminPaths {
     const val BACKUP_START = "/backup/start"
     const val BACKUP_STATUS = "/backup/status/{id}"
     const val RESTORE = "/restore"
+    const val RESTART = "/restart"
     const val SEED = "/seed"
 
     /** A page of the audit log, `?offset=&limit=` */
