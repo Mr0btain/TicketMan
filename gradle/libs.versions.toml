@@ -20,12 +20,10 @@ logback = "1.6.5"
 koin = "4.2.2"
 compose-navigation = "2.9.2"
 h2 = "2.5.252"
-#postgres-version = "42.7.13"
 material3WindowSizeClassMultiplatform = "0.5.0"
 filekit = "0.16.0"
 kotlinxSerializationJson = "1.11.0"
 exposed = "1.5.0"
-#sqlitejdbc = "3.53.4.0"
 openpdf = "2.0.5"
 kotlinx-io = "0.9.1"
 ksafe = "3.3.0"
@@ -122,8 +120,6 @@ exposed-crypt = { module = "org.jetbrains.exposed:exposed-crypt", version.ref = 
 
 # Databases
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
-#sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlitejdbc" }
-#postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres-version" }
 
 # Pdf
 openpdf = { module = "io.github.librepdf:openpdf", version.ref = "openpdf" }
