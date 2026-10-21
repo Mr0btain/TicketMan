@@ -46,4 +46,4 @@ On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:P
 ## Documentation
 
 Developer docs are in [`docs/`](docs/README.md): how the code is organized, how a request travels from the UI to the
-database, configuration, running a server and more. [`docs/PLAN.md`](docs/PLAN.md) tracks which pages are written.
+database, configuration, running a server and more.

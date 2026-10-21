@@ -92,5 +92,5 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 ## About these docs
 
 [STYLE.md](STYLE.md) covers how pages are written, the template new pages start from, and how they're kept
-current. [PLAN.md](PLAN.md) lists every page.
+current.
 [`CLAUDE.md`](../CLAUDE.md) at the repo root is a dense summary of the same ground, kept for AI assistants.

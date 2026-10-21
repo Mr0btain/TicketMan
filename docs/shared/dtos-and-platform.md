@@ -29,8 +29,6 @@ it can't disagree on the shape.
 | `BackupRequest`, `SeedRequest` | `/api/admin/...` | Whether to include photos; how much test data |
 | `PagedRequest`, `SearchQuery` (in `data/`) | The server, from the `?offset=&limit=` and `?query=&limit=` of paged reads and searches | Offset and page size; query text and limit |
 
-The [API reference](../PLAN.md) (Phase 4d) will list every route with its body.
-
 ### Responses
 
 | Class | From | Holds |

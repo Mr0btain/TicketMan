@@ -24,7 +24,7 @@ services:
     restart: unless-stopped
     environment:
       # The shop's time zone: "today", due dates and the yearly number rollover follow it
-      TZ: ${TZ:?Set TZ to the shop's time zone, like TZ=America/New_York}
+      TZ: ${TZ:-America/New_York}
       # The only address allowed to say who a request is from: the network below, which holds just the proxy and
       # the server. The image already sets DATA_PATH=/data, PORT=8080, PROXY=on and RESTART_ON_EXIT=true
       TRUSTED_PROXIES: ${SUBNET:-172.30.80.0/24}

@@ -67,7 +67,7 @@ Sections that would be empty are left out.
 ## Keeping them current
 
 When a change makes a page wrong, fix the page in the same PR. When a page is added, add it to
-[`README.md`](README.md) and tick it in [`PLAN.md`](PLAN.md).
+[`README.md`](README.md)
 
 - The pull request template (`.gitea/pull_request_template.md`) asks "Docs updated?" on every PR.
 - The API pages are checked against the routes by `python3 scripts/check_api_docs.py`. Run it after any route
