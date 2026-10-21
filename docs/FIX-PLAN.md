@@ -1,21 +1,27 @@
 # Fix plan
 
-Everything the docs found that should change, gathered from every page's **Known gaps** and **Gotchas**, the
-`TODO` comments in the code, and issues found while writing the docs. Grouped into phases, roughly in the order
-they're worth doing: bugs people will hit first, then security, data, API cleanup, the client, code health,
-platforms, and running behind a reverse proxy in Docker.
-
-Tick an item when it's merged. When one is done, also fix the doc page it came from (its **Source**), usually by
+When one is done, also fix the doc page it came from (its **Source**), usually by
 taking it out of that page's Known gaps. Things that aren't problems, just rules to follow, are in
 [Rules to keep](#rules-to-keep) at the end, not in the phases.
 
+## Phase 0: HTTPS removal, a decisive choice.
+- [ ] Completely remove HTTPS from server side. Only talk through HTTP and let a reverse proxy in the docker container handle all
+      the https. Right now we use caddy. Allow the client to connect through https with a valid public certificate and show the trust dialog if it's
+      a private made one. But add a warning to ensure that they understand what they are doing and that it's not a public cert. We also need to setup
+      a way to test this locally by running a docker container and connecting with the desktop client and through the browser on the same machine.
+      We need to figure out any other decisions we may need to make or things that need changed to align with this change.
+- [ ] Since the reverse proxy is handling https, we need a new waw to identify and handle too many login attempts. Let's go through some
+      options and see what we can come up with.
+
 ## Phase 1: Fixups
 - [ ] Editing an invoice at the counter replaces all its lines. If someone logs work while the invoice is open at the 
-      counter and the counter then saves, that new line is lost. Fix thi so it can work together.
-- [ ] Deleting a ticket deletes its invoice, even a paid one. We need to change this so invoices stay forever unless
-      removed by an admin.
+      counter and the counter then saves, that new line is lost. Fix this so it can work together.
+- [ ] Deleting a ticket deletes its invoice, even a paid one. We need to change this so paid invoices can stay indefinitely 
+      and let admins decide if they should be removed or not.
+- [ ] Photos on users as well. The basic structure is there just needs added in. also an option to make a User ID with
+      a QR that we can use later when we add the ability to clock employees times.
 
-## Phase 11: Android, and other machines
+## Phase 2: Android, and other machines
 
 Last, on a machine that can build and run them: the Android SDK tools Gradle downloads are x86, so ARM Linux
 can't build the APK, and there's no emulator for it.
@@ -31,14 +37,6 @@ can't build the APK, and there's no emulator for it.
       (`~/Library/Application Support/TicketMan`, `%APPDATA%\TicketMan`), but only Linux has been run. Start the
       desktop client and a server without `DATA_PATH` on each and check where the files go.
       *Source:* `AppDir.jvm.kt`'s old `TODO`s
-
-
-## Ideas
-
-Features that came up as `TODO` comments but were never started. Not planned; pick one up, or drop it, when
-deciding what's next.
-- Photos on every record type, not just notes and inventory. Customers, tickets and users already have the shape.
-- A reorder prompt when an item's stock drops to a set level, at login or when it happens.
 
 ## Rules to keep
 
