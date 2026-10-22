@@ -14,7 +14,7 @@ taking it out of that page's Known gaps. Things that aren't problems, just rules
       options and see what we can come up with.
 
 ## Phase 1: Fixups
-- [ ] Editing an invoice at the counter replaces all its lines. If someone logs work while the invoice is open at the 
+- [x] Editing an invoice at the counter replaces all its lines. If someone logs work while the invoice is open at the 
       counter and the counter then saves, that new line is lost. Fix this so it can work together.
 - [ ] Deleting a ticket deletes its invoice, even a paid one. We need to change this so paid invoices can stay indefinitely 
       and let admins decide if they should be removed or not.

@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
-import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
+import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.WorkRequest
@@ -49,17 +49,24 @@ class InvoiceService(
     }
 
     /**
-     * Replaces an open invoice's lines and discount. Keeps the tax rate the invoice was made with, so changing the
-     * shop's rate doesn't change what a customer was already quoted
+     * Applies what someone changed on an open invoice to the lines it has now, so a line added meanwhile (like logged
+     * work) stays. A line someone else changed or removed since is a conflict. Keeps the tax rate the invoice was made
+     * with, so changing the shop's rate doesn't change what a customer was already quoted
      */
-    fun update(identifier: Uuid, request: InvoiceUpdateRequest, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
+    fun update(identifier: Uuid, request: InvoiceChangeRequest, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()} and can't be changed")
+        if (request.isEmpty) return AccountResult.Done(invoice)
 
-        chargesProblem(request.charges)?.let { return AccountResult.Invalid(it) }
-        if (request.discountCents < 0) return AccountResult.Invalid("Discount can't be negative")
+        val (charges, discount) = when (val outcome = InvoiceChanges.apply(invoice.charges, invoice.discountCents, request)) {
+            is InvoiceChanges.Outcome.Applied -> outcome.charges to outcome.discountCents
+            is InvoiceChanges.Outcome.Conflict -> return AccountResult.Conflict(outcome.message)
+        }
 
-        val saved = invoices.setCharges(identifier, request.charges, request.discountCents, invoice.taxRateBasisPoints)
+        chargesProblem(charges)?.let { return AccountResult.Invalid(it) }
+        if (discount < 0) return AccountResult.Invalid("Discount can't be negative")
+
+        val saved = invoices.setCharges(identifier, charges, discount, invoice.taxRateBasisPoints)
             ?: return AccountResult.Invalid("Couldn't save the invoice")
 
         auditLog.log(actor, AuditAction.UPDATE, "invoice", identifier.toString(), "Invoice ${invoice.label} total ${money(saved.totalCents)}")

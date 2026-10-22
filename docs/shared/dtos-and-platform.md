@@ -24,7 +24,7 @@ it can't disagree on the shape.
 | `StationRegistrationRequest` | `/api/station/register` | Device id and a name |
 | `CheckInRequest` | `/api/counter/check-in` | Ticket, customer, tech, deposit and signature, saved together |
 | `PickupRequest` | `/api/counter/pickup` | Ticket and the payments taken |
-| `InvoiceUpdateRequest`, `PaymentRequest` | `/api/invoice/...` | Charges and discount; one payment |
+| `InvoiceChangeRequest`, `ChargeChange`, `PaymentRequest` | `/api/invoice/...` | Lines added, changed (before and after) and removed, and the discount, from `InvoiceChanges.between`; one payment |
 | `RepeatCheckRequest` | `/api/counter/repeat-check` | Customer and device, to flag a repeat repair |
 | `BackupRequest`, `SeedRequest` | `/api/admin/...` | Whether to include photos; how much test data |
 | `PagedRequest`, `SearchQuery` (in `data/`) | The server, from the `?offset=&limit=` and `?query=&limit=` of paged reads and searches | Offset and page size; query text and limit |

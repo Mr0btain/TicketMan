@@ -14,7 +14,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.logging.AppLogger
 import java.time.LocalDate
 import org.mr0btain.ticketman.components.service.InvoiceService
-import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
+import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 
 /**
@@ -96,7 +96,7 @@ fun Route.invoiceRoute(
                 return@post
             }
 
-            call.respondAccount(service.update(identifier, call.receive<InvoiceUpdateRequest>(), call.getIdentifierFromToken()), HttpStatusCode.OK)
+            call.respondAccount(service.update(identifier, call.receive<InvoiceChangeRequest>(), call.getIdentifierFromToken()), HttpStatusCode.OK)
         }
 
         post(InvoicePaths.PAYMENTS) {

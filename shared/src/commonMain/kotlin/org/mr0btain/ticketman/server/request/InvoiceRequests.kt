@@ -8,12 +8,28 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.WorkType
 import kotlin.uuid.Uuid
 
-/** Replaces an open invoice's lines and discount, totals are worked out by the server */
+/**
+ * What someone changed on an open invoice since they opened it, so the server applies just that to the lines it has
+ * now and lines added meanwhile (like logged work) are kept. Built with [org.mr0btain.ticketman.data.invoice.InvoiceChanges].
+ * Changed and removed lines carry how they were when opened, so one changed by someone else too is refused, not
+ * overwritten
+ * @param discountCents The new discount, null when it wasn't changed
+ * @param discountWas The discount when the invoice was opened, checked like a line's [ChargeChange.before]
+ */
 @Serializable
-data class InvoiceUpdateRequest(
-    val charges: List<Charge>,
-    val discountCents: Long = 0
-)
+data class InvoiceChangeRequest(
+    val added: List<Charge> = emptyList(),
+    val changed: List<ChargeChange> = emptyList(),
+    val removed: List<Charge> = emptyList(),
+    val discountCents: Long? = null,
+    val discountWas: Long = 0
+) {
+    val isEmpty: Boolean get() = added.isEmpty() && changed.isEmpty() && removed.isEmpty() && discountCents == null
+}
+
+/** One line as it was when the invoice was opened, and as it is now */
+@Serializable
+data class ChargeChange(val before: Charge, val after: Charge)
 
 @Serializable
 data class PaymentRequest(

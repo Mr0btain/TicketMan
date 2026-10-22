@@ -70,12 +70,19 @@ Gets the ticket's invoice, making it (numbered, with the shop's current tax rate
 
 **Auth:** normal
 
-Replaces the lines and discount. The server works out the totals again, with the shop's current tax rate.
+Applies what the caller changed since it opened the invoice to the lines it has now, so lines added meanwhile
+(like work logged on the ticket) stay. Changed lines keep their place, new ones go on the end. The server works out
+the totals again, with the tax rate the invoice was made with.
 
-- **Body:** `InvoiceUpdateRequest { charges, discountCents }`.
-- **`200`** the updated `Invoice`.
+- **Body:** `InvoiceChangeRequest { added, changed, removed, discountCents, discountWas }`, built with shared
+  `InvoiceChanges.between(before, beforeDiscount, after, afterDiscount)`. `changed` is a list of
+  `ChargeChange { before, after }`, `removed` the lines as they were, and `discountCents` null when it wasn't
+  changed. An empty one changes nothing.
+- **`200`** the updated `Invoice`, with everyone's lines.
 - **`400`** a line without a description, a quantity of zero or less or with more than two decimals, a negative
-  price, or a negative discount. **`404`** no such invoice. **`409`** the invoice is paid or void.
+  price, or a negative discount. **`404`** no such invoice. **`409`** the invoice is paid or void, or someone else
+  changed or removed a line this changes or removes, or changed the discount this changes (`Someone else changed
+  "Screen" on this invoice`). A line removed that's already gone, or added twice, is fine.
 
 ### `POST /api/invoice/{identifier}/payments`
 

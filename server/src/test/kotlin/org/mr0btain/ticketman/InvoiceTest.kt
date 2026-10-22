@@ -94,7 +94,7 @@ class InvoiceTest {
     }
 
     private suspend fun ApplicationTestBuilder.setCharges(invoice: Invoice, charges: List<Charge>, discount: Long = 0): HttpResponse =
-        postJson("/api/invoice/${invoice.identifier}/update", json.encodeToString(InvoiceUpdateRequest(charges, discount)))
+        postJson("/api/invoice/${invoice.identifier}/update", json.encodeToString(InvoiceChanges.between(invoice.charges, invoice.discountCents, charges, discount)))
 
     private suspend fun ApplicationTestBuilder.pickup(ticket: Ticket, vararg payments: PaymentRequest) =
         postJson("/api/counter/pickup", json.encodeToString(PickupRequest(ticket.identifier, payments.toList())))
@@ -371,7 +371,7 @@ class InvoiceTest {
         // Untracked stock is never short
         val cable = Inventory(name = "Cable", priceCents = 1_000)
         postJson("/api/data/inventory/add", json.encodeToString(cable))
-        setCharges(invoice, listOf(Charge(type = ChargeType.PART, description = "Cable", quantity = 3.0, unitPriceCents = 1_000, inventoryIdentifier = cable.identifier)))
+        setCharges(invoiceFor(ticket), listOf(Charge(type = ChargeType.PART, description = "Cable", quantity = 3.0, unitPriceCents = 1_000, inventoryIdentifier = cable.identifier)))
         assertEquals(HttpStatusCode.OK, pickup(ticket, PaymentRequest(PaymentMethod.CARD, 3_000)).status)
     }
 

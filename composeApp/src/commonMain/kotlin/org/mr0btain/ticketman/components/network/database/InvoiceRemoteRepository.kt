@@ -18,7 +18,7 @@ import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
-import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
+import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import kotlin.uuid.Uuid
 
@@ -59,12 +59,16 @@ class InvoiceRemoteRepository(
     suspend fun openForTicket(ticketIdentifier: Uuid): TmResult<Invoice, ServerError> =
         change { client.post { url("$baseUrl${InvoicePaths.FOR_TICKET.fill(ticketIdentifier)}") } }
 
-    suspend fun update(identifier: Uuid, charges: List<Charge>, discountCents: Long): TmResult<Invoice, ServerError> =
+    /**
+     * Saves what changed on an open invoice since it was opened (see `InvoiceChanges.between`), so lines added on the
+     * server meanwhile stay. A line someone else changed too answers `CONFLICT`
+     */
+    suspend fun update(identifier: Uuid, changes: InvoiceChangeRequest): TmResult<Invoice, ServerError> =
         change {
             client.post {
                 url("$baseUrl${InvoicePaths.UPDATE.fill(identifier)}")
                 contentType(ContentType.Application.Json)
-                setBody(InvoiceUpdateRequest(charges, discountCents))
+                setBody(changes)
             }
         }
 

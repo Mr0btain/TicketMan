@@ -57,7 +57,7 @@ owns the rules; `InvoiceDatabase` just stores.
 |------------------------|--------|------|
 | `GET /ticket/{ticketId}`, `GET /{id}`, `GET /fetch` | Restricted | Read |
 | `POST /ticket/{ticketId}` | Normal | Get the ticket's invoice, making it if needed |
-| `POST /{id}/update` | Normal | Replace the charges and discount (`InvoiceUpdateRequest`) |
+| `POST /{id}/update` | Normal | Apply what changed since it was opened (`InvoiceChangeRequest`, see below) |
 | `POST /{id}/payments` | Normal | Add a payment |
 | `DELETE /{id}/payments/{paymentId}` | Normal | Remove a payment |
 | `POST /{id}/void` | Admin | Void it |
@@ -88,8 +88,10 @@ Time and parts logged on a ticket as it's worked on, in `ticket_work` (`TicketWo
 - Removing an entry takes its charge off too, if it's still there. Neither works once the invoice is paid or void or
   the ticket is picked up (`409`), so the log matches what was charged.
 - Stock is taken at pickup as for any part on the invoice, not when it's logged.
-- Editing the invoice at the counter replaces its lines as a whole, so a line taken off there leaves its entry in
-  the log, and an entry logged while someone has the invoice open at the counter is dropped if they then save it.
+- Editing the invoice at the counter sends only what changed since it was opened (`InvoiceChanges`, applied under
+  `CHANGE_LOCK`), so an entry logged while someone has the invoice open there stays when they save, and shows up on
+  the counter once saved. A line both changed is refused with `409`, and the counter loads the invoice again and
+  asks for the change once more. A line taken off at the counter still leaves its entry in the log.
 
 ## Pickup
 

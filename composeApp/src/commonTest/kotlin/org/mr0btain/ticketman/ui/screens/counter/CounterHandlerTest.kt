@@ -27,6 +27,8 @@ import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.request.CheckInRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
+import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
+import io.ktor.http.content.*
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
@@ -42,6 +44,11 @@ class CounterHandlerTest {
     private val requests = mutableListOf<String>()
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
+    // The invoice as the server has it, and whether a save gets a 409 like when someone else changed the same line
+    private var serverInvoice = invoice
+    private var updateConflict = false
+    private val updateBodies = mutableListOf<String>()
+
     private val engine = MockEngine { request ->
         requests += "${request.method.value} ${request.url.encodedPath}"
 
@@ -51,8 +58,12 @@ class CounterHandlerTest {
             "/api/counter/search" -> respond(Json.encodeToString(CounterSearchResponse(tickets = listOf(TicketSummary(ticket)))), HttpStatusCode.OK, jsonHeaders)
             "/api/data/ticket/get/${ticket.identifier}" -> respond(Json.encodeToString(ticket), HttpStatusCode.OK, jsonHeaders)
             "/api/counter/check-in" -> respond(Json.encodeToString(CheckInResponse(ticket)), HttpStatusCode.Created, jsonHeaders)
-            "/api/invoice/ticket/${ticket.identifier}" -> respond(Json.encodeToString(invoice), HttpStatusCode.OK, jsonHeaders)
-            "/api/invoice/${invoice.identifier}/update" -> respond(Json.encodeToString(invoice.copy(totalCents = 4_000)), HttpStatusCode.OK, jsonHeaders)
+            "/api/invoice/ticket/${ticket.identifier}" -> respond(Json.encodeToString(serverInvoice), HttpStatusCode.OK, jsonHeaders)
+            "/api/invoice/${invoice.identifier}/update" -> {
+                updateBodies += request.body.toByteArray().decodeToString()
+                if (updateConflict) respond("Someone else changed \"Labor\" on this invoice", HttpStatusCode.Conflict)
+                else respond(Json.encodeToString(invoice.copy(totalCents = 4_000)), HttpStatusCode.OK, jsonHeaders)
+            }
             "/api/counter/pickup" -> respond(Json.encodeToString(invoice.copy(status = InvoiceStatus.PAID)), HttpStatusCode.OK, jsonHeaders)
             "/api/data/ticket/get/notes/${ticket.identifier}", "/api/data/ticket/get/history/${ticket.identifier}" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
             else -> respond("", HttpStatusCode.NotFound)
@@ -182,6 +193,31 @@ class CounterHandlerTest {
         assertNull(error)
         assertEquals(listOf("POST /api/invoice/${invoice.identifier}/update", "POST /api/counter/pickup"), requests.filter { "queue" !in it && "shop" !in it })
         assertEquals(InvoiceStatus.PAID, counter.pickup.last.value?.status)
+    }
+
+    @Test
+    fun onlyTheLinesChangedAreSentAndAConflictReloads() = runTest {
+        val labor = Charge(description = "Labor", unitPriceCents = 4_000)
+        serverInvoice = invoice.copy(charges = listOf(labor))
+        val counter = handler(canEdit = true)
+        counter.pickup.start(ticket.identifier)
+        settle { counter.view.value == CounterView.PICKUP }
+
+        // Someone logs work meanwhile, then changes the same line the counter is changing
+        val logged = Charge(description = "Diagnosis", unitPriceCents = 2_000)
+        serverInvoice = invoice.copy(charges = listOf(labor.copy(unitPriceCents = 3_000), logged))
+        updateConflict = true
+
+        var error: String? = null
+        var done = false
+        counter.pickup.saveCharges(listOf(labor.copy(unitPriceCents = 5_000)), 0) { error = it; done = true }
+        settle { done }
+
+        val sent = Json.decodeFromString<InvoiceChangeRequest>(updateBodies.single())
+        assertEquals(labor, sent.changed.single().before)
+        assertTrue(sent.added.isEmpty() && sent.removed.isEmpty())
+        assertEquals("Someone else changed \"Labor\" on this invoice. It's been loaded again, make your change once more", error)
+        assertEquals(serverInvoice, counter.pickup.detail.value?.invoice, "Shows what's there now")
     }
 
     @Test

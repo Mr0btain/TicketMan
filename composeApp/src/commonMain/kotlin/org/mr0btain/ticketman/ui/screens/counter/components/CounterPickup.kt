@@ -7,12 +7,14 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.invoice.InvoiceChanges
 import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.getOrDefault
 import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.valueOr
+import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import kotlin.uuid.Uuid
 
@@ -67,21 +69,40 @@ class CounterPickup(
     }
 
     /**
-     * Saves the invoice's lines so the server works out the totals
+     * Saves the invoice's lines so the server works out the totals. Only what changed since the invoice was loaded
+     * is sent, so work logged on the ticket meanwhile stays on it and shows up once saved
      * @param onResult Gets null when saved, otherwise what went wrong
      */
     fun saveCharges(charges: List<Charge>, discountCents: Long, onResult: (String?) -> Unit) {
-        val invoice = _detail.value?.invoice ?: return
         if (!support.canEdit()) return
 
-        scope.launch {
-            when (val result = remoteHandler.invoiceRepo.update(invoice.identifier, charges, discountCents)) {
-                is TmResult.Success -> {
-                    _detail.value = _detail.value?.copy(invoice = result.data)
-                    onResult(null)
-                }
+        scope.launch { onResult(save(charges, discountCents)) }
+    }
 
-                is TmResult.Error -> onResult(result.error.message)
+    /**
+     * Sends the changes from the invoice as last loaded to [charges] and [discountCents]. When someone else changed
+     * the same line, or the invoice isn't open any more, it's loaded again so the screen shows what's there now
+     * @return Null when saved or nothing changed, otherwise what went wrong
+     */
+    private suspend fun save(charges: List<Charge>, discountCents: Long): String? {
+        val detail = _detail.value ?: return null
+        val invoice = detail.invoice ?: return null
+        val changes = InvoiceChanges.between(invoice.charges, invoice.discountCents, charges, discountCents)
+        if (changes.isEmpty) return null
+
+        return when (val result = remoteHandler.invoiceRepo.update(invoice.identifier, changes)) {
+            is TmResult.Success -> {
+                _detail.value = _detail.value?.copy(invoice = result.data)
+                null
+            }
+
+            is TmResult.Error -> {
+                if (result.error.type != NetworkError.CONFLICT) return result.error.message
+
+                remoteHandler.invoiceRepo.getForTicket(detail.ticket.identifier)?.let { latest ->
+                    _detail.value = _detail.value?.copy(invoice = latest)
+                }
+                "${result.error.message}. It's been loaded again, make your change once more"
             }
         }
     }
@@ -105,17 +126,12 @@ class CounterPickup(
      */
     fun finish(charges: List<Charge>, discountCents: Long, payments: List<PaymentRequest>, onResult: (String?) -> Unit) {
         val detail = _detail.value ?: return
-        val invoice = detail.invoice ?: return
-        if (!support.canEdit()) return
+        if (detail.invoice == null || !support.canEdit()) return
 
         scope.launch {
-            if (charges != invoice.charges || discountCents != invoice.discountCents) {
-                val saved = remoteHandler.invoiceRepo.update(invoice.identifier, charges, discountCents)
-
-                if (saved is TmResult.Error) {
-                    onResult(saved.error.message)
-                    return@launch
-                }
+            save(charges, discountCents)?.let { problem ->
+                onResult(problem)
+                return@launch
             }
 
             when (val result = remoteHandler.counterRepo.pickup(detail.ticket.identifier, payments)) {

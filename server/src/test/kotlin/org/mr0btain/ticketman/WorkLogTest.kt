@@ -21,6 +21,8 @@ import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.WorkRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
+import org.mr0btain.ticketman.data.invoice.InvoiceChanges
+import org.mr0btain.ticketman.data.invoice.Charge
 import kotlin.test.*
 
 /**
@@ -110,6 +112,50 @@ class WorkLogTest {
         assertEquals(12_000 + 12_000 + 1_200, invoice.totalCents)
 
         assertEquals(listOf(time.identifier, part.identifier), workOf(ticket, clerkToken).map { it.identifier })
+    }
+
+    /** The counter saving what it changed since it opened the invoice */
+    private suspend fun ApplicationTestBuilder.counterSaves(opened: Invoice, charges: List<Charge>, discount: Long = opened.discountCents) =
+        post("/api/invoice/${opened.identifier}/update", json.encodeToString(InvoiceChanges.between(opened.charges, opened.discountCents, charges, discount)))
+
+    @Test
+    fun workLoggedWhileTheCounterHasTheInvoiceOpenIsKept() = testApplication {
+        setup()
+        val ticket = newTicket()
+        val first = json.decodeFromString<WorkEntry>(log(ticket, WorkRequest(WorkType.LABOR, "Diagnosis", quantity = 0.5)).bodyAsText())
+        val atCounter = invoiceOf(ticket)
+
+        // A technician logs more while the counter is busy with it
+        val more = json.decodeFromString<WorkEntry>(log(ticket, WorkRequest(WorkType.LABOR, "Replaced the screen", quantity = 1.0)).bodyAsText())
+
+        val cable = Charge(description = "Cable", unitPriceCents = 900)
+        val cheaper = atCounter.charges.single().copy(unitPriceCents = 6_000)
+        val saved = counterSaves(atCounter, listOf(cheaper, cable), discount = 500)
+        assertEquals(HttpStatusCode.OK, saved.status)
+
+        val invoice = json.decodeFromString<Invoice>(saved.bodyAsText())
+        assertEquals(listOf(first.identifier, more.identifier, cable.identifier), invoice.charges.map { it.identifier })
+        assertEquals(6_000, invoice.charges.first().unitPriceCents)
+        assertEquals(500, invoice.discountCents)
+    }
+
+    @Test
+    fun aLineChangedOnBothSidesIsRefused() = testApplication {
+        setup()
+        val ticket = newTicket()
+        log(ticket, WorkRequest(WorkType.LABOR, "Diagnosis", quantity = 0.5))
+        val front = invoiceOf(ticket)
+        val back = invoiceOf(ticket)
+
+        assertEquals(HttpStatusCode.OK, counterSaves(front, listOf(front.charges.single().copy(unitPriceCents = 5_000))).status)
+
+        val refused = counterSaves(back, listOf(back.charges.single().copy(unitPriceCents = 7_000)))
+        assertEquals(HttpStatusCode.Conflict, refused.status)
+        assertEquals("Someone else changed \"Diagnosis\" on this invoice", refused.bodyAsText())
+        assertEquals(5_000, invoiceOf(ticket).charges.single().unitPriceCents)
+
+        // Removing a line someone else changed is refused too
+        assertEquals(HttpStatusCode.Conflict, counterSaves(back, emptyList()).status)
     }
 
     @Test

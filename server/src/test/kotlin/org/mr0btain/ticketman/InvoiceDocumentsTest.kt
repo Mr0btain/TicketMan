@@ -19,7 +19,7 @@ import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
-import org.mr0btain.ticketman.server.request.InvoiceUpdateRequest
+import org.mr0btain.ticketman.data.invoice.InvoiceChanges
 import org.mr0btain.ticketman.server.request.LoginRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import java.io.File
@@ -81,7 +81,7 @@ class InvoiceDocumentsTest {
             Charge(type = ChargeType.OTHER, description = "Screen", unitPriceCents = 12_000),
             Charge(type = ChargeType.LABOR, description = "Install", quantity = 0.5, unitPriceCents = 6_000, taxable = false)
         )
-        return json.decodeFromString(post("/api/invoice/${invoice.identifier}/update", json.encodeToString(InvoiceUpdateRequest(charges, 0))).bodyAsText())
+        return json.decodeFromString(post("/api/invoice/${invoice.identifier}/update", json.encodeToString(InvoiceChanges.between(invoice.charges, 0, charges, 0))).bodyAsText())
     }
 
     @Test

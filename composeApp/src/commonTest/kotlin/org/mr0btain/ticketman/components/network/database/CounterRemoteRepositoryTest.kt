@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.request.PaymentRequest
+import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import kotlin.test.*
@@ -119,7 +120,7 @@ class CounterRemoteRepositoryTest {
 
         invoices.getForTicket(id)
         invoices.openForTicket(id)
-        invoices.update(id, emptyList(), 0)
+        invoices.update(id, InvoiceChangeRequest())
         invoices.addPayment(id, PaymentRequest(PaymentMethod.CARD, 500))
         invoices.removePayment(id, id)
         invoices.void(id)

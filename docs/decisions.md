@@ -162,6 +162,19 @@ There's no way yet to put the shop's current rate on an existing invoice.
 **Revisit if:** shops need a rate per line or per customer (tax exempt customers), which would make the rate a
 choice on the invoice anyway.
 
+### Invoice edits are sent as changes
+
+**Chosen:** saving an invoice sends what changed since it was opened (lines added, lines changed with how they were,
+lines removed as they were, and the discount if it changed), and the server applies that to the lines it has now.
+A line or discount someone else changed meanwhile is a `409`, and the counter loads the invoice again.
+
+**Why:** a technician logging work adds a line on the server while the counter may have the invoice open. Sending
+the whole list dropped that line. Changes merge without asking anyone in the usual case, and only a real clash
+(both sides editing one line) needs a person.
+
+**Costs:** on a clash the counter's own edit is lost and has to be made again. A version number on the invoice
+would be simpler but would refuse every save after any change at all, logged work included.
+
 ### Pickup is the only way to close a ticket
 
 **Chosen:** only `POST /api/counter/pickup` sets `PICKED_UP`, and it pays the invoice, takes the parts from
