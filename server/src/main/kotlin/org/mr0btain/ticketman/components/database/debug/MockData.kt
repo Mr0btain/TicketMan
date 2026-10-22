@@ -79,7 +79,8 @@ fun generateMockUser(name: List<String> = generateRandomName()): Pair<User, List
         name = name.joinToString(" "),
         phone = generatePhoneNumber(),
         email = generateEmail(),
-        accessLevel = AccessLevel.entries.random()
+        // NONE is only for migrating old data
+        accessLevel = listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN).random()
     ),
     (1..Random.nextInt(1, 3)).map { generateEmployeeNote() }
 )

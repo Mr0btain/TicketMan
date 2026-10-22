@@ -21,6 +21,7 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 | `env.name` | `NAME` | `Server` | Server name shown on the admin screen's Server tab |
 | `env.dataPath` | `DATA_PATH` | blank | Folder for the database, photos, backups and restores. Blank means the platform's app data folder |
 | `env.adminPassword` | `ADMIN_PASSWORD` | blank | Password for the `admin` user made when no admin exists. Blank means a random one is logged |
+| `env.seedTestData` | `SEED_TEST_DATA` | `false` | `true` fills an empty database with made up records on start, see [Seeding on start](#seeding-on-start). Never on a real shop's server |
 | `env.restartOnExit` | `RESTART_ON_EXIT` | `false` | `true` when something starts the server again after it exits, so admins can restart it from the Server tab. The Docker image sets it |
 | - | `TZ` | the machine's | The time zone "today", due dates and the yearly number rollover use. Set it in a container, which is UTC otherwise |
 | `backup.folder` | `BACKUP_DIR` | blank | Folder for a backup made once a day. Blank turns it off |
@@ -151,9 +152,13 @@ For HTTPS in development, put Caddy in front with `scripts/dev_proxy.sh` (see
 
 ### Seeding on start
 
-`Application.module()` also has a `generateTestData` flag, `false` in the repo. Set it to `true` to seed 1000
-tickets, 400 customers, 100 inventory items and 25 users every time the server starts. It's for quick local
-experiments only, so don't commit it switched on.
+`SEED_TEST_DATA=true` fills the database with made up records on start, in or out of development mode, but only
+when it has no tickets yet, so a restart doesn't add more: 150 tickets, 60 customers, 40 inventory items and a few
+users, then work logged on about two thirds of the tickets, some deposits, and most of the done ones picked up and
+paid, all through `InvoiceService` like the counter. A blank shop profile is filled in (`Bench Repair (test data)`,
+6% tax, $80 an hour labor), and staff with known passwords are added: `tech` / `tech_pass` (Normal) and `clerk` /
+`clerk_pass` (Restricted). The log warns when it happens. `scripts/docker_local.sh` turns it on. Never set it on a
+shop's real server.
 
 ## Logging
 

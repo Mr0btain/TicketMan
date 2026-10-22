@@ -32,6 +32,8 @@ services:
       BACKUP_DIR: /backups
       # The admin user's password on the first start. Blank logs a random one
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      # true fills an empty database with made up records, for trying it out (scripts/docker_local.sh). Never in a shop
+      SEED_TEST_DATA: ${SEED_TEST_DATA:-false}
     volumes:
       - ticketman-data:/data
       # A host folder works too, like /mnt/usb/ticketman:/backups, once it's owned by uid 10001

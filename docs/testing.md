@@ -247,7 +247,7 @@ and stops. Your user has to be able to run `docker`.
 
 To try the apps by hand against the same setup, [`scripts/docker_local.sh`](../scripts/docker_local.sh) starts it as
 `ticketman-local` at `https://localhost:8443` and leaves it running, keeping its data between runs (`--down` removes
-it). It prints Caddy's CA fingerprint and the commands for the desktop client, either asking to trust the CA or
+it). A fresh one is filled with made up records to look around in (`SEED_TEST_DATA`; `--empty` skips that). It prints Caddy's CA fingerprint and the commands for the desktop client, either asking to trust the CA or
 trusting it already through `build/docker-truststore.p12`; a browser on the same machine opens the address and
 accepts its warning. Check the trust dialog, the "Not secure" warning (connect to `http://<this machine's LAN
 address>:8080` from `:server:run`), and that the client keeps connecting after Caddy renews its certificate.

@@ -180,13 +180,11 @@ fun Application.module() {
 
         ensureAdminExists(database, environment.config.propertyOrNull("env.adminPassword")?.getString().orEmpty())
 
-        val generateTestData = false
-
-        if (generateTestData) {
-            seedTestData(
-                database = database,
-                request = SeedRequest(tickets = 1000, customers = 400, inventory = 100, users = 25)
-            )
+        // SEED_TEST_DATA=true fills an empty database with made up records, to look the app over (scripts/docker_local.sh)
+        val seed = environment.config.propertyOrNull("env.seedTestData")?.getString()?.trim().toBoolean()
+        if (seed && database.ticketDatabase.count() == 0L) {
+            AppLogger.e("SERVER:Seed", "SEED_TEST_DATA is on, filling the empty database with made up records. Never on a shop's real server")
+            seedTestData(database = database, request = SeedRequest(tickets = 150, customers = 60, inventory = 40, users = 6))
         }
     }
 }

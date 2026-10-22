@@ -5,6 +5,7 @@
 #
 #   scripts/docker_local.sh              # builds the server (:server:installDist -PwithWeb) and the image, starts it
 #   scripts/docker_local.sh --no-build   # uses the server already in server/build/install/server
+#   scripts/docker_local.sh --empty      # without the made up records it's otherwise filled with on first start
 #   scripts/docker_local.sh --down       # stops it and deletes its data
 #
 # Settings, all optional: HTTPS_PORT (8443), HTTP_PORT (8082), SUBNET (172.30.82.0/24). See docs/testing.md
@@ -16,10 +17,14 @@ for arg in "$@"; do
     case "$arg" in
         --no-build) BUILD=false ;;
         --down) DOWN=true ;;
+        --empty) SEED=false ;;
         *) echo "Unknown option $arg" >&2; exit 2 ;;
     esac
 done
 
+# Made up customers, tickets, invoices and staff on first start, so there's something to look at. Only an empty
+# database is filled, so restarting keeps what's there
+export SEED_TEST_DATA="${SEED:-true}"
 export DOMAIN=localhost CERTIFICATE=private TZ="${TZ:-America/New_York}" ADMIN_PASSWORD=admin_pass
 export HTTPS_PORT="${HTTPS_PORT:-8443}" HTTP_PORT="${HTTP_PORT:-8082}" SUBNET="${SUBNET:-172.30.82.0/24}"
 BASE="https://localhost:$HTTPS_PORT"
@@ -65,7 +70,8 @@ fi
 
 cat <<EOF
 
-Running at $BASE (admin / admin_pass). Caddy's local CA fingerprint, which the apps ask you to check:
+Running at $BASE. Log in as admin / admin_pass$([[ "$SEED_TEST_DATA" == true ]] && echo ", tech / tech_pass (Normal) or clerk / clerk_pass (Restricted)").
+Caddy's local CA fingerprint, which the apps ask you to check:
 
     $FINGERPRINT
 

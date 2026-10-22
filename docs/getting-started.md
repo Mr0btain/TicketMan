@@ -134,7 +134,9 @@ scripts/docker_local.sh              # builds the server and image, starts both 
 scripts/docker_local.sh --down       # stops it and deletes its data
 ```
 
-It needs Docker and a user that can run it. Log in as admin / `admin_pass`. The script prints Caddy's CA fingerprint
+It needs Docker and a user that can run it. On first start it's filled with made up customers, tickets, invoices
+and staff (`SEED_TEST_DATA`, see [Configuration](configuration.md#seeding-on-start)); `--empty` starts a fresh one
+without them. Log in as admin / `admin_pass`, `tech` / `tech_pass` (Normal) or `clerk` / `clerk_pass` (Restricted). The script prints Caddy's CA fingerprint
 and how to connect: the desktop client with `./gradlew :composeApp:run -DticketmanDebug=true` asks to trust the CA,
 while `-PdevTrustStore=build/docker-truststore.p12` trusts it already, like a public certificate. A browser on the
 same machine opens `https://localhost:8443` and accepts its warning. `scripts/docker_smoke.sh` runs the automated

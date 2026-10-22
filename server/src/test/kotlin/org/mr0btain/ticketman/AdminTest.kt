@@ -292,8 +292,8 @@ class AdminTest {
         assertEquals(4, stats.recentTickets.size)
         assertEquals(2, stats.totalCustomers)
         assertEquals(3, stats.totalInventory)
-        // boss, tech and the admin made on start
-        assertEquals(3, stats.totalUsers)
+        // boss, tech, the admin made on start, and the seed's demo clerk (it has a tech already)
+        assertEquals(4, stats.totalUsers)
         assertEquals(1, stats.activeSessions)
     }
 
