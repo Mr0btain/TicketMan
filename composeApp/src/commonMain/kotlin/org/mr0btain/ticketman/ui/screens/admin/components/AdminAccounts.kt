@@ -4,11 +4,19 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.network.isNotFound
+import org.mr0btain.ticketman.components.print.PrintBlock
+import org.mr0btain.ticketman.components.print.PrintTemplates
+import org.mr0btain.ticketman.components.print.printDocument
+import org.mr0btain.ticketman.data.image.ImageVariant
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.asEmptyDataResult
+import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.server.request.InviteRequest
 import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.server.response.PendingUserResponse
@@ -167,6 +175,54 @@ class AdminAccounts(
     fun resetPin(user: User) {
         scope.launch {
             support.report(users.resetPin(user.identifier), "Cleared ${user.username}'s PIN") {
+                onUsersChanged(user.identifier)
+            }
+        }
+    }
+
+    // ------------------------------------------ Photo and ID card ------------------------------------------
+
+    /** Sets [user]'s profile photo, one just uploaded, or takes it off with null */
+    fun setPhoto(user: User, photo: StoredImage?) {
+        scope.launch {
+            support.report(users.setPhoto(user.identifier, photo).asEmptyDataResult(), if (photo == null) "Took ${user.username}'s photo off" else "Saved ${user.username}'s photo") {
+                onUsersChanged(user.identifier)
+            }
+        }
+    }
+
+    /** Prints [user]'s ID card on the shop's default paper, making them a code first if they have none */
+    fun printIdCard(user: User) {
+        val onResult: (String?) -> Unit = { problem -> problem?.let { support.notify("Couldn't print the card: $it") } }
+
+        scope.launch {
+            val code = when (val existing = users.getBadge(user.identifier)) {
+                is TmResult.Success -> existing.data.code
+                is TmResult.Error -> {
+                    if (!existing.error.isNotFound) return@launch onResult(existing.error.message)
+
+                    when (val issued = users.issueBadge(user.identifier)) {
+                        is TmResult.Success -> issued.data.code.also { onUsersChanged(user.identifier) }
+                        is TmResult.Error -> return@launch onResult(issued.error.message)
+                    }
+                }
+            }
+
+            val shop = remoteHandler.adminRepo.getShopProfile() ?: ShopProfile()
+            // A card without the photo beats no card, so a photo that won't load is left off
+            val photo = user.photo?.let { image ->
+                remoteHandler.imageRepo.bytes(image.identifier, ImageVariant.DISPLAY).getOrNull()
+                    ?.let { PrintBlock.Photo(it, image.aspectRatio ?: 1f) }
+            }
+
+            onResult(printDocument(PrintTemplates.idCard(shop, user, code, photo), shop.defaultPaper))
+        }
+    }
+
+    /** Gives [user] a new ID card code, so a lost card stops working. Print the card again after */
+    fun newBadge(user: User) {
+        scope.launch {
+            support.report(users.issueBadge(user.identifier).asEmptyDataResult(), "New card code for ${user.username}, print their card again") {
                 onUsersChanged(user.identifier)
             }
         }

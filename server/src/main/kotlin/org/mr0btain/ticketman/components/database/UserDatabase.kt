@@ -15,13 +15,16 @@ import org.jetbrains.exposed.v1.jdbc.SizedCollection
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.components.service.PasswordHasher
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.user.AccessLevel
+import org.mr0btain.ticketman.data.user.BadgeCode
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -31,6 +34,7 @@ import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
 import org.mr0btain.ticketman.logging.AppLogger
+import java.security.SecureRandom
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -49,6 +53,8 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
     private val SET_PIN_TAG = "$tag:SetPin"
     private val CHECK_PIN_TAG = "$tag:CheckPin"
     private val GET_PIN_USERS_TAG = "$tag:GetPinUsers"
+    private val SET_PHOTO_TAG = "$tag:SetPhoto"
+    private val BADGE_TAG = "$tag:Badge"
 
     /** Any active admin, null when there are none */
     fun getAdmin(): User? =
@@ -96,10 +102,49 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             UserNoteTable.deleteWhere { UserNoteTable.user eq identifier }
             UserTicketTable.deleteWhere { UserTicketTable.user eq identifier }
             deleteNotes(notes)
+            markImagesDeleted(listOfNotNull(userEntity.photo?.let { ImageEntity.findById(it) }))
 
             userEntity.delete()
             true
         }
+
+    /**
+     * Makes [photo] the user's profile photo, or takes it off when null. Only one just uploaded or the one they have
+     * is taken (see [linkImages]); the one it replaces is marked deleted
+     * @return Whether the user was found
+     */
+    fun setPhoto(identifier: Uuid, photo: StoredImage?): Boolean =
+        dbWrite(SET_PHOTO_TAG) {
+            val userEntity = UserEntity.findById(identifier)
+                ?: return@dbWrite false.also { AppLogger.i(SET_PHOTO_TAG, UserError.NOT_FOUND) }
+
+            val current = listOfNotNull(userEntity.photo?.let { ImageEntity.findById(it) })
+            userEntity.photo = linkImages(listOfNotNull(photo), current).firstOrNull()?.id?.value
+            true
+        }
+
+    /** The user's ID card code, null when they have none or aren't there */
+    fun badgeCode(identifier: Uuid): String? =
+        dbQuery(BADGE_TAG) { UserEntity.findById(identifier)?.badgeCode }
+
+    /**
+     * Gives the user a new ID card code, which stops the old card working
+     * @return The code, null when the user isn't there
+     */
+    fun issueBadge(identifier: Uuid): String? {
+        val code = newBadgeCode()
+        val saved = dbWrite(BADGE_TAG) {
+            val userEntity = UserEntity.findById(identifier) ?: return@dbWrite false
+            userEntity.badgeCode = code
+            true
+        }
+        return code.takeIf { saved }
+    }
+
+    private fun newBadgeCode(): String {
+        val random = SecureRandom()
+        return (1..BadgeCode.LENGTH).map { BadgeCode.ALPHABET[random.nextInt(BadgeCode.ALPHABET.length)] }.joinToString("")
+    }
 
     override fun search(query: String, limit: Int): List<SearchResult>? =
         dbQuery(SEARCH_TAG) {

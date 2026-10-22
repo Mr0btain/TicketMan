@@ -24,6 +24,8 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.UserPaths
+import org.mr0btain.ticketman.server.request.UserPhotoRequest
+import org.mr0btain.ticketman.server.response.BadgeResponse
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -161,6 +163,57 @@ fun Route.userRoute(
             } else {
                 call.respond(HttpStatusCode.NotFound)
             }
+        }
+    }
+
+    // ------------------------------------------ Photo and ID card ------------------------------------------
+
+    authenticate {
+        // A profile photo: admins set anyone's, everyone else only their own. Restricted users can't upload one
+        post(UserPaths.SET_PHOTO) {
+            val identifier = call.uuidParameter("identifier")
+            val caller = call.getIdentifierFromToken()
+            val request = call.receive<UserPhotoRequest>()
+
+            if (identifier == null || caller == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            if (identifier != caller && database.getById(caller)?.canAccess(AccessLevel.ADMIN) != true) {
+                call.respond(HttpStatusCode.Forbidden, "Only admins can change someone else's photo")
+                return@post
+            }
+
+            if (!database.setPhoto(identifier, request.photo)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, if (request.photo == null) "Took the photo off" else "Set the photo")
+            call.respond(HttpStatusCode.OK, database.getById(identifier)!!.withoutPassword())
+        }
+    }
+
+    authenticate("admin") {
+        get(UserPaths.BADGE) {
+            val code = call.uuidParameter("identifier")?.let { database.badgeCode(it) }
+
+            if (code == null) call.respond(HttpStatusCode.NotFound) else call.respond(HttpStatusCode.OK, BadgeResponse(code))
+        }
+
+        // A new code, so the old card stops working
+        post(UserPaths.BADGE) {
+            val identifier = call.uuidParameter("identifier")
+            val code = identifier?.let { database.issueBadge(it) }
+
+            if (code == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "New ID card code")
+            call.respond(HttpStatusCode.Created, BadgeResponse(code))
         }
     }
 

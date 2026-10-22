@@ -11,6 +11,9 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.ui.kit.images.TmAvatar
+import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.log_in
 import ticketman.composeapp.generated.resources.log_out
@@ -23,6 +26,7 @@ import ticketman.composeapp.generated.resources.user
  * @param apiMismatch Why this app and the server may not work together, null when they're the same version
  * @param connectionProblem Why the server address didn't connect, null when it did
  * @param insecureWarning Why the connection isn't safe, null unless it's plain HTTP
+ * @param onPhotoChange Sets their own profile photo, null for Restricted users, who can't
  */
 @Composable
 fun AccountPanel(
@@ -32,7 +36,8 @@ fun AccountPanel(
     modifier: Modifier = Modifier,
     apiMismatch: String? = null,
     connectionProblem: String? = null,
-    insecureWarning: String? = null
+    insecureWarning: String? = null,
+    onPhotoChange: ((StoredImage?) -> Unit)? = null
 ) {
     TmPanel(modifier = modifier.fillMaxWidth(), title = "Account", icon = Res.drawable.user) {
         connectionProblem?.let { TmNotice(kind = TmNoticeKind.ERROR, title = "Can't connect", text = it) }
@@ -46,13 +51,26 @@ fun AccountPanel(
                 trailing = { TmButton(text = "Log in", onClick = onLogin, leadingIcon = Res.drawable.log_in) }
             )
         } else {
+            val name = user.name.trim().ifBlank { user.username }
+
             TmListRow(
-                title = user.name.trim().ifBlank { user.username },
+                title = name,
                 subtitle = "${user.username}, ${formatEnumName(user.accessLevel.name)} access",
+                leading = { TmAvatar(name = name, photo = user.photo) },
                 trailing = {
                     TmButton(text = "Log out", onClick = onLogout, variant = TmButtonVariant.SECONDARY, leadingIcon = Res.drawable.log_out)
                 }
             )
+
+            // Shown on the admin screen, the user menu and their ID card
+            onPhotoChange?.let { change ->
+                TmPhotoEditor(
+                    images = listOfNotNull(user.photo),
+                    onAdd = { change(it) },
+                    onRemove = { change(null) },
+                    buttonText = if (user.photo == null) "Add your photo" else "Change your photo"
+                )
+            }
         }
     }
 }

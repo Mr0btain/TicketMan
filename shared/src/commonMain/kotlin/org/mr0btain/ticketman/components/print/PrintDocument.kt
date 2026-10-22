@@ -37,6 +37,13 @@ sealed interface PrintBlock {
     /** Centered QR code */
     data class Qr(val text: String) : PrintBlock
 
+    /**
+     * Centered photo, like the face on an ID card, about the size of a [Qr]
+     * @param jpeg The picture, as the server's `display` variant
+     * @param aspectRatio Width over height
+     */
+    class Photo(val jpeg: ByteArray, val aspectRatio: Float) : PrintBlock
+
     data class Signature(
         val strokes: List<List<SignaturePoint>>,
         val aspectRatio: Float,

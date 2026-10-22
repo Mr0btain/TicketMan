@@ -28,6 +28,9 @@ import org.mr0btain.ticketman.server.response.LoginLimitsResponse
 import org.mr0btain.ticketman.server.response.LoginLock
 import org.mr0btain.ticketman.server.response.LoginLockKind
 import org.mr0btain.ticketman.server.request.LoginUnlockRequest
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.server.response.BadgeResponse
+import org.mr0btain.ticketman.components.network.isNotFound
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -63,6 +66,7 @@ class AdminRemoteRepositoryTest {
     private val runningBackup = BackupJob(id = "j1", state = BackupJobState.RUNNING, startedAt = 1)
     private val restoreBodies = mutableListOf<Pair<String, ByteArray>>()
     private val unlockBodies = mutableListOf<String>()
+    private val userId = Uuid.parse("00000000-0000-7000-8000-0000000000aa")
 
     private val json = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
@@ -109,6 +113,9 @@ class AdminRemoteRepositoryTest {
             "/api/shop" -> respond(Json.encodeToString(ShopProfile(name = "Shop")), HttpStatusCode.OK, json)
             "/api/user/me" -> respond(Json.encodeToString(User(username = "me")), HttpStatusCode.OK, json)
             "/api/user/add" -> respond("Username is already taken", HttpStatusCode.Conflict)
+            "/api/user/set/photo/$userId" -> respond(Json.encodeToString(User(identifier = userId, username = "me", photo = StoredImage(identifier = userId))), HttpStatusCode.OK, json)
+            "/api/user/badge/$userId" -> if (request.method == HttpMethod.Get) respond("", HttpStatusCode.NotFound)
+                else respond(Json.encodeToString(BadgeResponse("7K3M9QPA2BCDEFGH")), HttpStatusCode.Created, json)
             else -> respond("", HttpStatusCode.Accepted)
         }
     }
@@ -127,6 +134,18 @@ class AdminRemoteRepositoryTest {
 
         assertEquals(3, stats?.openTickets)
         assertEquals("GET /api/admin/stats?lowStock=7&recent=3", requests.single())
+    }
+
+    @Test
+    fun photosAndBadgesUseTheUserRoutes() = runTest {
+        val saved = assertIs<TmResult.Success<User>>(users.setPhoto(userId, StoredImage(identifier = userId)))
+        assertEquals(userId, saved.data.photo?.identifier)
+
+        val none = assertIs<TmResult.Error<ServerError>>(users.getBadge(userId))
+        assertTrue(none.error.isNotFound)
+        assertEquals("7K3M9QPA2BCDEFGH", assertIs<TmResult.Success<BadgeResponse>>(users.issueBadge(userId)).data.code)
+
+        assertEquals(listOf("POST /api/user/set/photo/$userId", "GET /api/user/badge/$userId", "POST /api/user/badge/$userId"), requests)
     }
 
     @Test

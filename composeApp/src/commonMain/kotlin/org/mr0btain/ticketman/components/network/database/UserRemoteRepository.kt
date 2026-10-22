@@ -25,6 +25,9 @@ import org.mr0btain.ticketman.server.request.PasswordResetRequest
 import org.mr0btain.ticketman.server.request.SetPinRequest
 import org.mr0btain.ticketman.server.response.InviteResponse
 import org.mr0btain.ticketman.server.response.PendingUserResponse
+import org.mr0btain.ticketman.data.image.StoredImage
+import org.mr0btain.ticketman.server.request.UserPhotoRequest
+import org.mr0btain.ticketman.server.response.BadgeResponse
 import kotlin.uuid.Uuid
 
 @Suppress("PrivatePropertyName")
@@ -44,6 +47,8 @@ class UserRemoteRepository(
     private val REJECT_TAG = "$tag:Reject"
     private val INVITE_TAG = "$tag:Invite"
     private val PIN_TAG = "$tag:Pin"
+    private val PHOTO_TAG = "$tag:Photo"
+    private val BADGE_TAG = "$tag:Badge"
 
     /** The logged in user */
     suspend fun getMe(): User? {
@@ -176,6 +181,41 @@ class UserRemoteRepository(
         }
 
         return handleDataHttpResponse(INVITE_TAG, response)
+    }
+
+    /**
+     * Sets a user's profile photo, one just uploaded or the one they have, or takes it off with null. Admins for
+     * anyone, everyone else for themselves
+     * @return The user with the photo
+     */
+    suspend fun setPhoto(identifier: Uuid, photo: StoredImage?): TmResult<User, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkRequest(PHOTO_TAG) {
+            client.post {
+                url("$serverUrl${UserPaths.SET_PHOTO.fill(identifier)}")
+                contentType(ContentType.Application.Json)
+                setBody(UserPhotoRequest(photo))
+            }
+        }
+
+        return handleDataHttpResponse(PHOTO_TAG, response)
+    }
+
+    /** Admin only: the user's ID card code, `NOT_FOUND` when they don't have one yet */
+    suspend fun getBadge(identifier: Uuid): TmResult<BadgeResponse, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkRequest(BADGE_TAG) { client.get { url("$serverUrl${UserPaths.BADGE.fill(identifier)}") } }
+        return handleDataHttpResponse(BADGE_TAG, response)
+    }
+
+    /** Admin only: a new ID card code, which stops the old card working */
+    suspend fun issueBadge(identifier: Uuid): TmResult<BadgeResponse, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkRequest(BADGE_TAG) { client.post { url("$serverUrl${UserPaths.BADGE.fill(identifier)}") } }
+        return handleDataHttpResponse(BADGE_TAG, response)
     }
 
     /** New setup code for an invite, the old one stops working */

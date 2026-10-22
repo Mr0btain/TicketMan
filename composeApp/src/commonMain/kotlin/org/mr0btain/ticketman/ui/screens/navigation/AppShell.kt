@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.navigation
 
+import androidx.compose.foundation.clickable
+import org.mr0btain.ticketman.ui.kit.images.TmAvatar
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
@@ -154,9 +156,14 @@ private fun UserMenu(user: User, expanded: Boolean, onOpenSettings: () -> Unit, 
 
     Box {
         if (expanded) {
-            TmListRow(title = name, subtitle = user.username, icon = Res.drawable.user, onClick = { open = true })
+            TmListRow(title = name, subtitle = user.username, leading = { TmAvatar(name = name, photo = user.photo, size = 28.dp) }, onClick = { open = true })
         } else {
-            TmIconButton(icon = Res.drawable.user, contentDescription = "Signed in as $name", onClick = { open = true })
+            TmAvatar(
+                name = name,
+                photo = user.photo,
+                modifier = Modifier.clickable(onClickLabel = "Signed in as $name, open the menu") { open = true },
+                size = 36.dp
+            )
         }
 
         TmMenu(expanded = open, onDismissRequest = { open = false }) {

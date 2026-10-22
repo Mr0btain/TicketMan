@@ -242,7 +242,9 @@ class LocalDatabase (
             UserTable.needsSetup to "DEFAULT FALSE NOT NULL",
             UserTable.pinHash to "DEFAULT '' NOT NULL",
             UserTable.pinFailedAttempts to "DEFAULT 0 NOT NULL",
-            UserTable.pinLocked to "DEFAULT FALSE NOT NULL"
+            UserTable.pinLocked to "DEFAULT FALSE NOT NULL",
+            UserTable.photo to "NULL",
+            UserTable.badgeCode to "NULL"
         ).forEach { (column, constraints) ->
             exec(
                 "ALTER TABLE ${identity(UserTable)} ADD COLUMN IF NOT EXISTS " +

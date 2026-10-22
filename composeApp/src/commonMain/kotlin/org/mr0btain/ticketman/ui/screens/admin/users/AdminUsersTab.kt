@@ -39,6 +39,10 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.user
 import ticketman.composeapp.generated.resources.users
+import org.mr0btain.ticketman.ui.kit.images.TmAvatar
+import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
+import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
+import ticketman.composeapp.generated.resources.printer
 import kotlin.uuid.Uuid
 
 private val COLUMNS = listOf(
@@ -77,7 +81,10 @@ fun AdminUsersTab(
     onResetPin: () -> Unit,
     onSaveNote: (Note) -> Unit,
     onRemoveNote: (Uuid) -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onSetPhoto: (StoredImage?) -> Unit = {},
+    onPrintIdCard: () -> Unit = {},
+    onNewBadge: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier.fillMaxSize(),
@@ -123,7 +130,10 @@ fun AdminUsersTab(
                         onUnlockPin = onUnlockPin,
                         onResetPin = onResetPin,
                         onSaveNote = onSaveNote,
-                        onRemoveNote = onRemoveNote
+                        onRemoveNote = onRemoveNote,
+                        onSetPhoto = onSetPhoto,
+                        onPrintIdCard = onPrintIdCard,
+                        onNewBadge = onNewBadge
                     )
                 }
             )
@@ -150,7 +160,10 @@ private fun UserListPane(
         items(userList, key = { it.identifier }) { user ->
             TmTableRow(COLUMNS, selected = selected == user.identifier, onClick = { onClick(user.identifier) }) { column ->
                 when (column) {
-                    0 -> Text(user.username, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    0 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                        TmAvatar(name = user.name.ifBlank { user.username }, photo = user.photo, size = 24.dp)
+                        Text(user.username, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     1 -> Text(user.name, style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     2 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs), verticalAlignment = Alignment.CenterVertically) {
                         UserStateChip(user)
@@ -175,7 +188,10 @@ private fun UserInfoPane(
     onUnlockPin: () -> Unit,
     onResetPin: () -> Unit,
     onSaveNote: (Note) -> Unit,
-    onRemoveNote: (Uuid) -> Unit
+    onRemoveNote: (Uuid) -> Unit,
+    onSetPhoto: (StoredImage?) -> Unit,
+    onPrintIdCard: () -> Unit,
+    onNewBadge: () -> Unit
 ) {
     val user = seed.user
     val isActive = user.status == UserStatus.ACTIVE
@@ -183,6 +199,23 @@ private fun UserInfoPane(
     // The seed doesn't carry PIN state, the listed copy does
     val hasPin = listed?.hasPin == true
     val pinLocked = listed?.pinLocked == true
+    val photo = listed?.photo ?: user.photo
+    val hasBadge = listed?.hasBadge == true
+    var confirmNewBadge by remember { mutableStateOf(false) }
+
+    if (confirmNewBadge) {
+        TmConfirmDialog(
+            title = "New card code for ${user.username}?",
+            message = "Their printed ID card stops working. Print them a new one afterwards.",
+            confirmText = "Make new code",
+            destructive = true,
+            onConfirm = {
+                onNewBadge()
+                confirmNewBadge = false
+            },
+            onDismissRequest = { confirmNewBadge = false }
+        )
+    }
 
     RecordDetail(
         title = user.name.ifBlank { user.username },
@@ -232,6 +265,32 @@ private fun UserInfoPane(
                         onClick = { onSetActive(!isActive) },
                         variant = if (isActive) TmButtonVariant.DANGER else TmButtonVariant.PRIMARY
                     )
+                }
+            }
+        }
+
+        DetailSection("Photo and ID card") {
+            Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md), verticalAlignment = Alignment.CenterVertically) {
+                    TmAvatar(name = user.name.ifBlank { user.username }, photo = photo, size = 72.dp)
+                    TmPhotoEditor(
+                        modifier = Modifier.weight(1f),
+                        images = listOfNotNull(photo),
+                        onAdd = { onSetPhoto(it) },
+                        onRemove = { onSetPhoto(null) },
+                        buttonText = if (photo == null) "Add photo" else "Change photo"
+                    )
+                }
+
+                Text(
+                    text = if (hasBadge) "Has an ID card. Its QR will clock them in once that's built."
+                        else "No ID card yet, printing one makes its code.",
+                    style = TmTheme.typography.caption,
+                    color = TmTheme.colors.textMuted
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                    TmButton(text = "Print ID card", onClick = onPrintIdCard, variant = TmButtonVariant.SECONDARY, leadingIcon = Res.drawable.printer)
+                    if (hasBadge) TmButton(text = "New card code", onClick = { confirmNewBadge = true }, variant = TmButtonVariant.SECONDARY)
                 }
             }
         }

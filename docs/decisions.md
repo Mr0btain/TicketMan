@@ -235,6 +235,17 @@ an admin can lift one.
 **Costs:** a restart clears the counts. Behind a reverse proxy they rely on its `X-Forwarded-For`, believed only
 from `TRUSTED_PROXIES`; a proxy outside that list makes every device count as one. A username's limit can be used to keep that user out of password login for a while.
 
+### ID cards hold their own code, not the user's id
+
+**Chosen:** a user's ID card QR holds a random badge code (`TMBADGE:` and 16 characters), kept on the user and only
+readable by admins, rather than their user id.
+
+**Why:** a lost card is cancelled by making a new code, without touching the account. A user's id is in tokens, the
+audit log and every reference to them, so it can't be changed, and a card holding it could never be cancelled.
+
+**Costs:** one more thing to keep secret-ish, though a QR on a card is visible to anyone who sees the card. When
+clocking in is built, scanning a card should still need something else (the kiosk's station) before trusting it.
+
 ## The client
 
 ### Client-made ids

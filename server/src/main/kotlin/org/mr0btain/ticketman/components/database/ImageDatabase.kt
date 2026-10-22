@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.image.ImageStatus
 import org.mr0btain.ticketman.components.database.tables.image.ImageTable
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryImageTable
+import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.note.NoteImageTable
 import org.mr0btain.ticketman.components.image.ImageProcessor
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -92,7 +93,8 @@ class ImageDatabase(private val recordDatabases: () -> List<Database<*>>) {
 
     /**
      * Housekeeping, run every so often:
-     * 1. Linked photos nothing points at any more (their note's record was deleted) become deleted
+     * 1. Linked photos nothing points at any more (their note's record was deleted) become deleted. A note, an
+     *    inventory item or a user's profile photo counts
      * 2. Photos deleted or left pending for longer than [graceMillis] lose their rows
      * @return Ids whose files should now be removed
      */
@@ -123,6 +125,8 @@ class ImageDatabase(private val recordDatabases: () -> List<Database<*>>) {
                 if (row[NoteImageTable.note].value in attachedNotes) add(row[NoteImageTable.image].value)
             }
             addAll(InventoryImageTable.select(InventoryImageTable.image).map { it[InventoryImageTable.image].value })
+            // Profile photos
+            addAll(UserTable.select(UserTable.photo).mapNotNull { it[UserTable.photo] })
         }
 
         val unreferenced = ImageTable.select(ImageTable.id)

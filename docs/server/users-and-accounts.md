@@ -100,6 +100,8 @@ All under `/api/user`, admin only unless noted:
 | `POST /me/pin` | Change your own PIN, checked against your password (Restricted and up) |
 | `POST /pin/{id}/unlock`, `DELETE /pin/{id}` | Unlock a locked PIN; clear someone's PIN |
 | Staff notes (`/add/note/{id}`, ...) | Notes on a user, like training or schedule. Admin only to read and write |
+| `POST /set/photo/{id}` | A profile photo (`UserTable.photo`). Admins for anyone, Normal users for themselves |
+| `GET`, `POST /badge/{id}` | The ID card code (`UserTable.badgeCode`), and a new one that cancels the old card |
 
 Rules `update` and `remove` enforce:
 
@@ -109,6 +111,17 @@ Rules `update` and `remove` enforce:
 - Changing a user to anything but `ACTIVE` ends their sessions.
 
 Every change is written to the audit log.
+
+### Photo and ID card
+
+A user's profile photo is an ordinary uploaded photo, linked through `linkImages` like a note's, so only one just
+uploaded or the one they have can be set. `UserTable.photo` points at it; the sweep counts it as in use, and deleting
+the user marks it deleted. It's shown on the admin Users tab, the user menu, Settings > Account and the ID card,
+not on the kiosk's PIN screen, which has no session to fetch photos with.
+
+The ID card code is random and separate from the user's id (`BadgeCode`), so a lost card is cancelled by making a
+new code, and the card shows nothing else about the user. Only admins can read it. Printing a card for someone
+without one makes it.
 
 ## The first admin
 

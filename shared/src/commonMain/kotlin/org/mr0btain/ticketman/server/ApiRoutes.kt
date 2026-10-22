@@ -100,6 +100,12 @@ object UserPaths {
     const val INVITE = "/invite"
     const val INVITE_RENEW = "/invite/{identifier}/renew"
     const val PASSWORD = "/password/{identifier}"
+
+    /** Body `UserPhotoRequest`. Admins for anyone, Normal users for themselves */
+    const val SET_PHOTO = "/set/photo/{identifier}"
+
+    /** Admin only: `GET` the ID card code, `POST` a new one, which cancels the old card */
+    const val BADGE = "/badge/{identifier}"
 }
 
 /** Logging in is a POST to [ApiRoutes.AUTH] itself */

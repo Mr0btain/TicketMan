@@ -89,6 +89,38 @@ Changes everything but the password. Making someone anything other than `ACTIVE`
 - **`409`** the username is taken, you changed your own access or status, or it would leave no active admin.
 - **`404`** no such user.
 
+A user's `photo` (their profile photo as a `StoredImage`) and `hasBadge` come back on every read; `update` ignores
+both, they're changed below.
+
+### `POST /api/user/set/photo/{identifier}`
+
+**Auth:** normal. Admins for anyone, everyone else only themselves
+
+Sets the profile photo, one just uploaded or the one they have (see [Photos](../server/photos.md#2-linking)), or
+takes it off. The one it replaces goes with a later sweep. Audited.
+
+- **Body:** `UserPhotoRequest { photo }`, null to take it off.
+- **`200`** the `User` with its photo (password blanked). A photo that's neither theirs nor just uploaded is left
+  off rather than refused.
+- **`403`** someone else's, and not an admin. **`404`** no such user.
+
+### `GET /api/user/badge/{identifier}`
+
+**Auth:** admin
+
+The user's ID card code, which their card's QR holds as `TMBADGE:<code>` (`BadgeCode` in shared). Nothing scans it
+yet; clocking in will.
+
+- **`200`** `BadgeResponse { code }`. **`404`** no such user, or they have no code yet.
+
+### `POST /api/user/badge/{identifier}`
+
+**Auth:** admin
+
+Makes a new random code (16 characters of Crockford base 32), which stops their old card working. Audited.
+
+- **`201`** `BadgeResponse { code }`. **`404`** no such user.
+
 ### `POST /api/user/password/{identifier}`
 
 **Auth:** admin

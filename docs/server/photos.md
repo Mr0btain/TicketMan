@@ -87,7 +87,8 @@ see it. Because a photo's bytes never change, files are sent with
 Nothing deletes photo files directly. Code marks rows deleted (`markImagesDeleted()`, or `linkImages` dropping them)
 and `ImageService.sweep()` does the rest. It runs every hour from `Application.module()`:
 
-1. `LINKED` photos that nothing points at any more (their note's record was deleted) are marked `DELETED`.
+1. `LINKED` photos that nothing points at any more (their note's record was deleted) are marked `DELETED`. A note,
+   an inventory item or a user's profile photo (`UserTable.photo`) counts as pointing at one.
 2. `PENDING` and `DELETED` photos older than 24 hours lose their rows and their files.
 3. Photo folders with no row at all, older than an hour, are removed. They're left by a crash between writing the
    files and inserting the row.

@@ -11,6 +11,8 @@ import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.data.user.BadgeCode
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.server.response.DailyReport
@@ -219,6 +221,29 @@ object PrintTemplates {
             PrintBlock.Divider,
             signature.terms.takeIf { it.isNotBlank() }?.let { PrintBlock.Text(it, small = true) },
             PrintBlock.Signature(signature.strokes, signature.aspectRatio, "${signature.signedName}, ${formatDateTime(signature.signedAt)}")
+        )
+    }
+
+    /**
+     * A staff member's ID card: the shop, their photo, name and username, and the QR with their badge code, for
+     * clocking in once that's built. Prints on either paper; a receipt makes a strip about card width
+     * @param photo Their profile photo, null to leave it off
+     */
+    fun idCard(shop: ShopProfile, user: User, badgeCode: String, photo: PrintBlock.Photo?): PrintDocument {
+        val name = user.name.trim().ifBlank { user.username }
+
+        return PrintDocument(
+            "ID card $name",
+            listOfNotNull(
+                PrintBlock.Heading(shop.name.ifBlank { "Staff" }),
+                PrintBlock.Divider,
+                photo,
+                PrintBlock.Heading(name, large = true),
+                PrintBlock.Text(user.username, centered = true),
+                PrintBlock.Gap,
+                PrintBlock.Qr(BadgeCode.qrText(badgeCode)),
+                PrintBlock.Text(BadgeCode.readable(badgeCode), small = true, centered = true)
+            )
         )
     }
 }

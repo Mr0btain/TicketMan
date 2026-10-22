@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.user
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.MainItem
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -25,7 +26,11 @@ data class User(
     /** Has a PIN for stations, the PIN itself never leaves the server */
     val hasPin: Boolean = false,
     /** Too many wrong PINs, an admin has to unlock it */
-    val pinLocked: Boolean = false
+    val pinLocked: Boolean = false,
+    /** Their profile photo, set by an admin or themselves. Not changed by an update, see `/api/user/set/photo` */
+    val photo: StoredImage? = null,
+    /** Has an ID card code, the code itself only goes to admins */
+    val hasBadge: Boolean = false
 ): MainItem() {
     /** Active, set up, with a real access level. The only kind of user that can do anything */
     fun canAccess(minimum: AccessLevel): Boolean =

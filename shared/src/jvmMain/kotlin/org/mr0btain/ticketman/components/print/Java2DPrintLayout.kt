@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.print
 
+import java.io.ByteArrayInputStream
+import javax.imageio.ImageIO
 import org.mr0btain.ticketman.data.shop.PaperSize
 import java.awt.BasicStroke
 import java.awt.Color
@@ -134,6 +136,7 @@ class Java2DPrintLayout(
         PrintBlock.Divider -> listOf(divider())
         PrintBlock.Gap -> listOf(Item(baseSize * 0.6) { _, _ -> })
         is PrintBlock.Qr -> listOf(qr(block.text))
+        is PrintBlock.Photo -> listOfNotNull(photo(block))
         is PrintBlock.Signature -> listOf(signature(block)) + textLines(block.caption, small, centered = true)
     }
 
@@ -252,6 +255,26 @@ class Java2DPrintLayout(
             }
 
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, smoothing)
+        }
+    }
+
+    /** Null when the bytes aren't a picture, so a bad photo leaves a gap rather than stopping the print */
+    private fun photo(block: PrintBlock.Photo): Item? {
+        val image = try {
+            ImageIO.read(ByteArrayInputStream(block.jpeg))
+        } catch (ex: Exception) {
+            null
+        } ?: return null
+
+        // As wide as a QR code, never taller than it is wide
+        val height = qrSize / block.aspectRatio.coerceAtLeast(1f)
+        val width = height * block.aspectRatio
+
+        return Item(height + 4) { g, y ->
+            val smoothing = g.getRenderingHint(RenderingHints.KEY_INTERPOLATION)
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR)
+            g.drawImage(image, ((contentWidth - width) / 2).toInt(), y.toInt(), width.toInt(), height.toInt(), null)
+            smoothing?.let { g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, it) }
         }
     }
 

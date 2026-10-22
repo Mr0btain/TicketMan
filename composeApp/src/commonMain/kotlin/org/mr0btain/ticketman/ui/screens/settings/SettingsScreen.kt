@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.settings
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
+import org.mr0btain.ticketman.data.user.AccessLevel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Arrangement
@@ -201,6 +204,7 @@ fun SettingsScreen(
     val apiMismatch = viewModel.session.apiMismatch.collectAsState()
     val connectionProblem = viewModel.session.connectionProblem.collectAsState()
     val insecureWarning = viewModel.session.insecureWarning.collectAsState()
+    val scope = rememberCoroutineScope()
 
     val account: @Composable () -> Unit = {
         AccountPanel(
@@ -209,7 +213,14 @@ fun SettingsScreen(
             onLogout = { viewModel.session.logout() },
             apiMismatch = apiMismatch.value,
             connectionProblem = connectionProblem.value,
-            insecureWarning = insecureWarning.value
+            insecureWarning = insecureWarning.value,
+            onPhotoChange = if (currentUser.value?.canAccess(AccessLevel.NORMAL) == true) {
+                { photo ->
+                    viewModel.session.setOwnPhoto(photo) { problem ->
+                        problem?.let { scope.launch { viewModel.snackBarHost.showSnackbar("Couldn't save your photo: $it") } }
+                    }
+                }
+            } else null
         )
     }
 

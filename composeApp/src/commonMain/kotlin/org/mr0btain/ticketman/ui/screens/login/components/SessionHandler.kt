@@ -16,6 +16,7 @@ import org.mr0btain.ticketman.components.network.UntrustedCertificate
 import org.mr0btain.ticketman.components.network.isSecureServerAddress
 import org.mr0btain.ticketman.components.network.trustAddressOf
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
+import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
@@ -189,6 +190,26 @@ class SessionHandler(
     fun dismissServerCertificate() {
         val certificate = untrustedCertificate.value ?: return
         dismissedCertificates.value += certificate.fingerprint
+    }
+
+    /**
+     * Sets the logged in user's own profile photo, one just uploaded, or takes it off with null
+     * @param onResult Gets null when saved, otherwise what went wrong
+     */
+    fun setOwnPhoto(photo: StoredImage?, onResult: (String?) -> Unit = {}) {
+        val user = _currentUser.value ?: return
+        if (!canEditNow()) return
+
+        scope.launch {
+            when (val result = remoteHandler.userRepo.setPhoto(user.identifier, photo)) {
+                is TmResult.Success -> {
+                    _currentUser.value = result.data
+                    onResult(null)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
     }
 
     /** Pulls the logged in user again, like after they were changed */

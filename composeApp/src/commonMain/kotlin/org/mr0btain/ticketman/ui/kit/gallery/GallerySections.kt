@@ -55,6 +55,7 @@ import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.data.TmCountBar
 import org.mr0btain.ticketman.ui.kit.images.TmImage
+import org.mr0btain.ticketman.ui.kit.images.TmAvatar
 import org.mr0btain.ticketman.ui.kit.data.TmStatTile
 import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
@@ -641,6 +642,13 @@ private fun PhotosSection() {
 
         Specimen("Editor, picked photos upload straight away") {
             TmPhotoEditor(modifier = Modifier.fillMaxWidth(), images = photos.take(2), onAdd = {}, onRemove = {})
+        }
+
+        Specimen("Avatars: a profile photo, or initials without one") {
+            TmAvatar(name = "Dana Whitfield", photo = photos.first())
+            TmAvatar(name = "Dana Whitfield", photo = null)
+            TmAvatar(name = "priya", photo = null)
+            TmAvatar(name = "Marcus Oyelaran", photo = null, size = 72.dp)
         }
     }
 }

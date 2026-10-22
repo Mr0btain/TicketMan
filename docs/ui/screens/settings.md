@@ -14,7 +14,7 @@ wider, one under the other on narrower ones.
 
 | Panel | Setting | What it does |
 |-------|---------|--------------|
-| **Account** | - | Who's signed in, with Log out, or Log in when nobody is. The only way to log in and out on phones, whose layout has no user menu (`AccountPanel`) |
+| **Account** | - | Who's signed in, with their avatar, and Log out, or Log in when nobody is. The only way to log in and out on phones, whose layout has no user menu (`AccountPanel`). Normal and Admin users add or change their own photo here (`session.setOwnPhoto`). Warnings for a different server version, a connection problem or plain HTTP sit above |
 | **Appearance** | Theme | Cards drawn in each palette's own colors (`TmPalettes.all`) |
 | | Mode | Dark or light |
 | | Font | `TmFonts.all` |

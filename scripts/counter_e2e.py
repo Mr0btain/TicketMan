@@ -202,10 +202,11 @@ step("Tech PINs back in and marks it ready; it shows in the ready-for-pickup que
 
 # ------------------------------------------ Pickup ------------------------------------------
 invoice = checked_in["invoice"]
-_, invoice = call("POST", f"/api/invoice/{invoice['identifier']}/update", {"charges": [
+# Only what changed since it was opened, which is two new lines (InvoiceChangeRequest)
+_, invoice = call("POST", f"/api/invoice/{invoice['identifier']}/update", {"added": [
     {"identifier": uid(), "type": "PART", "description": "iPhone 14 Screen", "quantity": 1.0, "unitPriceCents": 12000, "inventoryIdentifier": screen, "taxable": True},
     {"identifier": uid(), "type": "LABOR", "description": "Install", "quantity": 0.5, "unitPriceCents": 6000, "taxable": False}
-], "discountCents": 0}, pin, expect=200)
+], "discountWas": 0}, pin, expect=200)
 check(invoice["totalCents"] == 12000 + 990 + 3000, f"total was {invoice['totalCents']}")
 status, owed = call("POST", "/api/counter/pickup", {"ticketIdentifier": ticket_one["identifier"], "payments": [{"method": "CASH", "amountCents": 1000}]}, pin)
 check(status == 409 and "still owed" in owed, f"short pickup said {status} {owed}")

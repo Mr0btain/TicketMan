@@ -22,4 +22,8 @@ object UserTable : UuidTable("user") {
     val pinHash = text("pin_hash").default("")
     val pinFailedAttempts = integer("pin_failed_attempts").default(0)
     val pinLocked = bool("pin_locked").default(false)
+
+    // Profile photo (an image row) and ID card code, null when there's none
+    val photo = uuid("photo_id").nullable()
+    val badgeCode = text("badge_code").nullable()
 }

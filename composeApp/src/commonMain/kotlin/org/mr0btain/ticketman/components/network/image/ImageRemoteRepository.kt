@@ -29,6 +29,7 @@ class ImageRemoteRepository(
 ) : ServerRepository {
     private val TAG = "ImageRemoteRepository"
     private val UPLOAD_TAG = "$TAG:Upload"
+    private val BYTES_TAG = "$TAG:Bytes"
 
     private var baseUrl = ""
 
@@ -44,6 +45,12 @@ class ImageRemoteRepository(
     /** Where a photo's [variant] is fetched from, null with no server set */
     fun urlFor(identifier: Uuid, variant: ImageVariant): String? =
         if (baseUrl.isBlank()) null else "$imageUrl${ImagePaths.FILE.fill(identifier, variant.path)}"
+
+    /** A photo's [variant] as JPEG bytes, for printing it. Small enough to read whole */
+    suspend fun bytes(identifier: Uuid, variant: ImageVariant): TmResult<ByteArray, ServerError> {
+        val url = urlFor(identifier, variant) ?: return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+        return handleDataHttpResponse(BYTES_TAG, networkRequest(BYTES_TAG) { client.get(url) })
+    }
 
     /**
      * Sends a photo. It comes back pending, and is only kept once a note or item is saved with it

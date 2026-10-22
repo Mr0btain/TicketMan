@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.database.tables.user
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.dao.UuidEntity
 import org.jetbrains.exposed.v1.dao.UuidEntityClass
+import org.mr0btain.ticketman.components.database.tables.image.ImageEntity
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
 import org.mr0btain.ticketman.data.shared.EntityReference
@@ -26,6 +27,8 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var pinHash by UserTable.pinHash
     var pinFailedAttempts by UserTable.pinFailedAttempts
     var pinLocked by UserTable.pinLocked
+    var photo by UserTable.photo
+    var badgeCode by UserTable.badgeCode
 
     // For notes
     var notes by NoteEntity via UserNoteTable
@@ -45,7 +48,9 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             status = UserStatus.entries.firstOrNull { it.name == status } ?: UserStatus.ACTIVE,
             needsSetup = needsSetup,
             hasPin = pinHash.isNotBlank(),
-            pinLocked = pinLocked
+            pinLocked = pinLocked,
+            photo = photo?.let { ImageEntity.findById(it) }?.toStoredImage(),
+            hasBadge = badgeCode != null
         )
     }
 

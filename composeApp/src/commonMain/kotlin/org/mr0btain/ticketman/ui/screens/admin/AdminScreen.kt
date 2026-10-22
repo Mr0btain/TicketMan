@@ -278,6 +278,9 @@ private fun AdminContent(
                 onResetPin = { admin.accounts.resetPin(userSeed.user) },
                 onSaveNote = { note -> viewModel.users.saveNote(note) },
                 onRemoveNote = { identifier -> viewModel.users.removeNote(identifier) },
+                onSetPhoto = { photo -> admin.accounts.setPhoto(userSeed.user, photo) },
+                onPrintIdCard = { admin.accounts.printIdCard(users.value.firstOrNull { it.identifier == userSeed.identifier } ?: userSeed.user) },
+                onNewBadge = { admin.accounts.newBadge(userSeed.user) },
                 onDelete = { if (!userSeed.isNew) showDeleteDialog = true }
             )
 

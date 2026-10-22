@@ -36,6 +36,7 @@ is a title and a list of blocks, top to bottom:
 | `Amounts(rows)` | Rows with text on the left and an amount on the right, for invoice lines and totals |
 | `Divider`, `Gap` | A rule; some space |
 | `Qr(text)` | A centered QR code |
+| `Photo(jpeg, aspectRatio)` | A centered photo about the size of the QR, like the face on an ID card. Java2D decodes it and leaves it off if it can't; HTML inlines it as a data url |
 | `Signature(strokes, aspectRatio, caption)` | The customer's signature, drawn from its strokes |
 
 Blocks say what goes on the page, not where. Sizes, wrapping and page breaks are the platform's job.
@@ -51,8 +52,9 @@ Blocks say what goes on the page, not where. Sizes, wrapping and page breaks are
 | `receipt(shop, ticket, customer, invoice)` | Counter, after pickup | Shop header, charges, discount, tax, total, payments, change, invoice footer |
 | `invoice(shop, ticket, customer, invoice)` | The server, as a PDF (`GET /api/invoice/{id}/pdf`) | Like the receipt, with the status (due, paid, void), the customer's address, phone and email, and what's still owed |
 | `dailyReport(shop, report)` | Admin overview | The day's takings by payment method, sales, tax and ticket counts |
+| `idCard(shop, user, badgeCode, photo)` | Admin Users tab, **Print ID card** | Shop name, the profile photo (fetched as the `display` size, left off if it won't load), name large, username, and a QR of `TMBADGE:<code>` with the code under it in fours. On a receipt it makes a strip about card width |
 
-`CounterPrinter` (`counter.printer`) and `AdminHandler` build the document and call `printDocument(document, paper)`, with the paper
+`CounterPrinter` (`counter.printer`), `AdminHandler` and `AdminAccounts` (the ID card) build the document and call `printDocument(document, paper)`, with the paper
 size from the shop profile's default or the one picked.
 
 ## Platforms

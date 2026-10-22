@@ -6,6 +6,7 @@ import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.server.response.DailyReport
+import org.mr0btain.ticketman.data.user.User
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -102,5 +103,16 @@ class PrintTemplatesTest {
         assertTrue(AmountRow("Total taken (2 payments)", "$50.00", bold = true) in rows)
         assertTrue(AmountRow("Overdue now", "3") in rows)
         assertFalse(rows.any { it.label == "Check" }, "Methods with nothing taken are left off")
+    }
+
+    @Test
+    fun anIdCardHasTheBadgeAndThePhotoInline() {
+        val card = PrintTemplates.idCard(ShopProfile(name = "Bench"), User(username = "dana", name = "Dana Whitfield"), "7K3M9QPA2BCDEFGH", PrintBlock.Photo(byteArrayOf(1, 2, 3), 0.75f))
+        val html = HtmlPrintRenderer.render(card, PaperSize.LETTER)
+
+        assertTrue("data:image/jpeg;base64,AQID" in html)
+        assertTrue("7K3M-9QPA-2BCD-EFGH" in html)
+        assertTrue("Dana Whitfield" in html)
+        assertTrue(card.blocks.any { it is PrintBlock.Qr && it.text == "TMBADGE:7K3M9QPA2BCDEFGH" })
     }
 }

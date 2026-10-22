@@ -44,6 +44,7 @@ it can't disagree on the shape.
 | `StationRegistrationResponse` | Station register | The station and its credentials (the only time the secret is sent) |
 | `BackupTicket`, `BackupManifest`, `PendingRestore` | Backup and restore | Download link details; what's in a backup; a restore waiting for restart |
 | `ServerInfoResponse` | `/api/admin/server` | Name, version, uptime, data path and sizes, Java and OS, dev mode, backups, and the proxy diagnostics (`trustedProxies`, `clientAddress`, `forwarded`, `timeZone`) |
+| `UserPhotoRequest`, `BadgeResponse` | `/api/user/set/photo/{id}`, `/api/user/badge/{id}` | A profile photo to set; an ID card code (`BadgeCode` in shared builds and reads its QR text) |
 | `LoginLimitsResponse`, `LoginLock` | `/api/admin/logins` | Usernames and addresses locked out for wrong passwords, and whether the server wide ceiling is hit |
 
 `BackupManifest.CURRENT_FORMAT_VERSION` is the backup format. Bump it when the archive layout changes; the server

@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.components.print
 
 import org.mr0btain.ticketman.data.shop.PaperSize
+import kotlin.io.encoding.Base64
+import kotlin.io.encoding.ExperimentalEncodingApi
 
 /**
  * Turns a [PrintDocument] into a standalone HTML page sized for the paper, for printing through a browser or web view
@@ -35,7 +37,8 @@ object HtmlPrintRenderer {
               .row { display: flex; justify-content: space-between; margin: 0.1em 0; }
               hr { border: none; border-top: 1px dashed #000; margin: 0.6em 0; }
               .gap { height: 0.6em; }
-              .qr, .signature { display: block; margin: 0.4em auto; }
+              .qr, .signature, .photo { display: block; margin: 0.4em auto; }
+              .photo { object-fit: contain; }
               .signature { max-width: ${if (paper == PaperSize.LETTER) "4in" else "100%"}; }
               .caption { font-size: 0.85em; text-align: center; }
             </style>
@@ -66,7 +69,18 @@ object HtmlPrintRenderer {
         PrintBlock.Divider -> "<hr>"
         PrintBlock.Gap -> "<div class=\"gap\"></div>"
         is PrintBlock.Qr -> qrSvg(block.text, if (paper == PaperSize.LETTER) "1.4in" else "30mm")
+        is PrintBlock.Photo -> photoImg(block, if (paper == PaperSize.LETTER) "1.4in" else "30mm")
         is PrintBlock.Signature -> signatureSvg(block) + "<div class=\"caption\">${escape(block.caption)}</div>"
+    }
+
+    /** A photo inline as a data url, so the print frame needs nothing else loaded. As wide as a QR, never taller */
+    @OptIn(ExperimentalEncodingApi::class)
+    fun photoImg(block: PrintBlock.Photo, size: String): String {
+        val ratio = block.aspectRatio.coerceAtLeast(0.1f)
+        val width = if (ratio >= 1f) size else "calc($size * $ratio)"
+        val height = if (ratio >= 1f) "calc($size / $ratio)" else size
+        return "<img class=\"photo\" style=\"width: $width; height: $height\" alt=\"\" " +
+            "src=\"data:image/jpeg;base64,${Base64.encode(block.jpeg)}\">"
     }
 
     /** QR as one SVG path, with the quiet zone the spec asks for */

@@ -18,7 +18,7 @@ taking it out of that page's Known gaps. Things that aren't problems, just rules
       counter and the counter then saves, that new line is lost. Fix this so it can work together.
 - [x] Deleting a ticket deletes its invoice, even a paid one. We need to change this so paid invoices can stay indefinitely 
       and let admins decide if they should be removed or not.
-- [ ] Photos on users as well. The basic structure is there just needs added in. also an option to make a User ID with
+- [x] Photos on users as well. The basic structure is there just needs added in. also an option to make a User ID with
       a QR that we can use later when we add the ability to clock employees times.
 
 ## Phase 2: Android, and other machines

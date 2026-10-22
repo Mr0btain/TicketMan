@@ -8,6 +8,8 @@ import com.google.zxing.qrcode.QRCodeReader
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.user.BadgeCode
+import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.ticket.*
 import java.awt.Color
 import java.awt.image.BufferedImage
@@ -111,5 +113,31 @@ class Java2DPrintLayoutTest {
     fun deviceTagRendersOnAReceipt() {
         val layout = Java2DPrintLayout(PrintTemplates.deviceTag(ticket, Customer(name = "Jane Doe")), PaperSize.RECEIPT_80MM)
         assertEquals("26-00000042", scanQr(render(layout, PaperSize.RECEIPT_80MM)))
+    }
+
+    @Test
+    fun anIdCardShowsThePhotoAndAScannableBadge() {
+        // A solid red square, so it's easy to find on the page
+        val face = BufferedImage(300, 300, BufferedImage.TYPE_INT_RGB).apply {
+            createGraphics().apply { color = Color.RED; fillRect(0, 0, 300, 300) }
+        }
+        val jpeg = java.io.ByteArrayOutputStream().also { ImageIO.write(face, "jpg", it) }.toByteArray()
+        val user = User(username = "dana", name = "Dana Whitfield")
+        val code = "7K3M9QPA2BCDEFGH"
+
+        listOf(PaperSize.RECEIPT_80MM, PaperSize.LETTER).forEach { paper ->
+            val document = PrintTemplates.idCard(ShopProfile(name = "Bench Repair"), user, code, PrintBlock.Photo(jpeg, 1f))
+            val image = render(Java2DPrintLayout(document, paper), paper, scale = 3.0)
+
+            assertEquals(BadgeCode.qrText(code), scanQr(image))
+            val red = (0 until image.width step 4).sumOf { x ->
+                (0 until image.height step 4).count { y -> Color(image.getRGB(x, y)).let { it.red > 200 && it.green < 60 && it.blue < 60 } }
+            }
+            assertTrue(red > 50, "The photo is drawn on $paper")
+        }
+
+        // A photo that isn't a picture is left off rather than stopping the card
+        val broken = PrintTemplates.idCard(ShopProfile(), user, code, PrintBlock.Photo(byteArrayOf(1, 2, 3), 1f))
+        assertEquals(BadgeCode.qrText(code), scanQr(render(Java2DPrintLayout(broken, PaperSize.RECEIPT_80MM), PaperSize.RECEIPT_80MM)))
     }
 }
