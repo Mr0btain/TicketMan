@@ -87,6 +87,7 @@ import org.mr0btain.ticketman.server.response.ImportOutcome
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketInfoPane
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketWorkSection
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.PartLine
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.WorkDialog
 import org.mr0btain.ticketman.data.ticket.WorkEntry
 import org.mr0btain.ticketman.data.ticket.WorkType
@@ -583,6 +584,23 @@ class ScreenRenderTest {
         bothModes("records-ticket-work-dialog") {
             Shell("Records") {
                 WorkDialog(laborRateCents = 8_000, onPartSearch = { emptyList() }, onFindPart = { null }, onSave = { _, _ -> }, onDismissRequest = {})
+            }
+        }
+
+        bothModes("records-ticket-work-dialog-parts") {
+            Shell("Records") {
+                WorkDialog(
+                    laborRateCents = 8_000,
+                    onPartSearch = { emptyList() },
+                    onFindPart = { null },
+                    onSave = { _, _ -> },
+                    onDismissRequest = {},
+                    initialParts = listOf(
+                        PartLine(Inventory(name = "iPhone 13 Screen", stock = 4, priceCents = 12_000)),
+                        PartLine(Inventory(name = "Adhesive strip", stock = 1, priceCents = 300), count = "2"),
+                        PartLine(Inventory(name = "Screw kit", priceCents = 150))
+                    )
+                )
             }
         }
     }

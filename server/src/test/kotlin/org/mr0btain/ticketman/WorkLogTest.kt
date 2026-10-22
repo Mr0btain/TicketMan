@@ -114,6 +114,31 @@ class WorkLogTest {
         assertEquals(listOf(time.identifier, part.identifier), workOf(ticket, clerkToken).map { it.identifier })
     }
 
+    @Test
+    fun timeAndPartsLoggedTogetherAreAllOrNone() = testApplication {
+        setup()
+        val ticket = newTicket()
+        val both = listOf(
+            WorkRequest(WorkType.LABOR, "Replaced the screen", quantity = 1.0),
+            WorkRequest(WorkType.PART, quantity = 2.0, inventoryIdentifier = screen.identifier)
+        )
+
+        // One bad entry and nothing is logged
+        val refused = post("/api/data/ticket/add/work/all/${ticket.identifier}", json.encodeToString(both + WorkRequest(WorkType.PART, quantity = 1.0)))
+        assertEquals(HttpStatusCode.BadRequest, refused.status)
+        assertTrue(workOf(ticket).isEmpty())
+        assertEquals(HttpStatusCode.BadRequest, post("/api/data/ticket/add/work/all/${ticket.identifier}", "[]").status)
+
+        val saved = post("/api/data/ticket/add/work/all/${ticket.identifier}", json.encodeToString(both))
+        assertEquals(HttpStatusCode.Created, saved.status)
+        val entries = json.decodeFromString<List<WorkEntry>>(saved.bodyAsText())
+        assertEquals(listOf("Replaced the screen", "iPhone 14 Screen"), entries.map { it.description })
+        assertEquals(entries.map { it.identifier }, workOf(ticket).map { it.identifier })
+        assertEquals(entries.map { it.identifier }, invoiceOf(ticket).charges.map { it.identifier })
+        // $80 labor, $240 of parts with 10% tax
+        assertEquals(8_000 + 24_000 + 2_400, invoiceOf(ticket).totalCents)
+    }
+
     /** The counter saving what it changed since it opened the invoice */
     private suspend fun ApplicationTestBuilder.counterSaves(opened: Invoice, charges: List<Charge>, discount: Long = opened.discountCents) =
         post("/api/invoice/${opened.identifier}/update", json.encodeToString(InvoiceChanges.between(opened.charges, opened.discountCents, charges, discount)))

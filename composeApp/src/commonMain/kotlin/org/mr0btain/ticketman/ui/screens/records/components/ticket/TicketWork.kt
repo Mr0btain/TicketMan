@@ -58,10 +58,10 @@ class TicketWork(
     }
 
     /**
-     * Logs work on the open ticket
+     * Logs work on the open ticket, like the time and the parts for one repair: all of it, or none
      * @param onResult Gets null when it's saved, otherwise what went wrong
      */
-    fun log(request: WorkRequest, onResult: (String?) -> Unit) {
+    fun log(requests: List<WorkRequest>, onResult: (String?) -> Unit) {
         val ticketIdentifier = ticket ?: return
         if (!canEdit()) {
             onResult("You can only look, not change things")
@@ -69,7 +69,7 @@ class TicketWork(
         }
 
         scope.launch {
-            when (val result = remoteHandler.ticketRepo.addWork(ticketIdentifier, request)) {
+            when (val result = remoteHandler.ticketRepo.addWork(ticketIdentifier, requests)) {
                 is TmResult.Success -> {
                     if (ticket == ticketIdentifier) _entries.value = _entries.value.orEmpty() + result.data
                     onResult(null)

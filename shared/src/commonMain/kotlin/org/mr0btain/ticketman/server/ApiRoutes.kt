@@ -78,6 +78,9 @@ object TicketPaths {
     const val GET_WORK = "/get/work/{identifier}"
     const val ADD_WORK = "/add/work/{identifier}"
 
+    /** Body a list of `WorkRequest`: all of them are logged, or none */
+    const val ADD_WORK_ALL = "/add/work/all/{identifier}"
+
     /** Takes the work entry with this identifier off, and its invoice line */
     const val REMOVE_WORK = "/remove/work/{identifier}"
 }

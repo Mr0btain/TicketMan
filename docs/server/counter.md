@@ -81,6 +81,8 @@ code uses), and routes turn it into a status with `respondAccount()`: `400`, `40
 Time and parts logged on a ticket as it's worked on, in `ticket_work` (`TicketWorkTable`, `WorkDatabase`), through
 `InvoiceService.logWork` and `removeWork` (routes under `/api/data/ticket`, see the [ticket API](../api/ticket.md#work-log)).
 
+- The records screen's work dialog logs time and any number of parts together through `add/work/all`, which saves
+  every entry and charge in one transaction, or none.
 - Logging one makes the invoice if the ticket has none, and adds a `LABOR` or `PART` charge whose identifier is the
   entry's. Both are written in one transaction, under the same `CHANGE_LOCK` as pickup.
 - The price is the one sent, or the shop profile's `laborRateCents` for time and the item's price for a part. Labor

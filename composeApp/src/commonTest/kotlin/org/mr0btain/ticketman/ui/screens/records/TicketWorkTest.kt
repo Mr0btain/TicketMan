@@ -21,6 +21,9 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.WorkEntry
 import org.mr0btain.ticketman.data.ticket.WorkType
 import org.mr0btain.ticketman.server.request.WorkRequest
+import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.PartLine
+import org.mr0btain.ticketman.ui.screens.records.components.ticket.workRequests
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketWork
 import kotlin.test.*
 import kotlin.time.Duration.Companion.milliseconds
@@ -48,10 +51,10 @@ class TicketWorkTest {
                 if (workFails) respond("", HttpStatusCode.InternalServerError)
                 else respond(Json.encodeToString(listOf(screen)), HttpStatusCode.OK, jsonHeaders)
             path == "/api/data/ticket/get/work/${other.identifier}" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
-            path == "/api/data/ticket/add/work/${ticket.identifier}" -> {
-                val body = Json.decodeFromString<WorkRequest>((request.body as TextContent).text)
+            path == "/api/data/ticket/add/work/all/${ticket.identifier}" -> {
+                val body = Json.decodeFromString<List<WorkRequest>>((request.body as TextContent).text)
                 logged += body
-                val saved = WorkEntry(type = body.type, description = body.description, quantity = body.quantity, unitPriceCents = body.unitPriceCents ?: 0, userName = "tech")
+                val saved = body.map { WorkEntry(type = it.type, description = it.description, quantity = it.quantity, unitPriceCents = it.unitPriceCents ?: 0, userName = "tech") }
                 respond(Json.encodeToString(saved), HttpStatusCode.Created, jsonHeaders)
             }
             path.startsWith("/api/data/ticket/remove/work/") ->
@@ -85,12 +88,17 @@ class TicketWorkTest {
         assertEquals(listOf(screen), work.entries.value)
 
         var result: String? = "not yet"
-        work.log(WorkRequest(WorkType.LABOR, "Cleaned the port", quantity = 0.5, unitPriceCents = 8_000)) { result = it }
+        work.log(
+            listOf(
+                WorkRequest(WorkType.LABOR, "Cleaned the port", quantity = 0.5, unitPriceCents = 8_000),
+                WorkRequest(WorkType.PART, "Port", quantity = 2.0, unitPriceCents = 1_500)
+            )
+        ) { result = it }
         settle { result != "not yet" }
 
         assertNull(result)
-        assertEquals(listOf("Replaced the screen", "Cleaned the port"), work.entries.value?.map { it.description })
-        assertEquals(0.5, logged.single().quantity)
+        assertEquals(listOf("Replaced the screen", "Cleaned the port", "Port"), work.entries.value?.map { it.description })
+        assertEquals(listOf(0.5, 2.0), logged.map { it.quantity })
     }
 
     @Test
@@ -148,9 +156,32 @@ class TicketWorkTest {
         settle { work.entries.value != null }
 
         var result: String? = null
-        work.log(WorkRequest(WorkType.LABOR, "Time", quantity = 1.0)) { result = it }
+        work.log(listOf(WorkRequest(WorkType.LABOR, "Time", quantity = 1.0))) { result = it }
 
         assertEquals("You can only look, not change things", result)
         assertTrue(logged.isEmpty())
+    }
+
+    @Test
+    fun theDialogLogsTheTimeThenEachPart() {
+        val screenPart = Inventory(name = "iPhone 13 Screen", priceCents = 12_000)
+        val glue = Inventory(name = "Adhesive", priceCents = 300)
+
+        val (both, bothProblem) = workRequests("Replaced the screen", "1.25", 8_000, listOf(PartLine(screenPart), PartLine(glue, count = "2", priceCents = 250)))
+        assertNull(bothProblem)
+        assertEquals(listOf(WorkType.LABOR, WorkType.PART, WorkType.PART), both.map { it.type })
+        assertEquals(listOf(1.25, 1.0, 2.0), both.map { it.quantity })
+        assertEquals(listOf(8_000L, 12_000L, 250L), both.map { it.unitPriceCents })
+        assertEquals(glue.identifier, both.last().inventoryIdentifier)
+
+        // Time is optional, a blank form isn't
+        assertEquals(listOf(WorkType.PART), workRequests("", "", 8_000, listOf(PartLine(glue))).first.map { it.type })
+        assertEquals(listOf(WorkType.LABOR), workRequests("Diagnosis", "0.5", 8_000, emptyList()).first.map { it.type })
+        assertEquals("Fill in the time or add a part", workRequests("", "", 8_000, emptyList()).second)
+
+        assertEquals("Enter the hours, like 1.5", workRequests("Diagnosis", "", 8_000, listOf(PartLine(glue))).second)
+        assertEquals("Say what was done", workRequests("", "1", 8_000, emptyList()).second)
+        assertEquals("Hours can have two decimals at most", workRequests("Diagnosis", "0.333", 8_000, emptyList()).second)
+        assertEquals("Enter how many of Adhesive, in whole numbers", workRequests("", "", 8_000, listOf(PartLine(glue, count = "1.5"))).second)
     }
 }

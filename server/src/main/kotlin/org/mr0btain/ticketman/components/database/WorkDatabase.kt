@@ -27,7 +27,7 @@ class WorkDatabase {
             TicketWorkTable
                 .selectAll()
                 .where { TicketWorkTable.ticket eq ticketIdentifier }
-                .orderBy(TicketWorkTable.workedAt to SortOrder.ASC)
+                .orderBy(TicketWorkTable.workedAt to SortOrder.ASC, TicketWorkTable.id to SortOrder.ASC)
                 .map { it.toWorkEntry() }
         }
 

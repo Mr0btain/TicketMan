@@ -171,7 +171,7 @@ fun RecordsScreen(
             laborRateCents = shop.laborRateCents,
             onPartSearch = { viewModel.inventory.search(it) },
             onFindPart = { viewModel.inventory.get(it) },
-            onSave = { request, onResult -> viewModel.tickets.work.log(request, onResult) },
+            onSave = { requests, onResult -> viewModel.tickets.work.log(requests, onResult) },
             onDismissRequest = { showWorkDialog = false }
         )
     }

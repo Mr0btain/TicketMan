@@ -192,25 +192,42 @@ class InvoiceService(
      * saved together. Stock is still taken at pickup, from the invoice's lines
      * @param userIdentifier Who's logging it, kept on the entry with [userName]
      */
-    fun logWork(ticketIdentifier: Uuid, request: WorkRequest, userIdentifier: Uuid?, userName: String): AccountResult<WorkEntry> = synchronized(CHANGE_LOCK) {
+    fun logWork(ticketIdentifier: Uuid, request: WorkRequest, userIdentifier: Uuid?, userName: String): AccountResult<WorkEntry> =
+        when (val result = logWork(ticketIdentifier, listOf(request), userIdentifier, userName)) {
+            is AccountResult.Done -> AccountResult.Done(result.value.single())
+            is AccountResult.NotFound -> AccountResult.NotFound
+            is AccountResult.Invalid -> result
+            is AccountResult.Conflict -> result
+        }
+
+    /**
+     * Logs several things at once, like the time and the parts for one repair: all of them with their invoice lines,
+     * or none if one is wrong
+     * @return The entries as saved, in the order sent
+     */
+    fun logWork(ticketIdentifier: Uuid, requests: List<WorkRequest>, userIdentifier: Uuid?, userName: String): AccountResult<List<WorkEntry>> = synchronized(CHANGE_LOCK) {
+        if (requests.isEmpty()) return AccountResult.Invalid("Nothing to log")
         val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
         if (ticket.status.status == TicketStatusType.PICKED_UP) return AccountResult.Conflict("Ticket ${ticket.label} was picked up, its work can't change")
 
-        val item = request.inventoryIdentifier?.let { inventory.getById(it) ?: return AccountResult.Invalid("That inventory item doesn't exist") }
-        if (request.type == WorkType.PART && item == null) return AccountResult.Invalid("Pick the part from inventory")
+        val workedAt = Clock.System.now().toEpochMilliseconds()
+        val entries = requests.map { request ->
+            val item = request.inventoryIdentifier?.let { inventory.getById(it) ?: return AccountResult.Invalid("That inventory item doesn't exist") }
+            if (request.type == WorkType.PART && item == null) return AccountResult.Invalid("Pick the part from inventory")
 
-        val entry = WorkEntry(
-            type = request.type,
-            description = request.description.trim().ifBlank { item?.name.orEmpty() },
-            quantity = request.quantity,
-            unitPriceCents = request.unitPriceCents ?: if (request.type == WorkType.PART) item!!.priceCents else shop.get().laborRateCents,
-            inventoryIdentifier = item?.identifier,
-            userIdentifier = userIdentifier,
-            userName = userName,
-            workedAt = Clock.System.now().toEpochMilliseconds()
-        )
-        val charge = entry.toCharge()
-        chargesProblem(listOf(charge))?.let { return AccountResult.Invalid(it) }
+            WorkEntry(
+                type = request.type,
+                description = request.description.trim().ifBlank { item?.name.orEmpty() },
+                quantity = request.quantity,
+                unitPriceCents = request.unitPriceCents ?: if (request.type == WorkType.PART) item!!.priceCents else shop.get().laborRateCents,
+                inventoryIdentifier = item?.identifier,
+                userIdentifier = userIdentifier,
+                userName = userName,
+                workedAt = workedAt
+            )
+        }
+        val charges = entries.map { it.toCharge() }
+        chargesProblem(charges)?.let { return AccountResult.Invalid(it) }
 
         val invoice = when (val result = forTicket(ticketIdentifier, userIdentifier)) {
             is AccountResult.Done -> result.value
@@ -219,12 +236,12 @@ class InvoiceService(
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}, work can't be added to it")
 
         transaction {
-            work.add(ticketIdentifier, entry)
-            invoices.setCharges(invoice.identifier, invoice.charges + charge, invoice.discountCents, invoice.taxRateBasisPoints)
-            auditLog.log(userIdentifier, AuditAction.CREATE, "ticket", ticketIdentifier.toString(), "Logged ${describe(entry)} on ${ticket.label}")
+            entries.forEach { work.add(ticketIdentifier, it) }
+            invoices.setCharges(invoice.identifier, invoice.charges + charges, invoice.discountCents, invoice.taxRateBasisPoints)
+            auditLog.log(userIdentifier, AuditAction.CREATE, "ticket", ticketIdentifier.toString(), "Logged ${entries.joinToString(", ") { describe(it) }} on ${ticket.label}")
         }
 
-        return AccountResult.Done(entry)
+        return AccountResult.Done(entries)
     }
 
     /**

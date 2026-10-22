@@ -171,6 +171,16 @@ fun Route.ticketRoute(
             )
         }
 
+        // Time and parts together, all or none. Answers with the entries as saved, in the order sent
+        post(TicketPaths.ADD_WORK_ALL) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+
+            call.respondAccount(
+                invoiceService.logWork(identifier, call.receive<List<WorkRequest>>(), call.getIdentifierFromToken(), call.username(userDatabase)),
+                HttpStatusCode.Created
+            )
+        }
+
         // The identifier is the work entry's
         delete(TicketPaths.REMOVE_WORK) {
             val identifier = call.uuidParameter("identifier") ?: return@delete call.respond(HttpStatusCode.NotFound)

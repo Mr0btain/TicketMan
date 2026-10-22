@@ -160,6 +160,17 @@ Logs work and adds its line to the ticket's invoice, making the invoice if there
   doesn't exist, a blank labor description, a quantity of zero or less or with more than two decimals, or a negative
   price. **`404`** no such ticket. **`409`** the ticket is picked up, or its invoice is paid or void.
 
+### `POST /api/data/ticket/add/work/all/{identifier}`
+
+**Auth:** normal
+
+Logs several entries at once, like the time and the parts for one repair, each with its invoice line. All of them are
+saved in one transaction, or none.
+
+- **Body:** a list of `WorkRequest`, as for [`add/work`](#post-apidataticketaddworkidentifier).
+- **`201`** the saved `WorkEntry`s, in the order sent. **`400`** an empty list, or any entry `add/work` would refuse.
+  **`404`** no such ticket. **`409`** the ticket is picked up, or its invoice is paid or void.
+
 ### `DELETE /api/data/ticket/remove/work/{identifier}`
 
 **Auth:** normal

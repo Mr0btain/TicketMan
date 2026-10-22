@@ -109,17 +109,17 @@ class TicketRemoteRepository(
         return handleDataHttpResponse(WORK_TAG, networkRequest(WORK_TAG) { client.get { url("$serverUrl${TicketPaths.GET_WORK.fill(identifier)}") } })
     }
 
-    /** Logs work, which also goes on the ticket's invoice. Answers with the entry as saved */
-    suspend fun addWork(identifier: Uuid, request: WorkRequest): TmResult<WorkEntry, ServerError> {
+    /** Logs several things at once, all of them or none. Answers with the entries as saved, in the order sent */
+    suspend fun addWork(identifier: Uuid, requests: List<WorkRequest>): TmResult<List<WorkEntry>, ServerError> {
         if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
 
         return handleDataHttpResponse(
             WORK_TAG,
             networkRequest(WORK_TAG) {
                 client.post {
-                    url("$serverUrl${TicketPaths.ADD_WORK.fill(identifier)}")
+                    url("$serverUrl${TicketPaths.ADD_WORK_ALL.fill(identifier)}")
                     contentType(ContentType.Application.Json)
-                    setBody(request)
+                    setBody(requests)
                 }
             }
         )
