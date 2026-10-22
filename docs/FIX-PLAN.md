@@ -26,10 +26,10 @@ taking it out of that page's Known gaps. Things that aren't problems, just rules
 Last, on a machine that can build and run them: the Android SDK tools Gradle downloads are x86, so ARM Linux
 can't build the APK, and there's no emulator for it.
 
-- [ ] **Run Android end to end** on a device: login, records, counter, photos, printing, kiosk. Fix what breaks and
+- [x] **Run Android end to end** on a device: login, records, counter, photos, printing, kiosk. Fix what breaks and
       update [Platforms](client/platforms.md). Needs compileSdk 37 and an AAPT2 that runs on the build machine.
       *Source:* [platforms](client/platforms.md#known-gaps)
-- [ ] **Kiosk lockdown on Android.** Use Android's lock task mode (`startLockTask()` when kiosk mode turns on,
+- [x] **Kiosk lockdown on Android.** Use Android's lock task mode (`startLockTask()` when kiosk mode turns on,
       `stopLockTask()` when an admin leaves it) so a kiosk can't be swiped out of. Without being the device owner
       Android asks the user to pin the screen first; say so on the kiosk screen.
       *Source:* [kiosk](ui/screens/kiosk.md#known-gaps)

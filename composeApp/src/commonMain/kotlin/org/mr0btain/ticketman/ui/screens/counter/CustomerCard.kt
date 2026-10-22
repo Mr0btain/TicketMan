@@ -62,7 +62,7 @@ fun CustomerCard(
             }
 
             TmPanel(
-                modifier = Modifier.widthIn(min = 420.dp, max = 640.dp),
+                modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
                 title = "Tickets",
                 subtitle = "${detail.tickets.size} total, $notPickedUp not picked up",
                 icon = Res.drawable.tool

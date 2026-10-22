@@ -13,9 +13,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -68,8 +72,13 @@ fun TmStepper(
                 )
             }
 
+            // On a narrow screen the row scrolls, so keep the step being worked on in sight
+            val bringIntoView = remember { BringIntoViewRequester() }
+            if (current) LaunchedEffect(index) { bringIntoView.bringIntoView() }
+
             Row(
                 modifier = Modifier
+                    .bringIntoViewRequester(bringIntoView)
                     .alpha(if (reachable || current) 1f else TM_DISABLED_ALPHA)
                     .tmClickable(onClick = { onSelect(index) }, shape = TmTheme.shapes.pill, enabled = reachable && !current, role = Role.Tab)
                     .padding(horizontal = spacing.sm, vertical = spacing.xs),

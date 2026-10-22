@@ -110,7 +110,7 @@ private fun ServerInfoCard(
     serverInfo: ServerInfoResponse?,
     serverUrl: String
 ) {
-    TmPanel(modifier = Modifier.width(SIDE_WIDTH), title = "Server", icon = Res.drawable.server) {
+    TmPanel(modifier = Modifier.widthIn(max = SIDE_WIDTH).fillMaxWidth(), title = "Server", icon = Res.drawable.server) {
         TmKeyValueRow(label = "Address") {
             Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
                 // Passwords and tokens go over the network readable on plain HTTP
@@ -250,7 +250,7 @@ private fun BackupCard(
     }
 
     TmPanel(
-        modifier = Modifier.width(SIDE_WIDTH),
+        modifier = Modifier.widthIn(max = SIDE_WIDTH).fillMaxWidth(),
         title = "Backup and restore",
         subtitle = "A zip of the database and photos, and putting one back. Backups have customer details in them, so keep them somewhere safe.",
         icon = Res.drawable.database
@@ -374,7 +374,7 @@ private fun SeedCard(
         ?.let { (t, c, i, u) -> SeedRequest(tickets = t!!, customers = c!!, inventory = i!!, users = u!!) }
 
     TmPanel(
-        modifier = Modifier.width(SIDE_WIDTH),
+        modifier = Modifier.widthIn(max = SIDE_WIDTH).fillMaxWidth(),
         title = "Mock data",
         subtitle = "Development server only. Adds random tickets, customers, inventory and users.",
         icon = Res.drawable.zap
@@ -431,7 +431,7 @@ private fun ShopProfileCard(
     val spacing = TmTheme.spacing
 
     TmPanel(
-        modifier = Modifier.width(560.dp),
+        modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
         title = "Shop profile",
         subtitle = "Shown on invoices and anything else customers see",
         icon = Res.drawable.home,

@@ -183,7 +183,10 @@ fun TmMoneyText(
     )
 }
 
-/** Ticket or invoice number like 26-00000042, monospace so they're easy to read back */
+/**
+ * Ticket or invoice number like 26-00000042, monospace so they're easy to read back. Shrinks to fit rather than
+ * losing digits off the end, which the big styles would on a phone
+ */
 @Composable
 fun TmTicketIdText(
     number: String,
@@ -191,12 +194,12 @@ fun TmTicketIdText(
     style: TextStyle = TmTheme.typography.numeric,
     color: Color = Color.Unspecified
 ) {
-    Text(
+    BasicText(
         modifier = modifier,
         text = number,
-        style = style,
-        color = if (color.isSpecified) color else TmTheme.colors.accent.color,
-        maxLines = 1
+        style = style.copy(color = if (color.isSpecified) color else TmTheme.colors.accent.color),
+        maxLines = 1,
+        autoSize = TextAutoSize.StepBased(minFontSize = 12.sp, maxFontSize = style.fontSize)
     )
 }
 

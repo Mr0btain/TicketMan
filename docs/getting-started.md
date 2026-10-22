@@ -80,9 +80,10 @@ the server itself behind Caddy, run `scripts/docker_local.sh` and open `https://
 ./gradlew :androidApp:assembleDebug
 ```
 
-The APK lands in `androidApp/build/outputs/apk/debug/`. Like the web app, it doesn't get past start up yet; see
-[Platforms](client/platforms.md#known-gaps). Install it with `adb install` or run the `androidApp`
-configuration from Android Studio. An emulator reaches the host machine's server at `http://10.0.2.2:<port>`.
+The APK lands in `androidApp/build/outputs/apk/debug/`. Install it with `adb install` or run the `androidApp`
+configuration from Android Studio. To reach a dev server on this machine from the emulator, run
+`adb reverse tcp:<port> tcp:<port>` and connect to `http://localhost:<port>` (see
+[Platforms](client/platforms.md#android)). It needs a JDK on the path or in `JAVA_HOME`, like any Gradle task.
 
 To only check that the shared code compiles for Android, without the app: `./gradlew :composeApp:compileAndroidMain`.
 

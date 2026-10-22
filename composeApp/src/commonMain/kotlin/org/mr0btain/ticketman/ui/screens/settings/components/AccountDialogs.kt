@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.settings.components
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -94,6 +95,7 @@ fun ChangePinDialog(
  * @param station This device's station, null if it isn't one
  * @param onRegister Sends the name, calls back with null when done or what went wrong
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StationDialog(
     isVisible: Boolean,
@@ -123,7 +125,12 @@ fun StationDialog(
         onDismissRequest = onDismiss,
         maxWidth = 460.dp,
         actions = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+            // Wraps when three buttons don't fit across a phone
+            FlowRow(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)
+            ) {
                 if (station?.status == StationStatus.PENDING) {
                     TmButton(text = "Check again", onClick = onRefresh, variant = TmButtonVariant.GHOST)
                 }

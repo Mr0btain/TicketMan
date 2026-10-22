@@ -54,9 +54,12 @@ fun SearchResults(
                 message = "Type a ticket number, phone number, customer name, email or device."
             )
 
-            TmPanel(modifier = Modifier.widthIn(max = 360.dp), title = "Shortcuts") {
-                Column {
-                    SHORTCUTS.forEach { (key, action) -> TmKeyValueRow(label = action, value = key, numeric = true) }
+            // Only worth showing to someone with a keyboard, a touch screen has no F keys
+            if (usingKeyboard()) {
+                TmPanel(modifier = Modifier.widthIn(max = 360.dp), title = "Shortcuts") {
+                    Column {
+                        SHORTCUTS.forEach { (key, action) -> TmKeyValueRow(label = action, value = key, numeric = true) }
+                    }
                 }
             }
         }

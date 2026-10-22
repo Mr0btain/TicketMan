@@ -104,7 +104,7 @@ fun CounterLayout(
                     )
                 } else {
                     if (canEdit) {
-                        TmButton(text = "Check in  (F3)", onClick = onCheckIn, size = TmControlSize.LARGE, leadingIcon = Res.drawable.plus)
+                        TmButton(text = "Check in${keyHint("F3")}", onClick = onCheckIn, size = TmControlSize.LARGE, leadingIcon = Res.drawable.plus)
                         TmButton(
                             text = "New customer",
                             onClick = onNewCustomer,
@@ -115,7 +115,7 @@ fun CounterLayout(
                     }
 
                     TmButton(
-                        text = "Price check  (F4)",
+                        text = "Price check${keyHint("F4")}",
                         onClick = onPriceCheck,
                         variant = TmButtonVariant.SECONDARY,
                         size = TmControlSize.LARGE,

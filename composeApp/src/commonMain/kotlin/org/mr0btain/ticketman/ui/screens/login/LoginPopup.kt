@@ -43,6 +43,9 @@ fun LoginPopup(
     // Whether we've tried an address in this popup, so we only flag errors after an attempt
     var addressAttempted by remember { mutableStateOf(false) }
 
+    // The address last tried, so a failed try shows it again to correct instead of a blank field
+    var triedAddress by remember { mutableStateOf("") }
+
     // Ask for the address until we can reach a server, then ask for credentials
     val state = when {
         loginState == LoginState.LOADING -> LoginDialogState.Loading
@@ -61,6 +64,7 @@ fun LoginPopup(
         state = state,
         error = error,
         addressError = if (addressAttempted) connectionProblem else null,
+        triedAddress = triedAddress,
         insecureWarning = insecureWarning,
         initialUsername = viewModel.session.savedUsername,
         message = loginMessage,
@@ -70,6 +74,7 @@ fun LoginPopup(
         onBackFromRequest = { requestingAccount = false },
         onAddressConfirm = { address ->
             addressAttempted = true
+            triedAddress = address
             viewModel.settings.setServerUrl(address.trim())
         },
         onDismiss = onDismiss
@@ -81,6 +86,7 @@ private fun LoginDialog(
     state: LoginDialogState,
     error: Boolean,
     addressError: String?,
+    triedAddress: String,
     insecureWarning: String?,
     initialUsername: String,
     message: String?,
@@ -118,7 +124,7 @@ private fun LoginDialog(
             label = "Login step"
         ) { targetState ->
             when (targetState) {
-                LoginDialogState.Address -> ServerAddressField(onContinue = onAddressConfirm, error = addressError)
+                LoginDialogState.Address -> ServerAddressField(initialAddress = triedAddress, onContinue = onAddressConfirm, error = addressError)
 
                 LoginDialogState.Login -> LoginField(
                     error = error,

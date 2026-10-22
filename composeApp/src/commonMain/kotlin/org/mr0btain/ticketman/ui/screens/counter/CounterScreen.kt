@@ -122,7 +122,7 @@ fun CounterScreen(
                     modifier = fieldModifier.focusRequester(searchFocus),
                     query = query,
                     onQueryChange = { counter.setQuery(it) },
-                    placeholder = "Search tickets and customers  (F2)",
+                    placeholder = "Search tickets and customers${keyHint("F2")}",
                     loading = searching,
                     size = TmControlSize.LARGE
                 )
@@ -168,7 +168,7 @@ fun CounterScreen(
                         },
                         extraActions = {
                             TmButton(
-                                text = "Pick up  (F5)",
+                                text = "Pick up${keyHint("F5")}",
                                 onClick = { counter.pickup.start(detail.ticket.identifier) },
                                 size = TmControlSize.LARGE,
                                 leadingIcon = Res.drawable.dollar_sign
@@ -267,9 +267,10 @@ fun CounterScreen(
         }
     }
 
-    // Ready to type as soon as the counter opens
+    // Ready to type as soon as the counter opens, unless it's being touched, where focus would pop up the on screen keyboard
+    val keyboard = usingKeyboard()
     LaunchedEffect(loginState) {
-        if (loginState == LoginState.LOGGED_IN) searchFocus.requestFocus()
+        if (loginState == LoginState.LOGGED_IN && keyboard) searchFocus.requestFocus()
     }
 }
 

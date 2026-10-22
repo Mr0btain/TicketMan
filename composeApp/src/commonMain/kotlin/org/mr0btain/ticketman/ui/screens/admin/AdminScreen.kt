@@ -331,7 +331,7 @@ private fun AdminContent(
                 onSeed = { request -> admin.server.seed(request, onSuccess = { viewModel.refreshPagers() }) },
                 importCard = {
                     ImportCard(
-                        modifier = Modifier.width(440.dp),
+                        modifier = Modifier.widthIn(max = 440.dp).fillMaxWidth(),
                         isBusy = isLoading,
                         onPicked = { kind, file -> admin.import.openFile(kind, file) }
                     )
