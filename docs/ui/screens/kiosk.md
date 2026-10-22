@@ -96,7 +96,7 @@ Leaving only lasts until the app restarts. Settings > Account and station > Coun
 
 - Full screen isn't a lockdown. Desktop makes the window full screen, web asks the browser, and Android hides the
   status and navigation bars, which a swipe brings back for a moment. None of them stop someone leaving the app.
-  Android's lock task mode is in the [fix plan's last phase](../../FIX-PLAN.md#phase-11-android-and-other-machines).
+  Android's lock task mode is in the [fix plan's last phase](../../FIX-PLAN.md#phase-2-android-and-other-machines).
 - **Browsers only go full screen from a click or key press.** A kiosk that starts on page load stays windowed until
   someone touches it, and pressing Escape leaves full screen; the web entry point asks again on the next click or
   key press while kiosk mode is on.

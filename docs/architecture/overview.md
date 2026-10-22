@@ -126,7 +126,6 @@ the shared model, the server table and database class, the route, the client rep
 - iOS targets are commented out, so `iosApp` doesn't build.
 - Android and web compile but haven't been run end to end on a device or in a browser yet. See
   [Platforms](../client/platforms.md#known-gaps).
-- Feature ideas that were never started are listed under [Ideas](../FIX-PLAN.md#ideas) in the fix plan.
 
 ## See also
 

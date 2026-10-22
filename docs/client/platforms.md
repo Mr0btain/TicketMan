@@ -70,7 +70,7 @@ if a TicketMan server answers there. Logs go to the browser console.
 ## Known gaps
 
 - **Android hasn't been run end to end yet.** It compiles, but hasn't been opened on a device. That's the
-  [fix plan's last phase](../FIX-PLAN.md#phase-11-android-and-other-machines).
+  [fix plan's last phase](../FIX-PLAN.md#phase-2-android-and-other-machines).
 - **Web has been run in headless Chromium only**, served by `-PwithWeb`: login, records, a note with a photo, the
   counter search, ticket card, check-in, printing (the hidden iframe gets the right receipt), backup download and
   restore upload, the admin tabs and settings all worked. Firefox and Safari haven't been tried, and neither has
