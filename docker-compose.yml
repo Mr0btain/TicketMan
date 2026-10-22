@@ -2,6 +2,7 @@
 # this machine from the internet, and DOMAIN has to point at it). Put the settings in a .env file next to this one:
 #
 #   DOMAIN=tickets.myshop.com
+#   CERTIFICATE=public              (private for a name only your network knows, a LAN address or localhost)
 #   TZ=America/New_York
 #   ADMIN_PASSWORD=...              (optional, for the admin user made on the first start)
 #
@@ -11,8 +12,8 @@
 #   docker compose up -d --build
 #   docker compose logs ticketman     # the admin password, when ADMIN_PASSWORD isn't set
 #
-# With DOMAIN left as localhost (or a name only your network knows), Caddy uses its own local CA instead, which the
-# desktop and Android apps ask to trust once (scripts/docker_local.sh runs it that way to try). See docs/operations.md
+# With CERTIFICATE=private, Caddy uses its own local CA instead, which the desktop and Android apps ask to trust once
+# (scripts/docker_local.sh runs it that way on localhost to try). See docs/operations.md
 name: ticketman
 
 services:
@@ -47,6 +48,10 @@ services:
     restart: unless-stopped
     environment:
       DOMAIN: ${DOMAIN:-localhost}
+      # public for a real domain, private for Caddy's local CA, see docker/Caddyfile
+      CERTIFICATE: ${CERTIFICATE:-public}
+      # Where devices reach HTTPS, so plain HTTP is sent to the right port
+      HTTPS_PORT: ${HTTPS_PORT:-443}
     ports:
       - "${HTTP_PORT:-80}:80"
       - "${HTTPS_PORT:-443}:443"

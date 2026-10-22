@@ -22,6 +22,9 @@ fun main() {
         ComposeViewport(document.body!!) {
             App()
         }
+
+        // index.html's loading message, the app draws over the page from here
+        document.getElementById("loading")?.remove()
     }
 
     // Kiosk mode asks for fullscreen. Browsers refuse unless it's asked from a click or key press, so a kiosk

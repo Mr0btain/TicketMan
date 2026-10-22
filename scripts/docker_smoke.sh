@@ -22,7 +22,7 @@ for arg in "$@"; do
     esac
 done
 
-export DOMAIN=localhost TZ="${TZ:-America/New_York}" ADMIN_PASSWORD=admin_pass
+export DOMAIN=localhost CERTIFICATE=private TZ="${TZ:-America/New_York}" ADMIN_PASSWORD=admin_pass
 export HTTPS_PORT="${HTTPS_PORT:-8445}" HTTP_PORT="${HTTP_PORT:-8081}" SUBNET="${SUBNET:-172.30.81.0/24}"
 BASE="https://localhost:$HTTPS_PORT"
 compose() { docker compose -p ticketman-smoke -f "$ROOT/docker-compose.yml" "$@"; }
@@ -57,6 +57,15 @@ if [[ "$(health)" != "healthy" ]]; then
     echo "FAIL the server never got healthy" >&2
     exit 1
 fi
+
+# The desktop and Android apps send no SNI for localhost or an address; Caddy has to answer them anyway
+if echo | openssl s_client -connect "localhost:$HTTPS_PORT" -noservername 2>&1 | grep -q "alert"; then
+    echo "FAIL Caddy refuses a handshake without SNI, the way Java connects (CERTIFICATE=private?)" >&2
+    exit 1
+fi
+redirect="$(curl -s -o /dev/null -w '%{redirect_url}' "http://localhost:$HTTP_PORT/api/ping")"
+[[ "$redirect" == "$BASE/api/ping" ]] || { echo "FAIL plain HTTP redirected to '$redirect', not $BASE/api/ping" >&2; exit 1; }
+echo "Caddy answers without SNI and sends plain HTTP to $BASE"
 
 echo "Walking the counter through the proxy, then restoring with a restart"
 python3 "$ROOT/scripts/counter_e2e.py" "$BASE" --insecure --restart

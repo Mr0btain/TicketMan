@@ -5,3 +5,24 @@ html, body {
     padding: 0;
     overflow: hidden;
 }
+
+/* Until the app draws, see index.html */
+body {
+    background: #14171b;
+}
+
+#loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    font: 15px system-ui, sans-serif;
+    color: #9aa4ad;
+    text-align: center;
+}
+
+#loading.problem {
+    color: #f0a8a0;
+}

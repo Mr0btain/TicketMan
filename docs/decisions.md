@@ -108,7 +108,8 @@ trust the server again twice a day. The root lasts ten years. Fetching it over a
 because it's only offered after the signature check and a person still matches its fingerprint.
 
 **Costs:** a proxy that doesn't hand its CA out falls back to the top certificate it sends, and asks again when that
-changes. Resetting Caddy's data makes a new CA, and every device asks again. Fingerprints trusted for the server's
+changes. Caddy has to be told the private issuer outright (`CERTIFICATE=private`), or it refuses the apps, which
+send no SNI for `localhost` or an address. Resetting Caddy's data makes a new CA, and every device asks again. Fingerprints trusted for the server's
 own certificate (`trusted_certificates`) aren't carried over. Browsers still show their own warning unless the CA
 is installed.
 

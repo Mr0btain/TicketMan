@@ -232,7 +232,8 @@ exits with code 3.
 
 [`scripts/docker_smoke.sh`](../scripts/docker_smoke.sh) builds the server (`:server:installDist -PwithWeb`) and the
 image, starts [`docker-compose.yml`](../docker-compose.yml) as its own project (`ticketman-smoke`, on
-`https://localhost:8445` with Caddy's local CA and its own network range), waits for the health check, runs
+`https://localhost:8445` with Caddy's local CA and its own network range), waits for the health check, checks
+a handshake without SNI (how Java connects to `localhost`) and the plain HTTP redirect, runs
 `counter_e2e.py --insecure --restart` through Caddy, checks Docker started the server again, and stops it the way
 `docker stop` does, expecting exit code 143 and `Database closed` in the log. It removes its containers and volumes
 afterwards; `--keep` leaves them running, `--no-build` skips both builds' Gradle step.

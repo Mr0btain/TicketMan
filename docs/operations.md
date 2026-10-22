@@ -26,9 +26,10 @@ The usual setup is the server in Docker behind a reverse proxy that does HTTPS. 
    paper size). Tax and everything printed come from it, so do this before taking money.
 6. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
 
-A shop with no domain, only reached on its own network, leaves `DOMAIN` as `localhost` or sets it to the machine's
-name or LAN address (`DOMAIN=192.168.1.20`). Caddy then uses its own local CA, and devices are asked once to trust it
-(see [Private certificates](#private-certificates)).
+A shop with no domain, only reached on its own network, sets `DOMAIN` to the machine's name or LAN address
+(`DOMAIN=192.168.1.20`) and `CERTIFICATE=private`. Caddy then uses its own local CA, and devices are asked once to
+trust it (see [Private certificates](#private-certificates)). `HTTPS_PORT` and `HTTP_PORT` publish Caddy on other
+ports than 443 and 80; plain HTTP is still sent on to the right HTTPS port.
 
 Without Docker, start `bin/server` from `:server:installDist` (or `./gradlew :server:run`) with `DATA_PATH` set,
 and `TZ` if the machine's clock is on UTC (see [Configuration](configuration.md)), and put a reverse proxy in front.
@@ -153,8 +154,8 @@ which is also the app's minimum.
 
 ### Private certificates
 
-A proxy with a certificate no public authority vouches for, like Caddy's local CA when `DOMAIN` is `localhost`, a
-`.local` name or a LAN address:
+A proxy with a certificate no public authority vouches for, like Caddy's local CA with `CERTIFICATE=private`, for a
+`DOMAIN` that's `localhost`, a `.local` name or a LAN address:
 
 - **Desktop and Android** show a "Private certificate" dialog with a warning that it isn't a public certificate,
   and the fingerprint to check. Trust it only if it matches the one the admin handed out. After that the device only
@@ -173,6 +174,12 @@ docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt | opens
 A proxy that doesn't hand its CA out gets the top certificate it sends trusted instead, which works until that one
 changes. Resetting Caddy's data volume makes a new CA, so every device asks again; a backup of the `caddy-data`
 volume avoids that when moving machines.
+
+Leave `CERTIFICATE=private` set for these. Java, which the desktop and Android apps run on, sends no SNI (the name
+it's connecting to) for an address or a name without a dot, and Caddy only answers a handshake without one when the
+site's certificate issuer is given explicitly; with `public` it refuses them, and the apps say they can't reach the
+server, while browsers, which always send it, work. [`docker/Caddyfile`](../docker/Caddyfile) sets `default_sni`
+to `DOMAIN` and imports `tls internal` for `private`.
 
 `scripts/docker_local.sh` runs all of this on one machine to try it (see [Testing](testing.md#docker)).
 

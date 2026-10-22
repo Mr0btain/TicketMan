@@ -1,13 +1,25 @@
-# Caddy in front of TicketMan, for docker-compose.yml. A real domain gets a public certificate on its own;
-# localhost gets one from Caddy's local CA. Caddy streams uploads and downloads, has no body size limit and no
-# timeout on a slow request, and sends X-Forwarded-For, so this is all TicketMan needs. See docs/operations.md
+# Caddy in front of TicketMan, for docker-compose.yml. A real domain gets a public certificate on its own
+# (CERTIFICATE=public, the default); a name only the shop's network knows, a LAN address or localhost needs
+# CERTIFICATE=private, a certificate from Caddy's local CA. Caddy streams uploads and downloads, has no body size
+# limit and no timeout on a slow request, and sends X-Forwarded-For, so this is all TicketMan needs. See
+# docs/operations.md
 {
-	# Java sends no SNI for a name without a dot, like localhost, and Caddy refuses a handshake it can't match.
-	# Harmless for a real domain
+	# Java (the desktop and Android apps) sends no SNI for a name without a dot or an address, and Caddy refuses a
+	# handshake it can't match. This names the site to use then, which only works with an explicit issuer, hence
+	# CERTIFICATE=private
 	default_sni {$DOMAIN:localhost}
 }
 
+(certificate-public) {
+}
+
+(certificate-private) {
+	tls internal
+}
+
 {$DOMAIN:localhost} {
+	import certificate-{$CERTIFICATE:public}
+
 	# The local CA's root certificate, which the desktop and Android apps fetch when they're asked to trust this
 	# server, so they trust the CA rather than a certificate Caddy replaces every 12 hours. A 404 with a public
 	# certificate, when Caddy never makes a local CA
@@ -20,4 +32,10 @@
 	handle {
 		reverse_proxy ticketman:8080
 	}
+}
+
+# Plain HTTP goes on to HTTPS on the port devices reach it on (HTTPS_PORT), which isn't 443 when the compose file
+# publishes another, like scripts/docker_local.sh's 8443
+http://{$DOMAIN:localhost} {
+	redir https://{host}:{$HTTPS_PORT:443}{uri} 308
 }

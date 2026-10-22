@@ -20,7 +20,7 @@ for arg in "$@"; do
     esac
 done
 
-export DOMAIN=localhost TZ="${TZ:-America/New_York}" ADMIN_PASSWORD=admin_pass
+export DOMAIN=localhost CERTIFICATE=private TZ="${TZ:-America/New_York}" ADMIN_PASSWORD=admin_pass
 export HTTPS_PORT="${HTTPS_PORT:-8443}" HTTP_PORT="${HTTP_PORT:-8082}" SUBNET="${SUBNET:-172.30.82.0/24}"
 BASE="https://localhost:$HTTPS_PORT"
 TRUST_STORE="$ROOT/build/docker-truststore.p12"
@@ -78,6 +78,6 @@ Desktop client trusting it already, the way a shop with a public certificate see
 Browser: open $BASE and accept the warning, or import the CA to skip it
     (docker compose -p ticketman-local exec caddy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt)
 
-Plain HTTP on http://localhost:$HTTP_PORT only redirects to HTTPS.
+Plain HTTP on http://localhost:$HTTP_PORT only redirects to HTTPS, which the apps follow and save.
 Logs: docker compose -p ticketman-local logs -f      Stop and delete: scripts/docker_local.sh --down
 EOF
