@@ -213,7 +213,7 @@ private fun DailyReportCard(
     TmPanel(
         modifier = Modifier.fillMaxWidth(),
         title = "End of day",
-        subtitle = report.date.toString(),
+        subtitle = report.date,
         icon = Res.drawable.calendar,
         actions = {
             TmIconButton(icon = Res.drawable.chevron_left, contentDescription = "Day before", onClick = { onMove(-1) })

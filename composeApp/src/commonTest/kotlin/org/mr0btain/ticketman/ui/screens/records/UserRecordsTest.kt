@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -20,6 +21,7 @@ import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.screens.records.components.user.UserRecords
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /** Staff notes save straight away and come back from the server, and only for admins */
 class UserRecordsTest {
@@ -44,11 +46,12 @@ class UserRecordsTest {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun TestScope.settle(done: () -> Boolean) {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }
@@ -99,6 +102,7 @@ class UserRecordsTest {
         assertFalse(users.seed.isDirty)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun onlyAdminsCanDeleteStaffNotes() = runTest {
         val note = Note(message = "Works Mondays")
@@ -111,6 +115,7 @@ class UserRecordsTest {
         assertEquals(listOf(note), users.seed.notes)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test
     fun onlyAdminsCanSaveStaffNotes() = runTest {
         val users = records(admin = false)

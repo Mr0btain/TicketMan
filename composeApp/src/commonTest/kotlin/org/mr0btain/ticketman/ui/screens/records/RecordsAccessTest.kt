@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -18,10 +19,12 @@ import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerRecords
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryRecords
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Restricted users can look at records but the handlers don't send their changes, like the counter
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class RecordsAccessTest {
     private val requests = mutableListOf<String>()
 
@@ -41,7 +44,7 @@ class RecordsAccessTest {
     private suspend fun TestScope.settle() {
         repeat(20) {
             runCurrent()
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
     }
 

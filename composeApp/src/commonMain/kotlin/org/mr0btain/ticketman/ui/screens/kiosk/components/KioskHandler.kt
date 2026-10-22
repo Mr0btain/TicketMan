@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.AppWindow
 import kotlin.time.Clock
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Kiosk mode for an approved station: the counter fullscreen, signing in by PIN, and locking when left alone
@@ -22,7 +23,6 @@ import kotlin.time.Clock
  * @param isAdmin Whether whoever is signed in now is an admin
  * @param now Current epoch millis, swappable so tests can move time along
  */
-@Suppress("PrivatePropertyName")
 class KioskHandler(
     private val remoteHandler: RemoteHandler,
     private val scope: CoroutineScope,
@@ -145,7 +145,7 @@ class KioskHandler(
         val shouldBeActive = !suspended && current?.status == StationStatus.APPROVED && current.kioskEnabled
 
         if (shouldBeActive == _active.value) {
-            if (shouldBeActive) startIdleWatch(current!!.idleTimeoutSeconds)
+            if (shouldBeActive) startIdleWatch(current.idleTimeoutSeconds)
             return
         }
 
@@ -154,7 +154,7 @@ class KioskHandler(
         AppWindow.setFullscreen(shouldBeActive)
 
         if (shouldBeActive) {
-            startIdleWatch(current!!.idleTimeoutSeconds)
+            startIdleWatch(current.idleTimeoutSeconds)
 
             // Whoever logged the device in doesn't get to stay signed in at the counter
             _locked.value = false
@@ -169,7 +169,7 @@ class KioskHandler(
         idleJob?.cancel()
         idleJob = scope.launch {
             while (true) {
-                delay(IDLE_CHECK_MILLIS)
+                delay(IDLE_CHECK_MILLIS.milliseconds)
 
                 if (_locked.value) continue
 

@@ -7,6 +7,7 @@ import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import io.ktor.http.content.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -22,10 +23,12 @@ import org.mr0btain.ticketman.data.ticket.WorkType
 import org.mr0btain.ticketman.server.request.WorkRequest
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketWork
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The open ticket's work log on the client: loading it, logging and taking work off
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class TicketWorkTest {
     private val ticket = Ticket()
     private val other = Ticket()
@@ -59,11 +62,12 @@ class TicketWorkTest {
 
     private val snackBar = SnackbarHostState()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun TestScope.settle(done: () -> Boolean) {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }
@@ -119,7 +123,7 @@ class TicketWorkTest {
         workFails = true
 
         work.load(ticket.identifier, quiet = true)
-        repeat(20) { runCurrent(); withContext(Dispatchers.Default) { delay(5) } }
+        repeat(20) { runCurrent(); withContext(Dispatchers.Default) { delay(5.milliseconds) } }
         assertNull(work.loadError.value)
 
         work.load(ticket.identifier)

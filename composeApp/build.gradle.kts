@@ -14,7 +14,7 @@ plugins {
 }
 
 kotlin {
-    androidLibrary {
+    android {
         namespace = "org.mr0btain.ticketman"
         compileSdk = libs.versions.android.compileSdk.get().toInt()
         minSdk = libs.versions.android.minSdk.get().toInt()
@@ -28,6 +28,7 @@ kotlin {
         }
     }
     
+
     /*
     listOf(
         iosX64(),
@@ -52,11 +53,14 @@ kotlin {
             commonWebpackConfig {
                 outputFileName = "composeApp.js"
                 devServer = (devServer ?: KotlinWebpackConfig.DevServer()).apply {
-                    static = (static ?: mutableListOf()).apply {
-                        // Serve sources to debug inside browser
-                        add(rootDirPath)
-                        add(projectDirPath)
-                    }
+                    static(rootDirPath)
+                    static(projectDirPath)
+                }
+            }
+
+            testTask {
+                useKarma {
+                    useFirefox()
                 }
             }
         }
@@ -74,15 +78,15 @@ kotlin {
     }
 
     sourceSets {
-        val desktopMain by getting
+        val desktopMain = getByName("desktopMain")
 
         commonMain.dependencies {
-            implementation(compose.runtime)
-            implementation(compose.foundation)
-            implementation(compose.material3)
-            implementation(compose.ui)
-            implementation(compose.components.resources)
-            implementation(compose.components.uiToolingPreview)
+            implementation(libs.runtime)
+            implementation(libs.foundation)
+            implementation(libs.material3)
+            implementation(libs.ui)
+            implementation(libs.components.resources)
+            implementation(libs.ui.tooling.preview)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.androidx.lifecycle.runtimeCompose)
             implementation(projects.shared)
@@ -134,7 +138,7 @@ kotlin {
             implementation(libs.ktor.client.darwin)
         }
 
-        val desktopTest by getting {
+        val desktopTest = getByName("desktopTest") {
             dependencies {
                 // Reads back the QR codes we make
                 implementation(libs.zxing.core)
@@ -144,7 +148,7 @@ kotlin {
             }
         }
 
-        val jvmSharedMain by getting {
+        val jvmSharedMain = getByName("jvmSharedMain") {
             dependencies {
                 implementation(libs.ktor.client.okhttp)
             }
@@ -168,7 +172,7 @@ kotlin {
 }
 
 dependencies {
-    androidRuntimeClasspath(compose.uiTooling)
+    androidRuntimeClasspath(libs.ui.tooling)
 }
 
 compose.desktop {
@@ -194,6 +198,5 @@ compose.desktop {
                 systemProperty("javax.net.ssl.trustStorePassword", "changeit")
             }
         }
-
     }
 }

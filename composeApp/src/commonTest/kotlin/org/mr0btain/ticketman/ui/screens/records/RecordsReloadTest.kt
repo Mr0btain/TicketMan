@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -19,11 +20,13 @@ import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerRecords
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The periodic check for updates reloading the open record: it picks up another device's change, leaves an edit
  * alone, and stays quiet when the server can't be reached
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class RecordsReloadTest {
     private var jane = Customer(name = "Jane Doe", phone = "5550142")
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -52,7 +55,7 @@ class RecordsReloadTest {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }
@@ -61,7 +64,7 @@ class RecordsReloadTest {
     private suspend fun TestScope.idle() {
         repeat(20) {
             runCurrent()
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
     }
 

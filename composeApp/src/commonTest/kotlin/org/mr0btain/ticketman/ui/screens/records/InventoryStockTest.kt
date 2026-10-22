@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -20,10 +21,12 @@ import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.server.request.StockChangeRequest
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryRecords
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Stock counts are saved on their own, from the count the item was opened at, so a pickup since isn't undone
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class InventoryStockTest {
     private var item = Inventory(name = "Screen", stock = 5, priceCents = 8_000)
     private val writes = mutableListOf<Pair<String, String>>()
@@ -47,7 +50,7 @@ class InventoryStockTest {
     private suspend fun TestScope.settle() {
         repeat(20) {
             runCurrent()
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
     }
 

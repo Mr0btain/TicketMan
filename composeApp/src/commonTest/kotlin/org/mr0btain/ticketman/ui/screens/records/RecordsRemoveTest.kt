@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -19,10 +20,12 @@ import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerRecords
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Deleting a record waits for the server, and a record that's gone from the server stops being shown
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class RecordsRemoveTest {
     private val jane = Customer(name = "Jane Doe", phone = "5550142")
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
@@ -56,7 +59,7 @@ class RecordsRemoveTest {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }

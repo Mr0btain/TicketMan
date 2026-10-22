@@ -7,6 +7,7 @@ import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import io.ktor.http.content.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -24,8 +25,10 @@ import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminHandler
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class AdminHandlerTest {
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
     private val json = Json { ignoreUnknownKeys = true }
@@ -75,7 +78,7 @@ class AdminHandlerTest {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }

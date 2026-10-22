@@ -11,7 +11,7 @@ import org.w3c.dom.events.Event
 import org.mr0btain.ticketman.components.injection.initKoin
 import org.mr0btain.ticketman.ui.AppWindow
 
-@OptIn(ExperimentalComposeUiApi::class)
+@OptIn(ExperimentalComposeUiApi::class, ExperimentalWasmJsInterop::class)
 fun main() {
     val koin = initKoin().koin
 
@@ -39,6 +39,7 @@ fun main() {
 }
 
 // A refusal comes back as a rejected promise, not a throw, so it's caught there or the page logs an uncaught error
+@OptIn(ExperimentalWasmJsInterop::class)
 private fun enterFullscreen() {
     if (document.fullscreenElement != null) return
     document.documentElement?.requestFullscreen()?.catch { null }

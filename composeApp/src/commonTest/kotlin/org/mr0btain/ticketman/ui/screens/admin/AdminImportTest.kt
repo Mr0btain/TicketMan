@@ -7,6 +7,7 @@ import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import io.ktor.http.content.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -25,10 +26,12 @@ import org.mr0btain.ticketman.server.response.ImportRowResult
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminImport
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminSupport
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * The import preview: rows the client couldn't read stay in place, and the server's answer for the rest lines up
  */
+@OptIn(ExperimentalCoroutinesApi::class)
 class AdminImportTest {
     private val sent = mutableListOf<Pair<String, List<Customer>>>()
     private var imported = 0
@@ -59,7 +62,7 @@ class AdminImportTest {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }

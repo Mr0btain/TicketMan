@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -23,8 +24,10 @@ import org.mr0btain.ticketman.ui.screens.login.components.AccountSetup
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.SessionHandler
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class SessionHandlerTest {
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
     private val requests = mutableListOf<String>()
@@ -75,7 +78,7 @@ class SessionHandlerTest {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }

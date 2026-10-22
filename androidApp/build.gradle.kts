@@ -1,7 +1,7 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
-    alias(libs.plugins.kotlinAndroid)
+    //alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
@@ -17,7 +17,7 @@ kotlin {
     dependencies {
         implementation(projects.composeApp)
         implementation(libs.androidx.activity.compose)
-        implementation(compose.preview)
+        implementation(libs.ui.tooling.preview)
     }
 }
 

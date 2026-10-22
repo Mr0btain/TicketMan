@@ -1,11 +1,13 @@
 package org.mr0btain.ticketman.components.data
 
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class RecordSelectionTest {
     private val a = Uuid.random()
     private val b = Uuid.random()

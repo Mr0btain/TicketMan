@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalCoroutinesApi::class)
+
 package org.mr0btain.ticketman.ui.screens.kiosk
 
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
@@ -5,6 +7,7 @@ import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.test.TestScope
@@ -22,6 +25,7 @@ import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.ui.AppWindow
 import org.mr0btain.ticketman.ui.screens.kiosk.components.KioskHandler
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 
 class KioskHandlerTest {
@@ -64,7 +68,7 @@ class KioskHandlerTest {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
     }
 
@@ -136,12 +140,12 @@ class KioskHandlerTest {
         clock += 20_000
         kiosk.recordActivity()
         clock += 20_000
-        advanceTimeBy(2_000)
+        advanceTimeBy(2_000.milliseconds)
         assertFalse(kiosk.locked.value)
 
         // Left alone past the timeout
         clock += 31_000
-        advanceTimeBy(2_000)
+        advanceTimeBy(2_000.milliseconds)
         assertTrue(kiosk.locked.value)
     }
 
@@ -183,20 +187,20 @@ class KioskHandlerTest {
 
         // Nobody has touched it for over a minute, so there's nothing to keep alive
         clock += 120_000
-        advanceTimeBy(2_000)
+        advanceTimeBy(2_000.milliseconds)
         assertFalse("GET /api/user/me" in requests)
 
         // Touched recently, the server hears about it
         kiosk.recordActivity()
         clock += 10_000
-        advanceTimeBy(2_000)
+        advanceTimeBy(2_000.milliseconds)
         settle { "GET /api/user/me" in requests }
         assertEquals(1, requests.count { it == "GET /api/user/me" })
 
         // But only once a minute
         kiosk.recordActivity()
         clock += 10_000
-        advanceTimeBy(2_000)
+        advanceTimeBy(2_000.milliseconds)
         runCurrent()
         assertEquals(1, requests.count { it == "GET /api/user/me" })
     }

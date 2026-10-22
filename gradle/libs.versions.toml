@@ -5,14 +5,10 @@ android-compileSdk = "37"
 android-minSdk = "25"
 android-targetSdk = "37"
 androidx-activity = "1.13.0"
-androidx-appcompat = "1.8.0"
-androidx-constraintlayout = "2.2.2"
-androidx-core = "1.19.1"
-androidx-espresso = "3.7.0"
 androidx-lifecycle = "2.11.0"
-androidx-testExt = "1.3.0"
-composeMultiplatform = "1.12.1"
-junit = "4.13.2"
+componentsResources = "1.12.2"
+composeMultiplatform = "1.12.2"
+foundation = "1.12.2"
 kotlin = "2.4.20"
 kotlinx-coroutines = "1.11.0"
 ktor = "3.6.0"
@@ -20,13 +16,11 @@ logback = "1.6.5"
 koin = "4.2.2"
 compose-navigation = "2.9.2"
 h2 = "2.5.252"
-#postgres-version = "42.7.13"
+material3 = "1.9.0"
 material3WindowSizeClassMultiplatform = "0.5.0"
 filekit = "0.16.0"
 kotlinxSerializationJson = "1.11.0"
-exposed = "1.5.0"
-#sqlitejdbc = "3.53.4.0"
-openpdf = "2.0.5"
+exposed = "1.6.0"
 kotlinx-io = "0.9.1"
 ksafe = "3.3.0"
 kotlinx-datetime = "0.7.1"
@@ -38,18 +32,14 @@ pdfbox-graphics2d = "3.0.5"
 coil = "3.6.2"
 
 [libraries]
+components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "componentsResources" }
+foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "foundation" }
 haze = { module = "dev.chrisbanes.haze:haze", version.ref = "haze" }
 haze-blur = { module = "dev.chrisbanes.haze:haze-blur", version.ref = "haze" }
 kotlin-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 kotlin-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
-junit = { module = "junit:junit", version.ref = "junit" }
-androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
-androidx-testExt-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }
-androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-espresso" }
-androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
-androidx-constraintlayout = { module = "androidx.constraintlayout:constraintlayout", version.ref = "androidx-constraintlayout" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
 androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
 androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
@@ -93,6 +83,11 @@ koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
 koin-composeVM = { module = "io.insert-koin:koin-compose-viewmodel", version.ref = "koin" }
 
 # Window size class
+material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
+runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
+ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
+ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
+ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
 window-size-multiplatform = { module = "dev.chrisbanes.material3:material3-window-size-class-multiplatform", version.ref = "material3WindowSizeClassMultiplatform" }
 
 # Filekt a multiplatform file picker and saver
@@ -122,11 +117,6 @@ exposed-crypt = { module = "org.jetbrains.exposed:exposed-crypt", version.ref = 
 
 # Databases
 h2 = { module = "com.h2database:h2", version.ref = "h2" }
-#sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlitejdbc" }
-#postgresql = { module = "org.postgresql:postgresql", version.ref = "postgres-version" }
-
-# Pdf
-openpdf = { module = "io.github.librepdf:openpdf", version.ref = "openpdf" }
 
 # File Stuff
 kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
@@ -141,10 +131,8 @@ kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.
 zxing-core = { module = "com.google.zxing:core", version.ref = "zxing" }
 
 [plugins]
-kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 androidApplication = { id = "com.android.application", version.ref = "agp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }
 composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }

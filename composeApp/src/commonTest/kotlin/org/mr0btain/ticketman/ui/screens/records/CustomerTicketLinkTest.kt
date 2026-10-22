@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runCurrent
@@ -23,6 +24,7 @@ import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerRecords
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Linking an existing ticket from the customer dialog: finding out whose it is now, then saving the link
@@ -56,11 +58,12 @@ class CustomerTicketLinkTest {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun TestScope.settle(done: () -> Boolean) {
         repeat(300) {
             runCurrent()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
         fail("Timed out waiting")
     }

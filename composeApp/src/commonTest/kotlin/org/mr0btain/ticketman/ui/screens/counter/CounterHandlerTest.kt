@@ -6,6 +6,7 @@ import androidx.compose.material3.SnackbarHostState
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -31,8 +32,10 @@ import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterHandler
 import org.mr0btain.ticketman.ui.screens.counter.components.CounterView
 import kotlin.test.*
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 
+@OptIn(ExperimentalCoroutinesApi::class)
 class CounterHandlerTest {
     private val ticket = Ticket(number = TicketNumber(2026, 42))
     private val invoice = Invoice(ticketIdentifier = ticket.identifier, number = InvoiceNumber(2026, 1))
@@ -64,7 +67,7 @@ class CounterHandlerTest {
         repeat(300) {
             advanceUntilIdle()
             if (done()) return
-            withContext(Dispatchers.Default) { delay(10) }
+            withContext(Dispatchers.Default) { delay(10.milliseconds) }
         }
     }
 
