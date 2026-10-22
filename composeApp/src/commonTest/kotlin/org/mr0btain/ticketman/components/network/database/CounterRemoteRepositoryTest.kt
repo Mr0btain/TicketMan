@@ -124,6 +124,7 @@ class CounterRemoteRepositoryTest {
         invoices.addPayment(id, PaymentRequest(PaymentMethod.CARD, 500))
         invoices.removePayment(id, id)
         invoices.void(id)
+        invoices.remove(id)
         invoices.fetch(0, 10)
 
         assertEquals(
@@ -134,6 +135,7 @@ class CounterRemoteRepositoryTest {
                 "POST /api/invoice/$id/payments",
                 "DELETE /api/invoice/$id/payments/$id",
                 "POST /api/invoice/$id/void",
+                "DELETE /api/invoice/$id",
                 "GET /api/invoice/fetch"
             ),
             requests

@@ -133,6 +133,8 @@ Some columns hold shared classes as JSON (`json<Device>("device", ...)`), which 
 rows still read after a field is removed.
 
 Foreign keys on note and link tables use `ReferenceOption.CASCADE`, so deleting a ticket removes its join rows.
+An invoice's `ticket_id` isn't a foreign key: `TicketDatabase.remove` deletes the invoice itself when it's open with
+nothing paid, and otherwise keeps it with the ticket's number (`ticket_label`, `ticket_removed_at`).
 The notes themselves don't cascade, so each `remove` takes the record's notes first, deletes the record, then
 deletes the notes with the base class's `deleteNotes()`, which marks their photos deleted. An inventory item's own
 photos are marked deleted too. The [sweep](../operations.md#the-hourly-sweep) clears the files up a day later.

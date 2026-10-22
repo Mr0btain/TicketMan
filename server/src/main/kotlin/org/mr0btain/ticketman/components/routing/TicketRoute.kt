@@ -241,12 +241,15 @@ fun Route.ticketRoute(
         delete(RecordPaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
 
+            // Looked at first, the delete decides whether the invoice stays
+            val kept = identifier?.let { invoiceService.invoiceFor(it) }?.takeIf { it.outlivesTicket }
+
             if (identifier == null || !database.remove(identifier)) {
                 call.respond(HttpStatusCode.NotFound)
                 return@delete
             }
 
-            call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier)
+            call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier, kept?.let { "Invoice ${it.label} kept, it has payments or was voided" }.orEmpty())
             call.respond(HttpStatusCode.Accepted)
         }
 

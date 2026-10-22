@@ -48,6 +48,20 @@ class CounterInvoices(
         }
     }
 
+    /** Deletes an invoice kept after its ticket was deleted, admin only */
+    fun remove(invoice: Invoice) {
+        support.scope.launch {
+            when (val result = remoteHandler.invoiceRepo.remove(invoice.identifier)) {
+                is TmResult.Success -> {
+                    support.notify("Deleted ${invoice.label}")
+                    _list.value = _list.value.filter { it.identifier != invoice.identifier }
+                }
+
+                is TmResult.Error -> support.notify(result.error.message)
+            }
+        }
+    }
+
     /**
      * Saves the invoices made from [from] to [to] (days like 2026-10-01, both included) as CSV for the books
      * @param onResult Gets null when it was saved or they cancelled, otherwise what went wrong

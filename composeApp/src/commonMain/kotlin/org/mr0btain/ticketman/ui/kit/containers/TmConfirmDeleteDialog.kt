@@ -6,6 +6,7 @@ import androidx.compose.runtime.*
  * Asks before deleting something
  * @param itemName What's being deleted, like "Ticket"
  * @param isTwoStep Asks a second time, for things that take a lot with them like a customer's tickets
+ * @param note Said on the last step, like what's kept rather than deleted
  */
 @Composable
 fun TmConfirmDeleteDialog(
@@ -13,17 +14,21 @@ fun TmConfirmDeleteDialog(
     isTwoStep: Boolean = false,
     isVisible: Boolean,
     onConfirm: () -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    note: String? = null
 ) {
     if (!isVisible) return
 
     var confirmCount by remember { mutableIntStateOf(0) }
     val name = itemName.lowercase()
 
+    val lastStep = !isTwoStep || confirmCount > 0
+
     TmConfirmDialog(
         title = if (confirmCount == 0) "Delete this $name?" else "Delete it for good?",
-        message = if (confirmCount == 0) "This can't be undone."
-            else "Everything attached to this $name goes with it, and it can't be brought back.",
+        message = (if (confirmCount == 0) "This can't be undone."
+            else "Everything attached to this $name goes with it, and it can't be brought back.") +
+            if (lastStep && note != null) " $note" else "",
         confirmText = if (isTwoStep && confirmCount == 0) "Continue" else "Delete $name",
         destructive = true,
         onConfirm = {

@@ -20,7 +20,11 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerEntity
+import org.mr0btain.ticketman.components.database.tables.invoice.InvoicePaymentTable
+import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceTable
+import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketEntity
@@ -119,11 +123,33 @@ class TicketDatabase(
 
             // The technician link has no cascade, so it goes first or the delete fails
             val notes = ticketEntity.notes.toList()
+            val label = ticketEntity.toTicket().label
             UserTicketTable.deleteWhere { UserTicketTable.ticket eq identifier }
+            keepOrDeleteInvoice(identifier, label)
             ticketEntity.delete()
             deleteNotes(notes)
             true
         }
+
+    /**
+     * An invoice with money against it, or a void one, outlives its ticket, keeping the ticket's number so it can
+     * still be told apart. An open one with nothing paid goes with the ticket. Inside the ticket's delete
+     */
+    private fun keepOrDeleteInvoice(ticketIdentifier: Uuid, ticketLabel: String) {
+        val invoice = InvoiceTable.selectAll().where { InvoiceTable.ticket eq ticketIdentifier }.firstOrNull() ?: return
+        val invoiceIdentifier = invoice[InvoiceTable.id]
+        val paid = !InvoicePaymentTable.selectAll().where { InvoicePaymentTable.invoice eq invoiceIdentifier }.empty()
+
+        if (paid || invoice[InvoiceTable.status] != InvoiceStatus.OPEN.name) {
+            InvoiceTable.update(where = { InvoiceTable.id eq invoiceIdentifier }) { row ->
+                row[InvoiceTable.ticketLabel] = ticketLabel
+                row[InvoiceTable.ticketRemovedAt] = Clock.System.now().toEpochMilliseconds()
+            }
+        } else {
+            // Its lines and payments go with it
+            InvoiceTable.deleteWhere { InvoiceTable.id eq invoiceIdentifier }
+        }
+    }
 
     override fun search(query: String, limit: Int): List<SearchResult>? =
         searchTickets(query, limit)?.map { ticket ->

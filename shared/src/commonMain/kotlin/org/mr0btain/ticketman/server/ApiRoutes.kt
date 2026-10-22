@@ -169,6 +169,9 @@ object InvoicePaths {
     const val PAYMENT = "/{identifier}/payments/{paymentIdentifier}"
     const val VOID = "/{identifier}/void"
 
+    /** `DELETE`, admin only: an invoice kept after its ticket was deleted */
+    const val REMOVE = "/{identifier}"
+
     /** The invoice as a PDF, laid out like the printed one */
     const val PDF = "/{identifier}/pdf"
 

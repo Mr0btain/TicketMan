@@ -41,12 +41,12 @@ class InvoiceDocuments(
 
     /**
      * The invoice laid out like the printed one on a letter page, with what's needed to send it
-     * @return Null when the invoice or its ticket isn't there
+     * @return Null when the invoice isn't there. One kept after its ticket was deleted shows the ticket's number
      */
     fun pdf(identifier: Uuid): InvoicePdf? {
         val invoice = invoices.getById(identifier) ?: return null
-        val ticket = tickets.getById(invoice.ticketIdentifier) ?: return null
-        val customerIdentifier = invoice.customerIdentifier ?: tickets.getCustomer(ticket.identifier)?.identifier
+        val ticket = tickets.getById(invoice.ticketIdentifier)
+        val customerIdentifier = invoice.customerIdentifier ?: ticket?.let { tickets.getCustomer(it.identifier) }?.identifier
         val customer = customerIdentifier?.let { customers.getById(it) }
 
         val document = PrintTemplates.invoice(shop.get(), ticket, customer, invoice)
@@ -110,7 +110,7 @@ class InvoiceDocuments(
 
         list.forEach { invoice ->
             val ticket = ticketLabels.getOrPut(invoice.ticketIdentifier) {
-                tickets.getById(invoice.ticketIdentifier)?.label.orEmpty()
+                tickets.getById(invoice.ticketIdentifier)?.label ?: invoice.ticketLabel
             }
             val customerIdentifier = invoice.customerIdentifier ?: tickets.getCustomer(invoice.ticketIdentifier)?.identifier
             val customer = customerIdentifier?.let { id -> customerNames.getOrPut(id) { customers.getById(id)?.name.orEmpty() } }.orEmpty()

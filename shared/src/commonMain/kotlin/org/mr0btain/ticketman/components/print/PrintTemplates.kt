@@ -68,8 +68,9 @@ object PrintTemplates {
     /**
      * The invoice on its own, to email or file: like the [receipt], with the customer's contact details and what's
      * still owed. Made on the server as a PDF (`GET /api/invoice/{id}/pdf`)
+     * @param ticket Null once the ticket is deleted, the invoice's [Invoice.ticketLabel] stands in
      */
-    fun invoice(shop: ShopProfile, ticket: Ticket, customer: Customer?, invoice: Invoice): PrintDocument {
+    fun invoice(shop: ShopProfile, ticket: Ticket?, customer: Customer?, invoice: Invoice): PrintDocument {
         val address = customer?.address?.let { listOf(it.street, listOf(it.city, it.state, it.zip).filter(String::isNotBlank).joinToString(" ")) }
             ?.filter { it.isNotBlank() }?.joinToString("\n").orEmpty()
 
@@ -84,8 +85,8 @@ object PrintTemplates {
                     InvoiceStatus.OPEN -> "Due"
                 }
             ),
-            PrintBlock.Field("Ticket", ticket.label),
-            PrintBlock.Field("Device", ticket.device.toString().trim().ifBlank { "-" }),
+            PrintBlock.Field("Ticket", ticket?.label ?: invoice.ticketLabel.ifBlank { "-" }),
+            PrintBlock.Field("Device", ticket?.device?.toString()?.trim().orEmpty().ifBlank { "-" }),
             PrintBlock.Gap,
             customer?.let { PrintBlock.Field("Bill to", it.name) },
             address.takeIf { it.isNotBlank() }?.let { PrintBlock.Field("", it) },

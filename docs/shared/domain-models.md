@@ -112,7 +112,10 @@ The bytes live on the server's disk. A photo never changes once uploaded, so rep
 | `TicketSummary` | A ticket with its customer and tech as `EntityReference`s, for lists that would otherwise need extra lookups |
 | `ShopProfile` | The shop's name, address, contact details, tax rate, currency symbol, invoice footer, repair terms, repeat repair window and default paper size |
 
-There's one invoice per ticket. Totals are worked out by `InvoiceMath`, see [Money](money.md).
+There's one invoice per ticket. Totals are worked out by `InvoiceMath`, see [Money](money.md). An invoice with
+payments, or a void one (`outlivesTicket`), is kept when its ticket is deleted, with the ticket's number in
+`ticketLabel` and `ticketRemoved` true. Edits to its lines go to the server as an `InvoiceChangeRequest` from
+`InvoiceChanges.between`.
 
 ## Stations and audit
 

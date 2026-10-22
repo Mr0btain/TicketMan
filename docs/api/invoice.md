@@ -1,7 +1,9 @@
 # Invoices API
 
 `/api/invoice`, from [`InvoiceRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/InvoiceRoute.kt).
-One invoice per ticket. Anyone logged in can look; Normal access changes an open invoice; only admins void.
+One invoice per ticket. Anyone logged in can look; Normal access changes an open invoice; only admins void, and
+delete one kept after its ticket was deleted. An invoice with money taken against it, or a void one, outlives its
+ticket: `ticketLabel` keeps the ticket's number and `ticketRemovedAt` says when it went.
 Totals are always worked out by the server with `InvoiceMath` and the shop's tax rate, so a client never sends
 them. Paying an invoice off and closing the ticket is [`POST /api/counter/pickup`](counter.md#post-apicounterpickup).
 See [Counter: check-in, invoices and pickup](../server/counter.md#invoices) for the rules.
@@ -40,7 +42,8 @@ A page of every invoice, newest first.
 The invoice as a PDF on a letter page, laid out like the printed one (`PrintTemplates.invoice`), to email or file.
 Streamed, with `Content-Disposition: attachment; filename=INV-26-00000042.pdf`.
 
-- **`200`** `application/pdf`. **`404`** no such invoice, or its ticket is gone.
+- **`200`** `application/pdf`. **`404`** no such invoice. One whose ticket was deleted shows the kept ticket number
+  and no device.
 
 ### `GET /api/invoice/export`
 
@@ -110,6 +113,16 @@ Cancels an invoice. A paid one puts its parts back in stock. The ticket keeps it
 picked up.
 
 - **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void.
+
+### `DELETE /api/invoice/{identifier}`
+
+**Auth:** admin
+
+Deletes an invoice kept after its ticket was deleted, with its lines and payments, once an admin decides it isn't
+needed for the books. Stock its parts took stays taken; void it first to put that back. Audited.
+
+- **`202`** deleted. **`404`** no such invoice. **`409`** its ticket is still there; it's dealt with when the
+  ticket is deleted.
 
 ## See also
 

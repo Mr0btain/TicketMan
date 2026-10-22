@@ -2,13 +2,15 @@ package org.mr0btain.ticketman.components.database.tables.invoice
 
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
-import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 
-/** One invoice per ticket */
+/**
+ * One invoice per ticket. [ticket] isn't a foreign key, since an invoice with money against it outlives its ticket
+ * (databases from before that have it dropped by `LocalDatabase`'s `invoice-ticket-key` fix)
+ */
 object InvoiceTable : UuidTable("invoices") {
     val numberYear = integer("number_year")
     val numberSequence = long("number_sequence")
-    val ticket = reference("ticket_id", TicketTable, onDelete = ReferenceOption.CASCADE).uniqueIndex()
+    val ticket = uuid("ticket_id").uniqueIndex()
     val customer = text("customer_id").nullable()
     val status = text("status")
     val discountCents = long("discount_cents").default(0)
@@ -18,6 +20,10 @@ object InvoiceTable : UuidTable("invoices") {
     val totalCents = long("total_cents").default(0)
     val createdAt = long("created_at")
     val paidAt = long("paid_at").nullable()
+
+    // Added with keeping invoices after their ticket is deleted
+    val ticketLabel = text("ticket_label").default("")
+    val ticketRemovedAt = long("ticket_removed_at").nullable()
 
     init {
         uniqueIndex("invoices_number_unique", numberYear, numberSequence)

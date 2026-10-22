@@ -108,8 +108,10 @@ number and pickup time stay the server's. A status change is added to the histor
 
 **Auth:** normal
 
-Deletes the ticket with its notes, invoice, work log, signature, history and technician link. Note photos are cleared up by
-the next sweep.
+Deletes the ticket with its notes, work log, signature, history and technician link. Note photos are cleared up by
+the next sweep. Its invoice goes too when it's open with nothing paid; one with money taken against it, or a void
+one, is kept with the ticket's number (`ticketLabel`, `ticketRemovedAt`) and the audit entry says so. An admin can
+delete it later with [`DELETE /api/invoice/{identifier}`](invoice.md#delete-apiinvoiceidentifier).
 
 - **`202`** deleted. **`404`** no such ticket.
 

@@ -40,6 +40,7 @@ class InvoiceDatabase(
     private val STATUS_TAG = "$TAG:Status"
     private val PAGED_TAG = "$TAG:Paged"
     private val RANGE_TAG = "$TAG:Range"
+    private val REMOVE_TAG = "$TAG:Remove"
 
     fun getById(identifier: Uuid): Invoice? =
         dbQuery(GET_TAG) {
@@ -143,6 +144,10 @@ class InvoiceDatabase(
             } > 0
         }
 
+    /** Deletes the invoice with its lines and payments */
+    fun remove(identifier: Uuid): Boolean =
+        dbWrite(REMOVE_TAG) { InvoiceTable.deleteWhere { InvoiceTable.id eq identifier } > 0 }
+
     fun setStatus(identifier: Uuid, status: InvoiceStatus, paidAt: Long? = null): Boolean =
         dbWrite(STATUS_TAG) {
             InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row ->
@@ -213,7 +218,7 @@ class InvoiceDatabase(
         return Invoice(
             identifier = identifier,
             number = InvoiceNumber(this[InvoiceTable.numberYear], this[InvoiceTable.numberSequence]),
-            ticketIdentifier = this[InvoiceTable.ticket].value,
+            ticketIdentifier = this[InvoiceTable.ticket],
             customerIdentifier = this[InvoiceTable.customer]?.let { Uuid.parse(it) },
             status = InvoiceStatus.valueOf(this[InvoiceTable.status]),
             charges = charges,
@@ -224,7 +229,9 @@ class InvoiceDatabase(
             taxCents = this[InvoiceTable.taxCents],
             totalCents = this[InvoiceTable.totalCents],
             createdAt = this[InvoiceTable.createdAt],
-            paidAt = this[InvoiceTable.paidAt]
+            paidAt = this[InvoiceTable.paidAt],
+            ticketLabel = this[InvoiceTable.ticketLabel],
+            ticketRemovedAt = this[InvoiceTable.ticketRemovedAt]
         )
     }
 

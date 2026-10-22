@@ -9,6 +9,7 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import org.mr0btain.ticketman.components.network.ServerError
+import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
@@ -20,6 +21,7 @@ import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
+import org.mr0btain.ticketman.error.EmptyResult
 import kotlin.uuid.Uuid
 
 /**
@@ -87,6 +89,15 @@ class InvoiceRemoteRepository(
     /** Admin only */
     suspend fun void(identifier: Uuid): TmResult<Invoice, ServerError> =
         change { client.post { url("$baseUrl${InvoicePaths.VOID.fill(identifier)}") } }
+
+    /** Admin only: deletes an invoice kept after its ticket was deleted */
+    suspend fun remove(identifier: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleActionHttpResponse(CHANGE_TAG, networkRequest(CHANGE_TAG) {
+            client.delete { url("$baseUrl${InvoicePaths.REMOVE.fill(identifier)}") }
+        })
+    }
 
     /** Newest first */
     suspend fun fetch(offset: Long, limit: Int): TmResult<List<Invoice>, ServerError> {

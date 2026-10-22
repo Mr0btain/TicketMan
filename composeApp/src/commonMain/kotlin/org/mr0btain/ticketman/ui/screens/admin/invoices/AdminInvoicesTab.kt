@@ -40,11 +40,12 @@ private val COLUMNS = listOf(
     TmColumn("Paid", width = 104.dp, end = true),
     TmColumn("Balance", width = 104.dp, end = true),
     TmColumn("", width = 64.dp, end = true),
-    TmColumn("", width = 72.dp, end = true)
+    TmColumn("", width = 144.dp, end = true)
 )
 
 /**
- * Every invoice, newest first. Clicking one opens its ticket at the counter, and any that isn't void can be voided
+ * Every invoice, newest first. Clicking one opens its ticket at the counter, and any that isn't void can be voided.
+ * One kept after its ticket was deleted says so, and can be deleted
  * @param onOpenTicket Shows the invoice's ticket on the counter screen
  */
 @Composable
@@ -59,6 +60,7 @@ fun AdminInvoicesTab(
     val spacing = TmTheme.spacing
 
     var voiding by remember { mutableStateOf<Invoice?>(null) }
+    var deleting by remember { mutableStateOf<Invoice?>(null) }
     var exporting by remember { mutableStateOf(false) }
 
     if (exporting) {
@@ -84,6 +86,22 @@ fun AdminInvoicesTab(
                 voiding = null
             },
             onDismissRequest = { voiding = null }
+        )
+    }
+
+    deleting?.let { invoice ->
+        TmConfirmDialog(
+            title = "Delete ${invoice.label}?",
+            message = "Its ticket ${invoice.ticketLabel} was deleted, and this was kept because money was taken or it " +
+                "was voided. Deleting it takes it, and the payments on it, out of the books and the end of day " +
+                "report for good." + if (invoice.status == InvoiceStatus.PAID) " Parts it took stay out of stock; void it first to put them back." else "",
+            confirmText = "Delete invoice",
+            destructive = true,
+            onConfirm = {
+                counter.invoices.remove(invoice)
+                deleting = null
+            },
+            onDismissRequest = { deleting = null }
         )
     }
 
@@ -126,9 +144,15 @@ fun AdminInvoicesTab(
                 TmTableHeader(COLUMNS)
 
                 invoices.forEach { invoice ->
-                    TmTableRow(COLUMNS, onClick = { onOpenTicket(invoice.ticketIdentifier) }) { column ->
+                    // A deleted ticket has nothing to open
+                    TmTableRow(COLUMNS, onClick = if (invoice.ticketRemoved) null else ({ onOpenTicket(invoice.ticketIdentifier) })) { column ->
                         when (column) {
-                            0 -> TmTicketIdText(invoice.label)
+                            0 -> Column {
+                                TmTicketIdText(invoice.label)
+                                if (invoice.ticketRemoved) {
+                                    Text("Ticket ${invoice.ticketLabel} deleted", style = TmTheme.typography.caption, color = colors.textMuted)
+                                }
+                            }
                             1 -> Text(formatDateTime(invoice.createdAt), style = TmTheme.typography.body, color = colors.textMuted)
                             2 -> TmBadge(
                                 text = formatEnumName(invoice.status.name),
@@ -142,8 +166,13 @@ fun AdminInvoicesTab(
                             4 -> TmMoneyText(invoice.paidCents, color = colors.textMuted)
                             5 -> TmMoneyText(invoice.balanceCents, color = if (invoice.balanceCents > 0) colors.danger.color else colors.text)
                             6 -> TmButton(text = "PDF", onClick = { counter.printer.savePdf(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
-                            7 -> if (invoice.status != InvoiceStatus.VOID) {
-                                TmButton(text = "Void", onClick = { voiding = invoice }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                            7 -> Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                                if (invoice.status != InvoiceStatus.VOID) {
+                                    TmButton(text = "Void", onClick = { voiding = invoice }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                                }
+                                if (invoice.ticketRemoved) {
+                                    TmButton(text = "Delete", onClick = { deleting = invoice }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                                }
                             }
                         }
                     }

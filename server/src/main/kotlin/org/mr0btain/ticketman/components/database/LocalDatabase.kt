@@ -9,6 +9,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.DataFixTable
 import org.mr0btain.ticketman.components.database.tables.audit.AuditLogTable
@@ -134,7 +135,8 @@ class LocalDatabase (
         TokenTable,
         InventoryTable,
         StationTable,
-        ImageTable
+        ImageTable,
+        InvoiceTable
     )
 
     /**
@@ -168,6 +170,7 @@ class LocalDatabase (
             customerDatabase.migrateLegacyNames()
             userDatabase.migrateLegacyNames()
         }
+        runOnce("invoice-ticket-key") { dropInvoiceTicketKey() }
         removeDetachedNotes()
     }
 
@@ -190,6 +193,23 @@ class LocalDatabase (
         } catch (ex: Exception) {
             AppLogger.e(DATA_FIX_TAG, "$name: ${SimpleResult.FAIL}", ex)
         }
+    }
+
+    /**
+     * Invoices used to be deleted with their ticket by a foreign key. Now one with money against it outlives the
+     * ticket, so the key is dropped; the column and its unique index stay
+     */
+    private fun dropInvoiceTicketKey() {
+        val transaction = TransactionManager.current()
+        val keys = transaction.exec(
+            "SELECT tc.CONSTRAINT_NAME FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS tc " +
+                "JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE k ON k.CONSTRAINT_NAME = tc.CONSTRAINT_NAME " +
+                "AND k.TABLE_SCHEMA = tc.TABLE_SCHEMA " +
+                "WHERE tc.CONSTRAINT_TYPE = 'FOREIGN KEY' AND UPPER(tc.TABLE_NAME) = 'INVOICES' " +
+                "AND UPPER(k.COLUMN_NAME) = 'TICKET_ID'"
+        ) { result -> buildList { while (result.next()) add(result.getString(1)) } }.orEmpty()
+
+        keys.forEach { name -> transaction.exec("ALTER TABLE ${InvoiceTable.tableName} DROP CONSTRAINT \"$name\"") }
     }
 
     /**

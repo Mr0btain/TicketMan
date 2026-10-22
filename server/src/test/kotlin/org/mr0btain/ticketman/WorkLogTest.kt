@@ -221,7 +221,7 @@ class WorkLogTest {
 
         assertEquals(HttpStatusCode.Accepted, client.delete("/api/data/ticket/remove/${ticket.identifier}") { bearerAuth(token) }.status)
 
-        // Its invoice goes with it (a cascade), and so does its work
+        // Its invoice, open with nothing paid, goes with it, and so does its work
         assertEquals(HttpStatusCode.NotFound, client.get("/api/invoice/ticket/${ticket.identifier}") { bearerAuth(token) }.status)
         assertEquals(HttpStatusCode.NotFound, client.delete("/api/data/ticket/remove/work/${entry.identifier}") { bearerAuth(token) }.status)
     }

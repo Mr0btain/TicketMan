@@ -175,6 +175,19 @@ the whole list dropped that line. Changes merge without asking anyone in the usu
 **Costs:** on a clash the counter's own edit is lost and has to be made again. A version number on the invoice
 would be simpler but would refuse every save after any change at all, logged work included.
 
+### Invoices with money taken outlive their ticket
+
+**Chosen:** deleting a ticket deletes its invoice only when it's open with nothing paid. One with payments (a
+deposit or a pickup) or a void one is kept, with the ticket's number copied onto it, until an admin deletes it from
+the Invoices tab.
+
+**Why:** money taken has to stay in the books and the end of day report, whatever happens to the ticket. Keeping a
+void one too means a cancelled sale doesn't quietly disappear. An empty open invoice records nothing, so it goes.
+
+**Costs:** the invoice's `ticket_id` is no longer a foreign key, so nothing in the database stops it pointing at a
+ticket that's gone; `ticketRemovedAt` is what says so. A kept invoice can't be opened at the counter, only printed,
+voided or deleted.
+
 ### Pickup is the only way to close a ticket
 
 **Chosen:** only `POST /api/counter/pickup` sets `PICKED_UP`, and it pays the invoice, takes the parts from

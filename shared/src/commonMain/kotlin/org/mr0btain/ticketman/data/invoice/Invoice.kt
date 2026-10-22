@@ -11,6 +11,9 @@ import kotlin.uuid.Uuid
  * @param taxRateBasisPoints Shop tax rate when the invoice was made, kept after, 750 is 7.5%
  * @param createdAt Epoch millis
  * @param paidAt Epoch millis it was paid off at pickup
+ * @param ticketLabel The ticket's number, kept once the ticket is deleted, blank before
+ * @param ticketRemovedAt Epoch millis its ticket was deleted. An invoice with payments, or a void one, outlives its
+ * ticket, so the money taken stays on record until an admin deletes it
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -28,8 +31,18 @@ data class Invoice(
     val taxCents: Long = 0,
     val totalCents: Long = 0,
     val createdAt: Long = 0,
-    val paidAt: Long? = null
+    val paidAt: Long? = null,
+    val ticketLabel: String = "",
+    val ticketRemovedAt: Long? = null
 ): MainItem() {
+    /** Its ticket was deleted, the invoice was kept */
+    val ticketRemoved: Boolean
+        get() = ticketRemovedAt != null
+
+    /** Whether deleting its ticket keeps it: it has money against it, or was voided */
+    val outlivesTicket: Boolean
+        get() = payments.isNotEmpty() || status != InvoiceStatus.OPEN
+
     val paidCents: Long
         get() = payments.sumOf { it.amountCents }
 

@@ -162,5 +162,17 @@ fun Route.invoiceRoute(
 
             call.respondAccount(service.void(identifier, call.getIdentifierFromToken()), HttpStatusCode.OK)
         }
+
+        // Only one kept after its ticket was deleted, see InvoiceService.remove
+        delete(InvoicePaths.REMOVE) {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@delete
+            }
+
+            call.respondAccount(service.remove(identifier, call.getIdentifierFromToken()), HttpStatusCode.Accepted)
+        }
     }
 }

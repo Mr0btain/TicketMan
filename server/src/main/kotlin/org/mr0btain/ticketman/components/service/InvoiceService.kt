@@ -166,6 +166,25 @@ class InvoiceService(
         return AccountResult.Done(invoices.getById(identifier)!!)
     }
 
+    /**
+     * Deletes an invoice kept after its ticket was deleted, once an admin decides it isn't needed. Stock taken for
+     * its parts stays taken; void it first to put that back. One whose ticket is still there goes with the ticket
+     */
+    fun remove(identifier: Uuid, actor: Uuid?): AccountResult<Unit> = synchronized(CHANGE_LOCK) {
+        val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
+        if (!invoice.ticketRemoved) return AccountResult.Conflict("Invoice ${invoice.label} still has its ticket, it's deleted with the ticket")
+
+        transaction {
+            if (!invoices.remove(identifier)) throw IllegalStateException("Invoice ${invoice.label} wasn't deleted")
+            auditLog.log(actor, AuditAction.DELETE, "invoice", identifier.toString(), "Deleted ${invoice.label} (ticket ${invoice.ticketLabel}, ${money(invoice.paidCents)} paid)")
+        }
+
+        return AccountResult.Done(Unit)
+    }
+
+    /** The ticket's invoice, without making one */
+    fun invoiceFor(ticketIdentifier: Uuid): Invoice? = invoices.getByTicket(ticketIdentifier)
+
     // ------------------------------------------ Work log ------------------------------------------
 
     /**

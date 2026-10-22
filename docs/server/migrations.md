@@ -22,7 +22,7 @@ userDatabase.migrateDeactivatedUsers()
 tokenDatabase.clearLegacySessions()
 tokenDatabase.backfillExpiry()
 inventoryDatabase.migrateLegacyPrices()
-runOnce("legacy-names") { ... }         // 6. data fixes that only run once
+runOnce("legacy-names") { ... }         // 6. data fixes that only run once (also "invoice-ticket-key")
 removeDetachedNotes()
 ```
 
@@ -130,6 +130,7 @@ database runs them too, on nothing.
 
 | Name | What it does |
 |------|--------------|
+| `invoice-ticket-key` | Drops the foreign key that deleted an invoice with its ticket (`dropInvoiceTicketKey`), now that one with money against it is kept. The column and its unique index stay |
 | `legacy-names` | `CustomerDatabase.migrateLegacyNames()` and `UserDatabase.migrateLegacyNames()`: names older versions stored as `first:last` or lowercased (`isLegacyName`) are rewritten as they were shown, `jane:doe` as `Jane Doe` (`legacyName` in `LegacyName.kt`) |
 
 ## Checklist

@@ -196,6 +196,8 @@ fun RecordsScreen(
     TmConfirmDeleteDialog(
         itemName = dataType.stringName,
         isTwoStep = true,
+        // Money taken stays on record, InvoiceService keeps those
+        note = if (dataType == DataType.TICKET) "Except its invoice, if money was taken on it or it was voided: that's kept for the books, and an admin can delete it from the Invoices tab." else null,
         isVisible = showConfirmDeleteDialog,
         onConfirm = {
             when (dataType) {
