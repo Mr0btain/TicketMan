@@ -21,12 +21,13 @@ passing run prints nothing.
 
 | Kind | Source set | What's there |
 |------|-----------|--------------|
-| Server | `server/src/test/` | One class per area: `AuthTest`, `JwtTest`, `SessionTest`, `AccountTest`, `StationTest`, `CheckInTest`, `CounterTest`, `InvoiceTest`, `InventoryTest`, `TicketTest`, `ImageTest`, `AdminTest`, `RestoreTest`, `HttpsTest`, `WebClientTest`, ... |
+| Server | `server/src/test/` | One class per area: `AuthTest`, `JwtTest`, `SessionTest`, `AccountTest`, `StationTest`, `CheckInTest`, `CounterTest`, `InvoiceTest`, `InventoryTest`, `TicketTest`, `ImageTest`, `AdminTest`, `RestoreTest`, `ProxyTest`, `LoginLimiterTest`, `WebClientTest`, ... |
 | Shared | `shared/src/commonTest/` | Pure logic: `MoneyTest`, `InvoiceMathTest`, `UserRulesTest`, `LruCacheTest`, `TimeHelpersTest` |
 | Client logic | `composeApp/src/commonTest/` | Handlers, repositories, seeds, pagers, storage, print templates, formatting. Network calls go to a `MockEngine` |
 | Client, desktop only | `composeApp/src/desktopTest/` | Things that need the JVM: Java2D printing, QR codes checked with ZXing, the pinned HTTPS engine, streaming file bodies, render tests, `UiKitRulesTest` |
 | End to end | `scripts/counter_e2e.py` | The whole counter flow against a real server, over HTTP |
 | Docker | `scripts/docker_smoke.sh` | The image and `docker-compose.yml` behind Caddy: the end to end walk, a restore finished by restarting, and a clean stop |
+| Docker, by hand | `scripts/docker_local.sh` | The same setup left running at `https://localhost:8443`, for the desktop client and a browser on this machine |
 
 ## Server tests
 
@@ -82,9 +83,8 @@ class ThingTest {
 - **Restart on the same data** by running two `testApplication` blocks in one test with an H2 `SHUTDOWN` between
   them. `RestoreTest` and `DatabaseWriteTest.notesLeftBehindAreRemovedOnStart` do this, to test what happens on
   start.
-- **A real Netty server**, for HTTPS: `HttpsTest` starts one with `createServer(args)` on free ports, the same way
-  `main()` does.
-- **Swap the clock** where a class takes one: `RequestLimiter(now = { clock })`, `TicketDatabase(currentYear = ...)`.
+- **Swap the clock** where a class takes one: `RequestLimiter(now = { clock })`, `LoginLimiter(now = { clock })`,
+  `TicketDatabase(currentYear = ...)`.
 
 ### Pitfalls
 
@@ -161,7 +161,7 @@ test has to let both run:
 |------|--------|
 | `Java2DPrintLayoutTest` | Draws the printouts into images the way they'd go to a printer, and reads the QR code back off the page |
 | `QrCodeTest` | The in-house QR encoder's codes decode with ZXing |
-| `PinnedHttpsTest` | The OkHttp engine against a real HTTPS server with a self-made certificate: refused until trusted, then only that certificate |
+| `PinnedHttpsTest` | The OkHttp engine against a real HTTPS server with a private certificate: refused until trusted, then only that certificate, or ones from that same CA (a chain like Caddy's, whose intermediate changes), and the CA fetched from the proxy |
 | `FileBodyTest` | A picked file goes up as it's read, with its size known so the server can check for room first |
 | `UiKitRulesTest` | Screens only style through the UI kit. See [Kit rules](ui/kit-rules.md) |
 | `KitGalleryRenderTest`, `ScreenRenderTest` | Render tests, below |
@@ -243,6 +243,13 @@ scripts/docker_smoke.sh
 
 Run it after changing the Dockerfile, the compose file, the restart route, or anything about how the server starts
 and stops. Your user has to be able to run `docker`.
+
+To try the apps by hand against the same setup, [`scripts/docker_local.sh`](../scripts/docker_local.sh) starts it as
+`ticketman-local` at `https://localhost:8443` and leaves it running, keeping its data between runs (`--down` removes
+it). It prints Caddy's CA fingerprint and the commands for the desktop client, either asking to trust the CA or
+trusting it already through `build/docker-truststore.p12`; a browser on the same machine opens the address and
+accepts its warning. Check the trust dialog, the "Not secure" warning (connect to `http://<this machine's LAN
+address>:8080` from `:server:run`), and that the client keeps connecting after Caddy renews its certificate.
 
 ## Adding tests
 

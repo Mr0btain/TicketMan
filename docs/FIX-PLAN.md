@@ -5,12 +5,12 @@ taking it out of that page's Known gaps. Things that aren't problems, just rules
 [Rules to keep](#rules-to-keep) at the end, not in the phases.
 
 ## Phase 0: HTTPS removal, a decisive choice.
-- [ ] Completely remove HTTPS from server side. Only talk through HTTP and let a reverse proxy in the docker container handle all
+- [x] Completely remove HTTPS from server side. Only talk through HTTP and let a reverse proxy in the docker container handle all
       the https. Right now we use caddy. Allow the client to connect through https with a valid public certificate and show the trust dialog if it's
       a private made one. But add a warning to ensure that they understand what they are doing and that it's not a public cert. We also need to setup
       a way to test this locally by running a docker container and connecting with the desktop client and through the browser on the same machine.
       We need to figure out any other decisions we may need to make or things that need changed to align with this change.
-- [ ] Since the reverse proxy is handling https, we need a new waw to identify and handle too many login attempts. Let's go through some
+- [x] Since the reverse proxy is handling https, we need a new waw to identify and handle too many login attempts. Let's go through some
       options and see what we can come up with.
 
 ## Phase 1: Fixups

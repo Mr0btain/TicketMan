@@ -21,8 +21,21 @@ fun migrateSavedServerAddress(saved: String): String {
     return if (trimmed.isBlank() || "://" in trimmed) trimmed else "http://$trimmed"
 }
 
-/** Whether traffic to [url] is encrypted. Blank counts as secure, there's nothing to warn about yet */
-fun isSecureServerAddress(url: String): Boolean = url.isBlank() || url.trim().startsWith("https://", ignoreCase = true)
+/**
+ * Whether what's sent to [url] can't be read on the network: HTTPS, or a server on this same machine, whose traffic
+ * never leaves it. Blank counts as secure, there's nothing to warn about yet
+ */
+fun isSecureServerAddress(url: String): Boolean {
+    val trimmed = url.trim()
+    if (trimmed.isBlank() || trimmed.startsWith("https://", ignoreCase = true)) return true
+
+    val host = try {
+        Url(trimmed).host.lowercase().removePrefix("[").removeSuffix("]")
+    } catch (ex: Exception) {
+        return false
+    }
+    return host == "localhost" || host == "::1" || host.startsWith("127.")
+}
 
 /** The `host:port` [ServerTrust] keys certificates by, null when [url] can't be read */
 fun trustAddressOf(url: String): String? = try {

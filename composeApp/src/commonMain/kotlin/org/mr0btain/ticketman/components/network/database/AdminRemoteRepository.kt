@@ -41,8 +41,10 @@ import org.mr0btain.ticketman.server.response.BackupJobState
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.DailyReport
-import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
+import org.mr0btain.ticketman.server.response.LoginLimitsResponse
+import org.mr0btain.ticketman.server.response.LoginLockKind
+import org.mr0btain.ticketman.server.request.LoginUnlockRequest
 import org.mr0btain.ticketman.server.response.SessionResponse
 import org.mr0btain.ticketman.server.response.StationRegistrationResponse
 import kotlin.uuid.Uuid
@@ -59,12 +61,12 @@ class AdminRemoteRepository(
     private val LOW_STOCK_TAG = "$TAG:LowStock"
     private val SESSIONS_TAG = "$TAG:Sessions"
     private val REVOKE_SESSION_TAG = "$TAG:RevokeSession"
+    private val LOGIN_LIMITS_TAG = "$TAG:LoginLimits"
     private val SERVER_INFO_TAG = "$TAG:ServerInfo"
     private val BACKUP_TAG = "$TAG:Backup"
     private val RESTORE_TAG = "$TAG:Restore"
     private val RESTART_TAG = "$TAG:Restart"
     private val IMPORT_TAG = "$TAG:Import"
-    private val CERTIFICATE_TAG = "$TAG:Certificate"
     private val SEED_TAG = "$TAG:Seed"
     private val AUDIT_TAG = "$TAG:Audit"
     private val GET_SHOP_TAG = "$TAG:GetShop"
@@ -121,6 +123,25 @@ class AdminRemoteRepository(
 
     suspend fun getStations(): List<Station> =
         getJson(STATIONS_TAG, "$adminUrl${AdminPaths.STATIONS}") ?: emptyList()
+
+    /** Usernames and addresses locked out for wrong passwords, null when it couldn't be read */
+    suspend fun getLoginLimits(): LoginLimitsResponse? =
+        getJson(LOGIN_LIMITS_TAG, "$adminUrl${AdminPaths.LOGIN_LIMITS}")
+
+    /** Lets a locked username or address try logging in again straight away */
+    suspend fun unlockLogin(kind: LoginLockKind, key: String): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkRequest(LOGIN_LIMITS_TAG) {
+            client.post {
+                url("$adminUrl${AdminPaths.LOGIN_UNLOCK}")
+                contentType(ContentType.Application.Json)
+                setBody(LoginUnlockRequest(kind, key))
+            }
+        }
+
+        return handleActionHttpResponse(LOGIN_LIMITS_TAG, response)
+    }
 
     suspend fun approveStation(identifier: Uuid): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError
@@ -319,28 +340,6 @@ class AdminRemoteRepository(
         }
 
         return handleDataHttpResponse(IMPORT_TAG, response)
-    }
-
-    /** Has the server make a new HTTPS certificate, used from its next start */
-    suspend fun renewCertificate(): TmResult<ServerCertificateInfo, ServerError> {
-        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
-
-        val response = networkRequest(CERTIFICATE_TAG) {
-            client.post { url("$adminUrl${AdminPaths.CERTIFICATE_RENEW}") }
-        }
-
-        return handleDataHttpResponse(CERTIFICATE_TAG, response)
-    }
-
-    /** Drops the new certificate waiting for the server's next start */
-    suspend fun cancelCertificateRenewal(): EmptyResult<ServerError> {
-        if (baseUrl.isBlank()) return noServerError
-
-        val response = networkRequest(CERTIFICATE_TAG) {
-            client.delete { url("$adminUrl${AdminPaths.CERTIFICATE_RENEW}") }
-        }
-
-        return handleActionHttpResponse(CERTIFICATE_TAG, response)
     }
 
     /** Full url a prepared backup downloads from */

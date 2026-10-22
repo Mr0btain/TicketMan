@@ -41,7 +41,7 @@ stateDiagram-v2
 
 | State | Shows | Notes |
 |-------|-------|-------|
-| `Address` | `ServerAddressField` | Saving it calls `settings.setServerUrl`, which connects. The hint is the proxy form (`tickets.myshop.com`), with the IP and port as the no-proxy example. Errors (`session.connectionProblem`: unreachable, or the certificate's for another name) only show after an attempt |
+| `Address` | `ServerAddressField` | Saving it calls `settings.setServerUrl`, which connects. The hint is a domain (`tickets.myshop.com`), with a LAN address as the other example. Errors (`session.connectionProblem`: unreachable, or the certificate's for another name) only show after an attempt |
 | `Login` | `LoginField`: username, password, and a link to request an account | A new user with an invite types their setup code as the password |
 | `Request` | `RequestAccountForm`: username, first and last name, email, phone, password (8 or more) and confirm | The server rate limits these. The admin approves or rejects on the Users tab |
 | `Loading` | A spinner | While `loginState` is `LOADING` |
@@ -72,13 +72,18 @@ The rest of the app sits behind it until it's done.
 
 ### Trusting a server
 
-When the server uses a certificate it made itself, `setUrl` comes back `UNTRUSTED` and
+When the proxy in front of the server has a private certificate, like Caddy's local CA for a shop with no domain,
+`setUrl` comes back `UNTRUSTED` and
 [`ServerTrustDialog`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/login/ServerTrustDialog.kt)
-shows its SHA-256 fingerprint, split into two lines to read off against the one the administrator gave out. That's
-a server doing its own HTTPS (also on the admin screen's Server tab and in the server's log) or a proxy with a
-self-signed certificate (not on the admin screen, since the server never sees it), and the dialog can't tell which
-before logging in, so it names both. A **changed** certificate gets a warning and a red confirm button. Trusting saves the fingerprint
-for that address; see [Trusting a server's certificate](../../client/networking.md#trusting-a-servers-certificate).
+says so: titled **Private certificate**, with a warning to trust it only if the admin set the server up that way
+and the fingerprint matches, since a public certificate never asks. It shows the SHA-256 fingerprint of the CA
+(when the proxy hands it out) or the certificate, split into two lines to read off against the one the
+administrator gave out ([Private certificates](../../operations.md#private-certificates) says how they get it). A
+**changed** one gets a stronger warning and a red confirm button. Trusting saves it for that address; see
+[Trusting a server's certificate](../../client/networking.md#trusting-a-servers-certificate).
+
+Connected over plain `http://` to another machine, the popup shows a **Not secure** notice above the login and
+request forms, since the password goes over the network readable (`session.insecureWarning`).
 
 ![The server trust dialog](../../images/server-trust.png)
 

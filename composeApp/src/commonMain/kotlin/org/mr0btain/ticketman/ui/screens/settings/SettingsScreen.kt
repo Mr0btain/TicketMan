@@ -99,7 +99,7 @@ fun SettingsScreen(
                 SettingItem.Text(
                     icon = painterResource(Res.drawable.server),
                     label = "Server address",
-                    description = "Where the server is, like tickets.myshop.com, or 192.168.1.20:8443 for one without a proxy. Uses HTTPS unless it starts with http://",
+                    description = "Where the server is, like tickets.myshop.com, or 192.168.1.20 on the shop's network. Uses HTTPS unless it starts with http://, which isn't secure",
                     value = serverUrl.value,
                     onChange = { url ->
                         viewModel.settings.setServerUrl(url)
@@ -200,6 +200,7 @@ fun SettingsScreen(
 
     val apiMismatch = viewModel.session.apiMismatch.collectAsState()
     val connectionProblem = viewModel.session.connectionProblem.collectAsState()
+    val insecureWarning = viewModel.session.insecureWarning.collectAsState()
 
     val account: @Composable () -> Unit = {
         AccountPanel(
@@ -207,7 +208,8 @@ fun SettingsScreen(
             onLogin = { viewModel.session.changeShowLogin(true) },
             onLogout = { viewModel.session.logout() },
             apiMismatch = apiMismatch.value,
-            connectionProblem = connectionProblem.value
+            connectionProblem = connectionProblem.value,
+            insecureWarning = insecureWarning.value
         )
     }
 

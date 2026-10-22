@@ -13,6 +13,9 @@ import org.mr0btain.ticketman.components.database.debug.seedTestData
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.RestoreService
+import org.mr0btain.ticketman.components.service.LoginLimiter
+import org.mr0btain.ticketman.server.request.LoginUnlockRequest
+import org.mr0btain.ticketman.server.response.LoginLockKind
 import org.mr0btain.ticketman.components.service.ImportService
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -34,7 +37,8 @@ fun Route.adminRoute(
     database: LocalDatabase,
     adminService: AdminService,
     backupService: BackupService,
-    restoreService: RestoreService
+    restoreService: RestoreService,
+    loginLimiter: LoginLimiter = LoginLimiter()
 ) {
     val TAG = "AdminRoute"
     val STATS_TAG = "$TAG:Stats"
@@ -155,6 +159,27 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
+        // ------------------------------------------ Login limits ------------------------------------------
+
+        // Usernames and addresses refused password logins for now, and whether the server wide ceiling is hit
+        get(AdminPaths.LOGIN_LIMITS) {
+            call.respond(HttpStatusCode.OK, loginLimiter.snapshot())
+        }
+
+        // Lets one try again straight away, like a staff member who forgot their password and has it reset
+        post(AdminPaths.LOGIN_UNLOCK) {
+            val request = call.receive<LoginUnlockRequest>()
+
+            if (!loginLimiter.unlock(request.kind, request.key)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            val what = if (request.kind == LoginLockKind.USERNAME) "username" else "address"
+            call.audit(auditLog, AuditAction.UPDATE, "login-limit", request.key, "Let the $what ${request.key} try logging in again")
+            call.respond(HttpStatusCode.Accepted)
+        }
+
         // ------------------------------------------ Stations ------------------------------------------
 
         get(AdminPaths.STATIONS) {
@@ -219,31 +244,6 @@ fun Route.adminRoute(
                 forwarded = call.attributes.getOrNull(ForwardedByProxy) == true
             )
             call.respond(HttpStatusCode.OK, info)
-        }
-
-        // Makes a new HTTPS certificate, used from the next start. Only for one the server made itself
-        post(AdminPaths.CERTIFICATE_RENEW) {
-            if (!adminService.canRenewCertificate) {
-                call.respond(HttpStatusCode.Conflict, "This server uses a supplied certificate, replace SSL_KEYSTORE instead")
-                return@post
-            }
-
-            val info = adminService.renewCertificate()
-
-            if (info == null) {
-                call.respond(HttpStatusCode.InternalServerError)
-                return@post
-            }
-
-            call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "certificate", details = "New certificate for the next start, ${info.pendingFingerprint}")
-            call.respond(HttpStatusCode.Created, info)
-        }
-
-        delete(AdminPaths.CERTIFICATE_RENEW) {
-            if (adminService.cancelCertificateRenewal()) {
-                call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "certificate", details = "Waiting certificate cancelled")
-            }
-            call.respond(HttpStatusCode.Accepted)
         }
 
         // Builds a backup archive on the server and returns a link to download it from. Can take a while, longer
@@ -337,7 +337,7 @@ fun Route.adminRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
-        // Exits so whatever runs the server starts it again, applying a waiting restore or certificate. Answers first.
+        // Exits so whatever runs the server starts it again, applying a waiting restore. Answers first.
         // Only when RESTART_ON_EXIT says something will, or the server would just stay down
         post(AdminPaths.RESTART) {
             if (!adminService.restart.enabled) {

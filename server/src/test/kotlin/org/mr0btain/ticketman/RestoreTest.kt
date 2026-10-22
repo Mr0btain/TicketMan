@@ -9,7 +9,6 @@ import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.RestoreService
-import org.mr0btain.ticketman.components.tls.ServerTls
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.image.ImageLimits
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -25,12 +24,13 @@ import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import java.awt.image.BufferedImage
+import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import javax.imageio.ImageIO
-import kotlin.io.path.invariantSeparatorsPathString
 import kotlin.test.*
 import kotlin.uuid.ExperimentalUuidApi
 
@@ -160,30 +160,47 @@ class RestoreTest {
         }
     }
 
-    @Test
-    fun theCertificateComesBackWithTheRestore() {
-        val tlsFolder = ServerTls.folder(dataDir.invariantSeparatorsPathString)
-        lateinit var original: String
+    /** [archive] as a backup from before the server stopped doing HTTPS, with its certificate in `tls/` */
+    private fun withOldCertificate(archive: ByteArray): ByteArray {
+        val entries = mutableListOf<Pair<String, ByteArray>>()
 
+        ZipInputStream(ByteArrayInputStream(archive)).use { zip ->
+            while (true) {
+                val entry = zip.nextEntry ?: break
+                val bytes = zip.readBytes()
+
+                entries += if (entry.name == BackupManifest.FILE_NAME) {
+                    val manifest = json.decodeFromString<BackupManifest>(bytes.decodeToString())
+                    entry.name to json.encodeToString(manifest.copy(includesCertificate = true)).encodeToByteArray()
+                } else {
+                    entry.name to bytes
+                }
+            }
+        }
+
+        return zip(*entries.toTypedArray(), "tls/server.p12" to byteArrayOf(1, 2, 3), "tls/server.p12.password" to "pw".encodeToByteArray())
+    }
+
+    @Test
+    fun anOlderArchivesCertificateIsLeftOut() {
         testApplication {
             configureTestServer(dataDir)
             startApplication()
             UserDatabase().add(admin)
             val token = token()
 
-            original = ServerTls.loadOrGenerate(tlsFolder).fingerprint
             val ticket = json.decodeFromString<BackupTicket>(
                 post("/api/admin/backup", json.encodeToString(BackupRequest(includeImages = false)), token).bodyAsText()
             )
             val backup = client.get(ticket.downloadPath).readRawBytes()
 
-            // Like a new machine, which makes its own certificate on first start
-            tlsFolder.deleteRecursively()
-            assertNotEquals(original, ServerTls.loadOrGenerate(tlsFolder).fingerprint)
+            // New backups never carry one
+            ZipInputStream(ByteArrayInputStream(backup)).use { zip ->
+                assertTrue(generateSequence { zip.nextEntry }.none { it.name.startsWith("tls/") })
+            }
 
-            val manifest = json.decodeFromString<PendingRestore>(restore(backup, token).bodyAsText()).manifest
+            val manifest = json.decodeFromString<PendingRestore>(restore(withOldCertificate(backup), token).bodyAsText()).manifest
             assertTrue(manifest.includesCertificate)
-            assertFalse(manifest.includesImages)
         }
         shutDownDatabase()
 
@@ -192,13 +209,9 @@ class RestoreTest {
             startApplication()
             val token = token()
 
-            assertEquals(original, ServerTls.loadOrGenerate(tlsFolder).fingerprint)
-
-            // The server says it was restored, and from a backup without photos
             val info = json.decodeFromString<ServerInfoResponse>(client.get("/api/admin/server") { bearerAuth(token) }.bodyAsText())
-            val restored = assertNotNull(info.lastRestore)
-            assertFalse(restored.manifest.includesImages)
-            assertTrue(File(dataDir.toFile(), "server/${restored.setAsideFolder}/tls").isDirectory)
+            assertNotNull(info.lastRestore)
+            assertFalse(File(dataDir.toFile(), "server/tls").exists())
         }
     }
 

@@ -6,11 +6,9 @@ import io.ktor.http.*
 import io.ktor.server.config.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
-import org.mr0btain.ticketman.components.tls.HttpMode
-import org.mr0btain.ticketman.components.tls.IpRange
-import org.mr0btain.ticketman.components.tls.ProxySettings
-import org.mr0btain.ticketman.components.tls.TlsSettings
-import org.mr0btain.ticketman.components.tls.ipLiteral
+import org.mr0btain.ticketman.components.proxy.IpRange
+import org.mr0btain.ticketman.components.proxy.ProxySettings
+import org.mr0btain.ticketman.components.proxy.ipLiteral
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
@@ -21,47 +19,9 @@ import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import java.time.ZoneId
 import kotlin.test.*
 
-/** PROXY, TRUSTED_PROXIES and what they change: HTTPS defaults, forwarded headers and the startup log */
+/** TRUSTED_PROXIES and what it changes: forwarded headers, the Server tab and the startup log */
 class ProxyTest {
     private fun config(vararg pairs: Pair<String, String>) = MapApplicationConfig(*pairs)
-
-    // As application.yaml has them, all left blank
-    private val blankYaml = arrayOf("tls.port" to "", "tls.httpMode" to "", "env.proxy" to "", "env.trustedProxies" to "")
-
-    @Test
-    fun proxyModeIsTheDefaultOutsideDevelopment() {
-        assertTrue(ProxySettings.from(config()).enabled)
-        assertFalse(ProxySettings.from(config(), developmentMode = true).enabled)
-
-        assertFalse(ProxySettings.from(config("env.proxy" to "off")).enabled)
-        assertTrue(ProxySettings.from(config("env.proxy" to "ON"), developmentMode = true).enabled)
-        assertTrue(ProxySettings.from(config("env.proxy" to "nonsense")).enabled)
-    }
-
-    @Test
-    fun httpsDefaultsFollowTheMode() {
-        val behindProxy = TlsSettings.from(config(*blankYaml))
-        assertFalse(behindProxy.enabled)
-        assertEquals(HttpMode.ON, behindProxy.httpMode)
-
-        val direct = TlsSettings.from(config(*blankYaml, "env.proxy" to "off"))
-        assertEquals(TlsSettings.DEFAULT_HTTPS_PORT, direct.httpsPort)
-        assertEquals(HttpMode.REDIRECT, direct.httpMode)
-
-        // `:server:run -Pdevelopment` still answers on both, as before
-        val development = TlsSettings.from(config(*blankYaml), developmentMode = true)
-        assertEquals(TlsSettings.DEFAULT_HTTPS_PORT, development.httpsPort)
-        assertEquals(HttpMode.ON, development.httpMode)
-    }
-
-    @Test
-    fun settingsGivenWinOverTheModesDefaults() {
-        val httpsBehindProxy = TlsSettings.from(config(*blankYaml, "tls.port" to "9443", "tls.httpMode" to "off"))
-        assertEquals(9443, httpsBehindProxy.httpsPort)
-        assertEquals(HttpMode.OFF, httpsBehindProxy.httpMode)
-
-        assertFalse(TlsSettings.from(config(*blankYaml, "env.proxy" to "off", "tls.port" to "0")).enabled)
-    }
 
     @Test
     fun trustedProxiesDefaultToLoopbackAndPrivateRanges() {
@@ -88,13 +48,11 @@ class ProxyTest {
     }
 
     @Test
-    fun directModeIgnoresForwardedHeadersUnlessTheOldSettingIsOn() {
-        assertFalse(ProxySettings.from(config("env.proxy" to "off")).trusts("127.0.0.1"))
-        assertFalse(ProxySettings.from(config("env.proxy" to "off")).usesForwardedHeaders)
-
-        val old = ProxySettings.from(config("env.proxy" to "off", "env.trustProxy" to "true"))
-        assertTrue(old.trusts("203.0.113.5"))
-        assertTrue(old.usesForwardedHeaders)
+    fun noneIgnoresForwardedHeaders() {
+        val none = ProxySettings.from(config("env.trustedProxies" to "None"))
+        assertFalse(none.trusts("127.0.0.1"))
+        assertFalse(none.usesForwardedHeaders)
+        assertTrue(none.rejected.isEmpty())
     }
 
     @Test
@@ -110,35 +68,41 @@ class ProxyTest {
     }
 
     @Test
-    fun startupLogSaysWhoDoesHttps() {
-        val utc = ZoneId.of("UTC")
+    fun startupLogSaysHttpsIsTheProxysJob() {
         val shop = ZoneId.of("America/New_York")
 
-        val proxied = startupNotes(ProxySettings.from(config()), TlsSettings.from(config(*blankYaml)), 8080, null, shop, tzSet = false)
-        assertTrue(proxied.first().text.contains("HTTPS is the proxy's job"))
-        assertTrue(proxied.any { it.text.contains("10.0.0.0/8") })
-        assertTrue(proxied.none { it.warning })
+        val usual = startupNotes(ProxySettings.from(config()), 8080, zone = shop, tzSet = false)
+        assertTrue(usual.first().text.contains("HTTPS is the reverse proxy's job"))
+        assertTrue(usual.any { it.text.contains("10.0.0.0/8") })
+        assertTrue(usual.none { it.warning })
 
-        val direct = startupNotes(
-            ProxySettings.from(config("env.proxy" to "off")),
-            TlsSettings.from(config(*blankYaml, "env.proxy" to "off")),
-            8080, "AB:CD", shop, tzSet = false
+        val none = startupNotes(ProxySettings.from(config("env.trustedProxies" to "none")), 8080, zone = shop, tzSet = false)
+        assertTrue(none.any { it.text.contains("X-Forwarded-For is ignored") })
+        assertTrue(none.none { it.warning })
+
+        val bad = startupNotes(ProxySettings.from(config("env.trustedProxies" to "bad")), 8080, zone = shop, tzSet = false)
+        assertEquals(1, bad.count { it.warning })
+    }
+
+    @Test
+    fun startupLogWarnsAboutTheOldHttpsSettings() {
+        val shop = ZoneId.of("America/New_York")
+        val notes = startupNotes(
+            ProxySettings.from(config()), 8080, retired = listOf("SSL_PORT", "PROXY"), oldCertificateFolder = true,
+            zone = shop, tzSet = false
         )
-        assertTrue(direct.any { it.text.contains("AB:CD") })
-        assertTrue(direct.none { it.text.contains("proxy's job") })
 
-        val old = startupNotes(ProxySettings.from(config("env.trustProxy" to "true", "env.trustedProxies" to "bad")), TlsSettings.from(config()), 8080, null, shop, false)
-        assertEquals(3, old.count { it.warning }, "TRUST_PROXY, the bad entry, and nothing usable left in the list")
+        assertTrue(notes.any { it.warning && it.text.startsWith("SSL_PORT, PROXY are no longer used") })
+        assertTrue(notes.any { !it.warning && it.text.contains("server/tls/") })
     }
 
     @Test
     fun startupLogWarnsAboutUtcOnlyWhenTzIsntSet() {
         val proxy = ProxySettings.from(config())
-        val tls = TlsSettings.from(config())
 
-        assertTrue(startupNotes(proxy, tls, 8080, null, ZoneId.of("Etc/UTC"), tzSet = false).any { it.warning && it.text.contains("TZ") })
-        assertTrue(startupNotes(proxy, tls, 8080, null, ZoneId.of("Etc/UTC"), tzSet = true).none { it.text.contains("TZ") })
-        assertTrue(startupNotes(proxy, tls, 8080, null, ZoneId.of("Europe/London"), tzSet = false).none { it.text.contains("TZ") })
+        assertTrue(startupNotes(proxy, 8080, zone = ZoneId.of("Etc/UTC"), tzSet = false).any { it.warning && it.text.contains("TZ") })
+        assertTrue(startupNotes(proxy, 8080, zone = ZoneId.of("Etc/UTC"), tzSet = true).none { it.text.contains("TZ") })
+        assertTrue(startupNotes(proxy, 8080, zone = ZoneId.of("Europe/London"), tzSet = false).none { it.text.contains("TZ") })
     }
 
     private suspend fun ApplicationTestBuilder.requestFrom(forwardedFor: String, n: Int) =
@@ -154,7 +118,7 @@ class ProxyTest {
 
         try {
             // The test engine's requests come from localhost, which the default list trusts
-            configureTestServer(dataDir, extraConfig = mapOf("env.proxy" to "on"))
+            configureTestServer(dataDir)
             startApplication()
 
             // Only the last address counts, the one the proxy added
@@ -191,11 +155,10 @@ class ProxyTest {
         val dataDir = createTestDataDir()
 
         try {
-            configureTestServer(dataDir, extraConfig = mapOf("env.proxy" to "on", "env.trustedProxies" to "127.0.0.1, 10.0.0.0/8"))
+            configureTestServer(dataDir, extraConfig = mapOf("env.trustedProxies" to "127.0.0.1, 10.0.0.0/8"))
             startApplication()
 
             val info = serverInfoThroughProxy()
-            assertTrue(info.proxy)
             assertEquals(listOf("127.0.0.1", "10.0.0.0/8"), info.trustedProxies)
             assertEquals("203.0.113.9", info.clientAddress)
             assertTrue(info.forwarded)
@@ -210,7 +173,7 @@ class ProxyTest {
         val dataDir = createTestDataDir()
 
         try {
-            configureTestServer(dataDir, extraConfig = mapOf("env.proxy" to "on", "env.trustedProxies" to "172.20.0.2"))
+            configureTestServer(dataDir, extraConfig = mapOf("env.trustedProxies" to "172.20.0.2"))
             startApplication()
 
             // The proxy's own address for every device is what tells an admin it isn't trusted
@@ -223,33 +186,16 @@ class ProxyTest {
     }
 
     @Test
-    fun directTheServerTabHasNoProxy() = testApplication {
+    fun withNoneTheServerTabTrustsNoProxy() = testApplication {
         val dataDir = createTestDataDir()
 
         try {
-            configureTestServer(dataDir, extraConfig = mapOf("env.proxy" to "off"))
+            configureTestServer(dataDir, extraConfig = mapOf("env.trustedProxies" to "none"))
             startApplication()
 
             val info = serverInfoThroughProxy()
-            assertFalse(info.proxy)
             assertTrue(info.trustedProxies.isEmpty())
             assertFalse(info.forwarded)
-        } finally {
-            cleanupTestDataDir(dataDir)
-        }
-    }
-
-    @Test
-    fun theOldSettingBelievesAnyoneEvenDirect() = testApplication {
-        val dataDir = createTestDataDir()
-
-        try {
-            // localhost isn't in the list and the server isn't behind a proxy, but TRUST_PROXY still wins
-            configureTestServer(dataDir, extraConfig = mapOf("env.proxy" to "off", "env.trustedProxies" to "172.20.0.2", "env.trustProxy" to "true"))
-            startApplication()
-
-            val statuses = (1..6).map { n -> requestFrom("203.0.113.$n", n) }
-            assertEquals(List(6) { HttpStatusCode.Accepted }, statuses)
         } finally {
             cleanupTestDataDir(dataDir)
         }
@@ -260,7 +206,7 @@ class ProxyTest {
         val dataDir = createTestDataDir()
 
         try {
-            configureTestServer(dataDir, extraConfig = mapOf("env.proxy" to "on", "env.trustedProxies" to "172.20.0.2"))
+            configureTestServer(dataDir, extraConfig = mapOf("env.trustedProxies" to "172.20.0.2"))
             startApplication()
 
             // All counted as localhost, whatever they claim

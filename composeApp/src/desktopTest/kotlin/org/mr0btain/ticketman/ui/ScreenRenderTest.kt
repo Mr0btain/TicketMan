@@ -48,8 +48,13 @@ import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.RestoreRecord
 import org.mr0btain.ticketman.server.response.ScheduledBackupInfo
-import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
+import org.mr0btain.ticketman.server.response.LoginLockKind
+import org.mr0btain.ticketman.server.response.LoginLock
+import org.mr0btain.ticketman.server.response.LoginLimitsResponse
+import org.mr0btain.ticketman.server.response.SessionKind
+import org.mr0btain.ticketman.server.response.SessionResponse
+import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.DailyReport
@@ -114,6 +119,7 @@ import org.mr0btain.ticketman.ui.screens.settings.components.SettingsGroup
 import org.mr0btain.ticketman.ui.kit.theme.TmFonts
 import org.mr0btain.ticketman.ui.kit.theme.TmPalettes
 import org.jetbrains.compose.resources.painterResource
+import kotlin.uuid.Uuid
 import kotlin.test.Test
 import kotlin.test.assertTrue
 import kotlin.time.Clock
@@ -351,7 +357,7 @@ class ScreenRenderTest {
         }
     }
 
-    /** Asking to trust a server's own certificate, the first time and after it changed */
+    /** Asking to trust a proxy's private CA, the first time and after it changed */
     @Test
     fun serverTrust() {
         val fingerprint = (0 until 32).joinToString(":") { ((it * 37 + 11) % 256).toString(16).padStart(2, '0').uppercase() }
@@ -360,7 +366,13 @@ class ScreenRenderTest {
             bothModes(if (before == null) "server-trust" else "server-trust-changed") {
                 Shell("Records") {
                     ServerTrustDialog(
-                        certificate = UntrustedCertificate("192.168.1.20:8443", fingerprint, "CN=TicketMan server", before),
+                        certificate = UntrustedCertificate(
+                            address = "tickets.local:443",
+                            fingerprint = fingerprint,
+                            subject = "CN=Caddy Local Authority - 2026 ECC Root",
+                            isAuthority = true,
+                            trustedBefore = before
+                        ),
                         onTrust = {},
                         onDismiss = {}
                     )
@@ -369,10 +381,9 @@ class ScreenRenderTest {
         }
     }
 
-    /** The Server tab with a certificate close to running out, a new one waiting, a daily backup and a restore without photos */
+    /** The Server tab with a daily backup and a restore without photos */
     @Test
     fun adminServer() {
-        val fingerprint = (0 until 32).joinToString(":") { ((it * 37 + 11) % 256).toString(16).padStart(2, '0').uppercase() }
         val day = 24L * 60 * 60 * 1000
         val now = System.currentTimeMillis()
         val manifest = BackupManifest(serverVersion = "1.0.0", createdAt = now - 3 * day, includesImages = false, imageCount = 0, imageBytes = 0)
@@ -384,11 +395,6 @@ class ScreenRenderTest {
                         name = "Front shop", version = "1.0.0", startedAt = now - day, uptimeMillis = day,
                         dataPath = "/srv/ticketman", databaseSizeBytes = 48_000_000, imagesSizeBytes = 2_400_000_000,
                         javaVersion = "21.0.4", operatingSystem = "Linux 6.8", developmentMode = false,
-                        certificate = ServerCertificateInfo(
-                            fingerprint = fingerprint, subject = "CN=TicketMan server", expiresAt = now + 200 * day,
-                            generated = true, httpsPort = 8443, httpMode = "redirect",
-                            pendingFingerprint = fingerprint.reversed(), pendingExpiresAt = now + 3650 * day
-                        ),
                         scheduledBackup = ScheduledBackupInfo(folder = "/mnt/usb/ticketman", keep = 7, includesImages = true, lastBackupAt = now - day / 2, lastSizeBytes = 2_300_000_000),
                         lastRestore = RestoreRecord(manifest, now - day, "pre-restore-${now - day}")
                     ),
@@ -402,8 +408,6 @@ class ScreenRenderTest {
                     onRestore = {},
                     onCancelRestore = {},
                     onRestart = {},
-                    onRenewCertificate = {},
-                    onCancelCertificateRenewal = {},
                     onSeed = {},
                     importCard = { ImportCard(modifier = Modifier.width(440.dp), isBusy = false, onPicked = { _, _ -> }) }
                 )
@@ -423,7 +427,7 @@ class ScreenRenderTest {
             name = "Front shop", version = "1.0.0", startedAt = now - day, uptimeMillis = day,
             dataPath = "/data", databaseSizeBytes = 48_000_000, imagesSizeBytes = 2_400_000_000,
             javaVersion = "21.0.4", operatingSystem = "Linux 6.8", developmentMode = false,
-            proxy = true, trustedProxies = listOf("127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"),
+            trustedProxies = listOf("127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7"),
             clientAddress = "192.168.1.42", forwarded = true, timeZone = "America/New_York", canRestart = true
         )
         val waiting = PendingRestore(
@@ -447,11 +451,38 @@ class ScreenRenderTest {
                         onRestore = {},
                         onCancelRestore = {},
                         onRestart = {},
-                        onRenewCertificate = {},
-                        onCancelCertificateRenewal = {},
                         onSeed = {}
                     )
                 }
+            }
+        }
+    }
+
+    /** Logged in devices, with a username and a device locked out during a surge of wrong passwords */
+    @Test
+    fun adminSessions() {
+        val now = System.currentTimeMillis()
+        val dana = Uuid.random()
+
+        bothModes("admin-sessions", height = 1100) {
+            Shell("Admin") {
+                AdminSessionsTab(
+                    sessions = listOf(
+                        SessionResponse("s1", dana, "dana", "Dana Whitfield", AccessLevel.ADMIN, "Front desk PC", SessionKind.PASSWORD, now - 3_600_000, now - 60_000, now + 86_400_000),
+                        SessionResponse("s2", dana, "dana", "Dana Whitfield", AccessLevel.ADMIN, "Counter", SessionKind.PIN, now - 600_000, now, now + 43_200_000)
+                    ),
+                    currentUserIdentifier = dana,
+                    currentSessionId = "s1",
+                    onRevoke = {},
+                    loginLimits = LoginLimitsResponse(
+                        locks = listOf(
+                            LoginLock(LoginLockKind.USERNAME, "priya", 8, now + 120_000),
+                            LoginLock(LoginLockKind.ADDRESS, "203.0.113.24", 20, now + 600_000)
+                        ),
+                        recentFailures = 134,
+                        surge = true
+                    )
+                )
             }
         }
     }

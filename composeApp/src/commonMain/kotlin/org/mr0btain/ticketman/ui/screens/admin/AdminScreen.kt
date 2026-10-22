@@ -80,6 +80,7 @@ private fun AdminContent(
     val lowStock by admin.lowStock.collectAsState()
     val lowStockThreshold by admin.lowStockThreshold.collectAsState()
     val sessions by admin.devices.sessions.collectAsState()
+    val loginLimits by admin.devices.loginLimits.collectAsState()
     val pending by admin.accounts.pending.collectAsState()
     val stations by admin.devices.stations.collectAsState()
     val serverInfo by admin.server.serverInfo.collectAsState()
@@ -284,7 +285,9 @@ private fun AdminContent(
                 sessions = sessions,
                 currentUserIdentifier = currentUser?.identifier,
                 currentSessionId = admin.devices.currentSessionId(),
-                onRevoke = { session -> admin.devices.revokeSession(session) }
+                onRevoke = { session -> admin.devices.revokeSession(session) },
+                loginLimits = loginLimits,
+                onUnlockLogin = { lock -> admin.devices.unlockLogin(lock) }
             )
 
             AdminTab.STATIONS -> AdminStationsTab(
@@ -322,8 +325,6 @@ private fun AdminContent(
                 onRestore = { file -> admin.server.restoreFrom(file) },
                 onCancelRestore = { admin.server.cancelRestore() },
                 onRestart = { admin.server.restartServer() },
-                onRenewCertificate = { admin.server.renewCertificate() },
-                onCancelCertificateRenewal = { admin.server.cancelCertificateRenewal() },
                 onSeed = { request -> admin.server.seed(request, onSuccess = { viewModel.refreshPagers() }) },
                 importCard = {
                     ImportCard(

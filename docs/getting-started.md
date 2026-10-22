@@ -22,10 +22,9 @@ dependencies and takes a while.
 PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
 ```
 
-- `PORT` defaults to 8080. In development mode the server also does HTTPS itself on `SSL_PORT`, 8443 by default,
-  with a certificate it makes in `DATA_PATH` the first time. Clients ask you to check its fingerprint (printed in the
-  log) before trusting it. Outside development mode it expects a reverse proxy to do HTTPS instead (`PROXY`, see
-  [Configuration](configuration.md#proxy)).
+- `PORT` defaults to 8080. The server only speaks plain HTTP; HTTPS is a reverse proxy's job (see
+  [Behind a proxy](#behind-a-proxy) and [Configuration](configuration.md#https)). Clients connect to
+  `http://localhost:8098` without a warning, since it never leaves the machine.
 - `DATA_PATH` is where the database and photos go. Leave it out and the server uses the platform's app data
   folder (`~/.local/share/TicketMan` on Linux), which is probably not what you want for a scratch server.
 - `ADMIN_PASSWORD` sets the password of the `admin` user made on first start. Without it a random password is
@@ -71,10 +70,9 @@ run configuration.
 
 This starts a webpack dev server and opens the app in the browser, with hot reload. Point it at a server started
 with `-Pdevelopment` (so it allows the dev server's origin, see [Configuration](configuration.md#development-mode))
-on another `PORT`, using the server's `http://` address: the browser hasn't been told to trust the server's own
-certificate. To try the web client the way a shop gets it, served by the server itself, run
-`./gradlew :server:run -PwithWeb -Pdevelopment` and open `https://localhost:8443` (see
-[Running a server](operations.md#web-client)).
+on another `PORT`, using the server's `http://` address. To try the web client the way a shop gets it, served by
+the server itself behind Caddy, run `scripts/docker_local.sh` and open `https://localhost:8443` (see
+[In Docker](#in-docker)).
 
 ### Android
 
@@ -94,24 +92,23 @@ To only check that the shared code compiles for Android, without the app: `./gra
 
 ### Behind a proxy
 
-Shops normally run the server behind a reverse proxy that does HTTPS ([Configuration](configuration.md#proxy)).
+Shops run the server behind a reverse proxy that does HTTPS ([Configuration](configuration.md#https)).
 To try that setup from the repo, without Docker, install Caddy and run:
 
 ```bash
 scripts/dev_proxy.sh
 ```
 
-It starts a development server on `http://localhost:8080` with `PROXY=on HTTP_MODE=on
-TRUSTED_PROXIES=127.0.0.1,::1`, then Caddy on `https://localhost:8444` in front of it
+It starts a development server on `http://localhost:8080` with `TRUSTED_PROXIES=127.0.0.1,::1`, then Caddy on `https://localhost:8444` in front of it
 ([`scripts/dev/Caddyfile`](../scripts/dev/Caddyfile)). Ctrl+C stops both. `--no-server` starts only Caddy, in
 front of a server you already have on `SERVER_PORT`. The data goes in `build/dev-proxy-data` unless `DATA_PATH`
 says otherwise, and the admin password is `admin_pass`.
 
 Point a client at `https://localhost:8444`:
 
-- **Self-signed proxy.** Caddy's certificate comes from its own local CA, which nothing trusts, so the desktop
-  client shows the trust dialog, like it would for a proxy with a self-signed certificate. The script never adds
-  the CA to the system's trust store.
+- **Private certificate.** Caddy's certificate comes from its own local CA, which nothing trusts, so the desktop
+  client shows the trust dialog for the CA, the way a shop with no domain sees it. The script never adds the CA to
+  the system's trust store.
 - **Public certificate.** The script exports Caddy's CA to `build/dev-truststore.p12`. Run the client with it as
   the only trusted CA and the certificate passes the system check, with no dialog, the way a public certificate
   does:
@@ -129,10 +126,20 @@ The admin Server tab (`GET /api/admin/server`) should show `forwarded` true and 
 
 ### In Docker
 
-The shop setup itself, the image behind Caddy from [`docker-compose.yml`](../docker-compose.yml), is tried with
-`scripts/docker_smoke.sh` (see [Testing](testing.md#docker)), which needs Docker and a user that can run it. To keep
-it running afterwards at `https://localhost:8445` (admin / `admin_pass`), add `--keep`. Building and running the
-image for a shop is on [Running a server](operations.md#the-docker-image).
+The shop setup itself, the image behind Caddy from [`docker-compose.yml`](../docker-compose.yml), runs on this
+machine with:
+
+```bash
+scripts/docker_local.sh              # builds the server and image, starts both at https://localhost:8443
+scripts/docker_local.sh --down       # stops it and deletes its data
+```
+
+It needs Docker and a user that can run it. Log in as admin / `admin_pass`. The script prints Caddy's CA fingerprint
+and how to connect: the desktop client with `./gradlew :composeApp:run -DticketmanDebug=true` asks to trust the CA,
+while `-PdevTrustStore=build/docker-truststore.p12` trusts it already, like a public certificate. A browser on the
+same machine opens `https://localhost:8443` and accepts its warning. `scripts/docker_smoke.sh` runs the automated
+check of the same setup (see [Testing](testing.md#docker)). Building and running the image for a shop is on
+[Running a server](operations.md#the-docker-image).
 
 ## Run the tests
 

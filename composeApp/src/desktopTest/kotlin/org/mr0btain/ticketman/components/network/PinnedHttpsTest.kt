@@ -4,6 +4,7 @@ import com.sun.net.httpserver.HttpsConfigurator
 import com.sun.net.httpserver.HttpsServer
 import io.ktor.client.HttpClient
 import io.ktor.client.request.get
+import io.ktor.network.tls.certificates.KeyType
 import io.ktor.network.tls.certificates.buildKeyStore
 import io.ktor.network.tls.extensions.HashAlgorithm
 import kotlinx.coroutines.runBlocking
@@ -13,15 +14,19 @@ import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
 import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import java.net.InetAddress
 import java.net.InetSocketAddress
+import java.security.KeyPair
 import java.security.KeyStore
+import java.security.PrivateKey
 import java.security.cert.X509Certificate
+import java.util.Base64
 import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
+import javax.security.auth.x500.X500Principal
 import kotlin.test.*
 
 /**
- * The desktop engine against a real HTTPS server with a self-made certificate: refused until trusted, then only
- * that certificate is accepted from that address
+ * The desktop engine against a real HTTPS server with a private certificate: refused until trusted, then only that
+ * certificate, or certificates from that same CA, are accepted from that address
  */
 class PinnedHttpsTest {
     private val servers = mutableListOf<HttpsServer>()
@@ -41,6 +46,36 @@ class PinnedHttpsTest {
             keySizeInBits = 2048
             this.domains = domains
             ipAddresses = ips
+        }
+    }
+
+    private class Authority(val certificate: X509Certificate, val keys: KeyPair)
+
+    /** A certificate authority, a root when [signedBy] is null, like Caddy's local CA and its intermediate */
+    private fun authority(name: String, signedBy: Authority? = null): Authority {
+        val store = buildKeyStore {
+            certificate("ca") {
+                password = "pass"
+                hash = HashAlgorithm.SHA256
+                keySizeInBits = 2048
+                keyType = KeyType.CA
+                subject = X500Principal("CN=$name")
+                signedBy?.let { signWith(it.keys, it.certificate) }
+            }
+        }
+        val certificate = store.getCertificate("ca") as X509Certificate
+        return Authority(certificate, KeyPair(certificate.publicKey, store.getKey("ca", "pass".toCharArray()) as PrivateKey))
+    }
+
+    /** A server certificate from [issuer], sent with [issuer]'s own certificate the way Caddy sends its chain */
+    private fun certificateFrom(issuer: Authority): KeyStore = buildKeyStore {
+        certificate("server") {
+            password = "pass"
+            hash = HashAlgorithm.SHA256
+            keySizeInBits = 2048
+            domains = listOf("localhost")
+            ipAddresses = listOf(InetAddress.getByName("127.0.0.1"))
+            signWith(issuer.keys, issuer.certificate)
         }
     }
 
@@ -164,5 +199,91 @@ class PinnedHttpsTest {
 
         trust.trust(trust.refused.value!!)
         assertEquals(ConnectionResult.CONNECTED, remote.setUrl("https://localhost:$port"))
+    }
+
+    @Test
+    fun aProxysPrivateCaIsTrustedRatherThanItsShortLivedCertificate() {
+        val root = authority("Shop Root")
+        val port = serve(certificateFrom(authority("Shop Intermediate", root)))
+        val trust = ServerTrust(LocalStorage(InMemoryKeyValueStore()))
+        val client = HttpClient(pinnedHttpEngine(trust, fetchAuthority = { _, _ -> root.certificate }))
+
+        assertFalse(reachable(client, "https://localhost:$port/"))
+        val refused = assertNotNull(trust.refused.value)
+        assertTrue(refused.isAuthority)
+        assertEquals(fingerprintOf(root.certificate), refused.fingerprint)
+        assertEquals("CN=Shop Root", refused.subject)
+
+        trust.trust(refused)
+        assertTrue(reachable(client, "https://localhost:$port/"))
+
+        // Caddy makes a new certificate every 12 hours and a new intermediate every week, from the same root
+        servers.removeFirst().stop(0)
+        serve(certificateFrom(authority("Next Intermediate", root)), port)
+        trust.clearRefused()
+        assertTrue(reachable(HttpClient(pinnedHttpEngine(trust, fetchAuthority = { _, _ -> null })), "https://localhost:$port/"))
+        assertNull(trust.refused.value, "Nothing new to ask about")
+    }
+
+    @Test
+    fun aCertificateFromAnotherCaAtATrustedAddressIsRefused() {
+        val root = authority("Shop Root")
+        val port = serve(certificateFrom(authority("Shop Intermediate", root)))
+        val trust = ServerTrust(LocalStorage(InMemoryKeyValueStore()))
+        reachable(HttpClient(pinnedHttpEngine(trust, fetchAuthority = { _, _ -> root.certificate })), "https://localhost:$port/")
+        trust.trust(trust.refused.value!!)
+
+        // Something else on the address, with its own CA
+        servers.removeFirst().stop(0)
+        val other = authority("Other Root")
+        serve(certificateFrom(other), port)
+
+        assertFalse(reachable(HttpClient(pinnedHttpEngine(trust, fetchAuthority = { _, _ -> other.certificate })), "https://localhost:$port/"))
+        val refused = assertNotNull(trust.refused.value)
+        assertTrue(refused.changed)
+        assertEquals(fingerprintOf(root.certificate), refused.trustedBefore)
+        assertEquals(fingerprintOf(other.certificate), refused.fingerprint)
+    }
+
+    @Test
+    fun withoutTheCaTheTopCertificateSentIsOffered() {
+        val intermediate = authority("Shop Intermediate", authority("Shop Root"))
+        val port = serve(certificateFrom(intermediate))
+        // A CA the proxy hands out that didn't sign this chain is no use, and isn't offered
+        val unrelated = authority("Unrelated Root")
+
+        listOf<X509Certificate?>(null, unrelated.certificate).forEach { handedOut ->
+            val trust = ServerTrust(LocalStorage(InMemoryKeyValueStore()))
+            assertFalse(reachable(HttpClient(pinnedHttpEngine(trust, fetchAuthority = { _, _ -> handedOut })), "https://localhost:$port/"))
+
+            val refused = assertNotNull(trust.refused.value)
+            assertEquals(fingerprintOf(intermediate.certificate), refused.fingerprint)
+            assertTrue(refused.isAuthority)
+        }
+    }
+
+    @Test
+    fun theCaIsFetchedFromTheProxy() {
+        val root = authority("Shop Root")
+        val keyStore = certificateFrom(authority("Shop Intermediate", root))
+        val keys = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()).apply { init(keyStore, "pass".toCharArray()) }
+        val pem = "-----BEGIN CERTIFICATE-----\n" +
+            Base64.getMimeEncoder(64, "\n".toByteArray()).encodeToString(root.certificate.encoded) +
+            "\n-----END CERTIFICATE-----\n"
+
+        val server = HttpsServer.create(InetSocketAddress("127.0.0.1", 0), 0).apply {
+            httpsConfigurator = HttpsConfigurator(SSLContext.getInstance("TLS").apply { init(keys.keyManagers, null, null) })
+            createContext(ServerTrust.AUTHORITY_PATH) { exchange ->
+                val body = pem.encodeToByteArray()
+                exchange.sendResponseHeaders(200, body.size.toLong())
+                exchange.responseBody.use { it.write(body) }
+            }
+            start()
+        }
+        servers += server
+
+        assertEquals(root.certificate, fetchProxyAuthority("localhost", server.address.port))
+        assertEquals(root.certificate, certificateOf(Base64.getEncoder().encodeToString(root.certificate.encoded)))
+        assertNull(certificateOf("not a certificate"))
     }
 }

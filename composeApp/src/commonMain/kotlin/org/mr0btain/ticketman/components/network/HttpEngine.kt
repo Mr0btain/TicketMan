@@ -4,6 +4,6 @@ import io.ktor.client.engine.HttpClientEngine
 
 /**
  * The platform's HTTP engine. Where the app checks certificates itself (desktop and Android), [trust] decides
- * which self-made server certificates it accepts
+ * which private certificates it accepts on top of the system's
  */
 expect fun getHttpEngine(trust: ServerTrust): HttpClientEngine

@@ -21,8 +21,10 @@ Logs in with a password, or an invite's setup code in place of the password.
   - `INVITE_SETUP`: the setup code was right; no tokens, a 30 minute `setupToken` for `POST /api/auth/setup/invite`,
   - `PENDING_APPROVAL`: right password for an account request an admin hasn't approved; no tokens.
 - **`401`** wrong username, password or code, or a deactivated user. Logged as `LOGIN_FAILED`.
-- **`429`** `Too many wrong logins, try again in a few minutes`: 20 failures from this address or 10 for this
-  username in 15 minutes. Checked before the password, so the right one waits too.
+- **`429`** `Too many wrong logins, try again in 30 seconds` (or however long), with a `Retry-After` header in
+  seconds: 20 failures from this address in 15 minutes, this username locked after its 5 free tries, or this
+  address guessed wrong during a server wide surge. Checked before the password, so the right one waits too. See
+  [Wrong password limits](../server/auth.md#wrong-password-limits).
 
 ### `POST /api/auth/refresh`
 

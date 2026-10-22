@@ -54,7 +54,7 @@ class SessionHandlerTest {
         // A proxy whose server is stopped
         if (request.url.host == "proxy.local") return@MockEngine respond("<html>502 Bad Gateway</html>", HttpStatusCode.BadGateway)
 
-        // A server with HTTP_MODE=redirect
+        // A proxy sending plain HTTP on to HTTPS, like Caddy does
         if (request.url.host == "shop.local" && request.url.protocol == URLProtocol.HTTP) {
             return@MockEngine respond("", HttpStatusCode.Found, headersOf(HttpHeaders.Location, "https://shop.local:8443${request.url.encodedPath}"))
         }
@@ -144,6 +144,22 @@ class SessionHandlerTest {
         assertTrue(session.serverConnected.value)
         assertTrue(session.connectionSecure.value, "Now on the https:// address")
         assertEquals("https://shop.local:8443", movedTo)
+    }
+
+    @Test
+    fun plainHttpToAnotherMachineIsWarnedAbout() = runTest {
+        val session = handler()
+        assertNull(session.insecureWarning.value, "localhost never leaves this machine")
+
+        session.connect("http://192.168.1.20:8080")
+        runCurrent()
+        assertEquals(SessionHandler.INSECURE_MESSAGE, session.insecureWarning.value)
+
+        // Not while it can't connect at all, that's a different problem
+        reachable = false
+        session.connect("http://192.168.1.21:8080")
+        runCurrent()
+        assertNull(session.insecureWarning.value)
     }
 
     @Test

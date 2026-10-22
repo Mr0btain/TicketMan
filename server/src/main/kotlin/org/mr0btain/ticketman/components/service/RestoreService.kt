@@ -4,7 +4,6 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.logging.SimpleResult
 import org.mr0btain.ticketman.server.response.BackupManifest
-import org.mr0btain.ticketman.components.tls.ServerTls
 import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.RestoreRecord
 import java.io.File
@@ -17,9 +16,9 @@ import kotlin.time.Duration.Companion.days
 /**
  * Restoring from a backup archive, in two halves:
  * 1. [stage] while running: checks an uploaded archive and parks it in `<serverDir>/restore/`
- * 2. [applyPending] on the next start, before the database is opened: moves `database/` and `images/` (and `tls/`
- *    when the archive has a certificate) aside to `pre-restore-<time>/`, kept for [LEFTOVER_AGE] so a restore can be
- *    undone by hand, and unpacks the archive in their place
+ * 2. [applyPending] on the next start, before the database is opened: moves `database/` and `images/` aside to
+ *    `pre-restore-<time>/`, kept for [LEFTOVER_AGE] so a restore can be undone by hand, and unpacks the archive in
+ *    their place. The `tls/` older archives have, from when the server made its own certificate, is skipped
  *
  * Swapping the H2 files under a running server isn't safe, open connections and caches would see half of each,
  * so the restart is the switch over
@@ -153,20 +152,20 @@ class RestoreService(private val serverDir: File) {
         const val LAST_INFO = "last.json"
         const val DATABASE_FOLDER = "database"
         const val IMAGES_FOLDER = "images"
-        const val TLS_FOLDER = "tls"
         const val SET_ASIDE_PREFIX = "pre-restore-"
         const val FAILED_PREFIX = "failed-"
 
         /** How long the data a restore replaced, and archives that failed to restore, are kept */
         val LEFTOVER_AGE = 30.days
 
-        private val CERTIFICATE_FILES = setOf(ServerTls.KEYSTORE_FILE, ServerTls.PASSWORD_FILE)
+        /** The certificate and its password in older archives' `tls/`, allowed in but never unpacked */
+        private val CERTIFICATE_FILES = setOf("server.p12", "server.p12.password")
 
         private val json = Json { ignoreUnknownKeys = true }
 
         /**
-         * Only the manifest, the database copy, photo files under images/ and the certificate's two files under
-         * tls/, with no way out of their folder
+         * Only the manifest, the database copy, photo files under images/ and, in an older archive, the
+         * certificate's two files under tls/, with no way out of their folder
          */
         private fun isAllowed(name: String, manifest: BackupManifest): Boolean {
             if (name.startsWith("/") || name.contains('\\') || name.split('/').any { it == ".." }) return false
@@ -196,8 +195,7 @@ class RestoreService(private val serverDir: File) {
             }
 
             val now = System.currentTimeMillis()
-            // The certificate is only replaced when the backup has one, a server using a supplied one keeps its own
-            val folders = listOfNotNull(DATABASE_FOLDER, IMAGES_FOLDER, TLS_FOLDER.takeIf { manifest?.includesCertificate == true })
+            val folders = listOf(DATABASE_FOLDER, IMAGES_FOLDER)
             val setAside = File(serverDir, "$SET_ASIDE_PREFIX$now").apply { mkdirs() }
 
             return try {
@@ -239,7 +237,6 @@ class RestoreService(private val serverDir: File) {
         private fun unpack(archive: File, manifest: BackupManifest, serverDir: File) {
             val databaseDir = File(serverDir, DATABASE_FOLDER).apply { mkdirs() }
             val imagesDir = File(serverDir, IMAGES_FOLDER).apply { mkdirs() }
-            val tlsDir = File(serverDir, TLS_FOLDER)
 
             ZipFile(archive).use { zip ->
                 zip.entries().asSequence().filter { !it.isDirectory }.forEach { entry ->
@@ -257,14 +254,8 @@ class RestoreService(private val serverDir: File) {
                                     .outputStream().use { input.copyTo(it) }
                             }
 
-                        // The key and its password, only the server's account should read them
-                        entry.name.startsWith("${BackupManifest.TLS_FOLDER}/") ->
-                            zip.getInputStream(entry).use { input ->
-                                safeFile(tlsDir, entry.name.removePrefix("${BackupManifest.TLS_FOLDER}/"))
-                                    .apply { parentFile.mkdirs() }
-                                    .also { file -> file.outputStream().use { input.copyTo(it) } }
-                                    .also { ServerTls.ownerOnly(it) }
-                            }
+                        // An older archive's certificate, nothing uses it now
+                        else -> Unit
                     }
                 }
             }

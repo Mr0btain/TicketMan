@@ -21,7 +21,7 @@ wider, one under the other on narrower ones.
 | | Reduce transparency | Draws glass as solid |
 | | Component gallery | Opens the [kit gallery](../kit.md#the-component-gallery) |
 | **Login** | Remember login | Keeps the username and password after logging in, so the app can log back in when a refresh token is refused. Off on shared devices |
-| **Server** | Server address | Where the server is, like `tickets.myshop.com`, or `192.168.1.20:8443` without a proxy. No scheme means `https://`. Saving it reconnects (`session.changeServer`); if that fails, the Account panel says why (**Can't connect**) |
+| **Server** | Server address | Where the server is, like `tickets.myshop.com`, or a LAN address for a shop with no domain. No scheme means `https://`; an `http://` address off this machine connects but shows **Not secure**. Saving it reconnects (`session.changeServer`); if that fails, the Account panel says why (**Can't connect**) |
 | | Device name | What admins see for this device on the Sessions tab, from the next login. Also the suggested name when registering a station |
 | **Records** | Start tab | Which records tab opens first, picked from a dropdown |
 | | Check for updates every | Off, 15 seconds, 30 seconds (the default), 1 minute or 5 minutes (`UpdateInterval`). How often open screens pick up changes from other devices, see [records](records.md#checking-for-updates) |

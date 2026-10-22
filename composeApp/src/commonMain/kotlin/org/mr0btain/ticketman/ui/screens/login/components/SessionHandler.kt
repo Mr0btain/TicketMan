@@ -90,10 +90,18 @@ class SessionHandler(
     // The address connected to last, so trusting its certificate can try it again
     private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
 
-    /** False when the server is reached over plain HTTP, where passwords and tokens can be read on the network */
+    /**
+     * False when the server is reached over plain HTTP from another machine, where passwords and tokens can be read
+     * on the network
+     */
     val connectionSecure: StateFlow<Boolean> = _serverUrl
         .map { isSecureServerAddress(it) }
         .stateIn(scope, SharingStarted.Eagerly, true)
+
+    /** Why the connection to the server isn't safe, while connected to one over plain HTTP. Null otherwise */
+    val insecureWarning: StateFlow<String?> = combine(connectionSecure, _serverConnected) { secure, connected ->
+        if (connected && !secure) INSECURE_MESSAGE else null
+    }.stateIn(scope, SharingStarted.Eagerly, null)
 
     // Certificates someone chose not to trust, so they aren't asked again until the app restarts
     private val dismissedCertificates: MutableStateFlow<Set<String>> = MutableStateFlow(emptySet())
@@ -378,6 +386,8 @@ class SessionHandler(
 
     companion object {
         const val UNREACHABLE_MESSAGE = "Couldn't reach a server there. Check the address and that the server is running."
+        const val INSECURE_MESSAGE = "This server is on plain HTTP, so passwords and customer details can be read by " +
+            "anyone on the network. Ask your admin for its https:// address."
         const val SERVER_NOT_ANSWERING_MESSAGE = "The proxy is up but the TicketMan server isn't answering. Check the server is running."
     }
 }

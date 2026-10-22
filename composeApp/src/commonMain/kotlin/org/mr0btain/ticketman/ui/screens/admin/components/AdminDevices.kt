@@ -7,10 +7,13 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.station.KioskSettings
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.user.User
+import org.mr0btain.ticketman.server.response.LoginLimitsResponse
+import org.mr0btain.ticketman.server.response.LoginLock
 import org.mr0btain.ticketman.server.response.SessionResponse
 
 /**
- * The Stations and Sessions tabs: counter stations and their kiosk mode, and who's logged in where
+ * The Stations and Sessions tabs: counter stations and their kiosk mode, who's logged in where, and who's locked
+ * out for wrong passwords
  * @param reloadOverview Session counts are on the overview
  */
 class AdminDevices(
@@ -31,8 +34,14 @@ class AdminDevices(
         _stations.value = admin.getStations()
     }
 
+    // Null until loaded, or when it couldn't be
+    private val _loginLimits = MutableStateFlow<LoginLimitsResponse?>(null)
+    val loginLimits = _loginLimits.asStateFlow()
+
+    /** Reloads who's logged in, and who's locked out with them, since both are on the Sessions tab */
     suspend fun reloadSessions() {
         _sessions.value = admin.getSessions()
+        _loginLimits.value = admin.getLoginLimits()
     }
 
     // ------------------------------------------ Stations ------------------------------------------
@@ -89,8 +98,18 @@ class AdminDevices(
         }
     }
 
+    // ------------------------------------------ Login limits ------------------------------------------
+
+    /** Lets a locked username or address try logging in again straight away */
+    fun unlockLogin(lock: LoginLock) {
+        scope.launch {
+            support.report(admin.unlockLogin(lock.kind, lock.key), "${lock.key} can try logging in again") { reloadSessions() }
+        }
+    }
+
     fun clear() {
         _stations.value = emptyList()
         _sessions.value = emptyList()
+        _loginLimits.value = null
     }
 }

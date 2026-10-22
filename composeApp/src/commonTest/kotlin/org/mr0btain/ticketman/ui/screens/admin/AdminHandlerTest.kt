@@ -181,7 +181,7 @@ class AdminHandlerTest {
         admin.refresh(AdminTab.SESSIONS)
         settle { !admin.isLoading.value && reads.isNotEmpty() }
 
-        assertEquals(listOf("/api/user/pending", "/api/admin/sessions"), reads)
+        assertEquals(listOf("/api/user/pending", "/api/admin/sessions", "/api/admin/logins"), reads)
     }
 
     @Test

@@ -19,7 +19,7 @@ fun createTestDataDir(): Path = createTempDirectory("ticketman-test")
 /**
  * Runs the server module with test config, since testApplication doesn't load application.yaml
  * @param developmentMode Ktor's test default is on, which allows dev only routes like seeding
- * @param extraConfig More config entries, like `"env.trustProxy" to "true"`
+ * @param extraConfig More config entries, like `"env.trustedProxies" to "none"`
  */
 fun ApplicationTestBuilder.configureTestServer(
     dataDir: Path,

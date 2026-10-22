@@ -38,7 +38,7 @@ fun ServerAddressField(
             onValueChange = { address = it },
             label = stringResource(Res.string.server_address_string),
             placeholder = "tickets.myshop.com",
-            supportingText = if (error == null) "Or the server's IP and port without a proxy, like 192.168.1.20:8443" else null,
+            supportingText = if (error == null) "Or its address on the shop's network, like 192.168.1.20" else null,
             leadingIcon = Res.drawable.server,
             size = TmControlSize.LARGE,
             error = error,

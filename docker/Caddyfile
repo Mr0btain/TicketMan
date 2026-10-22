@@ -8,5 +8,16 @@
 }
 
 {$DOMAIN:localhost} {
-	reverse_proxy ticketman:8080
+	# The local CA's root certificate, which the desktop and Android apps fetch when they're asked to trust this
+	# server, so they trust the CA rather than a certificate Caddy replaces every 12 hours. A 404 with a public
+	# certificate, when Caddy never makes a local CA
+	handle /.well-known/ticketman/ca.pem {
+		root * /data/caddy/pki/authorities/local
+		rewrite * /root.crt
+		file_server
+	}
+
+	handle {
+		reverse_proxy ticketman:8080
+	}
 }

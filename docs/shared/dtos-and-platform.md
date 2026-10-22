@@ -43,7 +43,8 @@ it can't disagree on the shape.
 | `SessionResponse` | `/api/admin/sessions` | One session: who, which device, `SessionKind` (`PASSWORD` or `PIN`), times |
 | `StationRegistrationResponse` | Station register | The station and its credentials (the only time the secret is sent) |
 | `BackupTicket`, `BackupManifest`, `PendingRestore` | Backup and restore | Download link details; what's in a backup; a restore waiting for restart |
-| `ServerInfoResponse` | `/api/admin/server` | Name, version, uptime, data path and sizes, Java and OS, dev mode, certificate, backups, and the proxy diagnostics (`proxy`, `trustedProxies`, `clientAddress`, `forwarded`, `timeZone`) |
+| `ServerInfoResponse` | `/api/admin/server` | Name, version, uptime, data path and sizes, Java and OS, dev mode, backups, and the proxy diagnostics (`trustedProxies`, `clientAddress`, `forwarded`, `timeZone`) |
+| `LoginLimitsResponse`, `LoginLock` | `/api/admin/logins` | Usernames and addresses locked out for wrong passwords, and whether the server wide ceiling is hit |
 
 `BackupManifest.CURRENT_FORMAT_VERSION` is the backup format. Bump it when the archive layout changes; the server
 refuses to restore backups with a newer version than it knows.

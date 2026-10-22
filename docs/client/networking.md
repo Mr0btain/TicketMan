@@ -27,7 +27,7 @@ flowchart TD
 | `Helpers.kt` | `networkRequest`, `networkErrorTryCatch`, `handleHttpResponse`, `handleActionHttpResponse`, `handleDataHttpResponse`, `networkErrorFor` |
 | `ServerError.kt`, `ConnectionResult.kt` | Error and connection result types |
 | `HttpEngine.kt` | `expect fun getHttpEngine(trust)` |
-| `ServerTrust.kt`, `ServerAddress.kt` | Which self-made server certificates are trusted; how typed addresses are read |
+| `ServerTrust.kt`, `ServerAddress.kt` | Which private certificates are trusted; how typed addresses are read, and which are secure |
 | `jvmSharedMain/.../PinningTrustManager.kt` | The certificate and host name checks the desktop and Android engine use |
 | `transfer/` | Streaming big uploads and downloads, see [Transfers and photos](transfers-and-photos.md) |
 
@@ -64,8 +64,8 @@ web that's the page's origin; on a desktop debug build it's `http://localhost:80
 `SessionHandler.connect(url)`, called on start with the saved server address and whenever it's changed in Settings,
 calls `RemoteHandler.setUrl(url)`:
 
-1. For an `http://` address, `ServerUserClient.httpsRedirectOf` asks `/api/ping` first. A server with
-   `HTTP_MODE=redirect` answers with a redirect; when it points at the same host's `/api/ping` on `https://`, the
+1. For an `http://` address, `ServerUserClient.httpsRedirectOf` asks `/api/ping` first. A proxy sending plain HTTP
+   on to HTTPS (Caddy does by default) answers with a redirect; when it points at the same host's `/api/ping` on `https://`, the
    rest of the steps use that address instead. `RemoteHandler.address` holds the address actually used, and
    `SessionHandler` saves it through `onServerMoved` (to `SettingsHandler.rememberServerUrl`), so it's only moved
    once. A redirect to another host isn't followed.
@@ -85,27 +85,36 @@ Behind a reverse proxy with a public certificate the system's trust store vouche
 nothing is asked: the user types the address and logs in. What can still go wrong there is the name (below) and the
 proxy's own errors ([Errors a proxy makes](#errors-a-proxy-makes)).
 
-A server doing its own HTTPS makes its own certificate (see [Running a server](../operations.md#without-a-proxy)), which no
-authority vouches for, and so does a proxy with a self-signed one. On desktop and Android the engine trusts it the
-first time someone checks it, then only that certificate from that address. It's the same idea as SSH remembering
-a host's key.
+A proxy with a private certificate, like Caddy's local CA for a shop with no domain (see
+[Private certificates](../operations.md#private-certificates)), has one no authority vouches for. On desktop and
+Android the engine trusts its CA the first time someone checks it, then only certificates from that CA at that
+address. It's the same idea as SSH remembering a host's key, one level up, since Caddy replaces the certificate
+itself every 12 hours and the intermediate under its root every week.
 
 ```mermaid
 flowchart TD
-    H[TLS handshake] --> P{Fingerprint trusted<br/>for this host:port?}
+    H[TLS handshake] --> P{"From the CA trusted<br/>for this host:port?"}
     P -- yes --> OK[Connect]
     P -- no --> S{System trusts it?}
     S -- yes --> OK
-    S -- no --> R["ServerTrust.refuse()<br/>setUrl returns UNTRUSTED"]
-    R --> D["ServerTrustDialog shows the fingerprint"]
+    S -- no --> A["Fetch the proxy's CA from<br/>/.well-known/ticketman/ca.pem"]
+    A --> R["ServerTrust.refuse() with the CA,<br/>setUrl returns UNTRUSTED"]
+    R --> D["ServerTrustDialog warns it's private,<br/>shows the CA's fingerprint"]
     D -- "It matches" --> T["ServerTrust.trust(), saved in LocalStorage,<br/>then connect again"]
 ```
 
-- `PinningTrustManager` accepts what the system's trust store accepts, so a real certificate just works, plus the
-  one fingerprint (SHA-256 of the certificate) `ServerTrust` holds for that `host:port`. Anything else is passed to
-  `ServerTrust.refuse()` and the handshake fails.
-- `PinningHostnameVerifier` runs OkHttp's usual name check, and lets a trusted fingerprint through even when the
-  certificate doesn't list the name the server was reached by. Anything else it turns down goes to
+- `PinningTrustManager` accepts what the system's trust store accepts, so a public certificate just works, plus
+  chains from the one CA `ServerTrust` holds for that `host:port` (`TrustedAuthority`: its fingerprint and the
+  certificate itself, checked with a trust manager whose only anchor it is), or that very certificate for one a
+  server made itself. Anything else is refused and the handshake fails.
+- What it offers to trust is the *anchor*: the top certificate the server sent when it signed itself, otherwise the
+  CA's root fetched from `ServerTrust.AUTHORITY_PATH` (`/.well-known/ticketman/ca.pem`, which
+  [`docker/Caddyfile`](../../docker/Caddyfile) serves) when it really signed the chain, otherwise the top
+  certificate sent. The fetch skips checking the connection's certificate, since that's the question being asked;
+  whatever comes back is only offered after the signature check, and a person still matches the fingerprint. A
+  refusal from the CA already trusted (a certificate out of date) isn't asked about again, it just fails.
+- `PinningHostnameVerifier` runs OkHttp's usual name check, and lets a certificate trusted by its own fingerprint
+  through even when it doesn't list the name the server was reached by. Anything else it turns down goes to
   `ServerTrust.refuseName()` with the names the certificate is for (`WrongServerName`), and `setUrl` returns
   `WRONG_NAME`. That's a public certificate reached by the wrong name, like a proxy's `tickets.myshop.com`
   certificate reached at `10.0.0.5`: nothing to trust, so no dialog, but "This server's certificate is for
@@ -114,12 +123,22 @@ flowchart TD
   is null when it connected or is waiting on the trust dialog. The login dialog shows it under the address field
   and Settings > Account as a **Can't connect** notice.
 - `SessionHandler.untrustedCertificate` is the refused certificate for the current server, and `App` shows
-  `ServerTrustDialog` for it, above the login popup. The dialog shows the fingerprint in two lines to read off
-  against the admin Server tab or the server's log. A **changed** certificate (a different one from an address
-  trusted before) gets a warning, since it can mean something is pretending to be the server.
+  `ServerTrustDialog` for it, above the login popup. It warns that this isn't a public certificate and to trust it
+  only when the admin set the server up that way, and shows the fingerprint in two lines to read off against the
+  admin's. A **changed** CA (a different one from an address trusted before) gets a stronger warning, since it can
+  mean something is pretending to be the server.
 - **Don't connect** leaves the server unconnected and doesn't ask about that certificate again until the app
-  restarts. **It matches, connect** saves the fingerprint (`trusted_certificates` in `LocalStorage`) and connects again.
+  restarts. **It matches, trust it** saves it (`trusted_authorities` in `LocalStorage`) and connects again.
+  `trusted_certificates`, the fingerprints of certificates servers made for themselves before HTTPS moved to the
+  proxy, isn't read any more.
 - On web the browser does all of this itself, and nothing here runs.
+
+### Plain HTTP
+
+An `http://` address still connects, but `SessionHandler.insecureWarning` is set while connected to one, unless it's
+this same machine (`isSecureServerAddress`: `localhost`, `127.*` or `::1`). It's shown as a snackbar when it
+connects, a **Not secure** notice on the login popup (where the password is typed) and on Settings > Account, and the
+admin Server tab's address gets a **Not secure** badge.
 
 After connecting, `SessionHandler` reloads the current user (`GET /api/user/me`) and the device's station, and
 `MainViewModel` refreshes the record lists.
@@ -243,8 +262,9 @@ Repositories and handlers are tested in `composeApp/src/commonTest` with Ktor's 
 `RemoteHandler` on a `MockEngine` that answers the routes under test, and an `InMemoryKeyValueStore` for
 `LocalStorage`. The mock has to answer `SERVER_PING_PATH` with `SERVER_PING_BODY`, or connecting fails. Reads are
 `GET`s with the id in the path (`/api/data/customer/get/<id>`), so match on the whole path.
-`PinnedHttpsTest` (desktopTest) runs a real HTTPS server with a self-made certificate against the OkHttp engine;
-`pinnedHttpEngine(trust, system)` takes the system trust manager, so a test can make a certificate "public".
+`PinnedHttpsTest` (desktopTest) runs a real HTTPS server with a private certificate against the OkHttp engine;
+`pinnedHttpEngine(trust, system, fetchAuthority)` takes the system trust manager, so a test can make a certificate
+"public", and what the proxy hands out as its CA.
 
 ## Gotchas
 

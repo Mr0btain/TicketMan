@@ -45,24 +45,38 @@ sequenceDiagram
 | Anything else | `401`, and a `LOGIN_FAILED` audit entry |
 | Too many wrong tries | `429`, see below |
 
-### Wrong password limit
+### Wrong password limits
 
-`POST /api/auth` counts failed logins in memory, in two `RequestLimiter`s in `AuthRoute.kt`:
-20 per address and 10 per username, each over 15 minutes. Once either is used up the route answers `429` before
-checking the password, so even the right password waits until the oldest failure is 15 minutes old. Good logins
-never count. The client shows `NetworkError.TOO_MANY_REQUESTS` ("Too many tries, wait a moment and try again").
+`POST /api/auth` counts failed logins in memory, in
+[`LoginLimiter`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/service/LoginLimiter.kt). Only
+failures count, so staff logging in all day never hit it. Three limits, over the last 15 minutes:
+
+| Limit | Counts | Then |
+|-------|--------|------|
+| Per address | 20 wrong passwords from one device, on any usernames | Waits until enough of them are 15 minutes old |
+| Per username | 5 free wrong passwords, from any device | Each one after locks the name: 30 seconds, then 1, 2, 4, 8 minutes, up to 15. The count starts over after 15 minutes with no wrong one, or a good login |
+| Server wide | 100 wrong passwords from everywhere, guessing spread over many addresses | Any address that has had a wrong one in the window waits until it's 15 minutes old, so each gets one try. Devices that never typed a wrong one still get in |
+
+A locked username or address is refused before the password is checked, so even the right one waits. The route
+answers `429` with a `Retry-After` header and `Too many wrong logins, try again in 30 seconds` (or however long it
+is). The client shows `NetworkError.TOO_MANY_REQUESTS` ("Too many tries, wait a moment and try again").
+
+Every wrong password is in the audit log as `LOGIN_FAILED` already (`UserService`). A username or address being
+locked, and a server wide surge starting, add one more (`Locked out for 30 seconds after 6 wrong passwords`). The
+admin Sessions tab lists what's locked now (`GET /api/admin/logins`) and can let one try again
+(`POST /api/admin/logins/unlock`), like a staff member who forgot their password and had it reset.
 
 A username's count is shared by every address, so someone on the network can keep a user locked out of password
-login by guessing at it. PIN login and existing sessions aren't affected, and the counts reset when the server
-restarts.
+login by guessing at it, though the doubling waits mean only a few tries an hour. PIN login and existing sessions
+aren't affected, and the counts reset when the server restarts.
 
-The address is the connection's, which behind a reverse proxy is the proxy's for every device. So behind a proxy
-(`PROXY=on`, the default) `plugins/Proxy.kt` takes it from `X-Forwarded-For` instead, but only when the connection
-itself comes from an address in `TRUSTED_PROXIES` (loopback and the private ranges unless set). It takes the last
+The address is the connection's, which behind a reverse proxy is the proxy's for every device. So
+`plugins/Proxy.kt` takes it from `X-Forwarded-For` instead, but only when the connection itself comes from an
+address in `TRUSTED_PROXIES` (loopback and the private ranges unless set, never with `none`). It takes the last
 address in the header, the one the nearest proxy added, since anything before it was sent by the client. From
 anywhere else the header is ignored, so a device that reaches the server directly can't pick its own address. It's
-our own small plugin rather than Ktor's `XForwardedHeaders`, which believes the header from anyone. The deprecated
-`TRUST_PROXY=true` still does that, and logs a warning. See [Configuration](../configuration.md#trusted_proxies).
+our own small plugin rather than Ktor's `XForwardedHeaders`, which believes the header from anyone. See
+[Configuration](../configuration.md#trusted_proxies).
 
 A username that doesn't exist still runs a dummy hash check, so the response takes as long as a wrong password and
 can't be used to find out which usernames exist.
@@ -84,7 +98,7 @@ Both tokens are HMAC-SHA256 JWTs signed with the server's secret, carrying:
 | `exp` | Access: 1 hour. Refresh: 365 days, or 12 hours for a PIN session |
 
 The secret is `SECRET` when it's set. Otherwise `ServerSecret` makes a random one on first start and keeps it in
-`<dataPath>/server/secret`, readable only by the account running the server, like the certificate. It's kept
+`<dataPath>/server/secret`, readable only by the account running the server. It's kept
 because a new secret would log every device out. See [Configuration](../configuration.md#secret).
 
 The client sends the access token as `Authorization: Bearer ...`. When it gets a `401`, it posts the refresh token

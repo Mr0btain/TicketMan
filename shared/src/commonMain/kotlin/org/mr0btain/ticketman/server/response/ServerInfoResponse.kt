@@ -15,14 +15,10 @@ data class ServerInfoResponse(
     val javaVersion: String,
     val operatingSystem: String,
     val developmentMode: Boolean,
-    /** Null when HTTPS is off */
-    val certificate: ServerCertificateInfo? = null,
     /** Null when `BACKUP_DIR` isn't set */
     val scheduledBackup: ScheduledBackupInfo? = null,
     /** The last restore applied, while its set aside data is still kept */
     val lastRestore: RestoreRecord? = null,
-    /** Behind a reverse proxy (`PROXY=on`), which does HTTPS. False for the server doing it itself */
-    val proxy: Boolean = false,
     /** Addresses and ranges whose `X-Forwarded-For` the server believes (`TRUSTED_PROXIES`), empty when it ignores the header */
     val trustedProxies: List<String> = emptyList(),
     /**

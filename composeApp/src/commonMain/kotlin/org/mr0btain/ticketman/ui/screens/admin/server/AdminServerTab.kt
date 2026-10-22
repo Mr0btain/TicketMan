@@ -18,14 +18,12 @@ import io.github.vinceglb.filekit.name
 import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.components.network.isSecureServerAddress
 import org.mr0btain.ticketman.components.utils.formatDateTime
-import org.mr0btain.ticketman.components.utils.formatDay
 import org.mr0btain.ticketman.components.utils.formatDuration
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.server.request.SeedRequest
 import org.mr0btain.ticketman.server.response.PendingRestore
-import org.mr0btain.ticketman.server.response.ServerCertificateInfo
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 import org.mr0btain.ticketman.ui.screens.admin.components.BackupProgress
 import org.mr0btain.ticketman.ui.screens.admin.components.tooBigToRestoreMessage
@@ -53,7 +51,6 @@ import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.server
 import ticketman.composeapp.generated.resources.upload
 import ticketman.composeapp.generated.resources.zap
-import kotlin.time.Clock
 
 /** Width of the panels in the left column */
 private val SIDE_WIDTH = 440.dp
@@ -76,8 +73,6 @@ fun AdminServerTab(
     onRestore: (PlatformFile) -> Unit,
     onCancelRestore: () -> Unit,
     onRestart: () -> Unit,
-    onRenewCertificate: () -> Unit,
-    onCancelCertificateRenewal: () -> Unit,
     onSeed: (SeedRequest) -> Unit,
     importCard: @Composable () -> Unit = {}
 ) {
@@ -93,7 +88,7 @@ fun AdminServerTab(
             verticalArrangement = Arrangement.spacedBy(spacing.md)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
-                ServerInfoCard(serverInfo, serverUrl, isBusy, onRenewCertificate, onCancelCertificateRenewal)
+                ServerInfoCard(serverInfo, serverUrl)
 
                 BackupCard(isBusy, backupProgress, pendingRestore, serverInfo, onBackup, onRestore, onCancelRestore, onRestart)
 
@@ -113,10 +108,7 @@ fun AdminServerTab(
 @Composable
 private fun ServerInfoCard(
     serverInfo: ServerInfoResponse?,
-    serverUrl: String,
-    isBusy: Boolean,
-    onRenewCertificate: () -> Unit,
-    onCancelCertificateRenewal: () -> Unit
+    serverUrl: String
 ) {
     TmPanel(modifier = Modifier.width(SIDE_WIDTH), title = "Server", icon = Res.drawable.server) {
         TmKeyValueRow(label = "Address") {
@@ -153,15 +145,13 @@ private fun ServerInfoCard(
         }
 
         TmDivider()
-        // Behind a proxy devices only ever see the proxy's certificate, so the server's own isn't worth showing
-        if (serverInfo.proxy) ProxyRows(serverInfo)
-        else CertificateRows(serverInfo.certificate, isBusy, onRenewCertificate, onCancelCertificateRenewal)
+        ProxyRows(serverInfo)
     }
 }
 
 /**
- * Behind a reverse proxy: who does HTTPS, and whether the proxy says who each device is. A proxy the server doesn't
- * trust makes every device look like the proxy, so wrong password limits count them all together
+ * The reverse proxy in front: whether it says who each device is. A proxy the server doesn't trust makes every
+ * device look like the proxy, so wrong password limits count them all together
  */
 @Composable
 private fun ProxyRows(serverInfo: ServerInfoResponse) {
@@ -174,8 +164,6 @@ private fun ProxyRows(serverInfo: ServerInfoResponse) {
                 Text(text = serverInfo.clientAddress.ifBlank { "Unknown" }, style = TmTheme.typography.numeric, color = TmTheme.colors.text)
             }
         }
-        // A proxy can still talk HTTPS to the server
-        serverInfo.certificate?.let { TmKeyValueRow(label = "Server's own HTTPS port", value = it.httpsPort.toString(), numeric = true) }
     }
 
     // Can be a long list, so under its label rather than beside it
@@ -198,98 +186,6 @@ private fun ProxyRows(serverInfo: ServerInfoResponse) {
                 "proxy, so every device may count as one for wrong password limits. If that's the proxy's address, add it " +
                 "to TRUSTED_PROXIES and check the proxy sends X-Forwarded-For."
         )
-    }
-}
-
-/**
- * HTTPS settings and the certificate's fingerprint, which devices ask staff to check before trusting the server.
- * A certificate the server made can be replaced here, ahead of it running out
- */
-@Composable
-private fun CertificateRows(
-    certificate: ServerCertificateInfo?,
-    isBusy: Boolean,
-    onRenew: () -> Unit,
-    onCancelRenewal: () -> Unit
-) {
-    if (certificate == null) {
-        TmKeyValueRow(label = "HTTPS", value = "Off")
-        return
-    }
-
-    var confirmRenew by remember { mutableStateOf(false) }
-
-    if (confirmRenew) {
-        TmConfirmDialog(
-            title = "Make a new certificate?",
-            message = "The server switches to it the next time it starts. After that every device will warn that " +
-                "the certificate changed and ask staff to trust the new one, so tell them to expect it.",
-            confirmText = "Make certificate",
-            onConfirm = {
-                onRenew()
-                confirmRenew = false
-            },
-            onDismissRequest = { confirmRenew = false }
-        )
-    }
-
-    Column {
-        TmKeyValueRow(label = "HTTPS port", value = certificate.httpsPort.toString(), numeric = true)
-        TmKeyValueRow(
-            label = "Plain HTTP",
-            value = when (certificate.httpMode) {
-                "redirect" -> "Sent to HTTPS"
-                "off" -> "Off"
-                else -> "On"
-            }
-        )
-        TmKeyValueRow(label = "Certificate", value = if (certificate.generated) "Made by the server" else "Supplied")
-        TmKeyValueRow(label = "Expires", value = formatDay(certificate.expiresAt))
-    }
-
-    FingerprintText(label = "Fingerprint", fingerprint = certificate.fingerprint)
-
-    if (certificate.expiresSoon(Clock.System.now().toEpochMilliseconds())) {
-        TmNotice(
-            kind = TmNoticeKind.WARNING,
-            title = "Certificate runs out soon",
-            text = "It stops working on ${formatDay(certificate.expiresAt)}. " +
-                if (certificate.generated) "Make a new one below and restart the server before then."
-                else "Replace the SSL_KEYSTORE file before then."
-        )
-    }
-
-    // A supplied certificate is replaced on the server, not from here
-    if (!certificate.generated) return
-
-    val pending = certificate.pendingFingerprint
-    if (pending != null) {
-        TmNotice(
-            kind = TmNoticeKind.INFO,
-            title = "New certificate waiting",
-            text = "Used from the next time the server starts" +
-                (certificate.pendingExpiresAt?.let { ", until ${formatDay(it)}" } ?: "") +
-                ". Devices will ask to trust it; check they show this fingerprint."
-        )
-        FingerprintText(label = "New fingerprint", fingerprint = pending)
-        TmButton(text = "Keep the current certificate", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = onCancelRenewal)
-    } else {
-        TmButton(text = "Make a new certificate", variant = TmButtonVariant.SECONDARY, enabled = !isBusy, onClick = { confirmRenew = true })
-    }
-}
-
-@Composable
-private fun FingerprintText(label: String, fingerprint: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
-        Text(text = label, style = TmTheme.typography.caption, color = TmTheme.colors.textMuted)
-        SelectionContainer {
-            Column {
-                // Split the same way as on the device asking, so the two can be read off line by line
-                fingerprint.split(":").chunked(16).forEach { line ->
-                    Text(text = line.joinToString(":"), style = TmTheme.typography.numeric, color = TmTheme.colors.text)
-                }
-            }
-        }
     }
 }
 

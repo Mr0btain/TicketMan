@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.InvoiceDocuments
+import org.mr0btain.ticketman.components.service.LoginLimiter
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
@@ -33,7 +34,8 @@ fun Application.configureRouting(
     imageService: ImageService,
     backupService: BackupService,
     restoreService: RestoreService,
-    localDatabase: LocalDatabase
+    localDatabase: LocalDatabase,
+    loginLimiter: LoginLimiter = LoginLimiter()
 ) {
     install(StatusPages) {
         // A body that isn't valid JSON, has a field this server doesn't know, or is missing one. The details stay
@@ -77,7 +79,7 @@ fun Application.configureRouting(
         }
 
         route(ApiRoutes.AUTH) {
-            authRoute(userService, accountService, localDatabase.stationDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase)
+            authRoute(userService, accountService, localDatabase.stationDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase, loginLimiter)
         }
 
         route(ApiRoutes.USER) {
@@ -94,7 +96,8 @@ fun Application.configureRouting(
                 database = localDatabase,
                 adminService = adminService,
                 backupService = backupService,
-                restoreService = restoreService
+                restoreService = restoreService,
+                loginLimiter = loginLimiter
             )
         }
 

@@ -13,7 +13,6 @@ import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.ImageDatabase
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.image.ImageStore
-import org.mr0btain.ticketman.components.tls.ServerTls
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.logging.AppLogger
@@ -46,11 +45,9 @@ import kotlin.uuid.Uuid
  * Builds backup archives on disk and hands out short lived download links for them, so a backup of any size is
  * streamed from a file instead of being held in memory. Also makes the daily backup when `BACKUP_DIR` is set
  *
- * The archive is a zip of `manifest.json`, `database.zip` (H2's online backup), the made certificate in `tls/`
- * if there is one, and, unless left out, `images/`. The database is copied first: photos are only removed a day
+ * The archive is a zip of `manifest.json`, `database.zip` (H2's online backup) and, unless left out, `images/`. The database is copied first: photos are only removed a day
  * after they're deleted, so every photo the copied database points at is still on disk when they're copied after
  * @param backupsFolder Where finished archives wait to be downloaded
- * @param tlsFolder Where the server keeps the certificate it made, see [ServerTls]
  * @param schedule The daily backup, off when its folder is blank
  * @param auditLog Where scheduled backups are logged
  */
@@ -61,7 +58,6 @@ class BackupService(
     private val images: ImageDatabase,
     private val imageStore: ImageStore,
     private val backupsFolder: File,
-    private val tlsFolder: File? = null,
     private val schedule: BackupSchedule = BackupSchedule(),
     private val auditLog: AuditLogDatabase? = null
 ) {
@@ -184,15 +180,13 @@ class BackupService(
             val databaseCopy = File(work, BackupManifest.DATABASE_FILE)
             if (!database.backupTo(databaseCopy)) return null
 
-            val certificateFiles = certificateFiles()
             val imageFiles = if (includeImages) imageFiles() else emptyList()
             val manifest = BackupManifest(
                 serverVersion = AdminService.SERVER_VERSION,
                 createdAt = now,
                 includesImages = includeImages,
                 imageCount = imageFiles.map { it.first.substringBeforeLast('/') }.distinct().size,
-                imageBytes = imageFiles.sumOf { it.second.length() },
-                includesCertificate = certificateFiles.isNotEmpty()
+                imageBytes = imageFiles.sumOf { it.second.length() }
             )
 
             val digest = MessageDigest.getInstance("SHA-256")
@@ -202,7 +196,6 @@ class BackupService(
                 zip.putNextEntry(ZipEntry(BackupManifest.FILE_NAME))
                 zip.write(json.encodeToString(manifest).encodeToByteArray())
                 zip.closeEntry()
-                certificateFiles.forEach { file -> zip.addFile("${BackupManifest.TLS_FOLDER}/${file.name}", file) }
 
                 // The database copy and the JPEGs are already compressed, squeezing them again only costs time
                 zip.setLevel(Deflater.NO_COMPRESSION)
@@ -214,15 +207,6 @@ class BackupService(
         } finally {
             work.deleteRecursively()
         }
-    }
-
-    /**
-     * The certificate the server made and its password, so a server restored on a new machine answers with the
-     * same one and devices don't have to trust it again. Nothing when it uses a supplied one
-     */
-    private fun certificateFiles(): List<File> {
-        val files = listOf(ServerTls.KEYSTORE_FILE, ServerTls.PASSWORD_FILE).map { File(tlsFolder ?: return emptyList(), it) }
-        return if (files.all { it.isFile }) files else emptyList()
     }
 
     /**

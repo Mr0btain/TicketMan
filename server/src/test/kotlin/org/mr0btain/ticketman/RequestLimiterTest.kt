@@ -79,7 +79,7 @@ class RequestLimiterTest {
         val dataDir = createTestDataDir()
 
         try {
-            configureTestServer(dataDir, extraConfig = mapOf("env.trustProxy" to "true"))
+            configureTestServer(dataDir)
             startApplication()
 
             // The proxy adds the real address last, anything before it came from the client and is ignored
@@ -97,7 +97,7 @@ class RequestLimiterTest {
         val dataDir = createTestDataDir()
 
         try {
-            configureTestServer(dataDir)
+            configureTestServer(dataDir, extraConfig = mapOf("env.trustedProxies" to "none"))
             startApplication()
 
             val statuses = (1..6).map { n -> requestFrom("203.0.113.$n", n) }
@@ -116,36 +116,5 @@ class RequestLimiterTest {
 
         clock += 10.minutes.inWholeMilliseconds + 1
         assertFalse(limiter.isLimited("10.0.0.1"))
-    }
-
-    @Test
-    fun wrongPasswordsAreCappedPerUsername() = testApplication {
-        val dataDir = createTestDataDir()
-
-        try {
-            configureTestServer(dataDir)
-            startApplication()
-            val tech = User(username = "tech", password = "tech_pass", accessLevel = AccessLevel.NORMAL)
-            UserDatabase().add(tech)
-
-            suspend fun login(username: String, password: String) = client.post("/api/auth") {
-                contentType(ContentType.Application.Json)
-                setBody(Json.encodeToString(LoginRequest(username, password)))
-            }.status
-
-            // Good logins never count
-            repeat(15) { assertEquals(HttpStatusCode.Accepted, login("tech", "tech_pass")) }
-
-            repeat(10) { assertEquals(HttpStatusCode.Unauthorized, login("Tech", "guess$it")) }
-
-            // Now even the right password waits
-            assertEquals(HttpStatusCode.TooManyRequests, login("tech", "tech_pass"))
-
-            // The same address can still get 10 more wrong tries on another name before it's capped too
-            repeat(10) { assertEquals(HttpStatusCode.Unauthorized, login("nobody", "guess$it")) }
-            assertEquals(HttpStatusCode.TooManyRequests, login("someone", "guess"))
-        } finally {
-            cleanupTestDataDir(dataDir)
-        }
     }
 }

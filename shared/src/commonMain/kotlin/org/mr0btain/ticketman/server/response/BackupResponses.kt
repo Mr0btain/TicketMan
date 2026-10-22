@@ -40,8 +40,9 @@ data class BackupTicket(
 
 /**
  * `manifest.json` inside every backup archive, next to `database.zip` (H2's own backup), `images/`
- * (`images/<aa>/<id>/<variant>.jpg`, the same layout as on the server) and `tls/` (the certificate the server made)
- * @param includesCertificate Whether `tls/` is in it. Format 1 archives never have it
+ * (`images/<aa>/<id>/<variant>.jpg`, the same layout as on the server) and, only in archives from before the
+ * server stopped doing HTTPS itself, `tls/` (the certificate it made, skipped on restore)
+ * @param includesCertificate Whether `tls/` is in it. Never set on new archives
  */
 @Serializable
 data class BackupManifest(
@@ -55,7 +56,7 @@ data class BackupManifest(
     val includesCertificate: Boolean = false
 ) {
     companion object {
-        /** 2 added `tls/` */
+        /** 2 added `tls/`, which new archives no longer have */
         const val CURRENT_FORMAT_VERSION = 2
         const val FILE_NAME = "manifest.json"
         const val DATABASE_FILE = "database.zip"

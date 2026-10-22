@@ -61,6 +61,26 @@ Logs a user out of every device.
 
 - **`202`** done. **`404`** no such user.
 
+### `GET /api/admin/logins`
+
+**Auth:** admin
+
+What the [wrong password limits](../server/auth.md#wrong-password-limits) are holding back right now.
+
+- **`200`** `LoginLimitsResponse`: `locks` (`LoginLock`: `kind` `USERNAME` or `ADDRESS`, `key` the lowercase
+  username or the address, `failures` counted against it, `lockedUntil` epoch millis), newest lock first;
+  `recentFailures` (wrong passwords from everywhere in the window), `surge` (over the server wide ceiling) and
+  `windowMinutes` (15).
+
+### `POST /api/admin/logins/unlock`
+
+**Auth:** admin
+
+Lets a locked username or address try logging in again straight away. Audited.
+
+- **Body:** `LoginUnlockRequest { kind, key }`.
+- **`202`** its count is cleared. **`404`** it had nothing counted.
+
 ## Stations
 
 ### `GET /api/admin/stations`
@@ -101,19 +121,17 @@ Removes a station and signs out whoever is PINned in there.
 **Auth:** admin
 
 - **`200`** `ServerInfoResponse`: name, version, uptime, start time, data path, database and photo sizes, Java and
-  OS, development mode, `certificate` (fingerprint, subject, expiry, whether the server made it, HTTPS port and
-  HTTP mode, and `pendingFingerprint`/`pendingExpiresAt` for a new one waiting for the next start; null with HTTPS
-  off), `scheduledBackup` (`ScheduledBackupInfo`: folder, how many are kept, whether photos are in them, the newest
+  OS, development mode, `scheduledBackup` (`ScheduledBackupInfo`: folder, how many are kept, whether photos are in them, the newest
   one's time and size, and when the last try failed; null without `BACKUP_DIR`) and `lastRestore` (`RestoreRecord`:
   the restored backup's manifest, when it was applied and the `pre-restore-<time>` folder; null once that folder has
   been swept, or if there's been no restore).
-- It also says how this request reached the server, so an admin can check a reverse proxy is set up right: `proxy`
-  (`PROXY=on`), `trustedProxies` (`TRUSTED_PROXIES` as given, empty when forwarded headers are ignored),
+- It also says how this request reached the server, so an admin can check the reverse proxy is set up right:
+  `trustedProxies` (`TRUSTED_PROXIES` as given, empty with `none`),
   `clientAddress` (the address the server sees for the device asking), `forwarded` (whether that came from a
   trusted proxy's `X-Forwarded-For`) and `timeZone` (what "today" and the yearly number rollover use). Behind a
   working proxy `clientAddress` is the device's own address and `forwarded` is true; the proxy's address with
-  `forwarded` false means the proxy isn't in `trustedProxies` or doesn't send the header. All five have defaults, so
-  older clients ignore them.
+  `forwarded` false means the proxy isn't in `trustedProxies` or doesn't send the header. All four have defaults.
+  The `certificate` and `proxy` fields from when the server could do HTTPS itself are gone.
 - `canRestart`: whether [`POST /api/admin/restart`](#post-apiadminrestart) works (`RESTART_ON_EXIT=true`). Defaults
   to false.
 
@@ -121,30 +139,11 @@ Removes a station and signs out whoever is PINned in there.
 
 **Auth:** admin
 
-Restarts the server, which applies a waiting restore or certificate. It answers, then exits with code 3 about a
+Restarts the server, which applies a waiting restore. It answers, then exits with code 3 about a
 second later and leaves starting it again to whatever runs it (Docker's restart policy). Audited, once per restart.
 
 - **`202`** it's on its way, also when it already was.
 - **`409`** `RESTART_ON_EXIT` isn't on, so nothing would start it again (the text says so).
-
-### `POST /api/admin/certificate/renew`
-
-**Auth:** admin
-
-Makes a new HTTPS certificate, used from the next time the server starts. Replaces one already waiting. Every device
-that trusted the old one will ask to trust the new one.
-
-- **`201`** `ServerCertificateInfo` with the new one in `pendingFingerprint`.
-- **`409`** the server uses a supplied certificate (`SSL_KEYSTORE`), or HTTPS is off.
-- **`500`** it couldn't be made.
-
-### `DELETE /api/admin/certificate/renew`
-
-**Auth:** admin
-
-Drops the certificate waiting for the next start.
-
-- **`202`** whether or not there was one.
 
 ## Backup and restore
 

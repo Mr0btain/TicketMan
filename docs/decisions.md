@@ -75,34 +75,42 @@ session, because that lost answer would look the same.
 
 **Revisit if:** the server is reachable from outside the shop.
 
-### Behind a reverse proxy by default
+### HTTPS only in a reverse proxy
 
-**Chosen:** the normal setup is the server in a container behind a reverse proxy (Caddy, nginx, Traefik) that does
-HTTPS, usually with a public certificate. `PROXY=on` is the default: the server's own HTTPS is off, plain HTTP
-answers, and client addresses come from `X-Forwarded-For` sent by a trusted proxy. The server's own pinned
-certificate (next entry) is the direct option, `PROXY=off`, and what development mode uses.
+**Chosen:** the server only speaks plain HTTP, and a reverse proxy in front (Caddy in `docker-compose.yml`, or
+nginx, Traefik) does all of HTTPS. The server's own HTTPS, with a certificate it made and devices pinned, was
+removed along with `PROXY`, `SSL_*`, `HTTP_MODE` and `TRUST_PROXY`, which now only get a startup warning. Client
+addresses come from `X-Forwarded-For` sent by a proxy in `TRUSTED_PROXIES`.
 
-**Why:** a public certificate means no trust dialog on any device and no browser warning on the web client, and a
-proxy is how most self-hosted services are run. `PROXY` only changes defaults, so either setup is one setting away.
+**Why:** one way to set it up instead of two, each with its own settings, certificate handling, backup contents and
+admin screen. A proxy is how most self-hosted services are run, Caddy gets a public certificate on its own, and for
+a shop with no domain its local CA does what the server's own certificate did (see the next entry).
 
-**Costs:** the forwarded headers are believed from loopback and the private ranges unless `TRUSTED_PROXIES` narrows
-it, so a proxy on any Docker network works with nothing set. If the server's own port is also reachable from the
-shop network, a device there could pick its own address for the login limits. The default was chosen over
-loopback only, which is safer but would need setting in every container.
+**Costs:** running without a proxy means plain HTTP, which the client allows with a **Not secure** warning rather
+than refusing, so development and a quick try on a shop network still work. The forwarded headers are believed
+from loopback and the private ranges unless `TRUSTED_PROXIES` narrows it (or is `none`), so a proxy on any Docker
+network works with nothing set; if the server's port is also reachable from the shop network, a device there could
+pick its own address for the login limits. Backups no longer carry a certificate: the proxy's is its own to back
+up.
 
-### Its own certificate, pinned by the devices (the direct setup)
+**Revisit if:** shops need to run without Docker or any proxy and plain HTTP isn't acceptable.
 
-**Chosen:** with `PROXY=off` and no supplied certificate the server makes one, once, kept in `<dataPath>/server/tls/` for ten
-years. Desktop and Android ask staff to check its fingerprint the first time, then trust exactly that
-certificate for that address.
+### Private certificates: trust the proxy's CA, not its certificate
 
-**Why:** most shops have no domain name for a box in the back room, so a public certificate isn't an option, and
-plain HTTP sends passwords readable on the network. Pinning gives encryption with one check by a person.
+**Chosen:** when the system doesn't trust a server's certificate, desktop and Android offer to trust the private CA
+behind it, for that `host:port`: the top certificate when it signed itself, else the root the proxy hands out at
+`/.well-known/ticketman/ca.pem` once it's checked to have signed the chain, else the top certificate sent. The
+dialog warns that it isn't a public certificate. After that, any chain from that CA is accepted there.
 
-**Costs:** replacing the certificate makes every device ask again, and web users get the browser's own warning
-instead of the app's. So the certificate is put in backups (a server restored on a new machine keeps it), which
-makes a backup something that can impersonate the server. A new one can be made from the admin screen ahead of time
-but only takes over on a restart.
+**Why:** Caddy's local CA issues a certificate that lasts 12 hours under an intermediate that lasts a week, and only
+sends those two. Pinning the certificate itself, as the app did for the server's own, would ask every device to
+trust the server again twice a day. The root lasts ten years. Fetching it over an unchecked connection is fine
+because it's only offered after the signature check and a person still matches its fingerprint.
+
+**Costs:** a proxy that doesn't hand its CA out falls back to the top certificate it sends, and asks again when that
+changes. Resetting Caddy's data makes a new CA, and every device asks again. Fingerprints trusted for the server's
+own certificate (`trusted_certificates`) aren't carried over. Browsers still show their own warning unless the CA
+is installed.
 
 ### The Docker image is built from the host's build
 
@@ -189,9 +197,14 @@ routes), a failed entry is only logged to the console and the change stays.
 
 ### In-memory rate limits
 
-**Chosen:** account requests and wrong password logins are counted in memory per address and per username.
+**Chosen:** account requests and wrong password logins are counted in memory. Wrong passwords per address, per
+username with waits that double after 5 free tries, and across the server, where a surge gives each address one
+try (`LoginLimiter`). Not in the proxy, since Caddy's stock image has no rate limiting and a proxy can't tell a
+wrong password from a right one, nor count by username. Not locking accounts until an admin unlocks them either,
+which would let anyone lock out a known username for good.
 
-**Why:** simple, and nothing to clean up in the database.
+**Why:** simple, and nothing to clean up in the database. Locks are in the audit log and on the Sessions tab, where
+an admin can lift one.
 
 **Costs:** a restart clears the counts. Behind a reverse proxy they rely on its `X-Forwarded-For`, believed only
 from `TRUSTED_PROXIES`; a proxy outside that list makes every device count as one. A username's limit can be used to keep that user out of password login for a while.

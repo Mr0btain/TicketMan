@@ -22,6 +22,7 @@ import ticketman.composeapp.generated.resources.user
  * @param user Whoever is signed in, null when nobody is
  * @param apiMismatch Why this app and the server may not work together, null when they're the same version
  * @param connectionProblem Why the server address didn't connect, null when it did
+ * @param insecureWarning Why the connection isn't safe, null unless it's plain HTTP
  */
 @Composable
 fun AccountPanel(
@@ -30,11 +31,13 @@ fun AccountPanel(
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
     apiMismatch: String? = null,
-    connectionProblem: String? = null
+    connectionProblem: String? = null,
+    insecureWarning: String? = null
 ) {
     TmPanel(modifier = modifier.fillMaxWidth(), title = "Account", icon = Res.drawable.user) {
         connectionProblem?.let { TmNotice(kind = TmNoticeKind.ERROR, title = "Can't connect", text = it) }
         apiMismatch?.let { TmNotice(kind = TmNoticeKind.WARNING, title = "Different versions", text = it) }
+        insecureWarning?.let { TmNotice(kind = TmNoticeKind.WARNING, title = "Not secure", text = it) }
 
         if (user == null) {
             TmListRow(

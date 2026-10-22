@@ -24,6 +24,10 @@ import org.mr0btain.ticketman.server.response.BackupJob
 import org.mr0btain.ticketman.server.response.BackupJobState
 import org.mr0btain.ticketman.server.response.BackupTicket
 import org.mr0btain.ticketman.server.response.PendingRestore
+import org.mr0btain.ticketman.server.response.LoginLimitsResponse
+import org.mr0btain.ticketman.server.response.LoginLock
+import org.mr0btain.ticketman.server.response.LoginLockKind
+import org.mr0btain.ticketman.server.request.LoginUnlockRequest
 import kotlin.test.*
 import kotlin.uuid.Uuid
 
@@ -58,6 +62,7 @@ class AdminRemoteRepositoryTest {
     private var backupFails = false
     private val runningBackup = BackupJob(id = "j1", state = BackupJobState.RUNNING, startedAt = 1)
     private val restoreBodies = mutableListOf<Pair<String, ByteArray>>()
+    private val unlockBodies = mutableListOf<String>()
 
     private val json = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
@@ -92,6 +97,14 @@ class AdminRemoteRepositoryTest {
             }
             "/api/admin/restart" -> if (canRestart) respond("", HttpStatusCode.Accepted)
                 else respond("This server can't restart itself", HttpStatusCode.Conflict)
+            "/api/admin/logins" -> respond(
+                Json.encodeToString(LoginLimitsResponse(locks = listOf(LoginLock(LoginLockKind.USERNAME, "tech", 6, 99)), recentFailures = 6)),
+                HttpStatusCode.OK, json
+            )
+            "/api/admin/logins/unlock" -> {
+                unlockBodies += request.body.toByteArray().decodeToString()
+                respond("", HttpStatusCode.Accepted)
+            }
             "/api/admin/seed" -> respond("Seeding is only allowed in development mode", HttpStatusCode.Forbidden)
             "/api/shop" -> respond(Json.encodeToString(ShopProfile(name = "Shop")), HttpStatusCode.OK, json)
             "/api/user/me" -> respond(Json.encodeToString(User(username = "me")), HttpStatusCode.OK, json)
@@ -114,6 +127,16 @@ class AdminRemoteRepositoryTest {
 
         assertEquals(3, stats?.openTickets)
         assertEquals("GET /api/admin/stats?lowStock=7&recent=3", requests.single())
+    }
+
+    @Test
+    fun loginLocksAreReadAndLifted() = runTest {
+        val limits = assertNotNull(admin.getLoginLimits())
+        assertEquals("tech", limits.locks.single().key)
+
+        assertIs<TmResult.Success<*>>(admin.unlockLogin(LoginLockKind.USERNAME, "tech"))
+        assertEquals(listOf("GET /api/admin/logins", "POST /api/admin/logins/unlock"), requests)
+        assertEquals(LoginUnlockRequest(LoginLockKind.USERNAME, "tech"), Json.decodeFromString(unlockBodies.single()))
     }
 
     @Test

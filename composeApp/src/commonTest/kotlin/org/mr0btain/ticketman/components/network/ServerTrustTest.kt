@@ -5,7 +5,8 @@ import org.mr0btain.ticketman.components.data.local.LocalStorage
 import kotlin.test.*
 
 /**
- * Server addresses default to HTTPS, older saved ones keep HTTP, and trusted certificates are kept per address
+ * Server addresses default to HTTPS, older saved ones keep HTTP, plain HTTP off this machine isn't secure, and
+ * trusted certificates are kept per address
  */
 class ServerTrustTest {
     @Test
@@ -27,8 +28,16 @@ class ServerTrustTest {
     @Test
     fun plainHttpIsNotSecure() {
         assertFalse(isSecureServerAddress("http://192.168.1.20:8080"))
+        assertFalse(isSecureServerAddress("http://tickets.local"))
         assertTrue(isSecureServerAddress("https://192.168.1.20:8443"))
         assertTrue(isSecureServerAddress(""))
+    }
+
+    @Test
+    fun plainHttpOnThisMachineNeverLeavesIt() {
+        assertTrue(isSecureServerAddress("http://localhost:8080"))
+        assertTrue(isSecureServerAddress("http://127.0.0.1:8098"))
+        assertTrue(isSecureServerAddress("http://[::1]:8080"))
     }
 
     @Test
@@ -41,7 +50,7 @@ class ServerTrustTest {
     fun aTrustedCertificateIsRemembered() {
         val store = InMemoryKeyValueStore()
         val trust = ServerTrust(LocalStorage(store))
-        val certificate = UntrustedCertificate("shop:8443", "AA:BB", "CN=shop", trustedBefore = null)
+        val certificate = UntrustedCertificate("shop:8443", "AA:BB", "CN=shop", certificate = "AQID", isAuthority = true)
 
         trust.refuse(certificate)
         assertEquals(certificate, trust.refused.value)
@@ -52,8 +61,10 @@ class ServerTrustTest {
         assertTrue(trust.isTrusted("shop:8443", "aa:bb"))
         assertFalse(trust.isTrusted("shop:8444", "AA:BB"), "Only for the address it came from")
 
-        // A fresh start reads it back
-        assertTrue(ServerTrust(LocalStorage(store)).isTrusted("shop:8443", "AA:BB"))
+        // A fresh start reads it back, the certificate with it
+        val again = ServerTrust(LocalStorage(store))
+        assertTrue(again.isTrusted("shop:8443", "AA:BB"))
+        assertEquals(TrustedAuthority("AA:BB", "AQID"), again.trustedAuthority("shop:8443"))
     }
 
     @Test

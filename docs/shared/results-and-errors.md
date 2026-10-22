@@ -113,8 +113,8 @@ On the JVM (desktop and server), `e`, `i` and `d` go through `java.util.logging`
   shows or acts on.
 - **`TmResult.Error` shadows `Error`** inside the sealed interface, which is why its bound is written out in full.
 - **`d` logs at info level on the JVM**, like `i`, with a `DEBUG:` prefix, so it shows without changing
-  `java.util.logging`'s level. Anything logged before `debug` is set (Koin's own start up, the server's
-  `createServer`) skips `d`.
+  `java.util.logging`'s level. Anything logged before `debug` is set (Koin's own start up, Netty's own start up
+  on the server) skips `d`.
 
 ## See also
 

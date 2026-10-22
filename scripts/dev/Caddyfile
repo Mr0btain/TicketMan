@@ -2,7 +2,7 @@
 # Run by scripts/dev_proxy.sh; see docs/getting-started.md#behind-a-proxy
 {
 	# Leave the local CA out of the system's trust store, so the client shows its trust dialog like it would
-	# for a self-signed proxy. dev_proxy.sh exports the CA for -PdevTrustStore instead
+	# for any private CA. dev_proxy.sh exports the CA for -PdevTrustStore instead
 	skip_install_trust
 	# Java sends no SNI for a name without a dot, like localhost, and Caddy refuses a handshake it can't match
 	default_sni localhost
@@ -13,6 +13,14 @@
 https://localhost:{$PROXY_PORT:8444} {
 	tls internal
 
+	# The local CA's root, which the client fetches to trust the CA rather than the 12 hour certificate. CA_DIR is
+	# set by dev_proxy.sh, like docker/Caddyfile's
+	handle /.well-known/ticketman/ca.pem {
+		root * {$CA_DIR}
+		rewrite * /root.crt
+		file_server
+	}
+
 	# Anything under /tiny/ reaches the server with the prefix taken off, but with a 1 KB body limit, to try how
 	# the client takes a proxy's 413 (a photo upload to https://localhost:8444/tiny/api/image/upload)
 	handle_path /tiny/* {
@@ -22,5 +30,7 @@ https://localhost:{$PROXY_PORT:8444} {
 		reverse_proxy localhost:{$SERVER_PORT:8080}
 	}
 
-	reverse_proxy localhost:{$SERVER_PORT:8080}
+	handle {
+		reverse_proxy localhost:{$SERVER_PORT:8080}
+	}
 }

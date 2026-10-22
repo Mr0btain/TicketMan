@@ -1,8 +1,6 @@
 package org.mr0btain.ticketman
 
-import org.mr0btain.ticketman.components.tls.HttpMode
-import org.mr0btain.ticketman.components.tls.ProxySettings
-import org.mr0btain.ticketman.components.tls.TlsSettings
+import org.mr0btain.ticketman.components.proxy.ProxySettings
 import org.mr0btain.ticketman.logging.AppLogger
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -11,53 +9,51 @@ import java.time.ZoneOffset
 data class StartupNote(val text: String, val warning: Boolean = false)
 
 /**
+ * Settings from when the server could do HTTPS itself. Set to anything, they get a warning that they're ignored
+ */
+val RETIRED_SETTINGS = listOf(
+    "PROXY", "TRUST_PROXY", "SSL_PORT", "HTTP_MODE", "SSL_KEYSTORE", "SSL_KEYSTORE_PASSWORD", "SSL_KEY_ALIAS", "SSL_KEY_PASSWORD"
+)
+
+/**
  * What the log says on start about how devices reach the server and about its clock
  * @param httpPort The plain HTTP port
- * @param fingerprint The HTTPS certificate's, null when the server isn't doing HTTPS
+ * @param retired The [RETIRED_SETTINGS] that are set
+ * @param oldCertificateFolder Whether `<dataPath>/server/tls/`, where the server kept the certificate it made, is
+ * still there
  * @param zone The time zone "today" is worked out in (`ZoneId.systemDefault()`)
  * @param tzSet Whether the `TZ` variable was set
  */
 fun startupNotes(
     proxy: ProxySettings,
-    tls: TlsSettings,
     httpPort: Int,
-    fingerprint: String?,
+    retired: List<String> = emptyList(),
+    oldCertificateFolder: Boolean = false,
     zone: ZoneId,
     tzSet: Boolean
 ): List<StartupNote> = buildList {
-    if (proxy.enabled) {
-        add(StartupNote("Behind a reverse proxy (PROXY=on): HTTPS is the proxy's job, it should send requests to plain HTTP on port $httpPort"))
+    add(StartupNote("Plain HTTP on port $httpPort. HTTPS is the reverse proxy's job, it should send requests here"))
 
-        if (proxy.trusted.isNotEmpty()) {
-            add(StartupNote("Client addresses come from X-Forwarded-For on requests from ${proxy.trusted.joinToString(", ")}"))
-        } else {
-            add(StartupNote("TRUSTED_PROXIES has nothing usable in it, so every device is counted as the proxy's address", warning = true))
-        }
-
-        if (fingerprint != null) {
-            add(StartupNote("The server's own HTTPS is on as well, on port ${tls.httpsPort}. Certificate fingerprint: $fingerprint"))
-        }
-        if (tls.enabled && tls.httpMode == HttpMode.REDIRECT) {
-            add(StartupNote("HTTP_MODE=redirect is ignored behind a reverse proxy, it would send devices around the proxy", warning = true))
-        }
-    } else if (fingerprint != null) {
-        add(StartupNote("HTTPS on port ${tls.httpsPort}, plain HTTP is ${tls.httpMode.name.lowercase()}"))
-        add(StartupNote("Certificate fingerprint (devices are asked to check this): $fingerprint"))
+    if (proxy.usesForwardedHeaders) {
+        add(StartupNote("Client addresses come from X-Forwarded-For on requests from ${proxy.trusted.joinToString(", ")}"))
     } else {
-        add(StartupNote("No reverse proxy (PROXY=off) and the server's HTTPS is off, so devices connect over plain HTTP on port $httpPort"))
+        add(StartupNote("TRUSTED_PROXIES is none, so X-Forwarded-For is ignored and every device behind a proxy counts as the proxy's address"))
     }
 
     if (proxy.rejected.isNotEmpty()) {
         add(StartupNote("TRUSTED_PROXIES entries that aren't addresses or ranges were ignored: ${proxy.rejected.joinToString(", ")}", warning = true))
     }
-    if (proxy.trustAny) {
+    if (retired.isNotEmpty()) {
         add(
             StartupNote(
-                "TRUST_PROXY=true believes X-Forwarded-For from any address, so a device can pretend to be another. " +
-                    "It's deprecated, set TRUSTED_PROXIES to the proxy's address instead",
+                "${retired.joinToString(", ")} ${if (retired.size == 1) "is" else "are"} no longer used: the server " +
+                    "doesn't do HTTPS itself any more, put a reverse proxy like Caddy in front of it. See docs/operations.md",
                 warning = true
             )
         )
+    }
+    if (oldCertificateFolder) {
+        add(StartupNote("server/tls/ holds the certificate the server used to make for itself. Nothing uses it now, it can be deleted"))
     }
 
     // Fixed at UTC, which is what a container gets unless told otherwise

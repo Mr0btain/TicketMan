@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 4
+const val API_VERSION = 5
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -121,12 +121,15 @@ object AdminPaths {
     const val SESSIONS = "/sessions"
     const val SESSION = "/sessions/{sessionId}"
     const val USER_SESSIONS = "/sessions/user/{identifier}"
+
+    /** Usernames and addresses locked out for wrong passwords */
+    const val LOGIN_LIMITS = "/logins"
+    const val LOGIN_UNLOCK = "/logins/unlock"
     const val STATIONS = "/stations"
     const val STATION_APPROVE = "/stations/{identifier}/approve"
     const val STATION_KIOSK = "/stations/{identifier}/kiosk"
     const val STATION = "/stations/{identifier}"
     const val SERVER = "/server"
-    const val CERTIFICATE_RENEW = "/certificate/renew"
     const val BACKUP = "/backup"
     const val BACKUP_DOWNLOAD = "/backup/download/{id}"
     const val BACKUP_START = "/backup/start"

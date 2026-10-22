@@ -11,15 +11,8 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 
 | Setting | Env var | Default | What it does |
 |---------|---------|---------|--------------|
-| `ktor.deployment.port` | `PORT` | `8080` | Port for plain HTTP, on all interfaces |
-| `env.proxy` | `PROXY` | blank | `on` when a reverse proxy does HTTPS in front of the server, `off` to have the server do it itself. Blank means `on`, or `off` in development mode. Only changes defaults, see [`PROXY`](#proxy) |
-| `env.trustedProxies` | `TRUSTED_PROXIES` | blank | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. Blank means loopback and the private ranges |
-| `tls.port` | `SSL_PORT` | blank | Port for the server's own HTTPS. Blank means off behind a proxy and `8443` direct; `0` always turns it off |
-| `tls.httpMode` | `HTTP_MODE` | blank | What the plain HTTP port does once HTTPS is on: `on`, `redirect` or `off`. Blank means `on` behind a proxy or in development mode, `redirect` direct |
-| `tls.keyStore` | `SSL_KEYSTORE` | blank | A PKCS12 file with the certificate to use. Blank means the server makes its own |
-| `tls.keyStorePassword` | `SSL_KEYSTORE_PASSWORD` | blank | Password for `SSL_KEYSTORE` |
-| `tls.keyAlias` | `SSL_KEY_ALIAS` | blank | Which key in `SSL_KEYSTORE` to use. Blank means the first one |
-| `tls.privateKeyPassword` | `SSL_KEY_PASSWORD` | blank | Only when the key's password isn't the keystore's |
+| `ktor.deployment.port` | `PORT` | `8080` | Port for plain HTTP, on all interfaces. The server only speaks plain HTTP, see [HTTPS](#https) |
+| `env.trustedProxies` | `TRUSTED_PROXIES` | blank | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. Blank means loopback and the private ranges, `none` ignores the header |
 | `cors.hosts` | `CORS_HOSTS` | blank | Development mode only: hosts allowed to call the server from a browser, like `localhost:8080`. Blank allows any |
 | `jwt.secret` | `SECRET` | blank | Signs every access and refresh token. Blank means the server makes one and keeps it |
 | `jwt.audience` | - | `my-audience` | Put in tokens and checked on every request |
@@ -28,7 +21,6 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 | `env.name` | `NAME` | `Server` | Server name shown on the admin screen's Server tab |
 | `env.dataPath` | `DATA_PATH` | blank | Folder for the database, photos, backups and restores. Blank means the platform's app data folder |
 | `env.adminPassword` | `ADMIN_PASSWORD` | blank | Password for the `admin` user made when no admin exists. Blank means a random one is logged |
-| `env.trustProxy` | `TRUST_PROXY` | `false` | Deprecated: `true` believes `X-Forwarded-For` from any address. Use `TRUSTED_PROXIES` |
 | `env.restartOnExit` | `RESTART_ON_EXIT` | `false` | `true` when something starts the server again after it exits, so admins can restart it from the Server tab. The Docker image sets it |
 | - | `TZ` | the machine's | The time zone "today", due dates and the yearly number rollover use. Set it in a container, which is UTC otherwise |
 | `backup.folder` | `BACKUP_DIR` | blank | Folder for a backup made once a day. Blank turns it off |
@@ -46,32 +38,22 @@ start, keeps it in `<DATA_PATH>/server/secret` (readable only by the account run
 `SECRET isn't set, made one in ...`. Later starts read the same file.
 
 Either way, keep it the same across restarts: changing `SECRET` or deleting the file signs everyone out, since every
-existing token stops verifying. A backup doesn't include the file (it does include the certificate), so a server
-restored onto a new machine makes a new secret and devices log in once more.
+existing token stops verifying. A backup doesn't include the file, so a server restored onto a new machine makes a
+new secret and devices log in once more.
 
 Servers from before this used a fixed default written in `application.yaml`. The first start after upgrading makes
 a secret instead, so devices that relied on that default log in once more.
 
-### `PROXY`
+### HTTPS
 
-The normal setup is the server behind a reverse proxy (Caddy, nginx, Traefik) that does HTTPS, usually with a public
-certificate, and talks plain HTTP to the server. The server doing HTTPS itself with its own pinned certificate is
-the direct setup, `PROXY=off`. `PROXY` only changes defaults, and a setting given by hand still wins:
+The server never does HTTPS itself: a reverse proxy in front of it (Caddy, nginx, Traefik) does, usually with a
+public certificate, and talks plain HTTP to it. See [Running a server](operations.md#behind-a-reverse-proxy) for
+setting one up, and [Private certificates](operations.md#private-certificates) for a shop with no domain.
 
-| | `PROXY=on` (default) | `PROXY=off` (direct) |
-|---|---|---|
-| `SSL_PORT` | off | `8443` |
-| `HTTP_MODE` | `on` | `redirect` |
-| `X-Forwarded-For` | believed from `TRUSTED_PROXIES` | ignored |
-
-Development mode (`-Pdevelopment`) defaults to `off`, with plain HTTP left on, so `:server:run -Pdevelopment` still
-answers on `http://localhost:8080` and `https://localhost:8443`. Behind a proxy `HTTP_MODE=redirect` is ignored,
-since it would send devices to the server's own HTTPS port, around the proxy. The server's HTTPS can still be turned
-on with `SSL_PORT` (for a proxy that talks HTTPS to it).
-
-The startup log says which setup it's in: behind a proxy it names the plain HTTP port the proxy should send to and
-the trusted ranges, direct it logs the HTTPS port and the certificate's fingerprint. Both live in `ProxySettings`
-and `TlsSettings` (`components/tls/`), read by both `createServer()` and `module()`.
+`PROXY`, `TRUST_PROXY`, `SSL_PORT`, `HTTP_MODE`, `SSL_KEYSTORE`, `SSL_KEYSTORE_PASSWORD`, `SSL_KEY_ALIAS` and
+`SSL_KEY_PASSWORD` are from when it could, and are ignored. The startup log warns when any of them is set, and notes
+a `server/tls/` folder left in the data folder. The log also names the plain HTTP port the proxy should send to and
+the trusted ranges (`StartupLog.kt`, from `ProxySettings` in `components/proxy/`).
 
 ### `TRUSTED_PROXIES`
 
@@ -88,8 +70,8 @@ its own address. Don't publish the server's port when it's behind a proxy, or na
 address, like `TRUSTED_PROXIES=172.20.0.2`. Entries that aren't an address or range are logged and ignored. Names
 aren't looked up.
 
-`TRUST_PROXY=true`, the old setting, still believes the header from any address, in either mode, and logs a warning
-on start. Replace it with `TRUSTED_PROXIES`.
+`TRUSTED_PROXIES=none` ignores the header from everyone, for a server devices reach directly over plain HTTP with
+no proxy in front, so nobody on the network can claim to be someone else.
 
 ### `TZ`
 
@@ -98,29 +80,19 @@ the server's time zone (`ZoneId.systemDefault()`). A container's is UTC unless `
 behind would see tomorrow's date every evening. The server logs a warning on start when the zone is UTC and `TZ`
 isn't set. Set it to the shop's, like `TZ=America/New_York`.
 
-### HTTPS
-
-The HTTPS connector is added in `createServer()` in `Application.kt`, not through Ktor's own `ktor.security`
-settings, because the certificate may have to be made before the server starts. It listens on the same host as
-plain HTTP. See [Running a server](operations.md#without-a-proxy) for setting up certificates and trusting them on devices.
-
-Direct (`PROXY=off`), `HTTP_MODE` left blank redirects plain HTTP to HTTPS. In development mode it stays `on`
-instead, so the web client's dev server and `scripts/counter_e2e.py` can keep using `http://`. See
-[Plain HTTP](operations.md#plain-http).
-
 ### `BACKUP_DIR`
 
 A folder for a backup made once a day, the same as one downloaded from the admin screen, named
 `ticketman-backup-<millis>[-database].zip`. After each one, all but the newest `BACKUP_KEEP` are deleted; other files
 in the folder are left alone. The server makes the folder if it isn't there. Point it off the machine's own disk if
-you can (a USB drive or network share), and keep it private: backups hold customer details and the certificate.
+you can (a USB drive or network share), and keep it private: backups hold customer details.
 
 It can't be the server's own `<DATA_PATH>/server/backups/`, which is emptied by the hourly sweep. See
 [Running a server](operations.md#daily-backups).
 
 ### `RESTART_ON_EXIT`
 
-A restore, and a new certificate, only take effect when the server starts again. With `RESTART_ON_EXIT=true` the
+A restore only takes effect when the server starts again. With `RESTART_ON_EXIT=true` the
 Server tab offers **Restart now** next to a waiting restore, which calls `POST /api/admin/restart`: the server answers,
 then exits with code 3 and leaves starting it again to whatever runs it. The Docker image sets it, and the compose
 file's `restart: unless-stopped` does the starting. Under systemd, `Restart=on-failure` does the same. Leave it off
@@ -172,9 +144,10 @@ Once an admin exists, the setting does nothing. It isn't a way to reset a passwo
 - allows `POST /api/admin/seed`, which the admin screen's Server tab uses to fill the database with made up
   customers, tickets, inventory and users (up to 5000 of each). On any other server the route answers `403`,
 - turns on CORS, so the web client's dev server (`wasmJsBrowserDevelopmentRun`, on its own port) can call the
-  server. `CORS_HOSTS` narrows it to listed hosts. A real server serves the web client itself and never needs it,
-- defaults `PROXY` to `off`, so the server does HTTPS itself on 8443 as well as plain HTTP,
-- keeps plain HTTP answering when `HTTP_MODE` isn't set, instead of redirecting it to HTTPS.
+  server. `CORS_HOSTS` narrows it to listed hosts. A real server serves the web client itself and never needs it.
+
+For HTTPS in development, put Caddy in front with `scripts/dev_proxy.sh` (see
+[Getting started](getting-started.md#behind-a-proxy)).
 
 ### Seeding on start
 

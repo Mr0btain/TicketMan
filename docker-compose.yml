@@ -11,8 +11,8 @@
 #   docker compose up -d --build
 #   docker compose logs ticketman     # the admin password, when ADMIN_PASSWORD isn't set
 #
-# With DOMAIN left as localhost, Caddy uses its own local CA instead, which clients ask to trust
-# (scripts/docker_smoke.sh does that). See docs/operations.md
+# With DOMAIN left as localhost (or a name only your network knows), Caddy uses its own local CA instead, which the
+# desktop and Android apps ask to trust once (scripts/docker_local.sh runs it that way to try). See docs/operations.md
 name: ticketman
 
 services:
@@ -26,7 +26,7 @@ services:
       # The shop's time zone: "today", due dates and the yearly number rollover follow it
       TZ: ${TZ:-America/New_York}
       # The only address allowed to say who a request is from: the network below, which holds just the proxy and
-      # the server. The image already sets DATA_PATH=/data, PORT=8080, PROXY=on and RESTART_ON_EXIT=true
+      # the server. The image already sets DATA_PATH=/data, PORT=8080 and RESTART_ON_EXIT=true
       TRUSTED_PROXIES: ${SUBNET:-172.30.80.0/24}
       BACKUP_DIR: /backups
       # The admin user's password on the first start. Blank logs a random one

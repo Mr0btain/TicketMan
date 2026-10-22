@@ -1,5 +1,5 @@
-# The TicketMan server, behind a reverse proxy that does HTTPS (PROXY=on). Built from the repo root, after building
-# the server on the host, since the Gradle build needs the Android SDK:
+# The TicketMan server, which only speaks plain HTTP, behind a reverse proxy that does HTTPS. Built from the repo
+# root, after building the server on the host, since the Gradle build needs the Android SDK:
 #
 #   ./gradlew :server:installDist -PwithWeb
 #   docker build -f server/Dockerfile -t ticketman .
@@ -19,7 +19,6 @@ COPY server/build/install/server /app
 
 ENV DATA_PATH=/data \
     PORT=8080 \
-    PROXY=on \
     RESTART_ON_EXIT=true \
     JAVA_OPTS="-XX:MaxRAMPercentage=75"
 

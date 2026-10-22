@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.data.local
 
 import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.network.TrustedAuthority
 import org.mr0btain.ticketman.components.network.migrateSavedServerAddress
 import org.mr0btain.ticketman.data.station.StationCredentials
 import org.mr0btain.ticketman.getPlatform
@@ -101,15 +102,19 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(SERVER_URL_KEY, value.trim())
         }
 
-    /** Fingerprints of self-made server certificates this device was told to trust, by `host:port` */
-    var trustedCertificates: Map<String, String>
+    /**
+     * Private certificates this device was told to trust, by `host:port`. Replaces `trusted_certificates`, which only
+     * held the fingerprints of certificates the server made itself, back when it did HTTPS. Those aren't carried
+     * over, the server no longer has them
+     */
+    var trustedAuthorities: Map<String, TrustedAuthority>
         get() = try {
-            Json.decodeFromString<Map<String, String>>(store.getString(TRUSTED_CERTIFICATES_KEY, "").ifBlank { "{}" })
+            Json.decodeFromString<Map<String, TrustedAuthority>>(store.getString(TRUSTED_AUTHORITIES_KEY, "").ifBlank { "{}" })
         } catch (ex: Exception) {
             emptyMap()
         }
         set(value) {
-            store.putString(TRUSTED_CERTIFICATES_KEY, Json.encodeToString(value))
+            store.putString(TRUSTED_AUTHORITIES_KEY, Json.encodeToString(value))
         }
 
     /** Whether the username and password should be saved after a successful login */
@@ -274,7 +279,7 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val REDUCE_TRANSPARENCY_KEY = "reduce_transparency"
         private const val TICKET_SCOPE_KEY = "ticket_scope"
         private const val SERVER_URL_KEY = "server_url"
-        private const val TRUSTED_CERTIFICATES_KEY = "trusted_certificates"
+        private const val TRUSTED_AUTHORITIES_KEY = "trusted_authorities"
         private const val REMEMBER_LOGIN_KEY = "remember_login"
         private const val DEFAULT_TAB_KEY = "default_tab"
         private const val LOW_STOCK_THRESHOLD_KEY = "low_stock_threshold"

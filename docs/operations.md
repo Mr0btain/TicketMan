@@ -26,11 +26,14 @@ The usual setup is the server in Docker behind a reverse proxy that does HTTPS. 
    paper size). Tax and everything printed come from it, so do this before taking money.
 6. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
 
+A shop with no domain, only reached on its own network, leaves `DOMAIN` as `localhost` or sets it to the machine's
+name or LAN address (`DOMAIN=192.168.1.20`). Caddy then uses its own local CA, and devices are asked once to trust it
+(see [Private certificates](#private-certificates)).
+
 Without Docker, start `bin/server` from `:server:installDist` (or `./gradlew :server:run`) with `DATA_PATH` set,
-and `TZ` if the machine's clock is on UTC (see [Configuration](configuration.md)). The log says which plain HTTP port
-the proxy should send to and which proxy addresses it trusts. Without a proxy at all, set `PROXY=off` and see
-[Without a proxy](#without-a-proxy). Either way, without `SECRET` the server makes its own and keeps it in the data
-folder.
+and `TZ` if the machine's clock is on UTC (see [Configuration](configuration.md)), and put a reverse proxy in front.
+The server only speaks plain HTTP; the log says which port the proxy should send to and which proxy addresses it
+trusts. Either way, without `SECRET` the server makes its own and keeps it in the data folder.
 
 ## The Docker image
 
@@ -54,7 +57,7 @@ build it with `-Pdevelopment`, which bakes development mode into the start scrip
 | Data | `/data` (`DATA_PATH`), a volume |
 | Backups | `/backups`, owned by `ticketman`, for `BACKUP_DIR=/backups` |
 | Port | `8080` (`PORT`), plain HTTP for the proxy |
-| Set | `PROXY=on`, `RESTART_ON_EXIT=true`, `JAVA_OPTS=-XX:MaxRAMPercentage=75` |
+| Set | `RESTART_ON_EXIT=true`, `JAVA_OPTS=-XX:MaxRAMPercentage=75` |
 | Health check | `GET /api/ping` every 30 seconds, through bash since the image has no curl |
 
 Named volumes take the folder's owner from the image. A host folder mounted at `/data` or `/backups` has to be owned
@@ -113,14 +116,15 @@ server/
 │       ├── original.jpg
 │       ├── display.jpg
 │       └── thumb.jpg
-├── tls/                       The certificate the server made for HTTPS, and its keystore password
-│   └── next/                  A new certificate made from the admin screen, swapped in on the next start
 ├── secret                     What tokens are signed with, when SECRET isn't set. Deleting it logs every device out
 ├── backups/                   Backups waiting to be downloaded, removed once their link runs out
 ├── restore/                   An uploaded backup waiting for the next restart, last.json for the last restore,
 │                              and failed-<time>.zip for ones that couldn't be applied
 └── pre-restore-<time>/        What a restore replaced, kept for 30 days so it can be undone by hand
 ```
+
+A `tls/` folder left from when the server did HTTPS itself isn't used any more; the log says so on start, and it can
+be deleted.
 
 Photo bytes are kept on disk rather than in H2 so the database stays small and quick to back up. Only their
 details (owner, size, hash, status) are in the database.
@@ -130,8 +134,8 @@ folders are managed by the sweep below.
 
 ## Behind a reverse proxy
 
-The proxy does HTTPS, usually with a public certificate, and devices connect to its name (`tickets.myshop.com`).
-Three things to set on the proxy:
+The server never does HTTPS itself. A reverse proxy in front does it, usually with a public certificate, and devices
+connect to its name (`tickets.myshop.com`). Three things to set on the proxy:
 
 - **Body size.** Photos are up to 25 MB, and a restore upload is the size of the backup. nginx refuses anything
   over 1 MB unless `client_max_body_size` is raised (`0` turns the limit off). The app says "Bigger than the proxy
@@ -139,7 +143,7 @@ Three things to set on the proxy:
 - **Timeouts** can stay at their defaults. Backups are built in the background and asked after, and uploads and
   downloads keep data moving.
 - **`X-Forwarded-For`.** The server only believes it from `TRUSTED_PROXIES`; the admin Server tab shows whether it
-  works (see [Configuration](configuration.md#trusted_proxies)).
+  works (see [Configuration](configuration.md#trusted_proxies)). Wrong password limits count each device by it.
 
 [Behind another proxy](#behind-another-proxy) has the nginx settings.
 
@@ -147,64 +151,40 @@ Devices have to use a name the certificate is for. Connecting by IP to a proxy w
 fails with "This server's certificate is for ...". Android needs 7.1.1 or newer for Let's Encrypt certificates,
 which is also the app's minimum.
 
-## Without a proxy
+### Private certificates
 
-With `PROXY=off` (the direct setup, see [Configuration](configuration.md#proxy)) the server does HTTPS itself. It
-listens for HTTPS on `SSL_PORT` (8443) next to plain HTTP on `PORT` (8080). Devices should use the HTTPS one, since
-passwords, tokens and backup links can be read off the network over plain HTTP. On first start look for
-`Responding at https://0.0.0.0:8443` and the certificate fingerprint in the log, and point clients at something like
-`192.168.1.20:8443`, which asks to check that fingerprint.
+A proxy with a certificate no public authority vouches for, like Caddy's local CA when `DOMAIN` is `localhost`, a
+`.local` name or a LAN address:
 
-### The certificate
+- **Desktop and Android** show a "Private certificate" dialog with a warning that it isn't a public certificate,
+  and the fingerprint to check. Trust it only if it matches the one the admin handed out. After that the device only
+  accepts certificates from that same authority at that address, and warns loudly if it ever changes.
+- **Browsers** show their usual warning page. Accept it, or install the CA's certificate on the machine to skip it.
 
-With no `SSL_KEYSTORE` set, the server makes its own certificate on first start and keeps it in `server/tls/`. It
-lasts ten years and lists `localhost`, the machine's name and its IPv4 addresses. No authority vouches for it, so
-every device is asked once whether to trust it:
-
-- **Desktop and Android** show the certificate's fingerprint and ask. Compare it with the one in the server's log
-  (`Certificate fingerprint ...`) or on the admin screen's **Server** tab, and trust it if they match. After that the
-  device only accepts that certificate from that address, and warns if it ever changes.
-- **Browsers** show their usual warning page. Open the server's address, check the certificate the browser shows,
-  and accept it.
-
-To use a certificate of your own, like one from Let's Encrypt for a real domain or from a local CA such as
-`mkcert` that's installed on every device, put it in a PKCS12 file and set `SSL_KEYSTORE` and
-`SSL_KEYSTORE_PASSWORD` (see [Configuration](configuration.md#https)). Devices that trust its authority connect
-without being asked. A PEM certificate and key can be converted with:
+Caddy replaces its local certificate every 12 hours and its intermediate every week, so the apps trust the CA's root
+instead, which lasts ten years. [`docker/Caddyfile`](../docker/Caddyfile) hands the root out at
+`/.well-known/ticketman/ca.pem`; when a device is asked to trust the server, it fetches that file, checks it signed
+the server's certificate, and offers it. The fingerprint to give staff is the root's:
 
 ```bash
-openssl pkcs12 -export -in fullchain.pem -inkey privkey.pem -out ticketman.p12 -name ticketman
+docker compose exec caddy cat /data/caddy/pki/authorities/local/root.crt | openssl x509 -noout -fingerprint -sha256
 ```
 
-A supplied keystore that can't be read stops the server, rather than quietly serving a different certificate.
+A proxy that doesn't hand its CA out gets the top certificate it sends trusted instead, which works until that one
+changes. Resetting Caddy's data volume makes a new CA, so every device asks again; a backup of the `caddy-data`
+volume avoids that when moving machines.
 
-### Changing the certificate
-
-Every device that trusted the old certificate will warn that it changed, so do it on purpose and tell staff to
-expect it.
-
-The Server tab shows when the certificate runs out, and warns once that's less than a year away. To replace one
-the server made, use **Make a new certificate** there. The new one waits in `server/tls/next/` and the tab shows its
-fingerprint, so staff can be told what to look for; the server switches to it the next time it starts. **Keep the
-current certificate** drops it before then. Stopping the server, deleting `server/tls/` and starting it again does
-the same in one go.
-
-A supplied certificate is replaced by replacing the `SSL_KEYSTORE` file and restarting.
-
-Backups include a certificate the server made, so restoring one on a new machine brings the old certificate back
-and devices carry on without asking. Moving to a new machine without a backup or a copy of `server/tls/` makes a
-new certificate.
+`scripts/docker_local.sh` runs all of this on one machine to try it (see [Testing](testing.md#docker)).
 
 ### Plain HTTP
 
-`HTTP_MODE` sets what the HTTP port does: `redirect` (the default, sends everything to HTTPS), `on` (answers as
-usual) or `off`. Development mode defaults to `on`.
+Devices can still connect over `http://`, straight to the server's port without a proxy, for development or a
+quick try on a shop's own network. Passwords, tokens and customer details then go over the network readable, so the
+app says "Not secure" on the login popup, on Settings > Account and once when it connects. A server on the same
+machine (`localhost`) is left alone.
 
-Devices saved with an `http://` address move themselves: when they connect, the app sees the redirect, switches to
-the `https://` address it points to and saves it, then asks to trust the certificate like any first connection. That
-happens when the app starts or the address is saved, since a redirected POST arrives as a GET and fails, so the
-app checks before it sends anything else. Scripts and other tools calling the API need an `https://` address, or
-`HTTP_MODE=on`.
+An address typed with no scheme means `https://`. Caddy sends plain HTTP on to HTTPS; a device saved with an
+`http://` address sees that when it connects, switches to the `https://` address and saves it.
 
 ## Web client
 
@@ -214,9 +194,8 @@ A server built with `-PwithWeb` serves the web client at `/`, on the same addres
 ./gradlew :server:run -PwithWeb          # or :server:installDist -PwithWeb, which the Docker image uses
 ```
 
-Staff then open the proxy's address in a browser (direct: `https://<server>:8443`, accepting the certificate once),
-and log in. There's no address
-to type, since the page is already on the server. The build gzips the big files (the `.wasm` ones are about 15 MB,
+Staff then open the proxy's address in a browser and log in. There's no address to type, since the page is already
+on the server. The build gzips the big files (the `.wasm` ones are about 15 MB,
 4 MB gzipped), and browsers check for a new version on each load, which costs a 304 when nothing changed.
 
 Without `-PwithWeb` the server has no web client and `/` is a plain up check. The Wasm build takes a few minutes,
@@ -254,6 +233,10 @@ still exists.
 Access tokens last an hour and are refreshed in the background. Refresh tokens last a year. PIN sessions last 12
 hours.
 
+The same tab lists **Blocked logins**: usernames and devices refused password logins for now after too many wrong
+ones (see [Auth](server/auth.md#wrong-password-limits)), with a button to let one try again straight away. Each lock
+is in the audit log as a failed login. They're kept in memory, so restarting the server clears them too.
+
 ## Counter stations and kiosks
 
 A **station** is a device the shop has approved for PIN login, like the PC at the front counter. A **kiosk** is a
@@ -290,8 +273,8 @@ before a restart is deleted too. Downloaded backups aren't kept on the server, s
 
 A database only backup is small and fine to take often. Photos can make a full one large.
 
-A backup holds the server's certificate (if it made its own) as well as customer details, so keep it as safe as
-the server itself.
+A backup holds customer details and every user's password hash, so keep it as safe as the server itself. It doesn't
+hold the proxy's certificate; back up Caddy's `caddy-data` volume for that.
 
 ### Daily backups
 
@@ -314,8 +297,9 @@ Restoring always needs a restart, because H2's files can't be swapped under a ru
 3. Restart the server. In Docker (or anywhere `RESTART_ON_EXIT=true`), **Restart now** next to the waiting restore
    does it: the server answers, exits with code 3, and the restart policy starts it again. The app waits for it to
    come back, and devices may have to log in again, since the sessions come from the backup. Otherwise restart it
-   by hand. Before opening the database it moves `database/` and `images/` (and `tls/`, if the backup
-   has the certificate) into `pre-restore-<time>/`, then unpacks the backup in their place.
+   by hand. Before opening the database it moves `database/` and `images/` into `pre-restore-<time>/`, then
+   unpacks the backup in their place. A certificate in an older backup, from when the server made its own, is
+   skipped.
 4. If unpacking fails, it moves the old folders back and renames the backup to `restore/failed-<time>.zip`, so the
    server starts on its old data.
 
@@ -363,8 +347,9 @@ short of restoring a backup.
 
 ## Known gaps
 
-- Replacing the certificate still makes every device ask to trust the new one; there's no way to hand devices the
-  next certificate ahead of time.
+- A new private CA (Caddy's data reset, or a new machine without it) makes every device ask to trust the server
+  again; there's no way to hand devices the next one ahead of time.
+- Wrong password limits are kept in memory, so a restart clears them.
 - Daily backup settings are environment variables, so changing them means restarting the server.
 
 ## See also

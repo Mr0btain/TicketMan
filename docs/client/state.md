@@ -60,7 +60,7 @@ Every handler gets `viewModelScope` to launch work in and, where it shows messag
 | `session` | `SessionHandler` | Login, Settings | Connecting, login and logout, `currentUser`, `isAdmin`, `canEdit`, account requests and setup, this device's station |
 | `settings` | `SettingsHandler` | Settings | Saved settings as state flows. Each change is written to `LocalStorage` at once |
 | `counter` | `CounterHandler` | Counter | Search, queue, the open ticket and customer, price check. Its parts: `checkIn` (`CounterCheckIn`), `pickup` (`CounterPickup`), `invoices` (`CounterInvoices`, the invoice list) and `printer` (`CounterPrinter`) |
-| `admin` | `AdminHandler` | Admin | Overview, daily report, low stock, audit log. Its parts: `accounts` (`AdminAccounts`: users, requests, invites, PINs), `devices` (`AdminDevices`: stations, sessions) and `server` (`AdminServer`: server info, shop profile, backup and restore, certificate, mock data) |
+| `admin` | `AdminHandler` | Admin | Overview, daily report, low stock, audit log. Its parts: `accounts` (`AdminAccounts`: users, requests, invites, PINs), `devices` (`AdminDevices`: stations, sessions, blocked logins) and `server` (`AdminServer`: server info, shop profile, backup and restore, mock data) |
 | `kiosk` | `KioskHandler` | Kiosk | Kiosk on or off, the PIN lock, the idle timer |
 
 `selectedMainTabIndex` is the one bit of UI state kept on the view model itself, so the start tab setting can set it.

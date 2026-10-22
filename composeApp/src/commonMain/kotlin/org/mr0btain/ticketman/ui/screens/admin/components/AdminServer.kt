@@ -24,7 +24,7 @@ import org.mr0btain.ticketman.server.response.PendingRestore
 import org.mr0btain.ticketman.server.response.ServerInfoResponse
 
 /**
- * The Server tab: the shop profile, backups and restores, the HTTPS certificate, and mock data
+ * The Server tab: the shop profile, backups and restores, and mock data
  * @param onShopChanged Called after the shop profile is saved, so its currency shows everywhere
  * @param onSeeded Called after mock data is added, so lists and counts reload
  */
@@ -220,40 +220,6 @@ class AdminServer(
             while (!users.checkServerConnection()) delay(RESTART_POLL_MILLIS)
             true
         } ?: false
-    }
-
-    // ------------------------------------------ Certificate ------------------------------------------
-
-    /** Makes a new HTTPS certificate on the server, which it switches to when it next starts */
-    fun renewCertificate() {
-        scope.launch {
-            support.loading {
-                when (val result = admin.renewCertificate()) {
-                    is TmResult.Success -> {
-                        _serverInfo.value = _serverInfo.value?.copy(certificate = result.data)
-                        support.notify("New certificate made. Restart the server to use it")
-                    }
-
-                    is TmResult.Error -> support.notify("Couldn't make a new certificate: ${result.error.message}")
-                }
-            }
-        }
-    }
-
-    /** Drops the new certificate waiting for a restart */
-    fun cancelCertificateRenewal() {
-        scope.launch {
-            when (val result = admin.cancelCertificateRenewal()) {
-                is TmResult.Success -> {
-                    _serverInfo.value = _serverInfo.value?.let { info ->
-                        info.copy(certificate = info.certificate?.copy(pendingFingerprint = null, pendingExpiresAt = null))
-                    }
-                    support.notify("New certificate dropped")
-                }
-
-                is TmResult.Error -> support.notify(result.error.message)
-            }
-        }
     }
 
     /** Fills a development server with mock data */

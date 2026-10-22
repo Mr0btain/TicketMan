@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.components.database.StationDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.service.AccountResult
 import org.mr0btain.ticketman.components.service.AccountService
+import org.mr0btain.ticketman.components.service.LoginLimiter
 import org.mr0btain.ticketman.components.service.LoginResult
 import org.mr0btain.ticketman.components.service.PinLoginResult
 import org.mr0btain.ticketman.components.service.RequestLimiter
@@ -29,7 +30,6 @@ import org.mr0btain.ticketman.server.request.RefreshTokenRequest
 import org.mr0btain.ticketman.server.response.AuthResponse
 import org.mr0btain.ticketman.server.response.LoginStatus
 import kotlin.time.Duration.Companion.hours
-import kotlin.time.Duration.Companion.minutes
 
 /**
  * Authorization routes
@@ -40,20 +40,29 @@ fun Route.authRoute(
     accountService: AccountService,
     stationDatabase: StationDatabase,
     userDatabase: UserDatabase,
-    auditLog: AuditLogDatabase
+    auditLog: AuditLogDatabase,
+    loginLimiter: LoginLimiter
 ) {
     // Anyone can ask for an account, so cap how often one address can
     val requestLimiter = RequestLimiter(maxAttempts = 5, window = 1.hours)
-    // Wrong passwords are capped per address, and per username so many addresses can't share the guessing
-    val loginLimiter = LoginLimiter()
 
     post {
         val received = call.receive<LoginRequest>()
+        val address = call.request.origin.remoteHost
 
-        if (loginLimiter.refuse(call, received.username)) return@post
+        // Wrong passwords are capped per address, per username, and across the server, see LoginLimiter
+        loginLimiter.waitFor(address, received.username)?.let { wait ->
+            val seconds = (wait + 999) / 1000
+            call.response.header(HttpHeaders.RetryAfter, seconds.toString())
+            call.respond(HttpStatusCode.TooManyRequests, "Too many wrong logins, try again in ${waitText(seconds)}")
+            return@post
+        }
 
         when (val result = userService.authenticate(received)) {
-            is LoginResult.Success -> call.respond(HttpStatusCode.Accepted, result.response)
+            is LoginResult.Success -> {
+                loginLimiter.succeeded(received.username)
+                call.respond(HttpStatusCode.Accepted, result.response)
+            }
             is LoginResult.InviteSetup -> call.respond(HttpStatusCode.Accepted, result.response)
 
             // No tokens, just lets the screen say what's going on
@@ -63,7 +72,7 @@ fun Route.authRoute(
             )
 
             LoginResult.Failed -> {
-                loginLimiter.failed(call, received.username)
+                loginLimiter.failed(address, received.username)
                 call.respond(HttpStatusCode.Unauthorized)
             }
         }
@@ -173,27 +182,8 @@ fun Route.authRoute(
     }
 }
 
-/**
- * Caps wrong password logins. Only failures count, so staff logging in all day never hit it.
- * A limited username is refused even with the right password until its window passes
- */
-private class LoginLimiter {
-    private val byAddress = RequestLimiter(maxAttempts = 20, window = 15.minutes)
-    private val byUsername = RequestLimiter(maxAttempts = 10, window = 15.minutes)
-
-    /** Answers 429 and returns true when this address or username has had too many wrong tries */
-    suspend fun refuse(call: ApplicationCall, username: String): Boolean {
-        if (!byAddress.isLimited(call.address()) && !byUsername.isLimited(username.key())) return false
-
-        call.respond(HttpStatusCode.TooManyRequests, "Too many wrong logins, try again in a few minutes")
-        return true
-    }
-
-    fun failed(call: ApplicationCall, username: String) {
-        byAddress.record(call.address())
-        byUsername.record(username.key())
-    }
-
-    private fun ApplicationCall.address() = request.origin.remoteHost
-    private fun String.key() = trim().lowercase()
+/** "40 seconds", "2 minutes" */
+fun waitText(seconds: Long): String = when {
+    seconds < 60 -> "$seconds second${if (seconds == 1L) "" else "s"}"
+    else -> ((seconds + 59) / 60).let { "$it minute${if (it == 1L) "" else "s"}" }
 }

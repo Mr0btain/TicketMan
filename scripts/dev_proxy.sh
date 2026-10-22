@@ -2,11 +2,11 @@
 # A development server behind Caddy, the way a shop runs it behind a reverse proxy, without Docker.
 # Needs Caddy installed (https://caddyserver.com/docs/install), or CADDY=/path/to/caddy.
 #
-#   scripts/dev_proxy.sh               # starts the server too, with PROXY=on and the proxy trusted
+#   scripts/dev_proxy.sh               # starts the server too, with the proxy trusted
 #   scripts/dev_proxy.sh --no-server   # only Caddy, in front of a server already on SERVER_PORT
 #
 # Then point a client at https://localhost:8444. Caddy's local CA isn't trusted by anything, so the desktop client
-# asks to trust the certificate (the self-signed proxy case). For the public certificate case, run the client with
+# asks to trust it (the private certificate case). For the public certificate case, run the client with
 #   ./gradlew :composeApp:run -DticketmanDebug=true -PdevTrustStore=build/dev-truststore.p12
 # which this script writes from Caddy's CA once Caddy has made it.
 #
@@ -29,7 +29,8 @@ fi
 # Caddy keeps its local CA and its saved config here rather than in your own Caddy folders
 export XDG_DATA_HOME="$ROOT/build/dev-caddy"
 export XDG_CONFIG_HOME="$ROOT/build/dev-caddy/config"
-CA_ROOT="$XDG_DATA_HOME/caddy/pki/authorities/local/root.crt"
+export CA_DIR="$XDG_DATA_HOME/caddy/pki/authorities/local"
+CA_ROOT="$CA_DIR/root.crt"
 TRUST_STORE="$ROOT/build/dev-truststore.p12"
 mkdir -p "$XDG_DATA_HOME"
 
@@ -45,7 +46,7 @@ ping() { curl -sk --max-time 2 "$1/api/ping" 2>/dev/null | grep -q TicketMan; }
 
 if $START_SERVER; then
     echo "Starting the server on http://localhost:$SERVER_PORT behind the proxy"
-    (cd "$ROOT" && PORT="$SERVER_PORT" PROXY=on HTTP_MODE=on TRUSTED_PROXIES=127.0.0.1,::1 \
+    (cd "$ROOT" && PORT="$SERVER_PORT" TRUSTED_PROXIES=127.0.0.1,::1 \
         DATA_PATH="${DATA_PATH:-$ROOT/build/dev-proxy-data}" ADMIN_PASSWORD="${ADMIN_PASSWORD:-admin_pass}" \
         exec ./gradlew --console=plain :server:run -Pdevelopment) &
     pids+=($!)

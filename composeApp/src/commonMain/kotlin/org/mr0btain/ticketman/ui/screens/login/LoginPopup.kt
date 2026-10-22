@@ -21,6 +21,8 @@ import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.screens.login.components.RequestAccountForm
 import org.mr0btain.ticketman.ui.screens.login.components.ServerAddressField
 import org.mr0btain.ticketman.ui.MainViewModel
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.login_text
 
@@ -33,6 +35,7 @@ fun LoginPopup(
     val serverConnected by viewModel.session.serverConnected.collectAsState()
     val loginMessage by viewModel.session.loginMessage.collectAsState()
     val connectionProblem by viewModel.session.connectionProblem.collectAsState()
+    val insecureWarning by viewModel.session.insecureWarning.collectAsState()
 
     // Swaps the login form for the account request form
     var requestingAccount by remember { mutableStateOf(false) }
@@ -58,6 +61,7 @@ fun LoginPopup(
         state = state,
         error = error,
         addressError = if (addressAttempted) connectionProblem else null,
+        insecureWarning = insecureWarning,
         initialUsername = viewModel.session.savedUsername,
         message = loginMessage,
         onLoginConfirm = { user, pass -> viewModel.session.login(user, pass) },
@@ -77,6 +81,7 @@ private fun LoginDialog(
     state: LoginDialogState,
     error: Boolean,
     addressError: String?,
+    insecureWarning: String?,
     initialUsername: String,
     message: String?,
     onAddressConfirm: (String) -> Unit,
@@ -102,6 +107,11 @@ private fun LoginDialog(
         onDismissRequest = onDismiss,
         maxWidth = 460.dp
     ) {
+        // A password typed here goes over the network readable
+        if (insecureWarning != null && (state == LoginDialogState.Login || state == LoginDialogState.Request)) {
+            TmNotice(kind = TmNoticeKind.WARNING, title = "Not secure", text = insecureWarning)
+        }
+
         AnimatedContent(
             targetState = state,
             transitionSpec = { fadeIn(tween(200)) togetherWith fadeOut(tween(200)) },

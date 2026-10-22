@@ -13,19 +13,6 @@ jwt:
     # Blank makes the server generate one and keep it in <DATA_PATH>/server/secret
     secret: "$SECRET:"
 
-# The server's own HTTPS, for running without a reverse proxy (PROXY=off). It listens next to plain HTTP, with a
-# certificate made in <DATA_PATH>/server/tls/ on first start unless SSL_KEYSTORE points at a PKCS12 file.
-# Blank port means off behind a proxy and 8443 direct, 0 always turns it off
-tls:
-    port: "$SSL_PORT:"
-    # on, redirect (to HTTPS) or off. Blank means on behind a proxy or in development mode, redirect direct
-    httpMode: "$HTTP_MODE:"
-    keyStore: "$SSL_KEYSTORE:"
-    keyStorePassword: "$SSL_KEYSTORE_PASSWORD:"
-    keyAlias: "$SSL_KEY_ALIAS:"
-    # Only when it isn't the same as the keystore password
-    privateKeyPassword: "$SSL_KEY_PASSWORD:"
-
 # Only used in development mode, for the web client's dev server. Comma separated hosts like localhost:8080,
 # blank allows any
 cors:
@@ -36,14 +23,10 @@ env:
     dataPath: "$DATA_PATH:"
     # Password for the "admin" user made on first start, a random one is logged if blank
     adminPassword: "$ADMIN_PASSWORD:"
-    # on (the default) when a reverse proxy does HTTPS in front of the server, off to have the server do HTTPS
-    # itself on 8443. Blank means off in development mode. It only changes defaults, settings given still win
-    proxy: "$PROXY:"
-    # Behind a proxy, client addresses come from X-Forwarded-For, but only on requests from these addresses or CIDR
-    # ranges (comma separated). Blank means loopback and the private ranges, which covers a Docker network
+    # The server only speaks plain HTTP, a reverse proxy in front of it does HTTPS. Client addresses come from the
+    # proxy's X-Forwarded-For, but only on requests from these addresses or CIDR ranges (comma separated). Blank
+    # means loopback and the private ranges, which covers a Docker network. none ignores the header
     trustedProxies: "$TRUSTED_PROXIES:"
-    # Deprecated: true trusts X-Forwarded-For from any address. Use TRUSTED_PROXIES
-    trustProxy: "$TRUST_PROXY:false"
     # true when something starts the server again after it exits (Docker's restart policy, systemd), so admins can
     # restart it from the admin screen to finish a restore. The Docker image sets it
     restartOnExit: "$RESTART_ON_EXIT:false"

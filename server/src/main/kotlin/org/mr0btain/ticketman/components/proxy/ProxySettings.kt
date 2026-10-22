@@ -1,30 +1,23 @@
-package org.mr0btain.ticketman.components.tls
+package org.mr0btain.ticketman.components.proxy
 
 import io.ktor.server.config.*
 
 /**
- * The `env.proxy`, `env.trustedProxies` and `env.trustProxy` settings. Behind a reverse proxy (the default outside
- * development mode) the proxy does HTTPS, so the server's own HTTPS defaults to off, and each client's address comes
- * from the proxy's `X-Forwarded-For` header. Only a proxy in [trusted] is believed, anyone can send the header
- * @param enabled `PROXY`. Changes defaults only, see [TlsSettings.from]
- * @param trusted `TRUSTED_PROXIES`, the addresses forwarded headers are taken from
- * @param trustAny The old `TRUST_PROXY=true`: forwarded headers from any address, proxy mode or not
+ * The `env.trustedProxies` setting. HTTPS is always a reverse proxy's job, so the server only answers plain HTTP,
+ * and each client's address comes from the proxy's `X-Forwarded-For` header. Only a proxy in [trusted] is believed,
+ * anyone can send the header
+ * @param trusted `TRUSTED_PROXIES`, the addresses forwarded headers are taken from. Empty when it's `none`
  * @param rejected Entries in `TRUSTED_PROXIES` that aren't an address or range, for the startup log
  */
 data class ProxySettings(
-    val enabled: Boolean,
     val trusted: List<IpRange> = emptyList(),
-    val trustAny: Boolean = false,
     val rejected: List<String> = emptyList()
 ) {
     /** Whether forwarded headers are read at all */
-    val usesForwardedHeaders: Boolean get() = trustAny || (enabled && trusted.isNotEmpty())
+    val usesForwardedHeaders: Boolean get() = trusted.isNotEmpty()
 
     /** Whether a request whose connection came from [remoteAddress] may say who the client really is */
     fun trusts(remoteAddress: String): Boolean {
-        if (trustAny) return true
-        if (!enabled) return false
-
         val address = ipLiteral(remoteAddress) ?: return false
         return trusted.any { it.contains(address) }
     }
@@ -33,29 +26,21 @@ data class ProxySettings(
         /** Loopback and the private ranges, which covers any Docker network with nothing set */
         val DEFAULT_TRUSTED = listOf("127.0.0.1", "::1", "10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "fc00::/7")
 
-        /** `PROXY`: on unless it says off, or off in development mode when it's blank */
-        fun enabled(config: ApplicationConfig, developmentMode: Boolean): Boolean =
-            parseSwitch(config.propertyOrNull("env.proxy")?.getString()) ?: !developmentMode
+        /** `TRUSTED_PROXIES=none`, for a server devices reach directly, so nobody can say they're someone else */
+        const val NONE = "none"
 
-        fun from(config: ApplicationConfig, developmentMode: Boolean = false): ProxySettings {
+        fun from(config: ApplicationConfig): ProxySettings {
             val list = config.propertyOrNull("env.trustedProxies")?.getString()
                 ?.split(',', ' ', ';')?.map { it.trim() }?.filter { it.isNotEmpty() }
                 .orEmpty()
                 .ifEmpty { DEFAULT_TRUSTED }
 
+            if (list.singleOrNull()?.lowercase() == NONE) return ProxySettings()
+
             return ProxySettings(
-                enabled = enabled(config, developmentMode),
                 trusted = list.mapNotNull { IpRange.parse(it) },
-                trustAny = config.propertyOrNull("env.trustProxy")?.getString()?.trim().toBoolean(),
                 rejected = list.filter { IpRange.parse(it) == null }
             )
-        }
-
-        // on/off and the usual ways of saying it, null for blank or anything else
-        private fun parseSwitch(value: String?): Boolean? = when (value?.trim()?.lowercase()) {
-            "on", "true", "yes", "1" -> true
-            "off", "false", "no", "0" -> false
-            else -> null
         }
     }
 }

@@ -62,6 +62,12 @@ fun App() {
         apiMismatch.value?.let { snackBarHostState.showSnackbar(it) }
     }
 
+    // Same for a server on plain HTTP, also said on the login popup and Settings > Account
+    val insecureWarning = mainViewModel.session.insecureWarning.collectAsState()
+    LaunchedEffect(insecureWarning.value) {
+        insecureWarning.value?.let { snackBarHostState.showSnackbar(it) }
+    }
+
     // Approved stations with kiosk mode show only the counter, signed into by PIN
     val kioskActive = mainViewModel.kiosk.active.collectAsState()
 
