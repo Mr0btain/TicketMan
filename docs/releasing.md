@@ -65,7 +65,7 @@ builds everything without publishing, which is a good way to try it before taggi
 | Workflow | Builds | Publishes to |
 |---|---|---|
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, server zip, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | DEB (x64, and arm64 with an ARM runner), APK, server zip, Docker image | Gitea release, the Gitea container registry |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | DEB (x64, and arm64 on an ARM runner), APK, server zip, Docker image | Gitea release, the Gitea container registry |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. The Gitea one only builds on Linux, and its `ubuntu-latest` runner has to be x86 for the
@@ -74,10 +74,11 @@ APK. The image step needs a runner with Docker access.
 The server zip, APK, web client and Docker image (built for both through QEMU) don't depend on the runner's
 architecture, but a DEB is only for the architecture that built it, since it bundles a Java runtime and Compose's
 native graphics. GitHub builds the arm64 one on its `ubuntu-24.04-arm` runner, which is free for public repos only.
-On Gitea, register an ARM machine as a runner with the `linux-arm64` label (mapped to an image that has an arm64
-build, like `linux-arm64:docker://docker.gitea.com/runner-images:ubuntu-latest`) and set the repo variable
-`ARM64_RUNNER` to `true` (Settings > Actions > Variables). Without that variable the job is skipped and the release
-goes out without it.
+On Gitea, register an ARM machine as a runner with only the `linux-arm64` label (mapped to an image that has an arm64
+build: `GITEA_RUNNER_LABELS=linux-arm64:docker://docker.gitea.com/runner-images:ubuntu-latest`). It mustn't also take
+`ubuntu-latest`, or the APK could land on it. The labels are saved when the runner registers, so changing them means
+deleting its `.runner` file and registering again. A release waits until the arm64 DEB is built, so keep that runner
+online.
 
 ## One time setup
 

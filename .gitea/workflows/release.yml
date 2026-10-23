@@ -1,4 +1,4 @@
-# Builds the Linux packages (arm64 DEB too, with an ARM runner) and publishes a Gitea release when a v* tag is pushed (git tag v0.9.0 && git push origin
+# Builds the Linux packages (the arm64 DEB on an ARM runner) and publishes a Gitea release when a v* tag is pushed (git tag v0.9.0 && git push origin
 # v0.9.0). Run it by hand to build without publishing. The Windows MSI and macOS DMG need runners on those systems,
 # which .github/workflows/release.yml has on GitHub. See docs/releasing.md
 #
@@ -88,12 +88,11 @@ jobs:
           path: dist/
 
   # The Compose desktop app bundles a Java runtime and native graphics for the machine that builds it, so the arm64
-  # DEB needs an ARM runner: register one with the linux-arm64 label (mapped to an image with an arm64 build, like
-  # docker.gitea.com/runner-images:ubuntu-latest) and set the repo variable ARM64_RUNNER to true. Until then it's skipped
+  # DEB needs an ARM runner registered with only the linux-arm64 label (mapped to an image with an arm64 build, like
+  # docker.gitea.com/runner-images:ubuntu-latest). The job waits until one is online
   deb-arm64:
     name: Desktop DEB (arm64)
     needs: version
-    if: vars.ARM64_RUNNER == 'true'
     runs-on: linux-arm64
     timeout-minutes: 60
     steps:
@@ -178,12 +177,7 @@ jobs:
   release:
     name: Publish
     needs: [version, packages, deb-arm64, server]
-    # always() so a skipped deb-arm64 (no ARM runner yet) doesn't skip the release; a failed one still stops it
-    if: >-
-      always() && startsWith(github.ref, 'refs/tags/')
-      && needs.packages.result == 'success' && needs.server.result == 'success'
-      && needs.deb-arm64.result != 'failure' && needs.deb-arm64.result != 'cancelled'
-
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
