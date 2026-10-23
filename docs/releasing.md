@@ -72,7 +72,7 @@ builds everything without publishing, which is a good way to try it before taggi
 | Workflow | Builds | Publishes to |
 |---|---|---|
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, desktop jar, server zip and jar, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
@@ -93,10 +93,10 @@ docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output typ
 The Gitea workflow releases the server twice, with the web client built in and without it (`/` is then a plain up
 check):
 
-| Server | Zip | Jar | Image tags |
-|---|---|---|---|
-| With the web client | `TicketMan-server-<version>.zip` | `TicketMan-server-<version>.jar` | `<version>`, `latest` |
-| Without it | `TicketMan-server-noweb-<version>.zip` | `TicketMan-server-noweb-<version>.jar` | `<version>-noweb`, `latest-noweb` |
+| Server | Zip | Jar | Gitea image tags | Docker Hub image |
+|---|---|---|---|---|
+| With the web client | `TicketMan-server-<version>.zip` | `TicketMan-server-<version>.jar` | `<version>`, `latest` | `<user>/ticketman:<version>`, `latest` |
+| Without it | `TicketMan-server-noweb-<version>.zip` | `TicketMan-server-noweb-<version>.jar` | `<version>-noweb`, `latest-noweb` | `<user>/ticketman-server:<version>`, `latest` |
 
 Any part can be left out. Each has a box to tick when running the workflow by hand, and a variable that skips it for
 tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
@@ -151,12 +151,17 @@ Actions > Secrets:
 | `ANDROID_KEYSTORE_PASSWORD` | The keystore's password |
 | `ANDROID_KEY_ALIAS` | `ticketman`, or the alias you used |
 | `ANDROID_KEY_PASSWORD` | The key's password (the same as the keystore's unless you set it apart) |
-| `REGISTRY_TOKEN` | Gitea only: a token with `write:package`, for the image. Without it the image is skipped |
+| `REGISTRY_TOKEN` | Gitea only: a token with `write:package`, for the image in Gitea's registry. Without it the image isn't pushed there |
+| `DOCKERHUB_TOKEN` | Gitea only: a Docker Hub access token with Read & Write, for the images on Docker Hub. Without it they're skipped |
 
 On Gitea, if the runner reaches Gitea by an internal name (the workflow sees a server URL like `http://gitea:3000`),
 also add a `REGISTRY` variable under Settings > Actions > Variables set to Gitea's public HTTPS host, like
 `git.example.com`. The host's Docker daemon pushes the image, and it can't resolve the internal name or push to a plain
 HTTP registry.
+
+For Docker Hub, also add a `DOCKERHUB_USERNAME` variable (like `mr0btain`) and create the two repositories there,
+`ticketman` (with the web client) and `ticketman-server` (without it). With neither `REGISTRY_TOKEN` nor
+`DOCKERHUB_TOKEN` set, no image is built.
 
 GitHub pushes the image with its own `GITHUB_TOKEN`. The first time it does, the package is private: make it public
 under the package's settings if anyone should pull it without logging in.
