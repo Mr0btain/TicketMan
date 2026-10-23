@@ -48,6 +48,11 @@ jobs:
       - name: Shared tests
         run: ./gradlew :shared:jvmTest
 
+      # Skia's native library links against these even when it draws without a display, and the runner image leaves
+      # them out
+      - name: Skia libraries
+        run: sudo apt-get update && sudo apt-get install -y libgl1 libegl1 libx11-6 libfontconfig1
+
       # Includes the render tests and UiKitRulesTest. Compose draws with Skia's software renderer, no display needed
       - name: Client tests
         run: ./gradlew :composeApp:desktopTest
