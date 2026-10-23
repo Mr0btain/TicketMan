@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import com.auth0.jwt.JWT
+import org.mr0btain.ticketman.BuildInfo
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.proxy.ProxySettings
 import org.mr0btain.ticketman.logging.AppLogger
@@ -92,7 +93,7 @@ class AdminService(
     }
 
     companion object {
-        // Keep in step with version in server/build.gradle.kts
-        const val SERVER_VERSION = "0.9.0"
+        // ticketman.version in gradle.properties
+        const val SERVER_VERSION = BuildInfo.VERSION
     }
 }

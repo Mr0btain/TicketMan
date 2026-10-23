@@ -181,10 +181,31 @@ compose.desktop {
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "org.mr0btain.ticketman"
-            packageVersion = "0.9.0"
+            packageName = "TicketMan"
+            description = "Ticket tracking for repair shops"
+            vendor = "Mr0btain"
+            // Installers only take numbers, so a 1.0.0-rc1 is packaged as 1.0.0
+            val appVersion = providers.gradleProperty("ticketman.version").get().substringBefore('-')
+            packageVersion = appVersion
             modules("jdk.unsupported", "java.management")
             modules("jdk.unsupported.desktop")
+
+            windows {
+                // Never change this: it's how a newer MSI knows to replace the installed one
+                upgradeUuid = "58a5706e-674f-40a1-bec1-861c46c444e9"
+                menu = true
+                shortcut = true
+                dirChooser = true
+            }
+            macOS {
+                bundleID = "org.mr0btain.ticketman"
+                // macOS refuses a version starting with 0, so 0.x builds say 1.0.0 inside the app bundle. The DMG's
+                // file name still carries the real version (the release workflows rename it)
+                packageVersion = if (appVersion.startsWith("0.")) "1.0.0" else appVersion
+            }
+            linux {
+                menuGroup = "Office"
+            }
         }
 
         tasks.withType<JavaExec>().configureEach {

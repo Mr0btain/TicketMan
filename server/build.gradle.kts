@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.mr0btain.ticketman"
-version = "0.9.0"
+version = providers.gradleProperty("ticketman.version").get()
 
 application {
     mainClass.set("org.mr0btain.ticketman.ApplicationKt")
@@ -16,6 +16,21 @@ application {
     val isDevelopment: Boolean = project.ext.has("development")
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
+
+// BuildInfo.VERSION, so the server reports the version it was built as
+val generateBuildInfo = tasks.register("generateBuildInfo") {
+    val outputDir = layout.buildDirectory.dir("generated/buildInfo")
+    val appVersion = version.toString()
+    inputs.property("version", appVersion)
+    outputs.dir(outputDir)
+    doLast {
+        val file = outputDir.get().file("org/mr0btain/ticketman/BuildInfo.kt").asFile
+        file.parentFile.mkdirs()
+        file.writeText("package org.mr0btain.ticketman\n\nobject BuildInfo {\n    const val VERSION = \"$appVersion\"\n}\n")
+    }
+}
+
+kotlin.sourceSets.main { kotlin.srcDir(generateBuildInfo) }
 
 dependencies {
     // Shared project stuff
