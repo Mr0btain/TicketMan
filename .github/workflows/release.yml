@@ -45,6 +45,8 @@ jobs:
           - { os: windows-latest, format: msi, task: packageMsi }
           - { os: macos-latest, format: dmg, task: packageDmg }
           - { os: ubuntu-latest, format: deb, task: packageDeb }
+          # Free for public repos; a private one needs ARM runners on its plan
+          - { os: ubuntu-24.04-arm, format: deb, task: packageDeb }
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     steps:
@@ -59,6 +61,11 @@ jobs:
           packages: platforms;android-37
       - uses: gradle/actions/setup-gradle@v4
 
+      # jpackage makes the DEB with these
+      - name: Packaging tools
+        if: matrix.format == 'deb'
+        run: command -v dpkg-deb fakeroot >/dev/null || (sudo apt-get update && sudo apt-get install -y fakeroot dpkg-dev)
+
       - name: Package
         run: ./gradlew :composeApp:${{ matrix.task }}
 
@@ -71,7 +78,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: desktop-${{ matrix.format }}
+          name: desktop-${{ matrix.format }}-${{ runner.arch }}
           path: dist/
 
   android:
