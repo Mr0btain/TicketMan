@@ -14,6 +14,14 @@ on:
         description: Skip the arm64 DEB (it's emulated, so slow)
         type: boolean
         default: false
+      skip_amd64:
+        description: Skip the amd64 build
+        type: boolean
+        default: false
+      skip_server:
+        description: Skip the server build
+        type: boolean
+        default: false
 
 defaults:
   run:
@@ -42,6 +50,7 @@ jobs:
   packages:
     name: Desktop DEB and Android APK
     needs: version
+    if: format('{0}', inputs.skip_amd64) != 'true' && vars.SKIP_AMD64 != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -123,6 +132,7 @@ jobs:
   server:
     name: Server
     needs: version
+    if: format('{0}', inputs.skip_server) != 'true' && vars.SKIP_SERVER != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
