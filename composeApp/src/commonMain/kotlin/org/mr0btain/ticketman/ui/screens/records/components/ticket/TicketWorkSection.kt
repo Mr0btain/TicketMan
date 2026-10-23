@@ -137,7 +137,7 @@ fun workRequests(description: String, hours: String, rateCents: Long, parts: Lis
             quantity == null || quantity <= 0 -> return requests to "Enter the hours, like 1.5"
             !twoDecimals(quantity) -> return requests to "Hours can have two decimals at most"
         }
-        requests += WorkRequest(WorkType.LABOR, description.trim(), quantity = quantity!!, unitPriceCents = rateCents)
+        requests += WorkRequest(WorkType.LABOR, description.trim(), quantity = quantity, unitPriceCents = rateCents)
     }
 
     parts.forEach { line ->

@@ -64,7 +64,7 @@ jobs:
       # jpackage makes the DEB with these
       - name: Packaging tools
         if: matrix.format == 'deb'
-        run: command -v dpkg-deb fakeroot >/dev/null || (sudo apt-get update && sudo apt-get install -y fakeroot dpkg-dev)
+        run: command -v fakeroot >/dev/null || (sudo apt-get update && sudo apt-get install -y fakeroot dpkg-dev)
 
       - name: Package
         run: ./gradlew :composeApp:${{ matrix.task }}
