@@ -21,14 +21,16 @@ import ticketman.composeapp.generated.resources.server_address_string
 
 /**
  * Asks for the server's address
+ * @param initialAddress What the field starts with, the address that was just tried
  * @param error Why the address tried didn't connect, null before a try
  */
 @Composable
 fun ServerAddressField(
+    initialAddress: String,
     error: String?,
     onContinue: (String) -> Unit
 ) {
-    var address by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf(initialAddress) }
     val focus = remember { FocusRequester() }
 
     Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {

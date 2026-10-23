@@ -8,6 +8,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.union
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -46,6 +51,13 @@ import ticketman.composeapp.generated.resources.user
 private val BOTTOM_NAV_SPACE = 80.dp
 
 /**
+ * The status and navigation bars and any camera cutout. The backdrop runs under them, everything else stays out.
+ * Only Android has any; the keyboard isn't included, so the bottom bar stays behind it
+ */
+val shellInsets: WindowInsets
+    @Composable get() = WindowInsets.systemBars.union(WindowInsets.displayCutout)
+
+/**
  * Wide screen layout: glass nav rail on the left, the current screen beside it
  * @param user Signed in user shown at the bottom of the rail, null shows a log in button
  */
@@ -69,6 +81,7 @@ fun WideAppShell(
         Row(
             modifier = Modifier
                 .fillMaxSize()
+                .windowInsetsPadding(shellInsets)
                 .padding(spacing.sm),
             horizontalArrangement = Arrangement.spacedBy(spacing.sm)
         ) {
@@ -106,7 +119,7 @@ fun WideAppShell(
             )
         }
 
-        TmSnackbarHost(state = snackBarState, modifier = Modifier.align(Alignment.BottomCenter))
+        TmSnackbarHost(state = snackBarState, modifier = Modifier.align(Alignment.BottomCenter).windowInsetsPadding(shellInsets))
     }
 }
 
@@ -126,6 +139,7 @@ fun PhoneAppShell(
             modifier = Modifier
                 .fillMaxSize()
                 .glassSource()
+                .windowInsetsPadding(shellInsets)
                 .padding(bottom = BOTTOM_NAV_SPACE),
             content = content
         )
@@ -134,12 +148,14 @@ fun PhoneAppShell(
             state = snackBarState,
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .windowInsetsPadding(shellInsets)
                 .padding(bottom = BOTTOM_NAV_SPACE)
         )
 
         TmBottomNav(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
+                .windowInsetsPadding(shellInsets)
                 .padding(TmTheme.spacing.sm),
             items = items,
             selectedKey = selectedRoute,

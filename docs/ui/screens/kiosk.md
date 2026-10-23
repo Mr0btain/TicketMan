@@ -16,7 +16,8 @@ watches this device's `Station` (from `SessionHandler`). Kiosk mode is **active*
 
 1. sets `RemoteHandler.credentialFallback = false`, so a PIN session that runs out isn't quietly replaced by the
    device owner's saved password,
-2. asks for full screen through `AppWindow.setFullscreen(true)`,
+2. asks for full screen through `AppWindow.setFullscreen(true)`, which on Android also pins the app (see
+   [Pinning on Android](#pinning-on-android)),
 3. starts the idle watch,
 4. locks, which signs out whoever logged the device in.
 
@@ -71,6 +72,19 @@ shows.
 Leaving only lasts until the app restarts. Settings > Account and station > Counter station has a button that calls
 `resume()` to turn it back on.
 
+### Pinning on Android
+
+`MainActivity` follows `AppWindow.fullscreen`: on, it calls `startLockTask()` once the activity is in front; off,
+`stopLockTask()`. That's Android's screen pinning, so Home and Overview stop working until it's undone. Because
+TicketMan isn't the device owner, Android first asks whoever is holding the device to confirm ("App is pinned",
+Got it or No thanks), and anyone can unpin later by swiping up and holding (or Back and Overview together with
+button navigation).
+
+The activity reports whether it's pinned in `AppWindow.pinned` (null on desktop and web, which can't pin), checking
+every two seconds while kiosk mode is on, since Android doesn't tell the app when someone unpins it. While it's
+`false`, `KioskShell` shows a "Screen not pinned" notice above the lock screen or counter with a Pin screen button
+(`AppWindow.requestPin()`), which asks Android again. Leaving kiosk mode unpins it.
+
 ## Where it lives
 
 | What | Where |
@@ -78,7 +92,7 @@ Leaving only lasts until the app restarts. Settings > Account and station > Coun
 | State, locking, idle timer, sign in and out | `ui/screens/kiosk/components/KioskHandler.kt` |
 | What a kiosk shows | `ui/screens/kiosk/KioskShell.kt` |
 | Lock screen and PIN pad | `ui/screens/kiosk/LockScreen.kt`, `PinPad.kt` |
-| Full screen request | `ui/AppWindow.kt`, applied in each platform's entry point |
+| Full screen and pinning requests | `ui/AppWindow.kt`, applied in each platform's entry point (pinning in `androidApp/.../MainActivity.kt`) |
 | Tests | `composeApp/src/commonTest/.../ui/screens/kiosk/KioskHandlerTest.kt` (takes a `now` clock to move time along) |
 | Render test | `ScreenRenderTest.kioskLock()` |
 
@@ -94,9 +108,11 @@ Leaving only lasts until the app restarts. Settings > Account and station > Coun
 
 ## Known gaps
 
-- Full screen isn't a lockdown. Desktop makes the window full screen, web asks the browser, and Android hides the
-  status and navigation bars, which a swipe brings back for a moment. None of them stop someone leaving the app.
-  Android's lock task mode is in the [fix plan's last phase](../../FIX-PLAN.md#phase-2-android-and-other-machines).
+- **Only Android is locked down, and only as far as screen pinning goes.** Someone who knows the gesture can unpin
+  it; the notice then says so until it's pinned again. Making the app the device owner (through an MDM, or
+  `adb shell dpm set-device-owner` on a wiped device, which needs a `DeviceAdminReceiver` the app doesn't have yet)
+  would pin without asking and without a way out. Desktop and web only go full screen, which doesn't stop someone
+  leaving the app.
 - **Browsers only go full screen from a click or key press.** A kiosk that starts on page load stays windowed until
   someone touches it, and pressing Escape leaves full screen; the web entry point asks again on the next click or
   key press while kiosk mode is on.

@@ -141,7 +141,7 @@ fun PickupScreen(
                 TmPanel(
                     modifier = if (compact) Modifier.fillMaxWidth() else Modifier.widthIn(min = INVOICE_MIN_WIDTH, max = 760.dp),
                     title = "Invoice",
-                    subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else "${drafts.size} lines",
+                    subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else if (drafts.size == 1) "1 line" else "${drafts.size} lines",
                     icon = Res.drawable.file_text
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
@@ -459,6 +459,7 @@ fun stockText(stock: Int): String = when {
  * Shown after a pickup with what was paid and any change to hand back
  * @param actions Room for more buttons, like printing the receipt
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun PickedUpView(
     invoice: Invoice,
@@ -492,7 +493,12 @@ fun PickedUpView(
 
         Spacer(Modifier.height(spacing.lg))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
+        // Wraps on a phone, where the three buttons don't fit side by side
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(spacing.md, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(spacing.md),
+            itemVerticalAlignment = Alignment.CenterVertically
+        ) {
             actions()
             TmButton(text = "Done", onClick = onDone, size = TmControlSize.LARGE)
         }

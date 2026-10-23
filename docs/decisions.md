@@ -266,8 +266,23 @@ wrong clock makes records with the wrong creation time.
 
 **Why:** one UI to build and fix. Desktop is the main target, since a counter PC is where the app mostly runs.
 
-**Costs:** Android hasn't been run end to end, and some things are weaker off desktop (web caps restore uploads
-at 512 MB since it reads them whole; Android's full screen can be swiped away).
+**Costs:** Android has only been run in the emulator, and some things are weaker off desktop (web caps restore
+uploads at 512 MB since it reads them whole; Android's kiosk pinning can be undone by someone who knows the
+gesture).
+
+### Kiosk pinning without device owner
+
+**Chosen:** an Android kiosk pins itself with `startLockTask()` as an ordinary app. Android asks to confirm, and the
+kiosk shows a "Screen not pinned" notice with a button to ask again whenever it isn't pinned.
+
+**Why:** it works on any device with nothing to install or enroll, which suits a small shop with a tablet on the
+counter.
+
+**Costs:** whoever holds the device can decline or later unpin it, so it keeps honest people in the app rather than
+locking it down.
+
+**Revisit if:** a shop wants a kiosk nobody can leave. That means a `DeviceAdminReceiver` and making the app device
+owner through an MDM or `dpm set-device-owner`, after which lock task mode starts without asking.
 
 ### iOS parked, not removed
 

@@ -40,7 +40,7 @@ import ticketman.composeapp.generated.resources.*
 import kotlin.uuid.Uuid
 
 /** Width of a stat tile, they wrap onto new rows */
-private val TILE_WIDTH = 200.dp
+private val TILE_WIDTH = 180.dp
 
 /** Width of the breakdown panels */
 private val PANEL_WIDTH = 360.dp
@@ -160,7 +160,7 @@ fun AdminOverviewTab(
                 }
             }
 
-            TmPanel(modifier = Modifier.widthIn(min = 420.dp, max = 640.dp), title = "Recent tickets", icon = Res.drawable.tool) {
+            TmPanel(modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(), title = "Recent tickets", icon = Res.drawable.tool) {
                 if (stats.recentTickets.isEmpty()) {
                     Text(text = "No tickets yet", style = TmTheme.typography.body, color = colors.textMuted)
                 }

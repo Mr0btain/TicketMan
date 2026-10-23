@@ -9,7 +9,7 @@ platform does, and what isn't finished.
 | Platform | Entry point | Starts Koin | Notes |
 |----------|-------------|-------------|-------|
 | Desktop | `composeApp/src/desktopMain/.../main.kt` | Inside the `Window` | 1460×800 window. Kiosk mode switches it to full screen through `AppWindow.fullscreen`. `FileKit.init("TicketMan")` |
-| Android | `androidApp/.../MainActivity.kt` + `TicketManApplication` | In `Application.onCreate`, once per process, with the `Context` KSafe needs | Hides the system bars in kiosk mode. Attaches `AndroidPrintHost` |
+| Android | `androidApp/.../MainActivity.kt` + `TicketManApplication` | In `Application.onCreate`, once per process, with the `Context` KSafe needs | Edge to edge, so the shells pad by `shellInsets`. Kiosk mode hides the system bars and pins the app (lock task mode, reported in `AppWindow.pinned`). Attaches `AndroidPrintHost` |
 | Web | `composeApp/src/wasmJsMain/.../main.kt` | Before anything is shown | Waits for KSafe's cache, then `ComposeViewport`. Kiosk mode asks the browser for full screen |
 
 All of them call the same `App()`.
@@ -61,6 +61,28 @@ Nexus devices, which all got 7.1.1.
 The manifest asks for `INTERNET` and allows plain HTTP (`usesCleartextTraffic`), since a server can still be
 reached on its HTTP port. Remove that once servers redirect HTTP to HTTPS everywhere.
 
+Things that only show up on Android:
+
+- **Edge to edge.** `MainActivity` calls `enableEdgeToEdge()`, so the app draws under the status and navigation
+  bars. `WideAppShell`, `PhoneAppShell` and `KioskShell` pad their content by `shellInsets` (system bars and the
+  camera cutout, not the keyboard) and leave the backdrop full bleed. Desktop and web have no insets.
+- **The regex engine is ICU**, which refuses some patterns the JVM takes, like a bare `}`. Shared code that only
+  ever ran on the JVM can throw `PatternSyntaxException` here the first time it runs; escape braces.
+- **Touch, not keys.** Compose's `LocalInputModeManager` says whether someone is touching or typing. The counter
+  only focuses its search field, and only shows its F-key hints, while they're typing (`usingKeyboard()`,
+  `keyHint()` in `ui/screens/counter/KeyHints.kt`), so a phone doesn't open the on screen keyboard on its own.
+- **Printing** goes through the system print dialog. It asks for an 80mm page for receipts, but Android only keeps
+  that size if the chosen printer offers it; with no printer chosen yet the preview shows Letter.
+
+To try it in the emulator against a dev server on this machine, forward the port into the emulator and use
+`localhost` as the address, which also skips the "Not secure" warning:
+
+```bash
+adb reverse tcp:8098 tcp:8098      # then connect to http://localhost:8098
+```
+
+The emulator's alias for the host, `http://10.0.2.2:<port>`, also works where the host's firewall lets it through.
+
 ## Web
 
 A real server serves the web client itself (see [Running a server](../operations.md#web-client)), so the page and
@@ -69,8 +91,11 @@ if a TicketMan server answers there. Logs go to the browser console.
 
 ## Known gaps
 
-- **Android hasn't been run end to end yet.** It compiles, but hasn't been opened on a device. That's the
-  [fix plan's last phase](../FIX-PLAN.md#phase-2-android-and-other-machines).
+- **Android has only been run in the emulator** (a phone-sized Android 17 image): connecting, logging in, the
+  saved session coming back, records, a note with a photo from the system picker (uploaded, turned upright,
+  shown), the counter's search, check-in with a signature, pickup with payment, printing a claim slip to the
+  system print dialog, the admin overview, and kiosk mode with pinning. Not yet on a real device, a tablet, or an
+  actual printer.
 - **Web has been run in headless Chromium only**, served by `-PwithWeb`: login, records, a note with a photo, the
   counter search, ticket card, check-in, printing (the hidden iframe gets the right receipt), backup download and
   restore upload, the admin tabs and settings all worked. Firefox and Safari haven't been tried, and neither has

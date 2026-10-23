@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.ui.kit.theme.TmTheme
  * Shown right after a check in, with the number big enough to read out to the customer
  * @param actions Room for more buttons, like printing the claim slip
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun CheckedInView(
     result: CheckInResponse,
@@ -58,7 +59,12 @@ fun CheckedInView(
 
         Spacer(Modifier.height(spacing.lg))
 
-        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
+        // Wraps on a phone, where the buttons don't fit side by side
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(spacing.md, Alignment.CenterHorizontally),
+            verticalArrangement = Arrangement.spacedBy(spacing.md),
+            itemVerticalAlignment = Alignment.CenterVertically
+        ) {
             actions()
             TmButton(text = "Open ticket", onClick = onOpenTicket, variant = TmButtonVariant.SECONDARY, size = TmControlSize.LARGE)
             TmButton(text = "Check in another", onClick = onCheckInAnother, variant = TmButtonVariant.SECONDARY, size = TmControlSize.LARGE)

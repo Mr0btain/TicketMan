@@ -133,10 +133,12 @@ kotlin {
             implementation(libs.ktor.client.mock)
         }
 
+        /*
         nativeMain.dependencies {
             // ktor
             implementation(libs.ktor.client.darwin)
         }
+         */
 
         val desktopTest = getByName("desktopTest") {
             dependencies {
@@ -164,9 +166,6 @@ kotlin {
 
             // ktor
             implementation(libs.ktor.client.okhttp)
-
-            // open pdf
-            //implementation(libs.openpdf)
         }
     }
 }

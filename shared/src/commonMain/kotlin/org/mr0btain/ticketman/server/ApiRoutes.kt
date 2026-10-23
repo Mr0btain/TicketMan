@@ -203,7 +203,8 @@ object ImagePaths {
     const val FILE = "/{identifier}/{variant}"
 }
 
-private val PARAMETER = Regex("""\{[^}]+}""")
+// Android's regex engine (ICU) refuses a bare `}`, the JVM's doesn't, so keep it escaped
+private val PARAMETER = Regex("""\{[^}]+\}""")
 
 /**
  * The path with each `{name}` part replaced by the next of [values], in order, like

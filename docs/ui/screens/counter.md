@@ -58,7 +58,9 @@ queue) and load tickets through `RemoteHandler.loadTicketDetail` (`TicketDetail.
 | Esc | Back to home, or clear the search if already there |
 
 The shortcuts are listed on the home view before anything is searched, and in the button labels. The search field
-is focused when the counter opens.
+is focused when the counter opens. All three only happen for someone using a keyboard (`usingKeyboard()` in
+`KeyHints.kt`, from Compose's input mode): on a touch screen there are no F keys to hint at, and focusing the
+field would pop up the on screen keyboard.
 
 ### Search and queue
 
@@ -160,11 +162,6 @@ the handler and its parts refuse those actions anyway.
   without finishing.
 - **The ticket card's notes save at once**, the records screen's when the record is saved. The counter's are text
   only; photos and editing are on the records screen.
-
-## Known gaps
-
-- On a phone the check-in stepper scrolls sideways rather than fitting, and the F-key hints stay in the search
-  box's placeholder.
 
 ## See also
 
