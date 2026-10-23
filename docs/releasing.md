@@ -17,6 +17,15 @@ package is built from it:
 `API_VERSION` is separate: it only changes when older clients can't use the server any more (see
 [decisions](decisions.md)). The iOS app isn't built, so `iosApp/Configuration/Config.xcconfig` is updated by hand.
 
+## The icon
+
+[`scripts/AppIcon.java`](../scripts/AppIcon.java) draws the app icon (a blue ticket on graphite, the Bench theme's
+colors) and writes every copy of it: `composeApp/icons/` for the MSI, DMG and DEB (`iconFile` in
+`composeApp/build.gradle.kts`), `app_icon.png` in the client's resources for the desktop window and taskbar,
+`favicon.png` and `apple-touch-icon.png` for the web client, Android's launcher icons (adaptive vectors, and PNGs for
+Android 7) and the iOS app icon. To change it, edit the script and run `java scripts/AppIcon.java` from the
+repository root.
+
 ## Building by hand
 
 Each desktop installer has to be built on its own system, because jpackage can't make one for another OS:

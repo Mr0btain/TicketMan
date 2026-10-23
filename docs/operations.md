@@ -63,7 +63,13 @@ build it with `-Pdevelopment`, which bakes development mode into the start scrip
 | Health check | `GET /api/ping` every 30 seconds, through bash since the image has no curl |
 
 Named volumes take the folder's owner from the image. A host folder mounted at `/data` or `/backups` has to be owned
-by uid 10001 first (`sudo chown 10001:10001 /mnt/usb/ticketman`), or the server can't write to it.
+by uid 10001 first (`sudo chown 10001:10001 /mnt/usb/ticketman`), or the server can't write to it. It stops on the
+first start with H2's `Log file error: "/data/server/database/database.trace.db"`, caused by
+`AccessDeniedException: /data/server`.
+
+On a NAS (Unraid, Synology, TrueNAS) the share's own permissions can win over `chown`. If the error stays, use a
+named volume, or run the container as the user that owns the share with `user: "<uid>:<gid>"` on the service
+(often `99:100` on Unraid). Nothing in the image depends on uid 10001.
 
 `docker stop` sends SIGTERM to Java, which finishes the requests in flight and then closes H2 cleanly (the log
 says `Database closed`). The compose file's `restart: unless-stopped` brings the server back after a crash, a reboot

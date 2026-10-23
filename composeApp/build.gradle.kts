@@ -200,7 +200,9 @@ compose.desktop {
             modules("jdk.unsupported", "java.management")
             modules("jdk.unsupported.desktop")
 
+            // The icons come from scripts/AppIcon.java, which also makes the window, web and Android ones
             windows {
+                iconFile.set(project.file("icons/ticketman.ico"))
                 // Never change this: it's how a newer MSI knows to replace the installed one
                 upgradeUuid = "58a5706e-674f-40a1-bec1-861c46c444e9"
                 menu = true
@@ -208,12 +210,14 @@ compose.desktop {
                 dirChooser = true
             }
             macOS {
+                iconFile.set(project.file("icons/ticketman.icns"))
                 bundleID = "org.mr0btain.ticketman"
                 // macOS refuses a version starting with 0, so 0.x builds say 1.0.0 inside the app bundle. The DMG's
                 // file name still carries the real version (the release workflows rename it)
                 packageVersion = if (appVersion.startsWith("0.")) "1.0.0" else appVersion
             }
             linux {
+                iconFile.set(project.file("icons/ticketman.png"))
                 menuGroup = "Office"
             }
         }
