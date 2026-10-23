@@ -89,7 +89,8 @@ To only check that the shared code compiles for Android, without the app: `./gra
 
 ### Desktop installers
 
-`./gradlew :composeApp:packageDistributionForCurrentOS` builds a `.deb`, `.msi` or `.dmg` for the machine you're on.
+`./gradlew :composeApp:packageDistributionForCurrentOS` builds a `.deb`, `.msi` or `.dmg` for the machine you're on,
+named for it (`TicketMan-Windows-0.8.0-x64.msi`, see [releasing](releasing.md#building-by-hand)).
 
 ### Behind a proxy
 

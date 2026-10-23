@@ -65,12 +65,11 @@ jobs:
       - name: Package
         run: ./gradlew :composeApp:${{ matrix.task }}
 
-      - name: Name it
+      # The build names it for the runner (TicketMan-Windows-<version>-x64.msi, see docs/releasing.md)
+      - name: Collect it
         run: |
           mkdir -p dist
-          arch=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
-          file=$(ls composeApp/build/compose/binaries/main/${{ matrix.format }}/*.${{ matrix.format }})
-          cp "$file" "dist/TicketMan-${{ needs.version.outputs.version }}-$arch.${{ matrix.format }}"
+          cp composeApp/build/compose/binaries/main/${{ matrix.format }}/TicketMan-*.${{ matrix.format }} dist/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -94,10 +93,10 @@ jobs:
       - name: Package
         run: ./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms
 
-      - name: Name it
+      - name: Collect it
         run: |
           mkdir -p dist
-          cp composeApp/build/compose/jars/*.jar "dist/TicketMan-${{ needs.version.outputs.version }}.jar"
+          cp composeApp/build/compose/jars/TicketMan-Desktop-*.jar dist/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -139,12 +138,10 @@ jobs:
           TICKETMAN_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: ./gradlew :androidApp:assembleRelease
 
-      - name: Name it
+      - name: Collect it
         run: |
           mkdir -p dist
-          apk=$(ls androidApp/build/outputs/apk/release/*.apk | head -n 1)
-          suffix=$([[ "$apk" == *unsigned* ]] && echo "-unsigned" || true)
-          cp "$apk" "dist/TicketMan-${{ needs.version.outputs.version }}$suffix.apk"
+          cp androidApp/build/outputs/apk/release/TicketMan-*.apk dist/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -167,11 +164,11 @@ jobs:
       - name: Build with the web client
         run: ./gradlew :server:installDist :server:distZip :server:buildFatJar -PwithWeb
 
-      - name: Name them
+      - name: Collect them
         run: |
           mkdir -p dist
-          cp server/build/distributions/server-*.zip "dist/TicketMan-server-${{ needs.version.outputs.version }}.zip"
-          cp server/build/libs/server-all.jar "dist/TicketMan-server-${{ needs.version.outputs.version }}.jar"
+          cp server/build/distributions/TicketMan-Server-Web-*.zip dist/
+          cp server/build/libs/TicketMan-Server-Web-*.jar dist/
 
       - uses: actions/upload-artifact@v4
         with:

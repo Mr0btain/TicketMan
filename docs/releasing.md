@@ -35,14 +35,30 @@ Each desktop installer has to be built on its own system, because jpackage can't
 ./gradlew :composeApp:packageDmg        # macOS:   .../main/dmg/
 ./gradlew :composeApp:packageDeb        # Linux:   .../main/deb/ (needs dpkg-deb and fakeroot)
 ./gradlew :composeApp:createDistributable  # the app unpacked: .../main/app/TicketMan/ (bin/TicketMan starts it)
+./gradlew :composeApp:packageTarball    # that packed: .../main/tar/
 ./gradlew :composeApp:packageDistributionForCurrentOS   # whichever of those fits this machine
 
 ./gradlew :androidApp:assembleRelease   # androidApp/build/outputs/apk/release/ (x86 only, see getting started)
-./gradlew :server:distZip -PwithWeb     # server/build/distributions/server-<version>.zip, web client included
-./gradlew :server:buildFatJar -PwithWeb # server/build/libs/server-all.jar, the same as one jar
+./gradlew :server:distZip -PwithWeb     # server/build/distributions/, web client included
+./gradlew :server:buildFatJar -PwithWeb # server/build/libs/, the same as one jar
 ./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms   # composeApp/build/compose/jars/, any desktop
 ./gradlew :server:installDist -PwithWeb && docker build -f server/Dockerfile -t ticketman .
 ```
+
+The build names each file for what it is, so the release workflows only collect them. The installers, tarball and a
+desktop jar without `-PallPlatforms` are for the system and architecture that built them (`x64` or `arm64`); the rest
+run anywhere:
+
+| Package | File |
+|---|---|
+| Installers and tarball | `TicketMan-<OS>-<version>-<arch>.<ext>`: `TicketMan-Windows-0.8.0-x64.msi`, `TicketMan-macOS-0.8.0-arm64.dmg`, `TicketMan-Linux-0.8.0-x64.deb`, `TicketMan-Linux-0.8.0-arm64.tar.gz` |
+| Desktop jar | `TicketMan-Desktop-<version>.jar` with `-PallPlatforms`, otherwise `TicketMan-<OS>-<version>-<arch>.jar` |
+| APK | `TicketMan-Android-<version>.apk` (`-unsigned` added without a keystore), a copy beside AGP's own `androidApp-release.apk` |
+| Server zip and jar | `TicketMan-Server-Web-<version>.zip` / `.jar` with `-PwithWeb`, `TicketMan-Server-<version>.zip` / `.jar` without |
+
+The version is the whole `ticketman.version`, a `-rc1` included. The installers' names are set by renaming what
+jpackage makes once it's done (`AbstractJPackageTask` in `composeApp/build.gradle.kts`), the rest through the tasks'
+`archiveFileName`.
 
 The installers bundle their own Java runtime, so the machines they go on don't need Java. The server zip does need
 Java 21: unzip it and run `bin/server` (or `bin\server.bat`). [Running a server](operations.md) covers the settings.
@@ -62,7 +78,7 @@ repo's):
 | `TICKETMAN_KEY_ALIAS` | `ticketman.keyAlias` |
 | `TICKETMAN_KEY_PASSWORD` | `ticketman.keyPassword` |
 
-Without one the APK comes out as `androidApp-release-unsigned.apk`, which Android won't install.
+Without one the APK comes out unsigned (`TicketMan-Android-<version>-unsigned.apk`), which Android won't install.
 
 ## Making a release
 
@@ -94,9 +110,9 @@ native graphics. GitHub builds the arm64 one on its `ubuntu-24.04-arm` runner, w
 On Gitea the runner is x86, so the arm64 DEB is built in an arm64 container emulated through QEMU
 ([`docker/deb.Dockerfile`](../docker/deb.Dockerfile)), which needs Docker access like the image step. Everything runs
 emulated, so it's several times slower than the other jobs, and a release waits for it unless it's skipped (below).
-Beside each DEB the Gitea workflow releases `TicketMan-<version>-linux-<arch>.tar.gz`, the same app unpacked, for
+Beside each DEB the Gitea workflow releases `TicketMan-Linux-<version>-<arch>.tar.gz`, the same app unpacked, for
 systems without dpkg: extract it anywhere and run `TicketMan/bin/TicketMan`. The same Dockerfile builds a DEB (and
-`TicketMan.tar.gz`) by hand:
+the tarball) by hand:
 
 ```bash
 docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
@@ -107,8 +123,8 @@ check):
 
 | Server | Zip | Jar | Gitea image tags | Docker Hub image |
 |---|---|---|---|---|
-| With the web client | `TicketMan-server-<version>.zip` | `TicketMan-server-<version>.jar` | `<version>`, `latest` | `<user>/ticketman:<version>`, `latest` |
-| Without it | `TicketMan-server-noweb-<version>.zip` | `TicketMan-server-noweb-<version>.jar` | `<version>-noweb`, `latest-noweb` | `<user>/ticketman-server:<version>`, `latest` |
+| With the web client | `TicketMan-Server-Web-<version>.zip` | `TicketMan-Server-Web-<version>.jar` | `<version>`, `latest` | `<user>/ticketman:<version>`, `latest` |
+| Without it | `TicketMan-Server-<version>.zip` | `TicketMan-Server-<version>.jar` | `<version>-noweb`, `latest-noweb` | `<user>/ticketman-server:<version>`, `latest` |
 
 Any part can be left out. Each has a box to tick when running the workflow by hand, and a variable that skips it for
 tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:

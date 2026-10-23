@@ -70,3 +70,17 @@ android {
     }
 }
 
+// AGP names the APK androidApp-release(-unsigned).apk, so a copy named like the other release files goes beside it:
+// TicketMan-Android-<version>.apk, or TicketMan-Android-<version>-unsigned.apk without a signing key
+tasks.matching { it.name == "assembleRelease" }.configureEach {
+    val apkDir = layout.buildDirectory.dir("outputs/apk/release")
+    doLast {
+        val dir = apkDir.get().asFile
+        dir.listFiles { file -> file.name.startsWith("TicketMan-") }?.forEach { it.delete() }
+        // The newest, in case an earlier build left a signed or unsigned one
+        val apk = dir.listFiles { file -> file.extension == "apk" }?.maxByOrNull { it.lastModified() }
+            ?: error("No APK in $dir")
+        val suffix = if (apk.name.contains("unsigned")) "-unsigned" else ""
+        apk.copyTo(File(dir, "TicketMan-Android-$appVersion$suffix.apk"))
+    }
+}

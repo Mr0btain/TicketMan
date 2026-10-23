@@ -40,11 +40,14 @@ python3 scripts/counter_e2e.py https://localhost:8444 --insecure   # also runs t
 scripts/docker_smoke.sh                                  # docker-compose.yml behind Caddy: e2e, restore by restart, clean stop
 scripts/docker_local.sh                                  # the same left running at https://localhost:8443 to try by hand (--down removes it)
 
-# Release packages (docs/releasing.md); the version is ticketman.version in gradle.properties
+# Release packages (docs/releasing.md); the version is ticketman.version in gradle.properties. The build names each
+# one: TicketMan-<OS>-<version>-<arch>.<ext> for the machine's own (TicketMan-Windows-0.8.0-x64.msi),
+# TicketMan-Android-<version>.apk, TicketMan-Desktop-<version>.jar, TicketMan-Server[-Web]-<version>.zip/.jar
 ./gradlew :composeApp:packageDistributionForCurrentOS   # MSI, DMG or DEB, for the OS it runs on
+./gradlew :composeApp:packageTarball                     # the desktop app unpacked, as a .tar.gz
 ./gradlew :androidApp:assembleRelease                    # signed when TICKETMAN_KEYSTORE* are set
 ./gradlew :server:distZip -PwithWeb                      # server zip with the web client
-./gradlew :server:buildFatJar -PwithWeb                  # the same as one jar (server/build/libs/server-all.jar)
+./gradlew :server:buildFatJar -PwithWeb                  # the same as one jar
 ./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms  # desktop jar for every OS (needs Java 21 to run)
 
 python3 scripts/check_api_docs.py            # docs/api against the route files (--list prints every endpoint)

@@ -100,27 +100,21 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "TICKETMAN_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # The build names each file (TicketMan-Linux-<version>-x64.deb, TicketMan-Android-<version>.apk, see
+      # docs/releasing.md), so they're only collected
       - name: Build
         env:
           TICKETMAN_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           TICKETMAN_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           TICKETMAN_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew :composeApp:packageDeb :composeApp:createDistributable :androidApp:assembleRelease
-
-      - name: Name them
-        env:
           SKIP_TARBALL: ${{ format('{0}', inputs.skip_tarball) == 'true' || vars.SKIP_TARBALL == 'true' }}
         run: |
+          tarball=$([ "$SKIP_TARBALL" = "true" ] || echo :composeApp:packageTarball)
+          ./gradlew :composeApp:packageDeb $tarball :androidApp:assembleRelease
           mkdir -p dist
-          version="${{ needs.version.outputs.version }}"
-          arch=$(dpkg --print-architecture)
-          cp composeApp/build/compose/binaries/main/deb/*.deb "dist/TicketMan-$version-$arch.deb"
-          if [ "$SKIP_TARBALL" != "true" ]; then
-            tar -czf "dist/TicketMan-$version-linux-$arch.tar.gz" -C composeApp/build/compose/binaries/main/app TicketMan
-          fi
-          apk=$(ls androidApp/build/outputs/apk/release/*.apk | head -n 1)
-          suffix=$([[ "$apk" == *unsigned* ]] && echo "-unsigned" || true)
-          cp "$apk" "dist/TicketMan-$version$suffix.apk"
+          cp composeApp/build/compose/binaries/main/deb/TicketMan-*.deb dist/
+          if [ -n "$tarball" ]; then cp composeApp/build/compose/binaries/main/tar/TicketMan-*.tar.gz dist/; fi
+          cp androidApp/build/outputs/apk/release/TicketMan-*.apk dist/
 
       - uses: actions/upload-artifact@v3
         with:
@@ -148,16 +142,7 @@ jobs:
           docker run --privileged --rm tonistiigi/binfmt --install arm64
           tarball=$([ "$SKIP_TARBALL" = "true" ] && echo false || echo true)
           docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --build-arg TARBALL=$tarball \
-            --output type=local,dest=build-deb .
-
-      - name: Name them
-        run: |
-          mkdir -p dist
-          version="${{ needs.version.outputs.version }}"
-          cp build-deb/*.deb "dist/TicketMan-$version-arm64.deb"
-          if [ -f build-deb/TicketMan.tar.gz ]; then
-            cp build-deb/TicketMan.tar.gz "dist/TicketMan-$version-linux-arm64.tar.gz"
-          fi
+            --output type=local,dest=dist .
 
       - uses: actions/upload-artifact@v3
         with:
@@ -185,10 +170,10 @@ jobs:
       - name: Package
         run: ./gradlew --no-daemon -Pkotlin.compiler.execution.strategy=in-process :composeApp:packageMsi
 
-      - name: Name it
+      - name: Collect it
         run: |
           mkdir -p dist
-          cp composeApp/build/compose/binaries/main/msi/*.msi "dist/TicketMan-${{ needs.version.outputs.version }}-x64.msi"
+          cp composeApp/build/compose/binaries/main/msi/TicketMan-*.msi dist/
 
       - uses: actions/upload-artifact@v3
         with:
@@ -214,21 +199,21 @@ jobs:
       - name: Package
         run: ./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms
 
-      - name: Name it
+      - name: Collect it
         run: |
           mkdir -p dist
-          cp composeApp/build/compose/jars/*.jar "dist/TicketMan-${{ needs.version.outputs.version }}.jar"
+          cp composeApp/build/compose/jars/TicketMan-Desktop-*.jar dist/
 
       - uses: actions/upload-artifact@v3
         with:
           name: desktop-jar
           path: dist/
 
-  # The server is released twice: with the web client built in (TicketMan-server-<version>.zip, image tags <version>
-  # and latest, on Docker Hub <user>/ticketman) and without it (TicketMan-server-noweb-<version>.zip, tags
+  # The server is released twice: with the web client built in (TicketMan-Server-Web-<version>.zip, image tags
+  # <version> and latest, on Docker Hub <user>/ticketman) and without it (TicketMan-Server-<version>.zip, tags
   # <version>-noweb and latest-noweb, on Docker Hub <user>/ticketman-server with plain <version> and latest), where / is
-  # a plain up check, each also as a jar run with java -jar (TicketMan-server-<version>.jar and
-  # TicketMan-server-noweb-<version>.jar). Each is skipped by its input of a run by hand, or for tags by setting
+  # a plain up check, each also as a jar run with java -jar (TicketMan-Server-Web-<version>.jar and
+  # TicketMan-Server-<version>.jar). Each is skipped by its input of a run by hand, or for tags by setting
   # SKIP_SERVER_WEB or SKIP_SERVER_NOWEB to true; SKIP_SERVER_JARS (skip_server_jars) leaves out only the jars
   server-web:
     name: Server (with web client)
@@ -247,16 +232,16 @@ jobs:
       - name: Build
         run: ./gradlew :server:installDist :server:distZip -PwithWeb
 
-      - name: Name it
+      - name: Collect it
         run: |
           mkdir -p dist
-          cp server/build/distributions/server-*.zip "dist/TicketMan-server-${{ needs.version.outputs.version }}.zip"
+          cp server/build/distributions/TicketMan-Server-Web-*.zip dist/
 
       - name: Jar
         if: format('{0}', inputs.skip_server_jars) != 'true' && vars.SKIP_SERVER_JARS != 'true'
         run: |
           ./gradlew :server:buildFatJar -PwithWeb
-          cp server/build/libs/server-all.jar "dist/TicketMan-server-${{ needs.version.outputs.version }}.jar"
+          cp server/build/libs/TicketMan-Server-Web-*.jar dist/
 
       - uses: actions/upload-artifact@v3
         with:
@@ -324,16 +309,16 @@ jobs:
       - name: Build
         run: ./gradlew :server:installDist :server:distZip
 
-      - name: Name it
+      - name: Collect it
         run: |
           mkdir -p dist
-          cp server/build/distributions/server-*.zip "dist/TicketMan-server-noweb-${{ needs.version.outputs.version }}.zip"
+          cp server/build/distributions/TicketMan-Server-[0-9]*.zip dist/
 
       - name: Jar
         if: format('{0}', inputs.skip_server_jars) != 'true' && vars.SKIP_SERVER_JARS != 'true'
         run: |
           ./gradlew :server:buildFatJar
-          cp server/build/libs/server-all.jar "dist/TicketMan-server-noweb-${{ needs.version.outputs.version }}.jar"
+          cp server/build/libs/TicketMan-Server-[0-9]*.jar dist/
 
       - uses: actions/upload-artifact@v3
         with:
