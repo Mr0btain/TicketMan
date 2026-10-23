@@ -65,11 +65,11 @@ builds everything without publishing, which is a good way to try it before taggi
 | Workflow | Builds | Publishes to |
 |---|---|---|
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, server zip, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | DEB (x64, and arm64 through QEMU), APK, server zip and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, server zip and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
-workflow in its own place. The Gitea one only builds on Linux, and its `ubuntu-latest` runner has to be x86 for the
-APK. The image step needs a runner with Docker access.
+workflow in its own place. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
+a runner with Docker access. The MSI needs a Windows runner (below); there's no Mac one, so the DMG is GitHub only.
 
 The server zip, APK, web client and Docker image (built for both through QEMU) don't depend on the runner's
 architecture, but a DEB is only for the architecture that built it, since it bundles a Java runtime and Compose's
@@ -98,10 +98,32 @@ tag pushes when set to `true`; the release is published with the rest, and isn't
 |---|---|---|
 | The amd64 DEB and the APK | `skip_amd64` | `SKIP_AMD64` |
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
+| The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
 | The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |
 
 ## One time setup
+
+**Windows runner (Gitea).** The MSI job runs on a Windows machine with `act_runner` in host mode, so jobs run straight
+on it with that user's rights (keep it to repos you trust). Without one online the job waits in the queue, and the
+release with it, so set `SKIP_WINDOWS` while it's away. On the machine:
+
+1. Install Git for Windows and add `C:\Program Files\Git\bin` to the system PATH, ahead of `C:\Windows\System32` if
+   WSL is installed (the steps run in bash), and Node.js LTS (the actions run on it). If the MSI build complains about
+   WiX, turn on .NET Framework 3.5 under Windows Features.
+2. Turn on long paths: `git config --system core.longpaths true`, and `LongPathsEnabled` = 1 under
+   `HKLM\SYSTEM\CurrentControlSet\Control\FileSystem`.
+3. Download `act_runner` for Windows, then with a token from Settings > Actions > Runners > Create new runner:
+
+   ```powershell
+   .\act_runner.exe generate-config > config.yaml
+   .\act_runner.exe register --no-interactive --config config.yaml --instance https://git.example.com `
+     --token <token> --name windows --labels windows-latest:host
+   ```
+
+4. Start `act_runner.exe daemon --config config.yaml` with Windows, as your own user (not SYSTEM, so the Gradle cache
+   stays in your profile): through NSSM (`winget install NSSM.NSSM`) or a scheduled task run at startup. Turn off
+   sleep.
 
 **Android keystore.** Make it once and keep it, with its passwords, somewhere safe. Android only installs an update
 signed with the same key, so losing it means everyone uninstalls and starts over:
