@@ -128,7 +128,7 @@ The admin Server tab (`GET /api/admin/server`) should show `forwarded` true and 
 
 ### In Docker
 
-The shop setup itself, the image behind Caddy from [`docker-compose.yml`](../docker-compose.yml), runs on this
+The shop setup itself, the image behind Caddy from [`../docker/docker-compose.yml`](../docker/docker-compose.yml), runs on this
 machine with:
 
 ```bash

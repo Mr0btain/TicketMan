@@ -26,7 +26,7 @@ passing run prints nothing.
 | Client logic | `composeApp/src/commonTest/` | Handlers, repositories, seeds, pagers, storage, print templates, formatting. Network calls go to a `MockEngine` |
 | Client, desktop only | `composeApp/src/desktopTest/` | Things that need the JVM: Java2D printing, QR codes checked with ZXing, the pinned HTTPS engine, streaming file bodies, render tests, `UiKitRulesTest` |
 | End to end | `scripts/counter_e2e.py` | The whole counter flow against a real server, over HTTP |
-| Docker | `scripts/docker_smoke.sh` | The image and `docker-compose.yml` behind Caddy: the end to end walk, a restore finished by restarting, and a clean stop |
+| Docker | `scripts/docker_smoke.sh` | The image and `../docker/docker-compose.yml` behind Caddy: the end to end walk, a restore finished by restarting, and a clean stop |
 | Docker, by hand | `scripts/docker_local.sh` | The same setup left running at `https://localhost:8443`, for the desktop client and a browser on this machine |
 
 ## Server tests
@@ -231,7 +231,7 @@ exits with code 3.
 ### Docker
 
 [`scripts/docker_smoke.sh`](../scripts/docker_smoke.sh) builds the server (`:server:installDist -PwithWeb`) and the
-image, starts [`docker-compose.yml`](../docker-compose.yml) as its own project (`ticketman-smoke`, on
+image, starts [`../docker/docker-compose.yml`](../docker/docker-compose.yml) as its own project (`ticketman-smoke`, on
 `https://localhost:8445` with Caddy's local CA and its own network range), waits for the health check, checks
 a handshake without SNI (how Java connects to `localhost`) and the plain HTTP redirect, runs
 `counter_e2e.py --insecure --restart` through Caddy, checks Docker started the server again, and stops it the way
