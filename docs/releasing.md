@@ -25,6 +25,7 @@ Each desktop installer has to be built on its own system, because jpackage can't
 ./gradlew :composeApp:packageMsi        # Windows: composeApp/build/compose/binaries/main/msi/
 ./gradlew :composeApp:packageDmg        # macOS:   .../main/dmg/
 ./gradlew :composeApp:packageDeb        # Linux:   .../main/deb/ (needs dpkg-deb and fakeroot)
+./gradlew :composeApp:createDistributable  # the app unpacked: .../main/app/TicketMan/ (bin/TicketMan starts it)
 ./gradlew :composeApp:packageDistributionForCurrentOS   # whichever of those fits this machine
 
 ./gradlew :androidApp:assembleRelease   # androidApp/build/outputs/apk/release/ (x86 only, see getting started)
@@ -72,7 +73,7 @@ builds everything without publishing, which is a good way to try it before taggi
 | Workflow | Builds | Publishes to |
 |---|---|---|
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, desktop jar, server zip and jar, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB and tarball (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
@@ -84,7 +85,9 @@ native graphics. GitHub builds the arm64 one on its `ubuntu-24.04-arm` runner, w
 On Gitea the runner is x86, so the arm64 DEB is built in an arm64 container emulated through QEMU
 ([`docker/deb.Dockerfile`](../docker/deb.Dockerfile)), which needs Docker access like the image step. Everything runs
 emulated, so it's several times slower than the other jobs, and a release waits for it unless it's skipped (below).
-The same Dockerfile builds a DEB by hand:
+Beside each DEB the Gitea workflow releases `TicketMan-<version>-linux-<arch>.tar.gz`, the same app unpacked, for
+systems without dpkg: extract it anywhere and run `TicketMan/bin/TicketMan`. The same Dockerfile builds a DEB (and
+`TicketMan.tar.gz`) by hand:
 
 ```bash
 docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
@@ -105,6 +108,7 @@ tag pushes when set to `true`; the release is published with the rest, and isn't
 |---|---|---|
 | The amd64 DEB and the APK | `skip_amd64` | `SKIP_AMD64` |
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
+| Only the Linux tarballs (the DEBs are still built) | `skip_tarball` | `SKIP_TARBALL` |
 | The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
 | The desktop jar | `skip_desktop_jar` | `SKIP_DESKTOP_JAR` |
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |

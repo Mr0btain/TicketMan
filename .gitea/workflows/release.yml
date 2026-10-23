@@ -22,6 +22,10 @@ on:
         description: Skip the Windows MSI (needs the windows-latest runner online)
         type: boolean
         default: false
+      skip_tarball:
+        description: Skip the Linux tarballs (the desktop app unpacked, beside each DEB)
+        type: boolean
+        default: false
       skip_desktop_jar:
         description: Skip the desktop jar
         type: boolean
@@ -62,7 +66,8 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
 
   # The APK and DEB are built on x86: the AAPT2 Gradle downloads doesn't run on ARM Linux, and the DEB is for the
-  # runner's own architecture
+  # runner's own architecture. Beside the DEB goes a tarball of the same app (bin/TicketMan to start it) for systems
+  # without dpkg, skipped by the skip_tarball input of a run by hand, or for tags by setting SKIP_TARBALL to true
   packages:
     name: Desktop DEB and Android APK
     needs: version
@@ -100,14 +105,19 @@ jobs:
           TICKETMAN_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           TICKETMAN_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           TICKETMAN_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew :composeApp:packageDeb :androidApp:assembleRelease
+        run: ./gradlew :composeApp:packageDeb :composeApp:createDistributable :androidApp:assembleRelease
 
       - name: Name them
+        env:
+          SKIP_TARBALL: ${{ format('{0}', inputs.skip_tarball) == 'true' || vars.SKIP_TARBALL == 'true' }}
         run: |
           mkdir -p dist
           version="${{ needs.version.outputs.version }}"
           arch=$(dpkg --print-architecture)
           cp composeApp/build/compose/binaries/main/deb/*.deb "dist/TicketMan-$version-$arch.deb"
+          if [ "$SKIP_TARBALL" != "true" ]; then
+            tar -czf "dist/TicketMan-$version-linux-$arch.tar.gz" -C composeApp/build/compose/binaries/main/app TicketMan
+          fi
           apk=$(ls androidApp/build/outputs/apk/release/*.apk | head -n 1)
           suffix=$([[ "$apk" == *unsigned* ]] && echo "-unsigned" || true)
           cp "$apk" "dist/TicketMan-$version$suffix.apk"
@@ -118,8 +128,9 @@ jobs:
           path: dist/
 
   # The Compose desktop app bundles a Java runtime and native graphics for the machine that builds it, so the arm64
-  # DEB is built in an arm64 container emulated through QEMU (docker/deb.Dockerfile). Needs a runner with Docker
-  # access. It's skipped by the skip_arm64 input of a run by hand, or for tags by setting the SKIP_ARM64 variable to true
+  # DEB (and its tarball, see packages) is built in an arm64 container emulated through QEMU (docker/deb.Dockerfile).
+  # Needs a runner with Docker access. It's skipped by the skip_arm64 input of a run by hand, or for tags by setting the
+  # SKIP_ARM64 variable to true
   deb-arm64:
     name: Desktop DEB (arm64)
     needs: version
@@ -131,14 +142,22 @@ jobs:
 
       # Built through the host's Docker daemon, so the result comes back with --output rather than a mounted folder
       - name: Package
+        env:
+          SKIP_TARBALL: ${{ format('{0}', inputs.skip_tarball) == 'true' || vars.SKIP_TARBALL == 'true' }}
         run: |
           docker run --privileged --rm tonistiigi/binfmt --install arm64
-          docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=build-deb .
+          tarball=$([ "$SKIP_TARBALL" = "true" ] && echo false || echo true)
+          docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --build-arg TARBALL=$tarball \
+            --output type=local,dest=build-deb .
 
-      - name: Name it
+      - name: Name them
         run: |
           mkdir -p dist
-          cp build-deb/*.deb "dist/TicketMan-${{ needs.version.outputs.version }}-arm64.deb"
+          version="${{ needs.version.outputs.version }}"
+          cp build-deb/*.deb "dist/TicketMan-$version-arm64.deb"
+          if [ -f build-deb/TicketMan.tar.gz ]; then
+            cp build-deb/TicketMan.tar.gz "dist/TicketMan-$version-linux-arm64.tar.gz"
+          fi
 
       - uses: actions/upload-artifact@v3
         with:
