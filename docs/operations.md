@@ -31,7 +31,8 @@ A shop with no domain, only reached on its own network, sets `DOMAIN` to the mac
 trust it (see [Private certificates](#private-certificates)). `HTTPS_PORT` and `HTTP_PORT` publish Caddy on other
 ports than 443 and 80; plain HTTP is still sent on to the right HTTPS port.
 
-Without Docker, start `bin/server` from `:server:installDist` (or `./gradlew :server:run`) with `DATA_PATH` set,
+Without Docker, start `bin/server` from `:server:installDist`, the release's server jar with `java -jar` (Java 21),
+or `./gradlew :server:run`, with `DATA_PATH` set,
 and `TZ` if the machine's clock is on UTC (see [Configuration](configuration.md)), and put a reverse proxy in front.
 The server only speaks plain HTTP; the log says which port the proxy should send to and which proxy addresses it
 trusts. Either way, without `SECRET` the server makes its own and keeps it in the data folder.

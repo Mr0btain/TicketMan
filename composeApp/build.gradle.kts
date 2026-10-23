@@ -161,7 +161,18 @@ kotlin {
         }
 
         desktopMain.dependencies {
-            implementation(compose.desktop.currentOs)
+            // -PallPlatforms takes every desktop system's Skia, so packageUberJarForCurrentOS makes one jar that runs
+            // on any of them (with Java 21 installed). Otherwise only this machine's, which the installers bundle
+            if (project.hasProperty("allPlatforms")) {
+                implementation(compose.desktop.linux_x64)
+                implementation(compose.desktop.linux_arm64)
+                implementation(compose.desktop.windows_x64)
+                implementation(compose.desktop.windows_arm64)
+                implementation(compose.desktop.macos_x64)
+                implementation(compose.desktop.macos_arm64)
+            } else {
+                implementation(compose.desktop.currentOs)
+            }
             implementation(libs.kotlinx.coroutinesSwing)
 
             // ktor

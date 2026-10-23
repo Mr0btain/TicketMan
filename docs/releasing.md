@@ -29,11 +29,18 @@ Each desktop installer has to be built on its own system, because jpackage can't
 
 ./gradlew :androidApp:assembleRelease   # androidApp/build/outputs/apk/release/ (x86 only, see getting started)
 ./gradlew :server:distZip -PwithWeb     # server/build/distributions/server-<version>.zip, web client included
+./gradlew :server:buildFatJar -PwithWeb # server/build/libs/server-all.jar, the same as one jar
+./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms   # composeApp/build/compose/jars/, any desktop
 ./gradlew :server:installDist -PwithWeb && docker build -f server/Dockerfile -t ticketman .
 ```
 
 The installers bundle their own Java runtime, so the machines they go on don't need Java. The server zip does need
 Java 21: unzip it and run `bin/server` (or `bin\server.bat`). [Running a server](operations.md) covers the settings.
+
+The jars need Java 21 too, and run with `java -jar`. The server one runs anywhere. The desktop one only runs on the
+system that built it, unless `-PallPlatforms` puts in the Skia graphics library for every desktop system (Windows,
+Linux and macOS, x64 and arm64): that makes it about 100 MB, and one jar runs on all of them. Started from a jar, the
+server's `RESTART_ON_EXIT` needs a service manager (systemd, a Windows service) that starts it again.
 
 The release APK is signed when a keystore is given, through env vars or `~/.gradle/gradle.properties` (never the
 repo's):
@@ -64,8 +71,8 @@ builds everything without publishing, which is a good way to try it before taggi
 
 | Workflow | Builds | Publishes to |
 |---|---|---|
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, server zip, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, server zip and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, desktop jar, server zip and jar, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
@@ -86,10 +93,10 @@ docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output typ
 The Gitea workflow releases the server twice, with the web client built in and without it (`/` is then a plain up
 check):
 
-| Server | Zip | Image tags |
-|---|---|---|
-| With the web client | `TicketMan-server-<version>.zip` | `<version>`, `latest` |
-| Without it | `TicketMan-server-noweb-<version>.zip` | `<version>-noweb`, `latest-noweb` |
+| Server | Zip | Jar | Image tags |
+|---|---|---|---|
+| With the web client | `TicketMan-server-<version>.zip` | `TicketMan-server-<version>.jar` | `<version>`, `latest` |
+| Without it | `TicketMan-server-noweb-<version>.zip` | `TicketMan-server-noweb-<version>.jar` | `<version>-noweb`, `latest-noweb` |
 
 Any part can be left out. Each has a box to tick when running the workflow by hand, and a variable that skips it for
 tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
@@ -99,8 +106,10 @@ tag pushes when set to `true`; the release is published with the rest, and isn't
 | The amd64 DEB and the APK | `skip_amd64` | `SKIP_AMD64` |
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
 | The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
+| The desktop jar | `skip_desktop_jar` | `SKIP_DESKTOP_JAR` |
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
 | The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |
+| Only the server jars (the zips and images are still built) | `skip_server_jars` | `SKIP_SERVER_JARS` |
 
 ## One time setup
 
