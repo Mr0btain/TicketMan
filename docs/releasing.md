@@ -65,7 +65,7 @@ builds everything without publishing, which is a good way to try it before taggi
 | Workflow | Builds | Publishes to |
 |---|---|---|
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, server zip, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | DEB (x64, and arm64 on an ARM runner), APK, server zip, Docker image | Gitea release, the Gitea container registry |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | DEB (x64, and arm64 through QEMU), APK, server zip, Docker image | Gitea release, the Gitea container registry |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. The Gitea one only builds on Linux, and its `ubuntu-latest` runner has to be x86 for the
@@ -74,11 +74,15 @@ APK. The image step needs a runner with Docker access.
 The server zip, APK, web client and Docker image (built for both through QEMU) don't depend on the runner's
 architecture, but a DEB is only for the architecture that built it, since it bundles a Java runtime and Compose's
 native graphics. GitHub builds the arm64 one on its `ubuntu-24.04-arm` runner, which is free for public repos only.
-On Gitea, register an ARM machine as a runner with only the `linux-arm64` label (mapped to an image that has an arm64
-build: `GITEA_RUNNER_LABELS=linux-arm64:docker://docker.gitea.com/runner-images:ubuntu-latest`). It mustn't also take
-`ubuntu-latest`, or the APK could land on it. The labels are saved when the runner registers, so changing them means
-deleting its `.runner` file and registering again. A release waits until the arm64 DEB is built, so keep that runner
-online.
+On Gitea the runner is x86, so the arm64 DEB is built in an arm64 container emulated through QEMU
+([`docker/deb.Dockerfile`](../docker/deb.Dockerfile)), which needs Docker access like the image step. Everything runs
+emulated, so it's several times slower than the other jobs, and a release waits for it. To leave it out, tick "Skip the
+arm64 DEB" when running the workflow by hand, or set a `SKIP_ARM64` variable (Settings > Actions > Variables) to `true`
+for tag pushes; the release is then published without it. The same Dockerfile builds a DEB by hand:
+
+```bash
+docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
+```
 
 ## One time setup
 

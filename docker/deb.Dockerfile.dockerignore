@@ -1,0 +1,11 @@
+# The source for docker/deb.Dockerfile, without what the host built or downloaded
+.git
+.gradle
+.idea
+.kotlin
+**/build
+kotlin-js-store
+local.properties
+.env
+*.jks
+*.keystore
