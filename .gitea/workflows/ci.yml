@@ -34,8 +34,8 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      # shared and composeApp build an Android library, so Gradle needs an SDK with the compileSdk platform
-      # (gradle/libs.versions.toml) even for the JVM tests
+      # For the Android compile at the end, with the compileSdk platform (gradle/libs.versions.toml). The tests don't
+      # need it
       - uses: android-actions/setup-android@v3
         with:
           packages: platforms;android-37.0

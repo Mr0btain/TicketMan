@@ -1,5 +1,4 @@
-# The TicketMan server, Built from the repo
-# root, after building the server on the host, since the Gradle build needs the Android SDK:
+# The TicketMan server, built from the repo root after building the server on the host (no Android SDK needed):
 #
 #   ./gradlew :server:installDist -PwithWeb
 #   docker build -f server/Dockerfile -t ticketman .

@@ -118,15 +118,16 @@ is installed.
 **Chosen:** `server/Dockerfile` copies in `server/build/install/server` from `:server:installDist -PwithWeb` run on
 the host (or in CI), rather than running Gradle inside Docker.
 
-**Why:** the Gradle build loads the Android plugin for `shared` and `composeApp`, so even the server needs the
-Android SDK to configure. Installing the SDK in a builder stage, or a property that leaves out the Android targets,
-would both work, but the first makes a slow, gigabyte sized build stage and the second means conditional plugins in
-two build scripts that can drift. The copied jars run on any CPU, so one host build makes amd64 and arm64 images.
+**Why:** first chosen because the server build was thought to need the Android SDK. It doesn't: AGP only looks
+for the SDK when an Android task runs, so `:server:installDist -PwithWeb` works without one (checked with no
+`local.properties` or `ANDROID_HOME`). It stays because the Wasm build in a builder stage is slow, needs Node and the
+Gradle caches, and would run once per platform under `buildx`. The copied jars run on any CPU, so one host build makes
+amd64 and arm64 images.
 
 **Costs:** `docker build` from a fresh clone fails until the server has been built, and the image is only as fresh
 as that build. Nothing stops building it with `-Pdevelopment` by mistake.
 
-**Revisit if:** the server stops depending on `shared`'s Android target, or the image is built and published by CI.
+**Revisit if:** someone needs `docker build` to work from a fresh clone. A builder stage with JDK 21 is enough, no Android SDK.
 
 ### Restarting is left to whatever runs the server
 
