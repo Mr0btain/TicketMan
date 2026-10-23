@@ -1,4 +1,4 @@
-# The TicketMan server, which only speaks plain HTTP, behind a reverse proxy that does HTTPS. Built from the repo
+# The TicketMan server, Built from the repo
 # root, after building the server on the host, since the Gradle build needs the Android SDK:
 #
 #   ./gradlew :server:installDist -PwithWeb
