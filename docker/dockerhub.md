@@ -19,11 +19,6 @@ up. Connect to it with the desktop app (Windows, macOS, Linux), the Android app,
 
 Both come for `linux/amd64` and `linux/arm64` (a Raspberry Pi 4 or 5 works).
 
-| Tag | Points at |
-|-----|-----------|
-| `latest` | The newest release |
-| `<version>`, like `0.8.0` | That release, the safe choice for a shop's server |
-
 Desktop and Android apps, and the release notes, are on the
 [releases page](https://github.com/Mr0btain/TicketMan/releases).
 
@@ -42,12 +37,11 @@ Open `http://localhost:8080` and log in as `admin` with that password. Without `
 printed in `docker logs ticketman`.
 
 This is plain HTTP, fine on the same machine. From anywhere else passwords and customer details would cross the
-network readable (the apps say "Not secure"), so a real shop puts HTTPS in front, as below.
+network in plain text (the apps say "Not secure"), so a real shop would put HTTPS in front, as below.
 
-## Running it for a shop
+## Running it in Production example
 
-The server only speaks plain HTTP. HTTPS is a reverse proxy's job, and Caddy does it with almost no setup. Make a
-folder with these three files.
+The server only Raw dogs everything through HTTP. HTTPS has to be handles through a reverse proxy or tunnel, and Caddy does it with almost no setup. Make a folder with these three files.
 
 **`.env`**
 
