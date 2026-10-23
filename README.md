@@ -3,9 +3,9 @@
 A ticket tracking app for repair shops, or any shop that runs its work through tickets. Staff check devices in at
 the counter, track the repair, take payment at pickup and keep customer, inventory and photo records along the way.
 
-It's a Kotlin Multiplatform project: a Compose Multiplatform client talking over HTTP to a Ktor server that keeps
-everything in an H2 database. I started it to learn Kotlin and Compose, so some older parts are rougher than newer
-ones and get tidied as I go.
+It's a Kotlin Multiplatform project: a Compose Multiplatform client with a Ktor server with an H2 database.
+
+There will most likely be breaking changes often so this is nowhere near production ready.
 
 ![The counter screen showing a ticket, its invoice and the queue](docs/images/counter.png)
 
@@ -34,16 +34,21 @@ On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:P
 | Kiosk mode: PIN login on approved stations, idle lock | Done |
 | Admin: overview, users and account requests, sessions, stations, audit log, low stock, backup and restore | Done |
 | Themes (Bench, Copper, Mono), fonts, light and dark, reduce transparency | Done |
-| HTTPS between client and server | Done, by a reverse proxy in front (Caddy in the Docker setup) with a public certificate, or a private one devices check once ([details](docs/operations.md#behind-a-reverse-proxy)) |
+| Docker: Get server running in docker | Done |
+
 
 | Platform | Status |
 |----------|--------|
-| Desktop (Linux, Windows, macOS) | Main target, most complete |
-| Web (Wasm) | Served by the server when built with `-PwithWeb` ([details](docs/operations.md#web-client)). Not yet tried in a browser |
-| Android | Compiles, not yet tried on a device ([details](docs/client/platforms.md#known-gaps)) |
-| iOS | Not wired up, the targets are commented out |
+| Linux | Main target, Done |
+| Windows | Not Tested |
+| MacOs | Not Tested |
+| Web (Wasm) | Served by the server when built with `-PwithWeb`, Done |
+| Server | Done |
+| Android | Done |
+| iOS | Not Tested |
 
 ## Documentation
 
 Developer docs are in [`docs/`](docs/README.md): how the code is organized, how a request travels from the UI to the
-database, configuration, running a server and more.
+database, configuration, running a server and more. Pretty much all of this is AI generated. I haven't looked through 
+it yet so it may or may not be accurate.

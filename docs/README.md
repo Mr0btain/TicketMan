@@ -80,11 +80,6 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Add platform-specific code](how-to/add-a-platform-actual.md): an `expect` and its `actual`s
 - [Add a printout](how-to/add-a-printable-document.md): a new slip or report
 
-## Fix plan
-
-- [Fix plan](FIX-PLAN.md): every known gap, bug and leftover the docs found, in phases to work through and tick
-  off, plus the rules to keep on every change
-
 ## Decisions
 
 - [Decisions](decisions.md): why H2, per device sessions, photo deletion waiting a day, cents, client-made ids,
