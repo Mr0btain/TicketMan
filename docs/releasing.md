@@ -65,7 +65,7 @@ builds everything without publishing, which is a good way to try it before taggi
 | Workflow | Builds | Publishes to |
 |---|---|---|
 | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, server zip, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | DEB (x64, and arm64 through QEMU), APK, server zip, Docker image | Gitea release, the Gitea container registry |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | DEB (x64, and arm64 through QEMU), APK, server zip and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. The Gitea one only builds on Linux, and its `ubuntu-latest` runner has to be x86 for the
@@ -76,13 +76,30 @@ architecture, but a DEB is only for the architecture that built it, since it bun
 native graphics. GitHub builds the arm64 one on its `ubuntu-24.04-arm` runner, which is free for public repos only.
 On Gitea the runner is x86, so the arm64 DEB is built in an arm64 container emulated through QEMU
 ([`docker/deb.Dockerfile`](../docker/deb.Dockerfile)), which needs Docker access like the image step. Everything runs
-emulated, so it's several times slower than the other jobs, and a release waits for it. To leave it out, tick "Skip the
-arm64 DEB" when running the workflow by hand, or set a `SKIP_ARM64` variable (Settings > Actions > Variables) to `true`
-for tag pushes; the release is then published without it. The same Dockerfile builds a DEB by hand:
+emulated, so it's several times slower than the other jobs, and a release waits for it unless it's skipped (below).
+The same Dockerfile builds a DEB by hand:
 
 ```bash
 docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
 ```
+
+The Gitea workflow releases the server twice, with the web client built in and without it (`/` is then a plain up
+check):
+
+| Server | Zip | Image tags |
+|---|---|---|
+| With the web client | `TicketMan-server-<version>.zip` | `<version>`, `latest` |
+| Without it | `TicketMan-server-noweb-<version>.zip` | `<version>-noweb`, `latest-noweb` |
+
+Any part can be left out. Each has a box to tick when running the workflow by hand, and a variable that skips it for
+tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
+
+| Leaves out | Input | Variable |
+|---|---|---|
+| The amd64 DEB and the APK | `skip_amd64` | `SKIP_AMD64` |
+| The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
+| The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
+| The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |
 
 ## One time setup
 

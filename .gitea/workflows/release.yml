@@ -15,11 +15,15 @@ on:
         type: boolean
         default: false
       skip_amd64:
-        description: Skip the amd64 build
+        description: Skip the amd64 DEB and the APK
         type: boolean
         default: false
-      skip_server:
-        description: Skip the server build
+      skip_server_web:
+        description: Skip the server with the web client (saves the few minute Wasm build)
+        type: boolean
+        default: false
+      skip_server_noweb:
+        description: Skip the server without the web client
         type: boolean
         default: false
 
@@ -129,10 +133,14 @@ jobs:
           name: deb-arm64
           path: dist/
 
-  server:
-    name: Server
+  # The server is released twice: with the web client built in (TicketMan-server-<version>.zip, image tags <version>
+  # and latest) and without it (TicketMan-server-noweb-<version>.zip, tags <version>-noweb and latest-noweb), where / is
+  # a plain up check. Each is skipped by its input of a run by hand, or for tags by setting SKIP_SERVER_WEB or
+  # SKIP_SERVER_NOWEB to true
+  server-web:
+    name: Server (with web client)
     needs: version
-    if: format('{0}', inputs.skip_server) != 'true' && vars.SKIP_SERVER != 'true'
+    if: format('{0}', inputs.skip_server_web) != 'true' && vars.SKIP_SERVER_WEB != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
@@ -143,7 +151,7 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3: a commit, since act_runner can't resolve the v4 tag
 
-      - name: Build with the web client
+      - name: Build
         run: ./gradlew :server:installDist :server:distZip -PwithWeb
 
       - name: Name it
@@ -153,7 +161,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: server
+          name: server-web
           path: dist/
 
       # Pushed to this Gitea's container registry for a tag, when the REGISTRY_TOKEN secret (a token with
@@ -179,17 +187,73 @@ jobs:
           [[ "$version" != *-* ]] && tags+=(-t "$image:latest")
           echo "$REGISTRY_TOKEN" | docker login "$registry" -u "$GITHUB_ACTOR" --password-stdin
           docker run --privileged --rm tonistiigi/binfmt --install arm64,amd64
-          docker buildx create --use
-          docker buildx build --platform linux/amd64,linux/arm64 -f server/Dockerfile "${tags[@]}" --push .
+          builder=$(docker buildx create)
+          trap 'docker buildx rm "$builder"' EXIT
+          docker buildx build --builder "$builder" --platform linux/amd64,linux/arm64 -f server/Dockerfile \
+            "${tags[@]}" --push .
+
+  server-noweb:
+    name: Server (no web client)
+    needs: version
+    if: format('{0}', inputs.skip_server_noweb) != 'true' && vars.SKIP_SERVER_NOWEB != 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3: a commit, since act_runner can't resolve the v4 tag
+
+      - name: Build
+        run: ./gradlew :server:installDist :server:distZip
+
+      - name: Name it
+        run: |
+          mkdir -p dist
+          cp server/build/distributions/server-*.zip "dist/TicketMan-server-noweb-${{ needs.version.outputs.version }}.zip"
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: server-noweb
+          path: dist/
+
+      # Pushed like the one with the web client, see there
+      - name: Image
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          REGISTRY: ${{ vars.REGISTRY }}
+        run: |
+          if [ -z "$REGISTRY_TOKEN" ]; then
+            echo "::warning::No REGISTRY_TOKEN secret, so no Docker image"
+            exit 0
+          fi
+          registry="${REGISTRY:-${GITHUB_SERVER_URL#*://}}"
+          registry="${registry#*://}"
+          registry="${registry%/}"
+          image="$registry/${GITHUB_REPOSITORY,,}"
+          version="${{ needs.version.outputs.version }}"
+          tags=(-t "$image:$version-noweb")
+          [[ "$version" != *-* ]] && tags+=(-t "$image:latest-noweb")
+          echo "$REGISTRY_TOKEN" | docker login "$registry" -u "$GITHUB_ACTOR" --password-stdin
+          docker run --privileged --rm tonistiigi/binfmt --install arm64,amd64
+          builder=$(docker buildx create)
+          trap 'docker buildx rm "$builder"' EXIT
+          docker buildx build --builder "$builder" --platform linux/amd64,linux/arm64 -f server/Dockerfile \
+            "${tags[@]}" --push .
 
   release:
     name: Publish
-    needs: [version, packages, deb-arm64, server]
-    # Runs without the arm64 DEB when that was skipped, not when it failed
+    needs: [version, packages, deb-arm64, server-web, server-noweb]
+    # Publishes without whatever was skipped, but not when anything failed or was cancelled
     if: >-
-      always() && startsWith(github.ref, 'refs/tags/')
-      && needs.packages.result == 'success' && needs.server.result == 'success'
+      always() && startsWith(github.ref, 'refs/tags/') && needs.version.result == 'success'
+      && (needs.packages.result == 'success' || needs.packages.result == 'skipped')
       && (needs.deb-arm64.result == 'success' || needs.deb-arm64.result == 'skipped')
+      && (needs.server-web.result == 'success' || needs.server-web.result == 'skipped')
+      && (needs.server-noweb.result == 'success' || needs.server-noweb.result == 'skipped')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v3
