@@ -101,6 +101,11 @@ Actions > Secrets:
 | `ANDROID_KEY_PASSWORD` | The key's password (the same as the keystore's unless you set it apart) |
 | `REGISTRY_TOKEN` | Gitea only: a token with `write:package`, for the image. Without it the image is skipped |
 
+On Gitea, if the runner reaches Gitea by an internal name (the workflow sees a server URL like `http://gitea:3000`),
+also add a `REGISTRY` variable under Settings > Actions > Variables set to Gitea's public HTTPS host, like
+`git.example.com`. The host's Docker daemon pushes the image, and it can't resolve the internal name or push to a plain
+HTTP registry.
+
 GitHub pushes the image with its own `GITHUB_TOKEN`. The first time it does, the package is private: make it public
 under the package's settings if anyone should pull it without logging in.
 

@@ -154,17 +154,22 @@ jobs:
           path: dist/
 
       # Pushed to this Gitea's container registry for a tag, when the REGISTRY_TOKEN secret (a token with
-      # write:package) is set. Needs a runner that can reach Docker
+      # write:package) is set. Needs a runner that can reach Docker. The host's Docker daemon does the pushing, so
+      # when the runner knows Gitea by an internal name (like gitea:3000) set the REGISTRY variable to Gitea's public
+      # HTTPS host (its ROOT_URL, like git.example.com)
       - name: Image
         if: startsWith(github.ref, 'refs/tags/')
         env:
           REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+          REGISTRY: ${{ vars.REGISTRY }}
         run: |
           if [ -z "$REGISTRY_TOKEN" ]; then
             echo "::warning::No REGISTRY_TOKEN secret, so no Docker image"
             exit 0
           fi
-          registry="${GITHUB_SERVER_URL#*://}"
+          registry="${REGISTRY:-${GITHUB_SERVER_URL#*://}}"
+          registry="${registry#*://}"
+          registry="${registry%/}"
           image="$registry/${GITHUB_REPOSITORY,,}"
           version="${{ needs.version.outputs.version }}"
           tags=(-t "$image:$version")
