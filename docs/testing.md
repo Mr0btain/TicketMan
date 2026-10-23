@@ -274,8 +274,9 @@ two jobs:
 The Tests job installs JDK 21 and an Android SDK with the `compileSdk` platform, because `shared` and `composeApp`
 build an Android library and Gradle won't configure them without one. When it fails it keeps the HTML test
 reports as the `test-reports` artifact, and it always keeps the render tests' PNGs as `screen-renders`, so a UI
-change can be looked over from the pull request. Bump `platforms;android-37` in the workflow when `compileSdk`
-changes.
+change can be looked over from the pull request. Bump `platforms;android-37.0` in the workflows (CI and both release ones) when
+`compileSdk` changes. Newer platforms have a minor version in the package name (`android-37.0`, `android-36.1`);
+`sdkmanager --list` shows the exact one.
 
 ## Gotchas
 

@@ -47,7 +47,7 @@ jobs:
           java-version: 21
       - uses: android-actions/setup-android@v3
         with:
-          packages: platforms;android-37
+          packages: platforms;android-37.0
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3: a commit, since act_runner can't resolve the v4 tag
 
       # jpackage makes the DEB with these
@@ -105,7 +105,7 @@ jobs:
       # composeApp builds an Android library too, so Gradle needs the compileSdk platform to configure it
       - uses: android-actions/setup-android@v3
         with:
-          packages: platforms;android-37
+          packages: platforms;android-37.0
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3: a commit, since act_runner can't resolve the v4 tag
 
       - name: Packaging tools
@@ -138,7 +138,7 @@ jobs:
           java-version: 21
       - uses: android-actions/setup-android@v3
         with:
-          packages: platforms;android-37
+          packages: platforms;android-37.0
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3: a commit, since act_runner can't resolve the v4 tag
 
       - name: Build with the web client
