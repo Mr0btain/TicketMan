@@ -1,5 +1,5 @@
-# Builds the Linux packages (the arm64 DEB on an ARM runner) and publishes a Gitea release when a v* tag is pushed (git tag v0.9.0 && git push origin
-# v0.9.0). Run it by hand to build without publishing. The Windows MSI and macOS DMG need runners on those systems,
+# Builds the Linux packages (the arm64 DEB on an ARM runner) and publishes a Gitea release when a v* tag is pushed (git tag v0.8.0 && git push origin
+# v0.8.0). Run it by hand to build without publishing. The Windows MSI and macOS DMG need runners on those systems,
 # which .github/workflows/release.yml has on GitHub. See docs/releasing.md
 #
 # Gitea only runs actions/upload-artifact and download-artifact v3, not v4

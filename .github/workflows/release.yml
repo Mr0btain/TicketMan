@@ -1,5 +1,5 @@
-# Builds every package and publishes a GitHub release when a v* tag is pushed (git tag v0.9.0 && git push origin
-# v0.9.0). Run it by hand (Actions > Release > Run workflow) to build everything without publishing. Gitea doesn't
+# Builds every package and publishes a GitHub release when a v* tag is pushed (git tag v0.8.0 && git push origin
+# v0.8.0). Run it by hand (Actions > Release > Run workflow) to build everything without publishing. Gitea doesn't
 # read this folder while .gitea/workflows exists; its own release.yml builds the Linux packages. See docs/releasing.md
 name: Release
 

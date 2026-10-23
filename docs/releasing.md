@@ -12,7 +12,7 @@ package is built from it:
 |---|---|---|
 | Server | `server/build.gradle.kts` `version`, and the generated `BuildInfo.VERSION` | `AdminService.SERVER_VERSION` (admin screen, backup manifests) |
 | Desktop installers | `composeApp/build.gradle.kts` `packageVersion` | A `-rc1` suffix is dropped, since installers only take numbers. macOS refuses a version starting with 0, so 0.x app bundles say 1.0.0 inside |
-| Android | `androidApp/build.gradle.kts` `versionName`, and `versionCode` from it | `major * 10000 + minor * 100 + patch`, so 0.9.0 is 900 |
+| Android | `androidApp/build.gradle.kts` `versionName`, and `versionCode` from it | `major * 10000 + minor * 100 + patch`, so 0.8.0 is 800 |
 
 `API_VERSION` is separate: it only changes when older clients can't use the server any more (see
 [decisions](decisions.md)). The iOS app isn't built, so `iosApp/Configuration/Config.xcconfig` is updated by hand.

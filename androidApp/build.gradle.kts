@@ -21,7 +21,7 @@ kotlin {
     }
 }
 
-// 0.9.0 is versionCode 900 and 1.2.3 is 10203, so each release installs over the one before
+// 0.8.0 is versionCode 800 and 1.2.3 is 10203, so each release installs over the one before
 val appVersion = providers.gradleProperty("ticketman.version").get()
 val appVersionCode = appVersion.substringBefore('-').split('.').map { it.toInt() }
     .let { (major, minor, patch) -> major * 10_000 + minor * 100 + patch }
