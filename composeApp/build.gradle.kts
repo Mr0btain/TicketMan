@@ -182,7 +182,7 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
             packageName = "org.mr0btain.ticketman"
-            packageVersion = "1.0.0"
+            packageVersion = "0.9.0"
             modules("jdk.unsupported", "java.management")
             modules("jdk.unsupported.desktop")
         }

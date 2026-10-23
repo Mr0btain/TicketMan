@@ -93,6 +93,6 @@ class AdminService(
 
     companion object {
         // Keep in step with version in server/build.gradle.kts
-        const val SERVER_VERSION = "1.0.0"
+        const val SERVER_VERSION = "0.9.0"
     }
 }
