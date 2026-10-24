@@ -1,7 +1,8 @@
-# Builds every package (installers, APK, jars, server zips and images with and without the web client) and publishes a
-# GitHub release when a v* tag is pushed (git tag v0.8.0 && git push origin v0.8.0). Run it by hand (Actions > Release
-# > Run workflow) to build without publishing. It makes the same files as .gitea/workflows/release.yml, plus the DMG;
-# Gitea doesn't read this folder while .gitea/workflows exists. See docs/releasing.md
+# Builds every package (installers and tarballs, APK, jars, server zips and images with and without the web client)
+# and publishes a GitHub release when a v* tag is pushed (git tag v0.8.0 && git push origin v0.8.0). Run it by hand
+# (Actions > Release > Run workflow) to build without publishing. It makes the same files as
+# .gitea/workflows/release.yml, plus the DMG and, when asked, the unsigned iOS app; Gitea doesn't read this folder while
+# .gitea/workflows exists. See docs/releasing.md
 name: Release
 
 on:
@@ -23,6 +24,10 @@ on:
         default: false
       skip_mac:
         description: Skip the macOS DMG
+        type: boolean
+        default: false
+      skip_tarball:
+        description: Skip the Linux tarballs (the desktop app unpacked, beside each DEB)
         type: boolean
         default: false
       skip_desktop_jar:
@@ -92,7 +97,8 @@ jobs:
           echo "matrix={\"include\":[$(IFS=,; echo "${entries[*]}")]}" >> "$GITHUB_OUTPUT"
 
   # jpackage only builds installers for the system it runs on, so one runner per installer. The arm64 DEB is built
-  # natively here, where Gitea emulates it
+  # natively here, where Gitea emulates it. Beside each DEB goes a tarball of the same app (bin/TicketMan to start it)
+  # for systems without dpkg, skipped by skip_tarball or SKIP_TARBALL
   desktop:
     name: Desktop (${{ matrix.format }}, ${{ matrix.os }})
     needs: version
@@ -115,20 +121,17 @@ jobs:
         if: matrix.format == 'deb'
         run: command -v fakeroot >/dev/null || (sudo apt-get update && sudo apt-get install -y fakeroot dpkg-dev)
 
+      # The build names each file (TicketMan-Linux-<version>-x64.deb, TicketMan-macOS-<version>-arm64.dmg, see
+      # docs/releasing.md), so they're only collected
       - name: Package
-        run: ./gradlew :composeApp:${{ matrix.task }}
-
-      # DEBs are named by Debian's architecture (amd64, arm64) like Gitea's, the others by the runner's
-      - name: Name it
+        env:
+          SKIP_TARBALL: ${{ format('{0}', inputs.skip_tarball) == 'true' || vars.SKIP_TARBALL == 'true' }}
         run: |
+          tarball=$([ "${{ matrix.format }}" = deb ] && [ "$SKIP_TARBALL" != true ] && echo :composeApp:packageTarball || true)
+          ./gradlew :composeApp:${{ matrix.task }} $tarball
           mkdir -p dist
-          if [ "${{ matrix.format }}" = deb ]; then
-            arch=$(dpkg --print-architecture)
-          else
-            arch=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
-          fi
-          file=$(ls composeApp/build/compose/binaries/main/${{ matrix.format }}/*.${{ matrix.format }})
-          cp "$file" "dist/TicketMan-${{ needs.version.outputs.version }}-$arch.${{ matrix.format }}"
+          cp composeApp/build/compose/binaries/main/${{ matrix.format }}/TicketMan-*.${{ matrix.format }} dist/
+          if [ -n "$tarball" ]; then cp composeApp/build/compose/binaries/main/tar/TicketMan-*.tar.gz dist/; fi
 
       - uses: actions/upload-artifact@v4
         with:
@@ -153,10 +156,10 @@ jobs:
       - name: Package
         run: ./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms
 
-      - name: Name it
+      - name: Collect it
         run: |
           mkdir -p dist
-          cp composeApp/build/compose/jars/*.jar "dist/TicketMan-${{ needs.version.outputs.version }}.jar"
+          cp composeApp/build/compose/jars/TicketMan-Desktop-*.jar dist/
 
       - uses: actions/upload-artifact@v4
         with:
@@ -193,28 +196,27 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "TICKETMAN_KEYSTORE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      # The build names it TicketMan-Android-<version>.apk (-unsigned without a key)
       - name: Build
         env:
           TICKETMAN_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           TICKETMAN_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           TICKETMAN_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew :androidApp:assembleRelease
-
-      - name: Name it
         run: |
+          ./gradlew :androidApp:assembleRelease
           mkdir -p dist
-          apk=$(ls androidApp/build/outputs/apk/release/*.apk | head -n 1)
-          suffix=$([[ "$apk" == *unsigned* ]] && echo "-unsigned" || true)
-          cp "$apk" "dist/TicketMan-${{ needs.version.outputs.version }}$suffix.apk"
+          cp androidApp/build/outputs/apk/release/TicketMan-*.apk dist/
 
       - uses: actions/upload-artifact@v4
         with:
           name: android
           path: dist/
 
-  # The server is released twice: with the web client built in (TicketMan-server-<version>.zip and .jar, image tags
-  # <version> and latest) and without it (TicketMan-server-noweb-<version>.zip and .jar, tags <version>-noweb and
-  # latest-noweb), where / is a plain up check. Images are pushed to ghcr.io only for a tag
+  # The server is released twice: with the web client built in (TicketMan-Server-Web-<version>.zip and .jar, ghcr.io
+  # tags <version> and latest, Docker Hub <user>/ticketman) and without it (TicketMan-Server-<version>.zip and .jar,
+  # ghcr.io tags <version>-noweb and latest-noweb, Docker Hub <user>/ticketman-server with plain <version> and latest),
+  # where / is a plain up check. Images are pushed only for a tag: to ghcr.io always, and to Docker Hub when the
+  # DOCKERHUB_TOKEN secret (an access token with Read & Write) and the DOCKERHUB_USERNAME variable are set
   server:
     name: Server (${{ matrix.name }})
     needs: version
@@ -222,10 +224,13 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: with web client, web: true, file: TicketMan-server, tag: '' }
-          - { name: no web client, web: false, file: TicketMan-server-noweb, tag: '-noweb' }
+          - { name: with web client, web: true, files: 'TicketMan-Server-Web-*', ghcr: '', hub: ticketman }
+          - { name: no web client, web: false, files: 'TicketMan-Server-[0-9]*', ghcr: '-noweb', hub: ticketman-server }
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    env:
+      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       # A matrix entry can't be skipped with an if on the job, so each step checks this
       - id: skip
@@ -238,6 +243,10 @@ jobs:
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
           echo "web=$([ "${{ matrix.web }}" = true ] && echo -PwithWeb || true)" >> "$GITHUB_OUTPUT"
+          if [ -n "$DOCKERHUB_TOKEN" ] && [ -z "$DOCKERHUB_USERNAME" ]; then
+            echo "::error::DOCKERHUB_TOKEN is set but the DOCKERHUB_USERNAME variable isn't"
+            exit 1
+          fi
 
       - uses: actions/checkout@v4
         if: steps.skip.outputs.skip != 'true'
@@ -249,26 +258,24 @@ jobs:
       - uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
         if: steps.skip.outputs.skip != 'true'
 
+      # The build names the zip and jar, so they're only collected
       - name: Build
         if: steps.skip.outputs.skip != 'true'
-        run: ./gradlew :server:installDist :server:distZip ${{ steps.skip.outputs.web }}
-
-      - name: Name it
-        if: steps.skip.outputs.skip != 'true'
         run: |
+          ./gradlew :server:installDist :server:distZip ${{ steps.skip.outputs.web }}
           mkdir -p dist
-          cp server/build/distributions/server-*.zip "dist/${{ matrix.file }}-${{ needs.version.outputs.version }}.zip"
+          cp server/build/distributions/${{ matrix.files }}.zip dist/
 
       - name: Jar
         if: steps.skip.outputs.skip != 'true' && format('{0}', inputs.skip_server_jars) != 'true' && vars.SKIP_SERVER_JARS != 'true'
         run: |
           ./gradlew :server:buildFatJar ${{ steps.skip.outputs.web }}
-          cp server/build/libs/server-all.jar "dist/${{ matrix.file }}-${{ needs.version.outputs.version }}.jar"
+          cp server/build/libs/${{ matrix.files }}.jar dist/
 
       - uses: actions/upload-artifact@v4
         if: steps.skip.outputs.skip != 'true'
         with:
-          name: server${{ matrix.tag }}
+          name: server${{ matrix.ghcr }}
           path: dist/
 
       # The image copies the server built above (see server/Dockerfile)
@@ -282,15 +289,25 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/login-action@v3
+        if: steps.skip.outputs.skip != 'true' && startsWith(github.ref, 'refs/tags/') && env.DOCKERHUB_TOKEN != ''
+        with:
+          username: ${{ env.DOCKERHUB_USERNAME }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
       - name: Image tags
         id: image
         if: steps.skip.outputs.skip != 'true'
         run: |
-          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ticketman"
           version="${{ needs.version.outputs.version }}"
-          tags="$image:$version${{ matrix.tag }}"
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/ticketman"
+          tags="$image:$version${{ matrix.ghcr }}"
           # Only a plain x.y.z is latest, never a -rc
-          [[ "$version" != *-* ]] && tags="$tags,$image:latest${{ matrix.tag }}"
+          [[ "$version" != *-* ]] && tags="$tags,$image:latest${{ matrix.ghcr }}"
+          if [ -n "$DOCKERHUB_TOKEN" ]; then
+            hub="docker.io/${DOCKERHUB_USERNAME,,}/${{ matrix.hub }}"
+            tags="$tags,$hub:$version"
+            [[ "$version" != *-* ]] && tags="$tags,$hub:latest"
+          fi
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         if: steps.skip.outputs.skip != 'true'
@@ -339,7 +356,7 @@ jobs:
   release:
     name: Publish
     needs: [version, desktop, desktop-jar, android, server, ios]
-    # Publishes without whatever was skipped, but not when anything failed or was cancelled
+    # Publishes without whatever was skipped, but not when anything failed or was cancelled (iOS aside, see there)
     if: >-
       always() && startsWith(github.ref, 'refs/tags/') && needs.version.result == 'success'
       && (needs.desktop.result == 'success' || needs.desktop.result == 'skipped')
