@@ -32,6 +32,13 @@ val generateBuildInfo = tasks.register("generateBuildInfo") {
 
 kotlin.sourceSets.main { kotlin.srcDir(generateBuildInfo) }
 
+// Release file names: TicketMan-Server-Web-<version> with the web client built in (-PwithWeb), TicketMan-Server-<version>
+// without. The zip and jar run on any system with Java 21, so they carry no OS or architecture
+val releaseName = if (project.hasProperty("withWeb")) "TicketMan-Server-Web-$version" else "TicketMan-Server-$version"
+tasks.distZip { archiveFileName.set("$releaseName.zip") }
+tasks.distTar { archiveFileName.set("$releaseName.tar") }
+ktor { fatJar { archiveFileName.set("$releaseName.jar") } }
+
 dependencies {
     // Shared project stuff
     implementation(projects.shared)

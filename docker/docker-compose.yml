@@ -19,8 +19,8 @@ name: ticketman
 services:
   ticketman:
     build:
-      context: .
-      dockerfile: server/Dockerfile
+      context: ..
+      dockerfile: ../server/Dockerfile
     image: ticketman
     restart: unless-stopped
     environment:

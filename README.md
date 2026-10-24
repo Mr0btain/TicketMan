@@ -5,7 +5,7 @@ the counter, track the repair, take payment at pickup and keep customer, invento
 
 It's a Kotlin Multiplatform project: a Compose Multiplatform client with a Ktor server with an H2 database.
 
-There will most likely be breaking changes often so this is nowhere near production ready.
+There will most likely be breaking changes often so this is nowhere near production ready. But it does work!
 
 ![The counter screen showing a ticket, its invoice and the queue](docs/images/counter.png)
 
@@ -25,27 +25,21 @@ On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:P
 
 [Getting started](docs/getting-started.md) covers the other targets, tests and hot reload.
 
-## What works
-
-| Area | Status |
-|------|--------|
-| Customers, tickets, inventory and users, with notes and photos | Done |
-| Counter: check-in with signature and deposit, queue, pickup and payment, invoices, printed claim slips, receipts, device tags and daily reports | Done |
-| Kiosk mode: PIN login on approved stations, idle lock | Done |
-| Admin: overview, users and account requests, sessions, stations, audit log, low stock, backup and restore | Done |
-| Themes (Bench, Copper, Mono), fonts, light and dark, reduce transparency | Done |
-| Docker: Get server running in docker | Done |
-
+## Platforms
 
 | Platform | Status |
 |----------|--------|
 | Linux | Main target, Done |
-| Windows | Not Tested |
+| Windows | Done |
 | MacOs | Not Tested |
 | Web (Wasm) | Served by the server when built with `-PwithWeb`, Done |
 | Server | Done |
 | Android | Done |
 | iOS | Not Tested |
+
+## Caveats
+
+If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0
 
 ## Documentation
 

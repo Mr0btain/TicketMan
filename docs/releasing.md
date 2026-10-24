@@ -17,6 +17,15 @@ package is built from it:
 `API_VERSION` is separate: it only changes when older clients can't use the server any more (see
 [decisions](decisions.md)). The iOS app isn't built, so `iosApp/Configuration/Config.xcconfig` is updated by hand.
 
+## The icon
+
+[`scripts/AppIcon.java`](../scripts/AppIcon.java) draws the app icon (a blue ticket on graphite, the Bench theme's
+colors) and writes every copy of it: `composeApp/icons/` for the MSI, DMG and DEB (`iconFile` in
+`composeApp/build.gradle.kts`), `app_icon.png` in the client's resources for the desktop window and taskbar,
+`favicon.png` and `apple-touch-icon.png` for the web client, Android's launcher icons (adaptive vectors, and PNGs for
+Android 7) and the iOS app icon. To change it, edit the script and run `java scripts/AppIcon.java` from the
+repository root.
+
 ## Building by hand
 
 Each desktop installer has to be built on its own system, because jpackage can't make one for another OS:
@@ -25,14 +34,31 @@ Each desktop installer has to be built on its own system, because jpackage can't
 ./gradlew :composeApp:packageMsi        # Windows: composeApp/build/compose/binaries/main/msi/
 ./gradlew :composeApp:packageDmg        # macOS:   .../main/dmg/
 ./gradlew :composeApp:packageDeb        # Linux:   .../main/deb/ (needs dpkg-deb and fakeroot)
+./gradlew :composeApp:createDistributable  # the app unpacked: .../main/app/TicketMan/ (bin/TicketMan starts it)
+./gradlew :composeApp:packageTarball    # that packed: .../main/tar/
 ./gradlew :composeApp:packageDistributionForCurrentOS   # whichever of those fits this machine
 
 ./gradlew :androidApp:assembleRelease   # androidApp/build/outputs/apk/release/ (x86 only, see getting started)
-./gradlew :server:distZip -PwithWeb     # server/build/distributions/server-<version>.zip, web client included
-./gradlew :server:buildFatJar -PwithWeb # server/build/libs/server-all.jar, the same as one jar
+./gradlew :server:distZip -PwithWeb     # server/build/distributions/, web client included
+./gradlew :server:buildFatJar -PwithWeb # server/build/libs/, the same as one jar
 ./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms   # composeApp/build/compose/jars/, any desktop
 ./gradlew :server:installDist -PwithWeb && docker build -f server/Dockerfile -t ticketman .
 ```
+
+The build names each file for what it is, so the release workflows only collect them. The installers, tarball and a
+desktop jar without `-PallPlatforms` are for the system and architecture that built them (`x64` or `arm64`); the rest
+run anywhere:
+
+| Package | File |
+|---|---|
+| Installers and tarball | `TicketMan-<OS>-<version>-<arch>.<ext>`: `TicketMan-Windows-0.8.0-x64.msi`, `TicketMan-macOS-0.8.0-arm64.dmg`, `TicketMan-Linux-0.8.0-x64.deb`, `TicketMan-Linux-0.8.0-arm64.tar.gz` |
+| Desktop jar | `TicketMan-Desktop-<version>.jar` with `-PallPlatforms`, otherwise `TicketMan-<OS>-<version>-<arch>.jar` |
+| APK | `TicketMan-Android-<version>.apk` (`-unsigned` added without a keystore), a copy beside AGP's own `androidApp-release.apk` |
+| Server zip and jar | `TicketMan-Server-Web-<version>.zip` / `.jar` with `-PwithWeb`, `TicketMan-Server-<version>.zip` / `.jar` without |
+
+The version is the whole `ticketman.version`, a `-rc1` included. The installers' names are set by renaming what
+jpackage makes once it's done (`AbstractJPackageTask` in `composeApp/build.gradle.kts`), the rest through the tasks'
+`archiveFileName`.
 
 The installers bundle their own Java runtime, so the machines they go on don't need Java. The server zip does need
 Java 21: unzip it and run `bin/server` (or `bin\server.bat`). [Running a server](operations.md) covers the settings.
@@ -52,7 +78,7 @@ repo's):
 | `TICKETMAN_KEY_ALIAS` | `ticketman.keyAlias` |
 | `TICKETMAN_KEY_PASSWORD` | `ticketman.keyPassword` |
 
-Without one the APK comes out as `androidApp-release-unsigned.apk`, which Android won't install.
+Without one the APK comes out unsigned (`TicketMan-Android-<version>-unsigned.apk`), which Android won't install.
 
 ## Making a release
 
@@ -71,12 +97,11 @@ builds everything without publishing, which is a good way to try it before taggi
 
 | Workflow | Builds | Publishes to |
 |---|---|---|
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's, plus the DMG (macOS arm64): MSI, DEB (x64 and arm64, both built natively), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, desktop jar, server zip and jar, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB and tarball (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
-workflow in its own place. Each place also has its own copy of the tests ([`.gitea/workflows/ci.yml`](../.gitea/workflows/ci.yml)
-and [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)), so keep the two in step. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
+workflow in its own place. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
 a runner with Docker access. The MSI needs a Windows runner (below); there's no Mac one, so the DMG is GitHub only.
 
 The server zip, APK, web client and Docker image (built for both through QEMU) don't depend on the runner's
@@ -85,30 +110,31 @@ native graphics. GitHub builds the arm64 one on its `ubuntu-24.04-arm` runner, w
 On Gitea the runner is x86, so the arm64 DEB is built in an arm64 container emulated through QEMU
 ([`docker/deb.Dockerfile`](../docker/deb.Dockerfile)), which needs Docker access like the image step. Everything runs
 emulated, so it's several times slower than the other jobs, and a release waits for it unless it's skipped (below).
-The same Dockerfile builds a DEB by hand:
+Beside each DEB the Gitea workflow releases `TicketMan-Linux-<version>-<arch>.tar.gz`, the same app unpacked, for
+systems without dpkg: extract it anywhere and run `TicketMan/bin/TicketMan`. The same Dockerfile builds a DEB (and
+the tarball) by hand:
 
 ```bash
 docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
 ```
 
-Both workflows release the server twice, with the web client built in and without it (`/` is then a plain up
+The Gitea workflow releases the server twice, with the web client built in and without it (`/` is then a plain up
 check):
 
-| Server | Zip | Jar | Image tags |
-|---|---|---|---|
-| With the web client | `TicketMan-server-<version>.zip` | `TicketMan-server-<version>.jar` | `<version>`, `latest` |
-| Without it | `TicketMan-server-noweb-<version>.zip` | `TicketMan-server-noweb-<version>.jar` | `<version>-noweb`, `latest-noweb` |
+| Server | Zip | Jar | Gitea image tags | Docker Hub image |
+|---|---|---|---|---|
+| With the web client | `TicketMan-Server-Web-<version>.zip` | `TicketMan-Server-Web-<version>.jar` | `<version>`, `latest` | `<user>/ticketman:<version>`, `latest` |
+| Without it | `TicketMan-Server-<version>.zip` | `TicketMan-Server-<version>.jar` | `<version>-noweb`, `latest-noweb` | `<user>/ticketman-server:<version>`, `latest` |
 
-Any part can be left out, the same way in both. Each has a box to tick when running the workflow by hand, and a
-variable (Settings > Actions > Variables on Gitea, Settings > Secrets and variables > Actions > Variables on GitHub)
-that skips it for tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
+Any part can be left out. Each has a box to tick when running the workflow by hand, and a variable that skips it for
+tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
 
 | Leaves out | Input | Variable |
 |---|---|---|
 | The amd64 DEB and the APK | `skip_amd64` | `SKIP_AMD64` |
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
+| Only the Linux tarballs (the DEBs are still built) | `skip_tarball` | `SKIP_TARBALL` |
 | The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
-| The macOS DMG (GitHub only) | `skip_mac` | `SKIP_MAC` |
 | The desktop jar | `skip_desktop_jar` | `SKIP_DESKTOP_JAR` |
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
 | The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |
@@ -154,12 +180,17 @@ Actions > Secrets:
 | `ANDROID_KEYSTORE_PASSWORD` | The keystore's password |
 | `ANDROID_KEY_ALIAS` | `ticketman`, or the alias you used |
 | `ANDROID_KEY_PASSWORD` | The key's password (the same as the keystore's unless you set it apart) |
-| `REGISTRY_TOKEN` | Gitea only: a token with `write:package`, for the image. Without it the image is skipped |
+| `REGISTRY_TOKEN` | Gitea only: a token with `write:package`, for the image in Gitea's registry. Without it the image isn't pushed there |
+| `DOCKERHUB_TOKEN` | Gitea only: a Docker Hub access token with Read & Write, for the images on Docker Hub. Without it they're skipped |
 
 On Gitea, if the runner reaches Gitea by an internal name (the workflow sees a server URL like `http://gitea:3000`),
 also add a `REGISTRY` variable under Settings > Actions > Variables set to Gitea's public HTTPS host, like
 `git.example.com`. The host's Docker daemon pushes the image, and it can't resolve the internal name or push to a plain
 HTTP registry.
+
+For Docker Hub, also add a `DOCKERHUB_USERNAME` variable (like `mr0btain`) and create the two repositories there,
+`ticketman` (with the web client) and `ticketman-server` (without it). With neither `REGISTRY_TOKEN` nor
+`DOCKERHUB_TOKEN` set, no image is built.
 
 GitHub pushes the image with its own `GITHUB_TOKEN`. The first time it does, the package is private: make it public
 under the package's settings if anyone should pull it without logging in.

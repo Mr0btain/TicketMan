@@ -1,4 +1,6 @@
-# Builds the desktop DEB inside a container, so a runner can make one for another architecture through QEMU:
+# Builds the desktop DEB, and beside it a .tar.gz of the same app (--build-arg TARBALL=false leaves it out), inside a
+# container, so a runner can make them for another architecture through QEMU. The build names them for the system it
+# runs on (TicketMan-Linux-<version>-arm64.deb):
 #
 #   docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
 #
@@ -15,11 +17,16 @@ RUN apt-get update \
 WORKDIR /src
 COPY . .
 
-# The cache keeps Gradle and the dependencies between builds on the same Docker daemon
+ARG TARBALL=true
+
+# The cache keeps Gradle and the dependencies between builds on the same Docker daemon. The tarball is made here
+# rather than from the exported folder, so it keeps the files' permissions
 RUN --mount=type=cache,target=/root/.gradle \
-    ./gradlew --no-daemon :composeApp:packageDeb \
+    tarball=$([ "$TARBALL" = "true" ] && echo :composeApp:packageTarball || true) \
+    && ./gradlew --no-daemon :composeApp:packageDeb $tarball \
     && mkdir /out \
-    && cp composeApp/build/compose/binaries/main/deb/*.deb /out/
+    && cp composeApp/build/compose/binaries/main/deb/*.deb /out/ \
+    && if [ "$TARBALL" = "true" ]; then cp composeApp/build/compose/binaries/main/tar/*.tar.gz /out/; fi
 
 FROM scratch
 COPY --from=build /out /

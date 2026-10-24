@@ -7,11 +7,11 @@ page says where, and what happens on the server behind it.
 ## First start
 
 The usual setup is the server in Docker behind a reverse proxy that does HTTPS. The repo's
-[`docker-compose.yml`](../docker-compose.yml) runs it behind Caddy, which gets a public certificate by itself.
+[`../docker/docker-compose.yml`](../docker/docker-compose.yml) runs it behind Caddy, which gets a public certificate by itself.
 
 1. Point a domain (`tickets.myshop.com`) at the machine, with ports 80 and 443 reaching it from the internet so
    Caddy can get the certificate.
-2. Next to `docker-compose.yml`, make a `.env` file with `DOMAIN=tickets.myshop.com`, `TZ=` the shop's time zone
+2. Next to `../docker/docker-compose.yml`, make a `.env` file with `DOMAIN=tickets.myshop.com`, `TZ=` the shop's time zone
    (like `America/New_York`), and `ADMIN_PASSWORD=` if you want to choose the first password.
 3. Build the server and start it (see [The Docker image](#the-docker-image) for why the build is on the host):
 
@@ -63,13 +63,19 @@ build it with `-Pdevelopment`, which bakes development mode into the start scrip
 | Health check | `GET /api/ping` every 30 seconds, through bash since the image has no curl |
 
 Named volumes take the folder's owner from the image. A host folder mounted at `/data` or `/backups` has to be owned
-by uid 10001 first (`sudo chown 10001:10001 /mnt/usb/ticketman`), or the server can't write to it.
+by uid 10001 first (`sudo chown 10001:10001 /mnt/usb/ticketman`), or the server can't write to it. It stops on the
+first start with H2's `Log file error: "/data/server/database/database.trace.db"`, caused by
+`AccessDeniedException: /data/server`.
+
+On a NAS (Unraid, Synology, TrueNAS) the share's own permissions can win over `chown`. If the error stays, use a
+named volume, or run the container as the user that owns the share with `user: "<uid>:<gid>"` on the service
+(often `99:100` on Unraid). Nothing in the image depends on uid 10001.
 
 `docker stop` sends SIGTERM to Java, which finishes the requests in flight and then closes H2 cleanly (the log
 says `Database closed`). The compose file's `restart: unless-stopped` brings the server back after a crash, a reboot
 and the admin screen's restart (see [Restore](#restore)).
 
-In [`docker-compose.yml`](../docker-compose.yml) the server is only on `expose`, so nothing outside reaches it except
+In [`../docker/docker-compose.yml`](../docker/docker-compose.yml) the server is only on `expose`, so nothing outside reaches it except
 through Caddy. The two share a network with a fixed range (`172.30.80.0/24`, `SUBNET` changes it), and
 `TRUSTED_PROXIES` is set to exactly that range.
 

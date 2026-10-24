@@ -77,7 +77,7 @@ session, because that lost answer would look the same.
 
 ### HTTPS only in a reverse proxy
 
-**Chosen:** the server only speaks plain HTTP, and a reverse proxy in front (Caddy in `docker-compose.yml`, or
+**Chosen:** the server only speaks plain HTTP, and a reverse proxy in front (Caddy in `../docker/docker-compose.yml`, or
 nginx, Traefik) does all of HTTPS. The server's own HTTPS, with a certificate it made and devices pinned, was
 removed along with `PROXY`, `SSL_*`, `HTTP_MODE` and `TRUST_PROXY`, which now only get a startup warning. Client
 addresses come from `X-Forwarded-For` sent by a proxy in `TRUSTED_PROXIES`.

@@ -1,4 +1,5 @@
 import org.jetbrains.compose.desktop.application.dsl.TargetFormat
+import org.jetbrains.compose.desktop.application.tasks.AbstractJPackageTask
 import org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi
 import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 import org.jetbrains.kotlin.gradle.plugin.KotlinPlatformType
@@ -185,6 +186,23 @@ dependencies {
     androidRuntimeClasspath(libs.ui.tooling)
 }
 
+// Release file names say what they're for: TicketMan-<OS>-<version>-<arch>.<ext>, like TicketMan-Windows-0.8.0-x64.msi,
+// for the machine that builds them, since jpackage only packages for its own system
+val releaseVersion = providers.gradleProperty("ticketman.version").get()
+val hostOs = System.getProperty("os.name").let {
+    when {
+        it.startsWith("Windows") -> "Windows"
+        it.startsWith("Mac") -> "macOS"
+        else -> "Linux"
+    }
+}
+val hostArch = when (val arch = System.getProperty("os.arch")) {
+    "amd64", "x86_64" -> "x64"
+    "aarch64", "arm64" -> "arm64"
+    else -> arch
+}
+fun releaseName(extension: String) = "TicketMan-$hostOs-$releaseVersion-$hostArch.$extension"
+
 compose.desktop {
     application {
         mainClass = "org.mr0btain.ticketman.MainKt"
@@ -200,7 +218,9 @@ compose.desktop {
             modules("jdk.unsupported", "java.management")
             modules("jdk.unsupported.desktop")
 
+            // The icons come from scripts/AppIcon.java, which also makes the window, web and Android ones
             windows {
+                iconFile.set(project.file("icons/ticketman.ico"))
                 // Never change this: it's how a newer MSI knows to replace the installed one
                 upgradeUuid = "58a5706e-674f-40a1-bec1-861c46c444e9"
                 menu = true
@@ -208,12 +228,14 @@ compose.desktop {
                 dirChooser = true
             }
             macOS {
+                iconFile.set(project.file("icons/ticketman.icns"))
                 bundleID = "org.mr0btain.ticketman"
                 // macOS refuses a version starting with 0, so 0.x builds say 1.0.0 inside the app bundle. The DMG's
-                // file name still carries the real version (the release workflows rename it)
+                // file name still carries the real version (renamed below)
                 packageVersion = if (appVersion.startsWith("0.")) "1.0.0" else appVersion
             }
             linux {
+                iconFile.set(project.file("icons/ticketman.png"))
                 menuGroup = "Office"
             }
         }
@@ -230,4 +252,37 @@ compose.desktop {
             }
         }
     }
+}
+
+// jpackage names the installers after packageName and packageVersion (ticketman_0.8.0_amd64.deb), so they're renamed
+// once made. The macOS one gets the real version this way too, not the 1.0.0 inside its app bundle
+tasks.withType<AbstractJPackageTask>().configureEach {
+    val installerDir = destinationDir
+    doLast {
+        installerDir.get().asFile.listFiles { file -> file.extension in setOf("msi", "dmg", "deb", "pkg", "exe", "rpm") }
+            ?.filter { it.name != releaseName(it.extension) }
+            ?.forEach { file ->
+                val named = File(file.parentFile, releaseName(file.extension))
+                named.delete()
+                check(file.renameTo(named)) { "Couldn't rename ${file.name} to ${named.name}" }
+            }
+    }
+}
+
+// With -PallPlatforms the jar runs on any desktop system, so it carries no OS or architecture. Compose's uber jar
+// tasks are the plain org.gradle.jvm.tasks.Jar, not the Jar this script imports
+tasks.withType<org.gradle.jvm.tasks.Jar>().matching { it.name.endsWith("UberJarForCurrentOS") }.configureEach {
+    archiveFileName.set(
+        if (project.hasProperty("allPlatforms")) "TicketMan-Desktop-$releaseVersion.jar" else releaseName("jar")
+    )
+}
+
+// The app unpacked (bin/TicketMan starts it), for Linux systems without dpkg: compose/binaries/main/tar/
+tasks.register<Tar>("packageTarball") {
+    group = "compose desktop"
+    description = "Packs the app made by createDistributable into a .tar.gz"
+    from(tasks.named("createDistributable"))
+    compression = Compression.GZIP
+    archiveFileName.set(releaseName("tar.gz"))
+    destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main/tar"))
 }
