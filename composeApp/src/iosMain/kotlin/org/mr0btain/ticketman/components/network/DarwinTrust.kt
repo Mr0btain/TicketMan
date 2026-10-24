@@ -44,6 +44,7 @@ import platform.Foundation.NSURLSessionAuthChallengePerformDefaultHandling
 import platform.Foundation.NSURLSessionAuthChallengeUseCredential
 import platform.Foundation.create
 import platform.Foundation.credentialForTrust
+import platform.Foundation.serverTrust
 import platform.Security.SecCertificateCopyData
 import platform.Security.SecCertificateCopySubjectSummary
 import platform.Security.SecCertificateCreateWithData
@@ -85,7 +86,7 @@ internal class DarwinTrust(private val trust: ServerTrust) {
         completion: (NSURLSessionAuthChallengeDisposition, NSURLCredential?) -> Unit
     ) {
         val space = challenge.protectionSpace
-        val serverTrust = space.serverTrust
+        val serverTrust: SecTrustRef? = space.serverTrust
         if (space.authenticationMethod != NSURLAuthenticationMethodServerTrust || serverTrust == null) {
             completion(NSURLSessionAuthChallengePerformDefaultHandling, null)
             return
@@ -257,7 +258,7 @@ private fun subjectOf(certificate: SecCertificateRef): String =
 private fun base64Of(certificate: SecCertificateRef): String = Base64.Default.encode(derOf(certificate))
 
 /** A certificate from base64 DER, null if it isn't one */
-@OptIn(ExperimentalEncodingApi::class)
+@OptIn(ExperimentalForeignApi::class, ExperimentalEncodingApi::class)
 private fun certificateOf(base64: String): SecCertificateRef? = try {
     certificateFromDer(Base64.Default.decode(base64))
 } catch (ex: Exception) {
@@ -284,7 +285,7 @@ private suspend fun fetchProxyAuthority(host: String, port: Int): SecCertificate
     val anything = HttpClient(Darwin) {
         engine {
             handleChallenge { _, _, challenge, completionHandler ->
-                val serverTrust = challenge.protectionSpace.serverTrust
+                val serverTrust: SecTrustRef? = challenge.protectionSpace.serverTrust
                 if (serverTrust != null) {
                     completionHandler(NSURLSessionAuthChallengeUseCredential, NSURLCredential.credentialForTrust(serverTrust))
                 } else {
