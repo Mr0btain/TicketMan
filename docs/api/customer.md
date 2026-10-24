@@ -3,7 +3,8 @@
 `/api/data/customer`, from [`CustomerRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/CustomerRoute.kt).
 Anyone logged in can look; Normal access changes. The client's `CustomerRemoteRepository` calls these, through the
 shared paths in `RemoteRepository` (see [Entity layers](../architecture/entity-layers.md)). A customer's notes are on
-the [Notes](notes.md#customers) page.
+the [Notes](notes.md#customers) page. `notifyEmail` and `notifySms` say whether the customer agreed to automatic
+messages about their repairs on each channel, off unless set ([Messages API](notify.md)).
 
 ## Reading
 

@@ -59,6 +59,8 @@ class AdminHandler(
     /** Stations and Sessions tabs */
     val devices = AdminDevices(remoteHandler, support, reloadOverview = { loadOverview() })
 
+    val messages = AdminMessages(remoteHandler, support)
+
     /** Server tab */
     val server = AdminServer(remoteHandler, support, onShopChanged, onSeeded = {
         onUsersChanged(null)
@@ -112,6 +114,11 @@ class AdminHandler(
                     AdminTab.STATIONS -> devices.reloadStations()
                     AdminTab.LOW_STOCK -> loadLowStock()
                     AdminTab.SERVER -> server.reload()
+                    AdminTab.MESSAGES -> {
+                        messages.reload()
+                        // For the statuses that can send a message
+                        server.reloadShopProfile()
+                    }
                     AdminTab.AUDIT -> loadAudit(reset = true)
                 }
             }
@@ -133,6 +140,7 @@ class AdminHandler(
                 AdminTab.STATIONS -> devices.reloadStations()
                 AdminTab.LOW_STOCK -> loadLowStock()
                 AdminTab.SERVER -> server.reloadStatus()
+                AdminTab.MESSAGES -> messages.reloadOutbox()
                 AdminTab.USERS, AdminTab.INVOICES, AdminTab.AUDIT -> Unit
             }
         }

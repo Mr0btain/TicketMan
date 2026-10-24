@@ -23,6 +23,8 @@ import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.Housekeeping
 import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
+import org.mr0btain.ticketman.components.service.EstimateService
+import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
@@ -157,13 +159,40 @@ fun Application.module() {
             }
         )
 
-        configureRouting(
-            userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
-            restoreService, database, loginLimiter
+        val notificationService = NotificationService(
+            database = database.notifyDatabase,
+            tickets = database.ticketDatabase,
+            customers = database.customerDatabase,
+            invoices = database.invoiceDatabase,
+            shop = database.shopDatabase,
+            estimates = database.estimateDatabase,
+            auditLog = database.auditLogDatabase
+        )
+        val estimateService = EstimateService(
+            estimates = database.estimateDatabase,
+            tickets = database.ticketDatabase,
+            invoices = invoiceService,
+            shop = database.shopDatabase,
+            notifications = notificationService,
+            auditLog = database.auditLogDatabase
         )
 
+        configureRouting(
+            userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
+            restoreService, notificationService, estimateService, database, loginLimiter
+        )
+
+        // Sends customer messages as they're queued, and tries again the ones that didn't go
+        launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(NotificationService.SEND_INTERVAL)
+                notificationService.sendDue()
+            }
+        }
+
         // Clears out photos deleted or never saved a day ago, backups whose link has run out, sessions that have
-        // expired, old audit entries and old restore leftovers, and makes the daily backup. Stops with the application
+        // expired, old audit entries and old restore leftovers, makes the daily backup and queues pickup reminders. Stops
+        // with the application
         launch(Dispatchers.IO) {
             while (isActive) {
                 imageService.sweep()
@@ -172,6 +201,7 @@ fun Application.module() {
                 housekeeping.auditCutoff()?.let { database.auditLogDatabase.removeOlderThan(it) }
                 restoreService.sweepLeftovers(housekeeping.restoreLeftoverAge)
                 backupService.runSchedule()
+                notificationService.queueReminders()
                 delay(ImageService.SWEEP_INTERVAL)
             }
         }

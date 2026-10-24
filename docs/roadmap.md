@@ -32,7 +32,7 @@ and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
 Built as above ([Status page API](api/status.md), [Running a server](operations.md#the-customer-status-page)). Links
 stay working after pickup until staff replace them; the counter search takes a scanned status link too.
 
-## Phase 2: Talking to customers
+## Phase 2: Talking to customers (done)
 
 - **Notifications** [1]. Email over SMTP and SMS through a provider interface (Twilio first). An outbox table sent
   and retried in the background, templates the shop edits, the status link in every message, opt in on the
@@ -41,6 +41,12 @@ stay working after pickup until staff replace them; the counter search takes a s
 - **Estimate approval** [2]. Quote lines on the open invoice, approved or declined on the status page (with a
   signature) or recorded by staff, keeping the amount, time, method and who. "Awaiting approval" sends the estimate
   out; approving moves the ticket on.
+
+Built as above ([Messages API](api/notify.md), [Estimates API](api/estimate.md),
+[Running a server](operations.md#messages-to-customers)), with two changes. Estimates are their own records whose
+lines go onto the invoice when approved, rather than unapproved lines sitting on it, so invoice totals and pickup
+never see work nobody agreed to. The status page signature is the customer's typed name, since the page has no
+scripts to draw one with. Which statuses an estimate moves the ticket to is the shop's choice in its profile.
 
 ## Phase 3: Counter money
 
@@ -122,7 +128,7 @@ Not tied to the numbered phases: done whenever work moves to a macOS machine.
 
 - Phase 1 (settled): the server is reached from the internet through the proxy, which lets outside addresses
   reach only `/status`. Nothing is pushed elsewhere.
-- Phase 2: which SMS provider, and will shops bring their own SMTP?
+- Phase 2 (settled): Twilio for texts behind an `SmsSender` interface, and shops bring their own SMTP server.
 - Phase 7: which payment processor, and is "more than one location" one server for several shops or one server
   per shop with reporting across them?
 - iOS: is it shared by sideloading, or is a paid Apple Developer account worth it for TestFlight and the App Store?

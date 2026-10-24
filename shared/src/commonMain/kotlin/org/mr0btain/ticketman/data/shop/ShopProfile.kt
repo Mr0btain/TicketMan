@@ -3,12 +3,16 @@ package org.mr0btain.ticketman.data.shop
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.StatusChoice
 
 /**
  * Shop details used on invoices and anything else customer facing
  * @param publicUrl Where customers reach this server from outside the shop, like `https://repairs.example.com`,
  * used for status links. Blank until the shop sets it
  * @param statuses The shop's own ticket statuses, retired ones included (see [CustomStatus])
+ * @param estimateSentStatus Where a ticket goes when an estimate is sent, like "Awaiting approval". Null leaves it
+ * @param estimateApprovedStatus Where it goes when the customer approves, null leaves it
+ * @param estimateDeclinedStatus Where it goes when they decline, null leaves it
  */
 @Serializable
 data class ShopProfile(
@@ -33,7 +37,10 @@ data class ShopProfile(
     /** Per hour, for time logged on a ticket's work log. 0 until it's set */
     val laborRateCents: Long = 0,
     val publicUrl: String = "",
-    val statuses: List<CustomStatus> = emptyList()
+    val statuses: List<CustomStatus> = emptyList(),
+    val estimateSentStatus: StatusChoice? = null,
+    val estimateApprovedStatus: StatusChoice? = null,
+    val estimateDeclinedStatus: StatusChoice? = null
 ) {
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90

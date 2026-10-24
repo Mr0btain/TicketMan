@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.CustomStatusRules
+import org.mr0btain.ticketman.data.ticket.selectable
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
@@ -62,6 +63,15 @@ fun Route.shopRoute(
                 call.respond(HttpStatusCode.BadRequest, problem)
                 return@post
             }
+
+            // The statuses estimates move tickets to have to be ones staff could pick
+            val pickable = statuses.selectable()
+            listOfNotNull(profile.estimateSentStatus, profile.estimateApprovedStatus, profile.estimateDeclinedStatus)
+                .firstOrNull { it !in pickable }
+                ?.let {
+                    call.respond(HttpStatusCode.BadRequest, "An estimate can only move a ticket to a status staff can pick")
+                    return@post
+                }
 
             val saved = profile.copy(currencySymbol = symbol, publicUrl = profile.publicUrl.trim().trimEnd('/'), statuses = statuses)
             if (database.update(saved)) {

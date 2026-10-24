@@ -186,6 +186,47 @@ class InvoiceService(
     /** The ticket's invoice, without making one */
     fun invoiceFor(ticketIdentifier: Uuid): Invoice? = invoices.getByTicket(ticketIdentifier)
 
+    // ------------------------------------------ Estimates ------------------------------------------
+
+    /** What's wrong with lines for an invoice or an estimate, or null */
+    fun linesProblem(charges: List<Charge>): String? =
+        if (charges.isEmpty()) "Add at least one line" else chargesProblem(charges)
+
+    /**
+     * Puts an approved estimate's lines on the ticket's open invoice, made then if it has none. [alongside] runs in
+     * the same transaction, first: when it returns false (the estimate was answered meanwhile) nothing is saved
+     */
+    @OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+    fun addApprovedLines(ticketIdentifier: Uuid, lines: List<Charge>, label: String, actor: Uuid?, alongside: () -> Boolean): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
+        val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
+        if (ticket.status.status == TicketStatusType.PICKED_UP) return AccountResult.Conflict("Ticket ${ticket.label} was already picked up")
+
+        // Fresh ids, so lines copied from the invoice into an estimate don't clash with themselves
+        val charges = lines.map { it.copy(identifier = Uuid.generateV7()) }
+        chargesProblem(charges)?.let { return AccountResult.Invalid(it) }
+
+        val invoice = when (val result = forTicket(ticketIdentifier, actor)) {
+            is AccountResult.Done -> result.value
+            else -> return AccountResult.Invalid("Couldn't find or make the invoice")
+        }
+        if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}, the estimate can't be added to it")
+
+        val saved = try {
+            transaction {
+                if (!alongside()) throw AlreadyAnswered()
+                invoices.setCharges(invoice.identifier, invoice.charges + charges, invoice.discountCents, invoice.taxRateBasisPoints)
+                    ?: throw IllegalStateException("Invoice not saved")
+            }
+        } catch (_: AlreadyAnswered) {
+            return AccountResult.Conflict("That estimate was already answered")
+        }
+
+        auditLog.log(actor, AuditAction.UPDATE, "invoice", invoice.identifier.toString(), "$label added to ${invoice.label}, total ${money(saved.totalCents)}")
+        return AccountResult.Done(saved)
+    }
+
+    private class AlreadyAnswered : Exception()
+
     // ------------------------------------------ Work log ------------------------------------------
 
     /**

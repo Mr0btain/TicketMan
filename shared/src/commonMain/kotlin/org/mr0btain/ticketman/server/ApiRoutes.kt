@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 7
+const val API_VERSION = 8
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -27,6 +27,9 @@ object ApiRoutes {
     const val CUSTOMER = "/api/data/customer"
     const val TICKET = "/api/data/ticket"
     const val INVENTORY = "/api/data/inventory"
+
+    const val NOTIFY = "/api/notify"
+    const val ESTIMATE = "/api/estimate"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -194,9 +197,40 @@ object InvoicePaths {
     const val EXPORT = "/export"
 }
 
+object NotifyPaths {
+    /** Admin only: `GET` the settings without passwords, `POST` to save them */
+    const val SETTINGS = "/settings"
+
+    /** Admin only: sends a `TestMessageRequest` now */
+    const val TEST = "/test"
+
+    /** Admin only: every message, newest first, `?offset=&limit=` */
+    const val OUTBOX = "/outbox"
+    const val RETRY = "/outbox/{identifier}/retry"
+    const val CANCEL = "/outbox/{identifier}/cancel"
+
+    /** The messages sent about a ticket, newest first */
+    const val TICKET = "/ticket/{identifier}"
+
+    /** Body `TicketMessageRequest`: sends one to the ticket's customer now */
+    const val TICKET_SEND = "/ticket/{identifier}/send"
+}
+
+object EstimatePaths {
+    /** `GET` the ticket's estimates, newest first. `POST` an `EstimateRequest` to send a new one */
+    const val TICKET = "/ticket/{ticketIdentifier}"
+
+    /** Body `EstimateDecisionRequest`: what the customer said, written down by staff */
+    const val DECIDE = "/{identifier}/decide"
+    const val WITHDRAW = "/{identifier}/withdraw"
+}
+
 /** Under [ApiRoutes.STATUS], whose own path is the lookup form (`GET`) and its answer (`POST`) */
 object StatusPaths {
     const val PAGE = "/{token}"
+
+    /** The customer approving or declining the waiting estimate: form fields `decision` and `name` */
+    const val ESTIMATE = "/{token}/estimate"
 
     /** A photo from an update the customer can see, `thumb` or `display` */
     const val PHOTO = "/{token}/photo/{identifier}/{variant}"

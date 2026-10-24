@@ -49,23 +49,6 @@ import kotlin.uuid.Uuid
 /** Narrower than this, invoice lines take two rows */
 private val INVOICE_MIN_WIDTH = 560.dp
 
-/** A line being edited. Quantity stays text so a half typed number like "1." isn't thrown away */
-private class ChargeDraft(charge: Charge) {
-    val identifier: Uuid = charge.identifier
-    val type: ChargeType = charge.type
-    val inventoryIdentifier: Uuid? = charge.inventoryIdentifier
-
-    var description by mutableStateOf(charge.description)
-    var quantity by mutableStateOf(formatQuantity(charge.quantity))
-    var priceCents by mutableLongStateOf(charge.unitPriceCents)
-    var taxable by mutableStateOf(charge.taxable)
-
-    /** Null while the quantity isn't a number yet */
-    fun toCharge(): Charge? {
-        val amount = quantity.toDoubleOrNull()?.takeIf { it > 0 } ?: return null
-        return Charge(identifier, type, description.trim(), amount, priceCents, inventoryIdentifier, taxable)
-    }
-}
 
 /**
  * Builds the invoice, takes payment and hands the ticket back
@@ -144,35 +127,7 @@ fun PickupScreen(
                     subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else if (drafts.size == 1) "1 line" else "${drafts.size} lines",
                     icon = Res.drawable.file_text
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                        drafts.forEach { draft -> ChargeRow(draft, compact = compact, onRemove = { drafts.remove(draft) }) }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
-                        TmButton(
-                            text = "Add labor",
-                            variant = TmButtonVariant.SECONDARY,
-                            leadingIcon = Res.drawable.plus,
-                            onClick = {
-                                drafts.add(ChargeDraft(Charge(type = ChargeType.LABOR, description = "Labor", unitPriceCents = ticket.estimateCents ?: 0)))
-                            }
-                        )
-
-                        TmButton(
-                            text = "Add other",
-                            variant = TmButtonVariant.SECONDARY,
-                            leadingIcon = Res.drawable.plus,
-                            onClick = { drafts.add(ChargeDraft(Charge(type = ChargeType.OTHER, description = ""))) }
-                        )
-                    }
-
-                    PartPicker(onSearch = onSearchParts) { part ->
-                        drafts.add(
-                            ChargeDraft(
-                                Charge(type = ChargeType.PART, description = part.name, unitPriceCents = part.priceCents, inventoryIdentifier = part.identifier)
-                            )
-                        )
-                    }
+                    ChargeLines(drafts = drafts, compact = compact, laborCents = ticket.estimateCents ?: 0, onSearchParts = onSearchParts)
 
                     TmMoneyField(
                         modifier = Modifier.width(200.dp),
@@ -318,135 +273,6 @@ private fun PaymentRow(amountCents: Long, method: PaymentMethod, detail: String,
     )
 }
 
-/**
- * One invoice line to edit
- * @param compact Puts the numbers on a second row under the description, for narrow windows
- */
-@Composable
-private fun ChargeRow(draft: ChargeDraft, compact: Boolean, onRemove: () -> Unit) {
-    val spacing = TmTheme.spacing
-
-    if (compact) {
-        Column(verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ChargeTypeBadge(draft)
-                ChargeDescription(draft, Modifier.weight(1f))
-                RemoveCharge(onRemove)
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ChargeNumbers(draft, Modifier.weight(1f))
-            }
-        }
-        return
-    }
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(spacing.sm),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        ChargeTypeBadge(draft)
-        ChargeDescription(draft, Modifier.weight(1f))
-        ChargeNumbers(draft)
-        RemoveCharge(onRemove)
-    }
-}
-
-@Composable
-private fun ChargeTypeBadge(draft: ChargeDraft) {
-    TmBadge(modifier = Modifier.width(64.dp), text = formatEnumName(draft.type.name), tone = TmTheme.colors.neutral, dot = false)
-}
-
-@Composable
-private fun ChargeDescription(draft: ChargeDraft, modifier: Modifier) {
-    TmTextField(
-        modifier = modifier,
-        value = draft.description,
-        onValueChange = { draft.description = it },
-        placeholder = "Description",
-        // Part names come from inventory
-        readOnly = draft.type == ChargeType.PART
-    )
-}
-
-/**
- * Quantity, price, taxable and the line's total
- * @param totalModifier Lets the total take the spare room on a row of its own
- */
-@Composable
-private fun RowScope.ChargeNumbers(draft: ChargeDraft, totalModifier: Modifier = Modifier.width(88.dp)) {
-    val charge = draft.toCharge()
-
-    TmTextField(
-        modifier = Modifier.width(80.dp),
-        value = draft.quantity,
-        onValueChange = { draft.quantity = it },
-        placeholder = if (draft.type == ChargeType.LABOR) "Hours" else "Qty",
-        textStyle = TmTheme.typography.numeric,
-        error = if (draft.quantity.toDoubleOrNull()?.let { it > 0 } == true) null else ""
-    )
-
-    TmMoneyField(
-        modifier = Modifier.width(120.dp),
-        cents = draft.priceCents,
-        onCentsChange = { draft.priceCents = it }
-    )
-
-    TmCheckbox(checked = draft.taxable, onCheckedChange = { draft.taxable = it }, label = "Tax")
-
-    Box(totalModifier, contentAlignment = Alignment.CenterEnd) {
-        if (charge != null) TmMoneyText(charge.totalCents) else Text("", style = TmTheme.typography.numeric)
-    }
-}
-
-@Composable
-private fun RemoveCharge(onRemove: () -> Unit) {
-    TmIconButton(icon = Res.drawable.x, contentDescription = "Remove line", onClick = onRemove, size = TmControlSize.SMALL)
-}
-
-/** Searches inventory and adds the picked part as a line */
-@Composable
-private fun PartPicker(onSearch: suspend (String) -> List<Inventory>, onPick: (Inventory) -> Unit) {
-    var query by remember { mutableStateOf("") }
-    var matches by remember { mutableStateOf<List<Inventory>>(emptyList()) }
-
-    LaunchedEffect(query) {
-        delay(300)
-        matches = onSearch(query)
-    }
-
-    TmSearchField(
-        modifier = Modifier.fillMaxWidth(),
-        query = query,
-        onQueryChange = { query = it },
-        placeholder = "Add a part from inventory"
-    )
-
-    Column {
-        matches.forEach { part ->
-            TmListRow(
-                title = part.name,
-                icon = Res.drawable.package_icon,
-                subtitle = stockText(part.stock),
-                trailing = { TmMoneyText(part.priceCents) },
-                onClick = {
-                    onPick(part)
-                    query = ""
-                    matches = emptyList()
-                }
-            )
-        }
-    }
-}
 
 /** How many of a part are left, in words */
 fun stockText(stock: Int): String = when {

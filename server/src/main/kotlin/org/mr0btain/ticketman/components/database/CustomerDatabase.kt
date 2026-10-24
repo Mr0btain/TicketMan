@@ -139,6 +139,8 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
             address = data.address
             email = data.email.lowercase()
             phone = data.phone
+            notifyEmail = data.notifyEmail
+            notifySms = data.notifySms
         }
     }
 
@@ -152,6 +154,8 @@ open class CustomerDatabase() : Database<Customer>("CustomerDatabase") {
                 address = data.address
                 email = data.email.lowercase()
                 phone = data.phone
+                notifyEmail = data.notifyEmail
+                notifySms = data.notifySms
             }
 
             true

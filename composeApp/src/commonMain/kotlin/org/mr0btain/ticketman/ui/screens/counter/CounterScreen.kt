@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.StatusLink
 import androidx.compose.foundation.layout.*
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -154,6 +155,15 @@ fun CounterScreen(
                         onBack = { counter.goHome() },
                         statusLink = StatusLink.url(shop.publicUrl, detail.ticket),
                         onReplaceStatusLink = { counter.replaceStatusLink() },
+                        estimates = EstimateActions(
+                            laborCents = shop.laborRateCents,
+                            taxRateBasisPoints = Money.percentToBasisPoints(shop.taxRate) ?: 0,
+                            onSearchParts = { counter.pickup.searchParts(it) },
+                            onSend = { lines, note, notify, onSent -> counter.estimates.send(detail.ticket.identifier, lines, note, notify, onSent) },
+                            onAnswer = { estimate, approved, method, note -> counter.estimates.decide(estimate, approved, method, note) },
+                            onWithdraw = { counter.estimates.withdraw(it) }
+                        ),
+                        onSendStatusLink = StatusLink.url(shop.publicUrl, detail.ticket)?.let { { counter.estimates.message(detail.ticket.identifier) } },
                         printAction = {
                             Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                                 PrintButton(

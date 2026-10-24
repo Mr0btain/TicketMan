@@ -28,6 +28,7 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
+import org.mr0btain.ticketman.ui.kit.inputs.TmMessageConsent
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
@@ -119,6 +120,14 @@ fun CustomerDialog(
         TmFieldPair(
             { TmTextField(modifier = it, value = seed.phone, onValueChange = { v -> seed.changePhone(v) }, label = "Phone") },
             { TmTextField(modifier = it, value = seed.email, onValueChange = { v -> seed.changeEmail(v) }, label = "Email") }
+        )
+        TmMessageConsent(
+            email = seed.notifyEmail,
+            sms = seed.notifySms,
+            onEmailChange = { seed.changeNotifyEmail(it) },
+            onSmsChange = { seed.changeNotifySms(it) },
+            hasEmail = seed.email.isNotBlank(),
+            hasPhone = seed.phone.isNotBlank()
         )
 
         TmSectionLabel("Address")

@@ -72,6 +72,38 @@ fun Route.statusRoute(
         }
     }
 
+    // The customer's answer to the waiting estimate, back to their page when it's saved
+    post(StatusPaths.ESTIMATE) {
+        val token = call.parameters["token"].orEmpty()
+        val form = call.receiveParameters()
+        val approve = when (form["decision"]) {
+            "approve" -> true
+            "decline" -> false
+            else -> return@post call.respond(HttpStatusCode.BadRequest)
+        }
+        val shop = shopDatabase.get()
+
+        when (val answer = service.answerEstimate(token, approve, form["name"].orEmpty().take(MAX_FIELD * 4), call.request.origin.remoteHost)) {
+            StatusService.Answer.Saved -> {
+                call.response.header(HttpHeaders.Location, "../${token}")
+                call.response.header(HttpHeaders.CacheControl, "no-store")
+                call.respond(HttpStatusCode.SeeOther)
+            }
+
+            is StatusService.Answer.Problem -> call.respondStatusPage(HttpStatusCode.Conflict, StatusPage.ticket(answer.view))
+
+            StatusService.Answer.NotFound -> call.respondStatusPage(
+                HttpStatusCode.NotFound,
+                StatusPage.message(shop, "That link doesn't work", "It may have been replaced by a newer one. Call us to answer the estimate.", "../../status")
+            )
+
+            StatusService.Answer.Limited -> call.respondStatusPage(
+                HttpStatusCode.TooManyRequests,
+                StatusPage.message(shop, "Too many tries", "Wait a while and try again.", "../../status")
+            )
+        }
+    }
+
     get(StatusPaths.PHOTO) {
         val identifier = call.uuidParameter("identifier")
         val variant = call.parameters["variant"]?.let { ImageVariant.fromPath(it) }

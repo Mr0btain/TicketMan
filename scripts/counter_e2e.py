@@ -10,6 +10,9 @@ then:
 Or through a reverse proxy (scripts/dev_proxy.sh), whose certificate it can't check:
     python3 scripts/counter_e2e.py https://localhost:8444 --insecure
 
+Customer emails go to a small mail catcher the script runs on a free port, which the server has to reach at
+--mail-host (127.0.0.1 by default). --no-mail skips the emails, for a server that can't reach this machine (Docker).
+
 The last steps send a big photo, download a backup and upload it to restore, since those are what proxies break.
 With --restart, against a server started with RESTART_ON_EXIT=true and something to start it again (the Docker
 image, scripts/docker_smoke.sh), the restore isn't cancelled: the server restarts to apply it and the data is checked.
@@ -18,8 +21,11 @@ import argparse
 import hashlib
 import json
 import os
+import socket
+import socketserver
 import ssl
 import struct
+import threading
 import time
 import urllib.parse
 import urllib.request
@@ -30,6 +36,8 @@ parser = argparse.ArgumentParser(description="Walk check-in to pickup against a 
 parser.add_argument("base", nargs="?", default="http://localhost:8098", help="the server's (or proxy's) address")
 parser.add_argument("--insecure", action="store_true", help="don't check the HTTPS certificate")
 parser.add_argument("--restart", action="store_true", help="finish the restore by restarting the server from the admin route")
+parser.add_argument("--mail-host", default="127.0.0.1", help="where the server reaches this script's mail catcher")
+parser.add_argument("--no-mail", action="store_true", help="don't check customer emails")
 args = parser.parse_args()
 
 BASE = args.base.rstrip("/")
@@ -86,6 +94,53 @@ def page(path, form=None, forwarded_for=None):
         return error.code, error.read().decode(errors="replace"), error.headers
 
 
+class MailCatcher(socketserver.ThreadingTCPServer):
+    """Just enough SMTP to take messages, kept in .messages as their raw text"""
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def __init__(self):
+        super().__init__(("0.0.0.0", 0), MailHandler)
+        self.messages = []
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def wait_for(self, text, seconds=40):
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            found = [m for m in self.messages if text in m]
+            if found:
+                return found[0]
+            time.sleep(0.5)
+        raise SystemExit(f"FAIL no email with {text!r} in {seconds}s, got {len(self.messages)}")
+
+
+class MailHandler(socketserver.StreamRequestHandler):
+    def handle(self):
+        def reply(line):
+            self.wfile.write((line + "\r\n").encode())
+        reply("220 e2e")
+        data = None
+        for raw in self.rfile:
+            line = raw.decode(errors="replace").rstrip("\r\n")
+            if data is not None:
+                if line == ".":
+                    self.server.messages.append("\n".join(data))
+                    data = None
+                    reply("250 queued")
+                else:
+                    data.append(line)
+            elif line.upper().startswith("EHLO") or line.upper().startswith("HELO"):
+                reply("250 e2e")
+            elif line.upper() == "DATA":
+                data = []
+                reply("354 go on")
+            elif line.upper() == "QUIT":
+                reply("221 bye")
+                return
+            else:
+                reply("250 ok")
+
+
 def check(condition, message):
     if not condition:
         raise SystemExit("FAIL " + message)
@@ -138,6 +193,15 @@ call("POST", "/api/shop/update", {
 call("POST", "/api/data/inventory/add", {"identifier": (screen := uid()), "name": "iPhone 14 Screen", "stock": 5, "priceCents": 12000, "costCents": 6000}, admin, expect=201)
 step("Shop profile (8.25% tax, terms, letter paper) and a screen in stock (5 at $120)")
 
+mail = None if args.no_mail else MailCatcher()
+if mail:
+    call("POST", "/api/notify/settings", {
+        "emailEnabled": True,
+        "smtp": {"host": args.mail_host, "port": mail.server_address[1], "security": "NONE", "fromAddress": "shop@fixit.test", "fromName": "Fix It Shop"},
+        "events": ["READY_FOR_PICKUP", "ESTIMATE_READY"]
+    }, admin, expect=200)
+    step(f"Customer emails on, through the script's mail catcher at {args.mail_host}:{mail.server_address[1]}")
+
 # ------------------------------------------ New employee asks for an account ------------------------------------------
 call("POST", "/api/auth/request-account", {"username": "newtech", "password": "newtech_pass", "name": "Nina Tech"}, expect=202)
 _, pending_login = call("POST", "/api/auth", {"username": "newtech", "password": "newtech_pass"}, expect=202)
@@ -182,7 +246,7 @@ pin = pin_auth["accessToken"]
 step("Kiosk lists who can PIN in; the tech PINs in")
 
 # ------------------------------------------ Check in at the counter ------------------------------------------
-call("POST", "/api/data/customer/add", {"identifier": (jane := uid()), "name": "Jane Doe", "phone": "(555) 123-4567"}, pin, expect=201)
+call("POST", "/api/data/customer/add", {"identifier": (jane := uid()), "name": "Jane Doe", "phone": "(555) 123-4567", "email": "jane@home.test", "notifyEmail": True}, pin, expect=201)
 signature = {"strokes": [[{"x": 0.1, "y": 0.5}, {"x": 0.5, "y": 0.3}, {"x": 0.9, "y": 0.6}]], "aspectRatio": 3.0, "signedName": "Jane Doe"}
 ticket_one = {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "iPhone 14", "serial": "SN123"}, "problem": "Cracked screen",
               "accessories": "Case", "estimateCents": 15000, "priority": {"priority": "NORMAL", "time": 0}}
@@ -228,12 +292,39 @@ status_token = ready_ticket["statusToken"]
 status, html, headers = page(f"/status/{status_token}")
 check(status == 200 and headers.get("Content-Type", "").startswith("text/html"), f"status page answered {status}")
 check(all(text in html for text in (label, "Apple iPhone 14", "Ready for pickup", "Screen fitted, ready for you", "Hi Jane.")), "status page is missing something")
-check(not any(text in html for text in ("Passcode", "123-4567", "SN123", "newtech")), "status page shows something internal")
+check(not any(text in html for text in ("Passcode", "123-4567", "jane@home.test", "SN123", "newtech")), "status page shows something internal")
 status, _, headers = page("/status", {"number": label, "phone": "4567"})
 check(status == 303 and headers["Location"] == f"status/{status_token}", f"lookup answered {status} {headers.get('Location')}")
 status, _, _ = page("/status", {"number": label, "phone": "0000"})
 check(status == 404, f"wrong phone digits answered {status}")
 step(f"Jane's status page shows it ready with the shared note only; the lookup form finds it by {label} and 4567, not 0000")
+
+if mail:
+    ready_mail = mail.wait_for("Subject: Your Apple iPhone 14 is ready")
+    check("To: jane@home.test" in ready_mail and label in ready_mail, "ready email is missing something")
+    _, sent = call("GET", f"/api/notify/ticket/{ticket_one['identifier']}", token=pin, expect=200)
+    check([m["status"] for m in sent] == ["SENT"], f"messages {sent}")
+    step("Jane is emailed that it's ready, and the ticket shows the message as sent")
+
+# ------------------------------------------ An estimate, approved on the status page ------------------------------------------
+call("POST", "/api/data/ticket/add", {"identifier": (ticket_two := uid()), "device": {"manufacturer": "Apple", "model": "iPad Air"}, "problem": "Won't charge"}, pin, expect=201)
+call("POST", f"/api/data/ticket/set/customer/{ticket_two}", jane, pin, expect=202)
+_, estimate = call("POST", f"/api/estimate/ticket/{ticket_two}", {"lines": [
+    {"identifier": uid(), "type": "LABOR", "description": "Clean charge port", "quantity": 0.5, "unitPriceCents": 6000, "taxable": False}
+], "note": "Lint in the port, no parts needed"}, pin, expect=201)
+check(estimate["status"] == "PENDING", f"estimate {estimate}")
+if mail:
+    mail.wait_for("Subject: Estimate for your Apple iPad Air")
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+status, html, _ = page(f"/status/{two['statusToken']}")
+check(status == 200 and "Clean charge port" in html and 'value="approve"' in html, "status page should offer the estimate")
+status, _, headers = page(f"/status/{two['statusToken']}/estimate", {"decision": "approve", "name": "Jane Doe"})
+check(status == 303, f"approving answered {status}")
+_, estimates = call("GET", f"/api/estimate/ticket/{ticket_two}", token=pin, expect=200)
+check(estimates[0]["status"] == "APPROVED" and estimates[0]["decision"]["signedName"] == "Jane Doe", f"estimates {estimates}")
+_, two_invoice = call("POST", f"/api/invoice/ticket/{ticket_two}", token=pin, expect=200)
+check([c["description"] for c in two_invoice["charges"]] == ["Clean charge port"] and two_invoice["totalCents"] == 3000, f"invoice {two_invoice}")
+step(f"A $30 estimate on Jane's iPad{' is emailed,' if mail else ''} approved on her status page with her name, and lands on its invoice")
 
 # ------------------------------------------ Pickup ------------------------------------------
 invoice = checked_in["invoice"]
@@ -254,16 +345,16 @@ step("Pickup: $120 screen + half hour labor + 8.25% tax on the part = $159.90; s
 # ------------------------------------------ Admin wraps up ------------------------------------------
 _, report = call("GET", "/api/admin/report/daily", token=admin, expect=200)
 check(report["takenByMethod"] == {"CARD": 5000, "CASH": 11000}, f"taken {report['takenByMethod']}")
-check(report["ticketsCheckedIn"] == 1 and report["ticketsPickedUp"] == 1 and report["invoicesPaid"] == 1, f"report {report}")
-step(f"End of day: card $50.00, cash $110.00, sales ${report['salesCents'] / 100:.2f}, 1 in, 1 out")
+check(report["ticketsCheckedIn"] == 2 and report["ticketsPickedUp"] == 1 and report["invoicesPaid"] == 1, f"report {report}")
+step(f"End of day: card $50.00, cash $110.00, sales ${report['salesCents'] / 100:.2f}, 2 in (one the iPad), 1 out")
 
 status, pdf, headers = send(urllib.request.Request(f"{BASE}/api/invoice/{paid['identifier']}/pdf", headers={"Authorization": "Bearer " + pin}))
 check(status == 200 and pdf[:5] == b"%PDF-" and headers.get("Content-Type", "").startswith("application/pdf"), f"invoice PDF answered {status}")
 day = report["date"]
 status, csv, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}", headers={"Authorization": "Bearer " + admin}))
 rows = csv.decode().strip().split("\r\n")
-check(status == 200 and len(rows) == 2 and rows[1].startswith(f"INV-{paid['number']['year'] % 100:02d}-{paid['number']['sequence']:08d},") and ",paid," in rows[1] and ",159.90," in rows[1], f"export answered {status}: {rows}")
-step(f"The invoice comes back as a {len(pdf) // 1000 or 1} KB PDF, and today's CSV export has it, paid, at $159.90")
+check(status == 200 and len(rows) == 3 and rows[1].startswith(f"INV-{paid['number']['year'] % 100:02d}-{paid['number']['sequence']:08d},") and ",paid," in rows[1] and ",159.90," in rows[1], f"export answered {status}: {rows}")
+step(f"The invoice comes back as a {len(pdf) // 1000 or 1} KB PDF, and today's CSV export has it, paid, at $159.90, beside the iPad's open one")
 
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}

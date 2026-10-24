@@ -40,6 +40,12 @@ class CustomerSeed: DataSeed("CustomerSeed") {
     var phone by mutableStateOf("")
         private set
 
+    // Agreed to messages about their repairs
+    var notifyEmail by mutableStateOf(false)
+        private set
+    var notifySms by mutableStateOf(false)
+        private set
+
     // Tickets
     private val _tickets = mutableStateListOf<Ticket>()
     val tickets: List<Ticket> = _tickets
@@ -48,7 +54,7 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         get() = Address(street, city, state, zip)
 
     val customer: Customer
-        get() = Customer(identifier, name, address, email, phone)
+        get() = Customer(identifier, name, address, email, phone, notifyEmail, notifySms)
 
     fun changeName(newName: String) {
         name = newName
@@ -76,6 +82,14 @@ class CustomerSeed: DataSeed("CustomerSeed") {
 
     fun changePhone(newPhone: String) {
         phone = newPhone.filter { it.isDigit() }
+    }
+
+    fun changeNotifyEmail(on: Boolean) {
+        notifyEmail = on
+    }
+
+    fun changeNotifySms(on: Boolean) {
+        notifySms = on
     }
 
     fun addTicket(newTicket: Ticket) {
@@ -117,6 +131,8 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         // Contact
         phone = customer.phone
         email = customer.email
+        notifyEmail = customer.notifyEmail
+        notifySms = customer.notifySms
 
         _notes.clear()
         _notes.addAll(notes)
@@ -136,6 +152,8 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         ChangedField.ZIP to zip,
         ChangedField.EMAIL to email,
         ChangedField.PHONE to phone,
+        ChangedField.NOTIFY_EMAIL to notifyEmail,
+        ChangedField.NOTIFY_SMS to notifySms,
         ChangedField.TICKET to _tickets.toList()
     )
 
@@ -148,6 +166,8 @@ class CustomerSeed: DataSeed("CustomerSeed") {
         zip = ""
         email = ""
         phone = ""
+        notifyEmail = false
+        notifySms = false
         _tickets.clear()
         _notes.clear()
         _images.clear()

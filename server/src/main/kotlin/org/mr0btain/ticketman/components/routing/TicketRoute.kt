@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.WorkDatabase
 import org.mr0btain.ticketman.components.service.InvoiceService
+import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.server.request.WorkRequest
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -32,7 +33,8 @@ fun Route.ticketRoute(
     auditLog: AuditLogDatabase,
     workDatabase: WorkDatabase,
     shopDatabase: ShopDatabase,
-    invoiceService: InvoiceService
+    invoiceService: InvoiceService,
+    notificationService: NotificationService
 ) {
     val TAG = "TicketRoute"
     val GET_TAG = "$TAG:Get"
@@ -256,6 +258,7 @@ fun Route.ticketRoute(
 
             if (existing.status.choice != received.status.choice) {
                 database.recordStatusChange(received.identifier, received.status, call.username(userDatabase))
+                notificationService.statusChanged(received.copy(number = existing.number, statusToken = existing.statusToken), existing.status.choice)
             }
 
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, "Ticket ${existing.label}: status ${received.status.status}")

@@ -82,6 +82,8 @@ class TicketDatabase(
     private val MARK_PICKED_UP_TAG = "$tag:MarkPickedUp"
     private val STATUS_TOKEN_TAG = "$tag:StatusToken"
     private val BACKFILL_TOKENS_TAG = "$tag:BackfillStatusTokens"
+    private val READY_TAG = "$tag:ReadyForPickup"
+    private val SET_ESTIMATE_TAG = "$tag:SetEstimate"
 
     override fun getById(identifier: Uuid): Ticket? =
         dbQuery(GET_BY_ID_TAG) {
@@ -332,6 +334,25 @@ class TicketDatabase(
 
             ticket.status = TicketStatus(TicketStatusType.PICKED_UP, time)
             ticket.pickedUpAt = time
+            true
+        }
+
+    /** Tickets waiting to be picked up, ready longest first */
+    fun readyForPickup(): List<Ticket>? =
+        dbQuery(READY_TAG) {
+            TicketEntity.find { TicketTable.pickedUpAt.isNull() }
+                .map { it.toTicket() }
+                .filter { it.status.status == TicketStatusType.DONE }
+                .sortedBy { it.status.time }
+        }
+
+    /** Sets the quoted price, like when the customer approves an estimate */
+    fun setEstimate(identifier: Uuid, cents: Long?): Boolean =
+        dbWrite(SET_ESTIMATE_TAG) {
+            val ticket = TicketEntity.findById(identifier)
+                ?: return@dbWrite false.also { AppLogger.i(SET_ESTIMATE_TAG, TicketError.NOT_FOUND) }
+
+            ticket.estimateCents = cents
             true
         }
 

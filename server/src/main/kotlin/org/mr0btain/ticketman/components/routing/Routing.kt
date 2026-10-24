@@ -21,6 +21,8 @@ import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.InvoiceDocuments
 import org.mr0btain.ticketman.components.service.LoginLimiter
 import org.mr0btain.ticketman.components.service.StatusService
+import org.mr0btain.ticketman.components.service.EstimateService
+import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
@@ -35,6 +37,8 @@ fun Application.configureRouting(
     imageService: ImageService,
     backupService: BackupService,
     restoreService: RestoreService,
+    notificationService: NotificationService,
+    estimateService: EstimateService,
     localDatabase: LocalDatabase,
     loginLimiter: LoginLimiter = LoginLimiter(),
     statusService: StatusService = StatusService(
@@ -42,7 +46,8 @@ fun Application.configureRouting(
         customers = localDatabase.customerDatabase,
         invoices = localDatabase.invoiceDatabase,
         shop = localDatabase.shopDatabase,
-        images = imageService
+        images = imageService,
+        estimates = estimateService
     )
 ) {
     install(StatusPages) {
@@ -90,6 +95,20 @@ fun Application.configureRouting(
             statusRoute(
                 service = statusService,
                 shopDatabase = localDatabase.shopDatabase
+            )
+        }
+
+        route(ApiRoutes.NOTIFY) {
+            notifyRoute(
+                service = notificationService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.ESTIMATE) {
+            estimateRoute(
+                service = estimateService,
+                userDatabase = localDatabase.userDatabase
             )
         }
 
@@ -180,7 +199,8 @@ fun Application.configureRouting(
                 auditLog = localDatabase.auditLogDatabase,
                 workDatabase = localDatabase.workDatabase,
                 shopDatabase = localDatabase.shopDatabase,
-                invoiceService = invoiceService
+                invoiceService = invoiceService,
+                notificationService = notificationService
             )
         }
 

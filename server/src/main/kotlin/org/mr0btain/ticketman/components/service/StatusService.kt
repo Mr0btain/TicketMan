@@ -4,6 +4,7 @@ import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
+import org.mr0btain.ticketman.data.estimate.Estimate
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.invoice.Invoice
@@ -34,6 +35,7 @@ class StatusService(
     private val invoices: InvoiceDatabase,
     private val shop: ShopDatabase,
     private val images: ImageService,
+    private val estimates: EstimateService,
     // Wrong lookups per device, and per ticket number so guessing 4 digits from many addresses goes nowhere
     private val lookupsByAddress: RequestLimiter = RequestLimiter(LOOKUPS_PER_ADDRESS, 15.minutes),
     private val lookupsByNumber: RequestLimiter = RequestLimiter(LOOKUPS_PER_NUMBER, 24.hours),
@@ -56,7 +58,13 @@ class StatusService(
         val timeline: List<Step>,
         val updates: List<Update>,
         /** Null when there isn't one, or it was voided */
-        val invoice: Invoice?
+        val invoice: Invoice?,
+        /** Waiting for the customer to answer */
+        val estimate: Estimate? = null,
+        /** The newest one they answered, shown when nothing's waiting */
+        val answered: Estimate? = null,
+        /** Why their last answer didn't go through */
+        val problem: String? = null
     )
 
     sealed interface Found {
@@ -79,6 +87,33 @@ class StatusService(
 
         val ticket = tickets.getByStatusToken(token) ?: return Found.NotFound.also { badLinksByAddress.record(address) }
         return Found.Page(view(ticket))
+    }
+
+    sealed interface Answer {
+        data object Saved : Answer
+
+        /** Shown on the page again, with why */
+        data class Problem(val view: View) : Answer
+        data object NotFound : Answer
+        data object Limited : Answer
+    }
+
+    /**
+     * The customer approving or declining the waiting estimate on their page, signing with their typed name
+     */
+    fun answerEstimate(token: String, approve: Boolean, name: String, address: String): Answer {
+        if (badLinksByAddress.isLimited(address)) return Answer.Limited
+        val ticket = tickets.getByStatusToken(token) ?: return Answer.NotFound.also { badLinksByAddress.record(address) }
+
+        val signed = name.trim()
+        if (signed.length !in MIN_NAME..MAX_NAME) return Answer.Problem(view(ticket).copy(problem = "Type your full name to sign"))
+
+        return when (val result = estimates.decideOnPage(ticket, approve, signed)) {
+            is AccountResult.Done -> Answer.Saved
+            AccountResult.NotFound -> Answer.Problem(view(ticket).copy(problem = "There's no estimate waiting any more"))
+            is AccountResult.Conflict -> Answer.Problem(view(ticket).copy(problem = "${result.message}. Call us if that's not right"))
+            is AccountResult.Invalid -> Answer.Problem(view(ticket).copy(problem = "That didn't go through, call us to approve it"))
+        }
     }
 
     private fun view(ticket: Ticket): View {
@@ -105,7 +140,9 @@ class StatusService(
             current = statuses.customerChoice(ticket.status.choice),
             timeline = timeline,
             updates = updates,
-            invoice = invoices.getByTicket(ticket.identifier)?.takeIf { it.status != InvoiceStatus.VOID }
+            invoice = invoices.getByTicket(ticket.identifier)?.takeIf { it.status != InvoiceStatus.VOID },
+            estimate = estimates.pending(ticket.identifier),
+            answered = estimates.lastAnswered(ticket.identifier)
         )
     }
 
@@ -153,6 +190,8 @@ class StatusService(
         const val LOOKUPS_PER_ADDRESS = 10
         const val LOOKUPS_PER_NUMBER = 10
         const val BAD_LINKS_PER_ADDRESS = 30
+        const val MIN_NAME = 2
+        const val MAX_NAME = 100
 
         /** The original is only for staff */
         val PHOTO_VARIANTS = setOf(ImageVariant.THUMB, ImageVariant.DISPLAY)

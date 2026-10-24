@@ -10,4 +10,8 @@ object CustomerTable : UuidTable("customer") {
     val phone = text("phone")
     val email = text("email")
     val address = json<Address>("address", Json { ignoreUnknownKeys = true })
+
+    // Agreed to messages about their repairs, off for everyone until they say so
+    val notifyEmail = bool("notify_email").default(false)
+    val notifySms = bool("notify_sms").default(false)
 }

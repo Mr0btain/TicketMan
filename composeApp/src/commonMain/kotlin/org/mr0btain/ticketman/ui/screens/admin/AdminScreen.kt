@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
+import org.mr0btain.ticketman.ui.screens.admin.messages.AdminMessagesTab
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
@@ -87,6 +88,9 @@ private fun AdminContent(
     val backupProgress by admin.server.backupProgress.collectAsState()
     val pendingRestore by admin.server.pendingRestore.collectAsState()
     val shopProfile by admin.server.shopProfile.collectAsState()
+    val messageSettings by admin.messages.settings.collectAsState()
+    val outbox by admin.messages.outbox.collectAsState()
+    val outboxEnd by admin.messages.outboxEnd.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
     val auditEndReached by admin.auditEndReached.collectAsState()
     val serverUrl by viewModel.settings.serverUrl.collectAsState()
@@ -336,6 +340,19 @@ private fun AdminContent(
                         onPicked = { kind, file -> admin.import.openFile(kind, file) }
                     )
                 }
+            )
+
+            AdminTab.MESSAGES -> AdminMessagesTab(
+                settings = messageSettings,
+                statuses = shopProfile?.statuses.orEmpty(),
+                outbox = outbox,
+                outboxEnd = outboxEnd,
+                isBusy = isLoading,
+                onSave = { admin.messages.save(it) },
+                onTest = { settings, channel, recipient -> admin.messages.test(settings, channel, recipient) },
+                onRetry = { admin.messages.retry(it) },
+                onCancel = { admin.messages.cancel(it) },
+                onLoadMore = { admin.messages.loadMore() }
             )
 
             AdminTab.AUDIT -> AdminAuditTab(

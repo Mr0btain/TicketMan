@@ -66,6 +66,8 @@ private class CustomerFormState {
     var city by mutableStateOf("")
     var state by mutableStateOf("")
     var zip by mutableStateOf("")
+    var notifyEmail by mutableStateOf(false)
+    var notifySms by mutableStateOf(false)
     var saving by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
 
@@ -81,7 +83,9 @@ private class CustomerFormState {
             name = name.trim(),
             phone = phone.trim(),
             email = email.trim(),
-            address = Address(street.trim(), city.trim(), state.trim(), zip.trim())
+            address = Address(street.trim(), city.trim(), state.trim(), zip.trim()),
+            notifyEmail = notifyEmail && email.isNotBlank(),
+            notifySms = notifySms && phone.isNotBlank()
         )
 }
 
@@ -103,6 +107,15 @@ private fun CustomerFields(form: CustomerFormState) {
         TmTextField(modifier = Modifier.weight(1f), value = form.state, onValueChange = { form.state = it }, label = "State")
         TmTextField(modifier = Modifier.weight(1f), value = form.zip, onValueChange = { form.zip = it }, label = "Zip")
     }
+
+    TmMessageConsent(
+        email = form.notifyEmail,
+        sms = form.notifySms,
+        onEmailChange = { form.notifyEmail = it },
+        onSmsChange = { form.notifySms = it },
+        hasEmail = form.email.isNotBlank(),
+        hasPhone = form.phone.isNotBlank()
+    )
 
     (form.error ?: form.problem.takeIf { form.name.isNotEmpty() || form.phone.isNotEmpty() })?.let {
         TmNotice(text = it, kind = if (form.error != null) TmNoticeKind.ERROR else TmNoticeKind.WARNING)

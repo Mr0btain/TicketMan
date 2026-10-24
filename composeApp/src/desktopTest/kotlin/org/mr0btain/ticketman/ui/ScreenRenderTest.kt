@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.data.estimate.Estimate
+import org.mr0btain.ticketman.data.notify.*
+import org.mr0btain.ticketman.ui.screens.admin.messages.AdminMessagesTab
+import org.mr0btain.ticketman.ui.screens.counter.EstimateActions
+import org.mr0btain.ticketman.ui.screens.counter.EstimateDialog
 import org.mr0btain.ticketman.components.network.UntrustedCertificate
 import org.mr0btain.ticketman.ui.screens.login.ServerTrustDialog
 import org.mr0btain.ticketman.components.data.ticket.TicketScope
@@ -200,7 +205,37 @@ class ScreenRenderTest {
             TicketStatusChange(TicketStatusType.ON_HOLD, now - 3_600_000, "priya")
         ),
         invoice = invoice,
-        signature = null
+        signature = null,
+        messages = listOf(
+            OutboxMessage(
+                channel = NotificationChannel.SMS, event = NotificationEvent.STATUS_CHANGED, recipient = "+15550142",
+                body = "Hi Dana, your Apple iPhone 13 (ticket 26-00000041) is now: Awaiting parts. Follow it at https://repairs.example.com/status/0123",
+                status = OutboxStatus.SENT, createdAt = now - 3_500_000
+            ),
+            OutboxMessage(
+                channel = NotificationChannel.EMAIL, event = NotificationEvent.ESTIMATE_READY, recipient = "dana@example.com",
+                body = "Hi Dana, the estimate for your Apple iPhone 13 is $159.36.", status = OutboxStatus.PENDING,
+                lastError = "Connection refused", createdAt = now - 600_000
+            )
+        ),
+        estimates = listOf(
+            Estimate(
+                ticketIdentifier = iphone.identifier,
+                lines = listOf(
+                    Charge(type = ChargeType.LABOR, description = "Screen replacement", quantity = 1.0, unitPriceCents = 6000, taxable = false),
+                    Charge(type = ChargeType.PART, description = "iPhone 13 screen, OEM", quantity = 1.0, unitPriceCents = 8999)
+                ),
+                taxRateBasisPoints = 625,
+                note = "The frame is bent too, the screen won't sit right without straightening it.",
+                createdAt = now - 600_000,
+                createdBy = "priya"
+            )
+        )
+    )
+
+    private val estimateActions = EstimateActions(
+        laborCents = 6000, taxRateBasisPoints = 625, onSearchParts = { emptyList() },
+        onSend = { _, _, _, _ -> }, onAnswer = { _, _, _, _ -> }, onWithdraw = {}
     )
 
     private val navItems = listOf(
@@ -311,6 +346,8 @@ class ScreenRenderTest {
                 onCustomerClick = {},
                 onBack = {},
                 statusLink = "https://repairs.example.com/status/0123456789abcdef0123456789abcdef",
+                estimates = estimateActions,
+                onSendStatusLink = {},
                 extraActions = { TmButton(text = "Pick up  (F5)", onClick = {}, size = TmControlSize.LARGE) }
             )
         }
@@ -383,6 +420,55 @@ class ScreenRenderTest {
                     )
                 }
             }
+        }
+    }
+
+    /** The Messages tab with both channels set up and a few messages, one that failed */
+    @Test
+    fun adminMessages() {
+        val now = System.currentTimeMillis()
+        val sampleStatuses = listOf(
+            CustomStatus(name = "Diagnosing", actsAs = TicketStatusType.IN_PROGRESS, tone = StatusTone.ACCENT),
+            CustomStatus(name = "Awaiting parts", actsAs = TicketStatusType.ON_HOLD)
+        )
+        val settings = NotificationSettings(
+            emailEnabled = true,
+            smtp = SmtpSettings(host = "smtp.example.com", username = "repairs@example.com", fromAddress = "repairs@example.com", fromName = "Fix It Shop"),
+            smtpPasswordSet = true,
+            smsEnabled = true,
+            sms = SmsSettings(accountSid = "AC0123456789", fromNumber = "+15550100000"),
+            smsTokenSet = true,
+            events = setOf(NotificationEvent.READY_FOR_PICKUP, NotificationEvent.ESTIMATE_READY, NotificationEvent.STATUS_CHANGED, NotificationEvent.PICKUP_REMINDER),
+            statusChangeStatuses = listOf(sampleStatuses[0].choice)
+        )
+        val outbox = listOf(
+            OutboxMessage(ticketLabel = "26-00000041", channel = NotificationChannel.SMS, event = NotificationEvent.READY_FOR_PICKUP, recipient = "+15550142",
+                body = "Hi Dana, your Apple iPhone 13 is ready to pick up.", status = OutboxStatus.SENT, createdAt = now - 60_000),
+            OutboxMessage(ticketLabel = "26-00000040", channel = NotificationChannel.EMAIL, event = NotificationEvent.PICKUP_REMINDER, recipient = "marcus@example.com",
+                body = "Hi Marcus, a reminder that your Lenovo ThinkPad T14 is ready.", status = OutboxStatus.FAILED, attempts = 1,
+                lastError = "The mail server refused the address", createdAt = now - 3_600_000),
+            OutboxMessage(ticketLabel = "26-00000039", channel = NotificationChannel.EMAIL, event = NotificationEvent.STATUS_LINK, recipient = "ana@example.com",
+                body = "Hi Ana, follow your Sony PS5 at https://repairs.example.com/status/abc", status = OutboxStatus.PENDING,
+                lastError = "Connection timed out", createdAt = now - 7_200_000, createdBy = "priya")
+        )
+
+        bothModes("admin-messages", height = 2000) {
+            Shell("Admin") {
+                AdminMessagesTab(
+                    settings = settings, statuses = sampleStatuses, outbox = outbox, outboxEnd = true, isBusy = false,
+                    onSave = {}, onTest = { _, _, _ -> }, onRetry = {}, onCancel = {}, onLoadMore = {}
+                )
+            }
+        }
+    }
+
+    @Test
+    fun estimateDialog() = bothModes("counter-estimate-dialog") {
+        Shell("Counter") {
+            EstimateDialog(
+                start = detail.estimates!!.first().lines, laborCents = 6000, taxRateBasisPoints = 625, canNotify = true,
+                onSearchParts = { emptyList() }, onSend = { _, _, _ -> }, onDismiss = {}
+            )
         }
     }
 

@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.utils.formatDate
 import org.mr0btain.ticketman.components.utils.formatDateTime
+import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
@@ -43,6 +44,8 @@ object StatusPage {
                 append("""<p class="muted">Expected by ${formatDate(ticket.promisedAt!!).esc()}</p>""")
             }
             append("</section>")
+
+            append(estimate(shop, view, token))
 
             append("""<section><h2>Progress</h2><ol class="timeline">""")
             view.timeline.reversed().forEach { step ->
@@ -110,6 +113,38 @@ object StatusPage {
     fun message(shop: ShopProfile, title: String, text: String, formHref: String?): String {
         val body = """<section class="hero"><h1>${title.esc()}</h1><p>${text.esc()}</p></section>""" + contact(shop)
         return page(shop, title, body, formHref)
+    }
+
+    /** The estimate waiting for an answer, with the form to give it, or what they said to the last one */
+    private fun estimate(shop: ShopProfile, view: StatusService.View, token: String): String {
+        fun money(cents: Long) = Money.format(cents, shop.currencySymbol)
+
+        val waiting = view.estimate
+        if (waiting == null) {
+            val decision = view.answered?.decision ?: return ""
+            val what = if (decision.approved) "approved" else "declined"
+            return """<section><h2>Estimate</h2><p>You $what the estimate of <span class="num">${money(decision.amountCents).esc()}</span> on ${formatDate(decision.decidedAt).esc()}.</p></section>"""
+        }
+
+        val totals = waiting.totals
+        return buildString {
+            append("""<section id="estimate"><h2>Estimate: please approve or decline</h2>""")
+            if (waiting.note.isNotBlank()) append("""<p class="message">${waiting.note.esc()}</p>""")
+            append("""<dl class="rows">""")
+            waiting.lines.forEach { line ->
+                val quantity = if (line.quantity == 1.0) "" else "${formatQuantity(line.quantity)} x "
+                append("""<div><dt>${(quantity + line.description).esc()}</dt><dd class="num">${money(line.totalCents).esc()}</dd></div>""")
+            }
+            if (totals.taxCents > 0) append("""<div><dt>Tax</dt><dd class="num">${money(totals.taxCents).esc()}</dd></div>""")
+            append("""<div class="strong"><dt>Total</dt><dd class="num">${money(totals.totalCents).esc()}</dd></div></dl>""")
+
+            if (view.problem != null) append("""<p class="problem" role="alert">${view.problem.esc()}</p>""")
+            append("""<form method="post" action="${token.esc()}/estimate">""")
+            append("""<label>Your full name<input name="name" required minlength="${StatusService.MIN_NAME}" maxlength="${StatusService.MAX_NAME}" autocomplete="name"></label>""")
+            append("""<p class="muted">Typing your name and pressing Approve is your signature, agreeing to this work and price.</p>""")
+            append("""<div class="buttons"><button type="submit" name="decision" value="approve">Approve</button>""")
+            append("""<button type="submit" name="decision" value="decline" class="secondary">Decline</button></div></form></section>""")
+        }
     }
 
     private fun moneyRows(shop: ShopProfile, view: StatusService.View): List<Triple<String, String, Boolean>> {
@@ -206,6 +241,8 @@ form{display:grid;gap:14px}label{display:grid;gap:4px;font-weight:600}
 input{font:inherit;padding:.6em .7em;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
 button{font:inherit;font-weight:600;padding:.7em;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
 .problem{color:var(--danger);font-weight:600}
+.buttons{display:flex;gap:10px}.buttons button{flex:1}
+button.secondary{background:transparent;color:var(--text);border:1px solid var(--line)}
 footer{color:var(--muted);font-size:.85rem;padding-bottom:28px}
 """.trimIndent().replace("\n", "")
 

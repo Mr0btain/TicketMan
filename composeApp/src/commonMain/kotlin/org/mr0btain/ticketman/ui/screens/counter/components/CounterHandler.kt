@@ -37,7 +37,7 @@ enum class CounterView {
 /**
  * State and actions for the shop counter. Owned by the main view model. Holds the search, queue, shop profile,
  * ticket and customer cards and price check itself, and one part each for [checkIn], [pickup], the [invoices]
- * list and the [printer]
+ * list, the [printer] and the open ticket's [estimates] and messages
  * @param canEdit Whether the signed in user can change things, restricted users can only look
  */
 class CounterHandler(
@@ -81,6 +81,7 @@ class CounterHandler(
     val pickup = CounterPickup(remoteHandler, support)
     val invoices = CounterInvoices(remoteHandler, support)
     val printer = CounterPrinter(remoteHandler, support, shop = { _shop.value })
+    val estimates = CounterEstimates(remoteHandler, support, reload = { reloadTicket() })
 
     private var searchJob: Job? = null
     private var priceJob: Job? = null

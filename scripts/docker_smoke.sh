@@ -68,7 +68,7 @@ redirect="$(curl -s -o /dev/null -w '%{redirect_url}' "http://localhost:$HTTP_PO
 echo "Caddy answers without SNI and sends plain HTTP to $BASE"
 
 echo "Walking the counter through the proxy, then restoring with a restart"
-python3 "$ROOT/scripts/counter_e2e.py" "$BASE" --insecure --restart
+python3 "$ROOT/scripts/counter_e2e.py" "$BASE" --insecure --restart --no-mail
 
 restarts="$(docker inspect --format '{{.RestartCount}}' "$(compose ps -q ticketman)")"
 [[ "$restarts" -ge 1 ]] || { echo "FAIL Docker didn't restart the server (restart count $restarts)" >&2; exit 1; }

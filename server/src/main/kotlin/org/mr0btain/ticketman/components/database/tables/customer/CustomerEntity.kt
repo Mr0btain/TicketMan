@@ -16,6 +16,8 @@ class CustomerEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var phone by CustomerTable.phone
     var email by CustomerTable.email
     var address by CustomerTable.address
+    var notifyEmail by CustomerTable.notifyEmail
+    var notifySms by CustomerTable.notifySms
 
     var notes by NoteEntity via CustomerNoteTable
 
@@ -27,7 +29,9 @@ class CustomerEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             name = name,
             address = address,
             email = email,
-            phone = phone
+            phone = phone,
+            notifyEmail = notifyEmail,
+            notifySms = notifySms
         )
     }
 

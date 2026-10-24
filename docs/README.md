@@ -63,6 +63,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Auth](api/auth.md), [Users](api/user.md), [Admin](api/admin.md), [Counter](api/counter.md),
   [Invoices](api/invoice.md), [Stations](api/station.md), [Shop profile](api/shop.md), [Photos](api/image.md)
 - [Customers](api/customer.md), [Tickets](api/ticket.md), [Inventory](api/inventory.md), [Notes](api/notes.md)
+- [Messages](api/notify.md) and [Estimates](api/estimate.md): talking to customers
 - [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing

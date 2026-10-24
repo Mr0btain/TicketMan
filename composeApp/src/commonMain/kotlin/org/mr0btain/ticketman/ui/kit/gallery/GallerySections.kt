@@ -82,6 +82,7 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
 import org.mr0btain.ticketman.ui.kit.inputs.TmPinField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerForm
+import org.mr0btain.ticketman.ui.kit.inputs.TmMessageConsent
 import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerDialog
 import org.mr0btain.ticketman.ui.kit.navigation.TmBottomNav
 import org.mr0btain.ticketman.ui.kit.navigation.TmNavItem
@@ -366,6 +367,8 @@ private fun SelectionSection() {
     var urgent by remember { mutableStateOf(false) }
     var kiosk by remember { mutableStateOf(true) }
     var tax by remember { mutableStateOf(true) }
+    var consentEmail by remember { mutableStateOf(true) }
+    var consentSms by remember { mutableStateOf(false) }
     var payment by remember { mutableStateOf("Card") }
     var builtIn by remember { mutableStateOf(StatusChoice(TicketStatusType.IN_PROGRESS)) }
     var custom by remember { mutableStateOf(sampleStatuses[1].choice) }
@@ -414,6 +417,10 @@ private fun SelectionSection() {
             TmSwitch(checked = false, onCheckedChange = {}, enabled = false)
             TmCheckbox(checked = tax, onCheckedChange = { tax = it }, label = "Charge tax")
             TmCheckbox(checked = false, onCheckedChange = {}, label = "Disabled", enabled = false)
+        }
+
+        Specimen("Message consent") {
+            TmMessageConsent(email = consentEmail, sms = consentSms, onEmailChange = { consentEmail = it }, onSmsChange = { consentSms = it }, hasEmail = true, hasPhone = true)
         }
 
         Specimen("Radio") {

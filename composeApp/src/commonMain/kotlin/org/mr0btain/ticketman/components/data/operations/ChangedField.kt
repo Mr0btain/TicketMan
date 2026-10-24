@@ -34,5 +34,7 @@ enum class ChangedField {
     ACCESSORIES,
     ESTIMATE,
     PROMISED,
-    CUSTOMER_VISIBLE
+    CUSTOMER_VISIBLE,
+    NOTIFY_EMAIL,
+    NOTIFY_SMS
 }

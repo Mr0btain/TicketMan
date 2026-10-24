@@ -258,6 +258,29 @@ The page's own limits count devices by `X-Forwarded-For`, which Caddy sends and 
 asks not to be indexed or cached. Anyone with a link sees that ticket's page, so links are only on the claim slip
 and whatever staff send; the page never shows the customer's contact details or internal notes.
 
+## Messages to customers
+
+The server can email and text customers about their repairs: when it's ready, when an estimate needs approving,
+pickup reminders, and chosen status changes. Admin > Messages sets it up; the [Messages API](api/notify.md) has the
+details.
+
+- **Email** goes through the shop's own mail server: its host, port, security (STARTTLS on 587 is usual, TLS on 465),
+  login and the from address. A Google Workspace or Microsoft 365 mailbox works with an app password; many hosts
+  only let a from address the login owns through.
+- **Texts** go through a [Twilio](https://www.twilio.com) account: the account SID, auth token and a number from
+  it. Numbers saved without a country code get the one set there (1 for the US and Canada).
+- **Try it** sends a test with what's on screen before saving, and says what the mail server or Twilio answered.
+- **Customers opt in** per channel on their record or when they're added at the counter. Automatic messages only go
+  to those who did; **Send status link** on a ticket goes regardless, since someone chose to send it.
+- **Wording** is the shop's own per message, with `{name}`, `{device}`, `{link}` and the like filled in. Set the
+  public address (see [the status page](#the-customer-status-page)) or `{link}` comes out blank.
+
+Messages wait in an outbox and are sent within about 10 seconds; one that can't go is tried again for a few hours,
+then marked failed. Admin > Messages lists them with Retry and Cancel, and each ticket's card shows what its
+customer was sent. The server needs to reach the mail server (port 587 or 465 out) or `api.twilio.com` (443 out).
+The mail password and Twilio token are kept in the database, so they're in backups too: treat a backup like the
+passwords it holds.
+
 ## Web client
 
 A server built with `-PwithWeb` serves the web client at `/`, on the same address as the API:

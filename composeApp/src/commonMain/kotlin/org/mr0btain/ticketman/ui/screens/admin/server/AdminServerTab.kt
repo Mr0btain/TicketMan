@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.ui.screens.admin.server
 
+import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.StatusChoice
+import org.mr0btain.ticketman.data.ticket.label
+import org.mr0btain.ticketman.data.ticket.selectable
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -471,6 +476,8 @@ private fun ShopProfileCard(
             supportingText = "Where customers reach this server from outside the shop, for ticket status links",
             error = urlProblem
         )
+        EstimateStatusPickers(statuses = shopProfile.statuses, profile = profile, onChange = { profile = it })
+
         TmTextField(modifier = Modifier.fillMaxWidth(), value = profile.street, onValueChange = { profile = profile.copy(street = it) }, label = "Street")
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
             TmTextField(modifier = Modifier.weight(2f), value = profile.city, onValueChange = { profile = profile.copy(city = it) }, label = "City")
@@ -564,3 +571,38 @@ private const val DATABASE_ONLY_SUFFIX = "-database.zip"
 
 // Days a repaired device can come back and be flagged as a repeat
 private val REPEAT_WINDOW_RANGE = 1..3650
+
+/** Where sending, approving and declining an estimate move its ticket, each optional */
+@Composable
+private fun EstimateStatusPickers(statuses: List<CustomStatus>, profile: ShopProfile, onChange: (ShopProfile) -> Unit) {
+    val options: List<StatusChoice?> = listOf(null) + statuses.selectable()
+    fun label(choice: StatusChoice?) = choice?.let { statuses.label(it) } ?: "Leave it"
+
+    Text(text = "Estimates move the ticket to", style = TmTheme.typography.label, color = TmTheme.colors.text)
+    Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "When sent",
+            options = options,
+            selected = profile.estimateSentStatus,
+            onSelect = { onChange(profile.copy(estimateSentStatus = it)) },
+            optionLabel = ::label
+        )
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "Approved",
+            options = options,
+            selected = profile.estimateApprovedStatus,
+            onSelect = { onChange(profile.copy(estimateApprovedStatus = it)) },
+            optionLabel = ::label
+        )
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "Declined",
+            options = options,
+            selected = profile.estimateDeclinedStatus,
+            onSelect = { onChange(profile.copy(estimateDeclinedStatus = it)) },
+            optionLabel = ::label
+        )
+    }
+}

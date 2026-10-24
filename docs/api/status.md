@@ -12,7 +12,8 @@ claim slip's QR once `publicUrl` is set. Staff replace a token with
 cuts off the old link.
 
 The page shows the device (make and model, not the serial), the status and a timeline of status changes, the
-promised date while it's open, notes marked `customerVisible` with their photos, the estimate, the invoice's total,
+[estimate](estimate.md) waiting for an answer with its lines and a form to approve or decline it (or what they said
+to the last one), the promised date while it's open, notes marked `customerVisible` with their photos, the estimate, the invoice's total,
 paid and balance (not a void one, and no lines), the customer's first name and the shop's contact details. A status
 the shop doesn't share (`CustomStatus.showCustomer` off) reads as the built-in one it acts as, and repeats it makes
 are dropped from the timeline. Never internal notes, who changed what, the serial or the customer's contact details.
@@ -51,6 +52,18 @@ The form's answer.
 
 - **`200`** the ticket's page. **`404`** a page saying the link doesn't work, with a link to the form, for a token
   that isn't one or was replaced. **`429`** too many unknown links from this address.
+
+### `POST /status/{token}/estimate`
+
+**Auth:** none
+
+The customer approving or declining the waiting estimate. Their typed name is the signature; it's kept as
+`signedName` with `method` `STATUS_PAGE`. Unknown links count toward the same limit as the page's.
+
+- **Body:** form fields `decision` (`approve` or `decline`) and `name` (2 to 100 characters).
+- **`303`** to `../{token}` (relative), their page, when it's saved.
+- **`409`** their page again saying why: no name, nothing waiting any more, or an approval the invoice couldn't
+  take. **`400`** a `decision` that's neither. **`404`** an unknown link. **`429`** too many unknown links.
 
 ### `GET /status/{token}/photo/{identifier}/{variant}`
 
