@@ -5,7 +5,6 @@ import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.components.network.isNotFound
 import androidx.compose.material3.SnackbarHostState
 import kotlinx.coroutines.CoroutineScope
-import org.mr0btain.ticketman.ui.kit.feedback.label
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,8 +14,8 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shop.ShopProfile
-import org.mr0btain.ticketman.data.ticket.TicketStatus
-import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.ticket.StatusChoice
+import org.mr0btain.ticketman.data.ticket.label
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
@@ -194,14 +193,14 @@ class CounterHandler(
     // ------------------------------------------ Changing tickets ------------------------------------------
 
     /** Quick status buttons on the ticket card */
-    fun setTicketStatus(status: TicketStatusType) {
+    fun setTicketStatus(status: StatusChoice) {
         val detail = _ticket.value ?: return
         if (!support.canEdit()) return
 
         scope.launch {
-            when (val result = remoteHandler.ticketRepo.update(detail.ticket.copy(status = TicketStatus(status)))) {
+            when (val result = remoteHandler.ticketRepo.update(detail.ticket.copy(status = status.toStatus()))) {
                 is TmResult.Success -> {
-                    support.notify("Ticket ${detail.ticket.label} is now ${statusLabel(status).lowercase()}")
+                    support.notify("Ticket ${detail.ticket.label} is now ${_shop.value.statuses.label(status).lowercase()}")
                     reloadTicket()
                     refreshQueue()
                 }
@@ -269,7 +268,5 @@ class CounterHandler(
         const val SEARCH_LIMIT = 20
         private const val RECENT_LIMIT = 10
 
-        /** DONE reads better as "Ready for pickup" at the counter */
-        fun statusLabel(status: TicketStatusType): String = status.label
     }
 }

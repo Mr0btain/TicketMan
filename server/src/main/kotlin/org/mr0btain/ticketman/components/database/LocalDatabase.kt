@@ -136,7 +136,9 @@ class LocalDatabase (
         InventoryTable,
         StationTable,
         ImageTable,
-        InvoiceTable
+        InvoiceTable,
+        NoteTable,
+        TicketStatusHistoryTable
     )
 
     /**

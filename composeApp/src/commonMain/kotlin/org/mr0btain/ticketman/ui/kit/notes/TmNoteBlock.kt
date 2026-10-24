@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
 import org.mr0btain.ticketman.ui.kit.images.TmImagePager
+import org.mr0btain.ticketman.ui.kit.feedback.TmBadge
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
@@ -17,7 +18,7 @@ import ticketman.composeapp.generated.resources.edit_2
 import kotlin.uuid.Uuid
 
 /**
- * Notes newest first: author, time, message and any photos
+ * Notes newest first: author, time, message and any photos. Notes the customer can see are marked
  * @param editable Shows an edit button on each note
  * @param emptyText Shown when there are no notes, null shows nothing
  * @param onImageClick Gets the note's identifier and the page of its photo that was clicked
@@ -50,6 +51,9 @@ fun TmNoteBlock(
                         color = colors.textMuted,
                         maxLines = 1
                     )
+                    if (note.customerVisible) {
+                        TmBadge(text = "Customer sees this", tone = colors.accent)
+                    }
                     if (editable) {
                         TmIconButton(icon = Res.drawable.edit_2, contentDescription = "Edit note", onClick = { onEditClick(note) }, size = TmControlSize.SMALL)
                     }

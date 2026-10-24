@@ -6,6 +6,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import org.mr0btain.ticketman.ui.kit.data.LocalCurrencySymbol
+import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -93,10 +94,12 @@ fun App() {
     setSingletonImageLoaderFactory { context -> mainViewModel.imageClient.newImageLoader(context) }
 
     // Photos anywhere below can upload and load through the server.
-    // Amounts anywhere below show the shop's currency
+    // Amounts anywhere below show the shop's currency, and ticket statuses the shop's own names
+    val shop = mainViewModel.counter.shop.collectAsState().value
     CompositionLocalProvider(
         LocalImageClient provides mainViewModel.imageClient,
-        LocalCurrencySymbol provides mainViewModel.counter.shop.collectAsState().value.currencySymbol
+        LocalCurrencySymbol provides shop.currencySymbol,
+        LocalTicketStatuses provides shop.statuses
     ) {
         TmTheme(
             palette = mainViewModel.settings.palette.collectAsState().value,

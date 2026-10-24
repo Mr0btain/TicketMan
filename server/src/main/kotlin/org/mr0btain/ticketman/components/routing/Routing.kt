@@ -164,6 +164,7 @@ fun Application.configureRouting(
                 userDatabase = localDatabase.userDatabase,
                 auditLog = localDatabase.auditLogDatabase,
                 workDatabase = localDatabase.workDatabase,
+                shopDatabase = localDatabase.shopDatabase,
                 invoiceService = invoiceService
             )
         }

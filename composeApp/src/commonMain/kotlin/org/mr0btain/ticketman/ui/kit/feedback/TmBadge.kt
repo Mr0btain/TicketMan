@@ -9,13 +9,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
+import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.StatusChoice
+import org.mr0btain.ticketman.data.ticket.StatusTone
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.ticket.label
+import org.mr0btain.ticketman.data.ticket.tone
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.kit.theme.TmColors
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -66,12 +72,15 @@ fun TmDot(
 
 // --------------------------------- What each state looks like ---------------------------------
 
-fun TmColors.tone(status: TicketStatusType): TmTone = when (status) {
-    TicketStatusType.IN_PROGRESS -> warning
-    TicketStatusType.ON_HOLD -> danger
-    TicketStatusType.DONE -> success
-    TicketStatusType.PICKED_UP -> neutral
+fun TmColors.tone(tone: StatusTone): TmTone = when (tone) {
+    StatusTone.ACCENT -> accent
+    StatusTone.SUCCESS -> success
+    StatusTone.WARNING -> warning
+    StatusTone.DANGER -> danger
+    StatusTone.NEUTRAL -> neutral
 }
+
+fun TmColors.tone(status: TicketStatusType): TmTone = tone(status.tone)
 
 fun TmColors.tone(priority: TicketPriorityType): TmTone = when (priority) {
     TicketPriorityType.LOW -> neutral
@@ -93,18 +102,26 @@ fun TmColors.tone(status: UserStatus): TmTone = when (status) {
     UserStatus.DEACTIVATED -> neutral
 }
 
-/** What staff and customers call each status. DONE means the repair is finished and waiting to be collected */
-val TicketStatusType.label: String
-    get() = when (this) {
-        TicketStatusType.IN_PROGRESS -> "In progress"
-        TicketStatusType.ON_HOLD -> "On hold"
-        TicketStatusType.DONE -> "Ready for pickup"
-        TicketStatusType.PICKED_UP -> "Picked up"
-    }
+/** The shop's own ticket statuses, from its profile, so status badges and pickers anywhere below can name them */
+val LocalTicketStatuses = staticCompositionLocalOf { emptyList<CustomStatus>() }
 
+/** A status's name as staff see it, with the shop's own statuses from [LocalTicketStatuses] */
+@Composable
+fun statusLabel(choice: StatusChoice): String = LocalTicketStatuses.current.label(choice)
+
+@Composable
+fun statusTone(choice: StatusChoice): TmTone = TmTheme.colors.tone(LocalTicketStatuses.current.tone(choice))
+
+/** A built-in status on its own, for the gallery and anywhere the shop's own statuses don't apply */
 @Composable
 fun TmStatusBadge(status: TicketStatusType, modifier: Modifier = Modifier, solid: Boolean = false) {
     TmBadge(text = status.label, tone = TmTheme.colors.tone(status), modifier = modifier, solid = solid)
+}
+
+/** A ticket's status, named and colored as the shop set it up */
+@Composable
+fun TmStatusBadge(status: StatusChoice, modifier: Modifier = Modifier, solid: Boolean = false) {
+    TmBadge(text = statusLabel(status), tone = statusTone(status), modifier = modifier, solid = solid)
 }
 
 @Composable

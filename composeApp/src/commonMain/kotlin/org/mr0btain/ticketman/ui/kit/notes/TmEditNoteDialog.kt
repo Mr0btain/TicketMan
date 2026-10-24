@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDeleteDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
+import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.trash_2
 
@@ -22,6 +23,7 @@ import ticketman.composeapp.generated.resources.trash_2
  * @param label Dialog title, like "Add note"
  * @param onDelete Deletes the note being edited, asked about first. Null leaves the delete button off, and it's
  * never shown for a new note
+ * @param canShowCustomer Offers to show the note to the customer on their status page, for ticket notes
  */
 @Composable
 fun TmEditNoteDialog(
@@ -30,7 +32,8 @@ fun TmEditNoteDialog(
     isVisible: Boolean,
     onConfirm: () -> Unit,
     onDismissRequest: () -> Unit,
-    onDelete: (() -> Unit)? = null
+    onDelete: (() -> Unit)? = null,
+    canShowCustomer: Boolean = false
 ) {
     if (!isVisible) return
 
@@ -93,5 +96,13 @@ fun TmEditNoteDialog(
             onRemove = { seed.deleteImage(it.identifier) },
             onUploadingChange = { isUploading = it }
         )
+
+        if (canShowCustomer) {
+            TmCheckbox(
+                checked = seed.customerVisible,
+                onCheckedChange = { seed.changeCustomerVisible(it) },
+                label = "Show the customer, with its photos, on their status page"
+            )
+        }
     }
 }

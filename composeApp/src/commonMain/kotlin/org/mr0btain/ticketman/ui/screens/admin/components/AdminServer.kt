@@ -76,8 +76,10 @@ class AdminServer(
     fun saveShopProfile(profile: ShopProfile) {
         scope.launch {
             support.report(admin.updateShopProfile(profile), "Shop profile saved") {
-                _shopProfile.value = profile
-                onShopChanged(profile)
+                // Read back, since the server tidies it and keeps statuses that were taken off as retired
+                val saved = admin.getShopProfile() ?: profile
+                _shopProfile.value = saved
+                onShopChanged(saved)
             }
         }
     }

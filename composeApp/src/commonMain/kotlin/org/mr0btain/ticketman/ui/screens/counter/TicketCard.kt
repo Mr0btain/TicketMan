@@ -13,7 +13,9 @@ import org.mr0btain.ticketman.components.utils.formatDay
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.components.utils.formatTimeAgo
-import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.ticket.StatusChoice
+import org.mr0btain.ticketman.ui.kit.feedback.statusLabel
+import org.mr0btain.ticketman.ui.kit.selection.TmStatusPicker
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.ui.kit.inputs.TmSignatureView
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
@@ -31,7 +33,6 @@ import org.mr0btain.ticketman.ui.kit.feedback.tone
 import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
-import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.counter.components.*
 import ticketman.composeapp.generated.resources.Res
@@ -55,7 +56,7 @@ private val PANEL_WIDTH = 400.dp
 fun TicketCard(
     detail: TicketDetail,
     canEdit: Boolean,
-    onStatusChange: (TicketStatusType) -> Unit,
+    onStatusChange: (StatusChoice) -> Unit,
     onAddNote: (String) -> Unit,
     onCustomerClick: () -> Unit,
     onBack: () -> Unit,
@@ -84,7 +85,7 @@ fun TicketCard(
                     itemVerticalAlignment = Alignment.CenterVertically
                 ) {
                     TmTicketIdText(number = ticket.label, style = TmTheme.typography.numericDisplay)
-                    TmStatusBadge(ticket.status.status)
+                    TmStatusBadge(ticket.status.choice)
                     TmPriorityBadge(ticket.priority.priority)
                     if (ticket.isOverdue) TmBadge(text = "Overdue", tone = colors.danger, solid = true)
                 }
@@ -101,13 +102,7 @@ fun TicketCard(
                 verticalArrangement = Arrangement.spacedBy(spacing.sm),
                 itemVerticalAlignment = Alignment.Bottom
             ) {
-                TmSegmented(
-                    label = "Status",
-                    options = TicketStatusType.selectable,
-                    selected = ticket.status.status,
-                    onSelect = { if (it != ticket.status.status) onStatusChange(it) },
-                    optionLabel = { CounterHandler.statusLabel(it) }
-                )
+                TmStatusPicker(selected = ticket.status.choice, onSelect = onStatusChange)
 
                 Spacer(Modifier.weight(1f))
 
@@ -288,7 +283,7 @@ fun TicketCard(
                                     TmKeyValueRow(label = "${change.changedBy}, ${formatDateTime(change.time)}") {
                                         Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
                                             TmDot(colors.tone(change.status).color)
-                                            Text(text = CounterHandler.statusLabel(change.status), style = TmTheme.typography.label, color = colors.text)
+                                            Text(text = statusLabel(change.choice), style = TmTheme.typography.label, color = colors.text)
                                         }
                                     }
                                 }

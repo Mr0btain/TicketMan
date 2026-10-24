@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.ticket.CustomStatusRules
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
@@ -49,7 +50,21 @@ fun Route.shopRoute(
                 return@post
             }
 
-            if (database.update(profile.copy(currencySymbol = symbol))) {
+            ShopProfile.publicUrlProblem(profile.publicUrl)?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
+            // Statuses left out are kept as retired, since tickets may still be in them
+            val previous = database.get().statuses
+            val statuses = CustomStatusRules.keepingRemoved(previous, profile.statuses)
+            (CustomStatusRules.changeProblem(previous, profile.statuses) ?: CustomStatusRules.problem(statuses))?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
+            val saved = profile.copy(currencySymbol = symbol, publicUrl = profile.publicUrl.trim().trimEnd('/'), statuses = statuses)
+            if (database.update(saved)) {
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "shop", details = "Updated shop profile")
                 call.respond(HttpStatusCode.Accepted)
             } else {

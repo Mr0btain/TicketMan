@@ -15,6 +15,7 @@ class NoteEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
 
     var author by NoteTable.author
     var message by NoteTable.message
+    var customerVisible by NoteTable.customerVisible
 
     // List of images
     var images by ImageEntity via NoteImageTable
@@ -24,6 +25,7 @@ class NoteEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             identifier = id.value,
             author = author,
             message = message,
-            images = images.map { it.toStoredImage() }
+            images = images.map { it.toStoredImage() },
+            customerVisible = customerVisible
         )
 }

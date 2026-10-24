@@ -12,8 +12,7 @@ import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
-import org.mr0btain.ticketman.data.ticket.TicketStatus
-import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.ui.kit.selection.TmStatusPicker
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
@@ -21,7 +20,6 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
-import org.mr0btain.ticketman.ui.kit.feedback.label
 import org.mr0btain.ticketman.ui.kit.feedback.tone
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
@@ -65,6 +63,7 @@ fun TicketDialog(
         isVisible = showNoteDialog,
         onConfirm = { seed.saveNote(noteSeed.note) },
         onDelete = { seed.deleteNote(noteSeed.identifier) },
+        canShowCustomer = true,
         onDismissRequest = {
             noteSeed.clear()
             showNoteDialog = false
@@ -153,15 +152,11 @@ fun TicketDialog(
         TmSectionLabel("Progress")
         TmFieldPair(
             {
-                TmDropdown(
+                TmStatusPicker(
                     modifier = it,
-                    label = "Status",
-                    // A picked up ticket is closed, the server won't change its status
-                    options = if (seed.status.status == TicketStatusType.PICKED_UP) listOf(TicketStatusType.PICKED_UP) else TicketStatusType.selectable,
-                    selected = seed.status.status,
-                    onSelect = { status -> seed.changeStatus(TicketStatus(status)) },
-                    optionLabel = { status -> status.label },
-                    optionLeading = { status -> TmDot(colors.tone(status).color) }
+                    selected = seed.status.choice,
+                    onSelect = { choice -> seed.changeStatus(choice.toStatus()) },
+                    dropdown = true
                 )
             },
             {

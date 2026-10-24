@@ -33,5 +33,6 @@ enum class ChangedField {
     CONDITION,
     ACCESSORIES,
     ESTIMATE,
-    PROMISED
+    PROMISED,
+    CUSTOMER_VISIBLE
 }

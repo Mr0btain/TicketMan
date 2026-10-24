@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -29,6 +30,9 @@ import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
+import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.StatusChoice
+import org.mr0btain.ticketman.data.ticket.StatusTone
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
@@ -60,6 +64,7 @@ import org.mr0btain.ticketman.ui.kit.data.TmStatTile
 import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
+import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
@@ -90,6 +95,7 @@ import org.mr0btain.ticketman.ui.kit.selection.TmFilterChip
 import org.mr0btain.ticketman.ui.kit.selection.TmRadio
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
 import org.mr0btain.ticketman.ui.kit.selection.TmSwitch
+import org.mr0btain.ticketman.ui.kit.selection.TmStatusPicker
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.theme.TmTone
 import ticketman.composeapp.generated.resources.*
@@ -361,6 +367,8 @@ private fun SelectionSection() {
     var kiosk by remember { mutableStateOf(true) }
     var tax by remember { mutableStateOf(true) }
     var payment by remember { mutableStateOf("Card") }
+    var builtIn by remember { mutableStateOf(StatusChoice(TicketStatusType.IN_PROGRESS)) }
+    var custom by remember { mutableStateOf(sampleStatuses[1].choice) }
 
     GallerySection(title = "Choosing", description = "Dropdowns, segments, chips and toggles") {
         Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
@@ -386,6 +394,13 @@ private fun SelectionSection() {
 
         Specimen("Segmented") {
             TmSegmented(options = listOf("Queue", "Ready", "All"), selected = view, onSelect = { view = it }, optionLabel = { it })
+        }
+
+        Specimen("Ticket status, built-in only and with the shop's own") {
+            TmStatusPicker(selected = builtIn, onSelect = { builtIn = it })
+            CompositionLocalProvider(LocalTicketStatuses provides sampleStatuses) {
+                TmStatusPicker(modifier = Modifier.width(240.dp), selected = custom, onSelect = { custom = it })
+            }
         }
 
         Specimen("Filter chips") {
@@ -433,11 +448,23 @@ private fun SearchSection() {
 
 // --------------------------------------- Badges ---------------------------------------
 
+// Statuses a shop might add, for the badges and the status picker
+private val sampleStatuses = listOf(
+    CustomStatus(name = "Diagnosing", actsAs = TicketStatusType.IN_PROGRESS, tone = StatusTone.ACCENT),
+    CustomStatus(name = "Awaiting parts", actsAs = TicketStatusType.ON_HOLD),
+    CustomStatus(name = "Awaiting customer", actsAs = TicketStatusType.ON_HOLD, tone = StatusTone.NEUTRAL, showCustomer = false)
+)
+
 @Composable
 private fun BadgesSection() {
     GallerySection(title = "Badges", description = "Each state keeps its color in every theme") {
         Specimen("Ticket status") { TicketStatusType.entries.forEach { TmStatusBadge(it) } }
         Specimen("Ticket status, solid") { TicketStatusType.entries.forEach { TmStatusBadge(it, solid = true) } }
+        Specimen("Ticket status, the shop's own") {
+            CompositionLocalProvider(LocalTicketStatuses provides sampleStatuses) {
+                sampleStatuses.forEach { TmStatusBadge(it.choice) }
+            }
+        }
         Specimen("Priority") { TicketPriorityType.entries.forEach { TmPriorityBadge(it) } }
         Specimen("Access level") { AccessLevel.entries.forEach { TmAccessBadge(it) } }
         Specimen("Account") { UserStatus.entries.forEach { TmUserStatusBadge(it) } }
@@ -659,7 +686,7 @@ private fun PhotosSection() {
 private fun NotesSection() {
     val notes = remember {
         listOf(
-            Note(author = "Dana Whitfield", message = "Back glass cracked, frame is fine. Ordered a new panel."),
+            Note(author = "Dana Whitfield", message = "Back glass cracked, frame is fine. Ordered a new panel.", customerVisible = true),
             Note(
                 author = "Marcus Oyelaran",
                 message = "Customer dropped it in water last week, indicator is tripped.",
@@ -693,7 +720,8 @@ private fun NotesSection() {
             isVisible = editing,
             onConfirm = { editing = false },
             onDismissRequest = { editing = false },
-            onDelete = {}
+            onDelete = {},
+            canShowCustomer = true
         )
     }
 }

@@ -43,6 +43,9 @@ class NoteSeed {
     var message: String by mutableStateOf("")
         private set
 
+    var customerVisible: Boolean by mutableStateOf(false)
+        private set
+
     // Fields as they were when the note was set
     private var saved: Map<ChangedField, Any?> by mutableStateOf(emptyMap())
 
@@ -50,7 +53,8 @@ class NoteSeed {
         ChangedField.IDENTIFIER to identifier,
         ChangedField.AUTHOR to author,
         ChangedField.MESSAGE to message,
-        ChangedField.IMAGE to _images.toList()
+        ChangedField.IMAGE to _images.toList(),
+        ChangedField.CUSTOMER_VISIBLE to customerVisible
     )
 
     /** Whether anything differs from when the note was set */
@@ -58,12 +62,13 @@ class NoteSeed {
         get() = snapshot() != saved
 
     val note: Note
-        get() = Note(identifier, author, message, _images.toList())
+        get() = Note(identifier, author, message, _images.toList(), customerVisible)
 
     fun setNote(note: Note) {
         identifier = note.identifier
         author = note.author
         message = note.message
+        customerVisible = note.customerVisible
 
         changeImages(note.images)
 
@@ -98,10 +103,15 @@ class NoteSeed {
         message = newMessage
     }
 
+    fun changeCustomerVisible(visible: Boolean) {
+        customerVisible = visible
+    }
+
     fun clear() {
         identifier = Uuid.generateV7()
         author = ""
         message = ""
+        customerVisible = false
         _images.clear()
 
         isNew = true

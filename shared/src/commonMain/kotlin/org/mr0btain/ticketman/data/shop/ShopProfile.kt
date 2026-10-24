@@ -2,9 +2,13 @@ package org.mr0btain.ticketman.data.shop
 
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.ticket.CustomStatus
 
 /**
  * Shop details used on invoices and anything else customer facing
+ * @param publicUrl Where customers reach this server from outside the shop, like `https://repairs.example.com`,
+ * used for status links. Blank until the shop sets it
+ * @param statuses The shop's own ticket statuses, retired ones included (see [CustomStatus])
  */
 @Serializable
 data class ShopProfile(
@@ -27,10 +31,21 @@ data class ShopProfile(
     /** Put before every amount shown or printed, like "$" or "£" */
     val currencySymbol: String = Money.DEFAULT_SYMBOL,
     /** Per hour, for time logged on a ticket's work log. 0 until it's set */
-    val laborRateCents: Long = 0
+    val laborRateCents: Long = 0,
+    val publicUrl: String = "",
+    val statuses: List<CustomStatus> = emptyList()
 ) {
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90
+
+        private val PUBLIC_URL = Regex("""https?://[^\s/?#]+(/[^\s?#]*)?""")
+
+        /** Problem with a public address, or null if it's fine. Blank is fine, it just isn't set */
+        fun publicUrlProblem(url: String): String? = when {
+            url.isBlank() -> null
+            !PUBLIC_URL.matches(url.trim()) -> "Public address has to look like https://repairs.example.com"
+            else -> null
+        }
     }
 }
 

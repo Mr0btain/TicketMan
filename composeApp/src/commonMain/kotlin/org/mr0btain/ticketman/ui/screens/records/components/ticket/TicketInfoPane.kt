@@ -39,7 +39,7 @@ fun TicketInfoPane(
         canEdit = canEdit
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
-            TmStatusBadge(ticket.status.status)
+            TmStatusBadge(ticket.status.choice)
             TmPriorityBadge(ticket.priority.priority)
         }
 

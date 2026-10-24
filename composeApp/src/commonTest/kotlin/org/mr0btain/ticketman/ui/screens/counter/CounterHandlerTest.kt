@@ -25,6 +25,9 @@ import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.ticket.StatusChoice
+import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.label
 import org.mr0btain.ticketman.server.request.CheckInRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
@@ -132,7 +135,7 @@ class CounterHandlerTest {
         settle { counter.ticket.value != null }
         requests.clear()
 
-        counter.setTicketStatus(TicketStatusType.DONE)
+        counter.setTicketStatus(StatusChoice(TicketStatusType.DONE))
         counter.addTicketNote("Called the customer")
 
         // Both give up before launching anything when the user can't edit
@@ -143,7 +146,7 @@ class CounterHandlerTest {
 
     @Test
     fun doneReadsAsReadyForPickup() {
-        assertEquals("Ready for pickup", CounterHandler.statusLabel(TicketStatusType.DONE))
+        assertEquals("Ready for pickup", emptyList<CustomStatus>().label(StatusChoice(TicketStatusType.DONE)))
     }
 
     @Test

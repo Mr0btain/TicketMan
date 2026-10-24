@@ -18,7 +18,7 @@ or none of them. The ticket gets its number here.
   is a `PaymentRequest`; `signature` is needed when the shop has repair terms.
 - **`201`** `CheckInResponse { ticket, invoice }`, with the numbered ticket and the invoice if a deposit made one.
 - **`400`** with the reason: the ticket id isn't a version 7 UUID, no such customer, no make or model, no problem,
-  a status other than in progress or on hold, a negative estimate, a technician without Normal access, a deposit
+  a status other than in progress or on hold (or one of the shop's own counting as them; an unknown or retired one is refused too), a negative estimate, a technician without Normal access, a deposit
   of zero or less, or a missing or bad signature. **`409`** a ticket with that id already exists.
 
 ### `POST /api/counter/pickup`

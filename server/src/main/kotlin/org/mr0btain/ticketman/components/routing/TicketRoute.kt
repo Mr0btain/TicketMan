@@ -6,6 +6,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.WorkDatabase
@@ -13,6 +14,7 @@ import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.server.request.WorkRequest
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
+import org.mr0btain.ticketman.data.ticket.CustomStatusRules
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.data.ticket.TicketNumber
@@ -29,6 +31,7 @@ fun Route.ticketRoute(
     userDatabase: UserDatabase,
     auditLog: AuditLogDatabase,
     workDatabase: WorkDatabase,
+    shopDatabase: ShopDatabase,
     invoiceService: InvoiceService
 ) {
     val TAG = "TicketRoute"
@@ -194,7 +197,12 @@ fun Route.ticketRoute(
     authenticate {
         // Responds with the saved ticket so the caller gets its number
         post(RecordPaths.ADD) {
-            val received = call.receive<Ticket>()
+            val received = call.receive<Ticket>().let { ticket ->
+                when (val resolved = CustomStatusRules.resolve(ticket.status, shopDatabase.get().statuses)) {
+                    is CustomStatusRules.Resolved.Ok -> ticket.copy(status = resolved.status)
+                    is CustomStatusRules.Resolved.Problem -> return@post call.respond(HttpStatusCode.BadRequest, resolved.message)
+                }
+            }
 
             if (received.status.status == TicketStatusType.PICKED_UP) {
                 call.respond(HttpStatusCode.BadRequest, "New tickets can't start picked up")
@@ -208,18 +216,24 @@ fun Route.ticketRoute(
                 return@post
             }
 
-            database.recordStatusChange(saved.identifier, saved.status.status, call.username(userDatabase))
+            database.recordStatusChange(saved.identifier, saved.status, call.username(userDatabase))
             call.audit(auditLog, AuditAction.CREATE, ENTITY_TYPE, saved.identifier, "Ticket ${saved.label}")
             call.respond(HttpStatusCode.Created, saved)
         }
 
         post(RecordPaths.UPDATE) {
-            val received = call.receive<Ticket>()
-            val existing = database.getById(received.identifier)
+            val sent = call.receive<Ticket>()
+            val existing = database.getById(sent.identifier)
 
             if (existing == null) {
                 call.respond(HttpStatusCode.NotFound)
                 return@post
+            }
+
+            // A ticket already in a status that's since been retired can stay in it
+            val received = when (val resolved = CustomStatusRules.resolve(sent.status, shopDatabase.get().statuses, existing.status)) {
+                is CustomStatusRules.Resolved.Ok -> sent.copy(status = resolved.status)
+                is CustomStatusRules.Resolved.Problem -> return@post call.respond(HttpStatusCode.BadRequest, resolved.message)
             }
 
             // Pickup pays the invoice and takes the parts, so it only happens at the counter, and a picked up ticket stays closed
@@ -240,8 +254,8 @@ fun Route.ticketRoute(
                 return@post
             }
 
-            if (existing.status.status != received.status.status) {
-                database.recordStatusChange(received.identifier, received.status.status, call.username(userDatabase))
+            if (existing.status.choice != received.status.choice) {
+                database.recordStatusChange(received.identifier, received.status, call.username(userDatabase))
             }
 
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, "Ticket ${existing.label}: status ${received.status.status}")

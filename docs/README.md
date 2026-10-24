@@ -85,6 +85,10 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Decisions](decisions.md): why H2, per device sessions, photo deletion waiting a day, cents, client-made ids,
   the UI kit rules and other choices, with what each costs
 
+## Roadmap
+
+- [Roadmap](roadmap.md): the features planned next, in phases
+
 ## About these docs
 
 [STYLE.md](STYLE.md) covers how pages are written, the template new pages start from, and how they're kept

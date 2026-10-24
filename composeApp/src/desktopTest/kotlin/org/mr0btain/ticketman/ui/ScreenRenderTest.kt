@@ -35,6 +35,7 @@ import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.station.StaffMember
+import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
@@ -43,6 +44,8 @@ import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusChange
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.StatusTone
 import org.mr0btain.ticketman.server.response.AdminStatsResponse
 import org.mr0btain.ticketman.server.response.BackupManifest
 import org.mr0btain.ticketman.server.response.PendingRestore
@@ -389,7 +392,7 @@ class ScreenRenderTest {
         val now = System.currentTimeMillis()
         val manifest = BackupManifest(serverVersion = "1.0.0", createdAt = now - 3 * day, includesImages = false, imageCount = 0, imageBytes = 0)
 
-        bothModes("admin-server", height = 1700) {
+        bothModes("admin-server", height = 2200) {
             Shell("Admin") {
                 AdminServerTab(
                     serverInfo = ServerInfoResponse(
@@ -400,7 +403,14 @@ class ScreenRenderTest {
                         lastRestore = RestoreRecord(manifest, now - day, "pre-restore-${now - day}")
                     ),
                     serverUrl = "https://192.168.1.20:8443",
-                    shopProfile = null,
+                    shopProfile = ShopProfile(
+                        name = "Fix It Shop", phone = "555-0100", publicUrl = "https://repairs.example.com", taxRate = "8.25",
+                        statuses = listOf(
+                            CustomStatus(name = "Diagnosing", actsAs = TicketStatusType.IN_PROGRESS, tone = StatusTone.ACCENT),
+                            CustomStatus(name = "Awaiting parts", actsAs = TicketStatusType.ON_HOLD),
+                            CustomStatus(name = "Waiting on insurer", actsAs = TicketStatusType.ON_HOLD, retired = true)
+                        )
+                    ),
                     isBusy = false,
                     backupProgress = null,
                     pendingRestore = null,

@@ -69,7 +69,8 @@ Looks a ticket up by the number on its claim slip, like `26-00000042`.
 
 Every status the ticket has had, oldest first, with who changed it.
 
-- **`200`** a list of `TicketStatusChange { status, time, changedBy }`. **`404`** if it couldn't be read.
+- **`200`** a list of `TicketStatusChange { status, time, changedBy, custom }`, where `custom` is the shop's own
+  status it was set to, if any. **`404`** if it couldn't be read.
 
 ### `GET /api/data/ticket/signature/{identifier}`
 
@@ -90,17 +91,21 @@ Adds a ticket and gives it the next number.
 
 - **Body:** `Ticket`, with an id the client made. Its `number` is replaced by the next one.
 - **`201`** the saved `Ticket`, with its number.
-- **`400`** `New tickets can't start picked up`. **`500`** not saved.
+- **`400`** `New tickets can't start picked up`, or a `status.custom` that isn't one of the shop's statuses or is
+  retired. **`500`** not saved.
 
 ### `POST /api/data/ticket/update`
 
 **Auth:** normal
 
 Replaces the ticket's device, status, priority, problem, condition, accessories, estimate and promised time. The
-number and pickup time stay the server's. A status change is added to the history.
+number and pickup time stay the server's. A status change, including a move between two of the shop's own statuses
+that count as the same built-in one, is added to the history.
 
-- **Body:** `Ticket`.
+- **Body:** `Ticket`. A `status.custom` (one of the shop profile's `statuses`) sets `status.status` to the built-in
+  status it counts as, whatever was sent.
 - **`202`** saved. **`404`** no such ticket.
+- **`400`** a `status.custom` that isn't one of the shop's, or is retired, unless the ticket is already in it.
 - **`409`** setting `PICKED_UP` (`Pick tickets up at the counter, so the invoice gets paid`), or changing a picked
   up ticket's status. Other changes to a picked up ticket are fine.
 

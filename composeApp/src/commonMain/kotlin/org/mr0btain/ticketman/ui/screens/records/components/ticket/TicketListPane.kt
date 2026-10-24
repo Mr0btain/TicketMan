@@ -59,7 +59,7 @@ fun TicketListPane(
                         overflow = TextOverflow.Ellipsis
                     )
                     2 -> TmPriorityBadge(ticket.priority.priority)
-                    3 -> TmStatusBadge(ticket.status.status)
+                    3 -> TmStatusBadge(ticket.status.choice)
                 }
             }
         }

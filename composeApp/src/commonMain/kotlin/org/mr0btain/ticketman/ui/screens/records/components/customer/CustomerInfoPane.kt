@@ -58,7 +58,7 @@ fun CustomerInfoPane(
                     TmListRow(
                         title = ticket.device.toString().ifBlank { "Unknown device" },
                         leading = { TmTicketIdText(ticket.label, Modifier.width(104.dp)) },
-                        trailing = { TmStatusBadge(ticket.status.status) },
+                        trailing = { TmStatusBadge(ticket.status.choice) },
                         onClick = { onTicketClick(ticket.identifier) }
                     )
                 }

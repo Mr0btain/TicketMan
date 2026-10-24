@@ -34,7 +34,7 @@ fun TicketRow(
         subtitle = details.joinToString(", ").ifBlank { null },
         onClick = onClick,
         leading = { TmTicketIdText(ticket.label, Modifier.width(104.dp)) },
-        trailing = if (showStatus) ({ TmStatusBadge(ticket.status.status) }) else null
+        trailing = if (showStatus) ({ TmStatusBadge(ticket.status.choice) }) else null
     )
 }
 

@@ -297,12 +297,13 @@ class TicketDatabase(
      * Adds an entry to a ticket's status history
      * @param changedBy Username of whoever made the change
      */
-    fun recordStatusChange(identifier: Uuid, status: TicketStatusType, changedBy: String): Boolean =
+    fun recordStatusChange(identifier: Uuid, status: TicketStatus, changedBy: String): Boolean =
         dbWrite(RECORD_STATUS_TAG) {
             TicketStatusHistoryTable.insert { row ->
                 row[TicketStatusHistoryTable.id] = Uuid.generateV7()
                 row[TicketStatusHistoryTable.ticket] = identifier
-                row[TicketStatusHistoryTable.status] = status.name
+                row[TicketStatusHistoryTable.status] = status.status.name
+                row[TicketStatusHistoryTable.custom] = status.custom
                 row[TicketStatusHistoryTable.time] = Clock.System.now().toEpochMilliseconds()
                 row[TicketStatusHistoryTable.changedBy] = changedBy
             }
@@ -321,7 +322,8 @@ class TicketDatabase(
                     TicketStatusChange(
                         status = TicketStatusType.valueOf(row[TicketStatusHistoryTable.status]),
                         time = row[TicketStatusHistoryTable.time],
-                        changedBy = row[TicketStatusHistoryTable.changedBy]
+                        changedBy = row[TicketStatusHistoryTable.changedBy],
+                        custom = row[TicketStatusHistoryTable.custom]
                     )
                 }
         }

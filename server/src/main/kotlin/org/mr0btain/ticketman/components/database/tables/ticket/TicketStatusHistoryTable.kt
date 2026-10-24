@@ -11,4 +11,7 @@ object TicketStatusHistoryTable : UuidTable("ticket_status_history") {
     val status = text("status")
     val time = long("time")
     val changedBy = text("changed_by")
+
+    // The shop's own status, added with custom statuses
+    val custom = uuid("custom_status").nullable()
 }

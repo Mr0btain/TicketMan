@@ -128,6 +128,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
         return NoteEntity.new(note.identifier) {
             author = note.author
             message = note.message
+            customerVisible = note.customerVisible
         }.also { entity -> entity.images = SizedCollection(linked) }
     }
 
@@ -152,7 +153,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
 
     /**
-     * Updates a note's text and images. Images left off are marked deleted and their files go with a later sweep
+     * Updates a note's text, images and whether the customer sees it. Images left off are marked deleted and their files go with a later sweep
      * @param note Note data
      * @return Whether the note was found
      */
@@ -163,6 +164,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
 
             noteEntity.author = note.author
             noteEntity.message = note.message
+            noteEntity.customerVisible = note.customerVisible
             noteEntity.images = SizedCollection(linkImages(note.images, noteEntity.images.toList()))
 
             true

@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.ticket.CustomStatusRules
 import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.request.CheckInRequest
@@ -34,7 +35,15 @@ class CheckInService(
      * Makes the ticket, links the customer and tech, takes any deposit and saves the signature. Everything is
      * checked first, then saved together
      */
-    fun checkIn(request: CheckInRequest, takenBy: String, actor: Uuid?): AccountResult<CheckInResponse> {
+    fun checkIn(received: CheckInRequest, takenBy: String, actor: Uuid?): AccountResult<CheckInResponse> {
+        val shopProfile = shop.get()
+
+        // A custom status is saved with the built-in one it acts as, which is then checked like any other
+        val status = when (val resolved = CustomStatusRules.resolve(received.ticket.status, shopProfile.statuses)) {
+            is CustomStatusRules.Resolved.Ok -> resolved.status
+            is CustomStatusRules.Resolved.Problem -> return AccountResult.Invalid(resolved.message)
+        }
+        val request = received.copy(ticket = received.ticket.copy(status = status))
         val ticket = request.ticket
 
         // Check in time is read from the identifier, so it has to be a time based (version 7) one
@@ -54,7 +63,6 @@ class CheckInService(
 
         request.deposit?.let { if (it.amountCents <= 0) return AccountResult.Invalid("Deposit has to be more than zero") }
 
-        val shopProfile = shop.get()
         request.signature?.problem()?.let { return AccountResult.Invalid(it) }
         if (shopProfile.repairTerms.isNotBlank() && request.signature == null) return AccountResult.Invalid("The customer has to sign the repair terms")
 
@@ -86,7 +94,7 @@ class CheckInService(
         transaction {
             // Pickup fields are the server's to set
             tickets.add(ticket.copy(pickedUpAt = null, number = null))
-            tickets.recordStatusChange(ticket.identifier, ticket.status.status, takenBy)
+            tickets.recordStatusChange(ticket.identifier, ticket.status, takenBy)
             tickets.setCustomer(ticket.identifier, request.customerIdentifier)
             request.technicianIdentifier?.let { tickets.setUser(ticket.identifier, it) }
 

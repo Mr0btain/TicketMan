@@ -100,7 +100,11 @@ fun AdminServerTab(
                 }
             }
 
-            ShopProfileCard(shopProfile, onSaveShopProfile)
+            Column(verticalArrangement = Arrangement.spacedBy(spacing.md)) {
+                ShopProfileCard(shopProfile, onSaveShopProfile)
+
+                TicketStatusesCard(shopProfile?.statuses) { statuses -> shopProfile?.let { onSaveShopProfile(it.copy(statuses = statuses)) } }
+            }
         }
     }
 }
@@ -419,8 +423,9 @@ private fun ShopProfileCard(
     shopProfile: ShopProfile?,
     onSave: (ShopProfile) -> Unit
 ) {
-    // Edits are kept here until saved, and reset when a new profile comes from the server
-    val loaded = shopProfile ?: ShopProfile()
+    // Edits are kept here until saved, and reset when a new profile comes from the server. Statuses have their own
+    // card, so saving those doesn't throw away edits made here
+    val loaded = (shopProfile ?: ShopProfile()).copy(statuses = emptyList())
     var profile by remember(loaded) { mutableStateOf(loaded) }
     // Kept as text while typing so the field can be cleared, saved as a number
     var repeatDays by remember(loaded) { mutableStateOf(profile.repeatWindowDays.toString()) }
@@ -428,6 +433,7 @@ private fun ShopProfileCard(
     val symbolProblem = profile.currencySymbol.trim().let { symbol ->
         if (symbol.isEmpty() || symbol.length > Money.MAX_SYMBOL_LENGTH || symbol.any { it.isDigit() }) "1 to ${Money.MAX_SYMBOL_LENGTH} characters, no digits" else null
     }
+    val urlProblem = ShopProfile.publicUrlProblem(profile.publicUrl)
     val spacing = TmTheme.spacing
 
     TmPanel(
@@ -438,8 +444,8 @@ private fun ShopProfileCard(
         actions = {
             TmButton(
                 text = "Save profile",
-                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null,
-                onClick = { onSave(profile) }
+                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null && urlProblem == null,
+                onClick = { onSave(profile.copy(statuses = shopProfile?.statuses.orEmpty())) }
             )
         }
     ) {
@@ -455,6 +461,15 @@ private fun ShopProfileCard(
         TmFieldPair(
             { TmTextField(modifier = it, value = profile.email, onValueChange = { v -> profile = profile.copy(email = v) }, label = "Email") },
             { TmTextField(modifier = it, value = profile.website, onValueChange = { v -> profile = profile.copy(website = v) }, label = "Website") }
+        )
+        TmTextField(
+            modifier = Modifier.fillMaxWidth(),
+            value = profile.publicUrl,
+            onValueChange = { profile = profile.copy(publicUrl = it.trim()) },
+            label = "Public address",
+            placeholder = "https://repairs.example.com",
+            supportingText = "Where customers reach this server from outside the shop, for ticket status links",
+            error = urlProblem
         )
         TmTextField(modifier = Modifier.fillMaxWidth(), value = profile.street, onValueChange = { profile = profile.copy(street = it) }, label = "Street")
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {

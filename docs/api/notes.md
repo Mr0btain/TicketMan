@@ -20,6 +20,8 @@ only. How notes are stored and checked is in [Database layer](../server/database
 - **Photos** go in the note's `images`, uploaded first with [`POST /api/image/upload`](image.md). Saving the note
   links the ones that are pending or already on it; photos it had that aren't listed any more are marked deleted.
   Removing a note marks all its photos deleted.
+- **`customerVisible`** marks a note (and its photos) for the customer's status page. It's off unless set, and
+  only offered on ticket notes.
 - Every add, update and remove is written to the [audit log](../server/audit-log.md) as `<type> note`.
 
 ## Customers

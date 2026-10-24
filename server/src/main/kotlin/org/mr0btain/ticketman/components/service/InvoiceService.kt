@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.ticket.TicketStatus
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
@@ -135,7 +136,7 @@ class InvoiceService(
 
                 invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
                 tickets.markPickedUp(ticket.identifier, now)
-                tickets.recordStatusChange(ticket.identifier, TicketStatusType.PICKED_UP, receivedBy)
+                tickets.recordStatusChange(ticket.identifier, TicketStatus(TicketStatusType.PICKED_UP), receivedBy)
 
                 // Part of the transaction, so it's only there if the pickup is
                 auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${money(invoice.totalCents)}")
