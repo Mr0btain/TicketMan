@@ -24,6 +24,12 @@ object TicketTable: UuidTable("tickets") {
     val promisedAt = long("promised_at").nullable()
     val pickedUpAt = long("picked_up_at").nullable()
 
+    // The customer status page's link. Nullable so it can be added to existing rows, which get one on start
+    val statusToken = varchar("status_token", 64).nullable()
+
     // Unique on (year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"
+
+    // Unique, made the same way
+    const val STATUS_TOKEN_INDEX = "tickets_status_token_unique"
 }

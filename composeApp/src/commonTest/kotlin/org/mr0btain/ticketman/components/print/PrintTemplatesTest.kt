@@ -43,6 +43,25 @@ class PrintTemplatesTest {
     }
 
     @Test
+    fun claimSlipQrIsTheStatusLinkOnceTheShopHasAPublicAddress() {
+        val token = "0123456789abcdef0123456789abcdef"
+        val withToken = ticket.copy(statusToken = token)
+        val public = shop.copy(publicUrl = "https://repairs.example.com/")
+
+        val slip = PrintTemplates.claimSlip(public, withToken, customer, null, signature)
+        assertTrue(PrintBlock.Qr("https://repairs.example.com/status/$token") in slip.blocks)
+        assertTrue(slip.blocks.any { it is PrintBlock.Text && it.text.endsWith("go to https://repairs.example.com/status") })
+
+        // No address, or one too long for the QR, keeps the number
+        assertTrue(PrintBlock.Qr("26-00000042") in PrintTemplates.claimSlip(shop, withToken, customer, null, signature).blocks)
+        val long = shop.copy(publicUrl = "https://repairs.example.com/" + "x".repeat(200))
+        assertTrue(PrintBlock.Qr("26-00000042") in PrintTemplates.claimSlip(long, withToken, customer, null, signature).blocks)
+
+        // The device tag is matched in the back by its number
+        assertFalse(PrintTemplates.deviceTag(withToken, customer).blocks.any { it is PrintBlock.Qr && token in it.text })
+    }
+
+    @Test
     fun receiptListsChargesTotalsPaymentsAndChange() {
         val invoice = Invoice(
             ticketIdentifier = ticket.identifier,

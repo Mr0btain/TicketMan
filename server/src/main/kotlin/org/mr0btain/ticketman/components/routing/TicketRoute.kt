@@ -277,6 +277,20 @@ fun Route.ticketRoute(
             call.respond(HttpStatusCode.Accepted)
         }
 
+        // Cuts off the old status page link. Answers with the ticket and its new token
+        post(TicketPaths.STATUS_TOKEN) {
+            val identifier = call.uuidParameter("identifier")
+            val saved = identifier?.takeIf { database.replaceStatusToken(it) != null }?.let { database.getById(it) }
+
+            if (saved == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, saved.identifier, "Ticket ${saved.label}: status page link replaced")
+            call.respond(HttpStatusCode.OK, saved)
+        }
+
         // Body is the customer's identifier
         post(TicketPaths.SET_CUSTOMER) {
             val identifier = call.uuidParameter("identifier")

@@ -47,7 +47,7 @@ Blocks say what goes on the page, not where. Sizes, wrapping and page breaks are
 
 | Template | Printed from | Holds |
 |----------|--------------|-------|
-| `claimSlip(shop, ticket, customer, invoice, signature)` | Counter ticket card, after check-in | Shop header, ticket number large with a QR of it, customer and device, check-in and promised times, deposit, the repair terms and signature |
+| `claimSlip(shop, ticket, customer, invoice, signature)` | Counter ticket card, after check-in | Shop header, ticket number large with a QR of the [status page](../api/status.md) link once the shop has a public address (the number before that, or if the link is too long), customer and device, check-in and promised times, deposit, the repair terms and signature |
 | `deviceTag(ticket, customer)` | Counter ticket card | Number and QR, customer, device, due date. Stuck to the device |
 | `receipt(shop, ticket, customer, invoice)` | Counter, after pickup | Shop header, charges, discount, tax, total, payments, change, invoice footer |
 | `invoice(shop, ticket, customer, invoice)` | The server, as a PDF (`GET /api/invoice/{id}/pdf`) | Like the receipt, with the status (due, paid, void), the customer's address, phone and email, and what's still owed |
@@ -99,8 +99,9 @@ so no QR library is needed on any platform.
 
 ## Gotchas
 
-- **The QR holds the ticket number as text**, like `26-00000042`. The app has no scanner; a handheld scanner that
-  types into the counter search box is what it's for.
+- **The device tag's QR holds the ticket number as text**, like `26-00000042`, and so does the claim slip's until the
+  shop has a public address; then it's the status page link. The app has no scanner; a handheld scanner that types
+  into the counter search box is what it's for, and the search takes either.
 - **Receipt printers vary.** The 80mm layout leaves 4mm margins and relies on the driver to cut. Try a new template on
   real hardware.
 

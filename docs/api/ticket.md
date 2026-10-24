@@ -37,7 +37,8 @@ A page of the tickets assigned to the caller, who comes from the token, so nobod
 **Auth:** restricted
 
 Tickets matching a number (`26-42` exactly, `42` in any year), part of the id, the device's make, model or serial,
-or the problem. Newest number first.
+or the problem. Newest number first. A [status page](status.md) link, like the claim slip's QR scanned, finds just
+its ticket (the counter search uses the same lookup).
 
 - **Query:** `query`, `limit` (default 20, at most 200).
 - **`200`** a list of `SearchResult`, the text being the number and device.
@@ -89,7 +90,8 @@ The customer's signature from check-in.
 
 Adds a ticket and gives it the next number.
 
-- **Body:** `Ticket`, with an id the client made. Its `number` is replaced by the next one.
+- **Body:** `Ticket`, with an id the client made. Its `number` is replaced by the next one, and its `statusToken`
+  by a new random one.
 - **`201`** the saved `Ticket`, with its number.
 - **`400`** `New tickets can't start picked up`, or a `status.custom` that isn't one of the shop's statuses or is
   retired. **`500`** not saved.
@@ -99,7 +101,7 @@ Adds a ticket and gives it the next number.
 **Auth:** normal
 
 Replaces the ticket's device, status, priority, problem, condition, accessories, estimate and promised time. The
-number and pickup time stay the server's. A status change, including a move between two of the shop's own statuses
+number, status token and pickup time stay the server's. A status change, including a move between two of the shop's own statuses
 that count as the same built-in one, is added to the history.
 
 - **Body:** `Ticket`. A `status.custom` (one of the shop profile's `statuses`) sets `status.status` to the built-in
@@ -138,6 +140,15 @@ Normal access or higher take tickets.
 - **Body:** the user's id. **`202`** assigned.
 - **`400`** `That technician can't take tickets`: no such user, or one who's Restricted, deactivated or not set up.
 - **`404`** no such ticket.
+
+### `POST /api/data/ticket/status-token/{identifier}`
+
+**Auth:** normal
+
+Gives the ticket a new `statusToken`, so the [status page](status.md) link handed out before stops working. Audit
+logged.
+
+- **`200`** the `Ticket` with its new token. **`404`** no such ticket.
 
 ## Work log
 

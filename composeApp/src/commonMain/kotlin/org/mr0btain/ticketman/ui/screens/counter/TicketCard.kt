@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.ui.kit.inputs.TmSignatureView
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.containers.TmScrollColumn
 import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
@@ -39,6 +41,7 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.clock
 import ticketman.composeapp.generated.resources.edit_3
 import ticketman.composeapp.generated.resources.file_text
+import ticketman.composeapp.generated.resources.globe
 import ticketman.composeapp.generated.resources.message_square
 import ticketman.composeapp.generated.resources.smartphone
 import ticketman.composeapp.generated.resources.user
@@ -49,6 +52,8 @@ private val PANEL_WIDTH = 400.dp
 /**
  * Everything about one ticket, with quick status buttons for staff that can make changes
  * @param canEdit Restricted users see the card but none of the buttons that change things
+ * @param statusLink The customer's status page link, null until the shop has a public address
+ * @param onReplaceStatusLink Gives the ticket a new link, cutting off the old one
  * @param extraActions Room for buttons added by later screens, like pickup
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -60,11 +65,14 @@ fun TicketCard(
     onAddNote: (String) -> Unit,
     onCustomerClick: () -> Unit,
     onBack: () -> Unit,
+    statusLink: String? = null,
+    onReplaceStatusLink: () -> Unit = {},
     printAction: @Composable () -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {}
 ) {
     val ticket = detail.ticket
     var note by remember(ticket.identifier) { mutableStateOf("") }
+    var confirmReplace by remember(ticket.identifier) { mutableStateOf(false) }
     val colors = TmTheme.colors
     val spacing = TmTheme.spacing
 
@@ -191,7 +199,10 @@ fun TicketCard(
                             Column(verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
                                 detail.notes.reversed().forEach { entry ->
                                     Column {
-                                        Text(text = entry.author.ifBlank { "Unknown" }, style = TmTheme.typography.caption, color = colors.textMuted)
+                                        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(text = entry.author.ifBlank { "Unknown" }, style = TmTheme.typography.caption, color = colors.textMuted)
+                                            if (entry.customerVisible) TmBadge(text = "Customer sees", tone = colors.accent, dot = false)
+                                        }
                                         Text(text = entry.message, style = TmTheme.typography.body, color = colors.text)
                                     }
                                 }
@@ -239,6 +250,41 @@ fun TicketCard(
                             }
 
                             TmKeyValueRow(label = "Technician", value = detail.technician?.text ?: "Not assigned")
+                        }
+
+                        // ------------------------------------------ Status page ------------------------------------------
+                        TmPanel(
+                            modifier = Modifier.width(panelWidth),
+                            title = "Status page",
+                            subtitle = detail.notes.count { it.customerVisible }.let { shared ->
+                                when (shared) {
+                                    0 -> "No updates shared yet"
+                                    1 -> "1 update shared"
+                                    else -> "$shared updates shared"
+                                }
+                            },
+                            icon = Res.drawable.globe
+                        ) {
+                            if (statusLink == null) {
+                                Text(
+                                    text = "Set the shop's public address in Admin, Server to give customers a link to follow this repair",
+                                    style = TmTheme.typography.body,
+                                    color = colors.textMuted
+                                )
+                            } else {
+                                // Selectable so it can be copied into a text or email by hand
+                                SelectionContainer {
+                                    Text(text = statusLink, style = TmTheme.typography.body, color = colors.text)
+                                }
+                                Text(
+                                    text = "On the claim slip's QR. Customers see the statuses you share, notes marked for them and the balance",
+                                    style = TmTheme.typography.caption,
+                                    color = colors.textMuted
+                                )
+                                if (canEdit) {
+                                    TmButton(text = "New link", onClick = { confirmReplace = true }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                                }
+                            }
                         }
 
                         // ------------------------------------------ Invoice ------------------------------------------
@@ -292,6 +338,19 @@ fun TicketCard(
                     }
                 }
             }
+        }
+
+        if (confirmReplace) {
+            TmConfirmDialog(
+                title = "Give ${ticket.label} a new link?",
+                message = "The link on the claim slip, and any you've sent, will stop working. Print a new slip or send the new link.",
+                confirmText = "New link",
+                onConfirm = {
+                    confirmReplace = false
+                    onReplaceStatusLink()
+                },
+                onDismissRequest = { confirmReplace = false }
+            )
         }
     }
 }

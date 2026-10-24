@@ -18,6 +18,7 @@ changes here are made to both sides together.
 | [Customers](customer.md) | `/api/data/customer` | `CustomerRoute.kt` |
 | [Tickets](ticket.md) | `/api/data/ticket` | `TicketRoute.kt` |
 | [Inventory](inventory.md) | `/api/data/inventory` | `InventoryRoute.kt` |
+| [Status page](status.md) | `/status` | `StatusRoute.kt` |
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 
 The prefixes are set in

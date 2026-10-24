@@ -10,12 +10,17 @@ import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.ticket.StatusLink
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.BadgeCode
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.time.timestampMillis
+import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.response.DailyReport
+
+/** Under [QrCode]'s 213, so a long public address falls back to the ticket number rather than failing */
+private const val QR_MAX_BYTES = 200
 
 /** What can be printed from the counter */
 enum class PrintTemplate(val label: String) {
@@ -30,14 +35,19 @@ enum class PrintTemplate(val label: String) {
 object PrintTemplates {
     /**
      * Given to the customer at check in: the ticket number and QR, what was left, when it's promised, and what
-     * they signed
+     * they signed. Once the shop has a public address the QR is the ticket's status page link, which the counter
+     * search also takes, otherwise it's the ticket number
      */
     fun claimSlip(shop: ShopProfile, ticket: Ticket, customer: Customer?, invoice: Invoice?, signature: TicketSignature?): PrintDocument {
-        val blocks = shopHeader(shop) + listOf(
+        val link = StatusLink.url(shop.publicUrl, ticket)?.takeIf { it.encodeToByteArray().size <= QR_MAX_BYTES }
+        val lookup = "${shop.publicUrl.trim().trimEnd('/')}${ApiRoutes.STATUS}"
+
+        val blocks = shopHeader(shop) + listOfNotNull(
             PrintBlock.Divider,
             PrintBlock.Heading("Claim Slip"),
             PrintBlock.Heading(ticket.label, large = true),
-            PrintBlock.Qr(ticket.label),
+            PrintBlock.Qr(link ?: ticket.label),
+            link?.let { PrintBlock.Text("Scan to check on your repair, or go to $lookup", small = true, centered = true) },
             PrintBlock.Gap
         ) + customerFields(customer) + deviceFields(ticket) + listOfNotNull(
             PrintBlock.Field("Checked in", formatDateTime(ticket.identifier.timestampMillis())),

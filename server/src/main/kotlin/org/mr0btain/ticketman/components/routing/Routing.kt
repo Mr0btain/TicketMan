@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.InvoiceDocuments
 import org.mr0btain.ticketman.components.service.LoginLimiter
+import org.mr0btain.ticketman.components.service.StatusService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
@@ -35,7 +36,14 @@ fun Application.configureRouting(
     backupService: BackupService,
     restoreService: RestoreService,
     localDatabase: LocalDatabase,
-    loginLimiter: LoginLimiter = LoginLimiter()
+    loginLimiter: LoginLimiter = LoginLimiter(),
+    statusService: StatusService = StatusService(
+        tickets = localDatabase.ticketDatabase,
+        customers = localDatabase.customerDatabase,
+        invoices = localDatabase.invoiceDatabase,
+        shop = localDatabase.shopDatabase,
+        images = imageService
+    )
 ) {
     install(StatusPages) {
         // A body that isn't valid JSON, has a field this server doesn't know, or is missing one. The details stay
@@ -76,6 +84,13 @@ fun Application.configureRouting(
                     AppLogger.m("ROUTE.CHECK", "Client hit")
                 }
             }
+        }
+
+        route(ApiRoutes.STATUS) {
+            statusRoute(
+                service = statusService,
+                shopDatabase = localDatabase.shopDatabase
+            )
         }
 
         route(ApiRoutes.AUTH) {

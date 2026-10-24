@@ -186,7 +186,7 @@ class ScreenRenderTest {
     )
 
     private val sampleNotes = listOf(
-        Note(author = "Priya", message = "Ordered the screen, arrives Thursday."),
+        Note(author = "Priya", message = "Ordered the screen, arrives Thursday.", customerVisible = true),
         Note(author = "Dana W.", message = "Customer called to check on it, told them Friday.")
     )
 
@@ -310,6 +310,7 @@ class ScreenRenderTest {
                 onAddNote = {},
                 onCustomerClick = {},
                 onBack = {},
+                statusLink = "https://repairs.example.com/status/0123456789abcdef0123456789abcdef",
                 extraActions = { TmButton(text = "Pick up  (F5)", onClick = {}, size = TmControlSize.LARGE) }
             )
         }

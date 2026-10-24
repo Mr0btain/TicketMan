@@ -18,7 +18,7 @@ and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
 - **Customer visible updates.** A "show the customer" flag on notes, off by default, so internal notes never leak.
 - **The shop's public address.** `ShopProfile.publicUrl`, used for status links and the claim slip's QR.
 
-## Phase 1: Customer status page [15]
+## Phase 1: Customer status page [15] (done)
 
 - A small server rendered HTML page at `/status/{token}`, not the web client (that's megabytes and needs a login).
 - Each ticket has an unguessable status token, which staff can replace to cut off an old link. The claim slip's QR
@@ -28,6 +28,9 @@ and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
   for the customer, the estimate and the balance, and the shop's contact details. Never internal notes, the
   passcode, or the customer's details in full.
 - A documented Caddy setup that puts only `/status/*` on the internet.
+
+Built as above ([Status page API](api/status.md), [Running a server](operations.md#the-customer-status-page)). Links
+stay working after pickup until staff replace them; the counter search takes a scanned status link too.
 
 ## Phase 2: Talking to customers
 
@@ -117,8 +120,8 @@ Not tied to the numbered phases: done whenever work moves to a macOS machine.
 
 ## Open questions
 
-- Phase 1: will the server be reachable from the internet, or should the status page live elsewhere and be pushed
-  updates?
+- Phase 1 (settled): the server is reached from the internet through the proxy, which lets outside addresses
+  reach only `/status`. Nothing is pushed elsewhere.
 - Phase 2: which SMS provider, and will shops bring their own SMTP?
 - Phase 7: which payment processor, and is "more than one location" one server for several shops or one server
   per shop with reporting across them?

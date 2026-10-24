@@ -210,6 +210,23 @@ class CounterHandler(
         }
     }
 
+    /** Replaces the open ticket's status page link, for when the old one went somewhere it shouldn't */
+    fun replaceStatusLink() {
+        val detail = _ticket.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.ticketRepo.replaceStatusToken(detail.ticket.identifier)) {
+                is TmResult.Success -> {
+                    support.notify("Ticket ${detail.ticket.label} has a new status link, the old one no longer works")
+                    reloadTicket()
+                }
+
+                is TmResult.Error -> support.notify("Link not replaced: ${result.error.message}")
+            }
+        }
+    }
+
     /** Adds a text note to the open ticket straight away, signed by whoever is signed in, then reloads it */
     fun addTicketNote(message: String) {
         val detail = _ticket.value ?: return

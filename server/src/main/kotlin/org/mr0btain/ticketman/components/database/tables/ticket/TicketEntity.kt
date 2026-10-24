@@ -25,6 +25,7 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var estimateCents by TicketTable.estimateCents
     var promisedAt by TicketTable.promisedAt
     var pickedUpAt by TicketTable.pickedUpAt
+    var statusToken by TicketTable.statusToken
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -41,7 +42,8 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             accessories = accessories,
             estimateCents = estimateCents,
             promisedAt = promisedAt,
-            pickedUpAt = pickedUpAt
+            pickedUpAt = pickedUpAt,
+            statusToken = statusToken
         )
     }
 }

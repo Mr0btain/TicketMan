@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.ticket.StatusLink
 import androidx.compose.foundation.layout.*
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import androidx.compose.runtime.*
@@ -151,6 +152,8 @@ fun CounterScreen(
                         onAddNote = { counter.addTicketNote(it) },
                         onCustomerClick = { detail.customer?.let { counter.openCustomer(it.identifier) } },
                         onBack = { counter.goHome() },
+                        statusLink = StatusLink.url(shop.publicUrl, detail.ticket),
+                        onReplaceStatusLink = { counter.replaceStatusLink() },
                         printAction = {
                             Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                                 PrintButton(

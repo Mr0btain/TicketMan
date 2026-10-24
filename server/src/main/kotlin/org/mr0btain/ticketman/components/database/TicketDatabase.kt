@@ -39,6 +39,7 @@ import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.ticket.StatusLink
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.TicketSignature
@@ -50,6 +51,7 @@ import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
 import org.mr0btain.ticketman.logging.AppLogger
+import java.security.SecureRandom
 import java.time.Instant
 import java.time.Year
 import java.time.ZoneId
@@ -78,6 +80,8 @@ class TicketDatabase(
     private val GET_USER_TAG = "$tag:GetUser"
     private val GET_PAGED_FOR_USER_TAG = "$tag:GetPagedForUser"
     private val MARK_PICKED_UP_TAG = "$tag:MarkPickedUp"
+    private val STATUS_TOKEN_TAG = "$tag:StatusToken"
+    private val BACKFILL_TOKENS_TAG = "$tag:BackfillStatusTokens"
 
     override fun getById(identifier: Uuid): Ticket? =
         dbQuery(GET_BY_ID_TAG) {
@@ -161,10 +165,14 @@ class TicketDatabase(
 
     /**
      * Tickets matching a number ("26-42" exact, "42" any year), part of the id, device make/model/serial or problem.
-     * Newest number first
+     * A status page link (the claim slip's QR, scanned) finds just its ticket. Newest number first
      */
     fun searchTickets(query: String, limit: Int): List<Ticket>? =
         dbQuery(SEARCH_TAG) {
+            StatusLink.tokenIn(query)?.let { token ->
+                return@dbQuery TicketEntity.find { TicketTable.statusToken eq token }.limit(1).map { it.toTicket() }
+            }
+
             val text = query.trim().lowercase()
             val contains = "%$text%"
 
@@ -216,6 +224,8 @@ class TicketDatabase(
             accessories = data.accessories
             estimateCents = data.estimateCents
             promisedAt = data.promisedAt
+            // Never the client's, so nobody picks a link they know
+            statusToken = newStatusToken()
         }
     }
 
@@ -248,6 +258,46 @@ class TicketDatabase(
                         ticketEntity.flush()
                     }
 
+                true
+            }
+        }
+    }
+
+    /**
+     * Gives tickets made before status links one each
+     */
+    fun backfillStatusTokens() {
+        dbWrite(BACKFILL_TOKENS_TAG) {
+            TicketEntity.find { TicketTable.statusToken.isNull() }.forEach { ticketEntity ->
+                ticketEntity.statusToken = newStatusToken()
+            }
+
+            true
+        }
+    }
+
+    /** The ticket whose status page link has [token], null for a token that isn't one or was replaced */
+    fun getByStatusToken(token: String): Ticket? {
+        if (!StatusLink.isToken(token)) return null
+
+        return dbQuery(STATUS_TOKEN_TAG) {
+            TicketEntity.find { TicketTable.statusToken eq token }.firstOrNull()?.toTicket()
+        }
+    }
+
+    /**
+     * Gives the ticket a new status token, so a link handed out before stops working
+     * @return The new token, null when there's no such ticket
+     */
+    fun replaceStatusToken(identifier: Uuid): String? {
+        val token = newStatusToken()
+
+        return token.takeIf {
+            dbWrite(STATUS_TOKEN_TAG) {
+                val ticketEntity = TicketEntity.findById(identifier)
+                    ?: return@dbWrite false.also { AppLogger.i(STATUS_TOKEN_TAG, TicketError.NOT_FOUND) }
+
+                ticketEntity.statusToken = token
                 true
             }
         }
@@ -333,7 +383,7 @@ class TicketDatabase(
             val item = TicketEntity.findById(data.identifier)
                 ?: return@dbWrite false.also { AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND) }
 
-            // Number and pick up time are owned by the server, so they aren't taken from the client. Neither is a
+            // Number, status token and pick up time are owned by the server, so they aren't taken from the client. Nor a
             // picked up status: only pickup sets it, and once set it stays, even if the client sent an older status
             item.device = data.device
             if (item.status.status != TicketStatusType.PICKED_UP && data.status.status != TicketStatusType.PICKED_UP) {
@@ -462,5 +512,13 @@ class TicketDatabase(
     companion object {
         // Shared by every instance so numbering stays one at a time
         private val NUMBER_LOCK = Any()
+
+        private val random = SecureRandom()
+
+        /** 16 random bytes as hex: lowercase, so it survives the search's lowercasing, and safe in a link */
+        fun newStatusToken(): String {
+            val bytes = ByteArray(StatusLink.TOKEN_LENGTH / 2).also { random.nextBytes(it) }
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
     }
 }

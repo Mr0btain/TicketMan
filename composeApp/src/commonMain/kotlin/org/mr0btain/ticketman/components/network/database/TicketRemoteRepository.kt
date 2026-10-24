@@ -48,6 +48,7 @@ class TicketRemoteRepository(
     private val GET_SIGNATURE_TAG = "$tag:GetSignature"
     private val FETCH_MINE_TAG = "$tag:FetchMine"
     private val WORK_TAG = "$tag:Work"
+    private val STATUS_TOKEN_TAG = "$tag:StatusToken"
 
     /** A page of the tickets assigned to whoever is logged in, newest first */
     suspend fun fetchMine(offset: Long, limit: Int): TmResult<List<Ticket>, ServerError> =
@@ -122,6 +123,16 @@ class TicketRemoteRepository(
                     setBody(requests)
                 }
             }
+        )
+    }
+
+    /** Gives the ticket a new status page link, so the old one stops working. Answers with the ticket as saved */
+    suspend fun replaceStatusToken(identifier: Uuid): TmResult<Ticket, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(
+            STATUS_TOKEN_TAG,
+            networkRequest(STATUS_TOKEN_TAG) { client.post { url("$serverUrl${TicketPaths.STATUS_TOKEN.fill(identifier)}") } }
         )
     }
 

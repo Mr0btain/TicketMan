@@ -159,11 +159,16 @@ class LocalDatabase (
                 "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.NUMBER_INDEX} " +
                     "ON ${TicketTable.tableName} (${TicketTable.numberYear.name}, ${TicketTable.numberSequence.name})"
             )
+            exec(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.STATUS_TOKEN_INDEX} " +
+                    "ON ${TicketTable.tableName} (${TicketTable.statusToken.name})"
+            )
 
             AppLogger.m(INIT_TAG, SimpleResult.SUCCESS)
         }
 
         ticketDatabase.backfillNumbers()
+        ticketDatabase.backfillStatusTokens()
         userDatabase.migrateDeactivatedUsers()
         tokenDatabase.clearLegacySessions()
         tokenDatabase.backfillExpiry()

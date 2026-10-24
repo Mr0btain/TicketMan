@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 6
+const val API_VERSION = 7
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -27,6 +27,9 @@ object ApiRoutes {
     const val CUSTOMER = "/api/data/customer"
     const val TICKET = "/api/data/ticket"
     const val INVENTORY = "/api/data/inventory"
+
+    /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
+    const val STATUS = "/status"
 }
 
 /** Query parameters the paged and search reads take */
@@ -83,6 +86,9 @@ object TicketPaths {
 
     /** Takes the work entry with this identifier off, and its invoice line */
     const val REMOVE_WORK = "/remove/work/{identifier}"
+
+    /** `POST`: gives the ticket a new status token, so the old status page link stops working */
+    const val STATUS_TOKEN = "/status-token/{identifier}"
 }
 
 object InventoryPaths {
@@ -186,6 +192,14 @@ object InvoicePaths {
 
     /** Invoices made in a range as CSV, `?from=2026-10-01&to=2026-10-31`, both days included */
     const val EXPORT = "/export"
+}
+
+/** Under [ApiRoutes.STATUS], whose own path is the lookup form (`GET`) and its answer (`POST`) */
+object StatusPaths {
+    const val PAGE = "/{token}"
+
+    /** A photo from an update the customer can see, `thumb` or `display` */
+    const val PHOTO = "/{token}/photo/{identifier}/{variant}"
 }
 
 object StationPaths {

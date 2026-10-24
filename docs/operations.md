@@ -200,6 +200,64 @@ machine (`localhost`) is left alone.
 An address typed with no scheme means `https://`. Caddy sends plain HTTP on to HTTPS; a device saved with an
 `http://` address sees that when it connects, switches to the `https://` address and saves it.
 
+## The customer status page
+
+Each ticket has a page customers check from their phone, at `/status/{token}`, with a lookup form at `/status`
+(ticket number and the last 4 digits of their phone). The [Status page API](api/status.md) lists what's on it and
+how it's limited. Set the shop profile's **Public address** (Admin > Server) to where customers reach it, like
+`https://repairs.example.com`. From then on the claim slip's QR is the ticket's link, and the counter's ticket card
+shows it, with **New link** to cut off one that went somewhere it shouldn't. Without a public address the QR stays
+the ticket number.
+
+The status page is the only part of the server meant for the internet. Everything else, logins included, should
+stay on the shop's network. Port forwarding sends all of port 443 to the proxy whatever name was asked for, so it's
+not enough to give the status page its own name: anyone could still ask for the app's name at the shop's public
+address. The proxy has to turn away outside addresses on every site but the status page. With Caddy, in
+[`docker/Caddyfile`](../docker/Caddyfile):
+
+```caddyfile
+# The public name, with a public certificate. Only the status page, nothing else
+repairs.example.com {
+	@status path /status /status/*
+	handle @status {
+		reverse_proxy ticketman:8080
+	}
+	handle {
+		respond 404
+	}
+}
+
+{$DOMAIN:localhost} {
+	import certificate-{$CERTIFICATE:public}
+
+	# Addresses outside the shop's network only get the status page
+	@outside {
+		not remote_ip private_ranges
+		not path /status /status/*
+	}
+	handle @outside {
+		respond 404
+	}
+
+	# ... the ca.pem and reverse_proxy handles as they are
+}
+```
+
+Then forward ports 80 and 443 on the router to the machine running Caddy, and point `repairs.example.com` at the
+shop's public address. Check it from a phone off the shop's Wi-Fi: the status page loads, and
+`https://repairs.example.com/api/ping` is a 404. Two things to watch:
+
+- **Caddy has to see the real address.** `private_ranges` covers the LAN and Docker's own networks, so if every
+  request looks like it comes from Docker's gateway, outsiders pass as insiders. Docker's default port publishing
+  keeps the real IPv4 address; check Caddy's access log for a request from outside to make sure.
+- **Staff working from outside the shop** lose the app with this. Use a VPN into the shop's network rather than
+  leaving the whole server open.
+
+The page's own limits count devices by `X-Forwarded-For`, which Caddy sends and the server believes from
+[`TRUSTED_PROXIES`](configuration.md#trusted_proxies) (private ranges by default). The page sends no scripts and
+asks not to be indexed or cached. Anyone with a link sees that ticket's page, so links are only on the claim slip
+and whatever staff send; the page never shows the customer's contact details or internal notes.
+
 ## Web client
 
 A server built with `-PwithWeb` serves the web client at `/`, on the same address as the API:

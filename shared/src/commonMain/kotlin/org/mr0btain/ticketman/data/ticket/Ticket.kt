@@ -28,6 +28,11 @@ data class Ticket(
     val promisedAt: Long? = null,
     /** Epoch millis it was picked up, only set by a pickup */
     val pickedUpAt: Long? = null,
+    /**
+     * The unguessable part of the customer's status page link ([StatusLink]). Given out by the server when the
+     * ticket is added and only changed by replacing it, null until then
+     */
+    val statusToken: String? = null,
 ): MainItem(), SubItem {
     /** Number if it has one, otherwise the start of the identifier */
     val label: String

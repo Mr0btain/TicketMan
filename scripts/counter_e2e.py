@@ -21,6 +21,7 @@ import os
 import ssl
 import struct
 import time
+import urllib.parse
 import urllib.request
 import uuid
 import zlib
@@ -64,6 +65,25 @@ def step(text):
     global step_number
     step_number += 1
     print(f"{step_number:2}. {text}")
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def page(path, form=None, forwarded_for=None):
+    """A status page as a browser gets it, without following redirects: (status, html, headers)"""
+    data = urllib.parse.urlencode(form).encode() if form is not None else None
+    request = urllib.request.Request(BASE + path, data=data, method="POST" if form is not None else "GET")
+    if forwarded_for:
+        request.add_header("X-Forwarded-For", forwarded_for)
+    opener = urllib.request.build_opener(NoRedirect, urllib.request.HTTPSHandler(context=CONTEXT))
+    try:
+        with opener.open(request, timeout=60) as response:
+            return response.status, response.read().decode(errors="replace"), response.headers
+    except urllib.error.HTTPError as error:
+        return error.code, error.read().decode(errors="replace"), error.headers
 
 
 def check(condition, message):
@@ -199,6 +219,21 @@ call("POST", "/api/data/ticket/update", {**checked_in["ticket"], "status": {"sta
 _, queue = call("GET", "/api/counter/queue", token=pin, expect=200)
 check(any(t["ticket"]["identifier"] == ticket_one["identifier"] for t in queue["readyForPickup"]), "ticket should be ready for pickup")
 step("Tech PINs back in and marks it ready; it shows in the ready-for-pickup queue")
+
+# ------------------------------------------ The customer checks on it ------------------------------------------
+call("POST", f"/api/data/ticket/add/note/{ticket_one['identifier']}", {"identifier": uid(), "message": "Screen fitted, ready for you", "customerVisible": True}, pin, expect=201)
+call("POST", f"/api/data/ticket/add/note/{ticket_one['identifier']}", {"identifier": uid(), "message": "Passcode written on the bag"}, pin, expect=201)
+_, ready_ticket = call("GET", f"/api/data/ticket/get/{ticket_one['identifier']}", token=pin, expect=200)
+status_token = ready_ticket["statusToken"]
+status, html, headers = page(f"/status/{status_token}")
+check(status == 200 and headers.get("Content-Type", "").startswith("text/html"), f"status page answered {status}")
+check(all(text in html for text in (label, "Apple iPhone 14", "Ready for pickup", "Screen fitted, ready for you", "Hi Jane.")), "status page is missing something")
+check(not any(text in html for text in ("Passcode", "123-4567", "SN123", "newtech")), "status page shows something internal")
+status, _, headers = page("/status", {"number": label, "phone": "4567"})
+check(status == 303 and headers["Location"] == f"status/{status_token}", f"lookup answered {status} {headers.get('Location')}")
+status, _, _ = page("/status", {"number": label, "phone": "0000"})
+check(status == 404, f"wrong phone digits answered {status}")
+step(f"Jane's status page shows it ready with the shared note only; the lookup form finds it by {label} and 4567, not 0000")
 
 # ------------------------------------------ Pickup ------------------------------------------
 invoice = checked_in["invoice"]
