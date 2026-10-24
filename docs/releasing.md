@@ -71,11 +71,12 @@ builds everything without publishing, which is a good way to try it before taggi
 
 | Workflow | Builds | Publishes to |
 |---|---|---|
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, desktop jar, server zip and jar, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's, plus the DMG (macOS arm64): MSI, DEB (x64 and arm64, both built natively), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | GitHub release, `ghcr.io/<owner>/ticketman` |
 | [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
-workflow in its own place. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
+workflow in its own place. Each place also has its own copy of the tests ([`.gitea/workflows/ci.yml`](../.gitea/workflows/ci.yml)
+and [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)), so keep the two in step. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
 a runner with Docker access. The MSI needs a Windows runner (below); there's no Mac one, so the DMG is GitHub only.
 
 The server zip, APK, web client and Docker image (built for both through QEMU) don't depend on the runner's
@@ -90,7 +91,7 @@ The same Dockerfile builds a DEB by hand:
 docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
 ```
 
-The Gitea workflow releases the server twice, with the web client built in and without it (`/` is then a plain up
+Both workflows release the server twice, with the web client built in and without it (`/` is then a plain up
 check):
 
 | Server | Zip | Jar | Image tags |
@@ -98,14 +99,16 @@ check):
 | With the web client | `TicketMan-server-<version>.zip` | `TicketMan-server-<version>.jar` | `<version>`, `latest` |
 | Without it | `TicketMan-server-noweb-<version>.zip` | `TicketMan-server-noweb-<version>.jar` | `<version>-noweb`, `latest-noweb` |
 
-Any part can be left out. Each has a box to tick when running the workflow by hand, and a variable that skips it for
-tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
+Any part can be left out, the same way in both. Each has a box to tick when running the workflow by hand, and a
+variable (Settings > Actions > Variables on Gitea, Settings > Secrets and variables > Actions > Variables on GitHub)
+that skips it for tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
 
 | Leaves out | Input | Variable |
 |---|---|---|
 | The amd64 DEB and the APK | `skip_amd64` | `SKIP_AMD64` |
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
 | The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
+| The macOS DMG (GitHub only) | `skip_mac` | `SKIP_MAC` |
 | The desktop jar | `skip_desktop_jar` | `SKIP_DESKTOP_JAR` |
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
 | The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |

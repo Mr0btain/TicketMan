@@ -80,6 +80,22 @@ and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
 - **More than one location** [21]. A location on tickets, stock, stations, users and numbering. It touches nearly
   every query, so it comes last.
 
+## iOS app (needs a Mac)
+
+Not tied to a phase: picked up whenever work moves to a macOS machine, since iOS only builds there (Xcode).
+
+- **Port the app.** Turn the iOS targets back on in `shared` and `composeApp`, wire `iosApp` to the `ComposeApp`
+  framework, and write the iOS `actual`s: the HTTP engine (Darwin, with the shop's private CA trusted through its
+  certificate challenge, since `PinningTrustManager` lives in JVM code), `AppDir`, `AppLogger`, `saveFile`,
+  `saveDownload`, `fileBody`, `printDocument` (`UIPrintInteractionController` with `HtmlPrintRenderer`'s HTML),
+  `shrinkForUpload`, `imageDiskCache`, `TmVerticalScrollbar`, `defaultServerAddress`, `alwaysWide`, the platform
+  module and `LocalStorage`'s store. Kiosk mode maps to Guided Access.
+- **Build it in CI.** A `macos-latest` job in `.github/workflows/ci.yml` that compiles the iOS targets, so a change
+  that breaks iOS is caught on Linux too.
+- **Release it.** An unsigned IPA in the GitHub release first, installed by sideloading (AltStore, Sideloadly; a free
+  Apple ID has to re-sign it every 7 days). With a paid Apple Developer account, later: a signed ad hoc IPA for
+  registered devices, or TestFlight and the App Store, with the certificate and provisioning profile as secrets.
+
 ## Open questions
 
 - Phase 1: will the server be reachable from the internet, or should the status page live elsewhere and be pushed
@@ -87,3 +103,4 @@ and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
 - Phase 2: which SMS provider, and will shops bring their own SMTP?
 - Phase 7: which payment processor, and is "more than one location" one server for several shops or one server
   per shop with reporting across them?
+- iOS: is it shared by sideloading, or is a paid Apple Developer account worth it for TestFlight and the App Store?
