@@ -213,10 +213,9 @@ jobs:
           path: dist/
 
   # The server is released twice: with the web client built in (TicketMan-Server-Web-<version>.zip and .jar, ghcr.io
-  # tags <version> and latest, Docker Hub <user>/ticketman) and without it (TicketMan-Server-<version>.zip and .jar,
-  # ghcr.io tags <version>-noweb and latest-noweb, Docker Hub <user>/ticketman-server with plain <version> and latest),
-  # where / is a plain up check. Images are pushed only for a tag: to ghcr.io always, and to Docker Hub when the
-  # DOCKERHUB_TOKEN secret (an access token with Read & Write) and the DOCKERHUB_USERNAME variable are set
+  # tags <version> and latest) and without it (TicketMan-Server-<version>.zip and .jar, ghcr.io tags <version>-noweb
+  # and latest-noweb), where / is a plain up check. Images are pushed to ghcr.io only for a tag. Docker Hub is only
+  # pushed to from the Gitea release
   server:
     name: Server (${{ matrix.name }})
     needs: version
@@ -224,13 +223,10 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: with web client, web: true, files: 'TicketMan-Server-Web-*', ghcr: '', hub: ticketman }
-          - { name: no web client, web: false, files: 'TicketMan-Server-[0-9]*', ghcr: '-noweb', hub: ticketman-server }
+          - { name: with web client, web: true, files: 'TicketMan-Server-Web-*', ghcr: '' }
+          - { name: no web client, web: false, files: 'TicketMan-Server-[0-9]*', ghcr: '-noweb' }
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    env:
-      DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
-      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       # A matrix entry can't be skipped with an if on the job, so each step checks this
       - id: skip
@@ -243,10 +239,6 @@ jobs:
           fi
           echo "skip=$skip" >> "$GITHUB_OUTPUT"
           echo "web=$([ "${{ matrix.web }}" = true ] && echo -PwithWeb || true)" >> "$GITHUB_OUTPUT"
-          if [ -n "$DOCKERHUB_TOKEN" ] && [ -z "$DOCKERHUB_USERNAME" ]; then
-            echo "::error::DOCKERHUB_TOKEN is set but the DOCKERHUB_USERNAME variable isn't"
-            exit 1
-          fi
 
       - uses: actions/checkout@v4
         if: steps.skip.outputs.skip != 'true'
@@ -289,11 +281,6 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/login-action@v3
-        if: steps.skip.outputs.skip != 'true' && startsWith(github.ref, 'refs/tags/') && env.DOCKERHUB_TOKEN != ''
-        with:
-          username: ${{ env.DOCKERHUB_USERNAME }}
-          password: ${{ env.DOCKERHUB_TOKEN }}
       - name: Image tags
         id: image
         if: steps.skip.outputs.skip != 'true'
@@ -303,11 +290,6 @@ jobs:
           tags="$image:$version${{ matrix.ghcr }}"
           # Only a plain x.y.z is latest, never a -rc
           [[ "$version" != *-* ]] && tags="$tags,$image:latest${{ matrix.ghcr }}"
-          if [ -n "$DOCKERHUB_TOKEN" ]; then
-            hub="docker.io/${DOCKERHUB_USERNAME,,}/${{ matrix.hub }}"
-            tags="$tags,$hub:$version"
-            [[ "$version" != *-* ]] && tags="$tags,$hub:latest"
-          fi
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         if: steps.skip.outputs.skip != 'true'

@@ -97,7 +97,7 @@ builds everything without publishing, which is a good way to try it before taggi
 
 | Workflow | Builds | Publishes to |
 |---|---|---|
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's (the arm64 DEB and tarball built natively), plus the DMG (macOS arm64) and, when asked, the unsigned iOS app | GitHub release, `ghcr.io/<owner>/ticketman`, Docker Hub |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's (the arm64 DEB and tarball built natively), plus the DMG (macOS arm64) and, when asked, the unsigned iOS app | GitHub release, `ghcr.io/<owner>/ticketman` |
 | [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB and tarball (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
@@ -121,8 +121,8 @@ docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output typ
 ```
 
 Both workflows release the server twice, with the web client built in and without it (`/` is then a plain up
-check). GitHub pushes the same tags to `ghcr.io/<owner>/ticketman` in place of Gitea's registry, and the same
-Docker Hub images:
+check). GitHub pushes the same tags to `ghcr.io/<owner>/ticketman` in place of Gitea's registry; only Gitea pushes
+to Docker Hub:
 
 | Server | Zip | Jar | Gitea image tags | Docker Hub image |
 |---|---|---|---|---|
@@ -190,7 +190,7 @@ Actions > Secrets:
 | `ANDROID_KEY_ALIAS` | `ticketman`, or the alias you used |
 | `ANDROID_KEY_PASSWORD` | The key's password (the same as the keystore's unless you set it apart) |
 | `REGISTRY_TOKEN` | Gitea only: a token with `write:package`, for the image in Gitea's registry. Without it the image isn't pushed there |
-| `DOCKERHUB_TOKEN` | A Docker Hub access token with Read & Write, for the images on Docker Hub. Without it they're skipped |
+| `DOCKERHUB_TOKEN` | Gitea only: a Docker Hub access token with Read & Write, for the images on Docker Hub. Without it they're skipped |
 
 On Gitea, if the runner reaches Gitea by an internal name (the workflow sees a server URL like `http://gitea:3000`),
 also add a `REGISTRY` variable under Settings > Actions > Variables set to Gitea's public HTTPS host, like
@@ -198,9 +198,8 @@ also add a `REGISTRY` variable under Settings > Actions > Variables set to Gitea
 HTTP registry.
 
 For Docker Hub, also add a `DOCKERHUB_USERNAME` variable (like `mr0btain`) and create the two repositories there,
-`ticketman` (with the web client) and `ticketman-server` (without it), on whichever of Gitea and GitHub should push
-them (on GitHub under Settings > Secrets and variables > Actions > Variables). On Gitea, with neither
-`REGISTRY_TOKEN` nor `DOCKERHUB_TOKEN` set, no image is built.
+`ticketman` (with the web client) and `ticketman-server` (without it). Only the Gitea workflow pushes to Docker Hub,
+so these go on Gitea only. With neither `REGISTRY_TOKEN` nor `DOCKERHUB_TOKEN` set, no image is built there.
 
 GitHub pushes the image with its own `GITHUB_TOKEN`. The first time it does, the package is private: make it public
 under the package's settings if anyone should pull it without logging in.
