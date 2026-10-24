@@ -80,21 +80,40 @@ and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
 - **More than one location** [21]. A location on tickets, stock, stations, users and numbering. It touches nearly
   every query, so it comes last.
 
-## iOS app (needs a Mac)
+## iOS app
 
-Not tied to a phase: picked up whenever work moves to a macOS machine, since iOS only builds there (Xcode).
+The code is written (on Linux, where it can't compile); testing it needs a Mac. See
+[Platforms](client/platforms.md#ios) for how it fits together.
 
-- **Port the app.** Turn the iOS targets back on in `shared` and `composeApp`, wire `iosApp` to the `ComposeApp`
-  framework, and write the iOS `actual`s: the HTTP engine (Darwin, with the shop's private CA trusted through its
-  certificate challenge, since `PinningTrustManager` lives in JVM code), `AppDir`, `AppLogger`, `saveFile`,
-  `saveDownload`, `fileBody`, `printDocument` (`UIPrintInteractionController` with `HtmlPrintRenderer`'s HTML),
-  `shrinkForUpload`, `imageDiskCache`, `TmVerticalScrollbar`, `defaultServerAddress`, `alwaysWide`, the platform
-  module and `LocalStorage`'s store. Kiosk mode maps to Guided Access.
-- **Build it in CI.** A `macos-latest` job in `.github/workflows/ci.yml` that compiles the iOS targets, so a change
-  that breaks iOS is caught on Linux too.
-- **Release it.** An unsigned IPA in the GitHub release first, installed by sideloading (AltStore, Sideloadly; a free
-  Apple ID has to re-sign it every 7 days). With a paid Apple Developer account, later: a signed ad hoc IPA for
-  registered devices, or TestFlight and the App Store, with the certificate and provisioning profile as secrets.
+- **Port the app** (done, untested). iOS targets on in `shared` and `composeApp` when Gradle runs on a Mac,
+  `iosApp` wired to the `ComposeApp` framework (bundle `org.mr0btain.ticketman`, iOS 16+), and every `actual`: the
+  Darwin HTTP engine with `DarwinTrust` checking certificates against `ServerTrust`, `AppDir`, `AppLogger`,
+  `saveFile`, `saveDownload`, `fileBody`, `printDocument` (`UIPrintInteractionController` with
+  `HtmlPrintRenderer`'s HTML), `shrinkForUpload`, `imageDiskCache`, `TmVerticalScrollbar`, `defaultServerAddress`,
+  `alwaysWide`, the platform module (KSafe in the keychain), and kiosk pinning through Guided Access.
+- **Build it in CI** (done, not yet run). An `iOS compile` job on `macos-latest` in `.github/workflows/ci.yml`.
+- **Release it** (done, opt in). An unsigned IPA in the GitHub release when `build_ios` or `BUILD_IOS` is set.
+
+## Phase iOS: Test and fix (needs a Mac)
+
+Not tied to the numbered phases: done whenever work moves to a macOS machine.
+
+- **Make it build.** `./gradlew :composeApp:compileKotlinIosSimulatorArm64`, then the app from Xcode on a simulator.
+  Expect fixes in the Security framework and Foundation calls in `DarwinTrust`, `PrintDocument.ios.kt` and
+  `MainViewController.kt`, which were written without a compiler.
+- **Walk through it on a simulator and a real iPhone and iPad**, the way Android was: connecting (local network
+  permission, plain HTTP to a local address, refused to an internet one), trusting a Caddy CA through the trust
+  dialog and the proxy's `ca.pem`, a wrong name, logging in and the session coming back after a restart, records,
+  a note with a photo (does it come out upright; then whether `shrinkForUpload` can use FileKit's compressor),
+  check-in with a signature, pickup, printing a claim slip to AirPrint (80mm and Letter, photos in the HTML),
+  saving an invoice PDF and a backup to Files, restoring from one, the admin tabs, the keyboard over the counter's
+  fields, and kiosk mode with Guided Access.
+- **Fix what it finds**, add what only shows up on iOS to [Platforms](client/platforms.md#ios), and run
+  `scripts/counter_e2e.py`'s flow by hand against the device.
+- **Turn the release on.** Once it works, build the IPA by default (a `skip_ios` input and `SKIP_IOS` variable like
+  the others) and let a failed iOS build stop the release.
+- **Later, with a paid Apple Developer account:** a signed IPA, or TestFlight and the App Store, with the certificate
+  and provisioning profile as secrets.
 
 ## Open questions
 

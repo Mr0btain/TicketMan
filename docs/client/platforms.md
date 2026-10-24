@@ -1,6 +1,7 @@
 # Platforms
 
-The client is one codebase built for desktop (JVM), Android and the web (Wasm). Almost everything is in
+The client is one codebase built for desktop (JVM), Android, the web (Wasm) and iOS (only on a Mac, and not yet
+tested, see [iOS](#ios)). Almost everything is in
 `commonMain`; what has to differ goes through `expect`/`actual`. This page lists every one of those, what each
 platform does, and what isn't finished.
 
@@ -11,6 +12,7 @@ platform does, and what isn't finished.
 | Desktop | `composeApp/src/desktopMain/.../main.kt` | Inside the `Window` | 1460×800 window. Kiosk mode switches it to full screen through `AppWindow.fullscreen`. `FileKit.init("TicketMan")` |
 | Android | `androidApp/.../MainActivity.kt` + `TicketManApplication` | In `Application.onCreate`, once per process, with the `Context` KSafe needs | Edge to edge, so the shells pad by `shellInsets`. Kiosk mode hides the system bars and pins the app (lock task mode, reported in `AppWindow.pinned`). Attaches `AndroidPrintHost` |
 | Web | `composeApp/src/wasmJsMain/.../main.kt` | Before anything is shown | Waits for KSafe's cache, then `ComposeViewport`. Kiosk mode asks the browser for full screen |
+| iOS | `composeApp/src/iosMain/.../MainViewController.kt`, shown by `iosApp`'s `ContentView` | The first time the view controller is made | Edge to edge, so the shells pad by `shellInsets`. Kiosk pinning is Guided Access, reported in `AppWindow.pinned` while it's on |
 
 All of them call the same `App()`.
 
@@ -18,21 +20,21 @@ All of them call the same `App()`.
 
 In `composeApp` (`composeApp/src/commonMain/.../`):
 
-| Declaration | File | Desktop | Android | Web |
-|-------------|------|---------|---------|-----|
-| `getHttpEngine(trust)` | `components/network/HttpEngine.kt` | OkHttp that checks certificates with `ServerTrust` (shared, `jvmSharedMain`) | Same as desktop | Ktor's Js engine, the browser checks certificates |
-| `defaultServerAddress()` | `components/network/DefaultServerAddress.kt` | `http://localhost:8080` on a debug build, blank otherwise | Blank | The page's own origin |
-| `BuildConfigImpl.isDebug()` | `components/debug/IsDebug.kt` | `-DticketmanDebug=true` system property | The app is debuggable (a debug build) | The page came from `localhost` |
-| `platformModule` | `components/injection/PlatformModule.kt` | `KSafe` | `KSafe` with the app `Context` | `KSafe` |
-| `initAppDir()` | `components/injection/InitAppDir.kt` | `AppDir()` | `AppDir(context)` | `AppDir()`, with no folder |
-| `printDocument(document, paper)` | `components/print/PrintDocument.kt` | Java2D `PrinterJob` | `WebView` + `PrintManager` | Hidden iframe |
-| `saveFile(bytes, name, ext)` | `components/data/SaveFile.kt` | FileKit save dialog | FileKit save dialog | Browser download |
-| `saveDownload(...)` | `components/network/transfer/Download.kt` | Save dialog, then stream | Save dialog, then stream | Browser download of the link |
-| `fileBody(file, type)`, `fileBodyLimitBytes` | `components/network/transfer/Upload.kt` | Streams the file, no limit | Streams the file, no limit | Reads it whole, up to 512 MB |
-| `shrinkForUpload(bytes)` | `components/image/ImageClient.kt` | Sends as is | Scales photos over 1.5 MB to 2560px JPEG | Sends as is |
-| `imageDiskCache(context, size)` | `components/image/ImageClient.kt` | Coil disk cache in FileKit's cache dir | Coil disk cache in the app cache dir | None, the browser caches |
-| `alwaysWide` | `ui/screens/navigation/AlwaysWide.kt` | `true`: always the nav rail | `false`: the window's width decides | `false` |
-| `TmVerticalScrollbar(...)`, `tmShowsScrollbars` | `ui/kit/foundation/TmScrollbar.kt` | Desktop scrollbars, shown | None | None |
+| Declaration | File | Desktop | Android | Web | iOS |
+|-------------|------|---------|---------|-----|-----|
+| `getHttpEngine(trust)` | `components/network/HttpEngine.kt` | OkHttp that checks certificates with `ServerTrust` (shared, `jvmSharedMain`) | Same as desktop | Ktor's Js engine, the browser checks certificates | Ktor's Darwin engine, certificates checked by `DarwinTrust` with `ServerTrust` |
+| `defaultServerAddress()` | `components/network/DefaultServerAddress.kt` | `http://localhost:8080` on a debug build, blank otherwise | Blank | The page's own origin | Blank |
+| `BuildConfigImpl.isDebug()` | `components/debug/IsDebug.kt` | `-DticketmanDebug=true` system property | The app is debuggable (a debug build) | The page came from `localhost` | A debug binary (Xcode's Debug configuration) |
+| `platformModule` | `components/injection/PlatformModule.kt` | `KSafe` | `KSafe` with the app `Context` | `KSafe` | `KSafe` (keychain) |
+| `initAppDir()` | `components/injection/InitAppDir.kt` | `AppDir()` | `AppDir(context)` | `AppDir()`, with no folder | `AppDir()`, Application Support |
+| `printDocument(document, paper)` | `components/print/PrintDocument.kt` | Java2D `PrinterJob` | `WebView` + `PrintManager` | Hidden iframe | `UIPrintInteractionController` with the HTML |
+| `saveFile(bytes, name, ext)` | `components/data/SaveFile.kt` | FileKit save dialog | FileKit save dialog | Browser download | FileKit save dialog |
+| `saveDownload(...)` | `components/network/transfer/Download.kt` | Save dialog, then stream | Save dialog, then stream | Browser download of the link | Save dialog, then stream |
+| `fileBody(file, type)`, `fileBodyLimitBytes` | `components/network/transfer/Upload.kt` | Streams the file, no limit | Streams the file, no limit | Reads it whole, up to 512 MB | Streams the file, no limit |
+| `shrinkForUpload(bytes)` | `components/image/ImageClient.kt` | Sends as is | Scales photos over 1.5 MB to 2560px JPEG | Sends as is | Sends as is |
+| `imageDiskCache(context, size)` | `components/image/ImageClient.kt` | Coil disk cache in FileKit's cache dir | Coil disk cache in the app cache dir | None, the browser caches | Coil disk cache in Caches |
+| `alwaysWide` | `ui/screens/navigation/AlwaysWide.kt` | `true`: always the nav rail | `false`: the window's width decides | `false` | `false` |
+| `TmVerticalScrollbar(...)`, `tmShowsScrollbars` | `ui/kit/foundation/TmScrollbar.kt` | Desktop scrollbars, shown | None | None | None |
 
 In `shared` (see [DTOs, caches and platform helpers](../shared/dtos-and-platform.md#platform-helpers)): `AppLogger`,
 `AppDir`, `getPlatform()`.
@@ -40,7 +42,8 @@ In `shared` (see [DTOs, caches and platform helpers](../shared/dtos-and-platform
 ## Adding an `expect`
 
 1. Declare it in `commonMain` in `<Name>.kt`, with a KDoc saying what each platform should do.
-2. Add `<Name>.desktop.kt`, `<Name>.android.kt` and `<Name>.wasmJs.kt` beside it in each source set, same package.
+2. Add `<Name>.desktop.kt`, `<Name>.android.kt`, `<Name>.wasmJs.kt` and `<Name>.ios.kt` beside it in each source
+   set, same package. iOS only compiles on a Mac, so GitHub's CI is what checks the iOS one from Linux.
    When desktop and Android do the same thing, one `<Name>.jvmShared.kt` in `jvmSharedMain` covers both.
 3. Add a row to the table above.
 
@@ -89,6 +92,26 @@ A real server serves the web client itself (see [Running a server](../operations
 the API share one address. With no address saved, the web client tries the origin it was loaded from and keeps it
 if a TicketMan server answers there. Logs go to the browser console.
 
+## iOS
+
+The iOS targets (`iosArm64`, `iosSimulatorArm64`) are only added when Gradle runs on a Mac, since they need Xcode;
+everywhere else the build leaves them out without a word. `iosApp` is the Xcode project: its build phase runs
+`:composeApp:embedAndSignAppleFrameworkForXcode`, and `ContentView` shows `MainViewController()`. Open
+`iosApp/iosApp.xcodeproj` in Xcode and run it on a simulator, or set `TEAM_ID` in
+`iosApp/Configuration/Config.xcconfig` to run it on a device.
+
+- **Certificates.** `DarwinTrust` does what `PinningTrustManager` does on the JVM through the Security framework:
+  the system's authorities, then the authority trusted for that address, else it refuses the certificate into
+  `ServerTrust` with the proxy's CA (fetched from `ServerTrust.AUTHORITY_PATH`) or the top certificate. iOS doesn't
+  give apps a certificate's names, so a wrong name says the certificate isn't for the address used.
+- **Plain HTTP** is only allowed to local addresses (`NSAllowsLocalNetworking` in `Info.plist`); iOS refuses it to
+  anything on the internet. The first connection to a server on the local network asks for permission.
+- **Kiosk mode** can't pin the app itself: Guided Access is started by triple clicking the side button, or by the
+  app on a supervised device. `AppWindow.pinned` is true while it's on and unknown otherwise, so the kiosk doesn't
+  offer a pin button that can't work.
+- **Photos** go up as they are, like desktop and web, until FileKit's iOS compressor is checked to keep them upright.
+- **The device name** admins see is the model and system version, since iOS hides the name someone gave the device.
+
 ## Known gaps
 
 - **Android has only been run in the emulator** (a phone-sized Android 17 image): connecting, logging in, the
@@ -102,8 +125,8 @@ if a TicketMan server answers there. Logs go to the browser console.
   kiosk mode's full screen, which a headless browser can't show.
 - **`androidApp` needs compileSdk 37** (FileKit 0.16 requires it). Building the APK also needs an AAPT2 that runs
   on the build machine: Gradle downloads the x86 Linux one, which fails on ARM Linux.
-- **iOS is parked.** The source sets and `iosApp` exist but the targets are commented out, and the `iosMain`
-  files lack several `actual`s. See [decisions](../decisions.md#ios-parked-not-removed).
+- **iOS has never been built or run.** The code was written on Linux, where it can't compile, so the first build
+  on a Mac is expected to need fixes. Testing it is a phase of the [roadmap](../roadmap.md#phase-ios-test-and-fix-needs-a-mac).
 
 ## See also
 

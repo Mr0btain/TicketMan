@@ -43,7 +43,7 @@ flowchart TD
 | [`composeApp`](../../composeApp) | The client: all UI, client state, networking and printing. Built as an Android *library* | Android, desktop JVM, Wasm |
 | [`androidApp`](../../androidApp) | A thin Android application around `composeApp`. Just `MainActivity` and the manifest | Android |
 | [`server`](../../server) | The Ktor app: routes, services, the database layer, photo storage, backup and restore | JVM |
-| [`iosApp`](../../iosApp) | Xcode project. Not wired up, since the iOS targets are commented out | - |
+| [`iosApp`](../../iosApp) | Xcode project for the iOS app, built only on a Mac (see [Platforms](../client/platforms.md#ios)) | - |
 
 The client and the server never depend on each other, only on `shared`. That keeps the contract between them in
 one place: if a model or DTO changes, both sides see it at compile time.
@@ -123,7 +123,7 @@ the shared model, the server table and database class, the route, the client rep
 
 ## Known gaps
 
-- iOS targets are commented out, so `iosApp` doesn't build.
+- iOS targets only exist on a Mac, and the iOS app hasn't been built or run yet.
 - Android has only been run in the emulator and web only in headless Chromium. See
   [Platforms](../client/platforms.md#known-gaps).
 

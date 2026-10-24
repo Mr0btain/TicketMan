@@ -25,9 +25,12 @@ kotlin {
         }
     }
     
-    //iosX64()
-    //iosArm64()
-    //iosSimulatorArm64()
+    // iOS only builds on a Mac (it needs Xcode), so elsewhere the targets are left out rather than skipped with a
+    // warning on every build
+    if (System.getProperty("os.name").startsWith("Mac")) {
+        iosArm64()
+        iosSimulatorArm64()
+    }
     
     jvm()
 

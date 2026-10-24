@@ -62,11 +62,11 @@ Server config lives in `server/src/main/resources/application.yaml`, overridable
 
 ## Modules
 
-- **`shared`** — KMP library (android, jvm, wasmJs; iOS targets commented out). Holds everything both client and server need: `@Serializable` domain models (`data/`), request/response DTOs (`server/request`, `server/response`), the `TmResult<D, E: Error>` type + per-domain error enums (`error/`), caches, and `expect` declarations (`AppLogger`, `AppDir`, `Platform`) with per-platform `actual`s.
-- **`composeApp`** — KMP Compose UI + client logic, built as an Android *library* plus `jvm("desktop")` and `wasmJs`. iOS targets are commented out.
+- **`shared`** — KMP library (android, jvm, wasmJs, and iOS when built on a Mac). Holds everything both client and server need: `@Serializable` domain models (`data/`), request/response DTOs (`server/request`, `server/response`), the `TmResult<D, E: Error>` type + per-domain error enums (`error/`), caches, and `expect` declarations (`AppLogger`, `AppDir`, `Platform`) with per-platform `actual`s.
+- **`composeApp`** — KMP Compose UI + client logic, built as an Android *library* plus `jvm("desktop")`, `wasmJs`, and `iosArm64`/`iosSimulatorArm64` only when Gradle runs on macOS (the `ComposeApp` framework). Every `expect` needs an `iosMain` actual too; nothing on Linux compiles it, GitHub's CI `iOS compile` job does. iOS code was written without a Mac and is untested (`docs/roadmap.md`).
 - **`androidApp`** — thin Android application wrapper around `composeApp` (`MainActivity`).
 - **`server`** — Ktor JVM app (`EngineMain`, module `ApplicationKt.module`).
-- **`iosApp`** — Xcode project; currently not wired up since iOS targets are disabled.
+- **`iosApp`** — Xcode project (bundle `org.mr0btain.ticketman`, iOS 16+); its build phase runs `embedAndSignAppleFrameworkForXcode` and `ContentView` shows `MainViewController()`. HTTPS trust there is `DarwinTrust` (Security framework) instead of `PinningTrustManager`.
 
 Dependency versions and bundles (`ktorServer`, `ktorClient`, `exposed`, `koin`, `fileKit`) are in `gradle/libs.versions.toml`. Projects are referenced via type-safe accessors (`projects.shared`).
 

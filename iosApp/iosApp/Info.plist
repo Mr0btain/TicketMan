@@ -4,5 +4,17 @@
 <dict>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
+	<key>CFBundleDisplayName</key>
+	<string>TicketMan</string>
+	<!-- Shop servers are usually on the local network, which iOS asks about the first time the app reaches one -->
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>TicketMan connects to your shop's server on the local network.</string>
+	<!-- Plain http:// is only allowed to local addresses and .local names, the same servers the app's "Not secure"
+	     warning covers. Anything on the internet has to be https:// -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>

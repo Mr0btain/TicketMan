@@ -201,7 +201,7 @@ skips checking the certificate, for Caddy's local one.
 - **Server tests don't read `application.yaml`.** They use the helpers in `server/src/test/.../TestServer.kt`
   instead. The in-process test engine also handles big or cut-off request bodies differently from Netty, so check
   upload and download changes against a real `:server:run`.
-- **iOS doesn't build.** Its targets are commented out; iOS is parked (see [decisions](decisions.md#ios-parked-not-removed)).
+- **iOS only builds on a Mac.** Its targets are left out elsewhere (see [Platforms](client/platforms.md#ios)).
 
 ## See also
 

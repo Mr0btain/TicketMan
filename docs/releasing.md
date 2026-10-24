@@ -15,7 +15,7 @@ package is built from it:
 | Android | `androidApp/build.gradle.kts` `versionName`, and `versionCode` from it | `major * 10000 + minor * 100 + patch`, so 0.8.0 is 800 |
 
 `API_VERSION` is separate: it only changes when older clients can't use the server any more (see
-[decisions](decisions.md)). The iOS app isn't built, so `iosApp/Configuration/Config.xcconfig` is updated by hand.
+[decisions](decisions.md)). `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
 
 ## The icon
 
@@ -139,6 +139,11 @@ tag pushes when set to `true`; the release is published with the rest, and isn't
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
 | The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |
 | Only the server jars (the zips and images are still built) | `skip_server_jars` | `SKIP_SERVER_JARS` |
+
+The GitHub workflow can also build the iOS app, unsigned (`TicketMan-iOS-<version>-unsigned.ipa`). That works the
+other way round until it's been tried on a device: it's only built with the `build_ios` box or the `BUILD_IOS`
+variable set to `true`, and a failed iOS build doesn't stop the release. It's installed by sideloading (AltStore,
+Sideloadly), which signs it with the person's own Apple ID.
 
 ## One time setup
 
