@@ -3,11 +3,12 @@ package org.mr0btain.ticketman
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.util.date.*
 import io.ktor.server.application.*
-import io.ktor.server.plugins.conditionalheaders.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.testing.*
+import org.mr0btain.ticketman.components.plugins.configureTransfers
 import org.mr0btain.ticketman.components.routing.webClientBundled
 import org.mr0btain.ticketman.components.routing.webRoute
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
@@ -38,7 +39,7 @@ class WebClientTest {
     @Test
     fun theWebClientIsServedAtTheRoot() = testApplication {
         application {
-            this.install(ConditionalHeaders)
+            configureTransfers()
             routing {
                 get("/api/ping") { call.respondText(SERVER_PING_BODY) }
                 webRoute("test-web")
@@ -55,9 +56,27 @@ class WebClientTest {
         val script = client.get("/composeApp.js") { header(HttpHeaders.AcceptEncoding, "gzip") }
         assertEquals("gzip", script.headers[HttpHeaders.ContentEncoding])
 
+        // Browsers only compile Wasm streamed with its own type, gzipped or not
+        for (encoding in listOf("gzip", "identity")) {
+            val wasm = client.get("/composeApp.wasm") { header(HttpHeaders.AcceptEncoding, encoding) }
+            assertEquals(HttpStatusCode.OK, wasm.status)
+            assertEquals("application/wasm", wasm.headers[HttpHeaders.ContentType], encoding)
+        }
+
         // Asking again with the ETag it was given costs nothing
         val etag = assertNotNull(page.headers[HttpHeaders.ETag])
         assertEquals(HttpStatusCode.NotModified, client.get("/") { header(HttpHeaders.IfNoneMatch, etag) }.status)
+
+        // Only the ETag says whether a cached copy is current: files in a jar have the same date in every build, so
+        // a cache revalidating an old version by date (as Cloudflare does) gets the new one
+        assertNull(page.headers[HttpHeaders.LastModified])
+        val now = GMTDate().toHttpDate()
+        val stale = client.get("/") {
+            header(HttpHeaders.IfNoneMatch, "\"an-older-build\"")
+            header(HttpHeaders.IfModifiedSince, now)
+        }
+        assertEquals(HttpStatusCode.OK, stale.status)
+        assertEquals(HttpStatusCode.OK, client.get("/") { header(HttpHeaders.IfModifiedSince, now) }.status)
 
         // API routes still win, and missing ones aren't answered with the page
         assertEquals(SERVER_PING_BODY, client.get("/api/ping").bodyAsText())
