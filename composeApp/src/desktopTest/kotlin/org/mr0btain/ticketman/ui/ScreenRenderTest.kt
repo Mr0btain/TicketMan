@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.ui
 
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import org.mr0btain.ticketman.ui.screens.counter.RepairStep
+import org.mr0btain.ticketman.ui.screens.counter.CheckInForm
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.StockTransferDialog
 import org.mr0btain.ticketman.data.inventory.LocationStock
 import org.mr0btain.ticketman.data.inventory.StockTransfer
@@ -724,6 +729,23 @@ class ScreenRenderTest {
             onCancel = {},
             onLoadDevices = { danaDevices }
         )
+    }
+
+    /** The repair step with a card reader: a deposit about to go to it, and one already paid on it */
+    @Test
+    fun checkInReaderDeposit() = screen("check-in-reader-deposit", height = 1400, rail = "Counter") {
+        val readers = listOf(CardReader("tmr_1", "Front counter"), CardReader("tmr_2", "Back bench"))
+        val sending = remember { CheckInForm(dana, emptyList()).apply { problem = "Cracked screen"; depositInput = 4_000 } }
+        val paid = remember {
+            CheckInForm(dana, emptyList()).apply {
+                problem = "Battery swells"
+                depositCharge = CardCharge(kind = CardChargeKind.READER, provider = PaymentProvider.STRIPE, status = CardChargeStatus.SUCCEEDED, amountCents = 4_120, surchargeCents = 120, currency = "USD", readerName = "Front counter")
+            }
+        }
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(32.dp)) {
+            RepairStep(sending, { emptyList() }, readers, "3") { _, _, _ -> }
+            RepairStep(paid, { emptyList() }, readers, "3") { _, _, _ -> }
+        }
     }
 
     @Test

@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.components.notify.NotificationService
+import org.mr0btain.ticketman.server.request.SendLinkRequest
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -20,7 +22,8 @@ import org.mr0btain.ticketman.server.request.ReaderChargeRequest
  */
 fun Route.paymentRoute(
     service: PaymentService,
-    userDatabase: UserDatabase
+    userDatabase: UserDatabase,
+    notifications: NotificationService? = null
 ) {
     authenticate("admin") {
         // Without the keys, which never leave the server
@@ -83,6 +86,15 @@ fun Route.paymentRoute(
         post(PaymentPaths.CANCEL) {
             val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
             call.respondAccount(service.cancel(identifier, call.username(userDatabase), call.getIdentifierFromToken()), HttpStatusCode.OK)
+        }
+
+        post(PaymentPaths.SEND) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+            val request = call.receive<SendLinkRequest>()
+            val sender = notifications ?: return@post call.respond(HttpStatusCode.Conflict, "Messages aren't set up")
+            // Asked about first, it may have been paid already
+            val charge = service.charge(identifier) ?: return@post call.respond(HttpStatusCode.NotFound)
+            call.respondAccount(sender.sendPaymentLink(charge, request, call.username(userDatabase), call.getIdentifierFromToken()), HttpStatusCode.Accepted)
         }
     }
 }

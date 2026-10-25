@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import ticketman.composeapp.generated.resources.message_square
+import ticketman.composeapp.generated.resources.mail
+import ticketman.composeapp.generated.resources.Res
+import org.mr0btain.ticketman.data.notify.NotificationChannel
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.Text
@@ -66,7 +70,8 @@ fun ReaderChargeDialog(
 @Composable
 fun PaymentLinkDialog(
     charge: CardCharge,
-    onClose: () -> Unit
+    onClose: () -> Unit,
+    onSend: ((NotificationChannel) -> Unit)? = null
 ) {
     val colors = TmTheme.colors
 
@@ -74,7 +79,16 @@ fun PaymentLinkDialog(
         title = "Payment link",
         description = "${charge.invoiceLabel}. The payment shows on the invoice once it's paid",
         onDismissRequest = onClose,
-        actions = { TmButton(text = "Done", onClick = onClose) }
+        actions = {
+            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                // Sent through the shop's messages, to the invoice's customer
+                onSend?.let { send ->
+                    TmButton(text = "Email it", leadingIcon = Res.drawable.mail, variant = TmButtonVariant.SECONDARY, onClick = { send(NotificationChannel.EMAIL) })
+                    TmButton(text = "Text it", leadingIcon = Res.drawable.message_square, variant = TmButtonVariant.SECONDARY, onClick = { send(NotificationChannel.SMS) })
+                }
+                TmButton(text = "Done", onClick = onClose)
+            }
+        }
     ) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
             TmMoneyText(cents = charge.amountCents, style = TmTheme.typography.numericLarge)

@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.server.request
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.notify.NotificationChannel
 import kotlin.uuid.Uuid
 
 /**
@@ -29,6 +30,13 @@ data class PaymentLinkRequest(
     val invoiceIdentifier: Uuid,
     val amountCents: Long? = null
 )
+
+/**
+ * Sends a waiting payment link to the invoice's customer
+ * @param channels Empty for every channel the customer has a contact for and the shop has on
+ */
+@Serializable
+data class SendLinkRequest(val channels: Set<NotificationChannel> = emptySet())
 
 /** Why an unclaimed charge is being given back, kept in the audit log */
 @Serializable

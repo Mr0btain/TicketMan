@@ -1,5 +1,14 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.server.request.SendLinkRequest
+import org.mr0btain.ticketman.data.notify.SmtpSettings
+import org.mr0btain.ticketman.data.notify.SmsSettings
+import org.mr0btain.ticketman.data.notify.OutboxMessage
+import org.mr0btain.ticketman.data.notify.NotificationSettings
+import org.mr0btain.ticketman.data.notify.NotificationEvent
+import org.mr0btain.ticketman.data.notify.NotificationChannel
+import org.mr0btain.ticketman.components.notify.SendResult
+import org.mr0btain.ticketman.components.notify.NotificationSenders
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -112,6 +121,7 @@ class PaymentTest {
     @AfterTest
     fun cleanup() {
         PaymentProcessors.reset()
+        NotificationSenders.reset()
         cleanupTestDataDir(dataDir)
     }
 
@@ -507,6 +517,44 @@ class PaymentTest {
         assertEquals(CardChargeStatus.CANCELLED, charge(link.identifier).status)
 
         assertEquals(HttpStatusCode.BadRequest, postJson("/api/payment/charge/link", json.encodeToString(PaymentLinkRequest(invoice.identifier, 9_000))).status)
+    }
+
+    @Test
+    fun aPaymentLinkIsTextedToTheCustomer() = testApplication {
+        val texts = mutableListOf<Pair<String, String>>()
+        NotificationSenders.sms = org.mr0btain.ticketman.components.notify.SmsSender { _, to, body -> synchronized(texts) { texts += to to body }; SendResult.Sent }
+        NotificationSenders.email = org.mr0btain.ticketman.components.notify.EmailSender { _, _, _, _ -> SendResult.Sent }
+        setup()
+        val (ticket, invoice) = openInvoice()
+        val link = json.decodeFromString<CardCharge>(postJson("/api/payment/charge/link", json.encodeToString(PaymentLinkRequest(invoice.identifier))).bodyAsText())
+
+        // Nothing to send through yet
+        assertEquals(HttpStatusCode.BadRequest, postJson("/api/payment/charge/${link.identifier}/send", json.encodeToString(SendLinkRequest(setOf(NotificationChannel.SMS)))).status)
+
+        val messages = NotificationSettings(
+            emailEnabled = true,
+            smtp = SmtpSettings(host = "mail.example.com", username = "shop", password = "mail-secret", fromAddress = "shop@example.com"),
+            smsEnabled = true,
+            sms = SmsSettings(accountSid = "AC123", authToken = "sms-secret", fromNumber = "+15550000000")
+        )
+        assertEquals(HttpStatusCode.OK, postJson("/api/notify/settings", json.encodeToString(messages), adminToken).status)
+
+        // Ada has a phone and no email; staff send it whether or not she agreed to messages
+        assertEquals(HttpStatusCode.BadRequest, postJson("/api/payment/charge/${link.identifier}/send", json.encodeToString(SendLinkRequest(setOf(NotificationChannel.EMAIL)))).status)
+        val sent = postJson("/api/payment/charge/${link.identifier}/send", json.encodeToString(SendLinkRequest(setOf(NotificationChannel.SMS))))
+        assertEquals(HttpStatusCode.Accepted, sent.status, sent.bodyAsText())
+        val text = json.decodeFromString<List<OutboxMessage>>(sent.bodyAsText()).single()
+        assertEquals(NotificationEvent.PAYMENT_LINK, text.event)
+        assertEquals(ticket.identifier, text.ticketIdentifier)
+        assertContains(text.body, link.url)
+        assertContains(text.body, "$80.00")
+
+        // A reader charge, or a link that's done, isn't sent
+        val reader = json.decodeFromString<CardCharge>(readerCharge(1_000, invoice).bodyAsText())
+        assertEquals(HttpStatusCode.BadRequest, postJson("/api/payment/charge/${reader.identifier}/send", "{}").status)
+        postJson("/api/payment/charge/${link.identifier}/cancel", "")
+        assertEquals(HttpStatusCode.Conflict, postJson("/api/payment/charge/${link.identifier}/send", "{}").status)
+        assertEquals(HttpStatusCode.Forbidden, postJson("/api/payment/charge/${link.identifier}/send", "{}", clerkToken).status)
     }
 
     @Test

@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.data.payment.CardCharge
 import org.mr0btain.ticketman.data.payment.CardChargeStatus
 import org.mr0btain.ticketman.data.payment.CardReader
 import org.mr0btain.ticketman.data.payment.PaymentOptions
+import org.mr0btain.ticketman.data.notify.NotificationChannel
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.server.request.PaymentLinkRequest
@@ -102,6 +103,19 @@ class CounterCards(
             when (val result = payments.link(PaymentLinkRequest(invoiceIdentifier))) {
                 is TmResult.Success -> _link.value = result.data
                 is TmResult.Error -> support.notify("No payment link: ${result.error.message}")
+            }
+        }
+    }
+
+    /** Emails or texts the payment link being shown to the customer */
+    fun sendLink(channel: NotificationChannel) {
+        val charge = _link.value ?: return
+        if (!support.canEdit()) return
+
+        support.scope.launch {
+            when (val result = payments.sendLink(charge.identifier, setOf(channel))) {
+                is TmResult.Success -> support.notify("Payment link sent to ${result.data.joinToString(" and ") { it.recipient }}")
+                is TmResult.Error -> support.notify("Not sent: ${result.error.message}")
             }
         }
     }

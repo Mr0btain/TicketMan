@@ -27,6 +27,10 @@ import org.mr0btain.ticketman.data.ticket.customerChoice
 import org.mr0btain.ticketman.data.ticket.customerLabel
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.request.TestMessageRequest
+import org.mr0btain.ticketman.server.request.SendLinkRequest
+import org.mr0btain.ticketman.data.payment.CardCharge
+import org.mr0btain.ticketman.data.payment.CardChargeKind
+import org.mr0btain.ticketman.data.payment.CardChargeStatus
 import org.mr0btain.ticketman.server.request.TicketMessageRequest
 import kotlin.time.Clock
 import kotlin.time.Duration
@@ -150,6 +154,7 @@ class NotificationService(
     fun sendForTicket(ticketIdentifier: Uuid, request: TicketMessageRequest, staffName: String, actor: Uuid?): AccountResult<List<OutboxMessage>> {
         if (request.event == NotificationEvent.TEST) return AccountResult.Invalid("Test messages are sent from the settings")
         if (request.event == NotificationEvent.APPOINTMENT_REMINDER) return AccountResult.Invalid("Appointment reminders are sent before an appointment")
+        if (request.event == NotificationEvent.PAYMENT_LINK) return AccountResult.Invalid("Payment links are sent from the link itself")
         val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
         val settings = database.settings()
 
@@ -160,6 +165,36 @@ class NotificationService(
         if (queued.isEmpty()) return AccountResult.Invalid("The customer has no email or phone number to send to")
 
         auditLog.log(actor, AuditAction.CREATE, "ticket", ticket.identifier.toString(), "Sent ${request.event.label.lowercase()} to the customer of ${ticket.label}")
+        return AccountResult.Done(queued)
+    }
+
+    /**
+     * Staff sending a waiting payment link to the customer of its invoice, by hand like [sendForTicket]. A sale with
+     * no customer has no one to send it to
+     */
+    fun sendPaymentLink(charge: CardCharge, request: SendLinkRequest, staffName: String, actor: Uuid?): AccountResult<List<OutboxMessage>> {
+        if (charge.kind != CardChargeKind.LINK || charge.url.isBlank()) return AccountResult.Invalid("Only a payment link can be sent")
+        if (charge.status != CardChargeStatus.PENDING) return AccountResult.Conflict("That link is ${charge.status.label.lowercase()}, make a new one")
+        val invoice = charge.invoiceIdentifier?.let { invoices.getById(it) } ?: return AccountResult.NotFound
+        val customer = invoice.customerIdentifier?.let { customers.getById(it) } ?: return AccountResult.Invalid("${invoice.label} has no customer to send it to")
+        val settings = database.settings()
+
+        val wanted = request.channels.ifEmpty { NotificationChannel.entries.toSet() }
+        if (wanted.none { settings.channelReady(it) }) return AccountResult.Invalid("Turn on email or text messages in Admin, Notifications first")
+
+        val ticket = invoice.ticketIdentifier?.let { tickets.getById(it) }
+        val profile = shop.at(invoice.locationIdentifier)
+        val values = (ticket?.let { fields(it, customer) } ?: mapOf(
+            "name" to customer.name.trim().substringBefore(' '),
+            "ticket" to invoice.label,
+            "shop" to profile.name,
+            "shop_phone" to profile.phone
+        )) + mapOf("pay_link" to charge.url, "amount" to Money.format(charge.amountCents, profile.currencySymbol))
+
+        val queued = queueTo(customer, NotificationEvent.PAYMENT_LINK, values, ticket?.identifier, ticket?.label ?: invoice.label, wanted, settings, staffName, requireAgreement = false)
+        if (queued.isEmpty()) return AccountResult.Invalid("The customer has no email or phone number to send to")
+
+        auditLog.log(actor, AuditAction.CREATE, "card charge", charge.identifier.toString(), "Sent the ${Money.format(charge.amountCents, profile.currencySymbol)} payment link for ${invoice.label} by ${queued.joinToString(" and ") { it.channel.label.lowercase() }}")
         return AccountResult.Done(queued)
     }
 

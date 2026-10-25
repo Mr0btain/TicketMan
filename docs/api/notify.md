@@ -18,6 +18,7 @@ to customers who agreed on that channel (`Customer.notifyEmail`, `notifySms`):
 | `ABANDONED` | The hourly sweep treats a ticket left past the shop's abandon limit as abandoned |
 | `APPOINTMENT_REMINDER` | The hourly sweep finds a booked [appointment](appointment.md) with a customer starting within 24 hours, once (again if it's moved). Not about a ticket, so it has no `ticketIdentifier` and staff can't send it from a ticket (`400`) |
 | `STATUS_LINK` | Staff send it from the ticket card, whatever the customer agreed to |
+| `PAYMENT_LINK` | Staff send a waiting payment link from the counter ([`/charge/{identifier}/send`](payment.md#post-apipaymentchargeidentifiersend)), whatever the customer agreed to |
 | `TEST` | An admin tries the settings, not kept in the outbox |
 
 Only status changes made through [`/api/data/ticket/update`](ticket.md#post-apidataticketupdate) send messages;
@@ -28,7 +29,9 @@ estimates moving a ticket don't, since their own message says it.
 `{status}` (as customers see it), `{link}` (the [status page](status.md), blank without a public address),
 `{estimate}`, `{balance}`, `{storage}` (the daily storage fee), `{appointment}` (an appointment's day and time,
 like "tomorrow at 10:30"), `{shop}` and `{shop_phone}` are filled in when the message is queued; an appointment
-reminder only has `{name}`, `{device}`, `{appointment}`, `{shop}` and `{shop_phone}`.
+reminder only has `{name}`, `{device}`, `{appointment}`, `{shop}` and `{shop_phone}`. A payment link also has
+`{pay_link}` (the processor's checkout page) and `{amount}` (what it asks for); one for a counter sale has only those,
+`{name}`, `{ticket}` (the invoice's number), `{shop}` and `{shop_phone}`.
 
 **The outbox.** Each message is an `OutboxMessage` row (`outbox` table), one per channel. A loop every 10 seconds
 sends what's due. A send that might work later (`SendResult.Retry`: the server down, a refused login, Twilio 401,
@@ -113,7 +116,7 @@ not. The ticket card's **Send status link**.
 
 - **Body:** `TicketMessageRequest { event, channels }`, `STATUS_LINK` and every channel by default.
 - **`201`** the messages queued. **`404`** no such ticket.
-- **`400`** both channels off, no email or phone to send to, or `TEST`.
+- **`400`** both channels off, no email or phone to send to, `TEST`, `APPOINTMENT_REMINDER` or `PAYMENT_LINK`.
 
 ## See also
 

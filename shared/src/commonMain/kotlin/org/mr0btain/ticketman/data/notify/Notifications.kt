@@ -13,7 +13,7 @@ enum class NotificationChannel(val label: String) {
 }
 
 /**
- * What a message is about. Each has its own template, and all but [STATUS_LINK] and [TEST] are only sent when the
+ * What a message is about. Each has its own template, and all but [STATUS_LINK], [PAYMENT_LINK] and [TEST] are only sent when the
  * shop turns them on
  */
 @Serializable
@@ -41,6 +41,9 @@ enum class NotificationEvent(val label: String) {
 
     /** Staff sent the status page link by hand */
     STATUS_LINK("Status link"),
+
+    /** Staff sent a payment link from the counter, to pay on the processor's checkout */
+    PAYMENT_LINK("Payment link"),
 
     /** An admin trying the settings out, not about a ticket */
     TEST("Test");
@@ -209,6 +212,8 @@ object MessageTemplates {
         "balance" to "Still to pay",
         "storage" to "The daily storage fee",
         "appointment" to "An appointment's day and time",
+        "pay_link" to "A payment link's checkout page",
+        "amount" to "What a payment link asks for",
         "shop" to "The shop's name",
         "shop_phone" to "The shop's phone"
     )
@@ -247,6 +252,10 @@ object MessageTemplates {
         NotificationEvent.STATUS_LINK to MessageTemplate(
             "Your repair at {shop}",
             "Hi {name}, follow your {device} (ticket {ticket}) at {link}\n{shop}"
+        ),
+        NotificationEvent.PAYMENT_LINK to MessageTemplate(
+            "Pay for your repair at {shop}",
+            "Hi {name}, you can pay {amount} for {ticket} by card here: {pay_link}\n{shop} {shop_phone}"
         ),
         NotificationEvent.TEST to MessageTemplate(
             "Test from {shop}",

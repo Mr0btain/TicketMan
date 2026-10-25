@@ -461,6 +461,9 @@ object PaymentPaths {
     const val CHARGE = "/charge/{identifier}"
     const val CANCEL = "/charge/{identifier}/cancel"
 
+    /** Body `SendLinkRequest`: emails or texts a waiting payment link to the invoice's customer */
+    const val SEND = "/charge/{identifier}/send"
+
     /** Admin only: gives back a paid charge that never made it onto an invoice */
     const val REFUND = "/charge/{identifier}/refund"
 

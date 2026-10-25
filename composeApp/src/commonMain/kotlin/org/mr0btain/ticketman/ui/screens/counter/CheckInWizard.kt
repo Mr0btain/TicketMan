@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.payment.CardExtras
+import org.mr0btain.ticketman.data.payment.CardReader
+import org.mr0btain.ticketman.data.payment.CardCharge
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import org.mr0btain.ticketman.components.utils.formatDate
 import kotlin.time.Clock
@@ -62,6 +65,7 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerForm
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.alert_triangle
 import ticketman.composeapp.generated.resources.check_square
+import ticketman.composeapp.generated.resources.credit_card
 import ticketman.composeapp.generated.resources.edit_3
 import ticketman.composeapp.generated.resources.smartphone
 import ticketman.composeapp.generated.resources.tool
@@ -77,7 +81,7 @@ private val FORM_WIDTH = 680.dp
 /** Most devices at one check in, like the server's */
 private const val MAX_DEVICES = 10
 
-private enum class CheckInStep(val label: String) {
+internal enum class CheckInStep(val label: String) {
     CUSTOMER("Customer"),
     DEVICE("Device"),
     REPAIR("Repair"),
@@ -87,7 +91,7 @@ private enum class CheckInStep(val label: String) {
 
 /** Everything typed into the wizard, kept here so going back a step doesn't lose it */
 @OptIn(ExperimentalUuidApi::class)
-private class CheckInForm(customer: Customer?, private val checklists: List<IntakeChecklist>, val appointment: Appointment? = null) {
+internal class CheckInForm(customer: Customer?, private val checklists: List<IntakeChecklist>, val appointment: Appointment? = null) {
     // Made up front so the repeat check can leave this ticket out. A new one for each device added
     var ticketIdentifier: Uuid by mutableStateOf(Uuid.generateV7())
 
@@ -123,6 +127,9 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
     var promisedInDays by mutableStateOf<Int?>(3)
     var depositInput by mutableLongStateOf(0L)
     var depositMethod by mutableStateOf(PaymentMethod.CARD)
+
+    /** The deposit taken on a card reader, paid before the check in is sent, which then claims it */
+    var depositCharge by mutableStateOf<CardCharge?>(null)
     var technician by mutableStateOf(appointment?.technicianIdentifier?.let { SearchResult(it, appointment.technicianName) })
     var strokes by mutableStateOf<List<List<SignaturePoint>>>(emptyList())
     var aspectRatio by mutableStateOf(3f)
@@ -169,7 +176,7 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
         )
 
     val depositCents: Long?
-        get() = depositInput.takeIf { it > 0 }
+        get() = depositCharge?.appliedCents ?: depositInput.takeIf { it > 0 }
 
     fun problem(step: CheckInStep, needsSignature: Boolean): String? = when (step) {
         CheckInStep.CUSTOMER -> if (customer == null) "Pick or add a customer" else null
@@ -192,7 +199,8 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
             ticket = ticket(),
             customerIdentifier = customer!!.identifier,
             technicianIdentifier = technician?.identifier,
-            deposit = depositCents?.let { PaymentRequest(depositMethod, it, "Deposit") },
+            deposit = depositCharge?.let { PaymentRequest(PaymentMethod.CARD, it.appliedCents, "Deposit", chargeIdentifier = it.identifier) }
+                ?: depositCents?.let { PaymentRequest(depositMethod, it, "Deposit") },
             signature = if (needsSignature) SignatureInput(strokes, aspectRatio, signedName.trim()) else null,
             deviceIdentifier = deviceIdentifier,
             more = extra.toList(),
@@ -219,7 +227,10 @@ fun CheckInWizard(
     onOpenTicket: (Uuid) -> Unit,
     onSubmit: (CheckInRequest, (String?) -> Unit) -> Unit,
     onCancel: () -> Unit,
-    onLoadDevices: suspend (Uuid) -> List<CustomerDevice> = { emptyList() }
+    onLoadDevices: suspend (Uuid) -> List<CustomerDevice> = { emptyList() },
+    readers: List<CardReader> = emptyList(),
+    surchargePercent: String = "",
+    onReaderCharge: ((CardReader, Long, (CardCharge) -> Unit) -> Unit)? = null
 ) {
     val form = remember(startingCustomer, checklists, appointment) { CheckInForm(startingCustomer, checklists, appointment) }
     val needsSignature = terms.isNotBlank()
@@ -262,7 +273,7 @@ fun CheckInWizard(
             when (step) {
                 CheckInStep.CUSTOMER -> CustomerStep(form, onSearchCustomers, onAddCustomer)
                 CheckInStep.DEVICE -> DeviceStep(form, devices, onRepeatCheck, onOpenTicket)
-                CheckInStep.REPAIR -> RepairStep(form, onSearchTechnicians)
+                CheckInStep.REPAIR -> RepairStep(form, onSearchTechnicians, readers, surchargePercent, onReaderCharge)
                 CheckInStep.SIGN -> SignStep(form, terms)
                 CheckInStep.REVIEW -> ReviewStep(form, needsSignature)
             }
@@ -549,9 +560,12 @@ private fun DeviceStep(
 }
 
 @Composable
-private fun RepairStep(
+internal fun RepairStep(
     form: CheckInForm,
-    onSearchTechnicians: suspend (String) -> List<SearchResult>
+    onSearchTechnicians: suspend (String) -> List<SearchResult>,
+    readers: List<CardReader> = emptyList(),
+    surchargePercent: String = "",
+    onReaderCharge: ((CardReader, Long, (CardCharge) -> Unit) -> Unit)? = null
 ) {
     var techQuery by remember { mutableStateOf("") }
     var techMatches by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
@@ -607,22 +621,53 @@ private fun RepairStep(
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.Bottom) {
-            TmMoneyField(
-                modifier = Modifier.width(180.dp),
-                label = "Deposit",
-                cents = form.depositInput,
-                onCentsChange = { form.depositInput = it }
+        val paidOnReader = form.depositCharge
+        if (paidOnReader != null) {
+            // Paid already, so it can't be changed here; the check in claims it
+            TmNotice(
+                text = "${formatMoney(paidOnReader.amountCents)} deposit paid on ${paidOnReader.readerName}. " +
+                    "If this check in isn't finished, refund it from Admin > Payments.",
+                kind = TmNoticeKind.SUCCESS
             )
+        } else {
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.Bottom) {
+                TmMoneyField(
+                    modifier = Modifier.width(180.dp),
+                    label = "Deposit",
+                    cents = form.depositInput,
+                    onCentsChange = { form.depositInput = it }
+                )
 
-            TmSegmented(
-                label = "Paid by",
-                // Store credit when they have some; a gift card is taken at pickup, where its balance is checked
-                options = PaymentMethod.entries.filter { !it.storedValue || (it == PaymentMethod.STORE_CREDIT && (form.customer?.creditCents ?: 0) > 0) },
-                selected = form.depositMethod,
-                onSelect = { form.depositMethod = it },
-                optionLabel = { formatEnumName(it.name) }
-            )
+                TmSegmented(
+                    label = "Paid by",
+                    // Store credit when they have some; a gift card is taken at pickup, where its balance is checked
+                    options = PaymentMethod.entries.filter { !it.storedValue || (it == PaymentMethod.STORE_CREDIT && (form.customer?.creditCents ?: 0) > 0) },
+                    selected = form.depositMethod,
+                    onSelect = { form.depositMethod = it },
+                    optionLabel = { formatEnumName(it.name) }
+                )
+            }
+
+            // A card deposit can go to a reader now instead of being typed in as taken
+            val deposit = form.depositInput.takeIf { it > 0 }
+            if (form.depositMethod == PaymentMethod.CARD && readers.isNotEmpty() && onReaderCharge != null && deposit != null) {
+                var readerIdentifier by remember { mutableStateOf<String?>(null) }
+                val reader = readers.firstOrNull { it.identifier == readerIdentifier } ?: readers.first()
+                if (readers.size > 1) {
+                    ChipRow {
+                        readers.forEach { option ->
+                            TmFilterChip(text = option.name, selected = option == reader, onClick = { readerIdentifier = option.identifier })
+                        }
+                    }
+                }
+                val charged = deposit + CardExtras.surchargeCents(deposit, surchargePercent)
+                TmButton(
+                    text = "Charge ${formatMoney(charged)} on ${reader.name}",
+                    leadingIcon = Res.drawable.credit_card,
+                    variant = TmButtonVariant.SECONDARY,
+                    onClick = { onReaderCharge(reader, deposit) { form.depositCharge = it } }
+                )
+            }
         }
 
         val technician = form.technician
@@ -740,7 +785,10 @@ private fun ReviewStep(form: CheckInForm, needsSignature: Boolean) {
             TmKeyValueRow(label = "Priority", value = formatEnumName(form.priority.priority.name))
             if (form.estimateCents > 0) TmKeyValueRow(label = "Estimate", value = formatMoney(form.estimateCents), numeric = true)
             TmKeyValueRow(label = "Promised", value = form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")
-            form.depositCents?.let { TmKeyValueRow(label = "Deposit", value = "${formatMoney(it)} by ${formatEnumName(form.depositMethod.name).lowercase()}") }
+            form.depositCents?.let {
+                val how = form.depositCharge?.let { charge -> "on ${charge.readerName}, paid" } ?: "by ${formatEnumName(form.depositMethod.name).lowercase()}"
+                TmKeyValueRow(label = "Deposit", value = "${formatMoney(it)} $how")
+            }
             TmKeyValueRow(label = "Technician", value = form.technician?.text ?: "Not assigned")
             if (needsSignature) TmKeyValueRow(label = "Signed by", value = form.signedName)
         }

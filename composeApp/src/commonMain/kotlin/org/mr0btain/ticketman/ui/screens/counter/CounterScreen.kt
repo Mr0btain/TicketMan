@@ -270,7 +270,12 @@ fun CounterScreen(
                     onOpenTicket = { counter.openTicket(it) },
                     onSubmit = { request, onResult -> counter.checkIn.submit(request, onResult) },
                     onCancel = { counter.goHome() },
-                    onLoadDevices = { counter.checkIn.devices(it) }
+                    onLoadDevices = { counter.checkIn.devices(it) },
+                    readers = cardOptions.readers,
+                    surchargePercent = cardOptions.surchargePercent,
+                    onReaderCharge = if (cardOptions.readers.isEmpty()) null else { reader, amount, onPaid ->
+                        counter.cards.charge(reader, amount, 0, null, onPaid)
+                    }
                 )
 
                 CounterView.CHECKED_IN -> lastCheckIn?.let { result ->
@@ -383,7 +388,7 @@ fun CounterScreen(
         ReaderChargeDialog(charge = charge, onCancel = { counter.cards.cancel() }, onClose = { counter.cards.dismiss() })
     }
     paymentLink?.let { charge ->
-        PaymentLinkDialog(charge = charge, onClose = { counter.cards.closeLink() })
+        PaymentLinkDialog(charge = charge, onClose = { counter.cards.closeLink() }, onSend = { counter.cards.sendLink(it) })
     }
 
     // Ready to type as soon as the counter opens, unless it's being touched, where focus would pop up the on screen keyboard

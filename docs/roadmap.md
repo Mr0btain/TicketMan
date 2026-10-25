@@ -52,8 +52,9 @@ Smaller pieces left from earlier phases, picked up as they're needed.
 
 - **Booking from the status page.** Customers picking an appointment time themselves, at a location, from the
   times staff are scheduled.
-- **Card readers at check-in.** Taking a deposit on a reader from the counter's wizard (the server takes them
-  already), and sending a payment link by email or text.
+- **Card readers at check-in** (done). The wizard's repair step sends a card deposit to a reader, and the check in
+  claims the paid charge; the counter's payment link dialog emails or texts the link to the customer
+  ([`/charge/{identifier}/send`](api/payment.md#post-apipaymentchargeidentifiersend)).
 - **Tips and surcharges** on card payments (done). Tips picked at the counter before a reader charge, a capped
   surcharge on every card payment, both charged on the card but kept off the invoice, shown on receipts and in the
   period report ([Payments API](api/payment.md)).

@@ -156,6 +156,19 @@ through.
 - **`409`** it isn't waiting, the card went through before it could be cancelled (it's kept, on its invoice), or
   the processor didn't cancel it.
 
+### `POST /api/payment/charge/{identifier}/send`
+
+**Auth:** normal
+
+Emails or texts a waiting payment link to its invoice's customer, through the shop's [messages](notify.md) with the
+`PAYMENT_LINK` wording, whatever they agreed to. The charge is asked about first. The counter's payment link dialog
+has **Email it** and **Text it**.
+
+- **Body:** `SendLinkRequest { channels }`, empty for every channel that's on and that they have a contact for.
+- **`202`** the `OutboxMessage`s queued. Audit logged.
+- **`400`** not a payment link, the invoice has no customer, both channels off, or no email or phone to send to.
+- **`404`** no such charge or invoice. **`409`** the link isn't waiting any more, or messages aren't set up.
+
 ### `POST /api/payment/charge/{identifier}/refund`
 
 **Auth:** admin

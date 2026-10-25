@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.data.notify.NotificationChannel
+import org.mr0btain.ticketman.data.notify.OutboxMessage
+import org.mr0btain.ticketman.server.request.SendLinkRequest
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -88,6 +91,16 @@ class PaymentRemoteRepository(
 
     suspend fun cancel(identifier: Uuid): TmResult<CardCharge, ServerError> =
         data(CHARGE_TAG) { client.post { url("$baseUrl${PaymentPaths.CANCEL.fill(identifier)}") } }
+
+    /** Emails or texts a waiting payment link to the invoice's customer, [channels] empty for every one they have */
+    suspend fun sendLink(identifier: Uuid, channels: Set<NotificationChannel> = emptySet()): TmResult<List<OutboxMessage>, ServerError> =
+        data(CHARGE_TAG) {
+            client.post {
+                url("$baseUrl${PaymentPaths.SEND.fill(identifier)}")
+                contentType(ContentType.Application.Json)
+                setBody(SendLinkRequest(channels))
+            }
+        }
 
     /** Admin only: gives back a paid charge no invoice has */
     suspend fun refund(identifier: Uuid, reason: String): TmResult<CardCharge, ServerError> =

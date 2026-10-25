@@ -167,7 +167,8 @@ fun Application.configureRouting(
         route(ApiRoutes.PAYMENT) {
             paymentRoute(
                 service = paymentService,
-                userDatabase = localDatabase.userDatabase
+                userDatabase = localDatabase.userDatabase,
+                notifications = notificationService
             )
         }
 
