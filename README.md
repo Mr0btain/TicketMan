@@ -61,11 +61,11 @@ Then open `http://localhost:8080` and log in as `admin`. That's plain HTTP, fine
 |----------|--------|
 | Linux | Main target, Done |
 | Windows | Done |
-| macOS | Builds arm64 and x64 DMGs, not tested on a Mac yet |
+| macOS | Builds arm64 and x64 DMGs, not tested yet |
 | Web (Wasm) | Served by the server when built with `-PwithWeb`, Done |
 | Server | Done |
 | Android | Done |
-| iOS | Written, not built or tested yet (needs a Mac) |
+| iOS | Builds but not tested yet (needs a Mac) |
 
 ## Roadmap
 
@@ -101,7 +101,8 @@ inventory and purchasing, repair depth, and running the business. What's next, i
 
 ## Caveats
 
-If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0
+If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0 
+for now, but 1.0.0->2.0.0 when we hit stable.
 
 ## Documentation
 
