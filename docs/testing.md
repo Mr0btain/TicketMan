@@ -182,6 +182,9 @@ app:
 | `ScreenRenderTest` | `composeApp/build/screen-renders/` | Every screen, admin tab and the main dialogs: the counter (home, ticket, customer, check-in, pickup, sale, estimate), records tabs and dialogs, purchasing, appointments, settings, kiosk lock, server trust and every admin tab, each in dark and light, and each wide in the shell and at phone width (`<name>-narrow`, 420 px) |
 
 - **They only check a file was written.** Nothing compares pixels. Open the PNGs and look.
+- **`scripts/update_screenshots.py`** renders them, copies the dark ones into `docs/images/screens/` (scaled and cut
+  to 256 colors) and writes [Screenshots](screenshots.md). Run it after changing a screen; a new screen goes in its
+  `SECTIONS` list.
 - **`screen(name, rail = ...)` draws both widths**: `name` in the wide shell with that rail item picked, and
   `name-narrow` in a phone frame, taller since panels stack. Use it for a new screen so its phone layout gets looked
   at too.

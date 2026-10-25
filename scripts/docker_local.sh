@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# docker-compose.yml on this machine, to try the shop setup by hand: the server behind Caddy on its local CA at
+# docker/docker-compose.yml on this machine, to try the shop setup by hand: the server behind Caddy on its local CA at
 # https://localhost:8443, with the desktop client and a browser on the same machine. Runs as its own compose project
 # (ticketman-local) on its own ports and network, so it leaves a real install alone, and keeps its data between runs.
 #
@@ -29,7 +29,7 @@ export DOMAIN=localhost CERTIFICATE=private TZ="${TZ:-America/New_York}" ADMIN_P
 export HTTPS_PORT="${HTTPS_PORT:-8443}" HTTP_PORT="${HTTP_PORT:-8082}" SUBNET="${SUBNET:-172.30.82.0/24}"
 BASE="https://localhost:$HTTPS_PORT"
 TRUST_STORE="$ROOT/build/docker-truststore.p12"
-compose() { docker compose -p ticketman-local -f "$ROOT/docker-compose.yml" "$@"; }
+compose() { docker compose -p ticketman-local -f "$ROOT/docker/docker-compose.yml" "$@"; }
 
 if [[ "${DOWN:-false}" == true ]]; then
     compose down -v --remove-orphans

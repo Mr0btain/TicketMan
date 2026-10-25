@@ -25,7 +25,7 @@ done
 export DOMAIN=localhost CERTIFICATE=private TZ="${TZ:-America/New_York}" ADMIN_PASSWORD=admin_pass
 export HTTPS_PORT="${HTTPS_PORT:-8445}" HTTP_PORT="${HTTP_PORT:-8081}" SUBNET="${SUBNET:-172.30.81.0/24}"
 BASE="https://localhost:$HTTPS_PORT"
-compose() { docker compose -p ticketman-smoke -f "$ROOT/docker-compose.yml" "$@"; }
+compose() { docker compose -p ticketman-smoke -f "$ROOT/docker/docker-compose.yml" "$@"; }
 
 cleanup() {
     if $KEEP; then

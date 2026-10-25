@@ -153,6 +153,24 @@ Not tied to the numbered phases: done whenever work moves to a macOS machine.
 - **Later, with a paid Apple Developer account:** a signed IPA, or TestFlight and the App Store, with the certificate
   and provisioning profile as secrets.
 
+## Phase macOS: Test the desktop app (needs a Mac)
+
+The desktop app is the same JVM code as on Linux and Windows, and the release builds an arm64 DMG on GitHub's Mac
+runner, but nobody has run it on a Mac yet.
+
+- **Run it from source and from the DMG** on Apple silicon: `./gradlew :composeApp:run`, then the released DMG
+  dragged to Applications (unsigned, so `xattr -dr com.apple.quarantine /Applications/TicketMan.app` first, see
+  [Releasing](releasing.md)). Check the version shown inside (macOS refuses a bundle version starting with 0).
+- **Walk through it** like Linux and Windows: connecting and trusting a Caddy CA, logging in and the session coming
+  back after a restart (KSafe's store on macOS), records with photos, check-in with a signature on a trackpad,
+  pickup, printing a claim slip and an item label through Java2D to a macOS printer, saving an invoice PDF and a
+  backup with the file dialogs, restoring, the admin tabs, keyboard shortcuts (F keys need `fn` on most Mac
+  keyboards), the app icon, and kiosk mode going fullscreen.
+- **Intel Macs**: an x64 DMG (a `macos-13` runner) if anyone needs one, or the desktop jar with Java 21.
+- **Fix what it finds** and note what only shows up on macOS in [Platforms](client/platforms.md).
+- **Later, with a paid Apple Developer account:** sign and notarize the DMG (Compose's
+  `macOS { signing { } notarization { } }`) so it opens without the quarantine step.
+
 ## Open questions
 
 - Phase 1 (settled): the server is reached from the internet through the proxy, which lets outside addresses

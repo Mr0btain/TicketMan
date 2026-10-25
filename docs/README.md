@@ -7,6 +7,8 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Getting started](getting-started.md): tools, building and running each target, tests, hot reload
 - [Configuration](configuration.md): server settings and the env vars that override them, dev mode, test data
 - [Running a server](operations.md): first start, the data folder, backup and restore, stations and kiosks
+- [Run TicketMan in Docker](how-to/run-in-docker.md): the published image, trying it from the source, a shop's server
+- [Screenshots](screenshots.md): every screen, wide and on a phone, from the render tests
 - [Releasing](releasing.md): the version, building each package, the release workflows and their secrets
 
 ## Architecture

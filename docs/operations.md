@@ -17,11 +17,11 @@ The usual setup is the server in Docker behind a reverse proxy that does HTTPS. 
 
    ```bash
    ./gradlew :server:installDist -PwithWeb
-   docker compose up -d --build
+   docker compose -f docker/docker-compose.yml up -d --build
    ```
 
 4. Open `https://tickets.myshop.com` in a browser, or point a client at it (Settings > Server), and log in as
-   `admin`. Without `ADMIN_PASSWORD` the password is in `docker compose logs ticketman`.
+   `admin`. Without `ADMIN_PASSWORD` the password is in `docker compose -f docker/docker-compose.yml logs ticketman`.
 5. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
    paper size). Tax and everything printed come from it, so do this before taking money.
 6. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
@@ -45,7 +45,7 @@ Android SDK. The copied files are plain JVM jars, so the same build makes an amd
 
 ```bash
 ./gradlew :server:installDist -PwithWeb
-docker build -f server/Dockerfile -t ticketman .          # or docker compose build
+docker build -f server/Dockerfile -t ticketman .          # or docker compose -f docker/docker-compose.yml build
 docker buildx build --platform linux/amd64,linux/arm64 -f server/Dockerfile -t <registry>/ticketman .
 ```
 

@@ -4,7 +4,7 @@
 #   docker build -f server/Dockerfile -t ticketman .
 #
 # The copied files are plain JVM jars, so the same build makes an amd64 or arm64 image
-# (docker buildx build --platform linux/amd64,linux/arm64 ...). See docs/operations.md and docker-compose.yml
+# (docker buildx build --platform linux/amd64,linux/arm64 ...). See docs/operations.md and docker/docker-compose.yml
 FROM eclipse-temurin:21-jre
 
 # Runs as its own user, which owns the data and backup folders. Named volumes take that ownership from the image;
