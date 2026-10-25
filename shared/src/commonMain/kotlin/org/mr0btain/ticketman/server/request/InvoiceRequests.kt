@@ -64,6 +64,20 @@ data class PickupRequest(
 )
 
 /**
+ * Sells straight from stock with no ticket: the invoice is made, paid and its parts taken from stock together
+ * @param customerIdentifier Who bought it, when the counter knows. Optional
+ * @param charges What's sold, at least one line
+ * @param payments Have to cover the total, more is change
+ */
+@Serializable
+data class SaleRequest(
+    val customerIdentifier: Uuid? = null,
+    val charges: List<Charge>,
+    val discountCents: Long = 0,
+    val payments: List<PaymentRequest> = emptyList()
+)
+
+/**
  * Logs work on a ticket
  * @param description What was done. For a part, blank means the item's name
  * @param quantity Hours for labor, how many for a part

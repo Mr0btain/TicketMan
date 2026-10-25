@@ -144,13 +144,16 @@ fun AdminInvoicesTab(
                 TmTableHeader(COLUMNS)
 
                 invoices.forEach { invoice ->
-                    // A deleted ticket has nothing to open
-                    TmTableRow(COLUMNS, onClick = if (invoice.ticketRemoved) null else ({ onOpenTicket(invoice.ticketIdentifier) })) { column ->
+                    // A deleted ticket, or a sale, has nothing to open
+                    val ticket = invoice.ticketIdentifier?.takeIf { !invoice.ticketRemoved }
+                    TmTableRow(COLUMNS, onClick = ticket?.let { { onOpenTicket(it) } }) { column ->
                         when (column) {
                             0 -> Column {
                                 TmTicketIdText(invoice.label)
                                 if (invoice.ticketRemoved) {
                                     Text("Ticket ${invoice.ticketLabel} deleted", style = TmTheme.typography.caption, color = colors.textMuted)
+                                } else if (invoice.isSale) {
+                                    Text("Counter sale", style = TmTheme.typography.caption, color = colors.textMuted)
                                 }
                             }
                             1 -> Text(formatDateTime(invoice.createdAt), style = TmTheme.typography.body, color = colors.textMuted)

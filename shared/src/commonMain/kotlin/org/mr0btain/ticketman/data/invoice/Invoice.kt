@@ -6,11 +6,13 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 /**
- * A ticket's bill. There's one per ticket, it stays OPEN while being built and taking deposits,
- * and is PAID once the ticket is picked up. Totals are worked out by the server
+ * A ticket's bill, or a sale at the counter. There's one per ticket, it stays OPEN while being built and taking
+ * deposits, and is PAID once the ticket is picked up. A sale has no ticket and is made already PAID (see
+ * [isSale]). Totals are worked out by the server
  * @param taxRateBasisPoints Shop tax rate when the invoice was made, kept after, 750 is 7.5%
  * @param createdAt Epoch millis
  * @param paidAt Epoch millis it was paid off at pickup
+ * @param ticketIdentifier Its ticket, null for a sale straight from stock
  * @param ticketLabel The ticket's number, kept once the ticket is deleted, blank before
  * @param ticketRemovedAt Epoch millis its ticket was deleted. An invoice with payments, or a void one, outlives its
  * ticket, so the money taken stays on record until an admin deletes it
@@ -20,7 +22,7 @@ import kotlin.uuid.Uuid
 data class Invoice(
     override val identifier: Uuid = Uuid.generateV7(),
     val number: InvoiceNumber? = null,
-    val ticketIdentifier: Uuid,
+    val ticketIdentifier: Uuid? = null,
     val customerIdentifier: Uuid? = null,
     val status: InvoiceStatus = InvoiceStatus.OPEN,
     val charges: List<Charge> = emptyList(),
@@ -35,6 +37,10 @@ data class Invoice(
     val ticketLabel: String = "",
     val ticketRemovedAt: Long? = null
 ): MainItem() {
+    /** Sold over the counter without a ticket */
+    val isSale: Boolean
+        get() = ticketIdentifier == null
+
     /** Its ticket was deleted, the invoice was kept */
     val ticketRemoved: Boolean
         get() = ticketRemovedAt != null

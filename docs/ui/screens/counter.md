@@ -10,7 +10,7 @@ with a check-in or a pickup is in [Counter: check-in, invoices and pickup](../..
 ## How it works
 
 [`CounterScreen`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/counter/CounterScreen.kt)
-is a top bar (search, Check in, New customer, Price check), a main area, and the `QueuePanel` (360 dp) on the
+is a top bar (search, Check in, New customer, Sell, Price check), a main area, and the `QueuePanel` (360 dp) on the
 right, laid out by `CounterLayout`. Under 900 dp wide the buttons become icons and the queue moves into a dialog
 opened from its own button (`QueueDialog`); the main area stays put when the window crosses that width, so a half
 done check-in isn't lost. The ticket card, pickup and check-in wrap and stack their panels to fit a phone. What
@@ -33,6 +33,9 @@ stateDiagram-v2
     TICKET --> PICKUP: F5 / Pick up
     PICKUP --> TICKET: back
     PICKUP --> PICKED_UP: finished
+    HOME --> SALE: F6 / Sell
+    CUSTOMER --> SALE: Sell
+    SALE --> SOLD: paid
 ```
 
 Every view can go back to `HOME` (Escape, or its back button), and typing in the search bar always goes back to
@@ -41,6 +44,7 @@ Every view can go back to `HOME` (Escape, or its back button), and typing in the
 on `MainViewModel`, so leaving the counter and coming back keeps the open ticket. `CounterHandler` holds the
 search, queue, shop profile, ticket and customer cards and price check itself, and a part for each bigger flow:
 `counter.checkIn` (`CounterCheckIn`, the wizard and new customer screen), `counter.pickup` (`CounterPickup`),
+`counter.sale` (`CounterSale`),
 `counter.invoices` (`CounterInvoices`, the invoice list the admin screen shows) and `counter.printer`
 (`CounterPrinter`). They share a `CounterSupport` (scope, snackbar, `canEdit`, switching views, reloading the
 queue) and load tickets through `RemoteHandler.loadTicketDetail` (`TicketDetail.kt`).
@@ -55,6 +59,7 @@ queue) and load tickets through `RemoteHandler.loadTicketDetail` (`TicketDetail.
 | F3 | Start a check-in |
 | F4 | Price check |
 | F5 | Pick up the open ticket (only on the ticket view) |
+| F6 | Start a sale |
 | Esc | Back to home, or clear the search if already there |
 
 The shortcuts are listed on the home view before anything is searched, and in the button labels. The search field
@@ -124,6 +129,17 @@ opens with the ticket's invoice, made if it doesn't have one yet.
 If the pickup is refused (short on stock, someone else picked it up), the screen reloads the invoice and shows the
 server's message.
 
+`PaymentPanel` (`PaymentPanel.kt`) is the totals and payment side, shared with sales.
+
+### Sales
+
+[`SaleScreen`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/counter/SaleScreen.kt)
+sells from stock with no ticket: the same `ChargeLines` and `PaymentPanel` as pickup, and an optional customer
+(already picked when started from a customer's card). Nothing is saved until **Complete sale**, which sends one
+`SaleRequest` to `POST /api/counter/sale`; the server makes the invoice, takes the payments and the stock, and
+saves it paid, or refuses all of it. `PickedUpView` then shows it as "Sold", with the receipt (printed by
+`CounterPrinter.printSale`, since there's no ticket to load) and Save PDF.
+
 ### Printing
 
 **Save PDF** sits next to Print on a ticket with an invoice and after pickup: `CounterPrinter.savePdf` has the
@@ -135,8 +151,8 @@ paper, then calls `counter.printer.print`, which loads the ticket fresh so the p
 
 ### View only
 
-Restricted users can search, open tickets and customers, use price check and print. The Check in and New customer
-buttons, the ticket's status switch and Pick up are hidden, a "View only" badge shows instead, and
+Restricted users can search, open tickets and customers, use price check and print. The Check in, New customer and
+Sell buttons, the ticket's status switch and Pick up are hidden, a "View only" badge shows instead, and
 the handler and its parts refuse those actions anyway.
 
 ## Where it lives
@@ -145,12 +161,12 @@ the handler and its parts refuse those actions anyway.
 |------|-------|
 | Screen, shortcuts, view switching | `ui/screens/counter/CounterScreen.kt` |
 | Top bar and queue placement, wide and narrow | `ui/screens/counter/CounterLayout.kt` |
-| State and every action | `ui/screens/counter/components/CounterHandler.kt`, and its parts `CounterCheckIn.kt`, `CounterPickup.kt`, `CounterInvoices.kt`, `CounterPrinter.kt`, `CounterSupport.kt` |
+| State and every action | `ui/screens/counter/components/CounterHandler.kt`, and its parts `CounterCheckIn.kt`, `CounterPickup.kt`, `CounterSale.kt`, `CounterInvoices.kt`, `CounterPrinter.kt`, `CounterSupport.kt` |
 | `TicketDetail`, `CustomerDetail` and loading a ticket's card | `ui/screens/counter/components/TicketDetail.kt` |
 | Ticket and customer rows, `isOverdue`, `isClosed` | `ui/screens/counter/components/CounterRows.kt` |
-| Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt` (with `QueueDialog`), `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `NewCustomerScreen.kt` (new customer, the kit's `TmCustomerForm` under a header), `PickupScreen.kt` (with `PickedUpView`) |
+| Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt` (with `QueueDialog`), `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `NewCustomerScreen.kt` (new customer, the kit's `TmCustomerForm` under a header), `PickupScreen.kt` (with `PickedUpView`), `SaleScreen.kt`, and `PaymentPanel.kt` shared by the last two |
 | Print button | `ui/screens/counter/PrintButton.kt` |
-| Render tests | `ScreenRenderTest.counterTicket()`, `pickup()`, `checkIn()`, and `counterTicketNarrow()`, `pickupNarrow()`, `checkInNarrow()` at phone width |
+| Render tests | `ScreenRenderTest.counterTicket()`, `pickup()`, `sale()`, `checkIn()`, and `counterTicketNarrow()`, `pickupNarrow()`, `saleNarrow()`, `checkInNarrow()` at phone width |
 | Handler tests | `composeApp/src/commonTest/.../ui/screens/counter/CounterHandlerTest.kt` |
 
 ## Gotchas

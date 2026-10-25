@@ -356,6 +356,18 @@ rows = csv.decode().strip().split("\r\n")
 check(status == 200 and len(rows) == 3 and rows[1].startswith(f"INV-{paid['number']['year'] % 100:02d}-{paid['number']['sequence']:08d},") and ",paid," in rows[1] and ",159.90," in rows[1], f"export answered {status}: {rows}")
 step(f"The invoice comes back as a {len(pdf) // 1000 or 1} KB PDF, and today's CSV export has it, paid, at $159.90, beside the iPad's open one")
 
+# ------------------------------------------ Counter money ------------------------------------------
+sale_lines = [
+    {"type": "PART", "description": "iPhone 14 Screen", "quantity": 1, "unitPriceCents": 12000, "inventoryIdentifier": screen},
+    {"type": "OTHER", "description": "Fitting kit", "quantity": 1, "unitPriceCents": 500, "taxable": False},
+]
+call("POST", "/api/counter/sale", {"charges": sale_lines, "payments": [{"method": "CARD", "amountCents": 13000}]}, pin, expect=409)
+_, sale = call("POST", "/api/counter/sale", {"charges": sale_lines, "payments": [{"method": "CARD", "amountCents": 13490}]}, pin, expect=201)
+check(sale["status"] == "PAID" and sale.get("ticketIdentifier") is None and sale["totalCents"] == 13490, f"sale {sale}")
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+check(item["stock"] == 3, f"stock is {item['stock']}")
+step("Counter sale with no ticket: a $120 screen and a $5 untaxed kit = $134.90; short card refused, then paid; stock 4 -> 3")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

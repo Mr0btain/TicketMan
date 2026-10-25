@@ -43,7 +43,7 @@ class SeedTest {
         // Paid ones are the picked up ones
         val tickets = TicketDatabase()
         invoices.filter { it.status == InvoiceStatus.PAID }.forEach { invoice ->
-            assertEquals(TicketStatusType.PICKED_UP, tickets.getById(invoice.ticketIdentifier)!!.status.status)
+            assertEquals(TicketStatusType.PICKED_UP, tickets.getById(invoice.ticketIdentifier!!)!!.status.status)
             assertEquals(0, invoice.balanceCents)
         }
 

@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 8
+const val API_VERSION = 9
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -169,6 +169,9 @@ object AdminPaths {
 object CounterPaths {
     const val CHECK_IN = "/check-in"
     const val PICKUP = "/pickup"
+
+    /** Body `SaleRequest`: sells from stock without a ticket, paid there and then */
+    const val SALE = "/sale"
 
     /** `?query=&limit=` */
     const val SEARCH = "/search"

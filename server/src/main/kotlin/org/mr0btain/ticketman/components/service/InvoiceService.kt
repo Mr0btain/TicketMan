@@ -2,6 +2,7 @@ package org.mr0btain.ticketman.components.service
 
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
@@ -14,6 +15,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
+import org.mr0btain.ticketman.server.request.SaleRequest
 import org.mr0btain.ticketman.server.request.WorkRequest
 import org.mr0btain.ticketman.data.ticket.WorkEntry
 import org.mr0btain.ticketman.data.ticket.WorkType
@@ -33,7 +35,8 @@ class InvoiceService(
     private val inventory: InventoryDatabase,
     private val shop: ShopDatabase,
     private val auditLog: AuditLogDatabase,
-    private val work: WorkDatabase = WorkDatabase()
+    private val work: WorkDatabase = WorkDatabase(),
+    private val customers: CustomerDatabase = CustomerDatabase()
 ) {
     /** The ticket's invoice, made if it doesn't have one */
     fun forTicket(ticketIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
@@ -117,7 +120,7 @@ class InvoiceService(
         val owed = invoice.balanceCents - paying
         if (owed > 0) return AccountResult.Conflict("${money(owed)} is still owed on ${invoice.label}")
 
-        val parts = partsUsed(invoice)
+        val parts = partsUsed(invoice.charges)
         parts.forEach { (identifier, quantity) ->
             val item = inventory.getById(identifier) ?: return@forEach
             if (item.stock != Int.MAX_VALUE && item.stock < quantity) return shortOf(identifier)
@@ -149,6 +152,52 @@ class InvoiceService(
     }
 
     /**
+     * Sells straight from stock with no ticket. Like a pickup it's all or nothing: the invoice is made with its
+     * lines, the payments have to cover it, the parts come out of stock and it's saved PAID
+     */
+    fun sell(request: SaleRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
+        linesProblem(request.charges)?.let { return AccountResult.Invalid(it) }
+        if (request.discountCents < 0) return AccountResult.Invalid("Discount can't be negative")
+        if (request.payments.any { it.amountCents <= 0 }) return AccountResult.Invalid("Payments have to be more than zero")
+        request.customerIdentifier?.let { if (customers.getById(it) == null) return AccountResult.Invalid("That customer doesn't exist") }
+
+        val taxRate = taxRate()
+        val totals = InvoiceMath.totals(request.charges, request.discountCents, taxRate)
+        val owed = totals.totalCents - request.payments.sumOf { it.amountCents }
+        if (owed > 0) return AccountResult.Conflict("${money(owed)} is still owed")
+
+        val parts = partsUsed(request.charges)
+        parts.forEach { (identifier, quantity) ->
+            val item = inventory.getById(identifier) ?: return@forEach
+            if (item.stock != Int.MAX_VALUE && item.stock < quantity) return shortOf(identifier)
+        }
+
+        val now = Clock.System.now().toEpochMilliseconds()
+
+        val sold = try {
+            invoices.whileNumbering {
+                transaction {
+                    val invoice = invoices.createSale(request.customerIdentifier, taxRate) ?: throw IllegalStateException("Sale not made")
+                    invoices.setCharges(invoice.identifier, request.charges, request.discountCents, taxRate)
+                    request.payments.forEach { payment -> invoices.addPayment(invoice.identifier, payment.toPayment(receivedBy)) }
+
+                    parts.forEach { (identifier, quantity) ->
+                        if (!inventory.adjustStock(identifier, quantity)) throw ShortOfStock(identifier)
+                    }
+
+                    invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
+                    auditLog.log(actor, AuditAction.CREATE, "invoice", invoice.identifier.toString(), "Sold ${invoice.label}, ${money(totals.totalCents)}")
+                    invoice.identifier
+                }
+            }
+        } catch (ex: ShortOfStock) {
+            return shortOf(ex.identifier)
+        }
+
+        return AccountResult.Done(invoices.getById(sold)!!)
+    }
+
+    /**
      * Cancels an invoice. A paid one puts its parts back in stock. The ticket stays as it is
      */
     fun void(identifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
@@ -157,7 +206,7 @@ class InvoiceService(
 
         transaction {
             if (invoice.status == InvoiceStatus.PAID) {
-                partsUsed(invoice).forEach { (identifier, quantity) -> inventory.adjustStock(identifier, -quantity) }
+                partsUsed(invoice.charges).forEach { (identifier, quantity) -> inventory.adjustStock(identifier, -quantity) }
             }
 
             invoices.setStatus(identifier, InvoiceStatus.VOID)
@@ -335,9 +384,9 @@ class InvoiceService(
         return AccountResult.Conflict("Only ${item?.stock ?: 0} of ${item?.name?.ifBlank { null } ?: "an item"} in stock, fix the count in Inventory first")
     }
 
-    // How many of each stocked item the invoice's part lines use, added up when one is on several lines
-    private fun partsUsed(invoice: Invoice): Map<Uuid, Int> =
-        invoice.charges
+    // How many of each stocked item the part lines use, added up when one is on several lines
+    private fun partsUsed(charges: List<Charge>): Map<Uuid, Int> =
+        charges
             .filter { it.type == ChargeType.PART && it.inventoryIdentifier != null }
             .groupBy { it.inventoryIdentifier!! }
             .mapValues { (_, charges) -> charges.sumOf { it.quantity.roundToLong().toInt() } }

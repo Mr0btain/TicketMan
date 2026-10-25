@@ -1,6 +1,6 @@
 # Counter: check-in, invoices and pickup
 
-The counter is where a device comes in and goes back out. On the server that's three services working on tickets,
+The counter is where a device comes in and goes back out, and where things are sold from stock. On the server that's three services working on tickets,
 invoices and inventory together: `CheckInService`, `InvoiceService` and the read only `CounterDatabase`. This page
 covers the rules they enforce and which steps happen together. The maths behind totals is on
 [Money](../shared/money.md).
@@ -119,10 +119,22 @@ Then, in one `transaction { }`:
 
 The response is the paid invoice, which the client uses for the receipt.
 
+## Sales
+
+`POST /api/counter/sale` with a `SaleRequest(customerIdentifier, charges, discountCents, payments)`, Normal access,
+sells from stock with no ticket. `InvoiceService.sell` checks the lines like any invoice's (at least one), that the
+customer exists if one is given, that the payments cover the total worked out with the shop's tax rate now (`409`
+"$x is still owed" otherwise) and that the parts are in stock. Then, in one transaction holding the invoice
+numbering lock: make an invoice with no ticket (`ticket_id` null, `Invoice.isSale`), set its lines, add the payments,
+take the stock, mark it `PAID` and write the audit entry. The answer is `201` with the paid invoice.
+
+A sale is an invoice like the rest: it's in the invoice list and the export (its Ticket column says `Sale`), has a
+PDF, and an admin can void it, which puts its parts back.
+
 ### One change at a time
 
 Pickup checks things and then writes, so two at once could both pass the checks. Every `InvoiceService` change that
-does that (update, add or remove a payment, pickup, void) runs inside `synchronized(CHANGE_LOCK)`, so the second waits,
+does that (update, add or remove a payment, pickup, sale, void) runs inside `synchronized(CHANGE_LOCK)`, so the second waits,
 then sees the ticket is picked up and gets a `409`. Reads and `forTicket` don't need it. A new change of that kind
 should take the lock too.
 
@@ -146,7 +158,7 @@ at once can't lose one:
 
 | Where | What it does |
 |-------|--------------|
-| Pickup | `InventoryDatabase.adjustStock(id, n)`: `stock = stock - n` where `stock >= n`. Returns false when it's short |
+| Pickup and sale | `InventoryDatabase.adjustStock(id, n)`: `stock = stock - n` where `stock >= n`. Returns false when it's short |
 | Void of a paid invoice | `adjustStock(id, -n)`: puts the parts back |
 | By hand | `POST /api/data/inventory/set/stock/{id}` with `StockChangeRequest(from, to)`: `stock = to` where `stock = from` |
 

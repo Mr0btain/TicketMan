@@ -63,15 +63,16 @@ object PrintTemplates {
     }
 
     /**
-     * Given to the customer at pickup: every charge, the totals and how it was paid
+     * Given to the customer at pickup or after a sale: every charge, the totals and how it was paid
+     * @param ticket Null for a sale, which has no ticket or device
      */
-    fun receipt(shop: ShopProfile, ticket: Ticket, customer: Customer?, invoice: Invoice): PrintDocument {
+    fun receipt(shop: ShopProfile, ticket: Ticket?, customer: Customer?, invoice: Invoice): PrintDocument {
         val details = listOfNotNull(
             PrintBlock.Field("Invoice", invoice.label),
-            PrintBlock.Field("Ticket", ticket.label),
+            ticket?.let { PrintBlock.Field("Ticket", it.label) },
             PrintBlock.Field("Date", formatDateTime(invoice.paidAt ?: invoice.createdAt)),
             customer?.let { PrintBlock.Field("Customer", it.name) },
-            PrintBlock.Field("Device", ticket.device.toString().trim())
+            ticket?.let { PrintBlock.Field("Device", it.device.toString().trim()) }
         )
 
         return PrintDocument("Receipt ${invoice.label}", shopHeader(shop) + PrintBlock.Divider + PrintBlock.Heading("Receipt") + details + money(shop, invoice))
@@ -80,7 +81,7 @@ object PrintTemplates {
     /**
      * The invoice on its own, to email or file: like the [receipt], with the customer's contact details and what's
      * still owed. Made on the server as a PDF (`GET /api/invoice/{id}/pdf`)
-     * @param ticket Null once the ticket is deleted, the invoice's [Invoice.ticketLabel] stands in
+     * @param ticket Null once the ticket is deleted, the invoice's [Invoice.ticketLabel] stands in, and for a sale
      */
     fun invoice(shop: ShopProfile, ticket: Ticket?, customer: Customer?, invoice: Invoice): PrintDocument {
         val address = customer?.address?.let { listOf(it.street, listOf(it.city, it.state, it.zip).filter(String::isNotBlank).joinToString(" ")) }
@@ -97,8 +98,8 @@ object PrintTemplates {
                     InvoiceStatus.OPEN -> "Due"
                 }
             ),
-            PrintBlock.Field("Ticket", ticket?.label ?: invoice.ticketLabel.ifBlank { "-" }),
-            PrintBlock.Field("Device", ticket?.device?.toString()?.trim().orEmpty().ifBlank { "-" }),
+            if (invoice.isSale) PrintBlock.Field("Sale", "Counter sale") else PrintBlock.Field("Ticket", ticket?.label ?: invoice.ticketLabel.ifBlank { "-" }),
+            if (invoice.isSale) null else PrintBlock.Field("Device", ticket?.device?.toString()?.trim().orEmpty().ifBlank { "-" }),
             PrintBlock.Gap,
             customer?.let { PrintBlock.Field("Bill to", it.name) },
             address.takeIf { it.isNotBlank() }?.let { PrintBlock.Field("", it) },

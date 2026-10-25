@@ -7,6 +7,9 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.data.invoice.Charge
+import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
@@ -15,6 +18,7 @@ import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
+import org.mr0btain.ticketman.server.request.SaleRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import kotlin.test.*
 import kotlin.uuid.Uuid
@@ -36,6 +40,7 @@ class CounterRemoteRepositoryTest {
             "/api/counter/repeat-check" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
             "/api/data/ticket/add" -> respond(Json.encodeToString(created), HttpStatusCode.Created, jsonHeaders)
             "/api/counter/pickup" -> respond("$12.00 is still owed on INV-26-00000001", HttpStatusCode.Conflict)
+            "/api/counter/sale" -> respond(Json.encodeToString(Invoice(status = InvoiceStatus.PAID)), HttpStatusCode.Created, jsonHeaders)
             else -> respond("[]", HttpStatusCode.OK, jsonHeaders)
         }
     }
@@ -111,6 +116,15 @@ class CounterRemoteRepositoryTest {
 
         assertIs<TmResult.Error<*>>(result)
         assertEquals("$12.00 is still owed on INV-26-00000001", (result as TmResult.Error).error.message)
+    }
+
+    @Test
+    fun saleReturnsThePaidInvoice() = runTest {
+        val result = counter.sale(SaleRequest(charges = listOf(Charge(description = "Cable", unitPriceCents = 1_000))))
+
+        assertIs<TmResult.Success<Invoice>>(result)
+        assertTrue(result.data.isSale)
+        assertEquals(listOf("POST /api/counter/sale"), requests)
     }
 
     @Test

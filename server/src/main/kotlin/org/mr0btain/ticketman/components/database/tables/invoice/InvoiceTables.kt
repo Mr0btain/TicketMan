@@ -5,12 +5,13 @@ import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 
 /**
  * One invoice per ticket. [ticket] isn't a foreign key, since an invoice with money against it outlives its ticket
- * (databases from before that have it dropped by `LocalDatabase`'s `invoice-ticket-key` fix)
+ * (databases from before that have it dropped by `LocalDatabase`'s `invoice-ticket-key` fix). It's null for a
+ * counter sale (made nullable on older databases by the `invoice-ticket-nullable` fix)
  */
 object InvoiceTable : UuidTable("invoices") {
     val numberYear = integer("number_year")
     val numberSequence = long("number_sequence")
-    val ticket = uuid("ticket_id").uniqueIndex()
+    val ticket = uuid("ticket_id").nullable().uniqueIndex()
     val customer = text("customer_id").nullable()
     val status = text("status")
     val discountCents = long("discount_cents").default(0)

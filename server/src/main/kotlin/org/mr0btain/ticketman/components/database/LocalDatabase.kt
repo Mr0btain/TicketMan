@@ -187,6 +187,10 @@ class LocalDatabase (
             userDatabase.migrateLegacyNames()
         }
         runOnce("invoice-ticket-key") { dropInvoiceTicketKey() }
+        // Counter sales have no ticket. H2's unique index allows any number of nulls
+        runOnce("invoice-ticket-nullable") {
+            TransactionManager.current().exec("ALTER TABLE ${InvoiceTable.tableName} ALTER COLUMN ${InvoiceTable.ticket.name} SET NULL")
+        }
         removeDetachedNotes()
     }
 

@@ -129,7 +129,8 @@ private fun seedInvoices(database: LocalDatabase, tickets: List<Uuid>, parts: Li
         inventory = database.inventoryDatabase,
         shop = database.shopDatabase,
         auditLog = database.auditLogDatabase,
-        work = database.workDatabase
+        work = database.workDatabase,
+        customers = database.customerDatabase
     )
     val tech = database.userDatabase.getByUsername(DEMO_STAFF.first().username)
     val techName = tech?.username ?: "tech"

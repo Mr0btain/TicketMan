@@ -106,7 +106,8 @@ fun Application.module() {
             inventory = database.inventoryDatabase,
             shop = database.shopDatabase,
             auditLog = database.auditLogDatabase,
-            work = database.workDatabase
+            work = database.workDatabase,
+            customers = database.customerDatabase
         )
 
         val checkInService = CheckInService(

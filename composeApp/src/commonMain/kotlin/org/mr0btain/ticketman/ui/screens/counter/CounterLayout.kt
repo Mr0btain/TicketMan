@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.inbox
 import ticketman.composeapp.generated.resources.plus
+import ticketman.composeapp.generated.resources.shopping_cart
 import ticketman.composeapp.generated.resources.tag
 import ticketman.composeapp.generated.resources.user_plus
 import kotlin.uuid.Uuid
@@ -27,7 +28,7 @@ private val SIDE_QUEUE_WIDTH = 900.dp
  * it. On narrow windows the buttons are icons, and the queue opens in a dialog from a button of its own. [content]
  * stays put when the window crosses that width, so a half done check-in isn't lost
  * @param searchField The search box, given the modifier that sizes it
- * @param canEdit False drops the check-in and new customer buttons and shows a "View only" badge
+ * @param canEdit False drops the check-in, new customer and sale buttons and shows a "View only" badge
  */
 @Composable
 fun CounterLayout(
@@ -36,6 +37,7 @@ fun CounterLayout(
     queue: CounterQueueResponse?,
     onCheckIn: () -> Unit,
     onNewCustomer: () -> Unit,
+    onSell: () -> Unit,
     onPriceCheck: () -> Unit,
     onQueueTicketClick: (Uuid) -> Unit,
     modifier: Modifier = Modifier,
@@ -86,6 +88,13 @@ fun CounterLayout(
                             variant = TmButtonVariant.SECONDARY,
                             size = TmControlSize.LARGE
                         )
+                        TmIconButton(
+                            icon = Res.drawable.shopping_cart,
+                            contentDescription = "Sell",
+                            onClick = onSell,
+                            variant = TmButtonVariant.SECONDARY,
+                            size = TmControlSize.LARGE
+                        )
                     }
 
                     TmIconButton(
@@ -111,6 +120,13 @@ fun CounterLayout(
                             variant = TmButtonVariant.SECONDARY,
                             size = TmControlSize.LARGE,
                             leadingIcon = Res.drawable.user_plus
+                        )
+                        TmButton(
+                            text = "Sell${keyHint("F6")}",
+                            onClick = onSell,
+                            variant = TmButtonVariant.SECONDARY,
+                            size = TmControlSize.LARGE,
+                            leadingIcon = Res.drawable.shopping_cart
                         )
                     }
 

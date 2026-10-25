@@ -69,25 +69,36 @@ class InvoiceDatabase(
                     return@dbQuery it.toInvoice()
                 }
 
-                val year = currentYear()
-                val max = InvoiceTable.numberSequence.max()
-                val sequence = (InvoiceTable.select(max).where { InvoiceTable.numberYear eq year }.singleOrNull()?.get(max) ?: 0L) + 1
-                val identifier = Uuid.generateV7()
-
-                InvoiceTable.insert { row ->
-                    row[InvoiceTable.id] = identifier
-                    row[InvoiceTable.numberYear] = year
-                    row[InvoiceTable.numberSequence] = sequence
-                    row[InvoiceTable.ticket] = ticketIdentifier
-                    row[InvoiceTable.customer] = customerIdentifier?.toString()
-                    row[InvoiceTable.status] = InvoiceStatus.OPEN.name
-                    row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
-                    row[InvoiceTable.createdAt] = Clock.System.now().toEpochMilliseconds()
-                }
-
-                InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.single().toInvoice()
+                insert(ticketIdentifier, customerIdentifier, taxRateBasisPoints)
             }
         }
+
+    /** A new empty OPEN invoice with no ticket, for a counter sale. Called inside the sale's transaction */
+    fun createSale(customerIdentifier: Uuid?, taxRateBasisPoints: Int): Invoice? =
+        synchronized(NUMBER_LOCK) {
+            dbQuery(CREATE_TAG) { insert(null, customerIdentifier, taxRateBasisPoints) }
+        }
+
+    // Must be called inside a transaction, holding the numbering lock
+    private fun insert(ticketIdentifier: Uuid?, customerIdentifier: Uuid?, taxRateBasisPoints: Int): Invoice {
+        val year = currentYear()
+        val max = InvoiceTable.numberSequence.max()
+        val sequence = (InvoiceTable.select(max).where { InvoiceTable.numberYear eq year }.singleOrNull()?.get(max) ?: 0L) + 1
+        val identifier = Uuid.generateV7()
+
+        InvoiceTable.insert { row ->
+            row[InvoiceTable.id] = identifier
+            row[InvoiceTable.numberYear] = year
+            row[InvoiceTable.numberSequence] = sequence
+            row[InvoiceTable.ticket] = ticketIdentifier
+            row[InvoiceTable.customer] = customerIdentifier?.toString()
+            row[InvoiceTable.status] = InvoiceStatus.OPEN.name
+            row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
+            row[InvoiceTable.createdAt] = Clock.System.now().toEpochMilliseconds()
+        }
+
+        return InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.single().toInvoice()
+    }
 
     /** Replaces the charges and discount and saves the worked out totals */
     fun setCharges(identifier: Uuid, charges: List<Charge>, discountCents: Long, taxRateBasisPoints: Int): Invoice? =

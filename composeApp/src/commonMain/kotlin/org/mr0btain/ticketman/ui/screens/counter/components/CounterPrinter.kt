@@ -9,6 +9,7 @@ import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.saveFile
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.valueOr
 import kotlin.uuid.Uuid
 
@@ -44,6 +45,19 @@ class CounterPrinter(
             }
 
             onResult(printDocument(document, paper))
+        }
+    }
+
+    /**
+     * Prints the receipt for a sale, which has no ticket to load
+     * @param onResult Gets null when it went to the printer or they cancelled, otherwise what went wrong
+     */
+    fun printSale(invoice: Invoice, paper: PaperSize, onResult: (String?) -> Unit) {
+        support.scope.launch {
+            val shop = remoteHandler.adminRepo.getShopProfile() ?: shop()
+            val customer = invoice.customerIdentifier?.let { remoteHandler.customerRepo.get(it).getOrNull() }
+
+            onResult(printDocument(PrintTemplates.receipt(shop, null, customer, invoice), paper))
         }
     }
 

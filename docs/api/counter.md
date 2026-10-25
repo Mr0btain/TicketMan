@@ -1,8 +1,8 @@
 # Counter API
 
 `/api/counter`, from [`CounterRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/CounterRoute.kt).
-The front desk: one search across tickets and customers, the queue, the repeat repair check, and the two
-endpoints that change several things at once, check-in and pickup. What check-in and pickup do inside, and every
+The front desk: one search across tickets and customers, the queue, the repeat repair check, and the endpoints
+that change several things at once, check-in, pickup and sales. What check-in and pickup do inside, and every
 rule they check, is in [Counter: check-in, invoices and pickup](../server/counter.md).
 
 ## Changing
@@ -34,6 +34,19 @@ as `PICKED_UP`, in one transaction. Makes the invoice if the ticket doesn't have
 - **`400`** a payment of zero or less. **`404`** no such ticket.
 - **`409`** already picked up, the invoice isn't open, money is still owed (`$12.00 is still owed on INV-...`), or
   there isn't enough of a part in stock.
+
+### `POST /api/counter/sale`
+
+**Auth:** normal
+
+Sells from stock with no ticket: makes the invoice (with no `ticketIdentifier`), takes the payments and the parts
+from stock and marks it paid, in one transaction.
+
+- **Body:** `SaleRequest { customerIdentifier, charges, discountCents, payments }`. `customerIdentifier` is
+  optional. Lines follow the same rules as an invoice's.
+- **`201`** the paid `Invoice`.
+- **`400`** no lines, a bad line, a negative discount, a payment of zero or less, or no such customer.
+- **`409`** the payments don't cover the total (`$8.00 is still owed`), or there isn't enough of a part in stock.
 
 ## Reading
 

@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.server.request.CheckInRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
+import org.mr0btain.ticketman.server.request.SaleRequest
 
 /**
  * Read only lookups for the shop counter, open to every logged in user so restricted staff can answer questions
@@ -31,6 +32,14 @@ fun Route.counterRoute(
         post(CounterPaths.CHECK_IN) {
             call.respondAccount(
                 checkInService.checkIn(call.receive<CheckInRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                HttpStatusCode.Created
+            )
+        }
+
+        // Selling from stock with no ticket, paid there and then
+        post(CounterPaths.SALE) {
+            call.respondAccount(
+                invoiceService.sell(call.receive<SaleRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
                 HttpStatusCode.Created
             )
         }

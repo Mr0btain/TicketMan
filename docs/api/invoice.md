@@ -1,7 +1,8 @@
 # Invoices API
 
 `/api/invoice`, from [`InvoiceRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/InvoiceRoute.kt).
-One invoice per ticket. Anyone logged in can look; Normal access changes an open invoice; only admins void, and
+One invoice per ticket, plus counter sales, which have no ticket (`ticketIdentifier` null; made by
+[`POST /api/counter/sale`](counter.md#post-apicountersale)). Anyone logged in can look; Normal access changes an open invoice; only admins void, and
 delete one kept after its ticket was deleted. An invoice with money taken against it, or a void one, outlives its
 ticket: `ticketLabel` keeps the ticket's number and `ticketRemovedAt` says when it went.
 Totals are always worked out by the server with `InvoiceMath` and the shop's tax rate, so a client never sends
@@ -55,7 +56,7 @@ the count and days).
 - **Query:** `from` and `to`, days like `2026-10-01`, both included. **`400`** either missing, not a day, or `to`
   before `from`.
 - **`200`** `text/csv`, one row per invoice, oldest number first: `Invoice, Date, Status, Paid on, Ticket,
-  Customer, Subtotal, Discount, Tax, Total, Paid, Balance`. Amounts are plain numbers (`159.90`) so a spreadsheet adds
+  Customer, Subtotal, Discount, Tax, Total, Paid, Balance`. A sale's Ticket is `Sale`. Amounts are plain numbers (`159.90`) so a spreadsheet adds
   them up. Cells are quoted as spreadsheets expect, and typed text starting with `=`, `+`, `-` or `@` gets a leading
   `'` so it isn't run as a formula.
 

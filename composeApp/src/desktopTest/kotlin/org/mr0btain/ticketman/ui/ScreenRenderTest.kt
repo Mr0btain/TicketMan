@@ -78,6 +78,7 @@ import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.counter.CheckInWizard
 import org.mr0btain.ticketman.ui.screens.counter.CounterLayout
 import org.mr0btain.ticketman.ui.screens.counter.PickupScreen
+import org.mr0btain.ticketman.ui.screens.counter.SaleScreen
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
 import org.mr0btain.ticketman.ui.screens.kiosk.LockScreen
@@ -335,6 +336,7 @@ class ScreenRenderTest {
             queue = queue,
             onCheckIn = {},
             onNewCustomer = {},
+            onSell = {},
             onPriceCheck = {},
             onQueueTicketClick = {}
         ) {
@@ -364,6 +366,25 @@ class ScreenRenderTest {
             onSave = { _, _, _ -> },
             onRemovePayment = {},
             onFinish = { _, _, _, _ -> },
+            onBack = {}
+        )
+    }
+
+    @Test
+    fun sale() = bothModes("counter-sale") { Shell("Counter") { Sale() } }
+
+    @Test
+    fun saleNarrow() = bothModes("counter-sale-narrow", width = NARROW_WIDTH, height = 860) { Phone { Sale() } }
+
+    @Composable
+    private fun Sale() {
+        SaleScreen(
+            taxRateBasisPoints = 825,
+            laborCents = 6_000,
+            startingCustomer = dana,
+            onSearchParts = { emptyList() },
+            onSearchCustomers = { emptyList() },
+            onFinish = { _, _ -> },
             onBack = {}
         )
     }
