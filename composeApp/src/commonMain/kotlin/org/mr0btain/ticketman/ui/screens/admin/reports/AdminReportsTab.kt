@@ -178,6 +178,14 @@ fun AdminReportsTab(
                         numeric = true
                     )
                 }
+                // On cards on top of the invoices
+                if (report.surchargeCents != 0L) TmKeyValueRow(label = "Card surcharges", value = formatMoney(report.surchargeCents), numeric = true)
+                if (report.tipsCents != 0L) {
+                    TmKeyValueRow(label = "Tips", value = formatMoney(report.tipsCents), numeric = true)
+                    report.tipsBy.entries.sortedByDescending { it.value }.forEach { (who, tips) ->
+                        TmKeyValueRow(label = "  ${who.ifBlank { "Unknown" }}", value = formatMoney(tips), numeric = true)
+                    }
+                }
             }
 
             TmPanel(modifier = Modifier.width(PANEL_WIDTH), title = "Tax collected", icon = Res.drawable.percent) {

@@ -49,7 +49,9 @@ fun SaleScreen(
     onFinish: (SaleRequest, (String?) -> Unit) -> Unit,
     onBack: () -> Unit,
     readers: List<CardReader> = emptyList(),
-    onReaderCharge: ((CardReader, Long, (PaymentRequest) -> Unit) -> Unit)? = null
+    onReaderCharge: ((CardReader, Long, Long, (PaymentRequest) -> Unit) -> Unit)? = null,
+    tipPercents: List<Int> = emptyList(),
+    surchargePercent: String = ""
 ) {
     val spacing = TmTheme.spacing
 
@@ -120,7 +122,9 @@ fun SaleScreen(
                     creditCents = customer?.creditCents,
                     onLookupGiftCard = onLookupGiftCard,
                     readers = readers,
-                    onReaderCharge = onReaderCharge?.let { charge -> { reader, amount -> charge(reader, amount) { pending.add(it) } } },
+                    onReaderCharge = onReaderCharge?.let { charge -> { reader, amount, tip -> charge(reader, amount, tip) { pending.add(it) } } },
+                    tipPercents = tipPercents,
+                    surchargePercent = surchargePercent,
                     onFinish = {
                         busy = true
                         message = null

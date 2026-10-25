@@ -79,6 +79,8 @@ class PaymentDatabase {
                 row[createdAt] = charge.createdAt
                 row[finishedAt] = charge.finishedAt
                 row[createdBy] = charge.createdBy
+                row[tipCents] = charge.tipCents
+                row[surchargeCents] = charge.surchargeCents
             }
 
             true
@@ -218,6 +220,8 @@ class PaymentDatabase {
             error = this[CardChargeTable.error],
             createdAt = this[CardChargeTable.createdAt],
             finishedAt = this[CardChargeTable.finishedAt],
-            createdBy = this[CardChargeTable.createdBy]
+            createdBy = this[CardChargeTable.createdBy],
+            tipCents = this[CardChargeTable.tipCents],
+            surchargeCents = this[CardChargeTable.surchargeCents]
         )
 }

@@ -47,7 +47,7 @@ class CardPayments(
                 request.method != PaymentMethod.CARD -> return "A card reader payment is paid by card"
                 charge.status != CardChargeStatus.SUCCEEDED -> return "That card payment is ${charge.status.label.lowercase()}, not paid"
                 charge.paymentIdentifier != null -> return "That card payment is already on ${charge.invoiceLabel.ifBlank { "an invoice" }}"
-                charge.amountCents != request.amountCents -> return "That card payment was for a different amount"
+                charge.appliedCents != request.amountCents -> return "That card payment was for a different amount"
             }
         }
         return null
@@ -60,6 +60,8 @@ class CardPayments(
             processor = charge.provider,
             processorReference = charge.paymentReference,
             chargeIdentifier = charge.identifier,
+            tipCents = charge.tipCents,
+            surchargeCents = charge.surchargeCents,
             note = payment.note.ifBlank { charge.readerName.ifBlank { charge.kind.label } }
         )
     }

@@ -54,7 +54,9 @@ Smaller pieces left from earlier phases, picked up as they're needed.
   times staff are scheduled.
 - **Card readers at check-in.** Taking a deposit on a reader from the counter's wizard (the server takes them
   already), and sending a payment link by email or text.
-- **Tips and surcharges** on card payments.
+- **Tips and surcharges** on card payments (done). Tips picked at the counter before a reader charge, a capped
+  surcharge on every card payment, both charged on the card but kept off the invoice, shown on receipts and in the
+  period report ([Payments API](api/payment.md)).
 - **Stock transfers** between locations (done). **Move stock** on an item in the records screen takes parts from one
   location and puts them at another together, refused past what's there, with the item's recent moves listed
   ([`/transfer`](api/inventory.md#post-apidatainventorytransferidentifier)). Moved straight across; parts in transit

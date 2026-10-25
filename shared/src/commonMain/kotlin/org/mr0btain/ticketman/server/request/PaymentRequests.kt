@@ -6,6 +6,9 @@ import kotlin.uuid.Uuid
 /**
  * Sends an amount to a card reader
  * @param readerIdentifier One of the shop's readers
+ * @param amountCents What goes on the invoice. The reader asks for it with [tipCents] and the shop's surcharge
+ * added
+ * @param tipCents A tip on top, when the shop offers them
  * @param invoiceIdentifier The open invoice it pays, where it lands once the card goes through. Null for a sale or
  * a check in deposit, whose payment names the charge once it's paid
  */
@@ -13,7 +16,8 @@ import kotlin.uuid.Uuid
 data class ReaderChargeRequest(
     val readerIdentifier: String,
     val amountCents: Long,
-    val invoiceIdentifier: Uuid? = null
+    val invoiceIdentifier: Uuid? = null,
+    val tipCents: Long = 0
 )
 
 /**

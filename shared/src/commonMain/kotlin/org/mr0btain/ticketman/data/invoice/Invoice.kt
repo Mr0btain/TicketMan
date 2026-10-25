@@ -132,6 +132,8 @@ data class InvoiceNumber(
  * @param processorReference The processor's id for the money: what a refund goes against, or the refund itself
  * @param chargeIdentifier The [org.mr0btain.ticketman.data.payment.CardCharge] it came from
  * @param refundOf For a refund through the processor, the payment it gives back
+ * @param tipCents A tip taken on the card with it, on top of [amountCents] and not part of the invoice
+ * @param surchargeCents A card surcharge taken with it, likewise
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -147,8 +149,14 @@ data class Payment(
     val processor: PaymentProvider? = null,
     val processorReference: String = "",
     val chargeIdentifier: Uuid? = null,
-    val refundOf: Uuid? = null
+    val refundOf: Uuid? = null,
+    val tipCents: Long = 0,
+    val surchargeCents: Long = 0
 ) {
+    /** Everything the card was charged */
+    val chargedCents: Long
+        get() = amountCents + tipCents + surchargeCents
+
     val isRefund: Boolean
         get() = amountCents < 0
 }

@@ -103,6 +103,12 @@ class ReportDatabase(private val invoices: InvoiceDatabase) {
                 .groupBy({ PaymentMethod.valueOf(it[InvoicePaymentTable.method]) }, { it[InvoicePaymentTable.amountCents] })
                 .mapValues { (_, amounts) -> amounts.sum() }
 
+            // Taken on the card on top of the invoice's money
+            val tipsBy = payments.filter { it[InvoicePaymentTable.tipCents] != 0L }
+                .groupBy({ it[InvoicePaymentTable.receivedBy] }, { it[InvoicePaymentTable.tipCents] })
+                .mapValues { (_, tips) -> tips.sum() }
+            val surcharges = payments.sumOf { it[InvoicePaymentTable.surchargeCents] }
+
             val refundRows = payments.filter { it[InvoicePaymentTable.amountCents] < 0 }
             val labels = refundRows.map { it[InvoicePaymentTable.invoice].value }.distinct().let { ids ->
                 if (ids.isEmpty()) emptyMap() else InvoiceTable
@@ -186,6 +192,9 @@ class ReportDatabase(private val invoices: InvoiceDatabase) {
                 days = days,
                 taxes = taxes,
                 takenByMethod = takenByMethod,
+                tipsCents = tipsBy.values.sum(),
+                tipsBy = tipsBy,
+                surchargeCents = surcharges,
                 refunds = refunds,
                 techs = techs,
                 turnaround = Turnaround(

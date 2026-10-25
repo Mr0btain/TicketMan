@@ -37,6 +37,16 @@ waits to be claimed: the sale's or deposit's `PaymentRequest` names it in `charg
 charge's amount), checked before the transaction and claimed inside it. One never claimed, like a sale that wasn't
 finished, is listed with `unclaimed` and refunded with [`/charge/{identifier}/refund`](#post-apipaymentchargeidentifierrefund).
 
+**Tips and surcharges.** With `tips` on, the counter offers the `tipPercents` before sending to a reader and the
+request carries `tipCents`; a `surchargePercent` (up to 3%, `CardExtras`) is added by the server to every reader
+charge and link, on the invoice's part only. A charge's `amountCents` is everything the card is charged, with
+`tipCents` and `surchargeCents` the parts of it that don't go on the invoice (`appliedCents` is what does). The
+payment it becomes carries the same `tipCents` and `surchargeCents` on top of its `amountCents`, so balances only
+count the invoice's money; receipts list them apart, and the [period report](report.md) totals them (`tipsCents`,
+`tipsBy` the username that took each payment, `surchargeCents`). A claimed charge is matched on its `appliedCents`.
+Refunding an invoice gives back the invoice's money only; a tip or surcharge goes back from the processor's own
+dashboard.
+
 **Refunds.** A card payment taken through the processor goes back onto its card: an [invoice refund](invoice.md#post-apiinvoiceidentifierrefund)
 naming it in `paymentIdentifier`, or taking it off an open invoice ([`DELETE` a payment](invoice.md#delete-apiinvoiceidentifierpaymentspaymentidentifier)),
 which refunds what's left of it first. Either way the processor is asked before anything is saved, so a refused
@@ -62,12 +72,14 @@ saved. Saving with one `null` keeps the saved one; any string replaces it, `""` 
 
 - **Body:** `PaymentSettings`: `enabled`, `provider` (`STRIPE`, `SQUARE` or `SIMULATED`), `currency` (ISO code like
   `USD`, saved upper case), `stripe`, `square` (`environment` `PRODUCTION` or `SANDBOX`, `locationId`), `readers`
-  (`CardReader { identifier, name }`, the processor's id: a Stripe `tmr_...` or a Square device id) and
-  `onlinePayments` (customers pay from the status page).
+  (`CardReader { identifier, name }`, the processor's id: a Stripe `tmr_...` or a Square device id),
+  `onlinePayments` (customers pay from the status page), `tips` and `tipPercents` (up to 4, 1 to 100) and
+  `surchargePercent` (like `3` or `2.5`, blank for none).
 - **`200`** the settings as saved, without the keys. Audit logged.
 - **`400`** what `PaymentSettings.problem()` says, with the saved keys counted: a currency that isn't 3 letters,
   turned on without a Stripe secret key or a Square token and location, a reader without an id or name or twice,
-  more than 50; or `SIMULATED` on a server not in development mode.
+  more than 50, a surcharge over 3% or not a percent, tips on with none to offer; or `SIMULATED` on a server not in
+  development mode.
 
 ### `GET /api/payment/readers`
 
@@ -85,7 +97,8 @@ readers, Square's paired device codes.
 
 What the counter offers, no keys.
 
-- **`200`** `PaymentOptions { enabled, provider, readers, links, onlinePayments }`. All off while payments are off
+- **`200`** `PaymentOptions { enabled, provider, readers, links, onlinePayments, tipPercents, surchargePercent }`,
+  `tipPercents` empty when tips are off. All off while payments are off
   or not set up; `links` and `onlinePayments` also need the shop's [public address](shop.md#post-apishopupdate),
   since the checkout comes back to the status page.
 
@@ -97,10 +110,12 @@ What the counter offers, no keys.
 
 Sends an amount to a reader. Watch it with [`GET /charge/{identifier}`](#get-apipaymentchargeidentifier).
 
-- **Body:** `ReaderChargeRequest { readerIdentifier, amountCents, invoiceIdentifier }`. With an invoice, the payment
-  lands on it once paid; without, a sale or deposit claims it.
+- **Body:** `ReaderChargeRequest { readerIdentifier, amountCents, invoiceIdentifier, tipCents }`: `amountCents` is
+  what goes on the invoice, and the reader asks for it with the tip and the surcharge added. With an invoice, the
+  payment lands on it once paid; without, a sale or deposit claims it.
 - **`201`** the `CardCharge`, `PENDING`. Audit logged.
-- **`400`** a reader that isn't one of the shop's, an amount of zero or less, or more than the invoice's balance.
+- **`400`** a reader that isn't one of the shop's, an amount of zero or less, or more than the invoice's balance; a
+  tip when the shop doesn't take them, below zero, or more than the amount.
 - **`404`** no such invoice.
 - **`409`** payments are off, the invoice isn't open, the reader is still waiting for another card (asked about
   first), or the processor refused, with its reason (the charge is kept as `FAILED`).
@@ -112,7 +127,8 @@ Sends an amount to a reader. Watch it with [`GET /charge/{identifier}`](#get-api
 A checkout page for an open invoice, coming back to its ticket's status page. A waiting link for the same amount is
 handed out again; ones for other amounts are closed first, so a customer can't pay twice from two links.
 
-- **Body:** `PaymentLinkRequest { invoiceIdentifier, amountCents }`, `null` for the whole balance.
+- **Body:** `PaymentLinkRequest { invoiceIdentifier, amountCents }`, `null` for the whole balance. The surcharge is
+  added on top, and the status page says so beside its Pay button.
 - **`201`** the `CardCharge` with its `url`. Audit logged.
 - **`400`** more than the balance.
 - **`404`** no such invoice.

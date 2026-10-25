@@ -207,7 +207,9 @@ class InvoiceService(
 
         val payment = Payment(
             method = PaymentMethod.CARD,
-            amountCents = charge.amountCents,
+            amountCents = charge.appliedCents,
+            tipCents = charge.tipCents,
+            surchargeCents = charge.surchargeCents,
             receivedAt = now,
             receivedBy = charge.createdBy,
             note = charge.readerName.ifBlank { charge.kind.label },

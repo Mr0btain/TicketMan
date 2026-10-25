@@ -201,7 +201,8 @@ class LocalDatabase (
         AppointmentTable,
         PurchaseOrderTable,
         TimeEntryTable,
-        ScheduleTable
+        ScheduleTable,
+        CardChargeTable
     )
 
     /**

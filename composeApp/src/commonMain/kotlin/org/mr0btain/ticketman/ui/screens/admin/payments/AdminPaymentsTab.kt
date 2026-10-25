@@ -42,6 +42,8 @@ import org.mr0btain.ticketman.server.ApiRoutes
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.credit_card
 import ticketman.composeapp.generated.resources.globe
+import ticketman.composeapp.generated.resources.percent
+import org.mr0btain.ticketman.data.payment.CardExtras
 import ticketman.composeapp.generated.resources.inbox
 import ticketman.composeapp.generated.resources.tablet
 import ticketman.composeapp.generated.resources.x
@@ -114,6 +116,7 @@ private fun SettingsPanels(
         ProcessorPanel(draft, publicUrl) { draft = it }
         ReadersPanel(draft, accountReaders, saved = loaded.isConfigured && draft.provider == loaded.provider, isBusy, onFindReaders) { draft = it }
         OnlinePanel(draft, publicUrl) { draft = it }
+        ExtrasPanel(draft) { draft = it }
     }
 }
 
@@ -299,6 +302,52 @@ private fun OnlinePanel(draft: PaymentSettings, publicUrl: String, onChange: (Pa
         if (publicUrl.isBlank()) {
             TmNotice(text = "Paying online and payment links need the shop's public address, set on the Server and data tab.", kind = TmNoticeKind.INFO)
         }
+    }
+}
+
+/** Tips the counter offers and a surcharge on every card payment, both on top of what goes on the invoice */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun ExtrasPanel(draft: PaymentSettings, onChange: (PaymentSettings) -> Unit) {
+    val spacing = TmTheme.spacing
+    var tipsText by remember(draft.tipPercents) { mutableStateOf(draft.tipPercents.joinToString(", ")) }
+
+    TmPanel(
+        modifier = Modifier.widthIn(max = PANEL_WIDTH).fillMaxWidth(),
+        title = "Tips and surcharge",
+        subtitle = "Charged on the card on top of the invoice, and shown apart on receipts and reports",
+        icon = Res.drawable.percent
+    ) {
+        TmCheckbox(checked = draft.tips, onCheckedChange = { onChange(draft.copy(tips = it)) }, label = "Offer a tip before sending to a reader")
+        if (draft.tips) {
+            TmTextField(
+                modifier = Modifier.fillMaxWidth(),
+                value = tipsText,
+                onValueChange = { text ->
+                    tipsText = text.filter { it.isDigit() || it == ',' || it == ' ' }
+                    onChange(draft.copy(tipPercents = tipsText.split(',').mapNotNull { it.trim().toIntOrNull() }))
+                },
+                label = "Tips to offer, in percent",
+                placeholder = "10, 15, 20",
+                supportingText = "Up to ${CardExtras.MAX_TIP_CHOICES}, beside No tip"
+            )
+        }
+        TmTextField(
+            modifier = Modifier.width(220.dp),
+            value = draft.surchargePercent,
+            onValueChange = { onChange(draft.copy(surchargePercent = it.filter { c -> c.isDigit() || c == '.' }.take(5))) },
+            label = "Card surcharge, %",
+            placeholder = "None",
+            textStyle = TmTheme.typography.numeric,
+            error = CardExtras.surchargeProblem(draft.surchargePercent)
+        )
+        Text(
+            text = "Some states and countries don't allow surcharges, or not on debit cards, and card networks cap them at " +
+                "${CardExtras.MAX_SURCHARGE_PERCENT.toInt()}% and want them posted at the counter. Check before turning one on.",
+            style = TmTheme.typography.caption,
+            color = TmTheme.colors.textMuted,
+            modifier = Modifier.padding(top = spacing.xs)
+        )
     }
 }
 

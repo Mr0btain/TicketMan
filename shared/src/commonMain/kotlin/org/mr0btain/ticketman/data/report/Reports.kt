@@ -13,6 +13,9 @@ import kotlin.uuid.Uuid
  * those invoices; turnaround is tickets picked up in them
  * @param from First day, like 2026-10-01
  * @param to Last day
+ * @param tipsCents Tips taken on cards with payments in those days, not in [takenByMethod]
+ * @param tipsBy The tips by who took the payment (their username)
+ * @param surchargeCents Card surcharges taken with them, likewise
  */
 @Serializable
 data class PeriodReport(
@@ -24,7 +27,10 @@ data class PeriodReport(
     val takenByMethod: Map<PaymentMethod, Long> = emptyMap(),
     val refunds: RefundSummary = RefundSummary(),
     val techs: List<TechSummary> = emptyList(),
-    val turnaround: Turnaround = Turnaround()
+    val turnaround: Turnaround = Turnaround(),
+    val tipsCents: Long = 0,
+    val tipsBy: Map<String, Long> = emptyMap(),
+    val surchargeCents: Long = 0
 ) {
     /** Money taken, leaving out store credit and gift cards spent, which were money when they were bought */
     val takenCents: Long

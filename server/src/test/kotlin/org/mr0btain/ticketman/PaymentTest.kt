@@ -330,6 +330,64 @@ class PaymentTest {
     }
 
     @Test
+    fun tipsAndSurchargesGoOnTheCardNotTheInvoice() = testApplication {
+        setup(stripe().copy(tips = true, tipPercents = listOf(15, 20), surchargePercent = "3"))
+        val (_, invoice) = openInvoice()
+
+        val options = json.decodeFromString<PaymentOptions>(get("/api/payment/options").bodyAsText())
+        assertEquals(listOf(15, 20), options.tipPercents)
+        assertEquals("3", options.surchargePercent)
+
+        // $50 of the invoice, a $7.50 tip and the 3% surcharge on the $50
+        val response = postJson("/api/payment/charge/reader", json.encodeToString(ReaderChargeRequest(reader.identifier, 5_000, invoice.identifier, tipCents = 750)))
+        assertEquals(HttpStatusCode.Created, response.status, response.bodyAsText())
+        val started = json.decodeFromString<CardCharge>(response.bodyAsText())
+        assertEquals(5_900, started.amountCents)
+        assertEquals(750, started.tipCents)
+        assertEquals(150, started.surchargeCents)
+        assertEquals(5_900, fake.started.last().amountCents, "the reader asks for all of it")
+
+        fake.pay(started)
+        charge(started.identifier)
+        val after = invoice(invoice.identifier)
+        val payment = after.payments.single()
+        assertEquals(5_000, payment.amountCents)
+        assertEquals(750, payment.tipCents)
+        assertEquals(150, payment.surchargeCents)
+        assertEquals(3_000, after.balanceCents, "only the invoice's part counts against it")
+
+        val today = java.time.LocalDate.now()
+        val report = json.decodeFromString<org.mr0btain.ticketman.data.report.PeriodReport>(get("/api/report/period?from=$today&to=$today", adminToken).bodyAsText())
+        assertEquals(750, report.tipsCents)
+        assertEquals(mapOf("tech" to 750L), report.tipsBy)
+        assertEquals(150, report.surchargeCents)
+        assertEquals(5_000, report.takenByMethod[PaymentMethod.CARD])
+
+        // A tip has to be one the shop takes, and a surcharge stays within the cap
+        postJson("/api/payment/settings", json.encodeToString(stripe()), adminToken)
+        assertEquals(HttpStatusCode.BadRequest, postJson("/api/payment/charge/reader", json.encodeToString(ReaderChargeRequest(reader.identifier, 1_000, invoice.identifier, tipCents = 100))).status)
+        assertEquals(HttpStatusCode.BadRequest, postJson("/api/payment/settings", json.encodeToString(stripe().copy(surchargePercent = "4")), adminToken).status)
+    }
+
+    @Test
+    fun aSaleClaimsAReaderPaymentWithItsTip() = testApplication {
+        setup(stripe().copy(tips = true, surchargePercent = "2.5"))
+        val started = json.decodeFromString<CardCharge>(postJson("/api/payment/charge/reader", json.encodeToString(ReaderChargeRequest(reader.identifier, 2_000, tipCents = 300))).bodyAsText())
+        assertEquals(2_000 + 300 + 50, started.amountCents)
+        fake.pay(started)
+        charge(started.identifier)
+
+        val line = Charge(type = ChargeType.OTHER, description = "Case", quantity = 1.0, unitPriceCents = 2_000, taxable = false)
+        val sale = SaleRequest(charges = listOf(line), payments = listOf(PaymentRequest(PaymentMethod.CARD, 2_000, chargeIdentifier = started.identifier)))
+        val sold = postJson("/api/counter/sale", json.encodeToString(sale))
+        assertEquals(HttpStatusCode.Created, sold.status, sold.bodyAsText())
+        val payment = json.decodeFromString<Invoice>(sold.bodyAsText()).payments.single()
+        assertEquals(2_000, payment.amountCents)
+        assertEquals(300, payment.tipCents)
+        assertEquals(50, payment.surchargeCents)
+    }
+
+    @Test
     fun aRefundGoesBackOntoTheCard() = testApplication {
         setup()
         val (ticket, invoice) = openInvoice()

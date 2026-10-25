@@ -158,6 +158,12 @@ object PrintTemplates {
             val how = formatEnumName(payment.method.name).lowercase() + payment.reference.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()
             if (payment.isRefund) AmountRow("Refunded $how", Money.format(payment.amountCents, shop.currencySymbol))
             else AmountRow("Paid $how", Money.format(payment.amountCents, shop.currencySymbol))
+        } + invoice.payments.filter { it.tipCents != 0L || it.surchargeCents != 0L }.let { extras ->
+            // Charged on the card with the payments, off the invoice's total
+            listOfNotNull(
+                extras.sumOf { it.surchargeCents }.takeIf { it != 0L }?.let { AmountRow("Card surcharge", Money.format(it, shop.currencySymbol)) },
+                extras.sumOf { it.tipCents }.takeIf { it != 0L }?.let { AmountRow("Tip", Money.format(it, shop.currencySymbol)) }
+            )
         } + listOfNotNull(
             invoice.balanceCents.takeIf { it < 0 }?.let { AmountRow("Change", Money.format(-it, shop.currencySymbol), bold = true) },
             invoice.balanceCents.takeIf { it > 0 }?.let { AmountRow("Still owed", Money.format(it, shop.currencySymbol), bold = true) }

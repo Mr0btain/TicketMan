@@ -487,8 +487,35 @@ class ScreenRenderTest {
             onFinish = { _, _, _, _ -> },
             onBack = {},
             readers = listOf(CardReader("tmr_1", "Front counter"), CardReader("tmr_2", "Back bench")),
-            onReaderCharge = { _, _ -> },
+            onReaderCharge = { _, _, _ -> },
             onPaymentLink = {}
+        )
+    }
+
+    /** Tips offered and a 3% surcharge: the deposit shows its tip, the reader button the card's whole total */
+    @Test
+    fun pickupTipsAndSurcharge() = screen("pickup-tips-surcharge", height = 1000, rail = "Counter") {
+        val card = Payment(method = PaymentMethod.CARD, amountCents = 4_000, tipCents = 600, surchargeCents = 120, receivedAt = now - 86_400_000, note = "Front counter", processor = PaymentProvider.STRIPE, processorReference = "pi_1")
+        PickupScreen(
+            detail = detail.copy(invoice = invoice.copy(payments = listOf(card))),
+            onSearchParts = { emptyList() },
+            onSave = { _, _, _ -> },
+            onRemovePayment = {},
+            onLookupGiftCard = { null },
+            onFinish = { _, _, _, _ -> },
+            onBack = {},
+            readers = listOf(CardReader("tmr_1", "Front counter")),
+            onReaderCharge = { _, _, _ -> },
+            tipPercents = listOf(15, 18, 20),
+            surchargePercent = "3"
+        )
+    }
+
+    @Test
+    fun readerChargeWithTip() = screen("counter-reader-tip", rail = "Counter") {
+        ReaderChargeDialog(
+            charge = CardCharge(kind = CardChargeKind.READER, provider = PaymentProvider.STRIPE, amountCents = 13_244, tipCents = 1_684, surchargeCents = 336, currency = "USD", readerName = "Front counter"),
+            onCancel = {}, onClose = {}
         )
     }
 

@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
+import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import org.mr0btain.ticketman.ui.kit.data.TmQrCode
 import org.mr0btain.ticketman.ui.kit.data.qrFits
 import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
@@ -43,6 +44,7 @@ fun ReaderChargeDialog(
     ) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
             TmMoneyText(cents = charge.amountCents, style = TmTheme.typography.numericHero)
+            chargeBreakdown(charge)?.let { Text(text = it, style = TmTheme.typography.caption, color = TmTheme.colors.textMuted) }
             if (waiting) {
                 TmLoading(text = "Tap, insert or swipe on the reader")
             }
@@ -76,6 +78,7 @@ fun PaymentLinkDialog(
     ) {
         Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
             TmMoneyText(cents = charge.amountCents, style = TmTheme.typography.numericLarge)
+            chargeBreakdown(charge)?.let { Text(text = it, style = TmTheme.typography.caption, color = colors.textMuted) }
             if (qrFits(charge.url)) TmQrCode(text = charge.url, contentDescription = "QR code for the payment link")
         }
 
@@ -83,4 +86,15 @@ fun PaymentLinkDialog(
             Text(text = charge.url, style = TmTheme.typography.caption, color = colors.textMuted)
         }
     }
+}
+
+/** "$100.00 + $15.00 tip + $3.00 surcharge" when the charge has more than the invoice's amount, null otherwise */
+@Composable
+private fun chargeBreakdown(charge: CardCharge): String? {
+    if (charge.tipCents == 0L && charge.surchargeCents == 0L) return null
+    return listOfNotNull(
+        formatMoney(charge.appliedCents),
+        charge.tipCents.takeIf { it != 0L }?.let { "${formatMoney(it)} tip" },
+        charge.surchargeCents.takeIf { it != 0L }?.let { "${formatMoney(it)} surcharge" }
+    ).joinToString(" + ")
 }

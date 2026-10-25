@@ -303,8 +303,10 @@ fun CounterScreen(
                         onBack = { counter.openTicket(detail.ticket.identifier) },
                         readers = cardOptions.readers,
                         onReaderCharge = detail.invoice?.takeIf { cardOptions.readers.isNotEmpty() }?.let { invoice ->
-                            { reader, amount -> counter.cards.charge(reader, amount, invoice.identifier) { counter.pickup.reloadInvoice() } }
+                            { reader, amount, tip -> counter.cards.charge(reader, amount, tip, invoice.identifier) { counter.pickup.reloadInvoice() } }
                         },
+                        tipPercents = cardOptions.tipPercents,
+                        surchargePercent = cardOptions.surchargePercent,
                         onPaymentLink = detail.invoice?.takeIf { cardOptions.links }?.let { invoice -> { counter.cards.showLink(invoice.identifier) } }
                     )
                 }
@@ -337,11 +339,13 @@ fun CounterScreen(
                     onFinish = { request, onResult -> counter.sale.finish(request, onResult) },
                     onBack = { counter.goHome() },
                     readers = cardOptions.readers,
-                    onReaderCharge = if (cardOptions.readers.isEmpty()) null else { reader, amount, onPaid ->
-                        counter.cards.charge(reader, amount, null) { charge ->
-                            onPaid(PaymentRequest(PaymentMethod.CARD, charge.amountCents, chargeIdentifier = charge.identifier))
+                    onReaderCharge = if (cardOptions.readers.isEmpty()) null else { reader, amount, tip, onPaid ->
+                        counter.cards.charge(reader, amount, tip, null) { charge ->
+                            onPaid(PaymentRequest(PaymentMethod.CARD, charge.appliedCents, chargeIdentifier = charge.identifier))
                         }
-                    }
+                    },
+                    tipPercents = cardOptions.tipPercents,
+                    surchargePercent = cardOptions.surchargePercent
                 )
 
                 CounterView.SOLD -> lastSale?.let { invoice ->

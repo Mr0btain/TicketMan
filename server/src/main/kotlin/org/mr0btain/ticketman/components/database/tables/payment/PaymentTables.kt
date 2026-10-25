@@ -37,6 +37,10 @@ object CardChargeTable : UuidTable("card_charges") {
     val checkedAt = long("checked_at").default(0)
     val createdBy = text("created_by").default("")
 
+    // Added with tips and surcharges: the parts of the amount that don't go on the invoice
+    val tipCents = long("tip_cents").default(0)
+    val surchargeCents = long("surcharge_cents").default(0)
+
     init {
         index("card_charges_status", false, status, createdAt)
     }

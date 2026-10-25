@@ -72,6 +72,8 @@ class StatusService(
         val problem: String? = null,
         /** The balance can be paid from the page */
         val payOnline: Boolean = false,
+        /** The card surcharge paying the balance online adds, 0 for none */
+        val surchargeCents: Long = 0,
         /** Why paying didn't start */
         val payProblem: String? = null
     )
@@ -177,8 +179,9 @@ class StatusService(
             payments.refreshLinks(invoice.identifier)
             invoice = invoices.getByTicket(ticket.identifier) ?: invoice
         }
+        val options = payments?.options()
         val payOnline = invoice != null && invoice.status == InvoiceStatus.OPEN && invoice.balanceCents > 0 &&
-            payments?.options()?.onlinePayments == true
+            options?.onlinePayments == true
 
         return View(
             shop = profile,
@@ -190,7 +193,8 @@ class StatusService(
             invoice = invoice,
             estimate = estimates.pending(ticket.identifier),
             answered = estimates.lastAnswered(ticket.identifier),
-            payOnline = payOnline
+            payOnline = payOnline,
+            surchargeCents = if (payOnline) options!!.surchargeOn(invoice!!.balanceCents) else 0
         )
     }
 

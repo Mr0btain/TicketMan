@@ -93,6 +93,10 @@ object StatusPage {
                 if (view.payOnline) {
                     val balance = Money.format(view.invoice!!.balanceCents, shop.currencySymbol)
                     append("""<p><a class="button" href="${token.esc()}/pay" rel="nofollow">Pay ${balance.esc()} online</a></p>""")
+                    if (view.surchargeCents > 0) {
+                        val surcharge = Money.format(view.surchargeCents, shop.currencySymbol)
+                        append("""<p class="muted">Paying by card adds a ${surcharge.esc()} surcharge.</p>""")
+                    }
                 }
                 append("</section>")
             }

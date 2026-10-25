@@ -93,4 +93,8 @@ object InvoicePaymentTable : UuidTable("invoice_payments") {
     val processorReference = text("processor_reference").default("")
     val charge = uuid("charge_id").nullable()
     val refundOf = uuid("refund_of").nullable()
+
+    // Added with tips and surcharges: charged on the card on top of the amount
+    val tipCents = long("tip_cents").default(0)
+    val surchargeCents = long("surcharge_cents").default(0)
 }

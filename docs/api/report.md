@@ -16,7 +16,7 @@ From one day to another, both included, in the shop's time zone (`TZ`).
 
 - **Query:** `from` and `to`, days like `2026-10-01`. **`400`** either missing or not a day, `to` before `from`, or
   more than 732 days.
-- **`200`** `PeriodReport { from, to, sales, days, taxes, takenByMethod, refunds, techs, turnaround }`:
+- **`200`** `PeriodReport { from, to, sales, days, taxes, takenByMethod, refunds, techs, turnaround, tipsCents, tipsBy, surchargeCents }`:
   - `sales` (`SalesSummary`): invoices paid in those days, void ones left out. `invoices`, `totalCents`, `taxCents`,
     `discountCents`, line totals before the discount by type (`laborCents`, `partsCents`, `otherCents`,
     `giftCardCents`), `partsCostCents` and `partsWithoutCost`. Net sales are the total less tax and gift cards sold
@@ -29,6 +29,8 @@ From one day to another, both included, in the shop's time zone (`TZ`).
     (`InvoiceMath`), added up by name and rate.
   - `takenByMethod`: payments received in those days by method, refunds taken off. Store credit and gift cards spent
     are in it too; the client leaves them out of money taken.
+  - `tipsCents`, `tipsBy` (by the username that took each payment) and `surchargeCents`: card tips and surcharges
+    taken with those payments, on top of `takenByMethod` ([tips and surcharges](payment.md)).
   - `refunds` (`RefundSummary { count, cents, refunds }`): refunds given in those days, the newest 100 listed as
     `RefundLine { invoiceLabel, amountCents, reason, method, receivedAt, receivedBy }`. Refunds aren't taken off the
     profit.

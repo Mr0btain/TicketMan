@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.payment.CardCharge
+import org.mr0btain.ticketman.data.payment.CardExtras
 import org.mr0btain.ticketman.data.payment.CardChargeKind
 import org.mr0btain.ticketman.data.payment.CardChargeStatus
 import org.mr0btain.ticketman.data.payment.CardReader
@@ -65,7 +66,12 @@ class PaymentService(
         if (!charges.saveSettings(settings)) return AccountResult.Invalid("Couldn't save the payment settings")
 
         val state = if (settings.enabled) "on, ${settings.provider.label}, ${settings.readers.size} reader${if (settings.readers.size == 1) "" else "s"}" else "off"
-        auditLog.log(actor, AuditAction.SETTINGS_UPDATE, "payments", details = "Card payments $state" + if (settings.onlinePayments) ", paying online" else "")
+        val extras = listOfNotNull(
+            ", paying online".takeIf { settings.onlinePayments },
+            ", tips ${settings.tipPercents.joinToString("/")}%".takeIf { settings.tips },
+            settings.surchargePercent.takeIf { CardExtras.basisPoints(it)?.let { points -> points > 0 } == true }?.let { ", ${it}% surcharge" }
+        ).joinToString("")
+        auditLog.log(actor, AuditAction.SETTINGS_UPDATE, "payments", details = "Card payments $state$extras")
         return AccountResult.Done(settings.withoutSecrets())
     }
 
@@ -80,7 +86,9 @@ class PaymentService(
             provider = settings.provider,
             readers = settings.readers.filter { location == null || it.locationIdentifier == null || it.locationIdentifier == location },
             links = public,
-            onlinePayments = settings.onlinePayments && public
+            onlinePayments = settings.onlinePayments && public,
+            tipPercents = if (settings.tips) settings.tipPercents else emptyList(),
+            surchargePercent = settings.surchargePercent.takeIf { CardExtras.surchargeCents(10_000, it) > 0 }.orEmpty()
         )
     }
 
@@ -104,6 +112,10 @@ class PaymentService(
         val processor = cards.processor(settings) ?: return AccountResult.Conflict("Card payments aren't set up")
         val reader = settings.readers.firstOrNull { it.identifier == request.readerIdentifier } ?: return AccountResult.Invalid("That reader isn't one of the shop's")
         if (request.amountCents <= 0) return AccountResult.Invalid("The amount has to be more than zero")
+        if (request.tipCents < 0) return AccountResult.Invalid("A tip can't be below zero")
+        if (request.tipCents > 0 && !settings.tips) return AccountResult.Invalid("The shop doesn't take tips")
+        if (request.tipCents > request.amountCents * CardExtras.MAX_TIP_PERCENT / 100) return AccountResult.Invalid("The tip is more than the amount")
+        val surcharge = CardExtras.surchargeCents(request.amountCents, settings.surchargePercent)
 
         val invoice = request.invoiceIdentifier?.let { invoices.getById(it) ?: return AccountResult.NotFound }
         invoice?.let { owedProblem(it, request.amountCents)?.let { problem -> return problem } }
@@ -118,7 +130,9 @@ class PaymentService(
         val charge = CardCharge(
             kind = CardChargeKind.READER,
             provider = settings.provider,
-            amountCents = request.amountCents,
+            amountCents = request.amountCents + request.tipCents + surcharge,
+            tipCents = request.tipCents,
+            surchargeCents = surcharge,
             currency = settings.currency,
             invoiceIdentifier = invoice?.identifier,
             invoiceLabel = invoice?.label.orEmpty(),
@@ -164,7 +178,8 @@ class PaymentService(
             .filter { it.kind == CardChargeKind.LINK && it.status == CardChargeStatus.PENDING }
             .map { refresh(it) }
             .filter { it.status == CardChargeStatus.PENDING }
-        waiting.firstOrNull { it.amountCents == amount && it.provider == settings.provider }?.let { return AccountResult.Done(it) }
+        val surcharge = CardExtras.surchargeCents(amount, settings.surchargePercent)
+        waiting.firstOrNull { it.appliedCents == amount && it.surchargeCents == surcharge && it.provider == settings.provider }?.let { return AccountResult.Done(it) }
         waiting.forEach { close(it, "Replaced by a link for ${money(amount)}") }
         // One may have been paid just now, which changes what's owed
         if (waiting.isNotEmpty()) invoices.getById(invoice.identifier)?.let { latest -> owedProblem(latest, amount)?.let { return it } }
@@ -175,7 +190,8 @@ class PaymentService(
         val charge = CardCharge(
             kind = CardChargeKind.LINK,
             provider = settings.provider,
-            amountCents = amount,
+            amountCents = amount + surcharge,
+            surchargeCents = surcharge,
             currency = settings.currency,
             invoiceIdentifier = invoice.identifier,
             invoiceLabel = invoice.label,
@@ -187,7 +203,7 @@ class PaymentService(
         return when (val started = processor.createLink(charge, description(invoice), returnUrl)) {
             is ProcessorResult.Ok -> {
                 charges.setStarted(charge.identifier, started.value.reference, started.value.url)
-                auditLog.log(actor, AuditAction.CREATE, "card charge", charge.identifier.toString(), "Payment link for ${money(amount)} on ${invoice.label}", actorName = by.takeIf { actor == null })
+                auditLog.log(actor, AuditAction.CREATE, "card charge", charge.identifier.toString(), "Payment link for ${money(amount)} on ${invoice.label}" + (if (surcharge > 0) " plus ${money(surcharge)} surcharge" else ""), actorName = by.takeIf { actor == null })
                 AccountResult.Done(charge.copy(providerReference = started.value.reference, url = started.value.url))
             }
 

@@ -169,6 +169,8 @@ class InvoiceDatabase(
                 row[InvoicePaymentTable.processorReference] = payment.processorReference
                 row[InvoicePaymentTable.charge] = payment.chargeIdentifier
                 row[InvoicePaymentTable.refundOf] = payment.refundOf
+                row[InvoicePaymentTable.tipCents] = payment.tipCents
+                row[InvoicePaymentTable.surchargeCents] = payment.surchargeCents
             }
 
             InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
@@ -338,7 +340,9 @@ class InvoiceDatabase(
                     processor = row[InvoicePaymentTable.processor]?.let { name -> PaymentProvider.entries.firstOrNull { it.name == name } },
                     processorReference = row[InvoicePaymentTable.processorReference],
                     chargeIdentifier = row[InvoicePaymentTable.charge],
-                    refundOf = row[InvoicePaymentTable.refundOf]
+                    refundOf = row[InvoicePaymentTable.refundOf],
+                    tipCents = row[InvoicePaymentTable.tipCents],
+                    surchargeCents = row[InvoicePaymentTable.surchargeCents]
                 )
             }
 

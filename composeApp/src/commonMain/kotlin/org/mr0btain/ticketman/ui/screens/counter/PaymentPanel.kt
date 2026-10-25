@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.payment.CardExtras
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -47,7 +48,9 @@ import ticketman.composeapp.generated.resources.x
  * @param onLookupGiftCard Finds a gift card by its code, null when gift cards can't be taken here
  * @param secondaryAction A button beside the finishing one, like saving the invoice
  * @param readers The shop's card readers, offered for card payments when [onReaderCharge] is set
- * @param onReaderCharge Sends an amount to a reader, null when there's no processor
+ * @param onReaderCharge Sends an amount and a tip to a reader, null when there's no processor
+ * @param tipPercents Tips to offer before sending to a reader, none when the shop doesn't take them
+ * @param surchargePercent What the shop adds to card payments, blank for none
  * @param onPaymentLink Shows a payment link for the balance, null when links can't be made here
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -67,7 +70,9 @@ fun PaymentPanel(
     creditCents: Long? = null,
     onLookupGiftCard: (suspend (String) -> GiftCard?)? = null,
     readers: List<CardReader> = emptyList(),
-    onReaderCharge: ((CardReader, Long) -> Unit)? = null,
+    onReaderCharge: ((CardReader, Long, Long) -> Unit)? = null,
+    tipPercents: List<Int> = emptyList(),
+    surchargePercent: String = "",
     onPaymentLink: (() -> Unit)? = null,
     secondaryAction: @Composable RowScope.() -> Unit = {}
 ) {
@@ -101,7 +106,13 @@ fun PaymentPanel(
                     PaymentRow(
                         amountCents = payment.amountCents,
                         method = payment.method,
-                        detail = listOfNotNull(payment.reference.ifBlank { null }, payment.note.ifBlank { null }, formatDateTime(payment.receivedAt)).joinToString(", "),
+                        detail = listOfNotNull(
+                            payment.reference.ifBlank { null },
+                            payment.note.ifBlank { null },
+                            payment.tipCents.takeIf { it != 0L }?.let { "${formatMoney(it)} tip" },
+                            payment.surchargeCents.takeIf { it != 0L }?.let { "${formatMoney(it)} surcharge" },
+                            formatDateTime(payment.receivedAt)
+                        ).joinToString(", "),
                         onRemove = onRemoveTaken?.let { { it(payment) } }
                     )
                 }
@@ -229,13 +240,43 @@ fun PaymentPanel(
                     }
                 }
             }
+
+            // A tip, picked with the customer before it goes to the reader, and the shop's surcharge, both on top
+            var tipPercent by remember { mutableStateOf(0) }
+            if (tipPercents.isNotEmpty()) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs), verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                    TmFilterChip(text = "No tip", selected = tipPercent == 0, onClick = { tipPercent = 0 })
+                    tipPercents.forEach { percent ->
+                        TmFilterChip(
+                            text = amount?.let { "$percent% (${formatMoney(CardExtras.tipCents(it, percent))})" } ?: "$percent%",
+                            selected = tipPercent == percent,
+                            onClick = { tipPercent = percent }
+                        )
+                    }
+                }
+            }
+            val tip = amount?.let { CardExtras.tipCents(it, tipPercent.takeIf { percent -> percent in tipPercents } ?: 0) } ?: 0
+            val surcharge = amount?.let { CardExtras.surchargeCents(it, surchargePercent) } ?: 0
+            val charged = amount?.let { it + tip + surcharge }
+            if (amount != null && (tip > 0 || surcharge > 0)) {
+                Text(
+                    text = listOfNotNull(
+                        formatMoney(amount),
+                        tip.takeIf { it > 0 }?.let { "${formatMoney(it)} tip" },
+                        surcharge.takeIf { it > 0 }?.let { "${formatMoney(it)} card surcharge ($surchargePercent%)" }
+                    ).joinToString(" + "),
+                    style = TmTheme.typography.caption,
+                    color = colors.textMuted
+                )
+            }
             TmButton(
                 modifier = Modifier.fillMaxWidth(),
-                text = amount?.let { "Charge ${formatMoney(it)} on ${reader.name}" } ?: "Charge on ${reader.name}",
+                text = charged?.let { "Charge ${formatMoney(it)} on ${reader.name}" } ?: "Charge on ${reader.name}",
                 enabled = amount != null && !busy,
                 onClick = {
-                    amount?.let { onReaderCharge(reader, it) }
+                    amount?.let { onReaderCharge(reader, it, tip) }
                     paymentCents = 0
+                    tipPercent = 0
                 }
             )
         }

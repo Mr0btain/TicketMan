@@ -45,16 +45,16 @@ class CounterCards(
     }
 
     /**
-     * Sends [amountCents] to [reader] and waits for the card
+     * Sends [amountCents] with [tipCents] on top to [reader] and waits for the card (the server adds any surcharge)
      * @param invoiceIdentifier The open invoice it pays, where the server puts it. Null for a sale, whose payment
      * then names the charge
      * @param onPaid Run once the card went through
      */
-    fun charge(reader: CardReader, amountCents: Long, invoiceIdentifier: Uuid?, onPaid: (CardCharge) -> Unit) {
+    fun charge(reader: CardReader, amountCents: Long, tipCents: Long, invoiceIdentifier: Uuid?, onPaid: (CardCharge) -> Unit) {
         if (!support.canEdit() || waiting?.isActive == true) return
 
         waiting = support.scope.launch {
-            val started = payments.startReader(ReaderChargeRequest(reader.identifier, amountCents, invoiceIdentifier)).valueOr { error ->
+            val started = payments.startReader(ReaderChargeRequest(reader.identifier, amountCents, invoiceIdentifier, tipCents)).valueOr { error ->
                 support.notify("${reader.name} didn't start: ${error.message}")
                 return@launch
             }

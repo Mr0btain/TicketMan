@@ -55,7 +55,9 @@ fun PickupScreen(
     onFinish: (List<Charge>, Long, List<PaymentRequest>, (String?) -> Unit) -> Unit,
     onBack: () -> Unit,
     readers: List<CardReader> = emptyList(),
-    onReaderCharge: ((CardReader, Long) -> Unit)? = null,
+    onReaderCharge: ((CardReader, Long, Long) -> Unit)? = null,
+    tipPercents: List<Int> = emptyList(),
+    surchargePercent: String = "",
     onPaymentLink: (() -> Unit)? = null
 ) {
     val ticket = detail.ticket
@@ -155,8 +157,10 @@ fun PickupScreen(
                     readers = readers,
                     // The server checks against the saved balance, so lines changed on screen are saved first
                     onReaderCharge = onReaderCharge?.let { charge ->
-                        { reader, amount -> savedThen { charge(reader, amount) } }
+                        { reader, amount, tip -> savedThen { charge(reader, amount, tip) } }
                     },
+                    tipPercents = tipPercents,
+                    surchargePercent = surchargePercent,
                     onPaymentLink = onPaymentLink?.let { link -> { savedThen(link) } },
                     onFinish = {
                         busy = true
