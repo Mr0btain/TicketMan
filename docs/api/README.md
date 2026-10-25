@@ -21,6 +21,7 @@ changes here are made to both sides together.
 | [Messages](notify.md) | `/api/notify` | `NotifyRoute.kt` |
 | [Estimates](estimate.md) | `/api/estimate` | `EstimateRoute.kt` |
 | [Gift cards](giftcard.md) | `/api/giftcard` | `GiftCardRoute.kt` |
+| [Purchasing](purchase.md) | `/api/purchase` | `PurchaseRoute.kt` |
 | [Status page](status.md) | `/status` | `StatusRoute.kt` |
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 

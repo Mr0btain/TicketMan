@@ -10,7 +10,8 @@ A `stock` of `Int.MAX_VALUE` (2147483647) means the item's stock isn't tracked. 
 [tax class](shop.md#post-apishopupdate) it's sold at, null for the main rate; parts added from it start with it.
 `sku` (the shop's own code) and `barcode` (what a scanner reads) are saved trimmed and are each unique when set,
 ignoring case. `category` groups items. `reorderPoint` is where the item counts as low stock, null for the admin
-screen's threshold ([low stock](admin.md#get-apiadmininventorylow-stock)).
+screen's threshold ([low stock](admin.md#get-apiadmininventorylow-stock)). `supplierIdentifier` is who it's
+usually [ordered](purchase.md) from.
 
 ## Reading
 

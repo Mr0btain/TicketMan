@@ -41,5 +41,6 @@ enum class ChangedField {
     SKU,
     BARCODE,
     CATEGORY,
-    REORDER_POINT
+    REORDER_POINT,
+    SUPPLIER
 }

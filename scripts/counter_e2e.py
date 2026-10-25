@@ -414,6 +414,24 @@ _, low = call("GET", "/api/admin/inventory/low-stock?threshold=1", token=admin, 
 check(scanned["identifier"] == screen and screen in [i["identifier"] for i in low], f"low stock {low}")
 step(f"The screen gets SKU SCR-14, a barcode the scanner finds, and a reorder point of 5, so at {scanned['stock']} it shows as low stock even with the threshold at 1")
 
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+waiting = {"identifier": uid(), "name": "Awaiting parts", "actsAs": "ON_HOLD"}
+shop["statuses"] = shop["statuses"] + [waiting]
+shop["partsOrderedStatus"] = {"status": "ON_HOLD", "custom": waiting["identifier"]}
+shop["partsArrivedStatus"] = {"status": "IN_PROGRESS"}
+call("POST", "/api/shop/update", shop, admin, expect=202)
+_, supplier = call("POST", "/api/purchase/suppliers/add", {"identifier": uid(), "name": "Parts Co", "phone": "555-0199"}, pin, expect=201)
+_, order = call("POST", "/api/purchase/orders/part", {"ticketIdentifier": ticket_two, "inventoryIdentifier": screen, "quantity": 2, "supplierIdentifier": supplier["identifier"]}, pin, expect=200)
+_, order = call("POST", f"/api/purchase/orders/{order['identifier']}/place", token=pin, expect=200)
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+check(two["status"].get("custom") == waiting["identifier"], f"ticket status {two['status']}")
+line = order["lines"][0]
+_, order = call("POST", f"/api/purchase/orders/{order['identifier']}/receive", {"lines": [{"lineIdentifier": line["identifier"], "quantity": 2}]}, pin, expect=200)
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+check(order["status"] == "RECEIVED" and two["status"]["status"] == "IN_PROGRESS" and two["status"].get("custom") is None and item["stock"] == 6, f"after receiving {order['status']} {two['status']} {item['stock']}")
+step("Two screens ordered for Jane's iPad from Parts Co: placing it puts the ticket in Awaiting parts, receiving them puts it back in progress and stock 4 -> 6")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

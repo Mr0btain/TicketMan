@@ -93,6 +93,12 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 }
         }
 
+    /** What the shop last paid for one, set when an order arrives */
+    fun setCost(identifier: Uuid, costCents: Long): Boolean =
+        dbWrite(UPDATE_TAG) {
+            InventoryTable.update(where = { InventoryTable.id eq identifier }) { row -> row[InventoryTable.costCents] = costCents } > 0
+        }
+
     /** The item whose barcode or SKU is exactly [code], ignoring case, barcodes first */
     fun getByCode(code: String): Inventory? =
         dbQuery(CODE_TAG) {
@@ -152,6 +158,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
             barcode = data.barcode.trim()
             category = data.category.trim()
             reorderPoint = data.reorderPoint
+            supplier = data.supplierIdentifier
         }
     }
 
@@ -171,6 +178,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 barcode = data.barcode.trim()
                 category = data.category.trim()
                 reorderPoint = data.reorderPoint
+                supplier = data.supplierIdentifier
             }
 
             true

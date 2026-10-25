@@ -17,6 +17,9 @@ import org.mr0btain.ticketman.data.ticket.StatusChoice
  * @param estimateApprovedStatus Where it goes when the customer approves, null leaves it
  * @param estimateDeclinedStatus Where it goes when they decline, null leaves it
  * @param taxClasses Other rates besides [taxRate], for lines and items that pick one
+ * @param partsOrderedStatus Where a ticket goes when a part ordered for it is sent to the supplier, like "Awaiting
+ * parts". Null leaves it
+ * @param partsArrivedStatus Where it goes once every part ordered for it has arrived, null leaves it
  */
 @Serializable
 data class ShopProfile(
@@ -45,7 +48,9 @@ data class ShopProfile(
     val estimateSentStatus: StatusChoice? = null,
     val estimateApprovedStatus: StatusChoice? = null,
     val estimateDeclinedStatus: StatusChoice? = null,
-    val taxClasses: List<TaxClass> = emptyList()
+    val taxClasses: List<TaxClass> = emptyList(),
+    val partsOrderedStatus: StatusChoice? = null,
+    val partsArrivedStatus: StatusChoice? = null
 ) {
     /** [taxRate] in basis points, 0 when it's blank or not a number */
     val taxBasisPoints: Int

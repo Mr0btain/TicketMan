@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.ui.screens.admin.AdminScreen
 import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
 import org.mr0btain.ticketman.ui.screens.records.RecordsScreen
 import org.mr0btain.ticketman.ui.MainViewModel
+import org.mr0btain.ticketman.ui.screens.purchasing.PurchasingScreen
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -40,6 +41,10 @@ fun NavigationHost(
             CounterScreen(
                 viewModel = mainViewModel
             )
+        }
+
+        composable(Destination.PURCHASING.route) {
+            PurchasingScreen(viewModel = mainViewModel)
         }
 
         composable(Destination.RECORDS.route) {

@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.ui
 
 import androidx.compose.material3.SnackbarHostState
+import org.mr0btain.ticketman.ui.screens.purchasing.components.PurchasingHandler
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.ktor.client.engine.HttpClientEngine
@@ -126,6 +127,7 @@ class MainViewModel(
         onLoggedIn = {
             refreshPagers()
             counter.refreshShop()
+            purchasing.refresh()
         },
         onLoggedOut = {
             admin.clear()
@@ -134,6 +136,7 @@ class MainViewModel(
             tickets.clear()
             inventory.clear()
             users.clear()
+            purchasing.clear()
         },
         onServerMoved = { url -> settings.rememberServerUrl(url) }
     )
@@ -149,6 +152,15 @@ class MainViewModel(
     /** ----------------------------------------------COUNTER------------------------------------------------------------------- */
 
     val counter: CounterHandler = CounterHandler(
+        remoteHandler = remoteHandler,
+        scope = viewModelScope,
+        snackBarHost = snackBarHost,
+        canEdit = { session.canEditNow() }
+    )
+
+    /** ----------------------------------------------PURCHASING------------------------------------------------------------------- */
+
+    val purchasing: PurchasingHandler = PurchasingHandler(
         remoteHandler = remoteHandler,
         scope = viewModelScope,
         snackBarHost = snackBarHost,

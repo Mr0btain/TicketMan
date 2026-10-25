@@ -11,6 +11,7 @@ import kotlin.uuid.Uuid
  * @param barcode What a scanner reads off it (UPC, EAN or the shop's label), unique when set
  * @param category For grouping, like "Screens" or "Batteries"
  * @param reorderPoint Shows as low stock at or below this, null for the admin screen's threshold
+ * @param supplierIdentifier Who it's usually ordered from
  */
 @Serializable
 @OptIn(ExperimentalUuidApi::class)
@@ -28,7 +29,8 @@ data class Inventory(
     val sku: String = "",
     val barcode: String = "",
     val category: String = "",
-    val reorderPoint: Int? = null
+    val reorderPoint: Int? = null,
+    val supplierIdentifier: Uuid? = null
 ): MainItem() {
     /** Whether pickups and sales count it down */
     val tracksStock: Boolean

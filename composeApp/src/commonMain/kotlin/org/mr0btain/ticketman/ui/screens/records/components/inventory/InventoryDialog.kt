@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.purchase.Supplier
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
 import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
@@ -37,7 +38,8 @@ fun InventoryDialog(
     seed: InventorySeed,
     isVisible: Boolean,
     onDismiss: () -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    suppliers: List<Supplier> = emptyList()
 ) {
     if (!isVisible) return
 
@@ -149,6 +151,17 @@ fun InventoryDialog(
             onCheckedChange = { seed.changeTracksStock(it) },
             label = "Track stock"
         )
+
+        if (suppliers.isNotEmpty()) {
+            // Blank is none, since the dropdown takes no selection as nothing picked
+            TmDropdown(
+                label = "Usually ordered from",
+                options = listOf("") + suppliers.map { it.identifier.toString() },
+                selected = seed.supplierIdentifier?.toString()?.takeIf { id -> suppliers.any { it.identifier.toString() == id } } ?: "",
+                onSelect = { id -> seed.changeSupplier(suppliers.firstOrNull { it.identifier.toString() == id }?.identifier) },
+                optionLabel = { id -> suppliers.firstOrNull { it.identifier.toString() == id }?.name ?: "No supplier" }
+            )
+        }
 
         // Only when the shop has rates besides its main one
         val taxes = LocalTaxes.current

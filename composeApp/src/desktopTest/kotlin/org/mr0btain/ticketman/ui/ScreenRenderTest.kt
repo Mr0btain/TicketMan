@@ -84,6 +84,13 @@ import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.counter.CheckInWizard
 import org.mr0btain.ticketman.ui.screens.counter.CounterLayout
 import org.mr0btain.ticketman.ui.screens.counter.PickupScreen
+import org.mr0btain.ticketman.ui.screens.purchasing.OrderDetail
+import org.mr0btain.ticketman.ui.screens.purchasing.SuppliersPane
+import org.mr0btain.ticketman.data.purchase.PurchaseLine
+import org.mr0btain.ticketman.data.purchase.PurchaseNumber
+import org.mr0btain.ticketman.data.purchase.PurchaseOrder
+import org.mr0btain.ticketman.data.purchase.PurchaseStatus
+import org.mr0btain.ticketman.data.purchase.Supplier
 import org.mr0btain.ticketman.ui.screens.counter.CustomerCard
 import org.mr0btain.ticketman.ui.screens.counter.components.CustomerDetail
 import org.mr0btain.ticketman.data.customer.CreditEntry
@@ -125,6 +132,7 @@ import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.settings
+import ticketman.composeapp.generated.resources.truck
 import java.io.File
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.data.user.User
@@ -252,6 +260,7 @@ class ScreenRenderTest {
     private val navItems = listOf(
         TmNavItem("Records", "Records", Res.drawable.home),
         TmNavItem("Counter", "Counter", Res.drawable.monitor),
+        TmNavItem("Purchasing", "Purchasing", Res.drawable.truck),
         TmNavItem("Settings", "Settings", Res.drawable.settings),
         TmNavItem("Admin", "Admin", Res.drawable.archive)
     )
@@ -545,6 +554,49 @@ class ScreenRenderTest {
                 start = detail.estimates!!.first().lines, laborCents = 6000, taxRateBasisPoints = 625, canNotify = true,
                 onSearchParts = { emptyList() }, onSend = { _, _, _ -> }, onDismiss = {}
             )
+        }
+    }
+
+    private val partsCo = Supplier(name = "Parts Co", contactName = "Rae", phone = "555 0199", accountNumber = "A-17")
+    private val purchaseOrder = PurchaseOrder(
+        number = PurchaseNumber(2026, 7),
+        supplierIdentifier = partsCo.identifier,
+        supplierName = partsCo.name,
+        status = PurchaseStatus.PARTLY_RECEIVED,
+        lines = listOf(
+            PurchaseLine(inventoryIdentifier = Uuid.random(), description = "iPhone 13 screen, OEM", quantity = 3, receivedQuantity = 2, unitCostCents = 5500),
+            PurchaseLine(inventoryIdentifier = Uuid.random(), description = "Battery, Pixel 7", quantity = 1, unitCostCents = 2400, ticketIdentifier = Uuid.random())
+        ),
+        note = "Rush please",
+        createdAt = now - 86_400_000 * 2,
+        createdBy = "priya",
+        orderedAt = now - 86_400_000
+    )
+
+    /** An order part way in, and a draft being put together */
+    @Test
+    fun purchaseOrders() {
+        bothModes("purchasing-order") {
+            Shell("Purchasing") {
+                OrderDetail(
+                    order = purchaseOrder, suppliers = listOf(partsCo), canEdit = true, onSearchParts = { emptyList() },
+                    onSave = { _, _ -> }, onPlace = { _, _ -> }, onReceive = { _, _ -> }, onCancel = {}, onDelete = {}, onClose = null
+                )
+            }
+        }
+        bothModes("purchasing-draft") {
+            Shell("Purchasing") {
+                OrderDetail(
+                    order = purchaseOrder.copy(status = PurchaseStatus.DRAFT, orderedAt = null, lines = purchaseOrder.lines.map { it.copy(receivedQuantity = 0) }),
+                    suppliers = listOf(partsCo), canEdit = true, onSearchParts = { emptyList() },
+                    onSave = { _, _ -> }, onPlace = { _, _ -> }, onReceive = { _, _ -> }, onCancel = {}, onDelete = {}, onClose = null
+                )
+            }
+        }
+        bothModes("purchasing-suppliers") {
+            Shell("Purchasing") {
+                SuppliersPane(suppliers = listOf(partsCo, Supplier(name = "Screens Direct", email = "orders@screens.example")), canEdit = true, onSave = { _, _, _ -> }, onRemove = {})
+            }
         }
     }
 

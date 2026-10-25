@@ -190,6 +190,7 @@ fun RecordsScreen(
             viewModel.inventory.save()
             showInventoryDialog = false
         },
+        suppliers = viewModel.purchasing.suppliers.collectAsState().value
     )
 
     // For confirming deleting an item

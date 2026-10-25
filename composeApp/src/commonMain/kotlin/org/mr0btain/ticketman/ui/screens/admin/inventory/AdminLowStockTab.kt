@@ -37,14 +37,17 @@ private val COLUMNS = listOf(
 /**
  * Inventory that's running out: at or below its own reorder point, or the threshold for items without one
  * @param onItemClick Opens the item on the main screen
+ * @param onDraftOrders Drafts purchase orders for these, one per supplier; calls back with what went wrong or null
  */
 @Composable
 fun AdminLowStockTab(
     items: List<Inventory>,
     threshold: Int,
     onThresholdChange: (Int) -> Unit,
-    onItemClick: (Uuid) -> Unit
+    onItemClick: (Uuid) -> Unit,
+    onDraftOrders: (((String?) -> Unit) -> Unit)? = null
 ) {
+    var drafting by remember { mutableStateOf(false) }
     var thresholdText by remember(threshold) { mutableStateOf(threshold.toString()) }
     val colors = TmTheme.colors
 
@@ -74,6 +77,18 @@ fun AdminLowStockTab(
                     enabled = thresholdText.toIntOrNull()?.let { it != threshold } == true,
                     onClick = { thresholdText.toIntOrNull()?.let(onThresholdChange) }
                 )
+
+                // Enough of each to get back to twice its reorder point, on a draft per supplier
+                if (onDraftOrders != null && items.isNotEmpty()) {
+                    TmButton(
+                        text = "Draft orders",
+                        loading = drafting,
+                        onClick = {
+                            drafting = true
+                            onDraftOrders { drafting = false }
+                        }
+                    )
+                }
             }
         ) {
             if (items.isEmpty()) {

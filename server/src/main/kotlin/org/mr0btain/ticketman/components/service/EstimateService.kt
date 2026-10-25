@@ -38,6 +38,8 @@ class EstimateService(
     private val auditLog: AuditLogDatabase,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() }
 ) {
+    private val moves = TicketMoves(tickets, shop, now)
+
     fun forTicket(ticketIdentifier: Uuid): AccountResult<List<Estimate>> {
         tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
         return estimates.forTicket(ticketIdentifier)?.let { AccountResult.Done(it) } ?: AccountResult.Invalid("Couldn't read the estimates")
@@ -157,18 +159,8 @@ class EstimateService(
      * history like any change
      * @return The ticket as it is now
      */
-    private fun moveTicket(ticket: Ticket, choice: StatusChoice?, changedBy: String): Ticket {
-        // Read again, so a change made since (like the approved price) isn't saved over
-        val current = tickets.getById(ticket.identifier) ?: return ticket
-        if (choice == null || choice == current.status.choice || current.status.status == TicketStatusType.PICKED_UP) return current
-        if (choice !in shop.get().statuses.selectable()) return current
-
-        val moved = current.copy(status = choice.toStatus(now()))
-        if (!tickets.update(moved)) return current
-
-        tickets.recordStatusChange(current.identifier, moved.status, changedBy)
-        return moved
-    }
+    private fun moveTicket(ticket: Ticket, choice: StatusChoice?, changedBy: String): Ticket =
+        moves.move(ticket.identifier, choice, changedBy) ?: ticket
 
     private fun money(cents: Long): String = Money.format(cents, shop.get().currencySymbol)
 

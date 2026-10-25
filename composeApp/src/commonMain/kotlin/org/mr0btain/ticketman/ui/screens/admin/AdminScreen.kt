@@ -308,6 +308,9 @@ private fun AdminContent(
                 items = lowStock,
                 threshold = lowStockThreshold,
                 onThresholdChange = { admin.setLowStockThreshold(it) },
+                onDraftOrders = if (viewModel.session.canEditNow()) {
+                    { onResult -> viewModel.purchasing.draftForLowStock(lowStock, lowStockThreshold, onResult) }
+                } else null,
                 onItemClick = { identifier ->
                     viewModel.inventory.select(identifier)
                     viewModel.changeMainTabIndex(INVENTORY_TAB)

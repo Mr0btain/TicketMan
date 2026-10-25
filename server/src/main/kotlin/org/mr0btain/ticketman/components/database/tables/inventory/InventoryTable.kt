@@ -21,4 +21,7 @@ object InventoryTable : UuidTable("inventory") {
     val barcode = text("barcode").default("")
     val category = text("category").default("")
     val reorderPoint = integer("reorder_point").nullable()
+
+    // Added with purchase orders: who it's usually ordered from. No foreign key, a deleted supplier just isn't found
+    val supplier = uuid("supplier_id").nullable()
 }

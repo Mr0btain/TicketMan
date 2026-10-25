@@ -57,6 +57,7 @@ fun CounterScreen(
 
     val canEdit = viewModel.session.canEdit.collectAsState().value
     val isAdmin = viewModel.session.isAdmin.collectAsState().value
+    val suppliers by viewModel.purchasing.suppliers.collectAsState()
     val searchFocus = remember { FocusRequester() }
 
     // The queue when the counter opens, then changes from other devices on the interval set in Settings. Not in the
@@ -175,6 +176,16 @@ fun CounterScreen(
                             onWithdraw = { counter.estimates.withdraw(it) }
                         ),
                         onSendStatusLink = StatusLink.url(shop.publicUrl, detail.ticket)?.let { { counter.estimates.message(detail.ticket.identifier) } },
+                        parts = PartsActions(
+                            suppliers = suppliers,
+                            onSearchParts = { counter.pickup.searchParts(it) },
+                            onOrder = { item, quantity, supplier, onResult ->
+                                viewModel.purchasing.orderPart(detail.ticket.identifier, item, quantity, supplier) { failed ->
+                                    onResult(failed)
+                                    if (failed == null) counter.reloadTicket()
+                                }
+                            }
+                        ),
                         printAction = {
                             Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                                 PrintButton(

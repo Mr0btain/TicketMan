@@ -78,6 +78,12 @@ fun Route.shopRoute(
                     call.respond(HttpStatusCode.BadRequest, "An estimate can only move a ticket to a status staff can pick")
                     return@post
                 }
+            listOfNotNull(profile.partsOrderedStatus, profile.partsArrivedStatus)
+                .firstOrNull { it !in pickable }
+                ?.let {
+                    call.respond(HttpStatusCode.BadRequest, "Ordering parts can only move a ticket to a status staff can pick")
+                    return@post
+                }
 
             val saved = profile.copy(
                 currencySymbol = symbol,

@@ -42,6 +42,9 @@ class InventorySeed: DataSeed("InventorySeed") {
     /** Low stock at or below this, null for the admin screen's threshold */
     var reorderPoint: Int? by mutableStateOf(null)
         private set
+    /** Who it's usually ordered from */
+    var supplierIdentifier: Uuid? by mutableStateOf(null)
+        private set
 
     val inventory: Inventory get() = Inventory(
         identifier = identifier,
@@ -54,7 +57,8 @@ class InventorySeed: DataSeed("InventorySeed") {
         sku = sku,
         barcode = barcode,
         category = category,
-        reorderPoint = reorderPoint
+        reorderPoint = reorderPoint,
+        supplierIdentifier = supplierIdentifier
     )
 
     // --- Initial setting up with data ---
@@ -75,6 +79,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         barcode = data.barcode
         category = data.category
         reorderPoint = data.reorderPoint
+        supplierIdentifier = data.supplierIdentifier
 
         setNotes(notes)
         setImages(images)
@@ -130,6 +135,10 @@ class InventorySeed: DataSeed("InventorySeed") {
         reorderPoint = newPoint
     }
 
+    fun changeSupplier(newSupplier: Uuid?) {
+        supplierIdentifier = newSupplier
+    }
+
     override fun fields() = mapOf(
         ChangedField.NAME to name,
         ChangedField.DESCRIPTION to description,
@@ -140,7 +149,8 @@ class InventorySeed: DataSeed("InventorySeed") {
         ChangedField.SKU to sku,
         ChangedField.BARCODE to barcode,
         ChangedField.CATEGORY to category,
-        ChangedField.REORDER_POINT to reorderPoint
+        ChangedField.REORDER_POINT to reorderPoint,
+        ChangedField.SUPPLIER to supplierIdentifier
     )
 
     // Reset all fields
@@ -157,6 +167,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         barcode = ""
         category = ""
         reorderPoint = null
+        supplierIdentifier = null
         _notes.clear()
         _images.clear()
         isNew = true

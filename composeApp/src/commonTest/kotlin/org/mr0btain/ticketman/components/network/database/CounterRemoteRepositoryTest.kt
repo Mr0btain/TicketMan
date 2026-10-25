@@ -18,6 +18,11 @@ import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
+import org.mr0btain.ticketman.server.request.OrderPartRequest
+import org.mr0btain.ticketman.server.request.PurchaseOrderRequest
+import org.mr0btain.ticketman.server.request.ReceiveRequest
+import org.mr0btain.ticketman.data.purchase.PurchaseStatus
+import org.mr0btain.ticketman.data.purchase.Supplier
 import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.request.SaleRequest
@@ -119,6 +124,47 @@ class CounterRemoteRepositoryTest {
         inventory.categories()
 
         assertEquals(listOf("GET /api/data/inventory/code/0194252707", "GET /api/data/inventory/categories"), requests)
+    }
+
+    @Test
+    fun purchaseRoutes() = runTest {
+        val purchases = PurchaseRemoteRepository(client).apply { serverUrl = "http://localhost" }
+        val id = Uuid.parse("00000000-0000-7000-8000-000000000001")
+
+        purchases.suppliers()
+        purchases.addSupplier(Supplier(name = "Parts Co"))
+        purchases.updateSupplier(Supplier(identifier = id, name = "Parts Co"))
+        purchases.removeSupplier(id)
+        purchases.orders(0, 10, listOf(PurchaseStatus.ORDERED, PurchaseStatus.PARTLY_RECEIVED))
+        purchases.order(id)
+        purchases.forTicket(id)
+        purchases.add(PurchaseOrderRequest())
+        purchases.update(id, PurchaseOrderRequest())
+        purchases.place(id)
+        purchases.receive(id, ReceiveRequest(emptyList()))
+        purchases.cancel(id)
+        purchases.remove(id)
+        purchases.orderPart(OrderPartRequest(id, id))
+
+        assertEquals(
+            listOf(
+                "GET /api/purchase/suppliers",
+                "POST /api/purchase/suppliers/add",
+                "POST /api/purchase/suppliers/update",
+                "DELETE /api/purchase/suppliers/$id",
+                "GET /api/purchase/orders",
+                "GET /api/purchase/orders/$id",
+                "GET /api/purchase/orders/ticket/$id",
+                "POST /api/purchase/orders/add",
+                "POST /api/purchase/orders/$id/update",
+                "POST /api/purchase/orders/$id/place",
+                "POST /api/purchase/orders/$id/receive",
+                "POST /api/purchase/orders/$id/cancel",
+                "DELETE /api/purchase/orders/$id",
+                "POST /api/purchase/orders/part"
+            ),
+            requests
+        )
     }
 
     @Test

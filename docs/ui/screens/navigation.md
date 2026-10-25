@@ -49,11 +49,12 @@ maps each route to its screen. Which ones are in the nav is decided in `App()`:
 |-------------|--------|------------|
 | `ADMIN` | [`AdminScreen`](admin.md) | Admins only |
 | `COUNTER` | [`CounterScreen`](counter.md) | Always |
+| `PURCHASING` | [`PurchasingScreen`](purchasing.md) | Always |
 | `RECORDS` | [`RecordsScreen`](records.md) | Always. The start destination |
 | `SETTINGS` | [`SettingsScreen`](settings.md) | Always |
 | `GALLERY` | [`KitGallery`](../kit.md#the-component-gallery) | Debug builds, as "Components". Also opened from Settings |
 
-The nav is sorted by `index`, so for an admin it reads Admin, Counter, Records, Settings.
+The nav is sorted by `index`, so for an admin it reads Admin, Counter, Purchasing, Records, Settings.
 
 Moving between screens goes through `navHostController.navigateTo(route)`, which navigates with
 `launchSingleTop`, so clicking the screen you're on doesn't stack another copy.

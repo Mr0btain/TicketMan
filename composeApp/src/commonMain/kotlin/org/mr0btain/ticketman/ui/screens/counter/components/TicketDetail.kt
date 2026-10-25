@@ -17,6 +17,7 @@ import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.data.estimate.Estimate
 import org.mr0btain.ticketman.data.estimate.EstimateStatus
 import org.mr0btain.ticketman.data.notify.OutboxMessage
+import org.mr0btain.ticketman.data.purchase.PurchaseOrder
 import kotlin.uuid.Uuid
 
 /** Everything the ticket card shows */
@@ -31,7 +32,9 @@ data class TicketDetail(
     /** What the customer was sent, newest first. Null when it couldn't be read */
     val messages: List<OutboxMessage>? = emptyList(),
     /** Newest first. Null when they couldn't be read */
-    val estimates: List<Estimate>? = emptyList()
+    val estimates: List<Estimate>? = emptyList(),
+    /** Purchase orders with parts for it, newest first. Null when they couldn't be read */
+    val purchases: List<PurchaseOrder>? = emptyList()
 ) {
     /** The estimate waiting for the customer */
     val pendingEstimate: Estimate?
@@ -72,7 +75,8 @@ suspend fun RemoteHandler.loadTicketDetail(identifier: Uuid): TmResult<TicketDet
             signature = repo.getSignature(identifier),
             // Only shown, so the card still opens without them
             messages = notifyRepo.forTicket(identifier).getOrNull(),
-            estimates = estimateRepo.forTicket(identifier).getOrNull()
+            estimates = estimateRepo.forTicket(identifier).getOrNull(),
+            purchases = purchaseRepo.forTicket(identifier).getOrNull()
         )
     )
 }

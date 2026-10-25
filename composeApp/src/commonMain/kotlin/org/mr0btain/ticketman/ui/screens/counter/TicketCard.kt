@@ -65,6 +65,7 @@ private val PANEL_WIDTH = 400.dp
  * @param onReplaceStatusLink Gives the ticket a new link, cutting off the old one
  * @param estimates Sending estimates and writing down answers, null hides them (view only, or in previews)
  * @param onSendStatusLink Sends the customer their link now, null when there's no link to send
+ * @param parts Ordering parts for the ticket, null hides the panel (in previews)
  * @param extraActions Room for buttons added by later screens, like pickup
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -80,6 +81,7 @@ fun TicketCard(
     onReplaceStatusLink: () -> Unit = {},
     estimates: EstimateActions? = null,
     onSendStatusLink: (() -> Unit)? = null,
+    parts: PartsActions? = null,
     printAction: @Composable () -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {}
 ) {
@@ -329,6 +331,17 @@ fun TicketCard(
                                 onNew = { newEstimate = true },
                                 onAnswer = { answering = it },
                                 onWithdraw = { confirmWithdraw = it }
+                            )
+                        }
+
+                        // ------------------------------------------ Parts ------------------------------------------
+                        if (parts != null) {
+                            PartsPanel(
+                                modifier = Modifier.width(panelWidth),
+                                ticket = ticket.identifier,
+                                orders = detail.purchases,
+                                canOrder = changeable,
+                                actions = parts
                             )
                         }
 

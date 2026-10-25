@@ -30,6 +30,7 @@ object ApiRoutes {
 
     const val NOTIFY = "/api/notify"
     const val GIFT_CARD = "/api/giftcard"
+    const val PURCHASE = "/api/purchase"
     const val ESTIMATE = "/api/estimate"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
@@ -233,6 +234,37 @@ object NotifyPaths {
 
     /** Body `TicketMessageRequest`: sends one to the ticket's customer now */
     const val TICKET_SEND = "/ticket/{identifier}/send"
+}
+
+object PurchasePaths {
+    /** Every supplier, by name */
+    const val SUPPLIERS = "/suppliers"
+    const val SUPPLIER_ADD = "/suppliers/add"
+    const val SUPPLIER_UPDATE = "/suppliers/update"
+    const val SUPPLIER = "/suppliers/{identifier}"
+
+    /** A page of orders, newest first, `?status=&offset=&limit=` */
+    const val ORDERS = "/orders"
+    const val ORDER = "/orders/{identifier}"
+
+    /** Orders with lines for a ticket */
+    const val TICKET = "/orders/ticket/{ticketIdentifier}"
+
+    /** Body `PurchaseOrderRequest`: a new draft */
+    const val ADD = "/orders/add"
+
+    /** Body `PurchaseOrderRequest`: changes a draft */
+    const val UPDATE = "/orders/{identifier}/update"
+
+    /** The draft goes to the supplier */
+    const val PLACE = "/orders/{identifier}/place"
+
+    /** Body `ReceiveRequest` */
+    const val RECEIVE = "/orders/{identifier}/receive"
+    const val CANCEL = "/orders/{identifier}/cancel"
+
+    /** Body `OrderPartRequest`: a part for a ticket onto the supplier's draft */
+    const val PART = "/orders/part"
 }
 
 object GiftCardPaths {

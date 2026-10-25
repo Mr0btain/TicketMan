@@ -609,4 +609,24 @@ private fun EstimateStatusPickers(statuses: List<CustomStatus>, profile: ShopPro
             optionLabel = ::label
         )
     }
+
+    Text(text = "Parts ordered for a ticket move it to", style = TmTheme.typography.label, color = TmTheme.colors.text)
+    Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "When the order is placed",
+            options = options,
+            selected = profile.partsOrderedStatus,
+            onSelect = { onChange(profile.copy(partsOrderedStatus = it)) },
+            optionLabel = ::label
+        )
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "When they've all arrived",
+            options = options,
+            selected = profile.partsArrivedStatus,
+            onSelect = { onChange(profile.copy(partsArrivedStatus = it)) },
+            optionLabel = ::label
+        )
+    }
 }

@@ -25,6 +25,7 @@ import org.mr0btain.ticketman.components.service.EstimateService
 import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.components.service.PurchaseService
 import org.mr0btain.ticketman.components.service.StoredValueService
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
 import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
@@ -199,6 +200,20 @@ fun Application.configureRouting(
                 storedValue = localDatabase.storedValueDatabase,
                 storedValueService = storedValueService,
                 invoiceDatabase = localDatabase.invoiceDatabase
+            )
+        }
+
+        route(ApiRoutes.PURCHASE) {
+            purchaseRoute(
+                database = localDatabase.purchaseDatabase,
+                service = PurchaseService(
+                    purchases = localDatabase.purchaseDatabase,
+                    inventory = localDatabase.inventoryDatabase,
+                    tickets = localDatabase.ticketDatabase,
+                    shop = localDatabase.shopDatabase,
+                    auditLog = localDatabase.auditLogDatabase
+                ),
+                userDatabase = localDatabase.userDatabase
             )
         }
 

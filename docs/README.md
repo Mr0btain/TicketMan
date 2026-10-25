@@ -30,7 +30,8 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Authentication and sessions](server/auth.md): login, tokens, per device sessions, the auth providers
 - [Users and accounts](server/users-and-accounts.md): status and access level, requests, invites, first login setup
 - [PINs and stations](server/pins-and-stations.md): station registration, PIN login, kiosk mode
-- [Counter](server/counter.md): check-in, invoices, pickup, the queue
+- [Counter](server/counter.md): check-in, invoices, pickup, sales, refunds, store credit and gift cards, the queue
+- [Purchasing](server/purchasing.md): suppliers, purchase orders, receiving into stock, tickets waiting on parts
 - [Photos](server/photos.md): upload, processing, linking, serving, the sweep
 - [Backup and restore](server/backup-restore.md): building, downloading, staging and applying
 - [Audit log](server/audit-log.md): what's logged and how to log something new
@@ -51,7 +52,8 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Kit rules](ui/kit-rules.md): what `UiKitRulesTest` checks, and adding a component, theme or font
 - [App shell and navigation](ui/screens/navigation.md): the shells, destinations, adding a screen
 - [Records screen](ui/screens/records.md): the shared records layout, dialogs, view only
-- [Counter screen](ui/screens/counter.md): views, shortcuts, check-in wizard, pickup
+- [Counter screen](ui/screens/counter.md): views, shortcuts, check-in wizard, pickup, sales
+- [Purchasing screen](ui/screens/purchasing.md): orders, receiving, suppliers
 - [Kiosk](ui/screens/kiosk.md): the lock screen, PIN pad, idle lock, leaving kiosk mode
 - [Admin screen](ui/screens/admin.md): every tab and what it's backed by
 - [Settings screen](ui/screens/settings.md): what each setting does, adding one
@@ -64,6 +66,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
   [Invoices](api/invoice.md), [Stations](api/station.md), [Shop profile](api/shop.md), [Photos](api/image.md)
 - [Customers](api/customer.md), [Tickets](api/ticket.md), [Inventory](api/inventory.md), [Notes](api/notes.md)
 - [Messages](api/notify.md) and [Estimates](api/estimate.md): talking to customers
+- [Gift cards](api/giftcard.md) and [Purchasing](api/purchase.md)
 - [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing
