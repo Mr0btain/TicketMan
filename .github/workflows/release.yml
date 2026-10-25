@@ -293,6 +293,9 @@ jobs:
           echo "tags=$tags" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         if: steps.skip.outputs.skip != 'true'
+        # Its build record would be one more artifact for the release job to download, which download-artifact fails on
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: .
           file: server/Dockerfile
@@ -347,9 +350,11 @@ jobs:
       && needs.server.result == 'success'
     runs-on: ubuntu-latest
     steps:
+      # Only the jobs' own artifacts, never anything another action uploaded (like a Docker build record)
       - uses: actions/download-artifact@v4
         with:
           path: dist
+          pattern: '{desktop,android,server,ios}*'
           merge-multiple: true
       - name: Checksums
         run: cd dist && sha256sum * > SHA256SUMS
