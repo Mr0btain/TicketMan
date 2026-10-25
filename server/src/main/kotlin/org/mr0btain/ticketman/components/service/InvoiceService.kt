@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
+import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.server.request.SaleRequest
 import org.mr0btain.ticketman.server.request.WorkRequest
 import org.mr0btain.ticketman.data.ticket.WorkEntry
@@ -198,7 +199,60 @@ class InvoiceService(
     }
 
     /**
-     * Cancels an invoice. A paid one puts its parts back in stock. The ticket stays as it is
+     * Gives money back on a paid invoice, and puts returned parts back in stock, together. Admin only. The refund is
+     * a payment with a negative amount and the reason as its note; it can't be more than was paid less earlier
+     * refunds, and a part can't come back more times than it was sold
+     */
+    fun refund(identifier: Uuid, request: RefundRequest, givenBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
+        val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
+        if (invoice.status != InvoiceStatus.PAID) {
+            return AccountResult.Conflict("Only a paid invoice can be refunded, ${invoice.label} is ${invoice.status.name.lowercase()}" +
+                if (invoice.status == InvoiceStatus.OPEN) ", take the payment off instead" else "")
+        }
+
+        val reason = request.reason.trim()
+        if (reason.isBlank()) return AccountResult.Invalid("Give a reason for the refund")
+        if (request.amountCents < 0) return AccountResult.Invalid("Refund the amount as a positive number")
+        if (request.amountCents == 0L && request.returns.isEmpty()) return AccountResult.Invalid("Refund an amount or return a part")
+        if (request.amountCents > invoice.netPaidCents) return AccountResult.Invalid("Only ${money(invoice.netPaidCents)} was paid on ${invoice.label}")
+
+        // Each item once, added up, and only what was sold and not already returned
+        val returns = request.returns.groupBy { it.inventoryIdentifier }.map { (item, lines) -> ReturnedPart(item, lines.sumOf { it.quantity }) }
+        val sold = invoice.partsSold
+        val returned = invoice.returnedParts
+        returns.forEach { part ->
+            if (part.quantity <= 0) return AccountResult.Invalid("Return a whole number of parts, more than zero")
+            if (part.inventoryIdentifier !in sold) return AccountResult.Invalid("That part isn't on ${invoice.label}")
+            val left = (sold[part.inventoryIdentifier] ?: 0) - (returned[part.inventoryIdentifier] ?: 0)
+            if (part.quantity > left) {
+                val name = invoice.charges.first { it.inventoryIdentifier == part.inventoryIdentifier }.description
+                return AccountResult.Invalid(if (left <= 0) "No $name left to return on ${invoice.label}" else "Only $left of $name can be returned on ${invoice.label}")
+            }
+        }
+
+        val payment = Payment(
+            method = request.method,
+            amountCents = -request.amountCents,
+            receivedAt = Clock.System.now().toEpochMilliseconds(),
+            receivedBy = givenBy,
+            note = reason,
+            returns = returns
+        )
+
+        transaction {
+            invoices.addPayment(identifier, payment) ?: throw IllegalStateException("Refund not saved")
+            returns.forEach { part -> inventory.adjustStock(part.inventoryIdentifier, -part.quantity) }
+
+            val back = if (returns.isEmpty()) "" else ", ${returns.sumOf { it.quantity }} part${if (returns.sumOf { it.quantity } == 1) "" else "s"} back in stock"
+            auditLog.log(actor, AuditAction.REFUND, "invoice", identifier.toString(), "Refunded ${money(request.amountCents)} ${request.method.name.lowercase()} on ${invoice.label}$back: $reason")
+        }
+
+        return AccountResult.Done(invoices.getById(identifier)!!)
+    }
+
+    /**
+     * Cancels an invoice. A paid one puts its parts back in stock, less any a refund already returned. The ticket
+     * stays as it is
      */
     fun void(identifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
@@ -206,7 +260,11 @@ class InvoiceService(
 
         transaction {
             if (invoice.status == InvoiceStatus.PAID) {
-                partsUsed(invoice.charges).forEach { (identifier, quantity) -> inventory.adjustStock(identifier, -quantity) }
+                val returned = invoice.returnedParts
+                partsUsed(invoice.charges).forEach { (identifier, quantity) ->
+                    val back = quantity - (returned[identifier] ?: 0)
+                    if (back > 0) inventory.adjustStock(identifier, -back)
+                }
             }
 
             invoices.setStatus(identifier, InvoiceStatus.VOID)

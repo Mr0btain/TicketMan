@@ -17,6 +17,7 @@ import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
+import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.request.SaleRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
@@ -138,6 +139,7 @@ class CounterRemoteRepositoryTest {
         invoices.addPayment(id, PaymentRequest(PaymentMethod.CARD, 500))
         invoices.removePayment(id, id)
         invoices.void(id)
+        invoices.refund(id, RefundRequest(PaymentMethod.CASH, 100, "Faulty"))
         invoices.remove(id)
         invoices.fetch(0, 10)
 
@@ -149,6 +151,7 @@ class CounterRemoteRepositoryTest {
                 "POST /api/invoice/$id/payments",
                 "DELETE /api/invoice/$id/payments/$id",
                 "POST /api/invoice/$id/void",
+                "POST /api/invoice/$id/refund",
                 "DELETE /api/invoice/$id",
                 "GET /api/invoice/fetch"
             ),

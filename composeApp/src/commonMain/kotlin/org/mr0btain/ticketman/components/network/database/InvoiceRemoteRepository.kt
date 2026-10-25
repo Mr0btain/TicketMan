@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
+import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.error.EmptyResult
 import kotlin.uuid.Uuid
 
@@ -89,6 +90,16 @@ class InvoiceRemoteRepository(
     /** Admin only */
     suspend fun void(identifier: Uuid): TmResult<Invoice, ServerError> =
         change { client.post { url("$baseUrl${InvoicePaths.VOID.fill(identifier)}") } }
+
+    /** Admin only: money back on a paid invoice, and parts back in stock */
+    suspend fun refund(identifier: Uuid, request: RefundRequest): TmResult<Invoice, ServerError> =
+        change {
+            client.post {
+                url("$baseUrl${InvoicePaths.REFUND.fill(identifier)}")
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
 
     /** Admin only: deletes an invoice kept after its ticket was deleted */
     suspend fun remove(identifier: Uuid): EmptyResult<ServerError> {

@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.server.request
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
+import org.mr0btain.ticketman.data.invoice.ReturnedPart
 import org.mr0btain.ticketman.data.ticket.SignatureInput
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.WorkType
@@ -61,6 +62,20 @@ data class CheckInRequest(
 data class PickupRequest(
     val ticketIdentifier: Uuid,
     val payments: List<PaymentRequest> = emptyList()
+)
+
+/**
+ * Gives money back on a paid invoice, admin only
+ * @param amountCents How much goes back, positive. Zero when only parts are coming back, like an exchange
+ * @param reason Why, required, kept as the refund's note
+ * @param returns Parts coming back, put back in stock. Only ones the invoice sold and not already returned
+ */
+@Serializable
+data class RefundRequest(
+    val method: PaymentMethod,
+    val amountCents: Long,
+    val reason: String,
+    val returns: List<ReturnedPart> = emptyList()
 )
 
 /**

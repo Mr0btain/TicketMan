@@ -61,6 +61,7 @@ owns the rules; `InvoiceDatabase` just stores.
 | `POST /{id}/payments` | Normal | Add a payment |
 | `DELETE /{id}/payments/{paymentId}` | Normal | Remove a payment |
 | `POST /{id}/void` | Admin | Void it |
+| `POST /{id}/refund` | Admin | Give money back, parts back in stock |
 
 Rules:
 
@@ -71,7 +72,19 @@ Rules:
 - Saving charges recalculates the totals with `InvoiceMath`, using the tax rate stored on the invoice when it was
   made. Changing the shop's rate later doesn't touch invoices that already exist.
 
-Voiding a paid invoice puts its parts back in stock. Voiding never changes the ticket.
+Voiding a paid invoice puts its parts back in stock, less any a refund already returned. Voiding never changes the
+ticket.
+
+### Refunds
+
+`POST /api/invoice/{id}/refund` (admin) gives money back on a `PAID` invoice with a `RefundRequest(method,
+amountCents, reason, returns)`. `InvoiceService.refund` checks there's a reason, that the amount isn't more than was
+paid less earlier refunds (`Invoice.netPaidCents`), and that each returned part was sold on the invoice and hasn't
+all come back already (`partsSold` less `returnedParts`). Then in one transaction it adds a payment with the
+negative amount, the reason as its note and the returned parts on it, puts those parts back with
+`adjustStock(id, -n)`, and writes a `REFUND` audit entry. The invoice stays paid and nothing becomes owed:
+`balanceCents` only counts money taken. The day's report nets refunds out of `takenByMethod` and lists them in
+`refundedCents`/`refundCount`; the export has a Refunded column. An open invoice's payment is taken off instead.
 
 `InvoiceService` returns an `AccountResult` (`Done`, `Invalid`, `Conflict`, `NotFound`, the same type the account
 code uses), and routes turn it into a status with `respondAccount()`: `400`, `409`, `404`, or the success code.
@@ -134,7 +147,7 @@ PDF, and an admin can void it, which puts its parts back.
 ### One change at a time
 
 Pickup checks things and then writes, so two at once could both pass the checks. Every `InvoiceService` change that
-does that (update, add or remove a payment, pickup, sale, void) runs inside `synchronized(CHANGE_LOCK)`, so the second waits,
+does that (update, add or remove a payment, pickup, sale, refund, void) runs inside `synchronized(CHANGE_LOCK)`, so the second waits,
 then sees the ticket is picked up and gets a `409`. Reads and `forTicket` don't need it. A new change of that kind
 should take the lock too.
 
@@ -159,7 +172,7 @@ at once can't lose one:
 | Where | What it does |
 |-------|--------------|
 | Pickup and sale | `InventoryDatabase.adjustStock(id, n)`: `stock = stock - n` where `stock >= n`. Returns false when it's short |
-| Void of a paid invoice | `adjustStock(id, -n)`: puts the parts back |
+| Void of a paid invoice, refund | `adjustStock(id, -n)`: puts the parts back |
 | By hand | `POST /api/data/inventory/set/stock/{id}` with `StockChangeRequest(from, to)`: `stock = to` where `stock = from` |
 
 `POST /api/data/inventory/update` saves everything else about an item but not its stock. Without that, a dialog

@@ -354,6 +354,7 @@ fun TicketCard(
                                 Column {
                                     TmKeyValueRow(label = "Total") { TmMoneyText(invoice.totalCents) }
                                     TmKeyValueRow(label = "Paid") { TmMoneyText(invoice.paidCents) }
+                                    if (invoice.refundedCents > 0) TmKeyValueRow(label = "Refunded") { TmMoneyText(invoice.refundedCents) }
                                     // Cash payments keep what was handed over, so paying with more leaves change, not a debt
                                     val balance = invoice.balanceCents
                                     TmKeyValueRow(label = if (balance >= 0) "Balance" else "Change given") {

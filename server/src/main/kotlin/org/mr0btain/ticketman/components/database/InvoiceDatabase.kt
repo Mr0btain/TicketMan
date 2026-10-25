@@ -142,6 +142,7 @@ class InvoiceDatabase(
                 row[InvoicePaymentTable.receivedAt] = payment.receivedAt
                 row[InvoicePaymentTable.receivedBy] = payment.receivedBy
                 row[InvoicePaymentTable.note] = payment.note
+                row[InvoicePaymentTable.returns] = payment.returns
             }
 
             InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
@@ -222,7 +223,8 @@ class InvoiceDatabase(
                     amountCents = row[InvoicePaymentTable.amountCents],
                     receivedAt = row[InvoicePaymentTable.receivedAt],
                     receivedBy = row[InvoicePaymentTable.receivedBy],
-                    note = row[InvoicePaymentTable.note]
+                    note = row[InvoicePaymentTable.note],
+                    returns = row[InvoicePaymentTable.returns]
                 )
             }
 

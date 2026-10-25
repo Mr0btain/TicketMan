@@ -99,5 +99,6 @@ private fun TmColors.tone(action: AuditAction): TmTone = when (action) {
     AuditAction.DELETE, AuditAction.LOGIN_FAILED, AuditAction.SESSION_REVOKE -> danger
     AuditAction.CREATE, AuditAction.LOGIN -> success
     AuditAction.UPDATE, AuditAction.PASSWORD_RESET, AuditAction.SETTINGS_UPDATE -> accent
+    AuditAction.REFUND -> warning
     else -> neutral
 }

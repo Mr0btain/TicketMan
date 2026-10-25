@@ -1,7 +1,10 @@
 package org.mr0btain.ticketman.components.database.tables.invoice
 
+import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
+import org.jetbrains.exposed.v1.json.json
+import org.mr0btain.ticketman.data.invoice.ReturnedPart
 
 /**
  * One invoice per ticket. [ticket] isn't a foreign key, since an invoice with money against it outlives its ticket
@@ -43,7 +46,7 @@ object InvoiceChargeTable : UuidTable("invoice_charges") {
     val taxable = bool("taxable")
 }
 
-/** Money taken against an invoice */
+/** Money taken against an invoice, and refunds as negative amounts */
 object InvoicePaymentTable : UuidTable("invoice_payments") {
     val invoice = reference("invoice_id", InvoiceTable, onDelete = ReferenceOption.CASCADE)
     val method = text("method")
@@ -51,4 +54,7 @@ object InvoicePaymentTable : UuidTable("invoice_payments") {
     val receivedAt = long("received_at")
     val receivedBy = text("received_by")
     val note = text("note")
+
+    // Added with refunds: parts a refund put back in stock
+    val returns = json<List<ReturnedPart>>("returns", Json { ignoreUnknownKeys = true }).default(emptyList())
 }

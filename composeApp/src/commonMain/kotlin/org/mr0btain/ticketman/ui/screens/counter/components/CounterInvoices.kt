@@ -6,6 +6,7 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.error.TmResult
+import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.components.data.saveFile
 
@@ -44,6 +45,24 @@ class CounterInvoices(
                 }
 
                 is TmResult.Error -> support.notify(result.error.message)
+            }
+        }
+    }
+
+    /**
+     * Gives money back on a paid invoice, admin only
+     * @param onResult Gets null when it's done, otherwise what went wrong
+     */
+    fun refund(invoice: Invoice, request: RefundRequest, onResult: (String?) -> Unit) {
+        support.scope.launch {
+            when (val result = remoteHandler.invoiceRepo.refund(invoice.identifier, request)) {
+                is TmResult.Success -> {
+                    support.notify("Refunded ${invoice.label}")
+                    _list.value = _list.value.map { if (it.identifier == invoice.identifier) result.data else it }
+                    onResult(null)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
             }
         }
     }

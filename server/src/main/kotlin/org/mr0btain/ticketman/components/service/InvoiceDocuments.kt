@@ -128,7 +128,8 @@ class InvoiceDocuments(
                 money(invoice.taxCents),
                 money(invoice.totalCents),
                 money(invoice.paidCents),
-                money(invoice.balanceCents)
+                money(invoice.balanceCents),
+                money(invoice.refundedCents)
             )
             out.write(row.joinToString(",", postfix = "\r\n") { csvCell(it) })
         }
@@ -139,7 +140,7 @@ class InvoiceDocuments(
         const val SALE_LABEL = "Sale"
 
         val CSV_HEADER = listOf(
-            "Invoice", "Date", "Status", "Paid on", "Ticket", "Customer", "Subtotal", "Discount", "Tax", "Total", "Paid", "Balance"
+            "Invoice", "Date", "Status", "Paid on", "Ticket", "Customer", "Subtotal", "Discount", "Tax", "Total", "Paid", "Balance", "Refunded"
         )
 
         /** One CSV cell, quoted when it has to be */

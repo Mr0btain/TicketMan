@@ -125,7 +125,9 @@ object PrintTemplates {
         )
 
         val payments = invoice.payments.map { payment ->
-            AmountRow("Paid ${formatEnumName(payment.method.name).lowercase()}", Money.format(payment.amountCents, shop.currencySymbol))
+            val how = formatEnumName(payment.method.name).lowercase()
+            if (payment.isRefund) AmountRow("Refunded $how", Money.format(payment.amountCents, shop.currencySymbol))
+            else AmountRow("Paid $how", Money.format(payment.amountCents, shop.currencySymbol))
         } + listOfNotNull(
             invoice.balanceCents.takeIf { it < 0 }?.let { AmountRow("Change", Money.format(-it, shop.currencySymbol), bold = true) },
             invoice.balanceCents.takeIf { it > 0 }?.let { AmountRow("Still owed", Money.format(it, shop.currencySymbol), bold = true) }
@@ -172,7 +174,12 @@ object PrintTemplates {
             PrintBlock.Divider,
             PrintBlock.Text("Money taken", bold = true),
             PrintBlock.Amounts(taken.ifEmpty { listOf(AmountRow("Nothing taken", Money.format(0, shop.currencySymbol))) }),
-            PrintBlock.Amounts(listOf(AmountRow("Total taken (${report.paymentCount} payments)", Money.format(report.takenCents, shop.currencySymbol), bold = true))),
+            PrintBlock.Amounts(
+                listOfNotNull(
+                    report.refundedCents.takeIf { it > 0 }?.let { AmountRow("Refunded (${report.refundCount})", "-${Money.format(it, shop.currencySymbol)}") },
+                    AmountRow("Total taken (${report.paymentCount} payments)", Money.format(report.takenCents, shop.currencySymbol), bold = true)
+                )
+            ),
             PrintBlock.Gap,
             PrintBlock.Text("Sales", bold = true),
             PrintBlock.Amounts(

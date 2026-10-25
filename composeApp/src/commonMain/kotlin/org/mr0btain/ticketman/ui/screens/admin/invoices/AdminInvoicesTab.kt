@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.data.TmColumn
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
+import org.mr0btain.ticketman.ui.kit.data.formatMoney
 import org.mr0btain.ticketman.ui.kit.data.TmTableHeader
 import org.mr0btain.ticketman.ui.kit.data.TmTableRow
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
@@ -40,11 +41,12 @@ private val COLUMNS = listOf(
     TmColumn("Paid", width = 104.dp, end = true),
     TmColumn("Balance", width = 104.dp, end = true),
     TmColumn("", width = 64.dp, end = true),
-    TmColumn("", width = 144.dp, end = true)
+    TmColumn("", width = 216.dp, end = true)
 )
 
 /**
- * Every invoice, newest first. Clicking one opens its ticket at the counter, and any that isn't void can be voided.
+ * Every invoice, newest first. Clicking one opens its ticket at the counter, a paid one can be refunded and any
+ * that isn't void can be voided.
  * One kept after its ticket was deleted says so, and can be deleted
  * @param onOpenTicket Shows the invoice's ticket on the counter screen
  */
@@ -61,6 +63,7 @@ fun AdminInvoicesTab(
 
     var voiding by remember { mutableStateOf<Invoice?>(null) }
     var deleting by remember { mutableStateOf<Invoice?>(null) }
+    var refunding by remember { mutableStateOf<Invoice?>(null) }
     var exporting by remember { mutableStateOf(false) }
 
     if (exporting) {
@@ -86,6 +89,14 @@ fun AdminInvoicesTab(
                 voiding = null
             },
             onDismissRequest = { voiding = null }
+        )
+    }
+
+    refunding?.let { invoice ->
+        RefundDialog(
+            invoice = invoice,
+            onRefund = { request, onResult -> counter.invoices.refund(invoice, request, onResult) },
+            onDismissRequest = { refunding = null }
         )
     }
 
@@ -166,10 +177,18 @@ fun AdminInvoicesTab(
                                 }
                             )
                             3 -> TmMoneyText(invoice.totalCents)
-                            4 -> TmMoneyText(invoice.paidCents, color = colors.textMuted)
+                            4 -> Column(horizontalAlignment = Alignment.End) {
+                                TmMoneyText(invoice.paidCents, color = colors.textMuted)
+                                if (invoice.refundedCents > 0) {
+                                    Text("${formatMoney(invoice.refundedCents)} back", style = TmTheme.typography.caption, color = colors.warning.color)
+                                }
+                            }
                             5 -> TmMoneyText(invoice.balanceCents, color = if (invoice.balanceCents > 0) colors.danger.color else colors.text)
                             6 -> TmButton(text = "PDF", onClick = { counter.printer.savePdf(invoice) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                             7 -> Row(horizontalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                                if (invoice.status == InvoiceStatus.PAID) {
+                                    TmButton(text = "Refund", onClick = { refunding = invoice }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                                }
                                 if (invoice.status != InvoiceStatus.VOID) {
                                     TmButton(text = "Void", onClick = { voiding = invoice }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
                                 }

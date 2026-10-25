@@ -132,7 +132,9 @@ class StatsDatabase {
             val report = DailyReport(
                 date = date.toString(),
                 takenByMethod = payments.groupBy({ it.first }, { it.second }).mapValues { (_, amounts) -> amounts.sum() },
-                paymentCount = payments.size,
+                paymentCount = payments.count { it.second > 0 },
+                refundedCents = -payments.filter { it.second < 0 }.sumOf { it.second },
+                refundCount = payments.count { it.second < 0 },
                 salesCents = paidInvoices.sumOf { it.first },
                 taxCents = paidInvoices.sumOf { it.second },
                 invoicesPaid = paidInvoices.size,

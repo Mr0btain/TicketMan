@@ -34,6 +34,7 @@ import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.InvoiceNumber
+import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.shared.EntityReference
@@ -78,6 +79,7 @@ import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.counter.CheckInWizard
 import org.mr0btain.ticketman.ui.screens.counter.CounterLayout
 import org.mr0btain.ticketman.ui.screens.counter.PickupScreen
+import org.mr0btain.ticketman.ui.screens.admin.invoices.RefundDialog
 import org.mr0btain.ticketman.ui.screens.counter.SaleScreen
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
 import org.mr0btain.ticketman.ui.screens.counter.components.TicketDetail
@@ -489,6 +491,23 @@ class ScreenRenderTest {
             EstimateDialog(
                 start = detail.estimates!!.first().lines, laborCents = 6000, taxRateBasisPoints = 625, canNotify = true,
                 onSearchParts = { emptyList() }, onSend = { _, _, _ -> }, onDismiss = {}
+            )
+        }
+    }
+
+    /** A paid invoice with its screen part, refunding one */
+    @Test
+    fun refundDialog() = bothModes("admin-refund-dialog") {
+        Shell("Admin") {
+            val part = Inventory(name = "iPhone 13 screen, OEM")
+            RefundDialog(
+                invoice = invoice.copy(
+                    status = InvoiceStatus.PAID,
+                    charges = invoice.charges.map { if (it.type == ChargeType.PART) it.copy(inventoryIdentifier = part.identifier) else it },
+                    payments = invoice.payments + Payment(method = PaymentMethod.CASH, amountCents = 11936)
+                ),
+                onRefund = { _, _ -> },
+                onDismissRequest = {}
             )
         }
     }

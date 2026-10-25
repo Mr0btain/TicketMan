@@ -368,6 +368,15 @@ _, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200
 check(item["stock"] == 3, f"stock is {item['stock']}")
 step("Counter sale with no ticket: a $120 screen and a $5 untaxed kit = $134.90; short card refused, then paid; stock 4 -> 3")
 
+refund = {"method": "CARD", "amountCents": 12990, "reason": "Cracked in the box", "returns": [{"inventoryIdentifier": screen, "quantity": 1}]}
+call("POST", f"/api/invoice/{sale['identifier']}/refund", refund, pin, expect=403)
+_, refunded = call("POST", f"/api/invoice/{sale['identifier']}/refund", refund, admin, expect=200)
+check(refunded["status"] == "PAID" and [p["amountCents"] for p in refunded["payments"]] == [13490, -12990], f"refund {refunded['payments']}")
+call("POST", f"/api/invoice/{sale['identifier']}/refund", refund, admin, expect=400)
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+check(item["stock"] == 4, f"stock is {item['stock']}")
+step("The screen comes back: the tech can't refund, the admin refunds $129.90 to the card and it goes back in stock (3 -> 4); twice is refused")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

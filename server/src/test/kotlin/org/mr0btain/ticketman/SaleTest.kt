@@ -160,7 +160,7 @@ class SaleTest {
 
         val today = LocalDate.now()
         val csv = client.get("/api/invoice/export?from=$today&to=$today") { bearerAuth(adminToken) }.bodyAsText()
-        assertContains(csv, "${invoice.label},$today,paid,$today,Sale,,10.00,0.00,1.00,11.00,11.00,0.00")
+        assertContains(csv, "${invoice.label},$today,paid,$today,Sale,,10.00,0.00,1.00,11.00,11.00,0.00,0.00")
 
         val pdf = client.get("/api/invoice/${invoice.identifier}/pdf") { bearerAuth(token) }
         assertEquals(HttpStatusCode.OK, pdf.status)

@@ -56,7 +56,7 @@ the count and days).
 - **Query:** `from` and `to`, days like `2026-10-01`, both included. **`400`** either missing, not a day, or `to`
   before `from`.
 - **`200`** `text/csv`, one row per invoice, oldest number first: `Invoice, Date, Status, Paid on, Ticket,
-  Customer, Subtotal, Discount, Tax, Total, Paid, Balance`. A sale's Ticket is `Sale`. Amounts are plain numbers (`159.90`) so a spreadsheet adds
+  Customer, Subtotal, Discount, Tax, Total, Paid, Balance, Refunded`. A sale's Ticket is `Sale`. Amounts are plain numbers (`159.90`) so a spreadsheet adds
   them up. Cells are quoted as spreadsheets expect, and typed text starting with `=`, `+`, `-` or `@` gets a leading
   `'` so it isn't run as a formula.
 
@@ -110,10 +110,27 @@ Takes a payment back off, for one entered by mistake.
 
 **Auth:** admin
 
-Cancels an invoice. A paid one puts its parts back in stock. The ticket keeps its status; a picked up ticket stays
+Cancels an invoice. A paid one puts its parts back in stock, less any a refund already put back. The ticket keeps its status; a picked up ticket stays
 picked up.
 
 - **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void.
+
+### `POST /api/invoice/{identifier}/refund`
+
+**Auth:** admin
+
+Gives money back on a paid invoice, and puts returned parts back in stock, in one transaction. The refund is saved
+as a payment with a negative `amountCents`, the reason as its `note` and the parts as its `returns`; the invoice
+stays paid. `paidCents` leaves refunds out, `refundedCents` adds them up and `netPaidCents` is the difference.
+Audited as `REFUND`.
+
+- **Body:** `RefundRequest { method, amountCents, reason, returns }`. `amountCents` is positive, or zero when only
+  parts come back; `returns` is a list of `ReturnedPart { inventoryIdentifier, quantity }`.
+- **`200`** the `Invoice` with the refund on it.
+- **`400`** no reason, a negative amount, nothing refunded or returned, more than `netPaidCents` (`Only $30.00 was
+  paid on INV-...`), a part the invoice didn't sell, or more of one than it sold less what was already returned
+  (`Only 1 of Cable can be returned on INV-...`). **`404`** no such invoice. **`409`** the invoice is open (take the
+  payment off instead) or void.
 
 ### `DELETE /api/invoice/{identifier}`
 

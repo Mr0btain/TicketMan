@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.invoice
 
 import kotlinx.serialization.Serializable
+import kotlin.math.roundToLong
 import org.mr0btain.ticketman.data.MainItem
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
@@ -49,12 +50,34 @@ data class Invoice(
     val outlivesTicket: Boolean
         get() = payments.isNotEmpty() || status != InvoiceStatus.OPEN
 
+    /** Money taken, not counting refunds */
     val paidCents: Long
-        get() = payments.sumOf { it.amountCents }
+        get() = payments.filter { !it.isRefund }.sumOf { it.amountCents }
 
-    /** What's still owed, negative means change is due */
+    /** Money given back, as a positive amount */
+    val refundedCents: Long
+        get() = -payments.filter { it.isRefund }.sumOf { it.amountCents }
+
+    /** Paid less refunded, what the shop kept */
+    val netPaidCents: Long
+        get() = paidCents - refundedCents
+
+    /** What's still owed, negative means change is due. Refunds don't make anything owed */
     val balanceCents: Long
         get() = totalCents - paidCents
+
+    /**
+     * How many of each item have been returned to stock by refunds, so the same part isn't returned twice
+     */
+    val returnedParts: Map<Uuid, Int>
+        get() = payments.flatMap { it.returns }.groupBy({ it.inventoryIdentifier }, { it.quantity }).mapValues { (_, counts) -> counts.sum() }
+
+    /** How many of each stocked item the part lines sold, added up when one is on several lines */
+    val partsSold: Map<Uuid, Int>
+        get() = charges
+            .filter { it.type == ChargeType.PART && it.inventoryIdentifier != null }
+            .groupBy { it.inventoryIdentifier!! }
+            .mapValues { (_, lines) -> lines.sumOf { it.quantity.roundToLong() }.toInt() }
 
     val label: String
         get() = number?.toString() ?: identifier.toString().substringBefore("-")
@@ -80,9 +103,12 @@ data class InvoiceNumber(
 }
 
 /**
- * Money taken against an invoice, a deposit or the final payment
+ * Money taken against an invoice, a deposit or the final payment, or given back by a refund
+ * @param amountCents Negative for a refund
  * @param receivedAt Epoch millis
- * @param receivedBy Username of whoever took it
+ * @param receivedBy Username of whoever took it or gave it back
+ * @param note For a refund, the reason
+ * @param returns Parts a refund put back in stock
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -92,7 +118,19 @@ data class Payment(
     val amountCents: Long,
     val receivedAt: Long = 0,
     val receivedBy: String = "",
-    val note: String = ""
+    val note: String = "",
+    val returns: List<ReturnedPart> = emptyList()
+) {
+    val isRefund: Boolean
+        get() = amountCents < 0
+}
+
+/** Some of a part taken back by a refund and put back in stock */
+@OptIn(ExperimentalUuidApi::class)
+@Serializable
+data class ReturnedPart(
+    val inventoryIdentifier: Uuid,
+    val quantity: Int
 )
 
 @Serializable

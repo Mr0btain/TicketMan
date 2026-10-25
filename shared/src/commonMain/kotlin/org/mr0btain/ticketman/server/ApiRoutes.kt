@@ -190,6 +190,9 @@ object InvoicePaths {
     const val PAYMENT = "/{identifier}/payments/{paymentIdentifier}"
     const val VOID = "/{identifier}/void"
 
+    /** Admin only, body `RefundRequest`: money back on a paid invoice, optionally parts back in stock */
+    const val REFUND = "/{identifier}/refund"
+
     /** `DELETE`, admin only: an invoice kept after its ticket was deleted */
     const val REMOVE = "/{identifier}"
 

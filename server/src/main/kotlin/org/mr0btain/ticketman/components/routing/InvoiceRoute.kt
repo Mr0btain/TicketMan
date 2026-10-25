@@ -16,9 +16,11 @@ import java.time.LocalDate
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
+import org.mr0btain.ticketman.server.request.RefundRequest
 
 /**
- * Invoice routes. Anyone logged in can look, NORMAL and up can change open invoices, only admins can void and export
+ * Invoice routes. Anyone logged in can look, NORMAL and up can change open invoices, only admins can void, refund
+ * and export
  */
 fun Route.invoiceRoute(
     database: InvoiceDatabase,
@@ -161,6 +163,20 @@ fun Route.invoiceRoute(
             }
 
             call.respondAccount(service.void(identifier, call.getIdentifierFromToken()), HttpStatusCode.OK)
+        }
+
+        post(InvoicePaths.REFUND) {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            call.respondAccount(
+                service.refund(identifier, call.receive<RefundRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                HttpStatusCode.OK
+            )
         }
 
         // Only one kept after its ticket was deleted, see InvoiceService.remove
