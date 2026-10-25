@@ -148,6 +148,9 @@ kotlin {
 
                 // Self-signed certificates for a real HTTPS server to connect to
                 implementation(libs.ktor.network.tls.certificates)
+
+                // Typing and keys into real composables, like a scanner's Enter
+                implementation(libs.ui.test)
             }
         }
 

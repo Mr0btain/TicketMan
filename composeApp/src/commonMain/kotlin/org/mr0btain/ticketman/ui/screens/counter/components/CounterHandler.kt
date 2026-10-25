@@ -270,6 +270,26 @@ class CounterHandler(
         }
     }
 
+    /** The item with exactly this barcode or SKU, for a scan. Null when there's none or it couldn't be read */
+    suspend fun findItem(code: String): Inventory? = remoteHandler.inventoryRepo.getByCode(code).getOrNull()
+
+    /**
+     * Enter in the main search, which is how a barcode scanner ends what it types: an item's code opens the price
+     * check on it. Anything else stays a search
+     */
+    fun scan(code: String) {
+        if (code.isBlank()) return
+        scope.launch {
+            val item = findItem(code.trim()) ?: return@launch
+            searchJob?.cancel()
+            _query.value = ""
+            _searching.value = false
+            _results.value = CounterSearchResponse()
+            _priceResults.value = listOf(item)
+            _view.value = CounterView.PRICE_CHECK
+        }
+    }
+
     /** The gift card with this code, for paying with it. Null when there's none or it couldn't be read */
     suspend fun findGiftCard(code: String): GiftCard? = remoteHandler.giftCardRepo.get(code).getOrNull()
 

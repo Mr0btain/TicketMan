@@ -7,7 +7,10 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -66,6 +69,9 @@ class ChargeDraft(charge: Charge) {
  * The lines with buttons to add labor, something else, or a part from inventory
  * @param laborCents Price a new labor line starts at
  * @param giftCards Offers a gift card line, sold when the invoice is paid. Not on estimates
+ * @param onFindCode Finds the item with exactly this barcode or SKU, for a scanner typing into the part search and
+ * pressing Enter. Null leaves Enter alone
+ * @param focusParts Puts the cursor in the part search, so a scan goes straight in
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -74,7 +80,9 @@ fun ChargeLines(
     compact: Boolean,
     laborCents: Long,
     onSearchParts: suspend (String) -> List<Inventory>,
-    giftCards: Boolean = false
+    giftCards: Boolean = false,
+    onFindCode: (suspend (String) -> Inventory?)? = null,
+    focusParts: Boolean = false
 ) {
     val spacing = TmTheme.spacing
 
@@ -107,8 +115,15 @@ fun ChargeLines(
         }
     }
 
-    PartPicker(onSearch = onSearchParts) { part ->
-        drafts.add(ChargeDraft(Charge(type = ChargeType.PART, description = part.name, unitPriceCents = part.priceCents, inventoryIdentifier = part.identifier, taxClass = part.taxClass)))
+    PartPicker(onSearch = onSearchParts, onFindCode = onFindCode, focus = focusParts) { part ->
+        // Scanning the same part again counts it up rather than adding a line
+        val existing = drafts.firstOrNull { it.type == ChargeType.PART && it.inventoryIdentifier == part.identifier }
+        val count = existing?.quantity?.toIntOrNull()
+        if (existing != null && count != null) {
+            existing.quantity = (count + 1).toString()
+        } else {
+            drafts.add(ChargeDraft(Charge(type = ChargeType.PART, description = part.name, unitPriceCents = part.priceCents, inventoryIdentifier = part.identifier, taxClass = part.taxClass)))
+        }
     }
 }
 
@@ -258,23 +273,57 @@ private fun RemoveCharge(onRemove: () -> Unit) {
     TmIconButton(icon = Res.drawable.x, contentDescription = "Remove line", onClick = onRemove, size = TmControlSize.SMALL)
 }
 
-/** Searches inventory and adds the picked part as a line */
+/**
+ * Searches inventory and adds the picked part as a line. Enter adds the item whose code is exactly what was typed,
+ * which is what a barcode scanner does, or the only match
+ */
 @Composable
-private fun PartPicker(onSearch: suspend (String) -> List<Inventory>, onPick: (Inventory) -> Unit) {
+private fun PartPicker(
+    onSearch: suspend (String) -> List<Inventory>,
+    onFindCode: (suspend (String) -> Inventory?)?,
+    focus: Boolean,
+    onPick: (Inventory) -> Unit
+) {
     var query by remember { mutableStateOf("") }
     var matches by remember { mutableStateOf<List<Inventory>>(emptyList()) }
+    var notFound by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = usingKeyboard()
 
     LaunchedEffect(query) {
         delay(300)
         matches = onSearch(query)
     }
 
+    LaunchedEffect(focus) {
+        if (focus && keyboard) focusRequester.requestFocus()
+    }
+
     TmSearchField(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
         query = query,
-        onQueryChange = { query = it },
-        placeholder = "Add a part from inventory"
+        onQueryChange = {
+            query = it
+            notFound = null
+        },
+        placeholder = if (onFindCode != null) "Add a part, or scan its barcode" else "Add a part from inventory",
+        onSearch = { typed ->
+            if (onFindCode == null || typed.isBlank()) return@TmSearchField
+            scope.launch {
+                val item = onFindCode(typed.trim()) ?: matches.singleOrNull()
+                if (item != null) {
+                    onPick(item)
+                    query = ""
+                    matches = emptyList()
+                } else {
+                    notFound = "Nothing has the code ${typed.trim()}"
+                }
+            }
+        }
     )
+
+    notFound?.let { Text(text = it, style = TmTheme.typography.caption, color = TmTheme.colors.danger.color) }
 
     Column {
         matches.forEach { part ->

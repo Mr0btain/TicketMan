@@ -38,6 +38,12 @@ sealed interface PrintBlock {
     data class Qr(val text: String) : PrintBlock
 
     /**
+     * Centered Code 128 barcode with [text] printed under it, for a one dimensional scanner. Printers leave it out
+     * when the text can't be one (see [Code128.encode])
+     */
+    data class Barcode(val text: String) : PrintBlock
+
+    /**
      * Centered photo, like the face on an ID card, about the size of a [Qr]
      * @param jpeg The picture, as the server's `display` variant
      * @param aspectRatio Width over height

@@ -20,7 +20,8 @@ import java.awt.print.Printable
 import java.awt.print.PrinterJob
 
 /**
- * Lays a [PrintDocument] out with Java2D. Receipts are one page as long as the content, letter splits across pages.
+ * Lays a [PrintDocument] out with Java2D. Receipts are one page as long as the content, letter and labels split
+ * across pages.
  * The desktop client prints through it as a [Printable]; the server draws the same pages into a PDF with [drawPage]
  */
 class Java2DPrintLayout(
@@ -28,15 +29,28 @@ class Java2DPrintLayout(
     private val paper: PaperSize
 ) : Printable {
     private val receipt = paper == PaperSize.RECEIPT_80MM
+    private val label = paper == PaperSize.LABEL
 
     // Points, 72 to the inch
-    private val paperWidth = if (receipt) mm(80) else 612.0
-    private val letterHeight = 792.0
-    private val margin = if (receipt) mm(4) else 36.0
+    private val paperWidth = when (paper) {
+        PaperSize.RECEIPT_80MM -> mm(80)
+        PaperSize.LETTER -> 612.0
+        PaperSize.LABEL -> mm(57)
+    }
+    private val letterHeight = if (label) mm(32) else 792.0
+    private val margin = when (paper) {
+        PaperSize.RECEIPT_80MM -> mm(4)
+        PaperSize.LETTER -> 36.0
+        PaperSize.LABEL -> mm(2)
+    }
     val contentWidth = paperWidth - margin * 2
 
     private val fontName = Font.SANS_SERIF
-    private val baseSize = if (receipt) 8f else 11f
+    private val baseSize = when (paper) {
+        PaperSize.RECEIPT_80MM -> 8f
+        PaperSize.LETTER -> 11f
+        PaperSize.LABEL -> 7f
+    }
     private val regular = Font(fontName, Font.PLAIN, 1).deriveFont(baseSize)
     private val bold = regular.deriveFont(Font.BOLD)
     private val small = regular.deriveFont(baseSize * 0.85f)
@@ -44,7 +58,16 @@ class Java2DPrintLayout(
     private val large = bold.deriveFont(baseSize * if (receipt) 2.6f else 3.2f)
 
     private val labelWidth = if (receipt) 58.0 else 110.0
-    private val qrSize = if (receipt) mm(30) else 100.0
+    private val qrSize = when (paper) {
+        PaperSize.RECEIPT_80MM -> mm(30)
+        PaperSize.LETTER -> 100.0
+        PaperSize.LABEL -> mm(16)
+    }
+    private val barcodeHeight = when (paper) {
+        PaperSize.RECEIPT_80MM -> mm(12)
+        PaperSize.LETTER -> 40.0
+        PaperSize.LABEL -> mm(9)
+    }
 
     // Measuring needs a Graphics, a throwaway image's is fine
     private val measure: Graphics2D = BufferedImage(1, 1, BufferedImage.TYPE_INT_RGB).createGraphics()
@@ -78,7 +101,7 @@ class Java2DPrintLayout(
     /** Page width in points */
     val pageWidth: Double get() = paperWidth
 
-    /** Page height in points: a letter page, or a receipt as long as what's on it */
+    /** Page height in points: a letter page or label, or a receipt as long as what's on it */
     val pageHeight: Double get() = if (receipt) contentHeight + margin * 2 else letterHeight
 
     /** The space around the content, in points */
@@ -136,6 +159,7 @@ class Java2DPrintLayout(
         PrintBlock.Divider -> listOf(divider())
         PrintBlock.Gap -> listOf(Item(baseSize * 0.6) { _, _ -> })
         is PrintBlock.Qr -> listOf(qr(block.text))
+        is PrintBlock.Barcode -> barcode(block.text)?.let { listOf(it) + textLines(block.text, small, centered = true) }.orEmpty()
         is PrintBlock.Photo -> listOfNotNull(photo(block))
         is PrintBlock.Signature -> listOf(signature(block)) + textLines(block.caption, small, centered = true)
     }
@@ -252,6 +276,30 @@ class Java2DPrintLayout(
 
                     g.fill(Rectangle2D.Double(left + start * module, top + row * module, (column - start) * module, module))
                 }
+            }
+
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, smoothing)
+        }
+    }
+
+    /**
+     * Bars as wide as fits, a whole number of device pixels apart being the printer's business; null when the text
+     * can't be a barcode
+     */
+    private fun barcode(text: String): Item? {
+        val widths = Code128.encode(text) ?: return null
+        val total = Code128.modules(widths) + Code128.QUIET_ZONE * 2
+        // Wide modules scan best, but not so wide on letter paper that it looks like a fence
+        val module = minOf(contentWidth / total, if (paper == PaperSize.LETTER) 1.5 else contentWidth / total)
+
+        return Item(barcodeHeight + 2) { g, y ->
+            val smoothing = g.getRenderingHint(RenderingHints.KEY_ANTIALIASING)
+            g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF)
+
+            var x = (contentWidth - Code128.modules(widths) * module) / 2
+            widths.forEachIndexed { index, width ->
+                if (index % 2 == 0) g.fill(Rectangle2D.Double(x, y, width * module, barcodeHeight))
+                x += width * module
             }
 
             g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, smoothing)

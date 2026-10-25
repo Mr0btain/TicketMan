@@ -78,5 +78,8 @@ data class ShopProfile(
 @Serializable
 enum class PaperSize(val label: String) {
     RECEIPT_80MM("80mm receipt"),
-    LETTER("Letter")
+    LETTER("Letter"),
+
+    /** A sticky label from a label printer, 2.25 by 1.25 inches, one page each */
+    LABEL("Label 57 x 32mm")
 }

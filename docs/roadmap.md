@@ -63,12 +63,18 @@ when it's paid, and voiding one that's been spent from is refused. Store credit 
 adjustments. Tax classes sit beside the shop's main rate rather than replacing it, and the discount is shared
 between rates by how much each is charged on.
 
-## Phase 4: Inventory and purchasing
+## Phase 4: Inventory and purchasing (done)
 
 - **Item details** [6]. SKU, barcode, category and a reorder point per item, which the low stock list uses.
 - **Suppliers and purchase orders** [7]. Ordering, and receiving into stock through `adjustStock`. Parts ordered
   for a ticket put it in "Awaiting parts" and move it on when they arrive.
 - **Labels and scanning** [8]. A barcode label printout, and the counter search taking input from a scanner.
+
+Built as above ([Inventory API](api/inventory.md), [Purchasing](server/purchasing.md), [Printing](client/printing.md),
+[Counter screen](ui/screens/counter.md#scanning)). Which statuses ordering and receiving move a ticket to is the
+shop's choice in its profile, like estimates'. Receiving also sets the item's cost to what the order paid. Barcodes
+are Code 128 from an in-house encoder, printed on a new 57 x 32mm label paper size; a scanner is just a keyboard
+that presses Enter, so the counter, sale and pickup searches look the code up on Enter.
 
 ## Phase 5: Repair depth
 

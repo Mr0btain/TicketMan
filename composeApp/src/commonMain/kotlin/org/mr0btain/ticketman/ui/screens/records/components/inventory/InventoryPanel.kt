@@ -25,7 +25,8 @@ fun InventoryPanel(
     onImageClick: (page: Int) -> Unit,
     onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
     inventoryListState: LazyListState,
-    loadError: String? = null
+    loadError: String? = null,
+    printAction: @Composable () -> Unit = {}
 ) {
     RecordsLayout(
         toolbar = {
@@ -54,7 +55,8 @@ fun InventoryPanel(
                 onEditClick = onEditInventory,
                 canEdit = canEdit,
                 onImageClick = onImageClick,
-                onNoteImageClick = onNoteImageClick
+                onNoteImageClick = onNoteImageClick,
+                printAction = printAction
             )
         }
     )

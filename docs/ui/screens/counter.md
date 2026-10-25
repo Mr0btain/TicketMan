@@ -67,6 +67,15 @@ is focused when the counter opens. All three only happen for someone using a key
 `KeyHints.kt`, from Compose's input mode): on a touch screen there are no F keys to hint at, and focusing the
 field would pop up the on screen keyboard.
 
+### Scanning
+
+A barcode scanner types the code and presses Enter. In the main search, Enter looks the text up as an item's
+barcode or SKU (`CounterHandler.scan`, `GET /api/data/inventory/code/{code}`) and opens the price check on it;
+anything else stays a search, where ticket numbers and status links are found as usual. On the sale and pickup
+screens, Enter in the part search (`ChargeLines`' `onFindCode`) adds the item with that code, or the only match,
+counting it up if it's already a line; the sale screen puts the cursor there when it opens, so a scan goes straight
+in. `ScannerInputTest` checks that Enter reaches a search field on desktop.
+
 ### Search and queue
 
 - **Search** waits 300 ms after the last key, then asks `/api/counter/search` for up to 20 tickets and customers.

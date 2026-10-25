@@ -42,6 +42,7 @@ fun SaleScreen(
     onSearchParts: suspend (String) -> List<Inventory>,
     onSearchCustomers: suspend (String) -> List<Customer>,
     onLookupGiftCard: suspend (String) -> GiftCard?,
+    onFindCode: (suspend (String) -> Inventory?)? = null,
     onFinish: (SaleRequest, (String?) -> Unit) -> Unit,
     onBack: () -> Unit
 ) {
@@ -87,7 +88,7 @@ fun SaleScreen(
                         },
                         icon = Res.drawable.shopping_cart
                     ) {
-                        ChargeLines(drafts = drafts, compact = compact, laborCents = laborCents, onSearchParts = onSearchParts, giftCards = true)
+                        ChargeLines(drafts = drafts, compact = compact, laborCents = laborCents, onSearchParts = onSearchParts, giftCards = true, onFindCode = onFindCode, focusParts = true)
 
                         TmMoneyField(
                             modifier = Modifier.width(200.dp),

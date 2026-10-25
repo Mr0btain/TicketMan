@@ -135,9 +135,10 @@ fun CounterScreen(
                     modifier = fieldModifier.focusRequester(searchFocus),
                     query = query,
                     onQueryChange = { counter.setQuery(it) },
-                    placeholder = "Search tickets and customers${keyHint("F2")}",
+                    placeholder = "Search tickets and customers, or scan a part${keyHint("F2")}",
                     loading = searching,
-                    size = TmControlSize.LARGE
+                    size = TmControlSize.LARGE,
+                    onSearch = { counter.scan(it) }
                 )
             },
             canEdit = canEdit,
@@ -275,6 +276,7 @@ fun CounterScreen(
                         onSave = { charges, discount, onResult -> counter.pickup.saveCharges(charges, discount, onResult) },
                         onRemovePayment = { counter.pickup.removePayment(it) },
                         onLookupGiftCard = { counter.findGiftCard(it) },
+                        onFindCode = { counter.findItem(it) },
                         onFinish = { charges, discount, payments, onResult -> counter.pickup.finish(charges, discount, payments, onResult) },
                         onBack = { counter.openTicket(detail.ticket.identifier) }
                     )
@@ -304,6 +306,7 @@ fun CounterScreen(
                     onSearchParts = { counter.pickup.searchParts(it) },
                     onSearchCustomers = { counter.checkIn.searchCustomers(it) },
                     onLookupGiftCard = { counter.findGiftCard(it) },
+                    onFindCode = { counter.findItem(it) },
                     onFinish = { request, onResult -> counter.sale.finish(request, onResult) },
                     onBack = { counter.goHome() }
                 )

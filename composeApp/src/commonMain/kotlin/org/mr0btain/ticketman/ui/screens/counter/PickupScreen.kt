@@ -46,6 +46,7 @@ fun PickupScreen(
     onSave: (List<Charge>, Long, (String?) -> Unit) -> Unit,
     onRemovePayment: (Payment) -> Unit,
     onLookupGiftCard: suspend (String) -> GiftCard?,
+    onFindCode: (suspend (String) -> Inventory?)? = null,
     onFinish: (List<Charge>, Long, List<PaymentRequest>, (String?) -> Unit) -> Unit,
     onBack: () -> Unit
 ) {
@@ -103,7 +104,7 @@ fun PickupScreen(
                     subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else if (drafts.size == 1) "1 line" else "${drafts.size} lines",
                     icon = Res.drawable.file_text
                 ) {
-                    ChargeLines(drafts = drafts, compact = compact, laborCents = ticket.estimateCents ?: 0, onSearchParts = onSearchParts, giftCards = true)
+                    ChargeLines(drafts = drafts, compact = compact, laborCents = ticket.estimateCents ?: 0, onSearchParts = onSearchParts, giftCards = true, onFindCode = onFindCode)
 
                     TmMoneyField(
                         modifier = Modifier.width(200.dp),

@@ -6,6 +6,7 @@ import org.mr0btain.ticketman.components.print.PrintTemplate
 import org.mr0btain.ticketman.components.print.PrintTemplates
 import org.mr0btain.ticketman.components.print.printDocument
 import org.mr0btain.ticketman.data.shop.PaperSize
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.components.data.saveFile
 import org.mr0btain.ticketman.data.shop.ShopProfile
@@ -42,6 +43,10 @@ class CounterPrinter(
                     onResult("This ticket has no invoice yet")
                     return@launch
                 }
+                PrintTemplate.ITEM_LABEL -> {
+                    onResult("Item labels are printed from the item")
+                    return@launch
+                }
             }
 
             onResult(printDocument(document, paper))
@@ -58,6 +63,17 @@ class CounterPrinter(
             val customer = invoice.customerIdentifier?.let { remoteHandler.customerRepo.get(it).getOrNull() }
 
             onResult(printDocument(PrintTemplates.receipt(shop, null, customer, invoice), paper))
+        }
+    }
+
+    /**
+     * Prints an inventory item's label, with its barcode
+     * @param onResult Gets null when it went to the printer or they cancelled, otherwise what went wrong
+     */
+    fun printLabel(item: Inventory, paper: PaperSize, onResult: (String?) -> Unit) {
+        support.scope.launch {
+            val shop = remoteHandler.adminRepo.getShopProfile() ?: shop()
+            onResult(printDocument(PrintTemplates.itemLabel(shop, item), paper))
         }
     }
 

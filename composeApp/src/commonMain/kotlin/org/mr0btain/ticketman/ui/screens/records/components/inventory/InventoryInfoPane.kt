@@ -32,7 +32,8 @@ fun InventoryInfoPane(
     onEditClick: () -> Unit,
     canEdit: Boolean = true,
     onImageClick: (page: Int) -> Unit = {},
-    onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> }
+    onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> },
+    printAction: @Composable () -> Unit = {}
 ) {
     RecordDetail(
         title = inventoryData.name.ifBlank { "Unnamed item" },
@@ -49,14 +50,14 @@ fun InventoryInfoPane(
             }
         }
 
-        if (listOf(inventoryData.sku, inventoryData.barcode, inventoryData.category).any { it.isNotBlank() }) {
-            DetailSection("Details") {
-                Column {
-                    if (inventoryData.sku.isNotBlank()) TmKeyValueRow(label = "SKU", value = inventoryData.sku, numeric = true)
-                    if (inventoryData.barcode.isNotBlank()) TmKeyValueRow(label = "Barcode", value = inventoryData.barcode, numeric = true)
-                    if (inventoryData.category.isNotBlank()) TmKeyValueRow(label = "Category", value = inventoryData.category)
-                }
+        DetailSection("Details") {
+            Column {
+                if (inventoryData.sku.isNotBlank()) TmKeyValueRow(label = "SKU", value = inventoryData.sku, numeric = true)
+                if (inventoryData.barcode.isNotBlank()) TmKeyValueRow(label = "Barcode", value = inventoryData.barcode, numeric = true)
+                if (inventoryData.category.isNotBlank()) TmKeyValueRow(label = "Category", value = inventoryData.category)
             }
+            // Anyone can print a label, the scanner at the counter reads its barcode
+            printAction()
         }
 
         DetailSection("Pricing") {

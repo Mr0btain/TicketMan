@@ -1,6 +1,9 @@
 package org.mr0btain.ticketman.ui.screens.records
 
 import androidx.compose.foundation.layout.*
+import org.mr0btain.ticketman.components.print.PrintTemplate
+import org.mr0btain.ticketman.data.shop.PaperSize
+import org.mr0btain.ticketman.ui.screens.counter.PrintButton
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -345,7 +348,15 @@ fun RecordsScreen(
                     showConfirmDeleteDialog = true
                 },
                 inventoryListState = inventoryLazyListState,
-                loadError = inventoryLoadError.takeIf { loggedIn }
+                loadError = inventoryLoadError.takeIf { loggedIn },
+                printAction = {
+                    PrintButton(
+                        label = "Print label",
+                        templates = listOf(PrintTemplate.ITEM_LABEL),
+                        defaultPaper = PaperSize.LABEL,
+                        onPrint = { _, paper, onResult -> viewModel.counter.printer.printLabel(inventorySeed.inventory, paper, onResult) }
+                    )
+                }
             )
         }
     }

@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
@@ -27,7 +28,10 @@ private const val QR_MAX_BYTES = 200
 enum class PrintTemplate(val label: String) {
     CLAIM_SLIP("Claim slip"),
     RECEIPT("Receipt"),
-    DEVICE_TAG("Device tag")
+    DEVICE_TAG("Device tag"),
+
+    /** A shelf or bag label for an inventory item, with its barcode */
+    ITEM_LABEL("Item label")
 }
 
 /**
@@ -166,6 +170,23 @@ object PrintTemplates {
                 ticket.promisedAt?.let { PrintBlock.Text("Due ${formatDate(it)}", small = true, centered = true) }
             )
         )
+
+    /**
+     * Stuck on a part's bag or shelf: its name, price and a barcode the counter's scanner reads, the item's barcode or
+     * else its SKU. An item with neither gets no barcode
+     */
+    fun itemLabel(shop: ShopProfile, item: Inventory): PrintDocument {
+        val code = item.barcode.trim().ifBlank { item.sku.trim() }
+
+        return PrintDocument(
+            "Label ${item.name}",
+            listOfNotNull(
+                PrintBlock.Text(item.name, bold = true, centered = true),
+                PrintBlock.Heading(Money.format(item.priceCents, shop.currencySymbol)),
+                code.takeIf { it.isNotEmpty() }?.let { PrintBlock.Barcode(it) }
+            )
+        )
+    }
 
     /**
      * The end of day summary for closing up
