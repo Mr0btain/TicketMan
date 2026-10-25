@@ -214,7 +214,9 @@ class MainViewModel(
         scope = viewModelScope,
         snackBarHost = snackBarHost,
         canEdit = { session.canEditNow() },
-        onCheckIn = { appointment, customer -> counter.checkIn.startFromAppointment(appointment, customer) }
+        onCheckIn = { appointment, customer -> counter.checkIn.startFromAppointment(appointment, customer) },
+        localStorage = localStorage,
+        isAdmin = { session.isAdminNow() }
     )
 
     /** ----------------------------------------------ADMIN------------------------------------------------------------------- */

@@ -1,5 +1,13 @@
 package org.mr0btain.ticketman.ui
 
+import androidx.compose.material3.Text
+import kotlinx.datetime.plus
+import org.mr0btain.ticketman.ui.screens.appointments.ScheduleEntryDialog
+import org.mr0btain.ticketman.ui.screens.appointments.StaffBoard
+import org.mr0btain.ticketman.ui.screens.appointments.CalendarMonth
+import org.mr0btain.ticketman.ui.screens.appointments.CalendarDay
+import org.mr0btain.ticketman.data.schedule.ScheduleKind
+import org.mr0btain.ticketman.data.schedule.ScheduleEntry
 import org.mr0btain.ticketman.ui.kit.feedback.TmLocations
 import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
 import org.mr0btain.ticketman.data.location.Location
@@ -973,6 +981,69 @@ class ScreenRenderTest {
         )
     }
 
+    // A shop's staff and a fortnight of their schedule, from Monday Oct 26
+    private val nina = User(username = "nina", name = "Nina Tech")
+    private val sam = User(username = "sam", name = "Sam Ortiz")
+    private val lee = User(username = "lee", name = "Lee Park")
+    private val sampleStaff = listOf(lee, nina, sam)
+
+    private val sampleSchedule: List<ScheduleEntry> by lazy {
+        fun day(offset: Int) = kotlinx.datetime.LocalDate(2026, 10, 26).plus(kotlinx.datetime.DatePeriod(days = offset))
+        fun shift(user: User, offset: Int, from: Int, to: Int, note: String = "") =
+            ScheduleEntry(userIdentifier = user.identifier, userName = user.name, startsAt = AppointmentTimes.toMillis(day(offset), from, 0), endsAt = AppointmentTimes.toMillis(day(offset), to, 0), note = note)
+        fun off(user: User, first: Int, last: Int, note: String) =
+            ScheduleEntry(userIdentifier = user.identifier, userName = user.name, kind = ScheduleKind.TIME_OFF, startsAt = AppointmentTimes.toMillis(day(first), 0, 0), endsAt = AppointmentTimes.toMillis(day(last + 1), 0, 0), note = note)
+        (0..11).filter { it % 7 < 5 }.map { shift(nina, it, 9, 17) } +
+            listOf(0, 1, 2, 7, 8, 9).map { shift(sam, it, 12, 20) } +
+            listOf(shift(sam, 3, 10, 14, "Bench"), shift(lee, 0, 8, 16, "Opening"), shift(lee, 1, 8, 16, "Opening")) +
+            listOf(off(lee, 2, 9, "Vacation"), off(sam, 4, 6, "Long weekend")) +
+            ScheduleEntry(userIdentifier = nina.identifier, userName = nina.name, kind = ScheduleKind.TRAINING, startsAt = AppointmentTimes.toMillis(day(10), 13, 0), endsAt = AppointmentTimes.toMillis(day(10), 17, 0), note = "Board repair")
+    }
+
+    private val sampleAppointments: List<Appointment> by lazy {
+        fun at(day: Int, hour: Int, minute: Int = 0) = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, day), hour, minute)
+        listOf(
+            Appointment(startsAt = at(26, 9, 30), customerName = "Jane Doe", device = Device("Apple", "iPhone 13"), problem = "Cracked screen", technicianName = "Nina Tech"),
+            Appointment(startsAt = at(26, 11), minutes = 60, customerName = "Walk In Wendy", phone = "(555) 010-0100", device = Device("Samsung", "Galaxy S23"), problem = "Won't charge"),
+            Appointment(startsAt = at(26, 15), customerName = "Marcus O", device = Device("Google", "Pixel 7"), problem = "Battery"),
+            Appointment(startsAt = at(26, 16, 30), customerName = "Ana Silva", device = Device("Apple", "iPad"), problem = "Charging port"),
+            Appointment(startsAt = at(28, 14), customerName = "Bob Smith", device = Device("Sony", "PS5"), problem = "HDMI port")
+        )
+    }
+
+    /** Monday's who's working on a timeline, and its appointments */
+    @Test
+    fun calendarDay() = screen("calendar-day", height = 1100, rail = "Calendar") {
+        val monday = kotlinx.datetime.LocalDate(2026, 10, 26)
+        CalendarDay(day = monday, appointments = sampleAppointments.filter { AppointmentTimes.day(it.startsAt) == monday }, schedule = sampleSchedule, onEntry = {}) {
+            Text("Appointment cards go here", style = TmTheme.typography.body, color = TmTheme.colors.textMuted)
+        }
+    }
+
+    /** October as squares, the vacation drawn across two weeks */
+    @Test
+    fun calendarMonth() = screen("calendar-month", height = 1000, rail = "Calendar") {
+        CalendarMonth(month = kotlinx.datetime.LocalDate(2026, 10, 26), appointments = sampleAppointments, schedule = sampleSchedule, onDay = {}, onEntry = {})
+    }
+
+    /** Two weeks of the staff board, a row per person */
+    @Test
+    fun staffBoard() = screen("calendar-staff", rail = "Calendar") {
+        StaffBoard(start = kotlinx.datetime.LocalDate(2026, 10, 26), dayCount = 14, staff = sampleStaff, schedule = sampleSchedule, onEntry = {}, onEmpty = { _, _ -> })
+    }
+
+    @Test
+    fun scheduleDialog() = screen("calendar-schedule-dialog", rail = "Calendar") {
+        ScheduleEntryDialog(
+            entry = sampleSchedule.first(),
+            isNew = true,
+            staff = sampleStaff,
+            onSave = { _, _, _, _ -> },
+            onRemove = null,
+            onDismissRequest = {}
+        )
+    }
+
     @Test
     fun appointments() = screen("appointments", rail = "Calendar") {
         val monday = kotlinx.datetime.LocalDate(2026, 10, 26)
@@ -991,7 +1062,8 @@ class ScreenRenderTest {
                 onEdit = {},
                 onCheckIn = {},
                 onStatus = { _, _ -> },
-                onDelete = {}
+                onDelete = {},
+                schedule = sampleSchedule
             )
         }
     }

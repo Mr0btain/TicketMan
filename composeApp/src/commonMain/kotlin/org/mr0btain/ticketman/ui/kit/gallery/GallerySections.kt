@@ -57,6 +57,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.images.TmImagePager
 import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
 import org.mr0btain.ticketman.ui.kit.data.TmQrCode
+import org.mr0btain.ticketman.ui.kit.data.TmScheduleBlock
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.data.TmCountBar
@@ -667,6 +668,15 @@ private fun DataSection() {
 
         // A payment link or status page, for the customer's phone at the counter
         TmQrCode(text = "https://repairs.example.com/status/0123456789abcdef0123456789abcdef", size = 120.dp)
+
+        TmDivider()
+
+        // Shifts and time off on the calendar, squared off where they carry on past the edge
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
+            TmScheduleBlock(title = "Shift", subtitle = "9:00 to 17:00, 8h", tone = TmTheme.colors.accent, modifier = Modifier.weight(1f))
+            TmScheduleBlock(title = "Time off", subtitle = "Vacation", tone = TmTheme.colors.warning, modifier = Modifier.weight(2f), continuesAfter = true)
+            TmScheduleBlock(title = "Training", tone = TmTheme.colors.success, modifier = Modifier.weight(1f), continuesBefore = true)
+        }
     }
 }
 

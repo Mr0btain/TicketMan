@@ -642,6 +642,33 @@ check(moved["locationIdentifier"] == main_location["identifier"] and moved["numb
 call("POST", "/api/location/update", {**downtown, "retired": True}, admin, expect=200)
 step(f"A second location, Downtown (DT): its check in is DT-{dt_ticket['number']['year'] % 100}-00000001 at its own 10% tax, only in its queue, its stock counted apart (0, then 2), and it moves to the main shop keeping its number")
 
+# ------------------------------------------ Staff schedule ------------------------------------------
+# Nina on 9 to 5 every weekday for two weeks from next Monday, written by the admin, read by her PIN session
+import datetime as _dt
+# Dates as dates and times on them in local time, so a daylight saving change in between doesn't move a day
+_day = _dt.date.today() + _dt.timedelta(days=7)
+_monday = _day - _dt.timedelta(days=_day.weekday())
+def local_millis(day, hour=0):
+    return int(time.mktime(_dt.datetime(day.year, day.month, day.day, hour).timetuple()) * 1000)
+monday_text = _monday.isoformat()
+friday_after = (_monday + _dt.timedelta(days=11)).isoformat()
+shift = {"identifier": uid(), "userIdentifier": newtech_id, "kind": "SHIFT", "startsAt": local_millis(_monday, 9), "endsAt": local_millis(_monday, 17)}
+call("POST", "/api/schedule/add", {"entry": shift}, pin, expect=403)
+_, series = call("POST", "/api/schedule/add", {"entry": shift, "repeat": {"weekdays": [1, 2, 3, 4, 5], "until": friday_after}}, admin, expect=201)
+check(len(series) == 10 and len({e["seriesIdentifier"] for e in series}) == 1 and series[0]["userName"] == "Nina Tech", f"series of {len(series)}")
+_, seen = call("GET", f"/api/schedule/range?from={monday_text}&to={friday_after}", token=pin, expect=200)
+check(len([e for e in seen if e["userIdentifier"] == newtech_id]) == 10, f"pin session sees {len(seen)}")
+# Her second week an hour later
+later = {**series[5], "startsAt": series[5]["startsAt"] + 3600000, "endsAt": series[5]["endsAt"] + 3600000}
+_, moved = call("POST", "/api/schedule/update?scope=FOLLOWING", later, admin, expect=200)
+check(len(moved) == 5, f"moved {len(moved)}")
+_, off = call("POST", "/api/schedule/add", {"entry": {"identifier": uid(), "userIdentifier": newtech_id, "kind": "TIME_OFF", "startsAt": local_millis(_monday + _dt.timedelta(days=13)), "endsAt": local_millis(_monday + _dt.timedelta(days=15)), "note": "Dentist"}}, admin, expect=201)
+check(off[0]["allDay"], "time off is whole days")
+call("DELETE", f"/api/schedule/remove/{series[0]['identifier']}?scope=SERIES", token=admin, expect=202)
+_, left = call("GET", f"/api/schedule/range?from={monday_text}&to={friday_after}", token=pin, expect=200)
+check(all(e["seriesIdentifier"] != series[0]["seriesIdentifier"] for e in left), "the series is gone")
+step(f"Nina's schedule: 9 to 5 every weekday from {monday_text} (10 shifts, a series), her second week an hour later, two days off, then the series taken off")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

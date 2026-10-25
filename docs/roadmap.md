@@ -1,142 +1,64 @@
 # Roadmap
 
 What's planned beyond what TicketMan does now, in the order it's meant to be built. Each phase leans on the ones
-before it: the customer status page needs statuses and updates customers may see, notifications link to the status
-page, and so on. Numbers in brackets are the feature numbers this plan was drawn up from, so they stay easy to refer
-to.
+before it: the calendar views draw the staff schedule, and time off requests land on it.
 
 Every phase follows the usual rules: new columns go in `migratedTables` with a default, one off data fixes in
 `runOnce`, `API_VERSION` goes up when older clients can't follow, `docs/api` is kept in step (both doc checks pass),
 and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
 
-## Phase 0: Foundations (done)
+## Done so far
 
-- **Custom statuses** [3]. Shops name their own ticket statuses (Diagnosing, Awaiting parts, Awaiting customer,
-  Unrepairable, ...), each with a tone, whether customers see it, and which built-in state it acts like (open, on
-  hold, done). The built-in ones (In progress, On hold, Ready for pickup, Picked up) stay as fixed rows, so the
-  queue, pickup and the reports keep working.
-- **Customer visible updates.** A "show the customer" flag on notes, off by default, so internal notes never leak.
-- **The shop's public address.** `ShopProfile.publicUrl`, used for status links and the claim slip's QR.
+Phases 0 to 7 are built: custom statuses and customer visible updates, the [customer status page](api/status.md),
+[messages](api/notify.md) and [estimates](api/estimate.md), counter money (sales, refunds, store credit and
+[gift cards](api/giftcard.md), tax classes), [inventory and purchasing](server/purchasing.md), repair depth (customer
+devices, intake checklists and passcodes, warranties, storage fees), running the business ([reports](api/report.md),
+[appointments](api/appointment.md), the [time clock](api/timeclock.md), accounting exports), and the big
+integrations ([card payments](api/payment.md) and [more than one location](api/location.md)). How each works is in
+the linked pages and [the docs index](README.md); git history has how they were planned.
 
-## Phase 1: Customer status page [15] (done)
+## Phase 8: Staff schedule (done)
 
-- A small server rendered HTML page at `/status/{token}`, not the web client (that's megabytes and needs a login).
-- Each ticket has an unguessable status token, which staff can replace to cut off an old link. The claim slip's QR
-  points at the link; the device tag keeps the ticket number.
-- A lookup form as well: ticket number plus the last 4 digits of the phone, rate limited.
-- Shows the device, a status timeline (customer visible statuses only), the promised date, updates and photos marked
-  for the customer, the estimate and the balance, and the shop's contact details. Never internal notes, the
-  passcode, or the customer's details in full.
-- A documented Caddy setup that puts only `/status/*` on the internet.
+Who works when, kept beside the appointments on the calendar. Admins write it; everyone logged in sees it. Built
+([Staff schedule API](api/schedule.md)) as shifts, time off, training and other entries per person, time off in
+whole days, a shift repeating on chosen weekdays until a date as a series, and changes or removals going to one entry,
+the later ones or the whole series. Each person's scheduled hours per day come from their timed entries.
 
-Built as above ([Status page API](api/status.md), [Running a server](operations.md#the-customer-status-page)). Links
-stay working after pickup until staff replace them; the counter search takes a scanned status link too.
+## Phase 9: Calendar views (done)
 
-## Phase 2: Talking to customers (done)
+The calendar has Day, Week, Month and Staff views, remembered per device, each with back, today and forward. Day
+shows who's working on a timeline of the day's hours above its appointments; Week is the list of days with each
+day's staff; Month is day squares with what runs over more than a day drawn as bars across them, broken at each week
+and picked up on the next, and each square's appointments and who's on shift; Staff is a row per person and a
+column per day for two weeks, entries as blocks from start to end, rows growing for overlaps, the day's scheduled
+hours under each row, the names fixed while the days scroll sideways on a phone. Admins add an entry from the Staff
+board's empty cells or the Schedule button, and open one to change it from any view. Still to come: booking an
+appointment straight from an empty time slot, and dragging blocks to move them.
 
-- **Notifications** [1]. Email over SMTP and SMS through a provider interface (Twilio first). An outbox table sent
-  and retried in the background, templates the shop edits, the status link in every message, opt in on the
-  customer, and each message logged on the ticket. Sent on chosen status changes, an estimate being ready, ready
-  for pickup, and pickup reminders.
-- **Estimate approval** [2]. Quote lines on the open invoice, approved or declined on the status page (with a
-  signature) or recorded by staff, keeping the amount, time, method and who. "Awaiting approval" sends the estimate
-  out; approving moves the ticket on.
+## Phase 10: Time off requests and budgets
 
-Built as above ([Messages API](api/notify.md), [Estimates API](api/estimate.md),
-[Running a server](operations.md#messages-to-customers)), with two changes. Estimates are their own records whose
-lines go onto the invoice when approved, rather than unapproved lines sitting on it, so invoice totals and pickup
-never see work nobody agreed to. The status page signature is the customer's typed name, since the page has no
-scripts to draw one with. Which statuses an estimate moves the ticket to is the shop's choice in its profile.
+- **Budgets.** Admins set each person's time off allowance per year, in hours, on the admin Users tab. A person's
+  balance is the allowance less approved time off in that year (and what's waiting, shown apart).
+- **Requests.** Staff ask for time off from the calendar or Settings: the days, part of a day in hours, and a note.
+  It shows on the schedule as waiting, and can't be more than the balance left. Admins approve or decline it with a
+  reason on an admin Requests list (a badge on the tab, like account requests); approving turns it into a Time off
+  entry and takes it from the balance. Staff can withdraw one still waiting.
+- **Seen by everyone.** Approved time off is on every view; waiting requests only to the person and admins.
+- **Told.** The person sees the answer on their next open of the calendar, and in the audit log; no messages to
+  staff yet.
 
-## Phase 3: Counter money (done)
+## Phase 11: Leftovers
 
-- **Sales without a ticket** [4]. `Invoice.ticketIdentifier` nullable, so the counter sells straight from stock.
-- **Refunds and returns** [5]. A negative payment with a reason, optionally putting parts back in stock, admin only
-  (or a new permission), audit logged.
-- **Store credit and gift cards** [16]. A balance on the customer, gift card codes, both taken as payment methods.
-- **Multiple tax rates** [17]. Tax classes on items and charges, kept on the invoice when it's made.
+Smaller pieces left from earlier phases, picked up as they're needed.
 
-Built as above ([Counter API](api/counter.md#post-apicountersale), [Invoices API](api/invoice.md#post-apiinvoiceidentifierrefund),
-[Gift cards API](api/giftcard.md), [Money](shared/money.md#more-than-one-rate)). Refunds are admin only, on paid
-invoices; an open invoice's payment is still just taken off. Gift cards are sold as a line on any invoice and loaded
-when it's paid, and voiding one that's been spent from is refused. Store credit comes from refunds and admin
-adjustments. Tax classes sit beside the shop's main rate rather than replacing it, and the discount is shared
-between rates by how much each is charged on.
-
-## Phase 4: Inventory and purchasing (done)
-
-- **Item details** [6]. SKU, barcode, category and a reorder point per item, which the low stock list uses.
-- **Suppliers and purchase orders** [7]. Ordering, and receiving into stock through `adjustStock`. Parts ordered
-  for a ticket put it in "Awaiting parts" and move it on when they arrive.
-- **Labels and scanning** [8]. A barcode label printout, and the counter search taking input from a scanner.
-
-Built as above ([Inventory API](api/inventory.md), [Purchasing](server/purchasing.md), [Printing](client/printing.md),
-[Counter screen](ui/screens/counter.md#scanning)). Which statuses ordering and receiving move a ticket to is the
-shop's choice in its profile, like estimates'. Receiving also sets the item's cost to what the order paid. Barcodes
-are Code 128 from an in-house encoder, printed on a new 57 x 32mm label paper size; a scanner is just a keyboard
-that presses Enter, so the counter, sale and pickup searches look the code up on Enter.
-
-## Phase 5: Repair depth (done)
-
-- **Customer devices** [11]. Device records owned by a customer that tickets point to, so each device has a
-  history. Several devices at one check-in become linked tickets.
-- **Intake checklist and passcode** [10]. A checklist per device type filled at check-in and printed on the claim
-  slip. The passcode is stored encrypted, shown only to techs, its reads audit logged, cleared at pickup.
-- **Warranty** [9]. A warranty period on a repair or charge, warranty returns linked to the original and free by
-  default; the repeat check shows "under warranty until".
-- **Storage fees and abandoned devices** [18]. A fee after a number of days ready, abandoned after more, with the
-  terms on the claim slip and the customer told through Phase 2.
-
-Built as above ([Customers API](api/customer.md), [Tickets API](api/ticket.md#passcode),
-[Counter](server/counter.md#storage-and-abandoned-devices)). Existing tickets got device records from what was typed
-on them. Passcodes are sealed under a key from the server secret, so moving them to a new server needs the same
-`SECRET`. The warranty starts at pickup and lasts as long as the longest labor or part line gives (the shop's default
-unless a line says). The storage fee is a line synced onto the invoice whenever it's opened, waived by taking it off;
-abandoned devices move to their own list in the queue rather than to a status.
-
-## Phase 6: Running the business (done)
-
-- **Reports** [12]. Sales and profit by period, tax collected, tech productivity and commission from the work log,
-  turnaround from status history, refunds.
-- **Appointments** [13]. A calendar, appointments turning into check-ins, and later booking from the public page.
-- **Time clock** [19]. Clock in and out by PIN at a station, with timesheets.
-- **Accounting export** [20]. QuickBooks and Xero friendly CSV, building on the invoice export.
-
-Built as above ([Reports API](api/report.md), [Appointments API](api/appointment.md),
-[Time clock API](api/timeclock.md), [Invoices API](api/invoice.md#get-apiinvoiceexport)), except booking from the
-public page, which is still to come. Profit uses each part's cost kept on its invoice line when the invoice is paid;
-invoices paid before that count their parts as free, and the report says how many. Commission is a percent of the
-labor each tech bills, kept apart from users so only admins see it. Appointments get a reminder a day ahead through
-Phase 2's messages. Staff can clock in from their own device as well as by PIN at a station, where nobody is signed
-in. The QuickBooks and Xero exports are one row per line of each paid invoice, with the shop's own item, account
-and tax rate names, plus a payments export for the bank.
-
-## Phase 7: Big integrations
-
-- **Payment processing** [14] (done). Card terminals and payment links (Stripe Terminal or Square), and paying the
-  balance from the status page.
-- **More than one location** [21] (done). One server for every shop, with a location on tickets, stock, stations, users and
-  numbering. Each location can work on its own: its counter, queue, stock and staff show only its own, so running
-  one shop day to day doesn't mean wading through the others. Customers stay company wide: looking one up shows
-  their tickets at every location, and their store credit, gift cards and devices go with them. Reports and admin
-  can look at one location or all of them. It touches nearly every query, so it comes last.
-
-Payments are built as above ([Payments API](api/payment.md)), with Stripe and Square behind one
-`PaymentProcessor`, so a shop picks either. Every try at a card is a charge the server follows itself, asking the
-processor while the counter waits, every so often after, and when a webhook says so (webhooks are optional and only
-say what to ask about). A paid charge lands on its invoice as a card payment; one taken for a sale or a deposit
-before its invoice exists is claimed by the payment that names it. Refunds of card payments go back onto the card.
-A simulated processor stands in on development servers for the tests and `scripts/counter_e2e.py`. Still to come:
-check in deposits on a reader from the counter's wizard (the server takes them already), sending a payment link by
-email or text, and tipping and surcharges.
-
-Locations are built as above ([Locations API](api/location.md)). Each location numbers its own tickets, invoices and
-orders with its code, keeps its own stock counts of the shared catalog, and can have its own address, contacts and
-tax rates; the main one, made from what was there before, keeps the old numbers. Devices say where they work with
-every request: a station is fixed to its location, staff start at their home location and can pick another, and
-admins can look at all of them at once. Tickets move between locations with their open invoice. Still to come:
-moving stock between locations (a transfer, rather than counting it down at one and up at the other by hand), and a
-customer picking a location when booking from the public page.
+- **Booking from the status page.** Customers picking an appointment time themselves, at a location, from the
+  times staff are scheduled.
+- **Card readers at check-in.** Taking a deposit on a reader from the counter's wizard (the server takes them
+  already), and sending a payment link by email or text.
+- **Tips and surcharges** on card payments.
+- **Stock transfers** between locations, rather than counting down at one and up at the other by hand.
+- **Clocking against the schedule.** The time clock and timesheets showing scheduled hours beside worked ones, late
+  starts and missed shifts.
 
 ## iOS app
 
@@ -193,9 +115,6 @@ runners, but nobody has run it on a Mac yet.
 
 ## Open questions
 
-- Phase 1 (settled): the server is reached from the internet through the proxy, which lets outside addresses
-  reach only `/status`. Nothing is pushed elsewhere.
-- Phase 2 (settled): Twilio for texts behind an `SmsSender` interface, and shops bring their own SMTP server.
-- Phase 7 (settled): both Stripe and Square, behind one interface. More than one location is one server for every
-  shop, each able to keep to its own tickets, stock and staff, with customers shared across them.
+- Phase 10: does a time off allowance start over on 1 January, or on each person's start date, and does unused time
+  carry over? Built as starting over each calendar year with no carry over until decided.
 - iOS: is it shared by sideloading, or is a paid Apple Developer account worth it for TestFlight and the App Store?

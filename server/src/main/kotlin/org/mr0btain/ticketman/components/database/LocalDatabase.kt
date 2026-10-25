@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicket
 import org.mr0btain.ticketman.components.database.tables.image.ImageTable
 import org.mr0btain.ticketman.components.database.tables.location.InventoryStockTable
 import org.mr0btain.ticketman.components.database.tables.location.LocationTable
+import org.mr0btain.ticketman.components.database.tables.schedule.ScheduleTable
 import org.jetbrains.exposed.v1.core.isNull
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryImageTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceChargeTable
@@ -116,6 +117,7 @@ class LocalDatabase (
     val appointmentDatabase = AppointmentDatabase()
     val timeClockDatabase = TimeClockDatabase()
     val locationDatabase = LocationDatabase()
+    val scheduleDatabase = ScheduleDatabase()
     val paymentDatabase = PaymentDatabase()
     val imageDatabase = ImageDatabase { recordDatabases }
 
@@ -168,6 +170,7 @@ class LocalDatabase (
         CardChargeTable,
         LocationTable,
         InventoryStockTable,
+        ScheduleTable,
         DataFixTable
     )
 

@@ -46,6 +46,7 @@ object ApiRoutes {
     const val TIME_CLOCK = "/api/timeclock"
     const val PAYMENT = "/api/payment"
     const val LOCATION = "/api/location"
+    const val SCHEDULE = "/api/schedule"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -281,6 +282,22 @@ object AppointmentPaths {
 
     /** Body `AppointmentStatusRequest`: cancelled, no show, or booked again */
     const val STATUS = "/status/{identifier}"
+    const val REMOVE = "/remove/{identifier}"
+}
+
+/** Under [ApiRoutes.SCHEDULE] */
+object SchedulePaths {
+    /** `?from=&to=` days like 2026-10-01, both included, every entry touching them. `&user=` for one person's */
+    const val RANGE = "/range"
+    const val GET = "/get/{identifier}"
+
+    /** Admin only, body `ScheduleRequest`: answers with every entry it made */
+    const val ADD = "/add"
+
+    /** Admin only, body `ScheduleEntry`, `?scope=` ONE, FOLLOWING or SERIES: answers with every entry changed */
+    const val UPDATE = "/update"
+
+    /** Admin only, `?scope=` like update */
     const val REMOVE = "/remove/{identifier}"
 }
 
