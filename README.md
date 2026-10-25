@@ -101,7 +101,7 @@ inventory and purchasing, repair depth, and running the business. What's next, i
 
 ## Caveats
 
-If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0
+If there has to be Any breaking changes (changes that require both client and server to be updated) they should be made between Major revisions only once were stable. Ex: 1.0.0->2.0.0. For now theres going to be Breaking changes that are just thrown in untill we hit 1.0.
 
 ## Documentation
 
