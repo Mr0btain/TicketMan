@@ -115,6 +115,14 @@ fun Application.configureRouting(
             )
         }
 
+        route(ApiRoutes.REPORT) {
+            reportRoute(
+                database = localDatabase.reportDatabase,
+                userDatabase = localDatabase.userDatabase,
+                auditLog = localDatabase.auditLogDatabase
+            )
+        }
+
         route(ApiRoutes.ESTIMATE) {
             estimateRoute(
                 service = estimateService,

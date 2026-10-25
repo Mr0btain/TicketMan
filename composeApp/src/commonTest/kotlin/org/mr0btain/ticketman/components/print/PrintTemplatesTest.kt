@@ -6,6 +6,7 @@ import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.server.response.DailyReport
+import org.mr0btain.ticketman.data.report.*
 import org.mr0btain.ticketman.data.user.User
 import kotlin.test.*
 import kotlin.uuid.Uuid
@@ -122,6 +123,27 @@ class PrintTemplatesTest {
         assertTrue(AmountRow("Total taken (2 payments)", "$50.00", bold = true) in rows)
         assertTrue(AmountRow("Overdue now", "3") in rows)
         assertFalse(rows.any { it.label == "Check" }, "Methods with nothing taken are left off")
+    }
+
+    @Test
+    fun aPeriodReportHasProfitTechsAndTurnaround() {
+        val report = PeriodReport(
+            from = "2026-10-01",
+            to = "2026-10-31",
+            sales = SalesSummary(invoices = 3, totalCents = 11_000, taxCents = 1_000, laborCents = 6_000, partsCents = 4_000, partsCostCents = 1_500),
+            takenByMethod = mapOf(PaymentMethod.CASH to 11_000L),
+            techs = listOf(TechSummary(name = "Dana", laborHours = 1.5, laborCents = 6_000, commissionBasisPoints = 1_000)),
+            turnaround = Turnaround(pickedUp = 3, medianHoursToReady = 26.0)
+        )
+
+        val rows = PrintTemplates.periodReport(shop, report).blocks.filterIsInstance<PrintBlock.Amounts>().flatMap { it.rows }
+
+        assertTrue(AmountRow("Net sales", "$100.00") in rows)
+        assertTrue(AmountRow("Gross profit", "$85.00", bold = true) in rows)
+        assertTrue(AmountRow("Dana, 1.5h", "$60.00", bold = true) in rows)
+        assertTrue(AmountRow("  Commission 10.0%", "$6.00") in rows)
+        assertTrue(AmountRow("Median to ready", "1d 2h") in rows)
+        assertFalse(rows.any { it.label == "Gift cards sold" }, "Nothing sold isn't listed")
     }
 
     @Test

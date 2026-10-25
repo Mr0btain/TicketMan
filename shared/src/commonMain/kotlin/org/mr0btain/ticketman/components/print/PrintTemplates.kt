@@ -3,6 +3,8 @@ package org.mr0btain.ticketman.components.print
 import org.mr0btain.ticketman.components.utils.formatDate
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatEnumName
+import org.mr0btain.ticketman.components.utils.formatHours
+import org.mr0btain.ticketman.components.utils.formatHoursAsDuration
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -21,6 +23,7 @@ import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.response.DailyReport
+import org.mr0btain.ticketman.data.report.PeriodReport
 
 /** Under [QrCode]'s 213, so a long public address falls back to the ticket number rather than failing */
 private const val QR_MAX_BYTES = 200
@@ -252,6 +255,72 @@ object PrintTemplates {
         )
 
         return PrintDocument("End of day ${report.date}", blocks)
+    }
+
+    /** A report over some days: sales and profit, tax, money taken, refunds, techs and turnaround */
+    fun periodReport(shop: ShopProfile, report: PeriodReport): PrintDocument {
+        fun money(cents: Long) = Money.format(cents, shop.currencySymbol)
+        val sales = report.sales
+
+        val taken = PaymentMethod.entries
+            .filter { (report.takenByMethod[it] ?: 0) != 0L }
+            .map { AmountRow(formatEnumName(it.name) + if (it.storedValue) " spent" else "", money(report.takenByMethod[it] ?: 0)) }
+
+        val blocks = shopHeader(shop) + listOf(
+            PrintBlock.Divider,
+            PrintBlock.Heading("Report"),
+            PrintBlock.Text("${report.from} to ${report.to}", centered = true),
+            PrintBlock.Divider,
+            PrintBlock.Text("Sales (${sales.invoices} invoices paid)", bold = true),
+            PrintBlock.Amounts(
+                listOfNotNull(
+                    AmountRow("Labor", money(sales.laborCents)),
+                    AmountRow("Parts", money(sales.partsCents)),
+                    AmountRow("Other", money(sales.otherCents)),
+                    sales.giftCardCents.takeIf { it != 0L }?.let { AmountRow("Gift cards sold", money(it)) },
+                    sales.discountCents.takeIf { it != 0L }?.let { AmountRow("Discounts", "-${money(it)}") },
+                    AmountRow("Tax", money(sales.taxCents)),
+                    AmountRow("Total", money(sales.totalCents), bold = true),
+                    AmountRow("Net sales", money(sales.netCents)),
+                    AmountRow("Parts cost", "-${money(sales.partsCostCents)}"),
+                    AmountRow("Gross profit", money(sales.grossProfitCents), bold = true)
+                )
+            )
+        ) + (if (report.taxes.isEmpty()) emptyList() else listOf(
+            PrintBlock.Gap,
+            PrintBlock.Text("Tax collected", bold = true),
+            PrintBlock.Amounts(report.taxes.map { AmountRow(it.label, money(it.taxCents)) })
+        )) + listOf(
+            PrintBlock.Gap,
+            PrintBlock.Text("Money taken", bold = true),
+            PrintBlock.Amounts(
+                taken.ifEmpty { listOf(AmountRow("Nothing taken", money(0))) } + listOfNotNull(
+                    report.refunds.cents.takeIf { it > 0 }?.let { AmountRow("Refunded (${report.refunds.count})", "-${money(it)}") },
+                    AmountRow("Total taken", money(report.takenCents), bold = true)
+                )
+            )
+        ) + (if (report.techs.isEmpty()) emptyList() else listOf(
+            PrintBlock.Gap,
+            PrintBlock.Text("Techs", bold = true),
+            PrintBlock.Amounts(report.techs.flatMap { tech ->
+                listOfNotNull(
+                    AmountRow("${tech.name.ifBlank { "Unknown" }}, ${formatHours(tech.laborHours)}", money(tech.laborCents), bold = true),
+                    tech.commissionCents.takeIf { it > 0 }?.let { AmountRow("  Commission ${tech.commissionBasisPoints / 100.0}%", money(it)) }
+                )
+            })
+        )) + listOf(
+            PrintBlock.Gap,
+            PrintBlock.Text("Turnaround", bold = true),
+            PrintBlock.Amounts(
+                listOfNotNull(
+                    AmountRow("Picked up", report.turnaround.pickedUp.toString()),
+                    report.turnaround.medianHoursToReady?.let { AmountRow("Median to ready", formatHoursAsDuration(it)) },
+                    report.turnaround.medianHoursToPickup?.let { AmountRow("Median to pickup", formatHoursAsDuration(it)) }
+                )
+            )
+        )
+
+        return PrintDocument("Report ${report.from} to ${report.to}", blocks)
     }
 
     private fun shopHeader(shop: ShopProfile): List<PrintBlock> {

@@ -481,6 +481,19 @@ status, html, _ = page(f"/status/{two['statusToken']}")
 check("Storage is $2.00 a day" in html, "status page should say when storage starts")
 step("Storage terms of $2 a day after 3 days: Jane's iPad, ready 5 days, gets 2 days of storage on its invoice, and her status page says so")
 
+# ------------------------------------------ Running the business ------------------------------------------
+call("POST", "/api/report/commissions", [{"userIdentifier": newtech_id, "basisPoints": 1000}], newtech, expect=403)
+call("POST", "/api/report/commissions", [{"userIdentifier": newtech_id, "basisPoints": 1000}], admin, expect=202)
+call("GET", f"/api/report/period?from={day}&to={day}", token=newtech, expect=403)
+_, period = call("GET", f"/api/report/period?from={day}&to={day}", token=admin, expect=200)
+sales = period["sales"]
+nina = next((t for t in period["techs"] if t.get("userIdentifier") == newtech_id), None)
+check(sales["invoices"] >= 3 and sales["partsCostCents"] >= 6000, f"sales {sales}")
+check(nina is not None and nina["laborHours"] >= 1 and nina["laborCents"] >= 4000 and nina["commissionBasisPoints"] == 1000, f"techs {period['techs']}")
+check(any(r["reason"] == "Cracked in the box" for r in period["refunds"]["refunds"]), f"refunds {period['refunds']}")
+check(period["turnaround"]["pickedUp"] >= 2, f"turnaround {period['turnaround']}")
+step(f"Today's report: {sales['invoices']} invoices, ${sales['totalCents'] / 100:.2f} sales, parts cost ${sales['partsCostCents'] / 100:.2f}, Nina's {nina['laborHours']}h at 10% commission, the screen's refund listed")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

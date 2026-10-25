@@ -81,6 +81,11 @@ import org.mr0btain.ticketman.ui.kit.navigation.TmNavRail
 import org.mr0btain.ticketman.ui.kit.search.TmSearchField
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
+import org.mr0btain.ticketman.ui.screens.admin.reports.AdminReportsTab
+import org.mr0btain.ticketman.ui.screens.admin.reports.CommissionDialog
+import org.mr0btain.ticketman.ui.screens.admin.invoices.ExportRange
+import org.mr0btain.ticketman.data.report.*
+import org.mr0btain.ticketman.data.invoice.TaxLine
 import org.mr0btain.ticketman.ui.screens.counter.CheckInWizard
 import org.mr0btain.ticketman.ui.screens.counter.CounterLayout
 import org.mr0btain.ticketman.ui.screens.counter.PickupScreen
@@ -772,6 +777,54 @@ class ScreenRenderTest {
                 onPrintReport = { _, _ -> },
                 onTicketClick = {},
                 onLowStockClick = {}
+            )
+        }
+    }
+
+    @Test
+    fun adminReports() = bothModes("admin-reports", height = 1300) {
+        Shell("Admin") {
+            AdminReportsTab(
+                report = PeriodReport(
+                    from = "2026-10-01", to = "2026-10-24",
+                    sales = SalesSummary(
+                        invoices = 64, totalCents = 1_284_500, taxCents = 41_200, discountCents = 3_000,
+                        laborCents = 812_000, partsCents = 398_300, otherCents = 36_000, partsCostCents = 151_900, partsWithoutCost = 2
+                    ),
+                    days = listOf(DaySales("2026-10-22", 4, 61_000), DaySales("2026-10-23", 7, 98_450), DaySales("2026-10-24", 3, 30_000)),
+                    taxes = listOf(TaxLine("Tax", 750, 512_000, 38_400), TaxLine("Accessories", 500, 56_000, 2_800)),
+                    takenByMethod = mapOf(PaymentMethod.CARD to 984_500, PaymentMethod.CASH to 300_000, PaymentMethod.STORE_CREDIT to 5_000),
+                    refunds = RefundSummary(1, 4_500, listOf(RefundLine("INV-26-00000187", 4_500, "Case didn't fit", PaymentMethod.CARD, 1_761_300_000_000, "dana"))),
+                    techs = listOf(
+                        TechSummary(name = "Dana Whitfield", tickets = 31, laborHours = 58.5, laborCents = 468_000, partsCents = 212_000, commissionBasisPoints = 1_000),
+                        TechSummary(name = "Sam Ortiz", tickets = 24, laborHours = 43.0, laborCents = 344_000, partsCents = 186_300)
+                    ),
+                    turnaround = Turnaround(pickedUp = 58, readyCount = 55, averageHoursToReady = 41.2, medianHoursToReady = 26.5, averageHoursToPickup = 70.1, medianHoursToPickup = 50.0)
+                ),
+                range = ExportRange.THIS_MONTH,
+                days = null,
+                commissions = emptyList(),
+                users = emptyList(),
+                defaultPaper = PaperSize.RECEIPT_80MM,
+                isBusy = false,
+                onPick = {},
+                onShowDays = { _, _ -> },
+                onPrint = { _, _ -> },
+                onSaveCommissions = { _, _ -> }
+            )
+        }
+    }
+
+    @Test
+    fun commissionDialog() = bothModes("admin-commission-dialog") {
+        Shell("Admin") {
+            val dana = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.NORMAL)
+            CommissionDialog(
+                users = listOf(dana, User(username = "sam", name = "Sam Ortiz")),
+                rates = listOf(CommissionRate(dana.identifier, 1_250)),
+                saving = false,
+                onSave = {},
+                onDismissRequest = {}
             )
         }
     }

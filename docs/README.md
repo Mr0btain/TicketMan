@@ -67,6 +67,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Customers](api/customer.md), [Tickets](api/ticket.md), [Inventory](api/inventory.md), [Notes](api/notes.md)
 - [Messages](api/notify.md) and [Estimates](api/estimate.md): talking to customers
 - [Gift cards](api/giftcard.md) and [Purchasing](api/purchase.md)
+- [Reports](api/report.md): sales, profit, tax, techs and turnaround over some days
 - [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing

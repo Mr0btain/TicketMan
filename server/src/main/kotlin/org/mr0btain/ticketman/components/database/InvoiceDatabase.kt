@@ -5,6 +5,8 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.core.max
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -12,6 +14,7 @@ import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
+import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceChargeTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoicePaymentTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceTable
@@ -41,6 +44,7 @@ class InvoiceDatabase(
     private val PAGED_TAG = "$TAG:Paged"
     private val RANGE_TAG = "$TAG:Range"
     private val REMOVE_TAG = "$TAG:Remove"
+    private val COST_TAG = "$TAG:Cost"
 
     fun getById(identifier: Uuid): Invoice? =
         dbQuery(GET_TAG) {
@@ -196,6 +200,51 @@ class InvoiceDatabase(
                 .map { it.toInvoice() }
         }
 
+    /**
+     * Invoices paid from [fromMillis] up to but not including [toMillis], oldest payment first, for the reports.
+     * Null when the read failed
+     */
+    fun getPaidBetween(fromMillis: Long, toMillis: Long): List<Invoice>? =
+        dbQuery(RANGE_TAG) {
+            InvoiceTable
+                .selectAll()
+                .where {
+                    (InvoiceTable.status eq InvoiceStatus.PAID.name) and
+                        (InvoiceTable.paidAt greaterEq fromMillis) and (InvoiceTable.paidAt less toMillis)
+                }
+                .orderBy(InvoiceTable.paidAt to SortOrder.ASC)
+                .map { it.toInvoice() }
+        }
+
+    /**
+     * Keeps what each part on the invoice costs now on its line, for the profit report. Called in the transaction
+     * that pays it, before the invoice can't change any more
+     */
+    fun recordCosts(identifier: Uuid): Boolean =
+        dbWrite(COST_TAG) {
+            InvoiceChargeTable
+                .select(InvoiceChargeTable.id, InvoiceChargeTable.inventory)
+                .where { (InvoiceChargeTable.invoice eq identifier) and InvoiceChargeTable.inventory.isNotNull() }
+                .toList()
+                .forEach { row ->
+                    val item = row[InvoiceChargeTable.inventory]?.let { runCatching { Uuid.parse(it) }.getOrNull() } ?: return@forEach
+                    val cost = InventoryTable.select(InventoryTable.costCents).where { InventoryTable.id eq item }.singleOrNull()?.get(InventoryTable.costCents)
+                    InvoiceChargeTable.update(where = { InvoiceChargeTable.id eq row[InvoiceChargeTable.id] }) { it[costCents] = cost }
+                }
+            true
+        }
+
+    /** Each part line's kept cost, by line, for the lines on [invoices] that have one. Null when the read failed */
+    fun costs(invoices: List<Uuid>): Map<Uuid, Long>? =
+        dbQuery(COST_TAG) {
+            invoices.chunked(COST_CHUNK).flatMap { chunk ->
+                InvoiceChargeTable
+                    .select(InvoiceChargeTable.id, InvoiceChargeTable.costCents)
+                    .where { (InvoiceChargeTable.invoice inList chunk) and InvoiceChargeTable.costCents.isNotNull() }
+                    .map { it[InvoiceChargeTable.id].value to it[InvoiceChargeTable.costCents]!! }
+            }.toMap()
+        }
+
     /** The customer's invoices, newest first. Null when the read failed */
     fun getByCustomer(customerIdentifier: Uuid, limit: Int): List<Invoice>? =
         dbQuery(GET_TAG) {
@@ -282,5 +331,6 @@ class InvoiceDatabase(
 
     companion object {
         private val NUMBER_LOCK = Any()
+        private const val COST_CHUNK = 500
     }
 }

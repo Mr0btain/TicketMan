@@ -58,6 +58,9 @@ object InvoiceChargeTable : UuidTable("invoice_charges") {
 
     // Added with warranties: the line's own warranty, null for the shop's
     val warrantyDays = integer("warranty_days").nullable()
+
+    // Added with reports: one part's cost when the invoice was paid, null before then or for other lines
+    val costCents = long("cost_cents").nullable()
 }
 
 /** Money taken against an invoice, and refunds as negative amounts */

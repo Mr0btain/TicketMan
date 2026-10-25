@@ -25,6 +25,7 @@ import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
+import org.mr0btain.ticketman.ui.screens.admin.reports.AdminReportsTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
 import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
@@ -91,6 +92,10 @@ private fun AdminContent(
     val messageSettings by admin.messages.settings.collectAsState()
     val outbox by admin.messages.outbox.collectAsState()
     val outboxEnd by admin.messages.outboxEnd.collectAsState()
+    val report by admin.reports.report.collectAsState()
+    val reportRange by admin.reports.range.collectAsState()
+    val commissions by admin.reports.commissions.collectAsState()
+    val reportUsers by admin.reports.users.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
     val auditEndReached by admin.auditEndReached.collectAsState()
     val serverUrl by viewModel.settings.serverUrl.collectAsState()
@@ -321,6 +326,20 @@ private fun AdminContent(
             AdminTab.INVOICES -> AdminInvoicesTab(
                 viewModel = viewModel,
                 onOpenTicket = onOpenTicketAtCounter
+            )
+
+            AdminTab.REPORTS -> AdminReportsTab(
+                report = report,
+                range = reportRange,
+                days = admin.reports.days(),
+                commissions = commissions,
+                users = reportUsers,
+                defaultPaper = shopProfile?.defaultPaper ?: PaperSize.RECEIPT_80MM,
+                isBusy = isLoading,
+                onPick = { admin.reports.pick(it) },
+                onShowDays = { from, to -> admin.reports.showDays(from, to) },
+                onPrint = { paper, onResult -> admin.reports.print(paper, onResult) },
+                onSaveCommissions = { rates, onSaved -> admin.reports.saveCommissions(rates, onSaved) }
             )
 
             AdminTab.SERVER -> AdminServerTab(

@@ -32,6 +32,7 @@ data class TaxRate(
  * @param name The class's name, or "Tax" for the shop's main rate
  * @param taxableCents What it was charged on, after its share of the discount
  */
+@Serializable
 data class TaxLine(
     val name: String,
     val basisPoints: Int,

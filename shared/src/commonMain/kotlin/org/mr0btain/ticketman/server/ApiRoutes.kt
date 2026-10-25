@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 11
+const val API_VERSION = 12
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -32,6 +32,7 @@ object ApiRoutes {
     const val GIFT_CARD = "/api/giftcard"
     const val PURCHASE = "/api/purchase"
     const val ESTIMATE = "/api/estimate"
+    const val REPORT = "/api/report"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -249,6 +250,15 @@ object NotifyPaths {
 
     /** Body `TicketMessageRequest`: sends one to the ticket's customer now */
     const val TICKET_SEND = "/ticket/{identifier}/send"
+}
+
+/** Under [ApiRoutes.REPORT], admin only */
+object ReportPaths {
+    /** `?from=&to=` days like 2026-10-01, both included: a `PeriodReport` */
+    const val PERIOD = "/period"
+
+    /** Each user's commission on labor, read and replaced as a whole list */
+    const val COMMISSIONS = "/commissions"
 }
 
 object PurchasePaths {

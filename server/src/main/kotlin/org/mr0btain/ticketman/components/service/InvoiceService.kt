@@ -194,6 +194,7 @@ class InvoiceService(
                 }
 
                 loadGiftCards(invoice)
+                invoices.recordCosts(invoice.identifier)
                 invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
                 // The warranty starts now, as long as the longest a line gives
                 val days = Warranty.days(invoice.charges, shop.get().warrantyDays)
@@ -252,6 +253,7 @@ class InvoiceService(
                     }
 
                     loadGiftCards(invoice)
+                    invoices.recordCosts(invoice.identifier)
                     invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
                     auditLog.log(actor, AuditAction.CREATE, "invoice", invoice.identifier.toString(), "Sold ${invoice.label}, ${money(totals.totalCents)}")
                     invoice.identifier

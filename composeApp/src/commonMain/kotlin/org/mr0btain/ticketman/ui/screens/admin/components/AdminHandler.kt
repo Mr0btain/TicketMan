@@ -61,6 +61,9 @@ class AdminHandler(
 
     val messages = AdminMessages(remoteHandler, support)
 
+    /** Reports tab */
+    val reports = AdminReports(remoteHandler, support, shopProfile = { server.shopProfile.value })
+
     /** Server tab */
     val server = AdminServer(remoteHandler, support, onShopChanged, onSeeded = {
         onUsersChanged(null)
@@ -119,6 +122,11 @@ class AdminHandler(
                         // For the statuses that can send a message
                         server.reloadShopProfile()
                     }
+                    AdminTab.REPORTS -> {
+                        reports.reload()
+                        // For the printout's header and paper size
+                        server.reloadShopProfile()
+                    }
                     AdminTab.AUDIT -> loadAudit(reset = true)
                 }
             }
@@ -128,7 +136,8 @@ class AdminHandler(
     /**
      * The periodic check for updates on [tab]: like [refresh] but with no loading spinner, and leaving alone what
      * would lose someone's place: the audit log and invoices (reloading starts them from the top), the end of day
-     * report (they may be looking at another day) and the shop profile (it may be half edited)
+     * report (they may be looking at another day), the reports (commission rates may be half edited) and the shop
+     * profile (it may be half edited)
      */
     fun checkForUpdates(tab: AdminTab) {
         scope.launch {
@@ -141,7 +150,7 @@ class AdminHandler(
                 AdminTab.LOW_STOCK -> loadLowStock()
                 AdminTab.SERVER -> server.reloadStatus()
                 AdminTab.MESSAGES -> messages.reloadOutbox()
-                AdminTab.USERS, AdminTab.INVOICES, AdminTab.AUDIT -> Unit
+                AdminTab.USERS, AdminTab.INVOICES, AdminTab.REPORTS, AdminTab.AUDIT -> Unit
             }
         }
     }
@@ -221,6 +230,7 @@ class AdminHandler(
         accounts.clear()
         devices.clear()
         server.clear()
+        reports.clear()
         import.close()
     }
 
