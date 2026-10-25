@@ -21,6 +21,8 @@ import org.mr0btain.ticketman.data.ticket.StatusChoice
  * @param partsOrderedStatus Where a ticket goes when a part ordered for it is sent to the supplier, like "Awaiting
  * parts". Null leaves it
  * @param partsArrivedStatus Where it goes once every part ordered for it has arrived, null leaves it
+ * @param warrantyDays How long repairs are guaranteed from pickup, for labor and parts lines that don't say. 0 for
+ * no warranty
  * @param checklists The shop's own intake checklists, by kind of device. Kinds without one use
  * [org.mr0btain.ticketman.data.ticket.IntakeChecklists.defaults]
  */
@@ -54,7 +56,8 @@ data class ShopProfile(
     val taxClasses: List<TaxClass> = emptyList(),
     val partsOrderedStatus: StatusChoice? = null,
     val partsArrivedStatus: StatusChoice? = null,
-    val checklists: List<IntakeChecklist> = emptyList()
+    val checklists: List<IntakeChecklist> = emptyList(),
+    val warrantyDays: Int = 0
 ) {
     /** [taxRate] in basis points, 0 when it's blank or not a number */
     val taxBasisPoints: Int

@@ -60,7 +60,8 @@ object PrintTemplates {
             ticket.estimateCents?.let { PrintBlock.Field("Estimate", Money.format(it, shop.currencySymbol)) },
             invoice?.paidCents?.takeIf { it > 0 }?.let { PrintBlock.Field("Deposit paid", Money.format(it, shop.currencySymbol)) },
             // Never the passcode itself, only that the shop has it
-            if (ticket.passcodeSet) PrintBlock.Field("Passcode", "Given, kept private") else null
+            if (ticket.passcodeSet) PrintBlock.Field("Passcode", "Given, kept private") else null,
+            if (ticket.warrantyOf != null) PrintBlock.Field("Warranty", "Return of an earlier repair") else null
         ) + checklistBlocks(ticket) + signatureBlocks(signature) + listOf(
             PrintBlock.Divider,
             PrintBlock.Text("Bring this slip or your ticket number when you pick up.", small = true, centered = true)
@@ -79,7 +80,8 @@ object PrintTemplates {
             ticket?.let { PrintBlock.Field("Ticket", it.label) },
             PrintBlock.Field("Date", formatDateTime(invoice.paidAt ?: invoice.createdAt)),
             customer?.let { PrintBlock.Field("Customer", it.name) },
-            ticket?.let { PrintBlock.Field("Device", it.device.toString().trim()) }
+            ticket?.let { PrintBlock.Field("Device", it.device.toString().trim()) },
+            ticket?.warrantyUntil?.let { PrintBlock.Field("Warranty until", formatDate(it)) }
         )
 
         return PrintDocument("Receipt ${invoice.label}", shopHeader(shop) + PrintBlock.Divider + PrintBlock.Heading("Receipt") + details + money(shop, invoice))

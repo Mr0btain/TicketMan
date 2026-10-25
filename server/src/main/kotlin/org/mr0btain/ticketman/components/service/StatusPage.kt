@@ -30,7 +30,8 @@ object StatusPage {
 
         val headline = when (view.current.status) {
             TicketStatusType.DONE -> "It's ready to pick up."
-            TicketStatusType.PICKED_UP -> ticket.pickedUpAt?.let { "Picked up ${formatDate(it)}. Thanks for coming in." } ?: "Picked up. Thanks for coming in."
+            TicketStatusType.PICKED_UP -> (ticket.pickedUpAt?.let { "Picked up ${formatDate(it)}. Thanks for coming in." } ?: "Picked up. Thanks for coming in.") +
+                (ticket.warrantyUntil?.let { " The repair is under warranty until ${formatDate(it)}." } ?: "")
             else -> "We're working on it."
         }
 

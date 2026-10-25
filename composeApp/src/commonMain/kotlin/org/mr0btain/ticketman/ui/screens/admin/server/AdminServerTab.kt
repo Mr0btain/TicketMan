@@ -514,6 +514,17 @@ private fun ShopProfileCard(
 
         TaxClassesEditor(classes = profile.taxClasses, onChange = { profile = profile.copy(taxClasses = it) })
 
+        TmTextField(
+            modifier = Modifier.width(240.dp),
+            value = profile.warrantyDays.takeIf { it > 0 }?.toString().orEmpty(),
+            onValueChange = { text -> profile = profile.copy(warrantyDays = text.filter { it.isDigit() }.take(4).toIntOrNull()?.coerceAtMost(3650) ?: 0) },
+            label = "Repair warranty",
+            placeholder = "None",
+            supportingText = "Days from pickup that labor and parts are guaranteed",
+            textStyle = TmTheme.typography.numeric,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+
         ChecklistsEditor(checklists = profile.checklists, onChange = { profile = profile.copy(checklists = it) })
 
         TmFieldPair(

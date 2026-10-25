@@ -59,3 +59,18 @@ object InvoiceMath {
         )
     }
 }
+
+/** How long a repair's warranty runs */
+object Warranty {
+    /**
+     * Days of warranty an invoice's lines give, the longest of them: each labor or part line's own, or the shop's
+     * [defaultDays] when it doesn't say. Other lines give none
+     */
+    fun days(charges: List<Charge>, defaultDays: Int): Int =
+        charges.filter { it.type == ChargeType.LABOR || it.type == ChargeType.PART }
+            .maxOfOrNull { it.warrantyDays ?: defaultDays }
+            ?.coerceAtLeast(0) ?: 0
+
+    const val MAX_DAYS = 3650
+    const val DAY_MILLIS = 24L * 60 * 60 * 1000
+}

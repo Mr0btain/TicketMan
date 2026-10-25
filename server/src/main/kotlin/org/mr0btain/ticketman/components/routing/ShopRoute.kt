@@ -10,6 +10,7 @@ import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.invoice.TaxClasses
+import org.mr0btain.ticketman.data.invoice.Warranty
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.CustomStatusRules
@@ -54,6 +55,11 @@ fun Route.shopRoute(
 
             ShopProfile.publicUrlProblem(profile.publicUrl)?.let { problem ->
                 call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
+            if (profile.warrantyDays !in 0..Warranty.MAX_DAYS) {
+                call.respond(HttpStatusCode.BadRequest, "Warranty can be 0 to ${Warranty.MAX_DAYS} days")
                 return@post
             }
 

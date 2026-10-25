@@ -124,6 +124,7 @@ class InvoiceDatabase(
                     row[InvoiceChargeTable.taxable] = charge.taxable
                     row[InvoiceChargeTable.reference] = charge.reference
                     row[InvoiceChargeTable.taxClass] = charge.taxClass
+                    row[InvoiceChargeTable.warrantyDays] = charge.warrantyDays
                 }
             }
 
@@ -231,7 +232,8 @@ class InvoiceDatabase(
                     inventoryIdentifier = row[InvoiceChargeTable.inventory]?.let { Uuid.parse(it) },
                     taxable = row[InvoiceChargeTable.taxable],
                     reference = row[InvoiceChargeTable.reference],
-                    taxClass = row[InvoiceChargeTable.taxClass]
+                    taxClass = row[InvoiceChargeTable.taxClass],
+                    warrantyDays = row[InvoiceChargeTable.warrantyDays]
                 )
             }
 

@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
+import org.mr0btain.ticketman.components.utils.formatDate
+import kotlin.time.Clock
 import org.mr0btain.ticketman.data.ticket.CheckResult
 import org.mr0btain.ticketman.data.ticket.ChecklistItem
 import org.mr0btain.ticketman.data.ticket.IntakeChecklist
@@ -106,6 +108,9 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
     /** The device's passcode or pattern, blank when they didn't give one */
     var passcode by mutableStateOf("")
 
+    /** The earlier repair this is a warranty return of, picked from the repeat warning */
+    var warrantyOf by mutableStateOf<TicketSummary?>(null)
+
     /** What to check on this kind of device, the shop's list or the default */
     val checklistItems: List<String>
         get() = IntakeChecklists.itemsFor(kind, checklists)
@@ -141,6 +146,7 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
         pick(null)
         checks.clear()
         passcode = ""
+        warrantyOf = null
         condition = ""
         accessories = ""
         problem = ""
@@ -157,7 +163,8 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
             accessories = accessories.trim(),
             estimateCents = estimateCents.takeIf { it > 0 },
             promisedAt = promisedInDays?.let { promiseTimeInDays(it) },
-            checklist = checklistItems.map { ChecklistItem(it, checks[it] ?: CheckResult.NOT_TESTED) }
+            checklist = checklistItems.map { ChecklistItem(it, checks[it] ?: CheckResult.NOT_TESTED) },
+            warrantyOf = warrantyOf?.ticket?.identifier
         )
 
     val depositCents: Long?
@@ -495,7 +502,16 @@ private fun DeviceStep(
         )
     }
 
-    if (repeats.isNotEmpty()) {
+    form.warrantyOf?.let { original ->
+        TmNotice(
+            kind = TmNoticeKind.SUCCESS,
+            text = "Warranty return for ${original.ticket.label}, covered until ${original.ticket.warrantyUntil?.let { formatDate(it) }}. Its work starts free."
+        )
+        TmButton(text = "Not a warranty return", onClick = { form.warrantyOf = null }, variant = TmButtonVariant.GHOST)
+    }
+
+    if (repeats.isNotEmpty() && form.warrantyOf == null) {
+        val now = remember { Clock.System.now().toEpochMilliseconds() }
         TmPanel(title = "Possible repeat repair", icon = Res.drawable.alert_triangle) {
             TmNotice(
                 kind = TmNoticeKind.WARNING,
@@ -505,12 +521,20 @@ private fun DeviceStep(
             Column {
                 repeats.forEach { summary ->
                     val ticket = summary.ticket
+                    val covered = ticket.underWarranty(now)
                     TmListRow(
                         title = ticket.problem.ifBlank { "No problem noted" },
-                        subtitle = ticket.pickedUpAt?.let { "Picked up ${formatTimeAgo(it)}" }
-                            ?: "Checked in ${formatTimeAgo(ticket.identifier.timestampMillis())}",
+                        subtitle = listOfNotNull(
+                            ticket.pickedUpAt?.let { "Picked up ${formatTimeAgo(it)}" } ?: "Checked in ${formatTimeAgo(ticket.identifier.timestampMillis())}",
+                            ticket.warrantyUntil?.let { if (covered) "under warranty until ${formatDate(it)}" else "warranty ended ${formatDate(it)}" }
+                        ).joinToString(", "),
                         leading = { TmTicketIdText(ticket.label, Modifier.width(104.dp)) },
-                        trailing = { TmButton(text = "Open", onClick = { onOpenTicket(ticket.identifier) }, variant = TmButtonVariant.GHOST) }
+                        trailing = {
+                            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
+                                if (covered) TmButton(text = "Warranty return", onClick = { form.warrantyOf = summary }, variant = TmButtonVariant.SECONDARY, size = TmControlSize.SMALL)
+                                TmButton(text = "Open", onClick = { onOpenTicket(ticket.identifier) }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                            }
+                        }
                     )
                 }
             }
@@ -706,6 +730,7 @@ private fun ReviewStep(form: CheckInForm, needsSignature: Boolean) {
                 TmKeyValueRow(label = "Checked", value = if (faulty.isEmpty()) "Nothing faulty" else "Faulty: ${faulty.joinToString(", ")}")
             }
             if (form.passcode.isNotBlank()) TmKeyValueRow(label = "Passcode", value = "Given")
+            form.warrantyOf?.let { TmKeyValueRow(label = "Warranty return", value = "for ${it.ticket.label}") }
             TmKeyValueRow(label = "Priority", value = formatEnumName(form.priority.priority.name))
             if (form.estimateCents > 0) TmKeyValueRow(label = "Estimate", value = formatMoney(form.estimateCents), numeric = true)
             TmKeyValueRow(label = "Promised", value = form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")

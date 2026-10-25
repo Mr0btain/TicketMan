@@ -29,6 +29,8 @@ lines are saved. Paid and void invoices keep the rate they had.
 - **`taxClasses`** are the shop's other tax rates (`TaxClass { identifier, name, rate }`, `rate` a percent as
   typed), for lines and inventory items taxed differently from `taxRate`. An invoice keeps the classes it was made
   with in its `taxRates`, and picks up one made later when a line first uses it.
+- **`warrantyDays`** is how long repairs are guaranteed from pickup, 0 to 3650, for labor and part lines that don't
+  set their own `warrantyDays`. 0 is none.
 - **`checklists`** are the shop's own intake checklists (`IntakeChecklist { kind, items }`), one per `DeviceKind`;
   a kind without one uses the built in list (`IntakeChecklists.defaults`), and an empty list means nothing's
   checked. Items are saved trimmed, blank and repeated ones dropped, up to 30 of 60 characters each.
@@ -41,7 +43,7 @@ lines are saved. Paid and void invoices keep the rate they had.
   statuses that break the rules: a blank or over 40 character name, two in use with the same name or a built-in
   one's, one acting as `PICKED_UP`, more than 40, or a saved one whose `actsAs` changed; an estimate or parts status
   staff couldn't pick (picked up, retired or unknown); or a tax class with no name, a rate that isn't 0 to 100, or the
-  same identifier twice.
+  same identifier twice; or a warranty outside 0 to 3650 days.
 
 ## See also
 

@@ -229,6 +229,7 @@ class TicketDatabase(
             deviceRef = data.deviceIdentifier
             group = data.groupIdentifier
             checklist = data.checklist
+            warrantyOf = data.warrantyOf
             // Never the client's, so nobody picks a link they know
             statusToken = newStatusToken()
         }
@@ -330,13 +331,15 @@ class TicketDatabase(
         }
 
     /** Closes a ticket as picked up at [time] */
-    fun markPickedUp(identifier: Uuid, time: Long): Boolean =
+    /** @param warrantyUntil When its repair's warranty runs out, null for none */
+    fun markPickedUp(identifier: Uuid, time: Long, warrantyUntil: Long? = null): Boolean =
         dbWrite(MARK_PICKED_UP_TAG) {
             val ticket = TicketEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(MARK_PICKED_UP_TAG, TicketError.NOT_FOUND) }
 
             ticket.status = TicketStatus(TicketStatusType.PICKED_UP, time)
             ticket.pickedUpAt = time
+            ticket.warrantyUntil = warrantyUntil
             true
         }
 

@@ -452,6 +452,23 @@ _, history = call("GET", f"/api/data/customer/device/{devices[0]['identifier']}/
 check(len(history) == 2, f"history {len(history)}")
 step(f"Jane's iPhone is on file from her first visit; she brings it back with her watch: two linked tickets ({visited['ticket']['number']['sequence']} and {visited['linked'][0]['number']['sequence']}), the iPhone's history now two repairs")
 
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+call("POST", "/api/shop/update", {**shop, "warrantyDays": 90}, admin, expect=202)
+battery_ticket = visited["ticket"]["identifier"]
+call("POST", f"/api/data/ticket/add/work/{battery_ticket}", {"type": "LABOR", "description": "Battery swap", "quantity": 1, "unitPriceCents": 4000}, pin, expect=201)
+_, bill = call("GET", f"/api/invoice/ticket/{battery_ticket}", token=pin, expect=200)
+call("POST", "/api/counter/pickup", {"ticketIdentifier": battery_ticket, "payments": [{"method": "CARD", "amountCents": bill["totalCents"]}]}, pin, expect=200)
+_, swapped = call("GET", f"/api/data/ticket/get/{battery_ticket}", token=pin, expect=200)
+check(swapped["warrantyUntil"] - swapped["pickedUpAt"] == 90 * 24 * 3600 * 1000, f"warranty {swapped}")
+_, back = call("POST", "/api/counter/check-in", {
+    "ticket": {"identifier": uid(), "device": devices[0]["device"], "problem": "Battery drains again", "warrantyOf": battery_ticket},
+    "customerIdentifier": jane, "deviceIdentifier": devices[0]["identifier"], "signature": visit["signature"]
+}, pin, expect=201)
+call("POST", f"/api/data/ticket/add/work/{back['ticket']['identifier']}", {"type": "LABOR", "description": "Battery swap again", "quantity": 1}, pin, expect=201)
+_, free = call("GET", f"/api/invoice/ticket/{back['ticket']['identifier']}", token=pin, expect=200)
+check(free["totalCents"] == 0 and back["ticket"]["warrantyOf"] == battery_ticket, f"warranty return {free['totalCents']}")
+step("With a 90 day warranty, the iPhone's battery swap is picked up covered; it comes back as a warranty return and the redo starts free")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

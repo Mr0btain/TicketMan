@@ -41,8 +41,15 @@ data class Ticket(
     val checklist: List<ChecklistItem> = emptyList(),
     /** Whether a passcode is on file, which is kept encrypted apart from the ticket. The server's to set */
     val passcodeSet: Boolean = false,
+    /** Epoch millis the repair's warranty runs out, set at pickup from the invoice's lines. Null for none */
+    val warrantyUntil: Long? = null,
+    /** The earlier ticket this is a warranty return of, set at check in. Its work is free unless staff charge */
+    val warrantyOf: Uuid? = null,
 ): MainItem(), SubItem {
     /** Number if it has one, otherwise the start of the identifier */
     val label: String
         get() = number?.toString() ?: identifier.toString().substringBefore("-")
+
+    /** Whether its warranty still covers it at [now] */
+    fun underWarranty(now: Long): Boolean = warrantyUntil?.let { it >= now } == true
 }

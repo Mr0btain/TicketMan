@@ -36,6 +36,10 @@ object TicketTable: UuidTable("tickets") {
     val checklist = json<List<ChecklistItem>>("checklist", Json { ignoreUnknownKeys = true }).default(emptyList())
     val passcodeSet = bool("passcode_set").default(false)
 
+    // Added with warranties: when it runs out, set at pickup, and the ticket this is a warranty return of
+    val warrantyUntil = long("warranty_until").nullable()
+    val warrantyOf = uuid("warranty_of").nullable()
+
     // Unique on (year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"
 

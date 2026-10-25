@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -88,6 +90,10 @@ fun PickupScreen(
             }
         )
 
+        if (ticket.warrantyOf != null) {
+            TmNotice(text = "A warranty return: its work starts free, charge only for what the warranty doesn't cover.", kind = TmNoticeKind.INFO)
+        }
+
         // Side by side when there's room. On narrow windows each panel takes the width and each line takes two rows
         BoxWithConstraints {
             val compact = maxWidth < INVOICE_MIN_WIDTH
@@ -104,7 +110,7 @@ fun PickupScreen(
                     subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else if (drafts.size == 1) "1 line" else "${drafts.size} lines",
                     icon = Res.drawable.file_text
                 ) {
-                    ChargeLines(drafts = drafts, compact = compact, laborCents = ticket.estimateCents ?: 0, onSearchParts = onSearchParts, giftCards = true, onFindCode = onFindCode)
+                    ChargeLines(drafts = drafts, compact = compact, laborCents = if (ticket.warrantyOf != null) 0 else ticket.estimateCents ?: 0, onSearchParts = onSearchParts, giftCards = true, onFindCode = onFindCode)
 
                     TmMoneyField(
                         modifier = Modifier.width(200.dp),

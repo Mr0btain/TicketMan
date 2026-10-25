@@ -30,6 +30,8 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var group by TicketTable.group
     var checklist by TicketTable.checklist
     val passcodeSet by TicketTable.passcodeSet
+    var warrantyUntil by TicketTable.warrantyUntil
+    var warrantyOf by TicketTable.warrantyOf
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -51,7 +53,9 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             deviceIdentifier = deviceRef,
             groupIdentifier = group,
             checklist = checklist,
-            passcodeSet = passcodeSet
+            passcodeSet = passcodeSet,
+            warrantyUntil = warrantyUntil,
+            warrantyOf = warrantyOf
         )
     }
 }

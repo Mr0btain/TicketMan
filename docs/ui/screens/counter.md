@@ -117,7 +117,12 @@ and the ticket card's **Related repairs** shows the tickets checked in with it a
 The device step also has the **intake checklist** for the device's kind (the shop's list from its profile, or the
 built in one), each item marked works, faulty or not tested, and an optional **passcode**. On the ticket card the
 **Intake** panel (`IntakePanel`) shows the checklist, and for staff who can edit, **Show** fetches the passcode (an
-audited read) and hides it again after a minute, with **Change** and **Clear**. The stepper only opens a step
+audited read) and hides it again after a minute, with **Change** and **Clear**.
+
+The repeat warning on the device step says whether each earlier repair is still under warranty, with **Warranty
+return** for one that is: the ticket is checked in as its return (`warrantyOf`), its work starting free. The
+ticket card badges warranty returns and shows how long a picked up repair is covered; pickup says a warranty
+return's work starts free. The stepper only opens a step
 when every step before it is filled in. The form makes the ticket's id up front, so the **repeat check** can leave
 it out: half a second after the device stops changing, it asks the server for this customer's earlier tickets for
 the same device and warns if it's been in recently.

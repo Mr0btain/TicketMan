@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.components.utils.formatDate
+import kotlin.time.Clock
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -120,6 +122,7 @@ fun TicketCard(
                     TmStatusBadge(ticket.status.choice)
                     TmPriorityBadge(ticket.priority.priority)
                     if (ticket.isOverdue) TmBadge(text = "Overdue", tone = colors.danger, solid = true)
+                    if (ticket.warrantyOf != null) TmBadge(text = "Warranty return", tone = colors.accent)
                 }
             },
             // Anyone can print, restricted users included. Staff who can edit get it beside the other actions
@@ -188,6 +191,10 @@ fun TicketCard(
                                 }
                                 ticket.pickedUpAt?.let { TmKeyValueRow(label = "Picked up", value = formatDateTime(it)) }
                                 ticket.estimateCents?.let { TmKeyValueRow(label = "Estimate") { TmMoneyText(it) } }
+                                ticket.warrantyUntil?.let { until ->
+                                    val covered = until >= Clock.System.now().toEpochMilliseconds()
+                                    TmKeyValueRow(label = if (covered) "Warranty until" else "Warranty ended", value = formatDate(until))
+                                }
                             }
                         }
 

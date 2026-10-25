@@ -52,6 +52,9 @@ object InvoiceChargeTable : UuidTable("invoice_charges") {
     // Added with gift cards: the card's code on a GIFT_CARD line
     val reference = text("reference").default("")
     val taxClass = text("tax_class").nullable()
+
+    // Added with warranties: the line's own warranty, null for the shop's
+    val warrantyDays = integer("warranty_days").nullable()
 }
 
 /** Money taken against an invoice, and refunds as negative amounts */

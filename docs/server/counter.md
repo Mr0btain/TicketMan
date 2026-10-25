@@ -134,7 +134,9 @@ Then, in one `transaction { }`:
 2. take each part's quantity out of stock (untracked items are left alone). If a count set by hand since step 4
    leaves too few, this throws, the whole transaction rolls back and the answer is the same `409`,
 3. mark the invoice `PAID` with the time,
-4. set the ticket's `pickedUpAt` and status `PICKED_UP`, and record the status change,
+4. set the ticket's `pickedUpAt`, status `PICKED_UP` and `warrantyUntil` (shared `Warranty.days`: the longest of
+   the labor and part lines' `warrantyDays`, the shop's `warrantyDays` for those that don't say), record the status
+   change, and clear its passcode,
 5. write the audit entry.
 
 The response is the paid invoice, which the client uses for the receipt.

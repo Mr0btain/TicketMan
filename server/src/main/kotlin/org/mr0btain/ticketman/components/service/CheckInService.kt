@@ -6,6 +6,8 @@ import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.DeviceDatabase
 import org.mr0btain.ticketman.components.database.PasscodeDatabase
 import org.mr0btain.ticketman.data.ticket.IntakeChecklists
+import org.mr0btain.ticketman.data.ticket.Ticket
+import org.mr0btain.ticketman.components.utils.formatDate
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.StoredValueDatabase
@@ -74,9 +76,10 @@ class CheckInService(
             }
             if (item.passcode.trim().length > IntakeChecklists.MAX_PASSCODE) return AccountResult.Invalid("A passcode can be up to ${IntakeChecklists.MAX_PASSCODE} characters")
             if (item.passcode.isNotBlank() && vault == null) return AccountResult.Invalid("Passcodes can't be kept on this server")
+            warrantyProblem(ticket, received.customerIdentifier)?.let { return AccountResult.Invalid(it) }
 
-            // The passcode is the server's to say is set, the ticket can't claim one
-            item.copy(ticket = ticket.copy(passcodeSet = false))
+            // The passcode is the server's to say is set, the ticket can't claim one, nor a warranty of its own yet
+            item.copy(ticket = ticket.copy(passcodeSet = false, warrantyUntil = null))
         }
         if (items.map { it.ticket.identifier }.toSet().size != items.size) return AccountResult.Invalid("Each device needs its own ticket")
         if (items.size > MAX_DEVICES) return AccountResult.Invalid("Check in up to $MAX_DEVICES devices at once")
@@ -193,6 +196,15 @@ class CheckInService(
         val made = CustomerDevice(customerIdentifier = customer, device = typed, createdAt = now)
         if (!devices.add(made)) throw IllegalStateException("Device not saved")
         return made.identifier
+    }
+
+    // A warranty return has to be of one of the customer's tickets that's still covered
+    private fun warrantyProblem(ticket: Ticket, customer: Uuid): String? {
+        val original = ticket.warrantyOf?.let { tickets.getById(it) } ?: return if (ticket.warrantyOf != null) "That ticket doesn't exist" else null
+        if (tickets.getCustomer(original.identifier)?.identifier != customer) return "Ticket ${original.label} isn't the customer's"
+        val until = original.warrantyUntil ?: return "Ticket ${original.label} has no warranty"
+        if (until < Clock.System.now().toEpochMilliseconds()) return "Ticket ${original.label}'s warranty ran out on ${formatDate(until)}"
+        return null
     }
 
     companion object {

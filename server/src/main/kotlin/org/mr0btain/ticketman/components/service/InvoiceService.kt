@@ -166,7 +166,9 @@ class InvoiceService(
 
                 loadGiftCards(invoice)
                 invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
-                tickets.markPickedUp(ticket.identifier, now)
+                // The warranty starts now, as long as the longest a line gives
+                val days = Warranty.days(invoice.charges, shop.get().warrantyDays)
+                tickets.markPickedUp(ticket.identifier, now, if (days > 0) now + days * Warranty.DAY_MILLIS else null)
                 tickets.recordStatusChange(ticket.identifier, TicketStatus(TicketStatusType.PICKED_UP), receivedBy)
                 // The device is the customer's again, its passcode isn't ours to keep
                 passcodes.clear(ticket.identifier)
@@ -451,7 +453,8 @@ class InvoiceService(
                 type = request.type,
                 description = request.description.trim().ifBlank { item?.name.orEmpty() },
                 quantity = request.quantity,
-                unitPriceCents = request.unitPriceCents ?: if (request.type == WorkType.PART) item!!.priceCents else shop.get().laborRateCents,
+                // A warranty return's work is free unless a price is given
+                unitPriceCents = request.unitPriceCents ?: if (ticket.warrantyOf != null) 0 else if (request.type == WorkType.PART) item!!.priceCents else shop.get().laborRateCents,
                 inventoryIdentifier = item?.identifier,
                 userIdentifier = userIdentifier,
                 userName = userName,
@@ -569,6 +572,7 @@ class InvoiceService(
                 charge.type == ChargeType.PART && charge.inventoryIdentifier == null -> return "Parts need an inventory item"
                 charge.type == ChargeType.PART && charge.quantity % 1.0 != 0.0 -> return "Parts are counted in whole numbers"
                 charge.inventoryIdentifier != null && inventory.getById(charge.inventoryIdentifier!!) == null -> return "Inventory item for \"${charge.description}\" doesn't exist"
+                (charge.warrantyDays ?: 0) !in 0..Warranty.MAX_DAYS -> return "A line's warranty can be 0 to ${Warranty.MAX_DAYS} days"
                 charge.type == ChargeType.GIFT_CARD && (charge.quantity != 1.0 || charge.taxable || charge.inventoryIdentifier != null) -> return "A gift card line is one card, untaxed"
                 charge.type == ChargeType.GIFT_CARD && charge.unitPriceCents <= 0 -> return "Put an amount on the gift card"
                 charge.type == ChargeType.GIFT_CARD && charge.reference.isNotBlank() && GiftCardCode.problem(charge.reference) != null -> return GiftCardCode.problem(charge.reference)

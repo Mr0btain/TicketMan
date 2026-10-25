@@ -22,12 +22,14 @@ or none of them. The ticket gets its number here.
   devices left at the same visit: each gets its own numbered ticket, all sharing a `groupIdentifier` (the first
   ticket's id), the same technician and signature; the deposit goes on the first. Up to 10 devices. `passcode`
   (and each item's) is the device's [passcode](ticket.md#passcode), sealed and kept apart from the ticket; each
-  ticket's `checklist` is the intake checklist as filled in.
+  ticket's `checklist` is the intake checklist as filled in. A ticket with `warrantyOf` is a warranty return of
+  that earlier ticket, which has to be the customer's and still under warranty.
 - **`201`** `CheckInResponse { ticket, invoice, linked }`, with the numbered ticket, the invoice if a deposit made
   one, and the other tickets made with it.
 - **`400`** with the reason: a ticket id isn't a version 7 UUID or is used twice, a picked device isn't the
   customer's, more than 10 devices, no such customer, no make or model, no problem,
-  a status other than in progress or on hold (or one of the shop's own counting as them; an unknown or retired one is refused too), a negative estimate, a technician without Normal access, a deposit
+  a status other than in progress or on hold (or one of the shop's own counting as them; an unknown or retired one is refused too), a negative estimate, a warranty return of a ticket that isn't the customer's or whose warranty ran out, a technician without Normal
+  access, a deposit
   of zero or less, or a missing or bad signature. **`409`** a ticket with that id already exists.
 
 ### `POST /api/counter/pickup`
@@ -35,7 +37,9 @@ or none of them. The ticket gets its number here.
 **Auth:** normal
 
 Hands a ticket back: takes the payments, marks the invoice paid, takes the parts from stock and closes the ticket
-as `PICKED_UP`, in one transaction. Makes the invoice if the ticket doesn't have one.
+as `PICKED_UP`, in one transaction, starting its warranty (`warrantyUntil`, the longest a labor or part line gives,
+the shop's `warrantyDays` for lines that don't say) and forgetting its passcode. Makes the invoice if the ticket
+doesn't have one.
 
 - **Body:** `PickupRequest { ticketIdentifier, payments }`. `payments` are the ones taken now; earlier ones (the
   deposit) are already on the invoice.
@@ -92,7 +96,8 @@ profile), to warn at check-in that it's back.
 
 - **Body:** `RepeatCheckRequest { customerIdentifier, device, excludeTicket, deviceIdentifier }`. `excludeTicket`
   leaves out the ticket being checked in. With `deviceIdentifier` (a device picked at check in) that device's
-  tickets match, as well as the serial or make and model.
+  tickets match, as well as the serial or make and model. Each ticket's `warrantyUntil` says whether it's still
+  covered.
 - **`200`** a list of `TicketSummary`, empty when it's not a repeat.
 
 ## See also
