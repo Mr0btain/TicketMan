@@ -15,7 +15,9 @@ import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketStatus
+import org.mr0btain.ticketman.data.shop.Storage
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
@@ -48,18 +50,40 @@ class InvoiceService(
 ) {
     private val storedValue = StoredValuePayments(values) { money(it) }
 
-    /** The ticket's invoice, made if it doesn't have one */
+    /** The ticket's invoice, made if it doesn't have one, with its storage fee brought up to date */
     fun forTicket(ticketIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
-        tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
+        val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
 
         val existing = invoices.getByTicket(ticketIdentifier)
-        if (existing != null) return AccountResult.Done(existing)
+        if (existing != null) return AccountResult.Done(syncStorage(existing, ticket))
 
         val customer = tickets.getCustomer(ticketIdentifier)?.identifier
         val invoice = invoices.getOrCreate(ticketIdentifier, customer, taxRate(), shop.get().taxRates) ?: return AccountResult.Invalid("Couldn't make an invoice")
 
         auditLog.log(actor, AuditAction.CREATE, "invoice", invoice.identifier.toString(), "Invoice ${invoice.label}")
-        return AccountResult.Done(invoice)
+        return AccountResult.Done(syncStorage(invoice, ticket))
+    }
+
+    /**
+     * Puts the storage fee on an open invoice as one line, a day's fee for each day past the free ones, or takes it
+     * off when the ticket isn't ready any more. Not once staff took the line off, which waives it
+     */
+    private fun syncStorage(invoice: Invoice, ticket: Ticket): Invoice = synchronized(CHANGE_LOCK) {
+        if (invoice.status != InvoiceStatus.OPEN || invoice.storageWaived) return invoice
+        val terms = shop.get().storage
+        val days = Storage.feeDays(ticket, terms, Clock.System.now().toEpochMilliseconds())
+        val line = Storage.lineIdentifier(ticket.identifier)
+        val existing = invoice.charges.firstOrNull { it.identifier == line }
+
+        val charges = when {
+            days == 0 && existing == null -> return invoice
+            days == 0 -> invoice.charges.filter { it.identifier != line }
+            existing == null -> invoice.charges + Charge(line, ChargeType.OTHER, Storage.description(days), days.toDouble(), terms.dailyFeeCents, taxable = false)
+            existing.quantity == days.toDouble() -> return invoice
+            else -> invoice.charges.map { if (it.identifier == line) it.copy(quantity = days.toDouble(), description = Storage.description(days)) else it }
+        }
+
+        return invoices.setCharges(invoice.identifier, charges, invoice.discountCents, invoice.taxRateBasisPoints) ?: invoice
     }
 
     /**
@@ -80,6 +104,11 @@ class InvoiceService(
         chargesProblem(charges)?.let { return AccountResult.Invalid(it) }
         if (discount < 0) return AccountResult.Invalid("Discount can't be negative")
         val rates = ratesFor(invoice.taxRates, charges) ?: return AccountResult.Invalid(unknownClass(charges))
+
+        // Taking the storage line off waives it, so it isn't put back
+        invoice.ticketIdentifier?.let { ticket ->
+            if (request.removed.any { it.identifier == Storage.lineIdentifier(ticket) }) invoices.setStorageWaived(identifier)
+        }
 
         val saved = invoices.setCharges(identifier, charges, discount, invoice.taxRateBasisPoints, rates)
             ?: return AccountResult.Invalid("Couldn't save the invoice")

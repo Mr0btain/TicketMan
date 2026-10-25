@@ -33,6 +33,9 @@ object InvoiceTable : UuidTable("invoices") {
     // Added with tax classes: the shop's classes when it was made, see Invoice.taxRates
     val taxRates = json<List<TaxRate>>("tax_rates", Json { ignoreUnknownKeys = true }).default(emptyList())
 
+    // Added with storage terms: staff took the storage line off, so it isn't put back
+    val storageWaived = bool("storage_waived").default(false)
+
     init {
         uniqueIndex("invoices_number_unique", numberYear, numberSequence)
     }

@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.shop.Storage
 import org.mr0btain.ticketman.data.notify.*
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.ticket.StatusChoice
@@ -219,9 +220,37 @@ class NotificationService(
             "link" to StatusLink.url(profile.publicUrl, ticket).orEmpty(),
             "estimate" to estimate?.let { money(it) }.orEmpty(),
             "balance" to money((invoice?.balanceCents ?: 0).coerceAtLeast(0)),
+            "storage" to money(profile.storage.dailyFeeCents),
             "shop" to profile.name,
             "shop_phone" to profile.phone
         )
+    }
+
+    // ------------------------------------------ Storage ------------------------------------------
+
+    /**
+     * Tells each customer whose device is still waiting that storage fees start tomorrow, once since it was ready.
+     * Run by the hourly sweep
+     * @return How many were told
+     */
+    fun queueStorageNotices(): Int {
+        val settings = database.settings()
+        val terms = shop.get().storage
+        if (NotificationEvent.STORAGE_FEE !in settings.events || !terms.chargesFee) return 0
+
+        val time = now()
+        return tickets.readyForPickup().orEmpty().count { ticket ->
+            val readySince = ticket.status.time
+            val due = Storage.daysReady(ticket, time) >= (terms.feeAfterDays - 1).coerceAtLeast(0) &&
+                database.sentSince(ticket.identifier, NotificationEvent.STORAGE_FEE, readySince).isEmpty()
+            due && queue(ticket, NotificationEvent.STORAGE_FEE, settings = settings).isNotEmpty()
+        }
+    }
+
+    /** A device was treated as abandoned */
+    fun abandoned(ticket: Ticket) {
+        val settings = database.settings()
+        if (NotificationEvent.ABANDONED in settings.events) queue(ticket, NotificationEvent.ABANDONED, settings = settings)
     }
 
     // ------------------------------------------ Pickup reminders ------------------------------------------

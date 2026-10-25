@@ -425,6 +425,9 @@ While the server runs it sweeps once an hour:
 - **Restore leftovers** (`pre-restore-*` folders, `restore/failed-*.zip`) older than `RESTORE_KEEP_DAYS` (30 days)
   are deleted.
 - **The daily backup** is made, if `BACKUP_DIR` is set and the newest one is a day old.
+- **Pickup reminders** and **storage notices** are queued, and devices left past the shop's abandon limit
+  (`ShopProfile.storage`) are treated as abandoned (`StorageService`), with the customer told when the shop turned
+  that message on.
 
 Photos are deleted a day late on purpose. A backup copies the database first and the photos after, and the delay
 means a photo the database still lists can't vanish between the two.

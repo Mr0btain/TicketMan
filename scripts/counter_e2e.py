@@ -469,6 +469,18 @@ _, free = call("GET", f"/api/invoice/ticket/{back['ticket']['identifier']}", tok
 check(free["totalCents"] == 0 and back["ticket"]["warrantyOf"] == battery_ticket, f"warranty return {free['totalCents']}")
 step("With a 90 day warranty, the iPhone's battery swap is picked up covered; it comes back as a warranty return and the redo starts free")
 
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+call("POST", "/api/shop/update", {**shop, "storage": {"feeAfterDays": 3, "dailyFeeCents": 200, "abandonAfterDays": 30}}, admin, expect=202)
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+five_days_ago = int(time.time() * 1000) - 5 * 24 * 3600 * 1000 - 60000
+call("POST", "/api/data/ticket/update", {**two, "status": {"status": "DONE", "time": five_days_ago}}, pin, expect=202)
+_, two_invoice = call("POST", f"/api/invoice/ticket/{ticket_two}", token=pin, expect=200)
+storage = [c for c in two_invoice["charges"] if c["description"].startswith("Storage")]
+check(len(storage) == 1 and storage[0]["description"] == "Storage, 2 days" and storage[0]["unitPriceCents"] == 200, f"storage {two_invoice['charges']}")
+status, html, _ = page(f"/status/{two['statusToken']}")
+check("Storage is $2.00 a day" in html, "status page should say when storage starts")
+step("Storage terms of $2 a day after 3 days: Jane's iPad, ready 5 days, gets 2 days of storage on its invoice, and her status page says so")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

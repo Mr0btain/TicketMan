@@ -12,6 +12,7 @@ import kotlin.uuid.Uuid
  * [isSale]). Totals are worked out by the server
  * @param taxRateBasisPoints Shop tax rate when the invoice was made, kept after, 750 is 7.5%
  * @param taxRates The shop's tax classes when the invoice was made, and any its lines used that were made after
+ * @param storageWaived Staff took the storage fee line off, so it isn't added back
  * @param createdAt Epoch millis
  * @param paidAt Epoch millis it was paid off at pickup
  * @param ticketIdentifier Its ticket, null for a sale straight from stock
@@ -32,6 +33,7 @@ data class Invoice(
     val discountCents: Long = 0,
     val taxRateBasisPoints: Int = 0,
     val taxRates: List<TaxRate> = emptyList(),
+    val storageWaived: Boolean = false,
     val subtotalCents: Long = 0,
     val taxCents: Long = 0,
     val totalCents: Long = 0,

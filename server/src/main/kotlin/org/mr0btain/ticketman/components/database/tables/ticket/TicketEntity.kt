@@ -32,6 +32,7 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     val passcodeSet by TicketTable.passcodeSet
     var warrantyUntil by TicketTable.warrantyUntil
     var warrantyOf by TicketTable.warrantyOf
+    var abandonedAt by TicketTable.abandonedAt
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -55,7 +56,8 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             checklist = checklist,
             passcodeSet = passcodeSet,
             warrantyUntil = warrantyUntil,
-            warrantyOf = warrantyOf
+            warrantyOf = warrantyOf,
+            abandonedAt = abandonedAt
         )
     }
 }

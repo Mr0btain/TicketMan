@@ -153,6 +153,22 @@ take the stock, mark it `PAID` and write the audit entry. The answer is `201` wi
 A sale is an invoice like the rest: it's in the invoice list and the export (its Ticket column says `Sale`), has a
 PDF, and an admin can void it, which puts its parts back.
 
+## Storage and abandoned devices
+
+`ShopProfile.storage` (`StorageTerms`) sets a daily fee for devices left after they're ready and a limit after which
+they're abandoned. "Ready since" is the ticket's status time while it's `DONE` (shared `Storage.readySince`).
+
+- **The fee** is one untaxed line on the ticket's invoice, `Storage, N days`, whose id comes from the ticket's
+  (`Storage.lineIdentifier`). `InvoiceService.forTicket` brings it up to date whenever the invoice is opened, and
+  pickup does the same before checking what's owed, so the counter always shows today's fee. It's taken off again if
+  the ticket stops being ready. Removing it in an invoice update waives it (`invoices.storage_waived`), and it isn't
+  put back.
+- **The hourly sweep** (`StorageService.sweep`) queues the `STORAGE_FEE` message a day before the fee starts, once
+  since the ticket was ready, and marks tickets ready `abandonAfterDays` as abandoned (`Ticket.abandonedAt`, audit
+  logged, the `ABANDONED` message queued). Abandoned tickets leave the ready list for the queue's `abandoned` list and
+  get no more pickup reminders. Changing an abandoned ticket's status by hand clears it.
+- The terms are printed on the claim slip (`Storage.termsText`), and the status page says when the fee starts.
+
 ## Store credit and gift cards
 
 Balances the shop holds for customers, in `StoredValueDatabase`: a customer's credit is `customer.credit_cents`, with

@@ -84,6 +84,8 @@ private fun QueueSections(
         QueueSection("Overdue", queue.overdue, colors.danger, onTicketClick)
         QueueSection("Due today", queue.dueToday, colors.warning, onTicketClick)
         QueueSection("Just checked in", queue.recentlyCheckedIn, colors.neutral, onTicketClick)
+        // Only when there are some, most shops won't have abandoned devices
+        if (queue.abandoned.isNotEmpty()) QueueSection("Abandoned", queue.abandoned, colors.danger, onTicketClick)
     }
 }
 

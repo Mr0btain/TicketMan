@@ -171,6 +171,10 @@ class InvoiceDatabase(
     fun remove(identifier: Uuid): Boolean =
         dbWrite(REMOVE_TAG) { InvoiceTable.deleteWhere { InvoiceTable.id eq identifier } > 0 }
 
+    /** Staff took the storage line off, so syncing doesn't put it back */
+    fun setStorageWaived(identifier: Uuid): Boolean =
+        dbWrite(STATUS_TAG) { InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row -> row[storageWaived] = true } > 0 }
+
     fun setStatus(identifier: Uuid, status: InvoiceStatus, paidAt: Long? = null): Boolean =
         dbWrite(STATUS_TAG) {
             InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row ->
@@ -265,6 +269,7 @@ class InvoiceDatabase(
             discountCents = this[InvoiceTable.discountCents],
             taxRateBasisPoints = this[InvoiceTable.taxRateBasisPoints],
             taxRates = this[InvoiceTable.taxRates],
+            storageWaived = this[InvoiceTable.storageWaived],
             subtotalCents = this[InvoiceTable.subtotalCents],
             taxCents = this[InvoiceTable.taxCents],
             totalCents = this[InvoiceTable.totalCents],

@@ -82,10 +82,11 @@ email, and each matching customer's tickets are added to the tickets.
 
 **Auth:** restricted
 
-What needs attention: open tickets sorted into four lists.
+What needs attention: open tickets sorted into lists.
 
 - **Query:** `recent`, how many just checked in tickets (default 10, at most 100).
-- **`200`** `CounterQueueResponse { readyForPickup, dueToday, overdue, recentlyCheckedIn }`.
+- **`200`** `CounterQueueResponse { readyForPickup, dueToday, overdue, recentlyCheckedIn, abandoned }`. Tickets the
+  hourly sweep treated as abandoned (`abandonedAt`) are in `abandoned`, not `readyForPickup`.
 
 ### `POST /api/counter/repeat-check`
 

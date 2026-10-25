@@ -36,5 +36,7 @@ data class CounterQueueResponse(
     val readyForPickup: List<TicketSummary> = emptyList(),
     val dueToday: List<TicketSummary> = emptyList(),
     val overdue: List<TicketSummary> = emptyList(),
-    val recentlyCheckedIn: List<TicketSummary> = emptyList()
+    val recentlyCheckedIn: List<TicketSummary> = emptyList(),
+    /** Ready but left so long they're treated as abandoned, longest ago first */
+    val abandoned: List<TicketSummary> = emptyList()
 )

@@ -218,7 +218,7 @@ fun Route.ticketRoute(
             }
 
             // Device and group links are made by check in, never sent
-            val saved = received.copy(deviceIdentifier = null, groupIdentifier = null, warrantyOf = null, warrantyUntil = null)
+            val saved = received.copy(deviceIdentifier = null, groupIdentifier = null, warrantyOf = null, warrantyUntil = null, abandonedAt = null)
                 .takeIf { database.add(it) }?.let { database.getById(it.identifier) }
 
             if (saved == null) {

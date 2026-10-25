@@ -11,7 +11,8 @@ customer's device it's on) and `groupIdentifier` (shared by tickets checked in t
 `passcodeSet` says whether the device's passcode is on file; it's the server's to set, through the routes below.
 `warrantyUntil` is when the repair's warranty runs out, set at pickup, and `warrantyOf` the earlier ticket this is a
 warranty return of, set at check in; neither comes from `/add` or `/update`. Work logged on a warranty return
-without a price is free.
+without a price is free. `abandonedAt` is when the hourly sweep treated it as abandoned under the shop's storage
+terms; `/update` clears it when the status is changed, and `/add` ignores it.
 
 ## Reading
 

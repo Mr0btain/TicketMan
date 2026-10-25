@@ -31,6 +31,10 @@ lines are saved. Paid and void invoices keep the rate they had.
   with in its `taxRates`, and picks up one made later when a line first uses it.
 - **`warrantyDays`** is how long repairs are guaranteed from pickup, 0 to 3650, for labor and part lines that don't
   set their own `warrantyDays`. 0 is none.
+- **`storage`** is `StorageTerms { feeAfterDays, dailyFeeCents, abandonAfterDays }`: a device ready longer than
+  `feeAfterDays` is charged `dailyFeeCents` for each day past them (a line synced onto its invoice when it's opened,
+  see [invoices](invoice.md)), and one ready `abandonAfterDays` is treated as abandoned by the hourly sweep. 0 turns
+  either off. The terms are printed on the claim slip and the status page says when the fee starts.
 - **`checklists`** are the shop's own intake checklists (`IntakeChecklist { kind, items }`), one per `DeviceKind`;
   a kind without one uses the built in list (`IntakeChecklists.defaults`), and an empty list means nothing's
   checked. Items are saved trimmed, blank and repeated ones dropped, up to 30 of 60 characters each.
@@ -43,7 +47,8 @@ lines are saved. Paid and void invoices keep the rate they had.
   statuses that break the rules: a blank or over 40 character name, two in use with the same name or a built-in
   one's, one acting as `PICKED_UP`, more than 40, or a saved one whose `actsAs` changed; an estimate or parts status
   staff couldn't pick (picked up, retired or unknown); or a tax class with no name, a rate that isn't 0 to 100, or the
-  same identifier twice; or a warranty outside 0 to 3650 days.
+  same identifier twice; or a warranty outside 0 to 3650 days; or storage terms with days outside 0 to 3650, a negative fee, or an
+  abandon limit that isn't after the fee starts.
 
 ## See also
 

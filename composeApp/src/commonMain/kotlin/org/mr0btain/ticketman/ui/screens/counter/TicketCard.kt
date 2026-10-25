@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.shop.Storage
+import org.mr0btain.ticketman.ui.kit.data.LocalStorageTerms
 import org.mr0btain.ticketman.components.utils.formatDate
 import kotlin.time.Clock
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
@@ -123,6 +125,7 @@ fun TicketCard(
                     TmPriorityBadge(ticket.priority.priority)
                     if (ticket.isOverdue) TmBadge(text = "Overdue", tone = colors.danger, solid = true)
                     if (ticket.warrantyOf != null) TmBadge(text = "Warranty return", tone = colors.accent)
+                    if (ticket.abandonedAt != null) TmBadge(text = "Abandoned", tone = colors.danger, solid = true)
                 }
             },
             // Anyone can print, restricted users included. Staff who can edit get it beside the other actions
@@ -191,6 +194,10 @@ fun TicketCard(
                                 }
                                 ticket.pickedUpAt?.let { TmKeyValueRow(label = "Picked up", value = formatDateTime(it)) }
                                 ticket.estimateCents?.let { TmKeyValueRow(label = "Estimate") { TmMoneyText(it) } }
+                                Storage.feeStarts(ticket, LocalStorageTerms.current)?.let { start ->
+                                    TmKeyValueRow(label = "Storage from", value = formatDate(start))
+                                }
+                                ticket.abandonedAt?.let { TmKeyValueRow(label = "Abandoned", value = formatDate(it)) }
                                 ticket.warrantyUntil?.let { until ->
                                     val covered = until >= Clock.System.now().toEpochMilliseconds()
                                     TmKeyValueRow(label = if (covered) "Warranty until" else "Warranty ended", value = formatDate(until))

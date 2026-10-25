@@ -76,7 +76,7 @@ shop's choice in its profile, like estimates'. Receiving also sets the item's co
 are Code 128 from an in-house encoder, printed on a new 57 x 32mm label paper size; a scanner is just a keyboard
 that presses Enter, so the counter, sale and pickup searches look the code up on Enter.
 
-## Phase 5: Repair depth
+## Phase 5: Repair depth (done)
 
 - **Customer devices** [11]. Device records owned by a customer that tickets point to, so each device has a
   history. Several devices at one check-in become linked tickets.
@@ -86,6 +86,13 @@ that presses Enter, so the counter, sale and pickup searches look the code up on
   default; the repeat check shows "under warranty until".
 - **Storage fees and abandoned devices** [18]. A fee after a number of days ready, abandoned after more, with the
   terms on the claim slip and the customer told through Phase 2.
+
+Built as above ([Customers API](api/customer.md), [Tickets API](api/ticket.md#passcode),
+[Counter](server/counter.md#storage-and-abandoned-devices)). Existing tickets got device records from what was typed
+on them. Passcodes are sealed under a key from the server secret, so moving them to a new server needs the same
+`SECRET`. The warranty starts at pickup and lasts as long as the longest labor or part line gives (the shop's default
+unless a line says). The storage fee is a line synced onto the invoice whenever it's opened, waived by taking it off;
+abandoned devices move to their own list in the queue rather than to a status.
 
 ## Phase 6: Running the business
 

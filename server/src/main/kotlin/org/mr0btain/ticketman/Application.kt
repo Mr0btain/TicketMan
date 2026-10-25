@@ -35,6 +35,7 @@ import org.mr0btain.ticketman.server.response.LoginLockKind
 import org.mr0btain.ticketman.components.service.ServerRestart
 import org.mr0btain.ticketman.components.service.PasscodeVault
 import org.mr0btain.ticketman.components.service.ServerSecret
+import org.mr0btain.ticketman.components.service.StorageService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.proxy.ProxySettings
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -186,6 +187,8 @@ fun Application.module() {
             auditLog = database.auditLogDatabase
         )
 
+        val storageService = StorageService(database.ticketDatabase, database.shopDatabase, notificationService, database.auditLogDatabase)
+
         configureRouting(
             userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
             restoreService, notificationService, estimateService, database, loginLimiter, passcodeVault
@@ -211,6 +214,7 @@ fun Application.module() {
                 restoreService.sweepLeftovers(housekeeping.restoreLeftoverAge)
                 backupService.runSchedule()
                 notificationService.queueReminders()
+                storageService.sweep()
                 delay(ImageService.SWEEP_INTERVAL)
             }
         }

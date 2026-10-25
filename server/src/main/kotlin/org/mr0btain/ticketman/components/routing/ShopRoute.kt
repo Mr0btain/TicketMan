@@ -63,6 +63,11 @@ fun Route.shopRoute(
                 return@post
             }
 
+            profile.storage.problem()?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
             TaxClasses.problem(profile.taxClasses)?.let { problem ->
                 call.respond(HttpStatusCode.BadRequest, problem)
                 return@post

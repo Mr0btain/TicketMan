@@ -450,7 +450,7 @@ private fun ShopProfileCard(
         actions = {
             TmButton(
                 text = "Save profile",
-                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null && urlProblem == null &&
+                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null && urlProblem == null && profile.storage.problem() == null &&
                     TaxClasses.problem(profile.taxClasses) == null,
                 onClick = { onSave(profile.copy(statuses = shopProfile?.statuses.orEmpty())) }
             )
@@ -526,6 +526,8 @@ private fun ShopProfileCard(
         )
 
         ChecklistsEditor(checklists = profile.checklists, onChange = { profile = profile.copy(checklists = it) })
+
+        StorageTermsEditor(terms = profile.storage, onChange = { profile = profile.copy(storage = it) })
 
         TmFieldPair(
             {

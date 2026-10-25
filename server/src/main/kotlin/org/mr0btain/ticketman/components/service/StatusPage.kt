@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.utils.formatDate
+import org.mr0btain.ticketman.data.shop.Storage
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.image.ImageVariant
@@ -29,7 +30,12 @@ object StatusPage {
         val device = ticket.device.toString().trim().ifBlank { "Your device" }
 
         val headline = when (view.current.status) {
-            TicketStatusType.DONE -> "It's ready to pick up."
+            TicketStatusType.DONE -> when {
+                ticket.abandonedAt != null -> "It was left too long after it was ready. Please call us."
+                else -> "It's ready to pick up." + (Storage.feeStarts(ticket, shop.storage)?.let { start ->
+                    " Storage is ${Money.format(shop.storage.dailyFeeCents, shop.currencySymbol)} a day from ${formatDate(start)}."
+                } ?: "")
+            }
             TicketStatusType.PICKED_UP -> (ticket.pickedUpAt?.let { "Picked up ${formatDate(it)}. Thanks for coming in." } ?: "Picked up. Thanks for coming in.") +
                 (ticket.warrantyUntil?.let { " The repair is under warranty until ${formatDate(it)}." } ?: "")
             else -> "We're working on it."

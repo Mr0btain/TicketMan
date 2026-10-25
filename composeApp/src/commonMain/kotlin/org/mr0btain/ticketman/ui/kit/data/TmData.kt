@@ -30,6 +30,7 @@ import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
 import org.mr0btain.ticketman.data.invoice.TaxRate
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.shop.StorageTerms
 import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 
@@ -169,6 +170,9 @@ data class TmTaxes(
 
 /** The shop's tax rates, provided from the shop profile in `App`, for line editors and previews */
 val LocalTaxes = staticCompositionLocalOf { TmTaxes() }
+
+/** The shop's storage terms, provided from the shop profile in `App`, for when a waiting device's fee starts */
+val LocalStorageTerms = staticCompositionLocalOf { StorageTerms() }
 
 /** An amount in cents as text, with the shop's currency symbol, for amounts inside a sentence */
 @Composable

@@ -45,6 +45,8 @@ data class Ticket(
     val warrantyUntil: Long? = null,
     /** The earlier ticket this is a warranty return of, set at check in. Its work is free unless staff charge */
     val warrantyOf: Uuid? = null,
+    /** Epoch millis it was left too long after it was ready and treated as abandoned, by the hourly sweep */
+    val abandonedAt: Long? = null,
 ): MainItem(), SubItem {
     /** Number if it has one, otherwise the start of the identifier */
     val label: String

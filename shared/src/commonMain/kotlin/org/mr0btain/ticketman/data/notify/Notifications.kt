@@ -30,6 +30,12 @@ enum class NotificationEvent(val label: String) {
     /** Still waiting to be picked up, sent by the hourly sweep */
     PICKUP_REMINDER("Pickup reminder"),
 
+    /** Storage fees start tomorrow on a device that's still waiting, sent by the hourly sweep */
+    STORAGE_FEE("Storage fee"),
+
+    /** A device was left long enough to be treated as abandoned, sent by the hourly sweep */
+    ABANDONED("Abandoned"),
+
     /** Staff sent the status page link by hand */
     STATUS_LINK("Status link"),
 
@@ -38,7 +44,7 @@ enum class NotificationEvent(val label: String) {
 
     companion object {
         /** The ones the shop turns on or off, the others are sent when someone asks */
-        val automatic = listOf(STATUS_CHANGED, READY_FOR_PICKUP, ESTIMATE_READY, PICKUP_REMINDER)
+        val automatic = listOf(STATUS_CHANGED, READY_FOR_PICKUP, ESTIMATE_READY, PICKUP_REMINDER, STORAGE_FEE, ABANDONED)
     }
 }
 
@@ -198,6 +204,7 @@ object MessageTemplates {
         "link" to "The status page link",
         "estimate" to "The estimate's total",
         "balance" to "Still to pay",
+        "storage" to "The daily storage fee",
         "shop" to "The shop's name",
         "shop_phone" to "The shop's phone"
     )
@@ -220,6 +227,14 @@ object MessageTemplates {
         NotificationEvent.PICKUP_REMINDER to MessageTemplate(
             "Reminder: your {device} is waiting",
             "Hi {name}, a reminder that your {device} (ticket {ticket}) is ready to pick up. {link}\n{shop} {shop_phone}"
+        ),
+        NotificationEvent.STORAGE_FEE to MessageTemplate(
+            "Storage fees start tomorrow for your {device}",
+            "Hi {name}, your {device} (ticket {ticket}) is still waiting for you. From tomorrow there's a storage fee of {storage} a day. {link}\n{shop} {shop_phone}"
+        ),
+        NotificationEvent.ABANDONED to MessageTemplate(
+            "Your {device} hasn't been collected",
+            "Hi {name}, your {device} (ticket {ticket}) has been waiting too long and is now considered abandoned under our terms. Please call us. {link}\n{shop} {shop_phone}"
         ),
         NotificationEvent.STATUS_LINK to MessageTemplate(
             "Your repair at {shop}",

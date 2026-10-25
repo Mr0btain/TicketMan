@@ -82,7 +82,10 @@ class CounterDatabase(
 
         return CounterQueueResponse(
             readyForPickup = ticketDatabase.summarize(
-                tickets.filter { it.status.status == TicketStatusType.DONE }.sortedBy { it.status.time }
+                tickets.filter { it.status.status == TicketStatusType.DONE && it.abandonedAt == null }.sortedBy { it.status.time }
+            ),
+            abandoned = ticketDatabase.summarize(
+                tickets.filter { it.status.status == TicketStatusType.DONE && it.abandonedAt != null }.sortedBy { it.abandonedAt }
             ),
             dueToday = ticketDatabase.summarize(
                 open.filter { ticket -> ticket.promisedAt?.let { it in startOfToday until startOfTomorrow } == true }

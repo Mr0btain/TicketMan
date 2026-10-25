@@ -14,6 +14,8 @@ to customers who agreed on that channel (`Customer.notifyEmail`, `notifySms`):
 | `STATUS_CHANGED` | A ticket's status changes into one of `statusChangeStatuses` (and ready for pickup when that one's off) |
 | `ESTIMATE_READY` | An estimate is sent with `notify` on ([Estimates API](estimate.md)) |
 | `PICKUP_REMINDER` | The hourly sweep finds a ticket ready `reminderAfterDays`, then every `reminderEveryDays`, up to `reminderLimit` |
+| `STORAGE_FEE` | The hourly sweep finds a waiting ticket a day before its [storage fee](shop.md#post-apishopupdate) starts, once since it was ready |
+| `ABANDONED` | The hourly sweep treats a ticket left past the shop's abandon limit as abandoned |
 | `STATUS_LINK` | Staff send it from the ticket card, whatever the customer agreed to |
 | `TEST` | An admin tries the settings, not kept in the outbox |
 
@@ -23,7 +25,7 @@ estimates moving a ticket don't, since their own message says it.
 **Wording.** Each event has a `MessageTemplate { subject, body }` (subject for email only), the shop's own in
 `templates` or the defaults in shared `MessageTemplates`. `{name}` (first name), `{ticket}`, `{device}`,
 `{status}` (as customers see it), `{link}` (the [status page](status.md), blank without a public address),
-`{estimate}`, `{balance}`, `{shop}` and `{shop_phone}` are filled in when the message is queued.
+`{estimate}`, `{balance}`, `{storage}` (the daily storage fee), `{shop}` and `{shop_phone}` are filled in when the message is queued.
 
 **The outbox.** Each message is an `OutboxMessage` row (`outbox` table), one per channel. A loop every 10 seconds
 sends what's due. A send that might work later (`SendResult.Retry`: the server down, a refused login, Twilio 401,

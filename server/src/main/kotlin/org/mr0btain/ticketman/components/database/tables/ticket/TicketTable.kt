@@ -40,6 +40,9 @@ object TicketTable: UuidTable("tickets") {
     val warrantyUntil = long("warranty_until").nullable()
     val warrantyOf = uuid("warranty_of").nullable()
 
+    // Added with storage terms: when it was treated as abandoned
+    val abandonedAt = long("abandoned_at").nullable()
+
     // Unique on (year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"
 

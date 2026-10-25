@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.shop.Storage
 import org.mr0btain.ticketman.data.ticket.StatusLink
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.user.BadgeCode
@@ -62,8 +63,9 @@ object PrintTemplates {
             // Never the passcode itself, only that the shop has it
             if (ticket.passcodeSet) PrintBlock.Field("Passcode", "Given, kept private") else null,
             if (ticket.warrantyOf != null) PrintBlock.Field("Warranty", "Return of an earlier repair") else null
-        ) + checklistBlocks(ticket) + signatureBlocks(signature) + listOf(
+        ) + checklistBlocks(ticket) + signatureBlocks(signature) + listOfNotNull(
             PrintBlock.Divider,
+            Storage.termsText(shop.storage, shop.currencySymbol)?.let { PrintBlock.Text(it, small = true, centered = true) },
             PrintBlock.Text("Bring this slip or your ticket number when you pick up.", small = true, centered = true)
         )
 

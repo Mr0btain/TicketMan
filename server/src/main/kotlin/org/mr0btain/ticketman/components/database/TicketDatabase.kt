@@ -346,10 +346,18 @@ class TicketDatabase(
     /** Tickets waiting to be picked up, ready longest first */
     fun readyForPickup(): List<Ticket>? =
         dbQuery(READY_TAG) {
-            TicketEntity.find { TicketTable.pickedUpAt.isNull() }
+            TicketEntity.find { TicketTable.pickedUpAt.isNull() and TicketTable.abandonedAt.isNull() }
                 .map { it.toTicket() }
                 .filter { it.status.status == TicketStatusType.DONE }
                 .sortedBy { it.status.time }
+        }
+
+    /** Treats the ticket as abandoned from [time], left too long after it was ready */
+    fun markAbandoned(identifier: Uuid, time: Long): Boolean =
+        dbWrite(READY_TAG) {
+            val ticket = TicketEntity.findById(identifier) ?: return@dbWrite false
+            ticket.abandonedAt = time
+            true
         }
 
     /** Sets the quoted price, like when the customer approves an estimate */
@@ -414,6 +422,8 @@ class TicketDatabase(
             // picked up status: only pickup sets it, and once set it stays, even if the client sent an older status
             item.device = data.device
             if (item.status.status != TicketStatusType.PICKED_UP && data.status.status != TicketStatusType.PICKED_UP) {
+                // Moved on by hand, so it's not abandoned any more and its ready time starts again
+                if (item.status.choice != data.status.choice) item.abandonedAt = null
                 item.status = data.status
             }
             item.priority = data.priority

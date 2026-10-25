@@ -6,6 +6,7 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import org.mr0btain.ticketman.ui.kit.data.LocalCurrencySymbol
+import org.mr0btain.ticketman.ui.kit.data.LocalStorageTerms
 import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.data.TmTaxes
 import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
@@ -104,6 +105,7 @@ fun App() {
         LocalImageClient provides mainViewModel.imageClient,
         LocalCurrencySymbol provides shop.currencySymbol,
         LocalTaxes provides TmTaxes(shop.taxBasisPoints, shop.taxRates),
+        LocalStorageTerms provides shop.storage,
         LocalTicketStatuses provides shop.statuses
     ) {
         TmTheme(
