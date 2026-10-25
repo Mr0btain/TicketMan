@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.notify
 
+import org.mr0btain.ticketman.components.database.AppointmentDatabase
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.EstimateDatabase
@@ -8,6 +9,9 @@ import org.mr0btain.ticketman.components.database.NotifyDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.service.AccountResult
+import org.mr0btain.ticketman.components.utils.formatDayInSentence
+import org.mr0btain.ticketman.components.utils.formatTime
+import org.mr0btain.ticketman.data.appointment.AppointmentRules
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
@@ -50,7 +54,8 @@ class NotificationService(
     private val shop: ShopDatabase,
     private val estimates: EstimateDatabase,
     private val auditLog: AuditLogDatabase,
-    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() }
+    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val appointments: AppointmentDatabase = AppointmentDatabase()
 ) {
     private val TAG = "NotificationService"
     private val QUEUE_TAG = "$TAG:Queue"
@@ -144,6 +149,7 @@ class NotificationService(
      */
     fun sendForTicket(ticketIdentifier: Uuid, request: TicketMessageRequest, staffName: String, actor: Uuid?): AccountResult<List<OutboxMessage>> {
         if (request.event == NotificationEvent.TEST) return AccountResult.Invalid("Test messages are sent from the settings")
+        if (request.event == NotificationEvent.APPOINTMENT_REMINDER) return AccountResult.Invalid("Appointment reminders are sent before an appointment")
         val ticket = tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
         val settings = database.settings()
 
@@ -171,7 +177,24 @@ class NotificationService(
         requireAgreement: Boolean = true
     ): List<OutboxMessage> {
         val customer = tickets.getCustomer(ticket.identifier)?.let { customers.getById(it.identifier) } ?: return emptyList()
-        val values = fields(ticket, customer)
+        return queueTo(customer, event, fields(ticket, customer), ticket.identifier, ticket.label, channels, settings, createdBy, requireAgreement)
+    }
+
+    /**
+     * Puts a message to [customer] for each channel in the outbox, [values] filling in the template
+     * @param ticketIdentifier The ticket it's about, null for one that isn't (like an appointment)
+     */
+    private fun queueTo(
+        customer: Customer,
+        event: NotificationEvent,
+        values: Map<String, String>,
+        ticketIdentifier: Uuid?,
+        ticketLabel: String,
+        channels: Set<NotificationChannel> = NotificationChannel.entries.toSet(),
+        settings: NotificationSettings = database.settings(),
+        createdBy: String = "",
+        requireAgreement: Boolean = true
+    ): List<OutboxMessage> {
         val time = now()
 
         return channels.filter { settings.channelReady(it) }.mapNotNull { channel ->
@@ -182,8 +205,8 @@ class NotificationService(
             val template = settings.template(event, channel)
 
             OutboxMessage(
-                ticketIdentifier = ticket.identifier,
-                ticketLabel = ticket.label,
+                ticketIdentifier = ticketIdentifier,
+                ticketLabel = ticketLabel,
                 customerIdentifier = customer.identifier,
                 channel = channel,
                 event = event,
@@ -194,7 +217,7 @@ class NotificationService(
                 createdAt = time,
                 createdBy = createdBy
             ).takeIf { database.add(it) }
-                ?.also { AppLogger.i(QUEUE_TAG, "${event.name} by ${channel.name} for ${ticket.label}") }
+                ?.also { AppLogger.i(QUEUE_TAG, "${event.name} by ${channel.name}" + if (ticketLabel.isNotBlank()) " for $ticketLabel" else "") }
         }
     }
 
@@ -281,6 +304,39 @@ class NotificationService(
 
             due && queue(ticket, NotificationEvent.PICKUP_REMINDER, settings = settings).isNotEmpty()
         }.also { if (it > 0) AppLogger.i(REMINDER_TAG, "Reminded $it customers") }
+    }
+
+    // ------------------------------------------ Appointment reminders ------------------------------------------
+
+    /**
+     * Reminds each customer with a booked appointment in the next [AppointmentRules.REMINDER_HOURS] hours, once. Only
+     * appointments with a customer on file, who agreed to messages. Run by the hourly sweep
+     * @return How many were reminded
+     */
+    fun queueAppointmentReminders(): Int {
+        val settings = database.settings()
+        if (NotificationEvent.APPOINTMENT_REMINDER !in settings.events) return 0
+        if (NotificationChannel.entries.none { settings.channelReady(it) }) return 0
+
+        val time = now()
+        val due = appointments.dueReminders(time, time + AppointmentRules.REMINDER_HOURS.hours.inWholeMilliseconds).orEmpty()
+
+        return due.count { appointment ->
+            val customer = appointment.customerIdentifier?.let { customers.getById(it) } ?: return@count false
+            val profile = shop.get()
+            val values = mapOf(
+                "name" to customer.name.trim().substringBefore(' '),
+                "device" to appointment.device.toString().trim().ifBlank { "device" },
+                "appointment" to "${formatDayInSentence(appointment.startsAt)} at ${formatTime(appointment.startsAt)}",
+                "shop" to profile.name,
+                "shop_phone" to profile.phone
+            )
+
+            val queued = queueTo(customer, NotificationEvent.APPOINTMENT_REMINDER, values, null, "", settings = settings)
+            // Marked either way, so one they didn't agree to isn't looked at every hour
+            appointments.markReminded(appointment.identifier, time)
+            queued.isNotEmpty()
+        }.also { if (it > 0) AppLogger.i(REMINDER_TAG, "Reminded $it customers of their appointments") }
     }
 
     // ------------------------------------------ The outbox ------------------------------------------

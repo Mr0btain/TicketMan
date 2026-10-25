@@ -82,6 +82,11 @@ import org.mr0btain.ticketman.ui.kit.search.TmSearchField
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.reports.AdminReportsTab
+import org.mr0btain.ticketman.ui.screens.appointments.AppointmentDialog
+import org.mr0btain.ticketman.ui.screens.appointments.AppointmentTimes
+import org.mr0btain.ticketman.ui.screens.appointments.AppointmentWeek
+import org.mr0btain.ticketman.data.appointment.Appointment
+import org.mr0btain.ticketman.data.appointment.AppointmentStatus
 import org.mr0btain.ticketman.ui.screens.admin.reports.CommissionDialog
 import org.mr0btain.ticketman.ui.screens.admin.invoices.ExportRange
 import org.mr0btain.ticketman.data.report.*
@@ -143,6 +148,8 @@ import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.settings
 import ticketman.composeapp.generated.resources.truck
+import ticketman.composeapp.generated.resources.calendar
+import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import java.io.File
 import org.mr0btain.ticketman.components.data.user.UserSeed
 import org.mr0btain.ticketman.data.user.User
@@ -271,6 +278,7 @@ class ScreenRenderTest {
         TmNavItem("Records", "Records", Res.drawable.home),
         TmNavItem("Counter", "Counter", Res.drawable.monitor),
         TmNavItem("Purchasing", "Purchasing", Res.drawable.truck),
+        TmNavItem("Calendar", "Calendar", Res.drawable.calendar),
         TmNavItem("Settings", "Settings", Res.drawable.settings),
         TmNavItem("Admin", "Admin", Res.drawable.archive)
     )
@@ -824,6 +832,45 @@ class ScreenRenderTest {
                 rates = listOf(CommissionRate(dana.identifier, 1_250)),
                 saving = false,
                 onSave = {},
+                onDismissRequest = {}
+            )
+        }
+    }
+
+    @Test
+    fun appointments() = bothModes("appointments") {
+        Shell("Calendar") {
+            val monday = kotlinx.datetime.LocalDate(2026, 10, 26)
+            fun at(day: Int, hour: Int, minute: Int = 0) = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, day), hour, minute)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TmPageHeader(title = "Appointments", onBack = null, subtitle = "Week of Mon Oct 26")
+                AppointmentWeek(
+                    weekStart = monday,
+                    appointments = listOf(
+                        Appointment(startsAt = at(26, 9, 30), customerName = "Jane Doe", customerIdentifier = dana.identifier, device = Device("Apple", "iPhone 13"), problem = "Cracked screen", technicianName = "Dana Whitfield", status = AppointmentStatus.ARRIVED),
+                        Appointment(startsAt = at(26, 11), minutes = 60, customerName = "Walk In Wendy", phone = "(555) 010-0100", device = Device("Samsung", "Galaxy S23"), problem = "Won't charge"),
+                        Appointment(startsAt = at(27, 14), customerName = "Bob Smith", device = Device("Sony", "PS5"), problem = "HDMI port", notes = "Bringing the controller too", status = AppointmentStatus.NO_SHOW),
+                        Appointment(startsAt = at(29, 10), customerName = "Lee Park", device = Device("Lenovo", "ThinkPad X1"), problem = "Keyboard", status = AppointmentStatus.CANCELLED)
+                    ),
+                    canEdit = true,
+                    onEdit = {},
+                    onCheckIn = {},
+                    onStatus = { _, _ -> },
+                    onDelete = {}
+                )
+            }
+        }
+    }
+
+    @Test
+    fun appointmentDialog() = bothModes("appointment-dialog", height = 1000) {
+        Shell("Calendar") {
+            AppointmentDialog(
+                appointment = Appointment(startsAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 27), 14, 30), customerName = "Walk In Wendy", phone = "(555) 010-0100", device = Device("Samsung", "Galaxy S23"), problem = "Won't charge"),
+                isNew = true,
+                onSearchCustomers = { emptyList() },
+                onSearchTechnicians = { emptyList() },
+                onSave = { _, _ -> },
                 onDismissRequest = {}
             )
         }

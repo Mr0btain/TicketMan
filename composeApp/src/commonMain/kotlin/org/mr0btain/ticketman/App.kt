@@ -39,6 +39,7 @@ import ticketman.composeapp.generated.resources.layers
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
 import ticketman.composeapp.generated.resources.truck
+import ticketman.composeapp.generated.resources.calendar
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -89,6 +90,7 @@ fun App() {
         NavigationItem("Records", Res.drawable.home, Destination.RECORDS),
         NavigationItem("Counter", Res.drawable.monitor, Destination.COUNTER),
         NavigationItem("Purchasing", Res.drawable.truck, Destination.PURCHASING),
+        NavigationItem("Calendar", Res.drawable.calendar, Destination.APPOINTMENTS),
         NavigationItem("Settings", Res.drawable.settings, Destination.SETTINGS),
         if (isAdmin.value) NavigationItem("Admin", Res.drawable.archive, Destination.ADMIN) else null,
         // Component gallery is for working on the ui kit, so only listed in debug builds

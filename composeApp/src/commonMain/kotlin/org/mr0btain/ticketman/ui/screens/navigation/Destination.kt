@@ -10,6 +10,7 @@ enum class Destination(val route: String, val index: Int) {
     ADMIN("Admin", 0),
     COUNTER("Counter", 1),
     PURCHASING("Purchasing", 2),
+    APPOINTMENTS("Appointments", 3),
     RECORDS("Records", 4),
     SETTINGS("Settings", 5),
 

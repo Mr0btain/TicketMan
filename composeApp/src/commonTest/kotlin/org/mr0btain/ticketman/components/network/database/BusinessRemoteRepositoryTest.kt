@@ -7,6 +7,8 @@ import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.data.appointment.Appointment
+import org.mr0btain.ticketman.data.appointment.AppointmentStatus
 import org.mr0btain.ticketman.data.report.CommissionRate
 import org.mr0btain.ticketman.data.report.PeriodReport
 import org.mr0btain.ticketman.data.report.SalesSummary
@@ -22,6 +24,8 @@ class BusinessRemoteRepositoryTest {
     private val bodies = mutableListOf<String>()
     private val jsonHeaders = headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString())
 
+    private val booked = Appointment(startsAt = 1_793_000_000_000, customerName = "Walk In Wendy")
+
     private val engine = MockEngine { request ->
         requests += "${request.method.value} ${request.url.encodedPath}" + (request.url.encodedQuery.takeIf { it.isNotEmpty() }?.let { "?$it" } ?: "")
         (request.body as? io.ktor.http.content.TextContent)?.let { bodies += it.text }
@@ -31,6 +35,9 @@ class BusinessRemoteRepositoryTest {
             "/api/report/commissions" ->
                 if (request.method == HttpMethod.Post) respond("Commission has to be from 0% to 100%", HttpStatusCode.BadRequest)
                 else respond("[]", HttpStatusCode.OK, jsonHeaders)
+            "/api/appointment/range" -> respond("[]", HttpStatusCode.OK, jsonHeaders)
+            "/api/appointment/add", "/api/appointment/update" -> respond(Json.encodeToString(booked), HttpStatusCode.OK, jsonHeaders)
+            "/api/appointment/status/${booked.identifier}" -> respond("It was checked in already", HttpStatusCode.Conflict)
             else -> respond("[]", HttpStatusCode.OK, jsonHeaders)
         }
     }
@@ -40,6 +47,7 @@ class BusinessRemoteRepositoryTest {
     }
 
     private val reports = ReportRemoteRepository(client).apply { serverUrl = "http://localhost" }
+    private val appointments = AppointmentRemoteRepository(client).apply { serverUrl = "http://localhost" }
 
     @Test
     fun reportRoutes() = runTest {
@@ -55,5 +63,27 @@ class BusinessRemoteRepositoryTest {
             requests
         )
         assertTrue(bodies.single().startsWith("[{\"userIdentifier\""), "rates go as a list")
+    }
+
+    @Test
+    fun appointmentRoutes() = runTest {
+        assertIs<TmResult.Success<*>>(appointments.range("2026-10-26", "2026-11-01"))
+        assertEquals(booked, (appointments.add(booked) as TmResult.Success).data)
+        appointments.update(booked)
+        val cancelled = appointments.setStatus(booked.identifier, AppointmentStatus.CANCELLED)
+        assertEquals("It was checked in already", (cancelled as TmResult.Error).error.message)
+        appointments.remove(booked.identifier)
+
+        assertEquals(
+            listOf(
+                "GET /api/appointment/range?from=2026-10-26&to=2026-11-01",
+                "POST /api/appointment/add",
+                "POST /api/appointment/update",
+                "POST /api/appointment/status/${booked.identifier}",
+                "DELETE /api/appointment/remove/${booked.identifier}"
+            ),
+            requests
+        )
+        assertEquals("""{"status":"CANCELLED"}""", bodies.last())
     }
 }

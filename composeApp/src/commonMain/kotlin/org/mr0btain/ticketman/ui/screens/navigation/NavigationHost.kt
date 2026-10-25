@@ -12,6 +12,7 @@ import org.mr0btain.ticketman.ui.screens.counter.CounterScreen
 import org.mr0btain.ticketman.ui.screens.records.RecordsScreen
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.purchasing.PurchasingScreen
+import org.mr0btain.ticketman.ui.screens.appointments.AppointmentsScreen
 import org.mr0btain.ticketman.ui.screens.settings.SettingsScreen
 
 @Composable
@@ -45,6 +46,13 @@ fun NavigationHost(
 
         composable(Destination.PURCHASING.route) {
             PurchasingScreen(viewModel = mainViewModel)
+        }
+
+        composable(Destination.APPOINTMENTS.route) {
+            AppointmentsScreen(
+                viewModel = mainViewModel,
+                onCheckInStarted = { navHostController.navigateTo(Destination.COUNTER.route) }
+            )
         }
 
         composable(Destination.RECORDS.route) {

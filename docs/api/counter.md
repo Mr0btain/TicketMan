@@ -23,14 +23,17 @@ or none of them. The ticket gets its number here.
   ticket's id), the same technician and signature; the deposit goes on the first. Up to 10 devices. `passcode`
   (and each item's) is the device's [passcode](ticket.md#passcode), sealed and kept apart from the ticket; each
   ticket's `checklist` is the intake checklist as filled in. A ticket with `warrantyOf` is a warranty return of
-  that earlier ticket, which has to be the customer's and still under warranty.
+  that earlier ticket, which has to be the customer's and still under warranty. `appointmentIdentifier` is the
+  booked [appointment](appointment.md) this visit is: it's marked `ARRIVED` with the first ticket (and linked to the
+  customer when it had none) in the same transaction.
 - **`201`** `CheckInResponse { ticket, invoice, linked }`, with the numbered ticket, the invoice if a deposit made
   one, and the other tickets made with it.
 - **`400`** with the reason: a ticket id isn't a version 7 UUID or is used twice, a picked device isn't the
   customer's, more than 10 devices, no such customer, no make or model, no problem,
-  a status other than in progress or on hold (or one of the shop's own counting as them; an unknown or retired one is refused too), a negative estimate, a warranty return of a ticket that isn't the customer's or whose warranty ran out, a technician without Normal
+  an appointment that doesn't exist, isn't booked or is another customer's, a status other than in progress or on hold (or one of the shop's own counting as them; an unknown or retired one is refused too), a negative estimate, a warranty return of a ticket that isn't the customer's or whose warranty ran out, a technician without Normal
   access, a deposit
-  of zero or less, or a missing or bad signature. **`409`** a ticket with that id already exists.
+  of zero or less, or a missing or bad signature. **`409`** a ticket with that id already exists, or the appointment was checked in
+  at the same moment somewhere else.
 
 ### `POST /api/counter/pickup`
 

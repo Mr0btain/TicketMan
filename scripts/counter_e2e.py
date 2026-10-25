@@ -494,6 +494,23 @@ check(any(r["reason"] == "Cracked in the box" for r in period["refunds"]["refund
 check(period["turnaround"]["pickedUp"] >= 2, f"turnaround {period['turnaround']}")
 step(f"Today's report: {sales['invoices']} invoices, ${sales['totalCents'] / 100:.2f} sales, parts cost ${sales['partsCostCents'] / 100:.2f}, Nina's {nina['laborHours']}h at 10% commission, the screen's refund listed")
 
+in_an_hour = int(time.time() * 1000) + 3600 * 1000
+_, appointment = call("POST", "/api/appointment/add", {
+    "startsAt": in_an_hour, "minutes": 30, "customerIdentifier": jane, "device": {"manufacturer": "Apple", "model": "iPad mini"},
+    "problem": "Cracked screen", "technicianIdentifier": newtech_id
+}, pin, expect=201)
+booked_day = time.strftime("%Y-%m-%d", time.localtime(in_an_hour / 1000))
+_, calendar = call("GET", f"/api/appointment/range?from={booked_day}&to={booked_day}", token=pin, expect=200)
+check(any(a["identifier"] == appointment["identifier"] and a["customerName"] == "Jane Doe" and a["technicianName"] == "Nina Tech" for a in calendar), f"calendar {calendar}")
+_, arrived = call("POST", "/api/counter/check-in", {
+    "ticket": {"identifier": uid(), "device": appointment["device"], "problem": appointment["problem"]},
+    "customerIdentifier": jane, "technicianIdentifier": newtech_id, "signature": visit["signature"], "appointmentIdentifier": appointment["identifier"]
+}, pin, expect=201)
+_, appointment = call("GET", f"/api/appointment/get/{appointment['identifier']}", token=pin, expect=200)
+check(appointment["status"] == "ARRIVED" and appointment["ticketIdentifier"] == arrived["ticket"]["identifier"], f"appointment {appointment}")
+call("POST", f"/api/appointment/status/{appointment['identifier']}", {"status": "CANCELLED"}, pin, expect=409)
+step(f"Jane books an iPad mini screen for {time.strftime('%H:%M', time.localtime(in_an_hour / 1000))} with Nina; it's on the calendar, and checking it in makes ticket {arrived['ticket']['number']['sequence']} and marks it checked in")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

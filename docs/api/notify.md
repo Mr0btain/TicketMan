@@ -16,6 +16,7 @@ to customers who agreed on that channel (`Customer.notifyEmail`, `notifySms`):
 | `PICKUP_REMINDER` | The hourly sweep finds a ticket ready `reminderAfterDays`, then every `reminderEveryDays`, up to `reminderLimit` |
 | `STORAGE_FEE` | The hourly sweep finds a waiting ticket a day before its [storage fee](shop.md#post-apishopupdate) starts, once since it was ready |
 | `ABANDONED` | The hourly sweep treats a ticket left past the shop's abandon limit as abandoned |
+| `APPOINTMENT_REMINDER` | The hourly sweep finds a booked [appointment](appointment.md) with a customer starting within 24 hours, once (again if it's moved). Not about a ticket, so it has no `ticketIdentifier` and staff can't send it from a ticket (`400`) |
 | `STATUS_LINK` | Staff send it from the ticket card, whatever the customer agreed to |
 | `TEST` | An admin tries the settings, not kept in the outbox |
 
@@ -25,7 +26,9 @@ estimates moving a ticket don't, since their own message says it.
 **Wording.** Each event has a `MessageTemplate { subject, body }` (subject for email only), the shop's own in
 `templates` or the defaults in shared `MessageTemplates`. `{name}` (first name), `{ticket}`, `{device}`,
 `{status}` (as customers see it), `{link}` (the [status page](status.md), blank without a public address),
-`{estimate}`, `{balance}`, `{storage}` (the daily storage fee), `{shop}` and `{shop_phone}` are filled in when the message is queued.
+`{estimate}`, `{balance}`, `{storage}` (the daily storage fee), `{appointment}` (an appointment's day and time,
+like "tomorrow at 10:30"), `{shop}` and `{shop_phone}` are filled in when the message is queued; an appointment
+reminder only has `{name}`, `{device}`, `{appointment}`, `{shop}` and `{shop_phone}`.
 
 **The outbox.** Each message is an `OutboxMessage` row (`outbox` table), one per channel. A loop every 10 seconds
 sends what's due. A send that might work later (`SendResult.Retry`: the server down, a refused login, Twilio 401,

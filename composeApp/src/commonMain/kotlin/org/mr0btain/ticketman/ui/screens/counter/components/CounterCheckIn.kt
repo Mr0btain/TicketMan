@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.data.appointment.Appointment
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
@@ -28,6 +29,10 @@ class CounterCheckIn(
     private val _customer = MutableStateFlow<Customer?>(null)
     val customer = _customer.asStateFlow()
 
+    // Appointment being checked in, when it's started from the calendar
+    private val _appointment = MutableStateFlow<Appointment?>(null)
+    val appointment = _appointment.asStateFlow()
+
     private val _last = MutableStateFlow<CheckInResponse?>(null)
     /** The last check in, for the done screen */
     val last = _last.asStateFlow()
@@ -37,6 +42,16 @@ class CounterCheckIn(
         if (!support.canEdit()) return
 
         _customer.value = customer
+        _appointment.value = null
+        support.show(CounterView.CHECK_IN)
+    }
+
+    /** Opens the check in wizard for a booked appointment, filled in from it, with its customer when it has one */
+    fun startFromAppointment(appointment: Appointment, customer: Customer?) {
+        if (!support.canEdit()) return
+
+        _customer.value = customer
+        _appointment.value = appointment
         support.show(CounterView.CHECK_IN)
     }
 
@@ -92,6 +107,7 @@ class CounterCheckIn(
                 is TmResult.Success -> {
                     _last.value = result.data
                     _customer.value = null
+                    _appointment.value = null
                     support.show(CounterView.CHECKED_IN)
                     support.ticketsChanged()
                     onResult(null)
@@ -104,6 +120,7 @@ class CounterCheckIn(
 
     fun clear() {
         _customer.value = null
+        _appointment.value = null
         _last.value = null
     }
 }

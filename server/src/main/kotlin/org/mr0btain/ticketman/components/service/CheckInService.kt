@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.mr0btain.ticketman.components.database.AppointmentDatabase
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.DeviceDatabase
@@ -41,7 +42,8 @@ class CheckInService(
     values: StoredValueDatabase = StoredValueDatabase(),
     private val devices: DeviceDatabase = DeviceDatabase(),
     private val passcodes: PasscodeDatabase = PasscodeDatabase(),
-    private val vault: PasscodeVault? = null
+    private val vault: PasscodeVault? = null,
+    private val appointments: AppointmentDatabase = AppointmentDatabase()
 ) {
     private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
 
@@ -95,6 +97,14 @@ class CheckInService(
             storedValue.problem(listOf(deposit), request.customerIdentifier)?.let { return AccountResult.Conflict(it) }
         }
 
+        request.appointmentIdentifier?.let { identifier ->
+            val appointment = appointments.get(identifier) ?: return AccountResult.Invalid("That appointment doesn't exist")
+            if (!appointment.isOpen) return AccountResult.Invalid("That appointment is ${appointment.status.label.lowercase()} already")
+            if (appointment.customerIdentifier != null && appointment.customerIdentifier != request.customerIdentifier) {
+                return AccountResult.Invalid("That appointment is for another customer")
+            }
+        }
+
         request.signature?.problem()?.let { return AccountResult.Invalid(it) }
         if (shopProfile.repairTerms.isNotBlank() && request.signature == null) return AccountResult.Invalid("The customer has to sign the repair terms")
 
@@ -112,6 +122,8 @@ class CheckInService(
             }
         } catch (ex: StoredValuePayments.ShortOfValue) {
             return AccountResult.Conflict(ex.message)
+        } catch (ex: AppointmentTaken) {
+            return AccountResult.Conflict("That appointment was checked in already")
         }
 
         if (!added) return AccountResult.Conflict("That ticket already exists")
@@ -176,6 +188,11 @@ class CheckInService(
                     "Checked in $label" + (request.deposit?.takeIf { index == 0 }?.let { " with a ${Money.format(it.amountCents, shopProfile.currencySymbol)} deposit" } ?: "")
                 )
             }
+
+            // The appointment it was booked as, with the first ticket. Someone else checking it in at the same moment undoes this one
+            request.appointmentIdentifier?.let { identifier ->
+                if (!appointments.markArrived(identifier, items.first().ticket.identifier, request.customerIdentifier)) throw AppointmentTaken()
+            }
         }
     }
 
@@ -212,3 +229,6 @@ class CheckInService(
         const val MAX_DEVICES = 10
     }
 }
+
+/** The appointment being checked in wasn't booked any more when it came to saving */
+private class AppointmentTaken : Exception()

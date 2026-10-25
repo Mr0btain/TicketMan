@@ -67,6 +67,7 @@ import ticketman.composeapp.generated.resources.smartphone
 import ticketman.composeapp.generated.resources.tool
 import ticketman.composeapp.generated.resources.user
 import ticketman.composeapp.generated.resources.user_plus
+import org.mr0btain.ticketman.data.appointment.Appointment
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -86,15 +87,15 @@ private enum class CheckInStep(val label: String) {
 
 /** Everything typed into the wizard, kept here so going back a step doesn't lose it */
 @OptIn(ExperimentalUuidApi::class)
-private class CheckInForm(customer: Customer?, private val checklists: List<IntakeChecklist>) {
+private class CheckInForm(customer: Customer?, private val checklists: List<IntakeChecklist>, val appointment: Appointment? = null) {
     // Made up front so the repeat check can leave this ticket out. A new one for each device added
     var ticketIdentifier: Uuid by mutableStateOf(Uuid.generateV7())
 
     var customer by mutableStateOf(customer)
-    var manufacturer by mutableStateOf("")
-    var model by mutableStateOf("")
-    var serial by mutableStateOf("")
-    var kind by mutableStateOf(DeviceKind.PHONE)
+    var manufacturer by mutableStateOf(appointment?.device?.manufacturer.orEmpty())
+    var model by mutableStateOf(appointment?.device?.model.orEmpty())
+    var serial by mutableStateOf(appointment?.device?.serial.orEmpty())
+    var kind by mutableStateOf(appointment?.device?.kind?.takeIf { appointment.device.manufacturer.isNotBlank() || appointment.device.model.isNotBlank() } ?: DeviceKind.PHONE)
 
     /** One of the customer's devices, when it was picked rather than typed */
     var deviceIdentifier by mutableStateOf<Uuid?>(null)
@@ -116,13 +117,13 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
         get() = IntakeChecklists.itemsFor(kind, checklists)
     var condition by mutableStateOf("")
     var accessories by mutableStateOf("")
-    var problem by mutableStateOf("")
+    var problem by mutableStateOf(appointment?.problem.orEmpty())
     var priority by mutableStateOf(TicketPriority(TicketPriorityType.NORMAL))
     var estimateCents by mutableLongStateOf(0L)
     var promisedInDays by mutableStateOf<Int?>(3)
     var depositInput by mutableLongStateOf(0L)
     var depositMethod by mutableStateOf(PaymentMethod.CARD)
-    var technician by mutableStateOf<SearchResult?>(null)
+    var technician by mutableStateOf(appointment?.technicianIdentifier?.let { SearchResult(it, appointment.technicianName) })
     var strokes by mutableStateOf<List<List<SignaturePoint>>>(emptyList())
     var aspectRatio by mutableStateOf(3f)
     var signedName by mutableStateOf(customer?.name.orEmpty())
@@ -195,7 +196,8 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
             signature = if (needsSignature) SignatureInput(strokes, aspectRatio, signedName.trim()) else null,
             deviceIdentifier = deviceIdentifier,
             more = extra.toList(),
-            passcode = passcode.trim()
+            passcode = passcode.trim(),
+            appointmentIdentifier = appointment?.identifier
         )
 }
 
@@ -207,6 +209,7 @@ private class CheckInForm(customer: Customer?, private val checklists: List<Inta
 @Composable
 fun CheckInWizard(
     startingCustomer: Customer?,
+    appointment: Appointment? = null,
     terms: String,
     checklists: List<IntakeChecklist> = emptyList(),
     onSearchCustomers: suspend (String) -> List<Customer>,
@@ -218,7 +221,7 @@ fun CheckInWizard(
     onCancel: () -> Unit,
     onLoadDevices: suspend (Uuid) -> List<CustomerDevice> = { emptyList() }
 ) {
-    val form = remember(startingCustomer, checklists) { CheckInForm(startingCustomer, checklists) }
+    val form = remember(startingCustomer, checklists, appointment) { CheckInForm(startingCustomer, checklists, appointment) }
     val needsSignature = terms.isNotBlank()
     val steps = CheckInStep.entries.filter { it != CheckInStep.SIGN || needsSignature }
     val spacing = TmTheme.spacing
@@ -330,7 +333,9 @@ private fun CustomerStep(
     onSearch: suspend (String) -> List<Customer>,
     onAdd: (Customer, (Customer?, String?) -> Unit) -> Unit
 ) {
-    var query by remember { mutableStateOf("") }
+    // An appointment for someone not on file yet starts by looking for them
+    val booked = form.appointment?.takeIf { it.customerIdentifier == null }
+    var query by remember { mutableStateOf(booked?.let { it.phone.ifBlank { it.customerName } }.orEmpty()) }
     var matches by remember { mutableStateOf<List<Customer>>(emptyList()) }
     var adding by remember { mutableStateOf(false) }
 
@@ -361,7 +366,8 @@ private fun CustomerStep(
                     }
                 }
             },
-            onCancel = { adding = false }
+            onCancel = { adding = false },
+            initial = booked?.let { Customer(name = it.customerName, phone = it.phone, email = it.email) }
         )
         return
     }

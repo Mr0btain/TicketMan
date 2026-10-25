@@ -125,7 +125,8 @@ fun Application.module() {
             values = database.storedValueDatabase,
             devices = database.deviceDatabase,
             passcodes = database.passcodeDatabase,
-            vault = passcodeVault
+            vault = passcodeVault,
+            appointments = database.appointmentDatabase
         )
 
         val imageService = ImageService(database.imageDatabase, database.imageStore)
@@ -176,7 +177,8 @@ fun Application.module() {
             invoices = database.invoiceDatabase,
             shop = database.shopDatabase,
             estimates = database.estimateDatabase,
-            auditLog = database.auditLogDatabase
+            auditLog = database.auditLogDatabase,
+            appointments = database.appointmentDatabase
         )
         val estimateService = EstimateService(
             estimates = database.estimateDatabase,
@@ -203,7 +205,7 @@ fun Application.module() {
         }
 
         // Clears out photos deleted or never saved a day ago, backups whose link has run out, sessions that have
-        // expired, old audit entries and old restore leftovers, makes the daily backup and queues pickup reminders. Stops
+        // expired, old audit entries and old restore leftovers, makes the daily backup and queues pickup and appointment reminders. Stops
         // with the application
         launch(Dispatchers.IO) {
             while (isActive) {
@@ -214,6 +216,7 @@ fun Application.module() {
                 restoreService.sweepLeftovers(housekeeping.restoreLeftoverAge)
                 backupService.runSchedule()
                 notificationService.queueReminders()
+                notificationService.queueAppointmentReminders()
                 storageService.sweep()
                 delay(ImageService.SWEEP_INTERVAL)
             }

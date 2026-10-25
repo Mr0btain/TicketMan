@@ -26,6 +26,12 @@ fun formatDateTime(millis: Long): String {
     return "${time.date} ${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
 }
 
+/** Epoch millis as the time of day, "14:03" */
+fun formatTime(millis: Long): String {
+    val time = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone)
+    return "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
+}
+
 /** [formatDay] for the middle of a sentence: "due today", but still "due Fri Oct 17" */
 fun formatDayInSentence(millis: Long): String =
     formatDay(millis).let { if (it in setOf("Today", "Tomorrow", "Yesterday")) it.lowercase() else it }

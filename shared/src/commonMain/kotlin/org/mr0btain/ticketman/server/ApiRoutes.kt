@@ -33,6 +33,7 @@ object ApiRoutes {
     const val PURCHASE = "/api/purchase"
     const val ESTIMATE = "/api/estimate"
     const val REPORT = "/api/report"
+    const val APPOINTMENT = "/api/appointment"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -250,6 +251,19 @@ object NotifyPaths {
 
     /** Body `TicketMessageRequest`: sends one to the ticket's customer now */
     const val TICKET_SEND = "/ticket/{identifier}/send"
+}
+
+/** Under [ApiRoutes.APPOINTMENT] */
+object AppointmentPaths {
+    /** `?from=&to=` days like 2026-10-01, both included, by when they start */
+    const val RANGE = "/range"
+    const val GET = "/get/{identifier}"
+    const val ADD = "/add"
+    const val UPDATE = "/update"
+
+    /** Body `AppointmentStatusRequest`: cancelled, no show, or booked again */
+    const val STATUS = "/status/{identifier}"
+    const val REMOVE = "/remove/{identifier}"
 }
 
 /** Under [ApiRoutes.REPORT], admin only */

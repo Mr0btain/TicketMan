@@ -23,6 +23,7 @@ changes here are made to both sides together.
 | [Gift cards](giftcard.md) | `/api/giftcard` | `GiftCardRoute.kt` |
 | [Purchasing](purchase.md) | `/api/purchase` | `PurchaseRoute.kt` |
 | [Reports](report.md) | `/api/report` | `ReportRoute.kt` |
+| [Appointments](appointment.md) | `/api/appointment` | `AppointmentRoute.kt` |
 | [Status page](status.md) | `/status` | `StatusRoute.kt` |
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 

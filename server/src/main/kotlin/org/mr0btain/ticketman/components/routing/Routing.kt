@@ -12,6 +12,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.AccountService
+import org.mr0btain.ticketman.components.service.AppointmentService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.RestoreService
@@ -52,6 +53,12 @@ fun Application.configureRouting(
         shop = localDatabase.shopDatabase,
         images = imageService,
         estimates = estimateService
+    ),
+    appointmentService: AppointmentService = AppointmentService(
+        appointments = localDatabase.appointmentDatabase,
+        customers = localDatabase.customerDatabase,
+        users = localDatabase.userDatabase,
+        auditLog = localDatabase.auditLogDatabase
     ),
     storedValueService: StoredValueService = StoredValueService(
         values = localDatabase.storedValueDatabase,
@@ -111,6 +118,14 @@ fun Application.configureRouting(
         route(ApiRoutes.NOTIFY) {
             notifyRoute(
                 service = notificationService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.APPOINTMENT) {
+            appointmentRoute(
+                database = localDatabase.appointmentDatabase,
+                service = appointmentService,
                 userDatabase = localDatabase.userDatabase
             )
         }

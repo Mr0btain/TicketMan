@@ -19,15 +19,17 @@ import ticketman.composeapp.generated.resources.user_plus
  * Fields for a new customer, on a panel: the counter's quick add and check-in. Only the name and a phone or email
  * are required
  * @param onSave Gets the customer to save, calls back with what went wrong or null if it worked
+ * @param initial Name, phone and email to start with, like from an appointment
  */
 @Composable
 fun TmCustomerForm(
     onSave: (Customer, (String?) -> Unit) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
-    title: String = "New customer"
+    title: String = "New customer",
+    initial: Customer? = null
 ) {
-    val form = rememberCustomerFormState()
+    val form = rememberCustomerFormState(initial)
 
     TmPanel(modifier = modifier.widthIn(max = 640.dp), title = title, icon = Res.drawable.user_plus) {
         CustomerFields(form)
@@ -90,7 +92,15 @@ private class CustomerFormState {
 }
 
 @Composable
-private fun rememberCustomerFormState() = remember { CustomerFormState() }
+private fun rememberCustomerFormState(initial: Customer? = null) = remember(initial) {
+    CustomerFormState().apply {
+        initial?.let {
+            name = it.name
+            phone = it.phone
+            email = it.email
+        }
+    }
+}
 
 @Composable
 private fun CustomerFields(form: CustomerFormState) {

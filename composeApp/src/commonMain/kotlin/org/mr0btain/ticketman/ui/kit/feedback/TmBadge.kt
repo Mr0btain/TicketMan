@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.kit.feedback
 
+import org.mr0btain.ticketman.data.appointment.AppointmentStatus
 import org.mr0btain.ticketman.data.notify.OutboxStatus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -82,6 +83,13 @@ fun TmColors.tone(tone: StatusTone): TmTone = when (tone) {
 }
 
 fun TmColors.tone(status: TicketStatusType): TmTone = tone(status.tone)
+
+fun TmColors.tone(status: AppointmentStatus): TmTone = when (status) {
+    AppointmentStatus.BOOKED -> accent
+    AppointmentStatus.ARRIVED -> success
+    AppointmentStatus.NO_SHOW -> warning
+    AppointmentStatus.CANCELLED -> neutral
+}
 
 fun TmColors.tone(priority: TicketPriorityType): TmTone = when (priority) {
     TicketPriorityType.LOW -> neutral

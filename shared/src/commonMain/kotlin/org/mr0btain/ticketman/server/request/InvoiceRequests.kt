@@ -54,6 +54,7 @@ data class PaymentRequest(
  * @param more Other devices checked in at the same visit: each gets its own ticket, all linked, with the same
  * technician and signature. The deposit goes on the first
  * @param passcode The device's passcode or pattern, blank for none. Kept encrypted, shown only to staff who can edit
+ * @param appointmentIdentifier The booked appointment this visit is, marked checked in with the first ticket
  */
 @Serializable
 data class CheckInRequest(
@@ -64,7 +65,8 @@ data class CheckInRequest(
     val signature: SignatureInput? = null,
     val deviceIdentifier: Uuid? = null,
     val more: List<CheckInItem> = emptyList(),
-    val passcode: String = ""
+    val passcode: String = "",
+    val appointmentIdentifier: Uuid? = null
 )
 
 /** Another device at the same check in */

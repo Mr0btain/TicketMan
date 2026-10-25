@@ -36,6 +36,9 @@ enum class NotificationEvent(val label: String) {
     /** A device was left long enough to be treated as abandoned, sent by the hourly sweep */
     ABANDONED("Abandoned"),
 
+    /** A booked appointment is coming up, sent by the hourly sweep. Not about a ticket */
+    APPOINTMENT_REMINDER("Appointment reminder"),
+
     /** Staff sent the status page link by hand */
     STATUS_LINK("Status link"),
 
@@ -44,7 +47,7 @@ enum class NotificationEvent(val label: String) {
 
     companion object {
         /** The ones the shop turns on or off, the others are sent when someone asks */
-        val automatic = listOf(STATUS_CHANGED, READY_FOR_PICKUP, ESTIMATE_READY, PICKUP_REMINDER, STORAGE_FEE, ABANDONED)
+        val automatic = listOf(STATUS_CHANGED, READY_FOR_PICKUP, ESTIMATE_READY, PICKUP_REMINDER, STORAGE_FEE, ABANDONED, APPOINTMENT_REMINDER)
     }
 }
 
@@ -205,6 +208,7 @@ object MessageTemplates {
         "estimate" to "The estimate's total",
         "balance" to "Still to pay",
         "storage" to "The daily storage fee",
+        "appointment" to "An appointment's day and time",
         "shop" to "The shop's name",
         "shop_phone" to "The shop's phone"
     )
@@ -235,6 +239,10 @@ object MessageTemplates {
         NotificationEvent.ABANDONED to MessageTemplate(
             "Your {device} hasn't been collected",
             "Hi {name}, your {device} (ticket {ticket}) has been waiting too long and is now considered abandoned under our terms. Please call us. {link}\n{shop} {shop_phone}"
+        ),
+        NotificationEvent.APPOINTMENT_REMINDER to MessageTemplate(
+            "Your appointment at {shop}",
+            "Hi {name}, a reminder that we'll see you {appointment} about your {device}. Need to change it? Call us on {shop_phone}\n{shop}"
         ),
         NotificationEvent.STATUS_LINK to MessageTemplate(
             "Your repair at {shop}",

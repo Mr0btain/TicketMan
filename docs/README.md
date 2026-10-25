@@ -54,6 +54,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Records screen](ui/screens/records.md): the shared records layout, dialogs, view only
 - [Counter screen](ui/screens/counter.md): views, shortcuts, check-in wizard, pickup, sales
 - [Purchasing screen](ui/screens/purchasing.md): orders, receiving, suppliers
+- [Appointments screen](ui/screens/appointments.md): the week's calendar, booking, checking an appointment in
 - [Kiosk](ui/screens/kiosk.md): the lock screen, PIN pad, idle lock, leaving kiosk mode
 - [Admin screen](ui/screens/admin.md): every tab and what it's backed by
 - [Settings screen](ui/screens/settings.md): what each setting does, adding one
@@ -68,6 +69,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Messages](api/notify.md) and [Estimates](api/estimate.md): talking to customers
 - [Gift cards](api/giftcard.md) and [Purchasing](api/purchase.md)
 - [Reports](api/report.md): sales, profit, tax, techs and turnaround over some days
+- [Appointments](api/appointment.md): the calendar, and appointments becoming check-ins
 - [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing

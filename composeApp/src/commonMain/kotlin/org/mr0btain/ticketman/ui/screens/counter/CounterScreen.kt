@@ -49,6 +49,7 @@ fun CounterScreen(
     val priceResults by counter.priceResults.collectAsState()
     val shop by counter.shop.collectAsState()
     val checkInCustomer by counter.checkIn.customer.collectAsState()
+    val checkInAppointment by counter.checkIn.appointment.collectAsState()
     val lastCheckIn by counter.checkIn.last.collectAsState()
     val pickup by counter.pickup.detail.collectAsState()
     val lastPickup by counter.pickup.last.collectAsState()
@@ -249,6 +250,7 @@ fun CounterScreen(
 
                 CounterView.CHECK_IN -> CheckInWizard(
                     startingCustomer = checkInCustomer,
+                    appointment = checkInAppointment,
                     terms = shop.repairTerms,
                     checklists = shop.checklists,
                     onSearchCustomers = { counter.checkIn.searchCustomers(it) },
