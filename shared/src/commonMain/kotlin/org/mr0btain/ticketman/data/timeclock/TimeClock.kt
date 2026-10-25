@@ -74,6 +74,8 @@ data class Timesheet(
  * One person's time
  * @param hours Their entries added up, open ones up to [Timesheet.generatedAt]
  * @param entries Oldest first
+ * @param scheduledHours Their shifts on the staff schedule in those days, added up
+ * @param shifts Each of those shifts against the clock, oldest first
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -81,7 +83,31 @@ data class TimesheetPerson(
     val userIdentifier: Uuid,
     val name: String,
     val hours: Double,
-    val entries: List<TimeEntry>
+    val entries: List<TimeEntry>,
+    val scheduledHours: Double = 0.0,
+    val shifts: List<ShiftCheck> = emptyList()
+) {
+    /** Shifts started late, past [TimeClockRules.LATE_GRACE_MINUTES] */
+    val lateCount: Int
+        get() = shifts.count { (it.lateMinutes ?: 0) > 0 }
+
+    val missedCount: Int
+        get() = shifts.count { it.missed }
+}
+
+/**
+ * A scheduled shift against the clock
+ * @param clockedInAt When they clocked in for it, null when they didn't (yet)
+ * @param lateMinutes How late that was past the grace, 0 on time, null when they didn't clock in
+ * @param missed It's started and they never clocked in for it
+ */
+@Serializable
+data class ShiftCheck(
+    val startsAt: Long,
+    val endsAt: Long,
+    val clockedInAt: Long? = null,
+    val lateMinutes: Int? = null,
+    val missed: Boolean = false
 )
 
 object TimeClockRules {
@@ -92,4 +118,26 @@ object TimeClockRules {
 
     /** The most days one timesheet covers */
     const val MAX_DAYS = 92
+
+    /** Clocking in up to this many minutes after a shift starts is on time */
+    const val LATE_GRACE_MINUTES = 5
+
+    /** Clocking in up to this long before a shift starts counts toward it */
+    const val EARLY_MILLIS = 2 * 3_600_000L
+
+    /**
+     * Each of [shifts] (start and end) against the [entries] on the clock at [now]: the first clock in from
+     * [EARLY_MILLIS] before it starts to when it ends counts, later than [LATE_GRACE_MINUTES] is late, and none
+     * once it's started past the grace is missed. Ones still to come aren't judged
+     */
+    fun check(shifts: List<Pair<Long, Long>>, entries: List<TimeEntry>, now: Long): List<ShiftCheck> =
+        shifts.sortedBy { it.first }.map { (start, end) ->
+            val clocked = entries.filter { it.clockedInAt in (start - EARLY_MILLIS) until end }.minByOrNull { it.clockedInAt }?.clockedInAt
+            val graceEnd = start + LATE_GRACE_MINUTES * 60_000L
+            when {
+                clocked != null -> ShiftCheck(start, end, clocked, lateMinutes = if (clocked > graceEnd) ((clocked - start) / 60_000L).toInt() else 0)
+                now > graceEnd -> ShiftCheck(start, end, missed = true)
+                else -> ShiftCheck(start, end)
+            }
+        }
 }

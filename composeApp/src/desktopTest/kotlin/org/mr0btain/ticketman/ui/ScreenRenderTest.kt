@@ -128,6 +128,7 @@ import org.mr0btain.ticketman.ui.screens.admin.timesheets.AdminTimesheetsTab
 import org.mr0btain.ticketman.ui.screens.admin.timesheets.TimeEntryDialog
 import org.mr0btain.ticketman.data.timeclock.TimeEntry
 import org.mr0btain.ticketman.data.timeclock.Timesheet
+import org.mr0btain.ticketman.data.timeclock.ShiftCheck
 import org.mr0btain.ticketman.data.timeclock.TimesheetPerson
 import org.mr0btain.ticketman.ui.screens.appointments.AppointmentDialog
 import org.mr0btain.ticketman.ui.screens.appointments.AppointmentTimes
@@ -1142,9 +1143,16 @@ class ScreenRenderTest {
                         TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 2), clockedOutAt = at(17, 31), station = "Front Counter"),
                         TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 0, 1), clockedOutAt = at(17, 0, 1), note = "Forgot to clock out", editedBy = "boss"),
                         danaOn
+                    ), scheduledHours = 24.0, shifts = listOf(
+                        ShiftCheck(at(9, 0), at(17, 0), at(9, 2), 0),
+                        ShiftCheck(at(9, 0, 1), at(17, 0, 1), at(9, 0, 1), 0),
+                        ShiftCheck(at(9, 0, 2), at(17, 0, 2), at(9, 15, 2), 15)
                     )),
                     TimesheetPerson(samId, "Sam Ortiz", 7.5, listOf(
                         TimeEntry(userIdentifier = samId, userName = "Sam Ortiz", clockedInAt = at(10, 0), clockedOutAt = at(17, 30))
+                    ), scheduledHours = 16.0, shifts = listOf(
+                        ShiftCheck(at(10, 0), at(18, 0), at(10, 0), 0),
+                        ShiftCheck(at(10, 0, 1), at(18, 0, 1), missed = true)
                     ))
                 )
             ),

@@ -80,7 +80,8 @@ fun Application.configureRouting(
     timeClockService: TimeClockService = TimeClockService(
         entries = localDatabase.timeClockDatabase,
         users = localDatabase.userDatabase,
-        auditLog = localDatabase.auditLogDatabase
+        auditLog = localDatabase.auditLogDatabase,
+        schedule = localDatabase.scheduleDatabase
     ),
     storedValueService: StoredValueService = StoredValueService(
         values = localDatabase.storedValueDatabase,

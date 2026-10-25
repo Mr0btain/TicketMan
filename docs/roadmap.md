@@ -56,8 +56,9 @@ Smaller pieces left from earlier phases, picked up as they're needed.
   already), and sending a payment link by email or text.
 - **Tips and surcharges** on card payments.
 - **Stock transfers** between locations, rather than counting down at one and up at the other by hand.
-- **Clocking against the schedule.** The time clock and timesheets showing scheduled hours beside worked ones, late
-  starts and missed shifts.
+- **Clocking against the schedule** (done). Timesheets show each person's scheduled hours beside worked ones, with
+  late starts and missed shifts flagged on the admin Timesheets tab (`TimeClockRules.check`), and Settings shows your
+  week's hours against your schedule.
 
 ## iOS app
 

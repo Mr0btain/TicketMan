@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.data.schedule.ScheduleKind
+import org.mr0btain.ticketman.data.schedule.ScheduleEntry
+import org.mr0btain.ticketman.components.database.ScheduleDatabase
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -164,5 +167,34 @@ class TimeClockTest {
 
         assertEquals(HttpStatusCode.Accepted, client.delete("/api/timeclock/entry/remove/${saved.identifier}") { bearerAuth(adminToken) }.status)
         assertNull(TimeClockDatabase().get(saved.identifier))
+    }
+
+    @Test
+    fun timesheetsShowScheduledHoursBesideWorked() = testApplication {
+        setup()
+        val yesterday = today.minusDays(1)
+        ScheduleDatabase().add(listOf(
+            ScheduleEntry(userIdentifier = tech.identifier, startsAt = at(9, yesterday), endsAt = at(17, yesterday)),
+            ScheduleEntry(userIdentifier = clerk.identifier, startsAt = at(10, yesterday), endsAt = at(14, yesterday)),
+            // Time off isn't scheduled work
+            ScheduleEntry(userIdentifier = clerk.identifier, kind = ScheduleKind.TIME_OFF, allDay = true, startsAt = at(0, today), endsAt = at(0, today.plusDays(1)))
+        ))
+        val late = yesterday.atTime(9, 20).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        post("/api/timeclock/entry/add", json.encodeToString(TimeEntry(userIdentifier = tech.identifier, clockedInAt = late, clockedOutAt = at(17, yesterday))), adminToken)
+
+        val response = client.get("/api/timeclock/timesheet?from=$yesterday&to=$today") { bearerAuth(adminToken) }
+        val people = json.decodeFromString<Timesheet>(response.bodyAsText()).people.associateBy { it.userIdentifier }
+
+        val tess = people.getValue(tech.identifier)
+        assertEquals(8.0, tess.scheduledHours)
+        assertEquals(20, tess.shifts.single().lateMinutes)
+        assertEquals(1, tess.lateCount)
+
+        // On the schedule with no time on the clock still shows, as missed
+        val cal = people.getValue(clerk.identifier)
+        assertEquals(0.0, cal.hours)
+        assertEquals(4.0, cal.scheduledHours)
+        assertEquals(1, cal.missedCount)
+        assertEquals("Cal Clerk", cal.name)
     }
 }

@@ -1,11 +1,13 @@
 package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.database.ScheduleDatabase
 import org.mr0btain.ticketman.components.database.TimeClockDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatHours
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.schedule.ScheduleKind
 import org.mr0btain.ticketman.data.timeclock.PunchResult
 import org.mr0btain.ticketman.data.timeclock.TimeClockRules
 import org.mr0btain.ticketman.data.timeclock.TimeEntry
@@ -28,6 +30,7 @@ class TimeClockService(
     private val entries: TimeClockDatabase,
     private val users: UserDatabase,
     private val auditLog: AuditLogDatabase,
+    private val schedule: ScheduleDatabase? = null,
     private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() }
 ) {
     /**
@@ -64,9 +67,23 @@ class TimeClockService(
         val list = entries.between(start, end, user) ?: return AccountResult.Invalid("Couldn't read the time clock")
         val time = now()
 
-        val people = list
-            .groupBy { it.userIdentifier }
-            .map { (identifier, own) -> TimesheetPerson(identifier, own.last().userName, own.sumOf { it.hours(time) }, own) }
+        // Shifts on the schedule in those days, everyone with one or with time on the clock
+        val shifts = schedule?.between(start, end, user = user).orEmpty().filter { it.kind == ScheduleKind.SHIFT && it.startsAt >= start }
+        val byPerson = list.groupBy { it.userIdentifier }
+        val shiftsByPerson = shifts.groupBy { it.userIdentifier }
+        val people = (byPerson.keys + shiftsByPerson.keys)
+            .map { identifier ->
+                val own = byPerson[identifier].orEmpty()
+                val scheduled = shiftsByPerson[identifier].orEmpty()
+                TimesheetPerson(
+                    userIdentifier = identifier,
+                    name = own.lastOrNull()?.userName ?: scheduled.first().userName,
+                    hours = own.sumOf { it.hours(time) },
+                    entries = own,
+                    scheduledHours = scheduled.sumOf { it.hours },
+                    shifts = TimeClockRules.check(scheduled.map { it.startsAt to it.endsAt }, own, time)
+                )
+            }
             .sortedBy { it.name.lowercase() }
 
         return AccountResult.Done(Timesheet(from.toString(), to.toString(), people, time))

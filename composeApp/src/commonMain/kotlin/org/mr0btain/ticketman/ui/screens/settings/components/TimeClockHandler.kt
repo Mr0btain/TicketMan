@@ -37,6 +37,10 @@ class TimeClockHandler(
     /** Hours since Monday, null until loaded */
     val weekHours = _weekHours.asStateFlow()
 
+    private val _weekScheduled = MutableStateFlow<Double?>(null)
+    /** Hours on the staff schedule this week, null until loaded */
+    val weekScheduled = _weekScheduled.asStateFlow()
+
     fun refresh() {
         scope.launch { load() }
     }
@@ -46,7 +50,9 @@ class TimeClockHandler(
 
         val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
         val monday = today.minus(DatePeriod(days = today.dayOfWeek.ordinal))
-        _weekHours.value = repo.myTimesheet(monday.toString(), monday.plus(DatePeriod(days = 6)).toString()).getOrNull()?.people?.sumOf { it.hours }
+        val week = repo.myTimesheet(monday.toString(), monday.plus(DatePeriod(days = 6)).toString()).getOrNull()
+        _weekHours.value = week?.people?.sumOf { it.hours }
+        _weekScheduled.value = week?.people?.sumOf { it.scheduledHours }
     }
 
     /** Clocks in, or out when they're on the clock, and says which */
@@ -71,6 +77,7 @@ class TimeClockHandler(
     fun clear() {
         _current.value = null
         _weekHours.value = null
+        _weekScheduled.value = null
     }
 
     // Snackbars suspend until dismissed, so show them on the side

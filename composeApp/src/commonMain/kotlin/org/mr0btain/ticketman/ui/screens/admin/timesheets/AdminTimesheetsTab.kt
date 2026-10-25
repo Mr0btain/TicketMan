@@ -137,34 +137,61 @@ fun AdminTimesheetsTab(
             TmPanel(
                 modifier = Modifier.widthIn(max = 880.dp).fillMaxWidth(),
                 title = person.name,
-                subtitle = if (person.entries.size == 1) "Once on the clock" else "${person.entries.size} times on the clock",
+                subtitle = listOfNotNull(
+                    when (person.entries.size) {
+                        0 -> "Not on the clock"
+                        1 -> "Once on the clock"
+                        else -> "${person.entries.size} times on the clock"
+                    },
+                    person.shifts.size.takeIf { it > 0 }?.let { if (it == 1) "1 shift" else "$it shifts" }
+                ).joinToString(", "),
                 icon = Res.drawable.user,
-                actions = { Text(text = formatHours(person.hours), style = TmTheme.typography.numericLarge, color = colors.text) }
+                actions = {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(text = formatHours(person.hours), style = TmTheme.typography.numericLarge, color = colors.text)
+                        if (person.scheduledHours > 0) {
+                            Text(text = "of ${formatHours(person.scheduledHours)} scheduled", style = TmTheme.typography.caption, color = colors.textMuted)
+                        }
+                    }
+                }
             ) {
-                BoxWithConstraints {
-                    val narrow = maxWidth < ENTRY_TABLE_WIDTH
-                    val columns = if (narrow) narrowColumns else wideColumns
+                // Shifts on the schedule they were late for or missed
+                val flagged = person.shifts.filter { it.missed || (it.lateMinutes ?: 0) > 0 }
+                if (flagged.isNotEmpty()) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs), verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                        flagged.forEach { shift ->
+                            val label = "${formatDay(shift.startsAt)} ${formatTime(shift.startsAt)}"
+                            if (shift.missed) TmBadge(text = "Missed $label", tone = colors.danger, dot = false)
+                            else TmBadge(text = "${shift.lateMinutes} min late $label", tone = colors.warning, dot = false)
+                        }
+                    }
+                }
+                if (person.entries.isNotEmpty()) {
+                    BoxWithConstraints {
+                        val narrow = maxWidth < ENTRY_TABLE_WIDTH
+                        val columns = if (narrow) narrowColumns else wideColumns
 
-                    Column {
-                        TmTableHeader(columns)
-                        person.entries.forEach { entry ->
-                            val where = listOf(entry.station, entry.note, entry.editedBy.takeIf { it.isNotBlank() }?.let { "changed by $it" }.orEmpty())
-                                .filter { it.isNotBlank() }.joinToString(", ")
+                        Column {
+                            TmTableHeader(columns)
+                            person.entries.forEach { entry ->
+                                val where = listOf(entry.station, entry.note, entry.editedBy.takeIf { it.isNotBlank() }?.let { "changed by $it" }.orEmpty())
+                                    .filter { it.isNotBlank() }.joinToString(", ")
 
-                            TmTableRow(columns, onClick = if (narrow) ({ editing = entry to false }) else null) { index ->
-                                when (index) {
-                                    0 -> Column {
-                                        Text(text = formatDay(entry.clockedInAt), style = TmTheme.typography.body, color = colors.text)
-                                        if (narrow && where.isNotBlank()) Text(text = where, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 1)
-                                    }
-                                    1 -> Text(text = formatTime(entry.clockedInAt), style = TmTheme.typography.numeric, color = colors.text)
-                                    2 -> entry.clockedOutAt?.let { Text(text = formatTime(it), style = TmTheme.typography.numeric, color = colors.text) }
-                                        ?: TmBadge(text = "On", tone = colors.success)
-                                    3 -> Text(text = formatHours(entry.hours(sheet.generatedAt)), style = TmTheme.typography.numeric, color = colors.text)
-                                    4 -> Text(text = where, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 2)
-                                    else -> Row {
-                                        TmIconButton(icon = Res.drawable.edit_2, contentDescription = "Change", onClick = { editing = entry to false })
-                                        TmIconButton(icon = Res.drawable.trash_2, contentDescription = "Delete", onClick = { deleting = entry })
+                                TmTableRow(columns, onClick = if (narrow) ({ editing = entry to false }) else null) { index ->
+                                    when (index) {
+                                        0 -> Column {
+                                            Text(text = formatDay(entry.clockedInAt), style = TmTheme.typography.body, color = colors.text)
+                                            if (narrow && where.isNotBlank()) Text(text = where, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 1)
+                                        }
+                                        1 -> Text(text = formatTime(entry.clockedInAt), style = TmTheme.typography.numeric, color = colors.text)
+                                        2 -> entry.clockedOutAt?.let { Text(text = formatTime(it), style = TmTheme.typography.numeric, color = colors.text) }
+                                            ?: TmBadge(text = "On", tone = colors.success)
+                                        3 -> Text(text = formatHours(entry.hours(sheet.generatedAt)), style = TmTheme.typography.numeric, color = colors.text)
+                                        4 -> Text(text = where, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 2)
+                                        else -> Row {
+                                            TmIconButton(icon = Res.drawable.edit_2, contentDescription = "Change", onClick = { editing = entry to false })
+                                            TmIconButton(icon = Res.drawable.trash_2, contentDescription = "Delete", onClick = { deleting = entry })
+                                        }
                                     }
                                 }
                             }

@@ -65,6 +65,7 @@ fun SettingsScreen(
     var showChangePin by remember { mutableStateOf(false) }
     val clockedIn = viewModel.timeClock.current.collectAsState()
     val weekHours = viewModel.timeClock.weekHours.collectAsState()
+    val weekScheduled = viewModel.timeClock.weekScheduled.collectAsState()
     LaunchedEffect(Unit) { viewModel.timeClock.refresh() }
     var showStation by remember { mutableStateOf(false) }
 
@@ -200,7 +201,8 @@ fun SettingsScreen(
                     description = when {
                         currentUser.value == null -> "Log in to use the time clock"
                         else -> (clockedIn.value?.let { "On the clock since ${formatTime(it.clockedInAt)}" } ?: "Off the clock") +
-                            (weekHours.value?.let { ", ${formatHours(it)} this week" } ?: "")
+                            (weekHours.value?.let { ", ${formatHours(it)} this week" } ?: "") +
+                            (weekScheduled.value?.takeIf { it > 0 }?.let { " of ${formatHours(it)} scheduled" } ?: "")
                     },
                     enabled = currentUser.value != null,
                     onClick = { viewModel.timeClock.punch() }
