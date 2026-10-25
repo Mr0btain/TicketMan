@@ -514,6 +514,8 @@ private fun ShopProfileCard(
 
         TaxClassesEditor(classes = profile.taxClasses, onChange = { profile = profile.copy(taxClasses = it) })
 
+        ChecklistsEditor(checklists = profile.checklists, onChange = { profile = profile.copy(checklists = it) })
+
         TmFieldPair(
             {
                 TmTextField(

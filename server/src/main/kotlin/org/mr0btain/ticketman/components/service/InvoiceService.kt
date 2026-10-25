@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
+import org.mr0btain.ticketman.components.database.PasscodeDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.StoredValueDatabase
 import org.mr0btain.ticketman.data.giftcard.GiftCardCode
@@ -42,7 +43,8 @@ class InvoiceService(
     private val auditLog: AuditLogDatabase,
     private val work: WorkDatabase = WorkDatabase(),
     private val customers: CustomerDatabase = CustomerDatabase(),
-    private val values: StoredValueDatabase = StoredValueDatabase()
+    private val values: StoredValueDatabase = StoredValueDatabase(),
+    private val passcodes: PasscodeDatabase = PasscodeDatabase()
 ) {
     private val storedValue = StoredValuePayments(values) { money(it) }
 
@@ -166,6 +168,8 @@ class InvoiceService(
                 invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
                 tickets.markPickedUp(ticket.identifier, now)
                 tickets.recordStatusChange(ticket.identifier, TicketStatus(TicketStatusType.PICKED_UP), receivedBy)
+                // The device is the customer's again, its passcode isn't ours to keep
+                passcodes.clear(ticket.identifier)
 
                 // Part of the transaction, so it's only there if the pickup is
                 auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${money(invoice.totalCents)}")

@@ -25,6 +25,7 @@ import org.mr0btain.ticketman.components.service.EstimateService
 import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.components.service.PasscodeVault
 import org.mr0btain.ticketman.components.service.PurchaseService
 import org.mr0btain.ticketman.components.service.StoredValueService
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
@@ -43,6 +44,7 @@ fun Application.configureRouting(
     estimateService: EstimateService,
     localDatabase: LocalDatabase,
     loginLimiter: LoginLimiter = LoginLimiter(),
+    passcodeVault: PasscodeVault? = null,
     statusService: StatusService = StatusService(
         tickets = localDatabase.ticketDatabase,
         customers = localDatabase.customerDatabase,
@@ -230,7 +232,9 @@ fun Application.configureRouting(
                 workDatabase = localDatabase.workDatabase,
                 shopDatabase = localDatabase.shopDatabase,
                 invoiceService = invoiceService,
-                notificationService = notificationService
+                notificationService = notificationService,
+                passcodes = localDatabase.passcodeDatabase,
+                vault = passcodeVault
             )
         }
 

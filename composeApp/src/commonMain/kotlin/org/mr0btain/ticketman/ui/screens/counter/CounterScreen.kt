@@ -178,6 +178,11 @@ fun CounterScreen(
                         ),
                         onSendStatusLink = StatusLink.url(shop.publicUrl, detail.ticket)?.let { { counter.estimates.message(detail.ticket.identifier) } },
                         onOpenTicket = { counter.openTicket(it) },
+                        passcode = if (canEdit) PasscodeActions(
+                            onShow = { counter.showPasscode(detail.ticket.identifier) },
+                            onSet = { passcode, onResult -> counter.setPasscode(detail.ticket.identifier, passcode, onResult) },
+                            onClear = { counter.clearPasscode(detail.ticket.identifier) }
+                        ) else null,
                         parts = PartsActions(
                             suppliers = suppliers,
                             onSearchParts = { counter.pickup.searchParts(it) },
@@ -245,6 +250,7 @@ fun CounterScreen(
                 CounterView.CHECK_IN -> CheckInWizard(
                     startingCustomer = checkInCustomer,
                     terms = shop.repairTerms,
+                    checklists = shop.checklists,
                     onSearchCustomers = { counter.checkIn.searchCustomers(it) },
                     onAddCustomer = { customer, onResult -> counter.checkIn.addCustomer(customer, onResult) },
                     onSearchTechnicians = { counter.checkIn.searchTechnicians(it) },

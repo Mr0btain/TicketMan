@@ -1,6 +1,10 @@
 package org.mr0btain.ticketman.components.routing
 
 import io.ktor.http.*
+import org.mr0btain.ticketman.server.request.PasscodeBody
+import org.mr0btain.ticketman.data.ticket.IntakeChecklists
+import org.mr0btain.ticketman.components.service.PasscodeVault
+import org.mr0btain.ticketman.components.database.PasscodeDatabase
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -34,7 +38,9 @@ fun Route.ticketRoute(
     workDatabase: WorkDatabase,
     shopDatabase: ShopDatabase,
     invoiceService: InvoiceService,
-    notificationService: NotificationService
+    notificationService: NotificationService,
+    passcodes: PasscodeDatabase = PasscodeDatabase(),
+    vault: PasscodeVault? = null
 ) {
     val TAG = "TicketRoute"
     val GET_TAG = "$TAG:Get"
@@ -279,6 +285,45 @@ fun Route.ticketRoute(
             }
 
             call.audit(auditLog, AuditAction.DELETE, ENTITY_TYPE, identifier, kept?.let { "Invoice ${it.label} kept, it has payments or was voided" }.orEmpty())
+            call.respond(HttpStatusCode.Accepted)
+        }
+
+        // Shows the device's passcode to staff who can edit. Every look is in the audit log
+        get(TicketPaths.PASSCODE) {
+            val ticket = call.uuidParameter("identifier")?.let { database.getById(it) } ?: return@get call.respond(HttpStatusCode.NotFound)
+            val sealed = passcodes.get(ticket.identifier) ?: return@get call.respond(HttpStatusCode.NotFound)
+            val passcode = vault?.open(sealed)
+                ?: return@get call.respond(HttpStatusCode.Conflict, "This passcode was saved under another server secret and can't be read, ask the customer again")
+
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, ticket.identifier, "Passcode for ${ticket.label} viewed")
+            call.respond(HttpStatusCode.OK, PasscodeBody(passcode))
+        }
+
+        post(TicketPaths.PASSCODE) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+            val passcode = call.receive<PasscodeBody>().passcode.trim()
+            val ticket = database.getById(identifier) ?: return@post call.respond(HttpStatusCode.NotFound)
+
+            when {
+                vault == null -> return@post call.respond(HttpStatusCode.InternalServerError)
+                passcode.isEmpty() -> return@post call.respond(HttpStatusCode.BadRequest, "Type the passcode, or clear it instead")
+                passcode.length > IntakeChecklists.MAX_PASSCODE -> return@post call.respond(HttpStatusCode.BadRequest, "A passcode can be up to ${IntakeChecklists.MAX_PASSCODE} characters")
+                ticket.status.status == TicketStatusType.PICKED_UP -> return@post call.respond(HttpStatusCode.Conflict, "Ticket ${ticket.label} was picked up")
+            }
+
+            if (!passcodes.set(identifier, vault!!.seal(passcode), System.currentTimeMillis(), call.username(userDatabase))) {
+                return@post call.respond(HttpStatusCode.NotFound)
+            }
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Passcode for ${ticket.label} set")
+            call.respond(HttpStatusCode.Accepted)
+        }
+
+        delete(TicketPaths.PASSCODE) {
+            val identifier = call.uuidParameter("identifier") ?: return@delete call.respond(HttpStatusCode.NotFound)
+            val ticket = database.getById(identifier) ?: return@delete call.respond(HttpStatusCode.NotFound)
+
+            passcodes.clear(identifier)
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Passcode for ${ticket.label} cleared")
             call.respond(HttpStatusCode.Accepted)
         }
 

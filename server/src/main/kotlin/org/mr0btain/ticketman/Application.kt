@@ -33,6 +33,7 @@ import org.mr0btain.ticketman.components.routing.waitText
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.server.response.LoginLockKind
 import org.mr0btain.ticketman.components.service.ServerRestart
+import org.mr0btain.ticketman.components.service.PasscodeVault
 import org.mr0btain.ticketman.components.service.ServerSecret
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.proxy.ProxySettings
@@ -74,6 +75,7 @@ fun Application.module() {
         monitor.subscribe(ApplicationStopped) { database.close() }
         val secret = ServerSecret.resolve(environment.config.propertyOrNull("jwt.secret")?.getString().orEmpty(), dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase, secret)
+        val passcodeVault = PasscodeVault(secret)
         val userService = UserService(
             database = database.userDatabase,
             jwtService = jwtService,
@@ -108,7 +110,8 @@ fun Application.module() {
             auditLog = database.auditLogDatabase,
             work = database.workDatabase,
             customers = database.customerDatabase,
-            values = database.storedValueDatabase
+            values = database.storedValueDatabase,
+            passcodes = database.passcodeDatabase
         )
 
         val checkInService = CheckInService(
@@ -119,7 +122,9 @@ fun Application.module() {
             shop = database.shopDatabase,
             auditLog = database.auditLogDatabase,
             values = database.storedValueDatabase,
-            devices = database.deviceDatabase
+            devices = database.deviceDatabase,
+            passcodes = database.passcodeDatabase,
+            vault = passcodeVault
         )
 
         val imageService = ImageService(database.imageDatabase, database.imageStore)
@@ -183,7 +188,7 @@ fun Application.module() {
 
         configureRouting(
             userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
-            restoreService, notificationService, estimateService, database, loginLimiter
+            restoreService, notificationService, estimateService, database, loginLimiter, passcodeVault
         )
 
         // Sends customer messages as they're queued, and tries again the ones that didn't go

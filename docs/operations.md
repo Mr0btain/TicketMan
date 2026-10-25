@@ -124,7 +124,8 @@ server/
 │       ├── original.jpg
 │       ├── display.jpg
 │       └── thumb.jpg
-├── secret                     What tokens are signed with, when SECRET isn't set. Deleting it logs every device out
+├── secret                     What tokens are signed with and device passcodes sealed with, when SECRET isn't set.
+│                              Deleting it logs every device out and makes passcodes on file unreadable
 ├── backups/                   Backups waiting to be downloaded, removed once their link runs out
 ├── restore/                   An uploaded backup waiting for the next restart, last.json for the last restore,
 │                              and failed-<time>.zip for ones that couldn't be applied
@@ -401,6 +402,11 @@ Restoring always needs a restart, because H2's files can't be swapped under a ru
 To undo a restore by hand: stop the server, move `database/` and `images/` out of the way, move the ones from
 `pre-restore-<time>/` back, and start it again. The hourly sweep deletes `pre-restore-*` folders and
 `restore/failed-*.zip` files after `RESTORE_KEEP_DAYS` (30), so undo within that time or copy the folder elsewhere.
+
+Device passcodes are sealed with a key made from the server's secret (`SECRET`, or the `secret` file in the data
+folder), which backups don't contain. Restoring onto a server with a different secret brings the tickets back but
+not their passcodes: showing one says it can't be read, and staff ask the customer again. To move passcodes to a new
+machine, give it the same `SECRET`, or copy the `secret` file across.
 
 If a backup without photos is restored, `images/` is replaced with an empty folder and photos on records won't load.
 The app warns before uploading a file named like a database only backup, the waiting restore says the backup has no

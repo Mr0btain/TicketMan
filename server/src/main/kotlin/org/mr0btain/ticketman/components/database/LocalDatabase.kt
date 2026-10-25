@@ -40,6 +40,7 @@ import org.mr0btain.ticketman.components.database.tables.storedvalue.GiftCardTab
 import org.mr0btain.ticketman.components.database.tables.purchase.PurchaseOrderTable
 import org.mr0btain.ticketman.components.database.tables.purchase.SupplierTable
 import org.mr0btain.ticketman.components.database.tables.device.CustomerDeviceTable
+import org.mr0btain.ticketman.components.database.tables.ticket.TicketPasscodeTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.InviteTable
@@ -101,6 +102,7 @@ class LocalDatabase (
     val storedValueDatabase = StoredValueDatabase()
     val purchaseDatabase = PurchaseDatabase()
     val deviceDatabase = DeviceDatabase()
+    val passcodeDatabase = PasscodeDatabase()
     val imageDatabase = ImageDatabase { recordDatabases }
 
     /**
@@ -144,6 +146,7 @@ class LocalDatabase (
         SupplierTable,
         PurchaseOrderTable,
         CustomerDeviceTable,
+        TicketPasscodeTable,
         DataFixTable
     )
 

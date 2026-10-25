@@ -29,6 +29,9 @@ lines are saved. Paid and void invoices keep the rate they had.
 - **`taxClasses`** are the shop's other tax rates (`TaxClass { identifier, name, rate }`, `rate` a percent as
   typed), for lines and inventory items taxed differently from `taxRate`. An invoice keeps the classes it was made
   with in its `taxRates`, and picks up one made later when a line first uses it.
+- **`checklists`** are the shop's own intake checklists (`IntakeChecklist { kind, items }`), one per `DeviceKind`;
+  a kind without one uses the built in list (`IntakeChecklists.defaults`), and an empty list means nothing's
+  checked. Items are saved trimmed, blank and repeated ones dropped, up to 30 of 60 characters each.
 - **`partsOrderedStatus`** and **`partsArrivedStatus`** are where a ticket goes when a [purchase order](purchase.md)
   with a part for it is placed, and when every part ordered for it has arrived, each a `StatusChoice` or null.
 - **`estimateSentStatus`**, **`estimateApprovedStatus`** and **`estimateDeclinedStatus`** are where sending,

@@ -48,7 +48,7 @@ Blocks say what goes on the page, not where. Sizes, wrapping and page breaks are
 
 | Template | Printed from | Holds |
 |----------|--------------|-------|
-| `claimSlip(shop, ticket, customer, invoice, signature)` | Counter ticket card, after check-in | Shop header, ticket number large with a QR of the [status page](../api/status.md) link once the shop has a public address (the number before that, or if the link is too long), customer and device, check-in and promised times, deposit, the repair terms and signature |
+| `claimSlip(shop, ticket, customer, invoice, signature)` | Counter ticket card, after check-in | Shop header, ticket number large with a QR of the [status page](../api/status.md) link once the shop has a public address (the number before that, or if the link is too long), customer and device, check-in and promised times, deposit, that a passcode was given (never the passcode), what was checked at intake, the repair terms and signature |
 | `deviceTag(ticket, customer)` | Counter ticket card | Number and QR, customer, device, due date. Stuck to the device |
 | `receipt(shop, ticket, customer, invoice)` | Counter, after pickup | Shop header, charges, discount, tax, total, payments, change, invoice footer |
 | `invoice(shop, ticket, customer, invoice)` | The server, as a PDF (`GET /api/invoice/{id}/pdf`) | Like the receipt, with the status (due, paid, void), the customer's address, phone and email, and what's still owed |

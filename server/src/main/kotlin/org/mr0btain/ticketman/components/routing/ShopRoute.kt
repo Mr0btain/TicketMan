@@ -89,7 +89,11 @@ fun Route.shopRoute(
                 currencySymbol = symbol,
                 publicUrl = profile.publicUrl.trim().trimEnd('/'),
                 statuses = statuses,
-                taxClasses = profile.taxClasses.map { it.copy(name = it.name.trim(), rate = it.rate.trim()) }
+                taxClasses = profile.taxClasses.map { it.copy(name = it.name.trim(), rate = it.rate.trim()) },
+                // One list per kind, the last sent winning, with blank and repeated checks dropped
+                checklists = profile.checklists.associateBy { it.kind }.values.map { list ->
+                    list.copy(items = list.items.map { it.trim().take(MAX_CHECK) }.filter { it.isNotEmpty() }.distinct().take(MAX_CHECKS))
+                }
             )
             if (database.update(saved)) {
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "shop", details = "Updated shop profile")
@@ -101,3 +105,6 @@ fun Route.shopRoute(
         }
     }
 }
+
+private const val MAX_CHECK = 60
+private const val MAX_CHECKS = 30

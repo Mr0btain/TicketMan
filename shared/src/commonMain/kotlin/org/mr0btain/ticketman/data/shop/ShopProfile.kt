@@ -6,6 +6,7 @@ import org.mr0btain.ticketman.data.invoice.TaxClasses
 import org.mr0btain.ticketman.data.invoice.TaxRate
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.IntakeChecklist
 import org.mr0btain.ticketman.data.ticket.StatusChoice
 
 /**
@@ -20,6 +21,8 @@ import org.mr0btain.ticketman.data.ticket.StatusChoice
  * @param partsOrderedStatus Where a ticket goes when a part ordered for it is sent to the supplier, like "Awaiting
  * parts". Null leaves it
  * @param partsArrivedStatus Where it goes once every part ordered for it has arrived, null leaves it
+ * @param checklists The shop's own intake checklists, by kind of device. Kinds without one use
+ * [org.mr0btain.ticketman.data.ticket.IntakeChecklists.defaults]
  */
 @Serializable
 data class ShopProfile(
@@ -50,7 +53,8 @@ data class ShopProfile(
     val estimateDeclinedStatus: StatusChoice? = null,
     val taxClasses: List<TaxClass> = emptyList(),
     val partsOrderedStatus: StatusChoice? = null,
-    val partsArrivedStatus: StatusChoice? = null
+    val partsArrivedStatus: StatusChoice? = null,
+    val checklists: List<IntakeChecklist> = emptyList()
 ) {
     /** [taxRate] in basis points, 0 when it's blank or not a number */
     val taxBasisPoints: Int

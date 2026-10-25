@@ -4,6 +4,8 @@ import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.DeviceDatabase
+import org.mr0btain.ticketman.components.database.PasscodeDatabase
+import org.mr0btain.ticketman.data.ticket.IntakeChecklists
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.StoredValueDatabase
@@ -35,7 +37,9 @@ class CheckInService(
     private val shop: ShopDatabase,
     private val auditLog: AuditLogDatabase,
     values: StoredValueDatabase = StoredValueDatabase(),
-    private val devices: DeviceDatabase = DeviceDatabase()
+    private val devices: DeviceDatabase = DeviceDatabase(),
+    private val passcodes: PasscodeDatabase = PasscodeDatabase(),
+    private val vault: PasscodeVault? = null
 ) {
     private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
 
@@ -49,7 +53,7 @@ class CheckInService(
         if (customers.getById(received.customerIdentifier) == null) return AccountResult.Invalid("Pick a customer")
 
         // Each device's ticket, checked the same way
-        val items = (listOf(CheckInItem(received.ticket, received.deviceIdentifier)) + received.more).map { item ->
+        val items = (listOf(CheckInItem(received.ticket, received.deviceIdentifier, received.passcode)) + received.more).map { item ->
             // A custom status is saved with the built-in one it acts as, which is then checked like any other
             val status = when (val resolved = CustomStatusRules.resolve(item.ticket.status, shopProfile.statuses)) {
                 is CustomStatusRules.Resolved.Ok -> resolved.status
@@ -68,8 +72,11 @@ class CheckInService(
             item.deviceIdentifier?.let { device ->
                 if (devices.get(device)?.customerIdentifier != received.customerIdentifier) return AccountResult.Invalid("That device isn't the customer's")
             }
+            if (item.passcode.trim().length > IntakeChecklists.MAX_PASSCODE) return AccountResult.Invalid("A passcode can be up to ${IntakeChecklists.MAX_PASSCODE} characters")
+            if (item.passcode.isNotBlank() && vault == null) return AccountResult.Invalid("Passcodes can't be kept on this server")
 
-            item.copy(ticket = ticket)
+            // The passcode is the server's to say is set, the ticket can't claim one
+            item.copy(ticket = ticket.copy(passcodeSet = false))
         }
         if (items.map { it.ticket.identifier }.toSet().size != items.size) return AccountResult.Invalid("Each device needs its own ticket")
         if (items.size > MAX_DEVICES) return AccountResult.Invalid("Check in up to $MAX_DEVICES devices at once")
@@ -127,6 +134,9 @@ class CheckInService(
                 tickets.recordStatusChange(ticket.identifier, ticket.status, takenBy)
                 tickets.setCustomer(ticket.identifier, request.customerIdentifier)
                 request.technicianIdentifier?.let { tickets.setUser(ticket.identifier, it) }
+                item.passcode.trim().takeIf { it.isNotEmpty() }?.let { passcode ->
+                    if (!passcodes.set(ticket.identifier, vault!!.seal(passcode), now, takenBy)) throw IllegalStateException("Passcode not saved")
+                }
 
                 request.deposit?.takeIf { index == 0 }?.let { deposit ->
                     invoices.getOrCreate(ticket.identifier, request.customerIdentifier, shopProfile.taxBasisPoints, shopProfile.taxRates)?.let { invoice ->

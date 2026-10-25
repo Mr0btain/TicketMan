@@ -325,6 +325,40 @@ class CounterHandler(
         }
     }
 
+    /** The ticket's passcode, which the server writes down as looked at */
+    suspend fun showPasscode(ticket: Uuid): Result<String> =
+        when (val result = remoteHandler.ticketRepo.getPasscode(ticket)) {
+            is TmResult.Success -> Result.success(result.data.passcode)
+            is TmResult.Error -> Result.failure(Exception(if (result.error.isNotFound) "There's no passcode on file" else result.error.message))
+        }
+
+    /**
+     * Saves a new passcode for the ticket
+     * @param onResult Gets null when it's saved, otherwise what went wrong
+     */
+    fun setPasscode(ticket: Uuid, passcode: String, onResult: (String?) -> Unit) {
+        if (!support.canEdit()) return
+        scope.launch {
+            when (val result = remoteHandler.ticketRepo.setPasscode(ticket, passcode)) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    reloadTicket()
+                }
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    fun clearPasscode(ticket: Uuid) {
+        if (!support.canEdit()) return
+        scope.launch {
+            when (val result = remoteHandler.ticketRepo.clearPasscode(ticket)) {
+                is TmResult.Success -> reloadTicket()
+                is TmResult.Error -> support.notify(result.error.message)
+            }
+        }
+    }
+
     /** The gift card with this code, for paying with it. Null when there's none or it couldn't be read */
     suspend fun findGiftCard(code: String): GiftCard? = remoteHandler.giftCardRepo.get(code).getOrNull()
 

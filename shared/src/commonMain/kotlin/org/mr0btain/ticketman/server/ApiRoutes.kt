@@ -112,6 +112,9 @@ object TicketPaths {
 
     /** `POST`: gives the ticket a new status token, so the old status page link stops working */
     const val STATUS_TOKEN = "/status-token/{identifier}"
+
+    /** `GET` shows the device's passcode (audited), `POST` a `PasscodeBody` sets it, `DELETE` clears it */
+    const val PASSCODE = "/passcode/{identifier}"
 }
 
 object InventoryPaths {

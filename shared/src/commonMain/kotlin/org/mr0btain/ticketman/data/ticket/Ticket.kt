@@ -37,6 +37,10 @@ data class Ticket(
     val deviceIdentifier: Uuid? = null,
     /** Shared by tickets checked in together, several devices at one visit. The server's to set */
     val groupIdentifier: Uuid? = null,
+    /** What was checked at check in and how it was */
+    val checklist: List<ChecklistItem> = emptyList(),
+    /** Whether a passcode is on file, which is kept encrypted apart from the ticket. The server's to set */
+    val passcodeSet: Boolean = false,
 ): MainItem(), SubItem {
     /** Number if it has one, otherwise the start of the identifier */
     val label: String

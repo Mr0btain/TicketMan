@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.database.tables.ticket
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.json.json
+import org.mr0btain.ticketman.data.ticket.ChecklistItem
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketStatus
@@ -30,6 +31,10 @@ object TicketTable: UuidTable("tickets") {
     // Added with customer devices: the customer's device it's on, and the tickets checked in with it
     val deviceRef = uuid("device_id").nullable()
     val group = uuid("group_id").nullable()
+
+    // Added with intake: what was checked at check in, and whether a sealed passcode is in ticket_passcodes
+    val checklist = json<List<ChecklistItem>>("checklist", Json { ignoreUnknownKeys = true }).default(emptyList())
+    val passcodeSet = bool("passcode_set").default(false)
 
     // Unique on (year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"

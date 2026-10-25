@@ -112,7 +112,12 @@ device's history, and a kind (phone, tablet, laptop, ...). On the review step **
 been filled in (`CheckInForm.extra`) and starts the device step again with the same customer, technician and
 deposit; checking in then sends them all in one request as linked tickets, and `CheckedInView` reads out every
 number. The customer card's **Devices** panel (`DevicesPanel`) lists their devices, each opening to its repairs,
-and the ticket card's **Related repairs** shows the tickets checked in with it and the device's earlier ones. The stepper only opens a step
+and the ticket card's **Related repairs** shows the tickets checked in with it and the device's earlier ones.
+
+The device step also has the **intake checklist** for the device's kind (the shop's list from its profile, or the
+built in one), each item marked works, faulty or not tested, and an optional **passcode**. On the ticket card the
+**Intake** panel (`IntakePanel`) shows the checklist, and for staff who can edit, **Show** fetches the passcode (an
+audited read) and hides it again after a minute, with **Change** and **Clear**. The stepper only opens a step
 when every step before it is filled in. The form makes the ticket's id up front, so the **repeat check** can leave
 it out: half a second after the device stops changing, it asks the server for this customer's earlier tickets for
 the same device and warns if it's been in recently.

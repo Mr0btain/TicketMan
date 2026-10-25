@@ -20,7 +20,9 @@ or none of them. The ticket gets its number here.
   one was picked; without it the server finds theirs with the same serial or makes one, and the ticket's
   `deviceIdentifier` points at it either way. `more` is a list of `CheckInItem { ticket, deviceIdentifier }`, other
   devices left at the same visit: each gets its own numbered ticket, all sharing a `groupIdentifier` (the first
-  ticket's id), the same technician and signature; the deposit goes on the first. Up to 10 devices.
+  ticket's id), the same technician and signature; the deposit goes on the first. Up to 10 devices. `passcode`
+  (and each item's) is the device's [passcode](ticket.md#passcode), sealed and kept apart from the ticket; each
+  ticket's `checklist` is the intake checklist as filled in.
 - **`201`** `CheckInResponse { ticket, invoice, linked }`, with the numbered ticket, the invoice if a deposit made
   one, and the other tickets made with it.
 - **`400`** with the reason: a ticket id isn't a version 7 UUID or is used twice, a picked device isn't the

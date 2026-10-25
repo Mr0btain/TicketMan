@@ -68,6 +68,7 @@ private val PANEL_WIDTH = 400.dp
  * @param onSendStatusLink Sends the customer their link now, null when there's no link to send
  * @param parts Ordering parts for the ticket, null hides the panel (in previews)
  * @param onOpenTicket Opens another ticket, one checked in with this or an earlier repair of the device
+ * @param passcode Showing and changing the device's passcode, null for anyone who can't
  * @param extraActions Room for buttons added by later screens, like pickup
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -85,6 +86,7 @@ fun TicketCard(
     onSendStatusLink: (() -> Unit)? = null,
     parts: PartsActions? = null,
     onOpenTicket: (Uuid) -> Unit = {},
+    passcode: PasscodeActions? = null,
     printAction: @Composable () -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {}
 ) {
@@ -378,6 +380,11 @@ fun TicketCard(
                                     }
                                 }
                             }
+                        }
+
+                        // ------------------------------------------ Intake ------------------------------------------
+                        if (ticket.checklist.isNotEmpty() || ticket.passcodeSet || (passcode != null && !ticket.isClosed)) {
+                            IntakePanel(modifier = Modifier.width(panelWidth), ticket = ticket, passcode = passcode?.takeIf { !ticket.isClosed })
                         }
 
                         // ------------------------------------------ Visit and device ------------------------------------------

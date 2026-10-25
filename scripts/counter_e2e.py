@@ -248,12 +248,13 @@ step("Kiosk lists who can PIN in; the tech PINs in")
 # ------------------------------------------ Check in at the counter ------------------------------------------
 call("POST", "/api/data/customer/add", {"identifier": (jane := uid()), "name": "Jane Doe", "phone": "(555) 123-4567", "email": "jane@home.test", "notifyEmail": True}, pin, expect=201)
 signature = {"strokes": [[{"x": 0.1, "y": 0.5}, {"x": 0.5, "y": 0.3}, {"x": 0.9, "y": 0.6}]], "aspectRatio": 3.0, "signedName": "Jane Doe"}
-ticket_one = {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "iPhone 14", "serial": "SN123"}, "problem": "Cracked screen",
-              "accessories": "Case", "estimateCents": 15000, "priority": {"priority": "NORMAL", "time": 0}}
+ticket_one = {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "iPhone 14", "serial": "SN123", "kind": "PHONE"}, "problem": "Cracked screen",
+              "accessories": "Case", "estimateCents": 15000, "priority": {"priority": "NORMAL", "time": 0},
+              "checklist": [{"name": "Powers on", "result": "WORKS"}, {"name": "Front camera", "result": "FAULTY"}]}
 call("POST", "/api/counter/check-in", {"ticket": ticket_one, "customerIdentifier": jane}, pin, expect=400)
 _, checked_in = call("POST", "/api/counter/check-in", {
     "ticket": ticket_one, "customerIdentifier": jane, "technicianIdentifier": newtech_id,
-    "deposit": {"method": "CARD", "amountCents": 5000}, "signature": signature
+    "deposit": {"method": "CARD", "amountCents": 5000}, "signature": signature, "passcode": "2580"
 }, pin, expect=201)
 number = checked_in["ticket"]["number"]
 label = f"{number['year'] % 100:02d}-{number['sequence']:08d}"
@@ -275,14 +276,17 @@ clerk = clerk_auth["accessToken"]
 call("GET", "/api/user/me", token=pin, expect=401)
 call("GET", "/api/counter/queue", token=clerk, expect=200)
 call("POST", "/api/data/ticket/update", {**checked_in["ticket"], "status": {"status": "DONE", "time": 0}}, clerk, expect=403)
-step("Clerk PINs in (tech's PIN session ends); clerk can see the queue but can't change the ticket")
+call("GET", f"/api/data/ticket/passcode/{ticket_one['identifier']}", token=clerk, expect=403)
+step("Clerk PINs in (tech's PIN session ends); clerk can see the queue but can't change the ticket or see its passcode")
 
 _, pin_auth = call("POST", "/api/auth/pin", {"station": station, "userIdentifier": newtech_id, "pin": "246813"}, expect=202)
 pin = pin_auth["accessToken"]
 call("POST", "/api/data/ticket/update", {**checked_in["ticket"], "status": {"status": "DONE", "time": 0}}, pin, expect=202)
 _, queue = call("GET", "/api/counter/queue", token=pin, expect=200)
 check(any(t["ticket"]["identifier"] == ticket_one["identifier"] for t in queue["readyForPickup"]), "ticket should be ready for pickup")
-step("Tech PINs back in and marks it ready; it shows in the ready-for-pickup queue")
+_, shown = call("GET", f"/api/data/ticket/passcode/{ticket_one['identifier']}", token=pin, expect=200)
+check(shown["passcode"] == "2580" and checked_in["ticket"]["passcodeSet"] and checked_in["ticket"]["checklist"][1]["result"] == "FAULTY", f"intake {shown} {checked_in['ticket']}")
+step("Tech PINs back in, reads the passcode Jane gave (written to the audit log), and marks it ready; it shows in the ready-for-pickup queue")
 
 # ------------------------------------------ The customer checks on it ------------------------------------------
 call("POST", f"/api/data/ticket/add/note/{ticket_one['identifier']}", {"identifier": uid(), "message": "Screen fitted, ready for you", "customerVisible": True}, pin, expect=201)
@@ -340,7 +344,8 @@ _, paid = call("POST", "/api/counter/pickup", {"ticketIdentifier": ticket_one["i
 check(paid["status"] == "PAID" and paid["totalCents"] - sum(p["amountCents"] for p in paid["payments"]) == -10, "should be paid with 10 cents change")
 _, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
 check(item["stock"] == 4, f"stock is {item['stock']}")
-step("Pickup: $120 screen + half hour labor + 8.25% tax on the part = $159.90; short payment refused; paid with cash, 10c change, stock 5 -> 4")
+call("GET", f"/api/data/ticket/passcode/{ticket_one['identifier']}", token=pin, expect=404)
+step("Pickup: $120 screen + half hour labor + 8.25% tax on the part = $159.90; short payment refused; paid with cash, 10c change, stock 5 -> 4, passcode forgotten")
 
 # ------------------------------------------ Admin wraps up ------------------------------------------
 _, report = call("GET", "/api/admin/report/daily", token=admin, expect=200)

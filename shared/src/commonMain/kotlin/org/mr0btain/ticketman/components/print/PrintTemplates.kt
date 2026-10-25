@@ -58,8 +58,10 @@ object PrintTemplates {
             PrintBlock.Field("Checked in", formatDateTime(ticket.identifier.timestampMillis())),
             ticket.promisedAt?.let { PrintBlock.Field("Promised", formatDate(it)) },
             ticket.estimateCents?.let { PrintBlock.Field("Estimate", Money.format(it, shop.currencySymbol)) },
-            invoice?.paidCents?.takeIf { it > 0 }?.let { PrintBlock.Field("Deposit paid", Money.format(it, shop.currencySymbol)) }
-        ) + signatureBlocks(signature) + listOf(
+            invoice?.paidCents?.takeIf { it > 0 }?.let { PrintBlock.Field("Deposit paid", Money.format(it, shop.currencySymbol)) },
+            // Never the passcode itself, only that the shop has it
+            if (ticket.passcodeSet) PrintBlock.Field("Passcode", "Given, kept private") else null
+        ) + checklistBlocks(ticket) + signatureBlocks(signature) + listOf(
             PrintBlock.Divider,
             PrintBlock.Text("Bring this slip or your ticket number when you pick up.", small = true, centered = true)
         )
@@ -114,6 +116,15 @@ object PrintTemplates {
 
         return PrintDocument("Invoice ${invoice.label}", shopHeader(shop) + PrintBlock.Divider + PrintBlock.Heading("Invoice") + details + money(shop, invoice))
     }
+
+    // What was checked when it came in, so the customer has it in writing
+    private fun checklistBlocks(ticket: Ticket): List<PrintBlock> =
+        if (ticket.checklist.isEmpty()) emptyList()
+        else listOf(
+            PrintBlock.Gap,
+            PrintBlock.Text("Checked at intake", bold = true),
+            PrintBlock.Amounts(ticket.checklist.map { AmountRow(it.name, it.result.label) })
+        )
 
     // A row for each rate the invoice charged, or one for the main rate when nothing was taxed
     private fun taxRows(shop: ShopProfile, invoice: Invoice): List<AmountRow> =

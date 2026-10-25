@@ -96,6 +96,9 @@ import org.mr0btain.ticketman.ui.screens.counter.components.CustomerDetail
 import org.mr0btain.ticketman.data.customer.CreditEntry
 import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.ticket.DeviceKind
+import org.mr0btain.ticketman.data.ticket.CheckResult
+import org.mr0btain.ticketman.data.ticket.ChecklistItem
+import org.mr0btain.ticketman.ui.screens.counter.PasscodeActions
 import org.mr0btain.ticketman.ui.screens.admin.invoices.RefundDialog
 import org.mr0btain.ticketman.ui.screens.counter.SaleScreen
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
@@ -362,7 +365,11 @@ class ScreenRenderTest {
             onQueueTicketClick = {}
         ) {
             TicketCard(
-                detail = detail,
+                detail = detail.copy(ticket = detail.ticket.copy(
+                    checklist = listOf(ChecklistItem("Powers on", CheckResult.WORKS), ChecklistItem("Front camera", CheckResult.FAULTY), ChecklistItem("Face ID")),
+                    passcodeSet = true
+                )),
+                passcode = PasscodeActions(onShow = { Result.success("1234") }, onSet = { _, _ -> }, onClear = {}),
                 canEdit = true,
                 onStatusChange = {},
                 onAddNote = {},

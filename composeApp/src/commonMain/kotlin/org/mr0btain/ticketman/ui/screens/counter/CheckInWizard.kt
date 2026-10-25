@@ -1,6 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
+import org.mr0btain.ticketman.data.ticket.CheckResult
+import org.mr0btain.ticketman.data.ticket.ChecklistItem
+import org.mr0btain.ticketman.data.ticket.IntakeChecklist
+import org.mr0btain.ticketman.data.ticket.IntakeChecklists
+import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
 import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.ticket.DeviceKind
 import org.mr0btain.ticketman.server.request.CheckInItem
@@ -79,7 +84,7 @@ private enum class CheckInStep(val label: String) {
 
 /** Everything typed into the wizard, kept here so going back a step doesn't lose it */
 @OptIn(ExperimentalUuidApi::class)
-private class CheckInForm(customer: Customer?) {
+private class CheckInForm(customer: Customer?, private val checklists: List<IntakeChecklist>) {
     // Made up front so the repeat check can leave this ticket out. A new one for each device added
     var ticketIdentifier: Uuid by mutableStateOf(Uuid.generateV7())
 
@@ -94,6 +99,16 @@ private class CheckInForm(customer: Customer?) {
 
     /** Devices already filled in for this visit, checked in along with the one being typed */
     val extra = mutableStateListOf<CheckInItem>()
+
+    /** How each thing on the intake checklist was, by name. Anything not set wasn't tested */
+    val checks = mutableStateMapOf<String, CheckResult>()
+
+    /** The device's passcode or pattern, blank when they didn't give one */
+    var passcode by mutableStateOf("")
+
+    /** What to check on this kind of device, the shop's list or the default */
+    val checklistItems: List<String>
+        get() = IntakeChecklists.itemsFor(kind, checklists)
     var condition by mutableStateOf("")
     var accessories by mutableStateOf("")
     var problem by mutableStateOf("")
@@ -121,9 +136,11 @@ private class CheckInForm(customer: Customer?) {
 
     /** Keeps the device being typed for this visit and starts on another, keeping the customer, tech and deposit */
     fun addAnother() {
-        extra += CheckInItem(ticket(), deviceIdentifier)
+        extra += CheckInItem(ticket(), deviceIdentifier, passcode.trim())
         ticketIdentifier = Uuid.generateV7()
         pick(null)
+        checks.clear()
+        passcode = ""
         condition = ""
         accessories = ""
         problem = ""
@@ -139,7 +156,8 @@ private class CheckInForm(customer: Customer?) {
             condition = condition.trim(),
             accessories = accessories.trim(),
             estimateCents = estimateCents.takeIf { it > 0 },
-            promisedAt = promisedInDays?.let { promiseTimeInDays(it) }
+            promisedAt = promisedInDays?.let { promiseTimeInDays(it) },
+            checklist = checklistItems.map { ChecklistItem(it, checks[it] ?: CheckResult.NOT_TESTED) }
         )
 
     val depositCents: Long?
@@ -169,7 +187,8 @@ private class CheckInForm(customer: Customer?) {
             deposit = depositCents?.let { PaymentRequest(depositMethod, it, "Deposit") },
             signature = if (needsSignature) SignatureInput(strokes, aspectRatio, signedName.trim()) else null,
             deviceIdentifier = deviceIdentifier,
-            more = extra.toList()
+            more = extra.toList(),
+            passcode = passcode.trim()
         )
 }
 
@@ -182,6 +201,7 @@ private class CheckInForm(customer: Customer?) {
 fun CheckInWizard(
     startingCustomer: Customer?,
     terms: String,
+    checklists: List<IntakeChecklist> = emptyList(),
     onSearchCustomers: suspend (String) -> List<Customer>,
     onAddCustomer: (Customer, (Customer?, String?) -> Unit) -> Unit,
     onSearchTechnicians: suspend (String) -> List<SearchResult>,
@@ -191,7 +211,7 @@ fun CheckInWizard(
     onCancel: () -> Unit,
     onLoadDevices: suspend (Uuid) -> List<CustomerDevice> = { emptyList() }
 ) {
-    val form = remember(startingCustomer) { CheckInForm(startingCustomer) }
+    val form = remember(startingCustomer, checklists) { CheckInForm(startingCustomer, checklists) }
     val needsSignature = terms.isNotBlank()
     val steps = CheckInStep.entries.filter { it != CheckInStep.SIGN || needsSignature }
     val spacing = TmTheme.spacing
@@ -442,6 +462,37 @@ private fun DeviceStep(
             label = "Left with it",
             placeholder = "Charger, case, cable"
         )
+
+        // Written down now, so nobody argues later about what was already broken
+        if (form.checklistItems.isNotEmpty()) {
+            Text(text = "Check it over", style = TmTheme.typography.label, color = TmTheme.colors.textMuted)
+            Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
+                form.checklistItems.forEach { item ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                        Text(text = item, style = TmTheme.typography.body, color = TmTheme.colors.text, modifier = Modifier.weight(1f))
+                        TmSegmented(
+                            options = CheckResult.entries,
+                            selected = form.checks[item] ?: CheckResult.NOT_TESTED,
+                            onSelect = { form.checks[item] = it },
+                            optionLabel = { it.label },
+                            size = TmControlSize.SMALL
+                        )
+                    }
+                }
+            }
+        }
+
+        TmPasswordField(
+            modifier = Modifier.fillMaxWidth(),
+            value = form.passcode,
+            onValueChange = { form.passcode = it.take(IntakeChecklists.MAX_PASSCODE) },
+            label = "Passcode or pattern, if they'll share it"
+        )
+        Text(
+            text = "Kept encrypted, shown only to staff who can edit, and forgotten when it's picked up",
+            style = TmTheme.typography.caption,
+            color = TmTheme.colors.textMuted
+        )
     }
 
     if (repeats.isNotEmpty()) {
@@ -650,6 +701,11 @@ private fun ReviewStep(form: CheckInForm, needsSignature: Boolean) {
             TmKeyValueRow(label = "Problem", value = form.problem.trim())
             if (form.condition.isNotBlank()) TmKeyValueRow(label = "Condition", value = form.condition.trim())
             if (form.accessories.isNotBlank()) TmKeyValueRow(label = "Left with it", value = form.accessories.trim())
+            if (form.checks.isNotEmpty()) {
+                val faulty = form.checks.filterValues { it == CheckResult.FAULTY }.keys
+                TmKeyValueRow(label = "Checked", value = if (faulty.isEmpty()) "Nothing faulty" else "Faulty: ${faulty.joinToString(", ")}")
+            }
+            if (form.passcode.isNotBlank()) TmKeyValueRow(label = "Passcode", value = "Given")
             TmKeyValueRow(label = "Priority", value = formatEnumName(form.priority.priority.name))
             if (form.estimateCents > 0) TmKeyValueRow(label = "Estimate", value = formatMoney(form.estimateCents), numeric = true)
             TmKeyValueRow(label = "Promised", value = form.promisedInDays?.let { formatDay(promiseTimeInDays(it)) } ?: "No date")

@@ -53,6 +53,7 @@ data class PaymentRequest(
  * theirs with the same serial
  * @param more Other devices checked in at the same visit: each gets its own ticket, all linked, with the same
  * technician and signature. The deposit goes on the first
+ * @param passcode The device's passcode or pattern, blank for none. Kept encrypted, shown only to staff who can edit
  */
 @Serializable
 data class CheckInRequest(
@@ -62,15 +63,21 @@ data class CheckInRequest(
     val deposit: PaymentRequest? = null,
     val signature: SignatureInput? = null,
     val deviceIdentifier: Uuid? = null,
-    val more: List<CheckInItem> = emptyList()
+    val more: List<CheckInItem> = emptyList(),
+    val passcode: String = ""
 )
 
 /** Another device at the same check in */
 @Serializable
 data class CheckInItem(
     val ticket: Ticket,
-    val deviceIdentifier: Uuid? = null
+    val deviceIdentifier: Uuid? = null,
+    val passcode: String = ""
 )
+
+/** A device's passcode, being set or shown */
+@Serializable
+data class PasscodeBody(val passcode: String)
 
 /**
  * Hands a ticket back: takes the payments, pays off the invoice, takes parts out of stock and closes the ticket

@@ -28,6 +28,8 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var statusToken by TicketTable.statusToken
     var deviceRef by TicketTable.deviceRef
     var group by TicketTable.group
+    var checklist by TicketTable.checklist
+    val passcodeSet by TicketTable.passcodeSet
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -47,7 +49,9 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             pickedUpAt = pickedUpAt,
             statusToken = statusToken,
             deviceIdentifier = deviceRef,
-            groupIdentifier = group
+            groupIdentifier = group,
+            checklist = checklist,
+            passcodeSet = passcodeSet
         )
     }
 }

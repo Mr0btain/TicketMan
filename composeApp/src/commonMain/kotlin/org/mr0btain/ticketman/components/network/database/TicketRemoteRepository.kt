@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.network.database
 
 import io.ktor.client.*
+import org.mr0btain.ticketman.server.request.PasscodeBody
 import io.ktor.client.request.get
 import io.ktor.client.request.delete
 import org.mr0btain.ticketman.components.network.handleActionHttpResponse
@@ -49,6 +50,7 @@ class TicketRemoteRepository(
     private val FETCH_MINE_TAG = "$tag:FetchMine"
     private val WORK_TAG = "$tag:Work"
     private val STATUS_TOKEN_TAG = "$tag:StatusToken"
+    private val PASSCODE_TAG = "$tag:Passcode"
 
     /** A page of the tickets assigned to whoever is logged in, newest first */
     suspend fun fetchMine(offset: Long, limit: Int): TmResult<List<Ticket>, ServerError> =
@@ -134,6 +136,28 @@ class TicketRemoteRepository(
             STATUS_TOKEN_TAG,
             networkRequest(STATUS_TOKEN_TAG) { client.post { url("$serverUrl${TicketPaths.STATUS_TOKEN.fill(identifier)}") } }
         )
+    }
+
+    /** The device's passcode, which the server writes down as looked at. `NOT_FOUND` when there's none */
+    suspend fun getPasscode(identifier: Uuid): TmResult<PasscodeBody, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+        return handleDataHttpResponse(PASSCODE_TAG, networkRequest(PASSCODE_TAG) { client.get { url("$serverUrl${TicketPaths.PASSCODE.fill(identifier)}") } })
+    }
+
+    suspend fun setPasscode(identifier: Uuid, passcode: String): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+        return handleActionHttpResponse(PASSCODE_TAG, networkRequest(PASSCODE_TAG) {
+            client.post {
+                url("$serverUrl${TicketPaths.PASSCODE.fill(identifier)}")
+                contentType(ContentType.Application.Json)
+                setBody(PasscodeBody(passcode))
+            }
+        })
+    }
+
+    suspend fun clearPasscode(identifier: Uuid): EmptyResult<ServerError> {
+        if (serverUrl.isBlank()) return noServerError
+        return handleActionHttpResponse(PASSCODE_TAG, networkRequest(PASSCODE_TAG) { client.delete { url("$serverUrl${TicketPaths.PASSCODE.fill(identifier)}") } })
     }
 
     /** Takes a work entry off, and its invoice line */

@@ -228,6 +228,7 @@ class TicketDatabase(
             promisedAt = data.promisedAt
             deviceRef = data.deviceIdentifier
             group = data.groupIdentifier
+            checklist = data.checklist
             // Never the client's, so nobody picks a link they know
             statusToken = newStatusToken()
         }
@@ -418,6 +419,7 @@ class TicketDatabase(
             item.accessories = data.accessories
             item.estimateCents = data.estimateCents
             item.promisedAt = data.promisedAt
+            item.checklist = data.checklist
 
             true
         }

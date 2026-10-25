@@ -6,7 +6,9 @@ routes rather than fields on the ticket. Devices coming in at the counter go thr
 [`POST /api/counter/check-in`](counter.md#post-apicountercheck-in) instead of `/add`, which saves the links,
 deposit and signature with it. A ticket's notes are on the [Notes](notes.md#tickets) page. `deviceIdentifier` (the
 customer's device it's on) and `groupIdentifier` (shared by tickets checked in together) are set by check in;
-`/add` ignores them and `/update` leaves them alone.
+`/add` ignores them and `/update` leaves them alone. `checklist` is what was checked at check in
+(`ChecklistItem { name, result }`, `result` being `WORKS`, `FAULTY` or `NOT_TESTED`), saved by `/update` too.
+`passcodeSet` says whether the device's passcode is on file; it's the server's to set, through the routes below.
 
 ## Reading
 
@@ -196,6 +198,39 @@ saved in one transaction, or none.
 Takes the work entry with this identifier off, and its line off the invoice if it's still there.
 
 - **`202`** removed. **`404`** no such entry. **`409`** the ticket is picked up, or its invoice is paid or void.
+
+## Passcode
+
+The device's passcode or pattern, given at check in or later. It's sealed with a key from the server's secret
+(`PasscodeVault`, AES-GCM) in `ticket_passcodes`, never on the ticket, the status page, the claim slip or the PDF,
+and it's deleted when the ticket is picked up. See [Running a server](../operations.md#restore) for moving it
+between servers.
+
+### `GET /api/data/ticket/passcode/{identifier}`
+
+**Auth:** normal
+
+Shows it. Every look is audit logged (`Passcode for 26-... viewed`), so Restricted users can't.
+
+- **`200`** `PasscodeBody { passcode }`. **`404`** no such ticket, or no passcode on file. **`409`** it was sealed
+  under another server secret and can't be read.
+
+### `POST /api/data/ticket/passcode/{identifier}`
+
+**Auth:** normal
+
+Sets it, in place of any it had. Audited, without the passcode.
+
+- **Body:** `PasscodeBody { passcode }`, up to 64 characters, trimmed.
+- **`202`** saved. **`400`** blank or too long. **`404`** no such ticket. **`409`** the ticket was picked up.
+
+### `DELETE /api/data/ticket/passcode/{identifier}`
+
+**Auth:** normal
+
+Clears it. Audited.
+
+- **`202`** cleared, or there was none. **`404`** no such ticket.
 
 ## See also
 

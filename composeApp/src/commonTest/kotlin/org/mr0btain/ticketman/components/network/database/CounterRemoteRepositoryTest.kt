@@ -187,6 +187,9 @@ class CounterRemoteRepositoryTest {
         tickets.setCustomer(id, id)
         tickets.setUser(id, id)
         tickets.getNotes(id)
+        tickets.getPasscode(id)
+        tickets.setPasscode(id, "1234")
+        tickets.clearPasscode(id)
         customers.addTicket(id, id)
         customers.getTickets(id)
 
@@ -197,6 +200,9 @@ class CounterRemoteRepositoryTest {
                 "POST /api/data/ticket/set/customer/$id",
                 "POST /api/data/ticket/set/user/$id",
                 "GET /api/data/ticket/get/notes/$id",
+                "GET /api/data/ticket/passcode/$id",
+                "POST /api/data/ticket/passcode/$id",
+                "DELETE /api/data/ticket/passcode/$id",
                 "POST /api/data/customer/add/ticket/$id",
                 "GET /api/data/customer/get/tickets/$id"
             ),
