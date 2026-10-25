@@ -103,6 +103,26 @@ Sets the stock count by hand, only if it's still what the client last saw, so a 
 - **`409`** the count isn't `from` any more: `Stock changed to 3 since this was opened, check the count and try
   again`.
 
+### `POST /api/data/inventory/transfer/{identifier}`
+
+**Auth:** normal
+
+Moves parts from one location to another in one transaction: taken from the first only while there are enough there
+(in the same statement, like a pickup), then added at the second. Each move is kept in `stock_transfers`.
+
+- **Body:** `StockTransferRequest { fromLocation, toLocation, quantity, note }`, two different active locations,
+  1 to 100000 parts, a note up to 500 characters.
+- **`201`** the `StockTransfer { itemIdentifier, itemName, fromLocation, toLocation, quantity, note, movedBy, movedAt }`.
+  Audit logged.
+- **`400`** what `StockTransferRequest.problem` says, a location that isn't an active one, or an item whose stock isn't
+  counted. **`404`** no such item. **`409`** not enough there: `Only 2 at Main Street`.
+
+### `GET /api/data/inventory/transfers/{identifier}`
+
+**Auth:** restricted
+
+- **`200`** the item's last 50 moves, newest first.
+
 ### `POST /api/data/inventory/set/images/{identifier}`
 
 **Auth:** normal

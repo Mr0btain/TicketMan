@@ -55,7 +55,10 @@ Smaller pieces left from earlier phases, picked up as they're needed.
 - **Card readers at check-in.** Taking a deposit on a reader from the counter's wizard (the server takes them
   already), and sending a payment link by email or text.
 - **Tips and surcharges** on card payments.
-- **Stock transfers** between locations, rather than counting down at one and up at the other by hand.
+- **Stock transfers** between locations (done). **Move stock** on an item in the records screen takes parts from one
+  location and puts them at another together, refused past what's there, with the item's recent moves listed
+  ([`/transfer`](api/inventory.md#post-apidatainventorytransferidentifier)). Moved straight across; parts in transit
+  between the two aren't tracked.
 - **Clocking against the schedule** (done). Timesheets show each person's scheduled hours beside worked ones, with
   late starts and missed shifts flagged on the admin Timesheets tab (`TimeClockRules.check`), and Settings shows your
   week's hours against your schedule.

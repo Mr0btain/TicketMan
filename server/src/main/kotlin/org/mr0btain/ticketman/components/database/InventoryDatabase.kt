@@ -9,6 +9,9 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.mr0btain.ticketman.components.database.tables.location.InventoryStockTable
+import org.mr0btain.ticketman.components.database.tables.location.StockTransferTable
+import org.mr0btain.ticketman.data.inventory.StockTransfer
+import org.mr0btain.ticketman.data.inventory.StockTransferRules
 import org.mr0btain.ticketman.components.database.tables.location.LocationTable
 import org.mr0btain.ticketman.data.inventory.LocationStock
 import org.jetbrains.exposed.v1.jdbc.update
@@ -41,6 +44,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
     private val MIGRATE_PRICES_TAG = "$tag:MigrateLegacyPrices"
     private val NAMES_TAG = "$tag:Names"
     private val CODE_TAG = "$tag:Code"
+    private val TRANSFER_TAG = "$tag:Transfer"
 
     override fun getById(identifier: Uuid): Inventory? = getById(identifier, null)
 
@@ -308,6 +312,70 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
 
     /** How [setStock] went */
     enum class StockChange { DONE, NOT_FOUND, CHANGED_SINCE }
+
+    enum class Transfer { DONE, NOT_FOUND, UNTRACKED, SHORT }
+
+    /**
+     * Moves [transfer]'s parts between locations in one transaction: taken from the first only while there are
+     * enough there (in the same statement, like a pickup), then added at the second, and the move kept
+     * @return Null when it failed
+     */
+    fun transfer(transfer: StockTransfer): Transfer? =
+        dbQuery(TRANSFER_TAG) {
+            val item = InventoryEntity.findById(transfer.itemIdentifier) ?: return@dbQuery Transfer.NOT_FOUND
+            if (item.stock == Int.MAX_VALUE) return@dbQuery Transfer.UNTRACKED
+
+            val from = (InventoryStockTable.item eq transfer.itemIdentifier) and (InventoryStockTable.location eq transfer.fromLocation)
+            val taken = InventoryStockTable.update(where = { from and (InventoryStockTable.stock greaterEq transfer.quantity) }) { row ->
+                row[stock] = stock - transfer.quantity
+            }
+            if (taken == 0) return@dbQuery Transfer.SHORT
+
+            val to = (InventoryStockTable.item eq transfer.itemIdentifier) and (InventoryStockTable.location eq transfer.toLocation)
+            val added = InventoryStockTable.update(where = { to }) { row -> row[stock] = stock + transfer.quantity }
+            if (added == 0) {
+                InventoryStockTable.insert { row ->
+                    row[InventoryStockTable.item] = transfer.itemIdentifier
+                    row[location] = transfer.toLocation
+                    row[stock] = transfer.quantity
+                }
+            }
+
+            StockTransferTable.insert { row ->
+                row[StockTransferTable.id] = transfer.identifier
+                row[StockTransferTable.item] = transfer.itemIdentifier
+                row[fromLocation] = transfer.fromLocation
+                row[toLocation] = transfer.toLocation
+                row[quantity] = transfer.quantity
+                row[note] = transfer.note
+                row[movedBy] = transfer.movedBy
+                row[movedAt] = transfer.movedAt
+            }
+            Transfer.DONE
+        }
+
+    /** An item's moves between locations, newest first. Null when the read failed */
+    fun transfers(identifier: Uuid, limit: Int = StockTransferRules.HISTORY): List<StockTransfer>? =
+        dbQuery(TRANSFER_TAG) {
+            val name = InventoryEntity.findById(identifier)?.name.orEmpty()
+            StockTransferTable.selectAll()
+                .where { StockTransferTable.item eq identifier }
+                .orderBy(StockTransferTable.movedAt to SortOrder.DESC)
+                .limit(limit)
+                .map { row ->
+                    StockTransfer(
+                        identifier = row[StockTransferTable.id].value,
+                        itemIdentifier = identifier,
+                        itemName = name,
+                        fromLocation = row[StockTransferTable.fromLocation],
+                        toLocation = row[StockTransferTable.toLocation],
+                        quantity = row[StockTransferTable.quantity],
+                        note = row[StockTransferTable.note],
+                        movedBy = row[StockTransferTable.movedBy],
+                        movedAt = row[StockTransferTable.movedAt]
+                    )
+                }
+        }
 
     /**
      * Sets the count at [location] by hand, only if it's still [from]. Done in one statement, so a pickup taking

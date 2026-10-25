@@ -19,6 +19,8 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPager
 import org.mr0btain.ticketman.components.pagination.offset.OffsetPagerConfig
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.inventory.StockTransfer
+import org.mr0btain.ticketman.data.inventory.StockTransferRequest
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.screens.records.components.syncNotes
 import kotlin.uuid.Uuid
@@ -167,6 +169,32 @@ class InventoryRecords(
     }
 
     /** Items matching [query], at most the search limit setting */
+    /**
+     * Moves the open item's parts between locations, then loads it again for the new counts
+     * @param onResult Gets null once moved, otherwise what went wrong
+     */
+    fun transfer(request: StockTransferRequest, onResult: (String?) -> Unit) {
+        if (!canEdit() || seed.isNew) return onResult("Only staff who can edit move stock")
+        val identifier = seed.identifier
+
+        scope.launch {
+            when (val result = remoteHandler.inventoryRepo.transfer(identifier, request)) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    cache.remove(identifier)
+                    select(identifier, quiet = true)
+                    pager.refreshCurrentData()
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** The open item's moves between locations, null when they couldn't be read */
+    suspend fun transfers(): List<StockTransfer>? =
+        if (seed.isNew) emptyList() else remoteHandler.inventoryRepo.transfers(seed.identifier).getOrNull()
+
     /** An item from the cache, or the server if it isn't cached. Null if neither has it */
     suspend fun get(identifier: Uuid): Inventory? =
         cache.get(identifier)?.inventory

@@ -36,3 +36,14 @@ object InventoryStockTable : Table("inventory_stock") {
 
     override val primaryKey = PrimaryKey(item, location)
 }
+
+/** Parts moved between locations, kept for the item's history */
+object StockTransferTable : UuidTable("stock_transfers") {
+    val item = reference("item_id", InventoryTable, onDelete = ReferenceOption.CASCADE)
+    val fromLocation = uuid("from_location")
+    val toLocation = uuid("to_location")
+    val quantity = integer("quantity")
+    val note = text("note").default("")
+    val movedBy = text("moved_by").default("")
+    val movedAt = long("moved_at").index()
+}

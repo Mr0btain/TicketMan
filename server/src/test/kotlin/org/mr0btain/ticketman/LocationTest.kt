@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.data.inventory.StockTransferRequest
+import org.mr0btain.ticketman.data.inventory.StockTransfer
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -236,6 +238,44 @@ class LocationTest {
 
         val read = json.decodeFromString<Inventory>(get("/api/data/inventory/get/${screen.identifier}", at = downtown.identifier.toString()).bodyAsText())
         assertEquals(mapOf(main.identifier to 5, downtown.identifier to 1), read.stockAt.associate { it.locationIdentifier to it.stock })
+    }
+
+    @Test
+    fun stockMovesBetweenLocations() = testApplication {
+        setup()
+        val screen = item(main, 5)
+        fun move(quantity: Int, from: Location = main, to: Location = downtown) =
+            json.encodeToString(StockTransferRequest(from.identifier, to.identifier, quantity, "For a repair"))
+        val path = "/api/data/inventory/transfer/${screen.identifier}"
+
+        val moved = postJson(path, move(3))
+        assertEquals(HttpStatusCode.Created, moved.status, moved.bodyAsText())
+        val transfer = json.decodeFromString<StockTransfer>(moved.bodyAsText())
+        assertEquals("tech", transfer.movedBy)
+        assertEquals("Screen", transfer.itemName)
+        assertEquals(2, stock(screen, main))
+        assertEquals(3, stock(screen, downtown))
+
+        // Never more than is there, nor to the same place or nowhere
+        val short = postJson(path, move(3))
+        assertEquals(HttpStatusCode.Conflict, short.status)
+        assertContains(short.bodyAsText(), "Only 2 at")
+        assertEquals(HttpStatusCode.BadRequest, postJson(path, move(1, to = main)).status)
+        assertEquals(HttpStatusCode.BadRequest, postJson(path, move(0)).status)
+        assertEquals(2, stock(screen, main))
+
+        // And back again, from a count that's there now
+        assertEquals(HttpStatusCode.Created, postJson(path, move(1, from = downtown, to = main)).status)
+        assertEquals(3, stock(screen, main))
+        assertEquals(2, stock(screen, downtown))
+
+        val history = json.decodeFromString<List<StockTransfer>>(get("/api/data/inventory/transfers/${screen.identifier}").bodyAsText())
+        assertEquals(listOf(downtown.identifier to main.identifier, main.identifier to downtown.identifier), history.map { it.fromLocation to it.toLocation })
+
+        // An item whose stock isn't counted has nothing to move
+        val labour = Inventory(name = "Labour")
+        postJson("/api/data/inventory/add", json.encodeToString(labour))
+        assertEquals(HttpStatusCode.BadRequest, postJson("/api/data/inventory/transfer/${labour.identifier}", move(1)).status)
     }
 
     @Test

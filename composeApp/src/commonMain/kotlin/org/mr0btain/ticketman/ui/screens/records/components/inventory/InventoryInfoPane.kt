@@ -21,16 +21,22 @@ import org.mr0btain.ticketman.ui.screens.records.components.DetailSection
 import org.mr0btain.ticketman.ui.screens.records.components.RecordDetail
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.package_icon
+import ticketman.composeapp.generated.resources.truck
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import kotlin.uuid.Uuid
 
 /**
  * The picked item: description, pricing, photos and notes
  * @param onImageClick Opens the item's photos big
+ * @param onMoveStock Opens moving its parts between locations, null to leave it out
  */
 @Composable
 fun InventoryInfoPane(
     inventoryData: InventorySeed,
     onEditClick: () -> Unit,
+    onMoveStock: (() -> Unit)? = null,
     canEdit: Boolean = true,
     onImageClick: (page: Int) -> Unit = {},
     onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> },
@@ -81,6 +87,9 @@ fun InventoryInfoPane(
                         val count = inventoryData.stockAt.firstOrNull { it.locationIdentifier == location.identifier }?.stock ?: 0
                         TmKeyValueRow(label = "At ${location.name}", value = count.toString(), numeric = true)
                     }
+                }
+                if (locations.several && inventoryData.tracksStock && canEdit && onMoveStock != null) {
+                    TmButton(text = "Move stock", leadingIcon = Res.drawable.truck, variant = TmButtonVariant.SECONDARY, size = TmControlSize.SMALL, onClick = onMoveStock)
                 }
                 inventoryData.reorderPoint?.takeIf { inventoryData.tracksStock }?.let {
                     TmKeyValueRow(label = "Reorder at", value = it.toString(), numeric = true)

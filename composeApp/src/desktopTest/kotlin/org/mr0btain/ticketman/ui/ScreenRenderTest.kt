@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.screens.records.components.inventory.StockTransferDialog
+import org.mr0btain.ticketman.data.inventory.LocationStock
+import org.mr0btain.ticketman.data.inventory.StockTransfer
 import org.mr0btain.ticketman.ui.screens.admin.timeoff.AdminTimeOffTab
 import org.mr0btain.ticketman.ui.screens.appointments.TimeOffDialog
 import org.mr0btain.ticketman.data.schedule.MyTimeOff
@@ -557,6 +560,24 @@ class ScreenRenderTest {
     @Test
     fun adminLocations() = screen("admin-locations", rail = "Admin") {
         AdminLocationsTab(locations = listOf(mainStreet, downtown, northside), taxClasses = listOf(TaxClass("food", "Food", "2")), onSave = { _, _, _ -> })
+    }
+
+    /** Moving screens from Main Street to Downtown, with the moves before */
+    @Test
+    fun stockTransfer() = screen("inventory-stock-transfer", rail = "Records") {
+        val item = kotlin.uuid.Uuid.random()
+        CompositionLocalProvider(LocalLocations provides TmLocations(listOf(mainStreet, downtown, northside), downtown.identifier)) {
+            StockTransferDialog(
+                itemName = "iPhone 14 screen",
+                stockAt = listOf(LocationStock(mainStreet.identifier, 7), LocationStock(downtown.identifier, 1)),
+                history = listOf(
+                    StockTransfer(itemIdentifier = item, fromLocation = mainStreet.identifier, toLocation = downtown.identifier, quantity = 2, note = "For 26-00000042", movedBy = "dana", movedAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 20), 11, 5)),
+                    StockTransfer(itemIdentifier = item, fromLocation = downtown.identifier, toLocation = mainStreet.identifier, quantity = 1, movedBy = "sam", movedAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 14), 16, 40))
+                ),
+                onMove = { _, _ -> },
+                onDismissRequest = {}
+            )
+        }
     }
 
     /**

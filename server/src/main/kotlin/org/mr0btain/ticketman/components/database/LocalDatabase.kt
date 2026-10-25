@@ -19,6 +19,7 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.components.database.tables.image.ImageTable
 import org.mr0btain.ticketman.components.database.tables.location.InventoryStockTable
+import org.mr0btain.ticketman.components.database.tables.location.StockTransferTable
 import org.mr0btain.ticketman.components.database.tables.location.LocationTable
 import org.mr0btain.ticketman.components.database.tables.schedule.ScheduleTable
 import org.mr0btain.ticketman.components.database.tables.schedule.TimeOffAllowanceTable
@@ -173,6 +174,7 @@ class LocalDatabase (
         CardChargeTable,
         LocationTable,
         InventoryStockTable,
+        StockTransferTable,
         ScheduleTable,
         TimeOffAllowanceTable,
         TimeOffRequestTable,

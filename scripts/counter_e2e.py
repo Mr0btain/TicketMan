@@ -634,13 +634,22 @@ call("POST", f"/api/data/inventory/set/stock/{screen}", {"from": 0, "to": 2}, pi
 _, screen_here = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200, location=dt)
 check(screen_here["stock"] == 2, f"downtown now has {screen_here['stock']}")
 
+# One more brought over from the main shop: down there and up here together, and never more than the main shop has
+call("POST", f"/api/data/inventory/transfer/{screen}", {"fromLocation": main_location["identifier"], "toLocation": dt, "quantity": main_count + 1}, pin, expect=409)
+_, transfer = call("POST", f"/api/data/inventory/transfer/{screen}", {"fromLocation": main_location["identifier"], "toLocation": dt, "quantity": 1, "note": "For the downtown repair"}, pin, expect=201)
+_, screen_here = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200, location=dt)
+counts = {s["locationIdentifier"]: s["stock"] for s in screen_here["stockAt"]}
+check(counts[dt] == 3 and counts[main_location["identifier"]] == main_count - 1, f"after the move {counts}")
+_, transfers = call("GET", f"/api/data/inventory/transfers/{screen}", token=pin, expect=200)
+check(transfers[0]["identifier"] == transfer["identifier"], f"transfers {transfers}")
+
 # Taken back to the main shop for the repair: its number stays, its open invoice goes with it
 _, moved = call("POST", f"/api/data/ticket/move/{dt_ticket['identifier']}", {"locationIdentifier": main_location["identifier"]}, pin, expect=200)
 _, moved_invoice = call("GET", f"/api/invoice/{dt_invoice['identifier']}", token=pin, expect=200)
 check(moved["locationIdentifier"] == main_location["identifier"] and moved["number"]["prefix"] == "DT" and moved_invoice["locationIdentifier"] == main_location["identifier"], "moved with its invoice")
 
 call("POST", "/api/location/update", {**downtown, "retired": True}, admin, expect=200)
-step(f"A second location, Downtown (DT): its check in is DT-{dt_ticket['number']['year'] % 100}-00000001 at its own 10% tax, only in its queue, its stock counted apart (0, then 2), and it moves to the main shop keeping its number")
+step(f"A second location, Downtown (DT): its check in is DT-{dt_ticket['number']['year'] % 100}-00000001 at its own 10% tax, only in its queue, its stock counted apart (0, then 2, then 3 with one moved over from the main shop), and it moves to the main shop keeping its number")
 
 # ------------------------------------------ Staff schedule ------------------------------------------
 # Nina on 9 to 5 every weekday for two weeks from next Monday, written by the admin, read by her PIN session

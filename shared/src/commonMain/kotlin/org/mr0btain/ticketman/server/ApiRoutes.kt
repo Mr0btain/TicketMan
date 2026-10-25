@@ -141,6 +141,12 @@ object InventoryPaths {
     const val SET_IMAGES = "/set/images/{identifier}"
     const val SET_STOCK = "/set/stock/{identifier}"
 
+    /** `POST` a `StockTransferRequest`: parts from one location to another */
+    const val TRANSFER = "/transfer/{identifier}"
+
+    /** An item's moves between locations, newest first */
+    const val TRANSFERS = "/transfers/{identifier}"
+
     /** The item whose barcode or SKU is exactly this, for a scanner */
     const val BY_CODE = "/code/{code}"
 

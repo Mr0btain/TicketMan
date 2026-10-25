@@ -17,6 +17,8 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.InventoryPaths
 import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.request.StockChangeRequest
+import org.mr0btain.ticketman.data.inventory.StockTransfer
+import org.mr0btain.ticketman.data.inventory.StockTransferRequest
 
 fun Route.inventoryRoute(
     database: InventoryDatabase,
@@ -171,6 +173,49 @@ fun Route.inventoryRoute(
 
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)
+        }
+    }
+
+    authenticate("restricted") {
+        get(InventoryPaths.TRANSFERS) {
+            val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
+            database.transfers(identifier)?.let { call.respond(HttpStatusCode.OK, it) } ?: call.respond(HttpStatusCode.InternalServerError)
+        }
+    }
+
+    // Parts from one location to another, both counts changed together
+    authenticate {
+        post(InventoryPaths.TRANSFER) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+            val request = call.receive<StockTransferRequest>()
+            request.problem()?.let { return@post call.respond(HttpStatusCode.BadRequest, it) }
+
+            val from = locations.get(request.fromLocation)?.takeIf { !it.retired }
+            val to = locations.get(request.toLocation)?.takeIf { !it.retired }
+            if (from == null || to == null) return@post call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's")
+
+            val transfer = StockTransfer(
+                itemIdentifier = identifier,
+                fromLocation = from.identifier,
+                toLocation = to.identifier,
+                quantity = request.quantity,
+                note = request.note.trim(),
+                movedBy = call.username(userDatabase),
+                movedAt = System.currentTimeMillis()
+            )
+            when (database.transfer(transfer)) {
+                InventoryDatabase.Transfer.DONE -> {
+                    call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Moved ${request.quantity} from ${from.name} to ${to.name}" + transfer.note.ifBlank { null }?.let { ": $it" }.orEmpty())
+                    call.respond(HttpStatusCode.Created, database.transfers(identifier, limit = 1)?.firstOrNull() ?: transfer)
+                }
+                InventoryDatabase.Transfer.SHORT -> {
+                    val there = database.stockAt(identifier, from.identifier) ?: 0
+                    call.respond(HttpStatusCode.Conflict, "Only $there at ${from.name}")
+                }
+                InventoryDatabase.Transfer.UNTRACKED -> call.respond(HttpStatusCode.BadRequest, "Its stock isn't counted")
+                InventoryDatabase.Transfer.NOT_FOUND -> call.respond(HttpStatusCode.NotFound)
+                null -> call.respond(HttpStatusCode.InternalServerError)
+            }
         }
     }
 

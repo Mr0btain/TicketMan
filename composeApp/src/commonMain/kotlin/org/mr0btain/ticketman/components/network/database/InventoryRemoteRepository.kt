@@ -12,6 +12,8 @@ import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.inventory.StockTransfer
+import org.mr0btain.ticketman.data.inventory.StockTransferRequest
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.ApiRoutes
@@ -35,6 +37,7 @@ class InventoryRemoteRepository(
     private val SET_IMAGES_TAG = "$tag:SetImages"
     private val SET_STOCK_TAG = "$tag:SetStock"
     private val CODE_TAG = "$tag:Code"
+    private val TRANSFER_TAG = "$tag:Transfer"
 
     /** The item with exactly this barcode or SKU, `NOT_FOUND` when there's none */
     suspend fun getByCode(code: String): TmResult<Inventory, ServerError> {
@@ -101,5 +104,31 @@ class InventoryRemoteRepository(
         }
 
         return handleActionHttpResponse(SET_STOCK_TAG, response)
+    }
+
+    /** Moves parts between locations, both counts together */
+    suspend fun transfer(identifier: Uuid, request: StockTransferRequest): TmResult<StockTransfer, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
+
+        val response = networkRequest(TRANSFER_TAG) {
+            client.post {
+                url("$serverUrl${InventoryPaths.TRANSFER.fill(identifier)}")
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
+
+        return handleDataHttpResponse(TRANSFER_TAG, response)
+    }
+
+    /** The item's moves between locations, newest first */
+    suspend fun transfers(identifier: Uuid): TmResult<List<StockTransfer>, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
+
+        val response = networkRequest(TRANSFER_TAG) {
+            client.get { url("$serverUrl${InventoryPaths.TRANSFERS.fill(identifier)}") }
+        }
+
+        return handleDataHttpResponse(TRANSFER_TAG, response)
     }
 }
