@@ -41,7 +41,8 @@ class AdminHandler(
     onUsersChanged: (Uuid?) -> Unit,
     onShopChanged: (ShopProfile) -> Unit = {},
     onImported: () -> Unit = {},
-    onPaymentsChanged: () -> Unit = {}
+    onPaymentsChanged: () -> Unit = {},
+    onTimeOffChanged: () -> Unit = {}
 ) {
     private val admin get() = remoteHandler.adminRepo
 
@@ -61,6 +62,9 @@ class AdminHandler(
     val devices = AdminDevices(remoteHandler, support, reloadOverview = { loadOverview() })
 
     val messages = AdminMessages(remoteHandler, support)
+
+    /** Time off tab */
+    val timeOff = AdminTimeOff(remoteHandler, support, onChanged = onTimeOffChanged)
 
     /** Payments tab */
     val payments = AdminPayments(remoteHandler, support, onSaved = onPaymentsChanged)
@@ -110,6 +114,7 @@ class AdminHandler(
         scope.launch {
             support.loading {
                 accounts.reloadPending()
+                timeOff.reloadWaiting()
 
                 when (tab) {
                     AdminTab.OVERVIEW -> {
@@ -122,6 +127,7 @@ class AdminHandler(
                     AdminTab.USERS, AdminTab.INVOICES -> Unit
                     // For the tax classes a location can charge its own rates for
                     AdminTab.LOCATIONS -> server.reloadShopProfile()
+                    AdminTab.TIME_OFF -> timeOff.reload()
                     AdminTab.SESSIONS -> devices.reloadSessions()
                     AdminTab.STATIONS -> devices.reloadStations()
                     AdminTab.LOW_STOCK -> loadLowStock()
@@ -157,6 +163,7 @@ class AdminHandler(
     fun checkForUpdates(tab: AdminTab) {
         scope.launch {
             accounts.reloadPending()
+            timeOff.reloadWaiting()
 
             when (tab) {
                 AdminTab.OVERVIEW -> loadOverview()
@@ -170,6 +177,7 @@ class AdminHandler(
                 AdminTab.REPORTS -> reports.reloadReport()
                 AdminTab.AUDIT -> addNewAudit()
                 AdminTab.USERS, AdminTab.INVOICES, AdminTab.LOCATIONS -> Unit
+                AdminTab.TIME_OFF -> timeOff.reload()
             }
         }
     }

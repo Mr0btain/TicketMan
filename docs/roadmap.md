@@ -35,17 +35,16 @@ hours under each row, the names fixed while the days scroll sideways on a phone.
 board's empty cells or the Schedule button, and open one to change it from any view. Still to come: booking an
 appointment straight from an empty time slot, and dragging blocks to move them.
 
-## Phase 10: Time off requests and budgets
+## Phase 10: Time off requests and budgets (done)
 
-- **Budgets.** Admins set each person's time off allowance per year, in hours, on the admin Users tab. A person's
-  balance is the allowance less approved time off in that year (and what's waiting, shown apart).
-- **Requests.** Staff ask for time off from the calendar or Settings: the days, part of a day in hours, and a note.
-  It shows on the schedule as waiting, and can't be more than the balance left. Admins approve or decline it with a
-  reason on an admin Requests list (a badge on the tab, like account requests); approving turns it into a Time off
-  entry and takes it from the balance. Staff can withdraw one still waiting.
-- **Seen by everyone.** Approved time off is on every view; waiting requests only to the person and admins.
-- **Told.** The person sees the answer on their next open of the calendar, and in the audit log; no messages to
-  staff yet.
+Built ([Time off API](api/timeoff.md)) as planned: admins set each person's yearly allowance in hours on the admin
+Time off tab, which also lists the requests (waiting ones first, with a badge on the tab) to approve or decline with
+a reason. Staff ask from the calendar's Time off button, which shows their balance (allowance, taken, waiting, left)
+and their requests, ones still waiting withdrawable. A request can't be more than what's left; approving puts it on
+the schedule as time off taking its hours, and time off an admin writes straight onto the schedule takes the hours
+typed for it. Waiting requests show on the calendar, to the person and to admins. The allowance starts over each
+1 January with nothing carried over (see Open questions). The allowance is on the Time off tab rather than the
+Users tab, beside the balances it makes.
 
 ## Phase 11: Leftovers
 
@@ -115,6 +114,6 @@ runners, but nobody has run it on a Mac yet.
 
 ## Open questions
 
-- Phase 10: does a time off allowance start over on 1 January, or on each person's start date, and does unused time
-  carry over? Built as starting over each calendar year with no carry over until decided.
+- Phase 10: should a time off allowance start over on each person's start date rather than 1 January, or carry
+  unused time over? Built as starting over each calendar year with no carry over.
 - iOS: is it shared by sideloading, or is a paid Apple Developer account worth it for TestFlight and the App Store?

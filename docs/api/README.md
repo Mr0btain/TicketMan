@@ -28,6 +28,7 @@ changes here are made to both sides together.
 | [Payments](payment.md) | `/api/payment` | `PaymentRoute.kt` |
 | [Locations](location.md) | `/api/location` | `LocationRoute.kt` |
 | [Staff schedule](schedule.md) | `/api/schedule` | `ScheduleRoute.kt` |
+| [Time off](timeoff.md) | `/api/timeoff` | `TimeOffRoute.kt` |
 | [Status page](status.md) | `/status` | `StatusRoute.kt` |
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.appointments
 
+import org.mr0btain.ticketman.data.schedule.TimeOffRequest
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -63,6 +64,9 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
     val staff by appointments.staff.collectAsState()
     val loadError by appointments.loadError.collectAsState()
     val workingLocation by viewModel.locations.working.collectAsState()
+    val myTimeOff by appointments.myTimeOff.collectAsState()
+    val waitingTimeOff by appointments.waitingTimeOff.collectAsState()
+    var askingTimeOff by remember { mutableStateOf(false) }
 
     // The dialogs: null is closed, with isNew the entry is being added
     var editing by remember { mutableStateOf<Pair<Appointment, Boolean>?>(null) }
@@ -104,6 +108,16 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
         )
     }
 
+    if (askingTimeOff) {
+        TimeOffDialog(
+            mine = myTimeOff,
+            firstDay = day,
+            onRequest = { request, onResult -> appointments.requestTimeOff(request, onResult) },
+            onWithdraw = { appointments.withdrawTimeOff(it) },
+            onDismissRequest = { askingTimeOff = false }
+        )
+    }
+
     deleting?.let { appointment ->
         TmConfirmDialog(
             title = "Delete this appointment?",
@@ -118,7 +132,9 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
         )
     }
 
-    val openEntry: ((ScheduleEntry) -> Unit)? = if (isAdmin) ({ scheduling = it to false }) else null
+    // Time off still waiting shows on the schedule too, to the person and to admins, as an entry that opens nothing
+    val shown = schedule + waitingTimeOff.map { it.asWaitingEntry() }
+    val openEntry: ((ScheduleEntry) -> Unit)? = if (isAdmin) ({ entry -> if (!entry.isWaitingTimeOff) scheduling = entry to false }) else null
     val (from, to) = appointments.range
     val title = when (view) {
         CalendarView.DAY -> AppointmentTimes.dayLabel(day) + if (day == AppointmentsHandler.today()) ", today" else ""
@@ -136,6 +152,7 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
                 if (canEdit) {
                     TmButton(text = "Book", leadingIcon = Res.drawable.plus, onClick = { editing = AppointmentDefaults.new(if (view == CalendarView.DAY) day else weekStart) to true })
                 }
+                TmButton(text = "Time off", leadingIcon = Res.drawable.sun, variant = TmButtonVariant.SECONDARY, onClick = { askingTimeOff = true })
                 if (isAdmin) {
                     TmButton(
                         text = "Schedule",
@@ -182,7 +199,7 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
         when (view) {
             CalendarView.DAY -> {
                 val today = booked.filter { AppointmentsHandler.dayOf(it.startsAt) == day }.sortedBy { it.startsAt }
-                CalendarDay(day = day, appointments = today, schedule = schedule, onEntry = openEntry) {
+                CalendarDay(day = day, appointments = today, schedule = shown, onEntry = openEntry) {
                     Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) { list(today) }
                 }
             }
@@ -195,14 +212,14 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
                 onCheckIn = { appointments.checkIn(it, onCheckInStarted) },
                 onStatus = { appointment, status -> appointments.setStatus(appointment, status) },
                 onDelete = { deleting = it },
-                schedule = schedule,
+                schedule = shown,
                 onEntry = openEntry
             )
 
             CalendarView.MONTH -> CalendarMonth(
                 month = day,
                 appointments = booked,
-                schedule = schedule,
+                schedule = shown,
                 onDay = { appointments.openDay(it) },
                 onEntry = openEntry
             )
@@ -211,13 +228,32 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
                 start = from,
                 dayCount = AppointmentsHandler.STAFF_DAYS,
                 staff = staff,
-                schedule = schedule,
+                schedule = shown,
                 onEntry = openEntry,
                 onEmpty = if (isAdmin) ({ person, onDay -> scheduling = newScheduleEntry(person, onDay) to true }) else null
             )
         }
     }
 }
+
+/** A waiting request drawn on the schedule, kind Other so it reads apart from approved time off */
+@OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+private fun TimeOffRequest.asWaitingEntry(): ScheduleEntry = ScheduleEntry(
+    identifier = identifier,
+    userIdentifier = userIdentifier ?: identifier,
+    userName = userName,
+    kind = ScheduleKind.OTHER,
+    startsAt = startsAt,
+    endsAt = endsAt,
+    allDay = true,
+    note = "Time off, waiting",
+    requestIdentifier = identifier
+)
+
+/** A waiting request made by [asWaitingEntry], not an entry on the schedule */
+@OptIn(kotlin.uuid.ExperimentalUuidApi::class)
+private val ScheduleEntry.isWaitingTimeOff: Boolean
+    get() = requestIdentifier == identifier
 
 /** What a new appointment starts as */
 private object AppointmentDefaults {

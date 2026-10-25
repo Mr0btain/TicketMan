@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin
 
+import org.mr0btain.ticketman.ui.screens.admin.timeoff.AdminTimeOffTab
 import org.mr0btain.ticketman.ui.screens.admin.locations.AdminLocationsTab
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -98,6 +99,9 @@ private fun AdminContent(
     val outboxEnd by admin.messages.outboxEnd.collectAsState()
     val paymentSettings by admin.payments.settings.collectAsState()
     val allLocations by viewModel.locations.all.collectAsState()
+    val timeOffRequests by admin.timeOff.requests.collectAsState()
+    val timeOffBalances by admin.timeOff.balances.collectAsState()
+    val timeOffWaiting by admin.timeOff.waiting.collectAsState()
     val activeLocations by viewModel.locations.active.collectAsState()
     val accountReaders by admin.payments.accountReaders.collectAsState()
     val cardCharges by admin.payments.charges.collectAsState()
@@ -239,7 +243,10 @@ private fun AdminContent(
                 tabs = AdminTab.entries.map { it.label },
                 selectedIndex = selectedTab.ordinal,
                 onSelect = { selectedTab = AdminTab.entries[it] },
-                badges = if (pending.isNotEmpty()) mapOf(AdminTab.USERS.ordinal to pending.size) else emptyMap()
+                badges = listOfNotNull(
+                    (AdminTab.USERS.ordinal to pending.size).takeIf { pending.isNotEmpty() },
+                    (AdminTab.TIME_OFF.ordinal to timeOffWaiting).takeIf { timeOffWaiting > 0 }
+                ).toMap()
             )
 
             // Tabs check for changes on their own; this is only for when that's turned off in Settings
@@ -333,6 +340,14 @@ private fun AdminContent(
                 onRemove = { admin.devices.removeStation(it) },
                 locations = activeLocations,
                 onLocation = { station, location -> admin.devices.setStationLocation(station, location) }
+            )
+
+            AdminTab.TIME_OFF -> AdminTimeOffTab(
+                requests = timeOffRequests,
+                balances = timeOffBalances,
+                onApprove = { admin.timeOff.approve(it) },
+                onDecline = { request, reason -> admin.timeOff.decline(request, reason) },
+                onAllowance = { balance, hours -> admin.timeOff.setAllowance(balance, hours) }
             )
 
             AdminTab.LOCATIONS -> AdminLocationsTab(

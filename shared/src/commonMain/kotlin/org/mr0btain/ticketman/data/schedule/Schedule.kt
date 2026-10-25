@@ -34,6 +34,8 @@ enum class ScheduleKind(val label: String, val allDay: Boolean, val tone: Status
  * @param seriesIdentifier Shared by the entries one weekly repeat made, null for one on its own
  * @param locationIdentifier Where it is, set by the server from where it was written when it isn't given
  * @param createdBy Username of the admin who wrote it, set by the server
+ * @param timeOffHours What time off takes from the person's yearly allowance, 0 for none
+ * @param requestIdentifier The time off request approving it made, if one did
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -49,7 +51,9 @@ data class ScheduleEntry(
     val seriesIdentifier: Uuid? = null,
     val locationIdentifier: Uuid? = null,
     val createdBy: String = "",
-    val createdAt: Long = 0
+    val createdAt: Long = 0,
+    val timeOffHours: Double = 0.0,
+    val requestIdentifier: Uuid? = null
 ) {
     val millis: Long
         get() = (endsAt - startsAt).coerceAtLeast(0)
@@ -80,6 +84,7 @@ data class ScheduleEntry(
         !allDay && millis > ScheduleRules.MAX_SHIFT_MILLIS -> "A shift can be up to ${ScheduleRules.MAX_SHIFT_HOURS} hours, use whole days for longer"
         allDay && millis > ScheduleRules.MAX_DAYS * ScheduleRules.DAY_MILLIS + ScheduleRules.HOUR_MILLIS -> "Up to ${ScheduleRules.MAX_DAYS} days at once"
         note.length > ScheduleRules.MAX_NOTE -> "The note is too long"
+        timeOffHours < 0 -> "Hours off can't be below zero"
         else -> null
     }
 }

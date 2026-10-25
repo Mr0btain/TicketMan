@@ -21,6 +21,8 @@ import org.mr0btain.ticketman.components.database.tables.image.ImageTable
 import org.mr0btain.ticketman.components.database.tables.location.InventoryStockTable
 import org.mr0btain.ticketman.components.database.tables.location.LocationTable
 import org.mr0btain.ticketman.components.database.tables.schedule.ScheduleTable
+import org.mr0btain.ticketman.components.database.tables.schedule.TimeOffAllowanceTable
+import org.mr0btain.ticketman.components.database.tables.schedule.TimeOffRequestTable
 import org.jetbrains.exposed.v1.core.isNull
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryImageTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceChargeTable
@@ -118,6 +120,7 @@ class LocalDatabase (
     val timeClockDatabase = TimeClockDatabase()
     val locationDatabase = LocationDatabase()
     val scheduleDatabase = ScheduleDatabase()
+    val timeOffDatabase = TimeOffDatabase()
     val paymentDatabase = PaymentDatabase()
     val imageDatabase = ImageDatabase { recordDatabases }
 
@@ -171,6 +174,8 @@ class LocalDatabase (
         LocationTable,
         InventoryStockTable,
         ScheduleTable,
+        TimeOffAllowanceTable,
+        TimeOffRequestTable,
         DataFixTable
     )
 
@@ -193,7 +198,8 @@ class LocalDatabase (
         EstimateTable,
         AppointmentTable,
         PurchaseOrderTable,
-        TimeEntryTable
+        TimeEntryTable,
+        ScheduleTable
     )
 
     /**

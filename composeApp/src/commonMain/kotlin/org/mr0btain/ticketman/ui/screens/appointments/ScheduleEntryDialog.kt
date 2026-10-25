@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.data.schedule.ScheduleKind
 import org.mr0btain.ticketman.data.schedule.ScheduleRepeat
 import org.mr0btain.ticketman.data.schedule.ScheduleRules
 import org.mr0btain.ticketman.data.schedule.ScheduleScope
+import org.mr0btain.ticketman.data.schedule.TimeOffRules
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -62,6 +63,8 @@ fun ScheduleEntryDialog(
     var from by remember { mutableStateOf(formatTime(entry.startsAt)) }
     var to by remember { mutableStateOf(formatTime(entry.endsAt)) }
     var note by remember { mutableStateOf(entry.note) }
+    // Time off's hours against the allowance, worked out from the days until typed
+    var hoursOff by remember { mutableStateOf(if (isNew || entry.kind != ScheduleKind.TIME_OFF) null else entry.timeOffHours.toString().removeSuffix(".0")) }
     var repeats by remember { mutableStateOf(false) }
     var weekdays by remember { mutableStateOf(setOf(firstDay.dayOfWeek.ordinal + 1)) }
     var until by remember { mutableStateOf(firstDay.plus(DatePeriod(months = 1)).toString()) }
@@ -80,6 +83,7 @@ fun ScheduleEntryDialog(
         kind.allDay -> last?.let {
             entry.copy(
                 userIdentifier = person, kind = kind, allDay = true, note = note.trim(),
+                timeOffHours = hoursOff?.trim()?.toDoubleOrNull() ?: TimeOffRules.defaultHours(date, it),
                 startsAt = AppointmentTimes.toMillis(date, 0, 0),
                 endsAt = AppointmentTimes.toMillis(it.plus(DatePeriod(days = 1)), 0, 0)
             )
@@ -89,7 +93,7 @@ fun ScheduleEntryDialog(
             val startsAt = AppointmentTimes.toMillis(date, start.first, start.second)
             var endsAt = AppointmentTimes.toMillis(date, end.first, end.second)
             if (endsAt <= startsAt) endsAt = AppointmentTimes.toMillis(date.plus(DatePeriod(days = 1)), end.first, end.second)
-            entry.copy(userIdentifier = person, kind = kind, allDay = false, note = note.trim(), startsAt = startsAt, endsAt = endsAt)
+            entry.copy(userIdentifier = person, kind = kind, allDay = false, note = note.trim(), startsAt = startsAt, endsAt = endsAt, timeOffHours = 0.0)
         }
     }
     val repeat = if (isNew && repeats && !kind.allDay) ScheduleRepeat(weekdays.sorted(), until.trim()) else null
@@ -152,6 +156,14 @@ fun ScheduleEntryDialog(
             TmFieldPair(
                 { TmTextField(modifier = it, value = day, onValueChange = { v -> day = v }, label = "First day", placeholder = "2026-10-27") },
                 { TmTextField(modifier = it, value = lastDayText, onValueChange = { v -> lastDayText = v }, label = "Last day", placeholder = "2026-10-30") }
+            )
+            TmTextField(
+                modifier = Modifier.width(220.dp),
+                value = hoursOff ?: result?.timeOffHours?.toString()?.removeSuffix(".0").orEmpty(),
+                onValueChange = { hoursOff = it.filter { c -> c.isDigit() || c == '.' }.take(6) },
+                label = "Hours off",
+                supportingText = "Taken from their allowance, 0 for none",
+                textStyle = TmTheme.typography.numeric
             )
         } else {
             TmTextField(modifier = Modifier.fillMaxWidth(), value = day, onValueChange = { day = it }, label = "Day", placeholder = "2026-10-27")

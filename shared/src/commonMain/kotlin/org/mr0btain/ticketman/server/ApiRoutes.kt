@@ -47,6 +47,7 @@ object ApiRoutes {
     const val PAYMENT = "/api/payment"
     const val LOCATION = "/api/location"
     const val SCHEDULE = "/api/schedule"
+    const val TIME_OFF = "/api/timeoff"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -299,6 +300,31 @@ object SchedulePaths {
 
     /** Admin only, `?scope=` like update */
     const val REMOVE = "/remove/{identifier}"
+}
+
+/** Under [ApiRoutes.TIME_OFF] */
+object TimeOffPaths {
+    /** The caller's requests and balance, `?year=` or this year */
+    const val ME = "/me"
+
+    /** Body `TimeOffRequest`: asks for time off */
+    const val REQUEST = "/request"
+
+    /** Takes back the caller's own request while it's waiting */
+    const val WITHDRAW = "/withdraw/{identifier}"
+
+    /** Admin only: requests, `?status=PENDING` for those waiting */
+    const val REQUESTS = "/requests"
+
+    /** Admin only, body `TimeOffDecision` */
+    const val APPROVE = "/approve/{identifier}"
+    const val DECLINE = "/decline/{identifier}"
+
+    /** Admin only: every active user's balance, `?year=` or this year */
+    const val BALANCES = "/balances"
+
+    /** Admin only, body `TimeOffAllowance`: someone's yearly allowance */
+    const val ALLOWANCE = "/allowance/{identifier}"
 }
 
 /** Under [ApiRoutes.TIME_CLOCK] */

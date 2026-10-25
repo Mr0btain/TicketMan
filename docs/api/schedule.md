@@ -12,6 +12,8 @@ midnight to midnight, however it's sent: from the start of its first day to the 
 A timed one is up to 24 hours and may run past midnight; its hours count on the day it starts
 (`ScheduleRules.hoursByDay`). `userName` is filled in from the user. `locationIdentifier` is where it is, the
 [location](location.md) the admin works at when it's not given; reads keep to the location the request works at.
+`timeOffHours` is what a time off entry takes from the person's [allowance](timeoff.md) (0 for none), and
+`requestIdentifier` the request approving it made.
 
 **Weekly repeats.** Adding with a `ScheduleRepeat { weekdays, until }` (ISO weekdays, 1 Monday to 7 Sunday, and the
 last day) writes a copy on each chosen weekday from the entry's first day to `until`, at the same local time of day

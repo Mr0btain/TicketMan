@@ -18,6 +18,7 @@ import org.mr0btain.ticketman.components.service.AccountingExport
 import org.mr0btain.ticketman.components.service.AppointmentService
 import org.mr0btain.ticketman.components.service.TimeClockService
 import org.mr0btain.ticketman.components.service.ScheduleService
+import org.mr0btain.ticketman.components.service.TimeOffService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.RestoreService
@@ -143,6 +144,14 @@ fun Application.configureRouting(
             scheduleRoute(
                 database = localDatabase.scheduleDatabase,
                 service = ScheduleService(localDatabase.scheduleDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase),
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.TIME_OFF) {
+            timeOffRoute(
+                database = localDatabase.timeOffDatabase,
+                service = TimeOffService(localDatabase.timeOffDatabase, localDatabase.scheduleDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase),
                 userDatabase = localDatabase.userDatabase
             )
         }

@@ -93,6 +93,8 @@ class ScheduleDatabase {
         this[ScheduleTable.note] = entry.note.trim()
         this[ScheduleTable.series] = entry.seriesIdentifier
         this[ScheduleTable.location] = entry.locationIdentifier
+        this[ScheduleTable.timeOffHours] = entry.timeOffHours
+        this[ScheduleTable.request] = entry.requestIdentifier
     }
 
     // Inside a transaction. Each person's name comes from their record
@@ -116,7 +118,9 @@ class ScheduleDatabase {
                 seriesIdentifier = row[ScheduleTable.series],
                 locationIdentifier = row[ScheduleTable.location],
                 createdBy = row[ScheduleTable.createdBy],
-                createdAt = row[ScheduleTable.createdAt]
+                createdAt = row[ScheduleTable.createdAt],
+                timeOffHours = row[ScheduleTable.timeOffHours],
+                requestIdentifier = row[ScheduleTable.request]
             )
         }
     }

@@ -50,6 +50,7 @@ class ScheduleService(
     fun add(request: ScheduleRequest, by: String, actor: Uuid?, location: Uuid?): AccountResult<List<ScheduleEntry>> {
         val entry = normalized(request.entry).copy(
             seriesIdentifier = null,
+            requestIdentifier = null,
             locationIdentifier = request.entry.locationIdentifier ?: location,
             createdBy = by,
             createdAt = now()
@@ -73,7 +74,12 @@ class ScheduleService(
      */
     fun update(received: ScheduleEntry, scope: ScheduleScope, actor: Uuid?): AccountResult<List<ScheduleEntry>> {
         val existing = schedule.get(received.identifier) ?: return AccountResult.NotFound
-        val entry = normalized(received).copy(seriesIdentifier = existing.seriesIdentifier, createdBy = existing.createdBy, createdAt = existing.createdAt)
+        val entry = normalized(received).copy(
+            seriesIdentifier = existing.seriesIdentifier,
+            createdBy = existing.createdBy,
+            createdAt = existing.createdAt,
+            requestIdentifier = existing.requestIdentifier
+        )
         problem(entry)?.let { return AccountResult.Invalid(it) }
 
         val shift = entry.startsAt - existing.startsAt

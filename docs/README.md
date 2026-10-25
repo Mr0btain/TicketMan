@@ -76,6 +76,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Payments](api/payment.md): card readers, payment links and paying online through Stripe or Square, refunds onto the card
 - [Locations](api/location.md): more than one shop on one server, each with its own tickets, stock and numbers
 - [Staff schedule](api/schedule.md): shifts, time off and training, weekly repeats, the calendar's staff board
+- [Time off](api/timeoff.md): requests against a yearly allowance, approved onto the schedule
 - [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing

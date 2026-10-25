@@ -18,6 +18,9 @@ import org.mr0btain.ticketman.data.schedule.ScheduleEntry
 import org.mr0btain.ticketman.data.schedule.ScheduleRepeat
 import org.mr0btain.ticketman.data.schedule.ScheduleRequest
 import org.mr0btain.ticketman.data.schedule.ScheduleScope
+import org.mr0btain.ticketman.data.schedule.MyTimeOff
+import org.mr0btain.ticketman.data.schedule.TimeOffRequest
+import org.mr0btain.ticketman.data.schedule.TimeOffStatus
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
 import org.mr0btain.ticketman.data.appointment.Appointment
@@ -84,6 +87,14 @@ class AppointmentsHandler(
     private val _loadError = MutableStateFlow<String?>(null)
     val loadError = _loadError.asStateFlow()
 
+    private val _myTimeOff = MutableStateFlow<MyTimeOff?>(null)
+    /** The signed in user's time off balance and requests */
+    val myTimeOff = _myTimeOff.asStateFlow()
+
+    private val _waitingTimeOff = MutableStateFlow<List<TimeOffRequest>>(emptyList())
+    /** Time off asked for and not answered yet: everyone's for an admin, their own for anyone else */
+    val waitingTimeOff = _waitingTimeOff.asStateFlow()
+
     /** The first and last days the view shows */
     val range: Pair<LocalDate, LocalDate>
         get() = rangeOf(_view.value, _day.value)
@@ -149,6 +160,44 @@ class AppointmentsHandler(
         // Who works here, for the staff board's rows
         remoteHandler.userRepo.fetch(0, STAFF_LIMIT).getOrNull()?.let { users ->
             _staff.value = users.filter { it.status == UserStatus.ACTIVE }.sortedBy { it.name.ifBlank { it.username }.lowercase() }
+        }
+        loadTimeOff()
+    }
+
+    private suspend fun loadTimeOff() {
+        val mine = remoteHandler.timeOffRepo.mine().getOrNull()
+        _myTimeOff.value = mine
+        _waitingTimeOff.value = if (isAdmin()) remoteHandler.timeOffRepo.requests(TimeOffStatus.PENDING).getOrNull().orEmpty()
+            else mine?.requests.orEmpty().filter { it.status == TimeOffStatus.PENDING }
+    }
+
+    // ------------------------------------------ Time off ------------------------------------------
+
+    /**
+     * Asks for time off for the signed in user
+     * @param onResult Gets null when it's asked, otherwise what went wrong
+     */
+    fun requestTimeOff(request: TimeOffRequest, onResult: (String?) -> Unit) {
+        scope.launch {
+            when (val result = remoteHandler.timeOffRepo.request(request)) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    notify("Time off asked for, an admin will answer it")
+                    loadTimeOff()
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** Takes back one of their own requests while it's waiting */
+    fun withdrawTimeOff(request: TimeOffRequest) {
+        scope.launch {
+            when (val result = remoteHandler.timeOffRepo.withdraw(request.identifier)) {
+                is TmResult.Success -> loadTimeOff()
+                is TmResult.Error -> notify(result.error.message)
+            }
         }
     }
 
@@ -275,6 +324,8 @@ class AppointmentsHandler(
         _appointments.value = emptyList()
         _schedule.value = emptyList()
         _staff.value = emptyList()
+        _myTimeOff.value = null
+        _waitingTimeOff.value = emptyList()
         _loadError.value = null
         _day.value = today()
         _weekStart.value = mondayOf(today())

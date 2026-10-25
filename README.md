@@ -69,13 +69,10 @@ Then open `http://localhost:8080` and log in as `admin`. That's plain HTTP, fine
 
 ## Roadmap
 
-Phases 0 to 9 are done: custom statuses, the customer status page, messages and estimates, counter money,
+Phases 0 to 10 are done: custom statuses, the customer status page, messages and estimates, counter money,
 inventory and purchasing, repair depth, running the business, card payments, more than one location, the staff
-schedule and the calendar's Day, Week, Month and Staff views. What's
+schedule, the calendar's Day, Week, Month and Staff views, and time off requests against yearly allowances. What's
 next, in order ([the full roadmap](docs/roadmap.md)):
-
-**Phase 10: Time off requests and budgets**: staff ask for time off against a yearly allowance admins set, admins
-approve or decline
 
 **Phase 11: Leftovers**: booking from the status page, card readers at check-in, tips, stock transfers, and the time
 clock against the schedule

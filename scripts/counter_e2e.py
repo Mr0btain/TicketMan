@@ -669,6 +669,25 @@ _, left = call("GET", f"/api/schedule/range?from={monday_text}&to={friday_after}
 check(all(e["seriesIdentifier"] != series[0]["seriesIdentifier"] for e in left), "the series is gone")
 step(f"Nina's schedule: 9 to 5 every weekday from {monday_text} (10 shifts, a series), her second week an hour later, two days off, then the series taken off")
 
+# ------------------------------------------ Time off ------------------------------------------
+# Nina gets 40 hours a year, asks for two days (16h), more than what's left is refused, the admin approves it onto the schedule
+_off_day = _monday + _dt.timedelta(days=21)
+def time_off(first, days, hours):
+    return {"identifier": uid(), "startsAt": local_millis(first), "endsAt": local_millis(first + _dt.timedelta(days=days)), "hours": hours, "note": "Family visit"}
+call("POST", "/api/timeoff/request", time_off(_off_day, 2, 16), pin, expect=409)
+call("POST", f"/api/timeoff/allowance/{newtech_id}", {"hours": 40}, pin, expect=403)
+call("POST", f"/api/timeoff/allowance/{newtech_id}", {"hours": 40}, admin, expect=200)
+_, asked = call("POST", "/api/timeoff/request", time_off(_off_day, 2, 16), pin, expect=201)
+call("POST", "/api/timeoff/request", time_off(_off_day + _dt.timedelta(days=7), 5, 40), pin, expect=409)
+_, waiting = call("GET", "/api/timeoff/requests?status=PENDING", token=admin, expect=200)
+check([r["identifier"] for r in waiting] == [asked["identifier"]], f"waiting {waiting}")
+_, approved = call("POST", f"/api/timeoff/approve/{asked['identifier']}", {}, admin, expect=200)
+_, on_schedule = call("GET", f"/api/schedule/range?from={_off_day.isoformat()}&to={(_off_day + _dt.timedelta(days=1)).isoformat()}", token=pin, expect=200)
+check(any(e["requestIdentifier"] == asked["identifier"] and e["kind"] == "TIME_OFF" and e["timeOffHours"] == 16 for e in on_schedule), f"on the schedule {on_schedule}")
+_, mine = call("GET", f"/api/timeoff/me?year={_off_day.year}", token=pin, expect=200)
+check(mine["balance"]["takenHours"] == 16 and mine["balance"]["allowanceHours"] == 40, f"balance {mine['balance']}")
+step(f"Nina's time off: refused without an allowance, 40 hours a year set by the admin, two days ({_off_day.isoformat()}) asked for and approved onto the schedule, 24 hours left; asking for 40 more refused")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

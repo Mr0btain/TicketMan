@@ -1,5 +1,11 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.screens.admin.timeoff.AdminTimeOffTab
+import org.mr0btain.ticketman.ui.screens.appointments.TimeOffDialog
+import org.mr0btain.ticketman.data.schedule.MyTimeOff
+import org.mr0btain.ticketman.data.schedule.TimeOffBalance
+import org.mr0btain.ticketman.data.schedule.TimeOffStatus
+import org.mr0btain.ticketman.data.schedule.TimeOffRequest
 import androidx.compose.material3.Text
 import kotlinx.datetime.plus
 import org.mr0btain.ticketman.ui.screens.appointments.ScheduleEntryDialog
@@ -1030,6 +1036,47 @@ class ScreenRenderTest {
     @Test
     fun staffBoard() = screen("calendar-staff", rail = "Calendar") {
         StaffBoard(start = kotlinx.datetime.LocalDate(2026, 10, 26), dayCount = 14, staff = sampleStaff, schedule = sampleSchedule, onEntry = {}, onEmpty = { _, _ -> })
+    }
+
+    private val sampleTimeOff: List<TimeOffRequest> by lazy {
+        fun request(user: User, day: Int, days: Int, hours: Double, status: TimeOffStatus, note: String = "", reason: String = "") = TimeOffRequest(
+            userIdentifier = user.identifier, userName = user.name,
+            startsAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 11, day), 0, 0),
+            endsAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 11, day + days), 0, 0),
+            hours = hours, note = note, status = status, reason = reason, createdAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 20), 10, 0)
+        )
+        listOf(
+            request(nina, 23, 5, 40.0, TimeOffStatus.PENDING, "Thanksgiving week"),
+            request(sam, 13, 1, 4.0, TimeOffStatus.PENDING, "Afternoon off"),
+            request(lee, 2, 8, 48.0, TimeOffStatus.APPROVED, "Vacation"),
+            request(sam, 6, 1, 8.0, TimeOffStatus.DECLINED, reason = "Short staffed that day")
+        )
+    }
+
+    @Test
+    fun timeOffDialog() = screen("calendar-time-off", height = 1000, rail = "Calendar") {
+        TimeOffDialog(
+            mine = MyTimeOff(TimeOffBalance(nina.identifier, nina.name, 2026, allowanceHours = 120.0, takenHours = 24.0, pendingHours = 40.0), sampleTimeOff.filter { it.userIdentifier == nina.identifier }),
+            firstDay = kotlinx.datetime.LocalDate(2026, 12, 21),
+            onRequest = { _, _ -> },
+            onWithdraw = {},
+            onDismissRequest = {}
+        )
+    }
+
+    @Test
+    fun adminTimeOff() = screen("admin-time-off", height = 1000, rail = "Admin") {
+        AdminTimeOffTab(
+            requests = sampleTimeOff,
+            balances = listOf(
+                TimeOffBalance(lee.identifier, lee.name, 2026, 80.0, 48.0, 0.0),
+                TimeOffBalance(nina.identifier, nina.name, 2026, 120.0, 24.0, 40.0),
+                TimeOffBalance(sam.identifier, sam.name, 2026, 0.0, 0.0, 4.0)
+            ),
+            onApprove = {},
+            onDecline = { _, _ -> },
+            onAllowance = { _, _ -> }
+        )
     }
 
     @Test
