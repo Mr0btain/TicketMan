@@ -29,12 +29,13 @@ import kotlin.uuid.Uuid
 private val COLUMNS = listOf(
     TmColumn("Name"),
     TmColumn("Stock", width = 64.dp, end = true),
+    TmColumn("Reorder at", width = 88.dp, end = true),
     TmColumn("Cost", width = 96.dp, end = true),
     TmColumn("Price", width = 96.dp, end = true)
 )
 
 /**
- * Inventory that's running out
+ * Inventory that's running out: at or below its own reorder point, or the threshold for items without one
  * @param onItemClick Opens the item on the main screen
  */
 @Composable
@@ -55,7 +56,7 @@ fun AdminLowStockTab(
         TmPanel(
             modifier = Modifier.widthIn(max = 900.dp),
             title = "Low stock",
-            subtitle = "${items.size} items at or below $threshold, click one to open it",
+            subtitle = "${items.size} items at their reorder point, or $threshold for items without one. Click one to open it",
             icon = Res.drawable.package_icon,
             actions = {
                 TmTextField(
@@ -76,7 +77,7 @@ fun AdminLowStockTab(
             }
         ) {
             if (items.isEmpty()) {
-                TmEmptyState(icon = Res.drawable.check_circle, title = "Nothing is running low", message = "No item has $threshold or fewer in stock.")
+                TmEmptyState(icon = Res.drawable.check_circle, title = "Nothing is running low", message = "No item is at its reorder point.")
                 return@TmPanel
             }
 
@@ -97,8 +98,13 @@ fun AdminLowStockTab(
                                 style = TmTheme.typography.numeric,
                                 color = if (item.stock <= 0) colors.danger.color else colors.warning.color
                             )
-                            2 -> TmMoneyText(item.costCents)
-                            3 -> TmMoneyText(item.priceCents)
+                            2 -> Text(
+                                text = (item.reorderPoint ?: threshold).toString(),
+                                style = TmTheme.typography.numeric,
+                                color = if (item.reorderPoint == null) colors.textFaint else colors.textMuted
+                            )
+                            3 -> TmMoneyText(item.costCents)
+                            4 -> TmMoneyText(item.priceCents)
                         }
                     }
                 }

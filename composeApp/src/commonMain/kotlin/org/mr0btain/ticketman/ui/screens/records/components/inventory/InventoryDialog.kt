@@ -82,6 +82,42 @@ fun InventoryDialog(
             singleLine = false,
             minLines = 2
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+            TmTextField(
+                modifier = Modifier.weight(1f),
+                value = seed.sku,
+                onValueChange = { seed.changeSku(it.take(64)) },
+                label = "SKU",
+                textStyle = TmTheme.typography.numeric
+            )
+            TmTextField(
+                modifier = Modifier.weight(1f),
+                value = seed.barcode,
+                onValueChange = { seed.changeBarcode(it.filterNot(Char::isWhitespace).take(64)) },
+                label = "Barcode",
+                placeholder = "Scan it here",
+                textStyle = TmTheme.typography.numeric
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+            TmTextField(
+                modifier = Modifier.weight(2f),
+                value = seed.category,
+                onValueChange = { seed.changeCategory(it.take(60)) },
+                label = "Category",
+                placeholder = "Screens, batteries"
+            )
+            TmTextField(
+                modifier = Modifier.weight(1f),
+                value = seed.reorderPoint?.toString().orEmpty(),
+                onValueChange = { text -> seed.changeReorderPoint(text.filter { it.isDigit() }.take(6).toIntOrNull()) },
+                label = "Reorder at",
+                placeholder = "Default",
+                enabled = seed.tracksStock,
+                textStyle = TmTheme.typography.numeric,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
             TmTextField(

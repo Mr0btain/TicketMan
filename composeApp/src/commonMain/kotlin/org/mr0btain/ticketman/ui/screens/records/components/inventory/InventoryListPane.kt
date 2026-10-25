@@ -18,7 +18,7 @@ import kotlin.uuid.Uuid
 
 private val COLUMNS = listOf(
     TmColumn("Name", weight = 1f),
-    TmColumn("Description", weight = 1.4f),
+    TmColumn("SKU, category", weight = 1.4f),
     TmColumn("Stock", width = 88.dp, end = true),
     TmColumn("Cost", width = 88.dp, end = true),
     TmColumn("Price", width = 88.dp, end = true)
@@ -47,7 +47,11 @@ fun InventoryListPane(
             TmTableRow(COLUMNS, selected = item.identifier == selected, onClick = { onClick(item.identifier) }) { column ->
                 when (column) {
                     0 -> Text(item.name, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    1 -> Text(item.description, style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    // Its code and category, or the description when it has neither
+                    1 -> Text(
+                        listOf(item.sku, item.category).filter { it.isNotBlank() }.joinToString(", ").ifBlank { item.description },
+                        style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis
+                    )
                     2 -> if (item.stock == Int.MAX_VALUE) {
                         Text("Not tracked", style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1)
                     } else {

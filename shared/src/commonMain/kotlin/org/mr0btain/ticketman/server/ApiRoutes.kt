@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 9
+const val API_VERSION = 10
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -105,6 +105,12 @@ object InventoryPaths {
     const val GET_IMAGES = "/get/images/{identifier}"
     const val SET_IMAGES = "/set/images/{identifier}"
     const val SET_STOCK = "/set/stock/{identifier}"
+
+    /** The item whose barcode or SKU is exactly this, for a scanner */
+    const val BY_CODE = "/code/{code}"
+
+    /** Every category in use, by name */
+    const val CATEGORIES = "/categories"
 }
 
 object UserPaths {

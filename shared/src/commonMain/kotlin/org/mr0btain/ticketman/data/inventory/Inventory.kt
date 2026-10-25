@@ -5,6 +5,13 @@ import org.mr0btain.ticketman.data.MainItem
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+/**
+ * Something the shop stocks, a part or anything else it sells
+ * @param sku The shop's own code for it, unique when set
+ * @param barcode What a scanner reads off it (UPC, EAN or the shop's label), unique when set
+ * @param category For grouping, like "Screens" or "Batteries"
+ * @param reorderPoint Shows as low stock at or below this, null for the admin screen's threshold
+ */
 @Serializable
 @OptIn(ExperimentalUuidApi::class)
 data class Inventory(
@@ -17,5 +24,16 @@ data class Inventory(
     /** What we charge, in cents */
     val priceCents: Long = 0,
     /** The shop's tax class it's sold at, null for the main rate */
-    val taxClass: String? = null
-): MainItem()
+    val taxClass: String? = null,
+    val sku: String = "",
+    val barcode: String = "",
+    val category: String = "",
+    val reorderPoint: Int? = null
+): MainItem() {
+    /** Whether pickups and sales count it down */
+    val tracksStock: Boolean
+        get() = stock != Int.MAX_VALUE
+
+    /** At or below where it should be ordered again, [threshold] when it has no reorder point of its own */
+    fun isLow(threshold: Int): Boolean = tracksStock && stock <= (reorderPoint ?: threshold)
+}

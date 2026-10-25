@@ -37,5 +37,9 @@ enum class ChangedField {
     CUSTOMER_VISIBLE,
     NOTIFY_EMAIL,
     NOTIFY_SMS,
-    TAX_CLASS
+    TAX_CLASS,
+    SKU,
+    BARCODE,
+    CATEGORY,
+    REORDER_POINT
 }

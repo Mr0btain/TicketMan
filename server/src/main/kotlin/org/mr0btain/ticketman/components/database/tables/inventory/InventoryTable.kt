@@ -15,4 +15,10 @@ object InventoryTable : UuidTable("inventory") {
 
     // Added with tax classes: the shop's class it's sold at, null for the main rate
     val taxClass = text("tax_class").nullable()
+
+    // Added with item details. Blank when not set; unique when set, checked when saving
+    val sku = text("sku").default("")
+    val barcode = text("barcode").default("")
+    val category = text("category").default("")
+    val reorderPoint = integer("reorder_point").nullable()
 }

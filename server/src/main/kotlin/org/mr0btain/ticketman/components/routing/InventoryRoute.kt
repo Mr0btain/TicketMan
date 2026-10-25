@@ -70,6 +70,21 @@ fun Route.inventoryRoute(
         }
     }
 
+    authenticate("restricted") {
+        // Exactly matching a barcode or SKU, for a scanner at the counter
+        get(InventoryPaths.BY_CODE) {
+            val item = call.parameters["code"]?.let { database.getByCode(it) }
+
+            if (item != null) call.respond(HttpStatusCode.OK, item) else call.respond(HttpStatusCode.NotFound)
+        }
+
+        get(InventoryPaths.CATEGORIES) {
+            val categories = database.categories()
+
+            if (categories != null) call.respond(HttpStatusCode.OK, categories) else call.respond(HttpStatusCode.InternalServerError)
+        }
+    }
+
     // Photos of the item itself
     authenticate("restricted") {
         get(InventoryPaths.GET_IMAGES) {
@@ -106,6 +121,16 @@ fun Route.inventoryRoute(
                 return@post
             }
 
+            detailsProblem(received)?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
+            database.codeClash(received)?.let { clash ->
+                call.respond(HttpStatusCode.Conflict, clash)
+                return@post
+            }
+
             val saved = received.takeIf { database.add(it) }?.let { database.getById(it.identifier) }
 
             if (saved == null) {
@@ -122,6 +147,16 @@ fun Route.inventoryRoute(
     authenticate {
         post(RecordPaths.UPDATE) {
             val received = call.receive<Inventory>()
+
+            detailsProblem(received)?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
+            database.codeClash(received)?.let { clash ->
+                call.respond(HttpStatusCode.Conflict, clash)
+                return@post
+            }
 
             if (!database.update(received)) {
                 call.respond(HttpStatusCode.NotFound)
@@ -182,3 +217,16 @@ fun Route.inventoryRoute(
 
     noteRoute(database, userDatabase, auditLog, ENTITY_TYPE)
 }
+
+/** What's wrong with an item's codes, category or reorder point, or null */
+private fun detailsProblem(item: Inventory): String? = when {
+    item.sku.trim().length > MAX_CODE -> "SKU can be up to $MAX_CODE characters"
+    item.barcode.trim().length > MAX_CODE -> "Barcode can be up to $MAX_CODE characters"
+    item.barcode.any { it.isWhitespace() } -> "A barcode can't have spaces in it"
+    item.category.trim().length > MAX_CATEGORY -> "Category can be up to $MAX_CATEGORY characters"
+    (item.reorderPoint ?: 0) < 0 -> "Reorder point can't be below zero"
+    else -> null
+}
+
+private const val MAX_CODE = 64
+private const val MAX_CATEGORY = 60

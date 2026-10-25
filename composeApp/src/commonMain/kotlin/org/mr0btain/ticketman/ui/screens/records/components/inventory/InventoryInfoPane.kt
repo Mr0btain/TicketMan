@@ -49,6 +49,16 @@ fun InventoryInfoPane(
             }
         }
 
+        if (listOf(inventoryData.sku, inventoryData.barcode, inventoryData.category).any { it.isNotBlank() }) {
+            DetailSection("Details") {
+                Column {
+                    if (inventoryData.sku.isNotBlank()) TmKeyValueRow(label = "SKU", value = inventoryData.sku, numeric = true)
+                    if (inventoryData.barcode.isNotBlank()) TmKeyValueRow(label = "Barcode", value = inventoryData.barcode, numeric = true)
+                    if (inventoryData.category.isNotBlank()) TmKeyValueRow(label = "Category", value = inventoryData.category)
+                }
+            }
+        }
+
         DetailSection("Pricing") {
             Column {
                 TmKeyValueRow(label = "Price") { TmMoneyText(Money.fromDollars(inventoryData.price), style = TmTheme.typography.numericLarge) }
@@ -58,6 +68,9 @@ fun InventoryInfoPane(
                     value = if (inventoryData.tracksStock) inventoryData.stock.toString() else "Not tracked",
                     numeric = inventoryData.tracksStock
                 )
+                inventoryData.reorderPoint?.takeIf { inventoryData.tracksStock }?.let {
+                    TmKeyValueRow(label = "Reorder at", value = it.toString(), numeric = true)
+                }
                 TmKeyValueRow(label = "Added", value = formatDateTime(inventoryData.time.toEpochMilliseconds()))
             }
         }

@@ -112,6 +112,16 @@ class CounterRemoteRepositoryTest {
     }
 
     @Test
+    fun inventoryCodeRoutes() = runTest {
+        val inventory = InventoryRemoteRepository(client).apply { serverUrl = "http://localhost" }
+
+        inventory.getByCode(" 0194252707 ")
+        inventory.categories()
+
+        assertEquals(listOf("GET /api/data/inventory/code/0194252707", "GET /api/data/inventory/categories"), requests)
+    }
+
+    @Test
     fun ticketAndCustomerLinkRoutes() = runTest {
         val id = Uuid.parse("00000000-0000-7000-8000-000000000001")
 

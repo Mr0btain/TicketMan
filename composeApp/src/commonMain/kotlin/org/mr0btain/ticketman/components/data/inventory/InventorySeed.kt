@@ -33,6 +33,15 @@ class InventorySeed: DataSeed("InventorySeed") {
     /** The shop's tax class it's sold at, null for the main rate */
     var taxClass: String? by mutableStateOf(null)
         private set
+    var sku: String by mutableStateOf("")
+        private set
+    var barcode: String by mutableStateOf("")
+        private set
+    var category: String by mutableStateOf("")
+        private set
+    /** Low stock at or below this, null for the admin screen's threshold */
+    var reorderPoint: Int? by mutableStateOf(null)
+        private set
 
     val inventory: Inventory get() = Inventory(
         identifier = identifier,
@@ -41,7 +50,11 @@ class InventorySeed: DataSeed("InventorySeed") {
         stock = stock,
         costCents = Money.fromDollars(cost),
         priceCents = Money.fromDollars(price),
-        taxClass = taxClass
+        taxClass = taxClass,
+        sku = sku,
+        barcode = barcode,
+        category = category,
+        reorderPoint = reorderPoint
     )
 
     // --- Initial setting up with data ---
@@ -58,6 +71,10 @@ class InventorySeed: DataSeed("InventorySeed") {
         cost = Money.toDollars(data.costCents)
         price = Money.toDollars(data.priceCents)
         taxClass = data.taxClass
+        sku = data.sku
+        barcode = data.barcode
+        category = data.category
+        reorderPoint = data.reorderPoint
 
         setNotes(notes)
         setImages(images)
@@ -97,13 +114,33 @@ class InventorySeed: DataSeed("InventorySeed") {
         taxClass = newClass
     }
 
+    fun changeSku(newSku: String) {
+        sku = newSku
+    }
+
+    fun changeBarcode(newBarcode: String) {
+        barcode = newBarcode
+    }
+
+    fun changeCategory(newCategory: String) {
+        category = newCategory
+    }
+
+    fun changeReorderPoint(newPoint: Int?) {
+        reorderPoint = newPoint
+    }
+
     override fun fields() = mapOf(
         ChangedField.NAME to name,
         ChangedField.DESCRIPTION to description,
         ChangedField.STOCK to stock,
         ChangedField.PRICE to price,
         ChangedField.COST to cost,
-        ChangedField.TAX_CLASS to taxClass
+        ChangedField.TAX_CLASS to taxClass,
+        ChangedField.SKU to sku,
+        ChangedField.BARCODE to barcode,
+        ChangedField.CATEGORY to category,
+        ChangedField.REORDER_POINT to reorderPoint
     )
 
     // Reset all fields
@@ -116,6 +153,10 @@ class InventorySeed: DataSeed("InventorySeed") {
         cost = 0.0
         price = 0.0
         taxClass = null
+        sku = ""
+        barcode = ""
+        category = ""
+        reorderPoint = null
         _notes.clear()
         _images.clear()
         isNew = true

@@ -8,6 +8,9 @@ by pickups and voids (see [Stock counts](../server/counter.md#stock-counts)). An
 
 A `stock` of `Int.MAX_VALUE` (2147483647) means the item's stock isn't tracked. `taxClass` is the shop's
 [tax class](shop.md#post-apishopupdate) it's sold at, null for the main rate; parts added from it start with it.
+`sku` (the shop's own code) and `barcode` (what a scanner reads) are saved trimmed and are each unique when set,
+ignoring case. `category` groups items. `reorderPoint` is where the item counts as low stock, null for the admin
+screen's threshold ([low stock](admin.md#get-apiadmininventorylow-stock)).
 
 ## Reading
 
@@ -30,10 +33,27 @@ A page of items, by name.
 
 **Auth:** restricted
 
-Items whose name or description contains the query, or whose id starts with it.
+Items whose name, description or category contains the query, or whose SKU, barcode or id starts with it.
 
 - **Query:** `query`, `limit` (default 20, at most 200).
 - **`200`** a list of `SearchResult`.
+
+### `GET /api/data/inventory/code/{code}`
+
+**Auth:** restricted
+
+The item whose barcode, or else SKU, is exactly `code`, ignoring case. What the counter calls when a scanner reads
+a label.
+
+- **`200`** `Inventory`. **`404`** no item has that code.
+
+### `GET /api/data/inventory/categories`
+
+**Auth:** restricted
+
+Every category in use, by name, for picking one.
+
+- **`200`** a list of strings.
 
 ### `GET /api/data/inventory/get/images/{identifier}`
 
@@ -50,7 +70,9 @@ The item's own photos (not its notes' photos).
 **Auth:** normal
 
 - **Body:** `Inventory`, with an id the client made. **`201`** the `Inventory` as saved.
-- **`400`** `Stock can't be below zero`. **`500`** not saved.
+- **`400`** `Stock can't be below zero`, a SKU or barcode over 64 characters, a barcode with a space, a category
+  over 60 characters, or a negative reorder point. **`409`** another item has that SKU or barcode (`SKU SCR-13 is
+  already on iPhone 13 screen`). **`500`** not saved.
 
 ### `POST /api/data/inventory/update`
 
@@ -58,7 +80,7 @@ The item's own photos (not its notes' photos).
 
 Replaces everything but the stock count, which is kept as it is on the server whatever is sent.
 
-- **Body:** `Inventory`. **`202`** saved. **`404`** no such item.
+- **Body:** `Inventory`. **`202`** saved. **`400`** and **`409`** as for `/add`. **`404`** no such item.
 
 ### `POST /api/data/inventory/set/stock/{identifier}`
 

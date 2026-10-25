@@ -58,6 +58,18 @@ class ImportSheetTest {
     }
 
     @Test
+    fun inventoryCodesCategoryAndReorderPoint() {
+        val sheet = ImportSheet.read(ImportKind.INVENTORY, "Name,SKU,UPC,Category,Reorder Level\nCable,CBL-1,0123,Cables,4\nScreen,,,,lots")!!
+
+        val rows = sheet.inventory(sheet.mapping)
+        assertEquals("CBL-1", rows[0].record?.sku)
+        assertEquals("0123", rows[0].record?.barcode)
+        assertEquals("Cables", rows[0].record?.category)
+        assertEquals(4, rows[0].record?.reorderPoint)
+        assertEquals("Reorder point \"lots\" isn't a whole number", rows[1].problem)
+    }
+
+    @Test
     fun aFileWithOnlyHeadersIsNothingToImport() {
         assertNull(ImportSheet.read(ImportKind.INVENTORY, "Name,Price\n"))
     }

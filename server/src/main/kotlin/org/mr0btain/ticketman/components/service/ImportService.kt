@@ -80,20 +80,29 @@ class ImportService(
     fun inventory(list: List<Inventory>, dryRun: Boolean, actor: Uuid?): ImportResult? {
         val existing = inventory.names()?.associateBy { it.trim().lowercase() } ?: return null
         val seen = mutableMapOf<String, Int>()
+        val seenCodes = mutableMapOf<String, Int>()
 
         val rows = list.mapIndexed { index, item ->
             val key = item.name.trim().lowercase()
+            // SKUs and barcodes are unique, in the file and against what's there
+            val codes = listOf(item.sku, item.barcode).map { it.trim().lowercase() }.filter { it.isNotEmpty() }
 
             val outcome = when {
                 key.isEmpty() -> error(index, "No name")
                 item.priceCents < 0 || item.costCents < 0 -> error(index, "Prices can't be negative")
                 item.stock < 0 -> error(index, "Stock can't be negative")
+                (item.reorderPoint ?: 0) < 0 -> error(index, "Reorder point can't be negative")
                 existing[key] != null -> match(index, "${existing[key]} is already in inventory")
                 seen[key] != null -> match(index, "Same name as row ${seen[key]!! + 1}")
+                codes.any { it in seenCodes } -> error(index, "Same SKU or barcode as row ${codes.firstNotNullOf { seenCodes[it] } + 1}")
+                inventory.codeClash(item.copy(identifier = Uuid.generateV7())) != null -> error(index, inventory.codeClash(item.copy(identifier = Uuid.generateV7()))!!)
                 else -> ImportRowResult(index, ImportOutcome.ADD)
             }
 
-            if (outcome.outcome == ImportOutcome.ADD) seen[key] = index
+            if (outcome.outcome == ImportOutcome.ADD) {
+                seen[key] = index
+                codes.forEach { seenCodes[it] = index }
+            }
             outcome
         }
 

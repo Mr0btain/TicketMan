@@ -405,6 +405,15 @@ _, mixed = call("POST", "/api/counter/sale", {"charges": [
 check(mixed["taxCents"] == 20 + 41 and [r["identifier"] for r in mixed["taxRates"]] == ["food"], f"mixed tax {mixed['taxCents']} {mixed['taxRates']}")
 step("A Food tax class at 2%: a $10 snack bar (20c tax) and a $5 wipe at 8.25% (41c) sold together, the invoice keeping the Food rate")
 
+# ------------------------------------------ Inventory and purchasing ------------------------------------------
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+call("POST", "/api/data/inventory/update", {**item, "sku": "SCR-14", "barcode": "0194253401", "category": "Screens", "reorderPoint": 5}, admin, expect=202)
+call("POST", "/api/data/inventory/add", {"identifier": uid(), "name": "Copy", "sku": "scr-14"}, admin, expect=409)
+_, scanned = call("GET", "/api/data/inventory/code/0194253401", token=pin, expect=200)
+_, low = call("GET", "/api/admin/inventory/low-stock?threshold=1", token=admin, expect=200)
+check(scanned["identifier"] == screen and screen in [i["identifier"] for i in low], f"low stock {low}")
+step(f"The screen gets SKU SCR-14, a barcode the scanner finds, and a reorder point of 5, so at {scanned['stock']} it shows as low stock even with the threshold at 1")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")
