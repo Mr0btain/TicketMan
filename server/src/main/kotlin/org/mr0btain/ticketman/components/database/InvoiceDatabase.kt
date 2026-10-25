@@ -217,6 +217,22 @@ class InvoiceDatabase(
         }
 
     /**
+     * Invoices with a payment or refund received from [fromMillis] up to but not including [toMillis], for the
+     * payments export. Null when the read failed
+     */
+    fun withPaymentsBetween(fromMillis: Long, toMillis: Long): List<Invoice>? =
+        dbQuery(RANGE_TAG) {
+            val ids = InvoicePaymentTable
+                .select(InvoicePaymentTable.invoice)
+                .where { (InvoicePaymentTable.receivedAt greaterEq fromMillis) and (InvoicePaymentTable.receivedAt less toMillis) }
+                .map { it[InvoicePaymentTable.invoice].value }
+                .distinct()
+            if (ids.isEmpty()) emptyList() else ids.chunked(COST_CHUNK).flatMap { chunk ->
+                InvoiceTable.selectAll().where { InvoiceTable.id inList chunk }.map { it.toInvoice() }
+            }
+        }
+
+    /**
      * Keeps what each part on the invoice costs now on its line, for the profit report. Called in the transaction
      * that pays it, before the invoice can't change any more
      */

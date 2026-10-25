@@ -9,7 +9,9 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
+import org.mr0btain.ticketman.components.service.AccountingExport
 import org.mr0btain.ticketman.components.service.InvoiceDocuments
+import org.mr0btain.ticketman.data.invoice.ExportFormat
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.logging.AppLogger
 import java.time.LocalDate
@@ -27,7 +29,8 @@ fun Route.invoiceRoute(
     service: InvoiceService,
     userDatabase: UserDatabase,
     documents: InvoiceDocuments,
-    auditLog: AuditLogDatabase
+    auditLog: AuditLogDatabase,
+    accounting: AccountingExport
 ) {
     val TAG = "InvoiceRoute"
     val PDF_TAG = "$TAG:Pdf"
@@ -129,29 +132,54 @@ fun Route.invoiceRoute(
     }
 
     authenticate("admin") {
-        // For the books: one row per invoice made between two days
+        // For the books: invoices or payments between two days, as a spreadsheet, QuickBooks or Xero want them
         get(InvoicePaths.EXPORT) {
             val from = call.queryParameters["from"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
             val to = call.queryParameters["to"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+            val format = call.queryParameters["format"]?.let { name -> ExportFormat.entries.firstOrNull { it.name.equals(name, ignoreCase = true) } }
 
             if (from == null || to == null || to < from) {
                 call.respondText("Give from and to as days like 2026-10-01, from first", status = HttpStatusCode.BadRequest)
                 return@get
             }
 
-            val list = documents.inRange(from, to)
-            if (list == null) {
-                call.respond(HttpStatusCode.InternalServerError)
+            if (call.queryParameters["format"] != null && format == null) {
+                call.respondText("Format is one of ${ExportFormat.entries.joinToString { it.name.lowercase() }}", status = HttpStatusCode.BadRequest)
                 return@get
             }
 
-            call.audit(auditLog, AuditAction.BACKUP, "invoices", details = "Exported ${list.size} invoices, $from to $to")
+            val kind = format ?: ExportFormat.INVOICES
+            val write: (java.io.Writer) -> Unit
+            val count: Int
+
+            when (kind) {
+                ExportFormat.INVOICES -> {
+                    val list = documents.inRange(from, to) ?: return@get call.respond(HttpStatusCode.InternalServerError)
+                    write = { documents.writeCsv(list, it) }
+                    count = list.size
+                }
+
+                ExportFormat.QUICKBOOKS, ExportFormat.XERO -> {
+                    val list = accounting.paidInRange(from, to) ?: return@get call.respond(HttpStatusCode.InternalServerError)
+                    write = { if (kind == ExportFormat.XERO) accounting.writeXero(list, it) else accounting.writeQuickBooks(list, it) }
+                    count = list.size
+                }
+
+                ExportFormat.PAYMENTS -> {
+                    val list = accounting.paymentsInRange(from, to) ?: return@get call.respond(HttpStatusCode.InternalServerError)
+                    write = { accounting.writePayments(list, it) }
+                    count = list.size
+                }
+            }
+
+            val what = if (kind == ExportFormat.PAYMENTS) "payments" else "invoices"
+            call.audit(auditLog, AuditAction.BACKUP, "invoices", details = "Exported $count $what for ${kind.label}, $from to $to")
             call.response.header(
                 HttpHeaders.ContentDisposition,
-                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, "invoices-$from-to-$to.csv").toString()
+                ContentDisposition.Attachment.withParameter(ContentDisposition.Parameters.FileName, "${kind.fileName}-$from-to-$to.csv").toString()
             )
-            call.respondTextWriter(ContentType.Text.CSV.withCharset(Charsets.UTF_8)) { documents.writeCsv(list, this) }
-            AppLogger.m(EXPORT_TAG, "${list.size} invoices, $from to $to")
+            call.respondTextWriter(ContentType.Text.CSV.withCharset(Charsets.UTF_8)) { write(this) }
+            AppLogger.m(EXPORT_TAG, "$count $what for ${kind.label}, $from to $to")
         }
 
         post(InvoicePaths.VOID) {

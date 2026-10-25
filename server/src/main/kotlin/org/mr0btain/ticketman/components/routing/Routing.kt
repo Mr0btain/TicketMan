@@ -12,6 +12,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.AccountService
+import org.mr0btain.ticketman.components.service.AccountingExport
 import org.mr0btain.ticketman.components.service.AppointmentService
 import org.mr0btain.ticketman.components.service.TimeClockService
 import org.mr0btain.ticketman.components.service.AdminService
@@ -204,7 +205,13 @@ fun Application.configureRouting(
                     customers = localDatabase.customerDatabase,
                     shop = localDatabase.shopDatabase
                 ),
-                auditLog = localDatabase.auditLogDatabase
+                auditLog = localDatabase.auditLogDatabase,
+                accounting = AccountingExport(
+                    invoices = localDatabase.invoiceDatabase,
+                    tickets = localDatabase.ticketDatabase,
+                    customers = localDatabase.customerDatabase,
+                    shop = localDatabase.shopDatabase
+                )
             )
         }
 

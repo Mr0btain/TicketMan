@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.giftcard.GiftCard
+import org.mr0btain.ticketman.data.invoice.ExportFormat
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
 import org.mr0btain.ticketman.error.TmResult
@@ -88,17 +89,18 @@ class CounterInvoices(
     }
 
     /**
-     * Saves the invoices made from [from] to [to] (days like 2026-10-01, both included) as CSV for the books
+     * Saves the invoices or payments from [from] to [to] (days like 2026-10-01, both included) as CSV for the books
+     * @param format A spreadsheet's, QuickBooks', Xero's or the payments
      * @param onResult Gets null when it was saved or they cancelled, otherwise what went wrong
      */
-    fun export(from: String, to: String, onResult: (String?) -> Unit) {
+    fun export(from: String, to: String, format: ExportFormat = ExportFormat.INVOICES, onResult: (String?) -> Unit) {
         support.scope.launch {
-            val bytes = remoteHandler.invoiceRepo.export(from, to).valueOr { error ->
+            val bytes = remoteHandler.invoiceRepo.export(from, to, format).valueOr { error ->
                 onResult("Couldn't export: ${error.message}")
                 return@launch
             }
 
-            if (saveFile(bytes, "invoices-$from-to-$to", "csv")) support.notify("Invoices saved")
+            if (saveFile(bytes, "${format.fileName}-$from-to-$to", "csv")) support.notify("${format.label} export saved")
             onResult(null)
         }
     }

@@ -47,7 +47,7 @@ class InvoiceFilesTest {
         val csv = invoices.export("2026-10-01", "2026-10-31")
 
         assertEquals("Invoice,Date\r\n", (csv as TmResult.Success).data.decodeToString())
-        assertEquals(listOf("GET /api/invoice/export?from=2026-10-01&to=2026-10-31"), requests)
+        assertEquals(listOf("GET /api/invoice/export?from=2026-10-01&to=2026-10-31&format=invoices"), requests)
     }
 
     @Test

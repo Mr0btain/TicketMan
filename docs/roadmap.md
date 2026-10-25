@@ -94,13 +94,22 @@ on them. Passcodes are sealed under a key from the server secret, so moving them
 unless a line says). The storage fee is a line synced onto the invoice whenever it's opened, waived by taking it off;
 abandoned devices move to their own list in the queue rather than to a status.
 
-## Phase 6: Running the business
+## Phase 6: Running the business (done)
 
 - **Reports** [12]. Sales and profit by period, tax collected, tech productivity and commission from the work log,
   turnaround from status history, refunds.
 - **Appointments** [13]. A calendar, appointments turning into check-ins, and later booking from the public page.
 - **Time clock** [19]. Clock in and out by PIN at a station, with timesheets.
 - **Accounting export** [20]. QuickBooks and Xero friendly CSV, building on the invoice export.
+
+Built as above ([Reports API](api/report.md), [Appointments API](api/appointment.md),
+[Time clock API](api/timeclock.md), [Invoices API](api/invoice.md#get-apiinvoiceexport)), except booking from the
+public page, which is still to come. Profit uses each part's cost kept on its invoice line when the invoice is paid;
+invoices paid before that count their parts as free, and the report says how many. Commission is a percent of the
+labor each tech bills, kept apart from users so only admins see it. Appointments get a reminder a day ahead through
+Phase 2's messages. Staff can clock in from their own device as well as by PIN at a station, where nobody is signed
+in. The QuickBooks and Xero exports are one row per line of each paid invoice, with the shop's own item, account
+and tax rate names, plus a payments export for the bank.
 
 ## Phase 7: Big integrations
 

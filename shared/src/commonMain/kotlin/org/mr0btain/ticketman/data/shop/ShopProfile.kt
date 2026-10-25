@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.data.shop
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.invoice.AccountingSettings
 import org.mr0btain.ticketman.data.invoice.TaxClass
 import org.mr0btain.ticketman.data.invoice.TaxClasses
 import org.mr0btain.ticketman.data.invoice.TaxRate
@@ -24,6 +25,7 @@ import org.mr0btain.ticketman.data.ticket.StatusChoice
  * @param warrantyDays How long repairs are guaranteed from pickup, for labor and parts lines that don't say. 0 for
  * no warranty
  * @param storage Fees for devices left after they're ready, and when they're abandoned
+ * @param accounting The names the shop's books use, for the QuickBooks and Xero exports
  * @param checklists The shop's own intake checklists, by kind of device. Kinds without one use
  * [org.mr0btain.ticketman.data.ticket.IntakeChecklists.defaults]
  */
@@ -59,7 +61,8 @@ data class ShopProfile(
     val partsArrivedStatus: StatusChoice? = null,
     val checklists: List<IntakeChecklist> = emptyList(),
     val warrantyDays: Int = 0,
-    val storage: StorageTerms = StorageTerms()
+    val storage: StorageTerms = StorageTerms(),
+    val accounting: AccountingSettings = AccountingSettings()
 ) {
     /** [taxRate] in basis points, 0 when it's blank or not a number */
     val taxBasisPoints: Int

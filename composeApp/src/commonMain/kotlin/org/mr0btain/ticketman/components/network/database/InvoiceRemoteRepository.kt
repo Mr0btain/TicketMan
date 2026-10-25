@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.invoice.Charge
+import org.mr0btain.ticketman.data.invoice.ExportFormat
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
@@ -133,16 +134,18 @@ class InvoiceRemoteRepository(
         file(FILE_TAG) { client.get { url("$baseUrl${InvoicePaths.PDF.fill(identifier)}") } }
 
     /**
-     * Invoices made between two days as CSV, admin only
+     * Invoices or payments between two days as CSV, admin only
      * @param from First day, like 2026-10-01
      * @param to Last day, included
+     * @param format What's written: invoices for a spreadsheet, QuickBooks or Xero's import, or payments
      */
-    suspend fun export(from: String, to: String): TmResult<ByteArray, ServerError> =
+    suspend fun export(from: String, to: String, format: ExportFormat = ExportFormat.INVOICES): TmResult<ByteArray, ServerError> =
         file(FILE_TAG) {
             client.get {
                 url("$baseUrl${InvoicePaths.EXPORT}")
                 parameter("from", from)
                 parameter("to", to)
+                parameter("format", format.name.lowercase())
             }
         }
 

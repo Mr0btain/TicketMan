@@ -35,6 +35,11 @@ lines are saved. Paid and void invoices keep the rate they had.
   `feeAfterDays` is charged `dailyFeeCents` for each day past them (a line synced onto its invoice when it's opened,
   see [invoices](invoice.md)), and one ready `abandonAfterDays` is treated as abandoned by the hourly sweep. 0 turns
   either off. The terms are printed on the claim slip and the status page says when the fee starts.
+- **`accounting`** is `AccountingSettings`, the names the shop's books use for the
+  [QuickBooks and Xero exports](invoice.md#get-apiinvoiceexport): QuickBooks items per kind of line (`laborItem`,
+  `partsItem`, `otherItem`, `giftCardItem`), Xero's `salesAccount`, `giftCardAccount` (blank is the sales account),
+  `taxType`, `exemptTaxType` and `classTaxTypes` (tax class id to Xero tax rate), `walkInCustomer` for sales with no
+  customer, `dueDays` (0 to 365) and `dateFormat` (`MONTH_FIRST`, `DAY_FIRST` or `ISO`).
 - **`checklists`** are the shop's own intake checklists (`IntakeChecklist { kind, items }`), one per `DeviceKind`;
   a kind without one uses the built in list (`IntakeChecklists.defaults`), and an empty list means nothing's
   checked. Items are saved trimmed, blank and repeated ones dropped, up to 30 of 60 characters each.
@@ -48,7 +53,8 @@ lines are saved. Paid and void invoices keep the rate they had.
   one's, one acting as `PICKED_UP`, more than 40, or a saved one whose `actsAs` changed; an estimate or parts status
   staff couldn't pick (picked up, retired or unknown); or a tax class with no name, a rate that isn't 0 to 100, or the
   same identifier twice; or a warranty outside 0 to 3650 days; or storage terms with days outside 0 to 3650, a negative fee, or an
-  abandon limit that isn't after the fee starts.
+  abandon limit that isn't after the fee starts; or accounting names left blank or over 100 characters, or `dueDays`
+  outside 0 to 365.
 
 ## See also
 

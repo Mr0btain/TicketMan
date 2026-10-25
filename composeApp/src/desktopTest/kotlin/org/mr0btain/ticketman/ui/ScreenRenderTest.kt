@@ -1050,7 +1050,7 @@ class ScreenRenderTest {
     @Test
     fun invoiceExport() = bothModes("admin-invoice-export") {
         Shell("Admin") {
-            InvoiceExportDialog(onExport = { _, _, _ -> }, onDismissRequest = {})
+            InvoiceExportDialog(onExport = { _, _, _, _ -> }, onDismissRequest = {})
         }
     }
 

@@ -522,6 +522,17 @@ _, sheet = call("GET", f"/api/timeclock/timesheet?from={day}&to={day}", token=ad
 check([p["name"] for p in sheet["people"]] == ["Nina Tech"] and len(sheet["people"][0]["entries"]) == 1, f"timesheet {sheet}")
 step("Nina clocks in at the Front Counter with her PIN (a wrong one refused), shows as on the clock, clocks out, and the admin's timesheet has the stretch")
 
+status, qb, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}&format=quickbooks", headers={"Authorization": "Bearer " + admin}))
+qb_rows = qb.decode().strip().split("\r\n")
+check(status == 200 and qb_rows[0].startswith("InvoiceNo,Customer,InvoiceDate") and any(",Parts,iPhone 14 Screen," in r for r in qb_rows), f"quickbooks {status}: {qb_rows[:3]}")
+status, xero, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}&format=xero", headers={"Authorization": "Bearer " + admin}))
+xero_rows = xero.decode().strip().split("\r\n")
+check(status == 200 and xero_rows[0].startswith("*ContactName") and any(r.startswith("Jane Doe,jane@home.test,") and r.endswith(",200,Tax on Sales") for r in xero_rows), f"xero {status}: {xero_rows[:3]}")
+status, paid_csv, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}&format=payments", headers={"Authorization": "Bearer " + admin}))
+payment_rows = paid_csv.decode().strip().split("\r\n")
+check(status == 200 and any(",-129.90," in r and "Cracked in the box" in r for r in payment_rows), f"payments {status}: {payment_rows[:3]}")
+step(f"Today's books export: {len(qb_rows) - 1} QuickBooks lines, {len(xero_rows) - 1} Xero lines and {len(payment_rows) - 1} payments, the screen's refund among them")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

@@ -56,15 +56,32 @@ Streamed, with `Content-Disposition: attachment; filename=INV-26-00000042.pdf`.
 
 **Auth:** admin
 
-Invoices made between two days, in the shop's time zone, as CSV for the books. Audited (`BACKUP` on `invoices`, with
-the count and days).
+Invoices or payments between two days, in the shop's time zone, as CSV for a spreadsheet or the books. Audited
+(`BACKUP` on `invoices`, with the format, count and days). The accounting formats are written by
+`AccountingExport`, with names from the shop profile's [`accounting`](shop.md#post-apishopupdate).
 
-- **Query:** `from` and `to`, days like `2026-10-01`, both included. **`400`** either missing, not a day, or `to`
-  before `from`.
-- **`200`** `text/csv`, one row per invoice, oldest number first: `Invoice, Date, Status, Paid on, Ticket,
-  Customer, Subtotal, Discount, Tax, Total, Paid, Balance, Refunded`. A sale's Ticket is `Sale`. Amounts are plain numbers (`159.90`) so a spreadsheet adds
-  them up. Cells are quoted as spreadsheets expect, and typed text starting with `=`, `+`, `-` or `@` gets a leading
-  `'` so it isn't run as a formula.
+- **Query:** `from` and `to`, days like `2026-10-01`, both included; `format`, one of `invoices` (the default),
+  `quickbooks`, `xero` or `payments`. **`400`** a day missing or not a day, `to` before `from`, or another format.
+- **`200`** `text/csv`, named `<format>-<from>-to-<to>.csv`:
+  - `invoices`: one row per invoice made in the days, oldest number first: `Invoice, Date, Status, Paid on, Ticket,
+    Customer, Subtotal, Discount, Tax, Total, Paid, Balance, Refunded`. A sale's Ticket is `Sale`.
+  - `quickbooks`: one row per line of each invoice **paid** in the days, in QuickBooks Online's invoice import
+    columns: `InvoiceNo, Customer, InvoiceDate, DueDate, Memo, Item(Product/Service), ItemDescription,
+    ItemQuantity, ItemRate, ItemAmount, Taxable, TaxRate`. The item is the shop's name for the line's type; the
+    rate is the one the line was taxed at (its class's, or the main rate); the memo the ticket number or "Counter
+    sale".
+  - `xero`: the same lines in Xero's sales invoice import columns: `*ContactName, EmailAddress, *InvoiceNumber,
+    Reference, *InvoiceDate, *DueDate, *Description, *Quantity, *UnitAmount, *AccountCode, *TaxType`, the account
+    and tax rate from the shop's settings.
+  - `payments`: one row per payment or refund received in the days, oldest first: `Date, Invoice, Customer, Method,
+    Amount, Reference, Note, Received by`, refunds negative.
+
+  Invoice dates in the accounting formats are when it was paid, the due date `dueDays` later, written in the
+  shop's `dateFormat`. A discount is its own `Discount` line, negative, taxed at the main rate when anything on the
+  invoice is (it comes off the taxed lines first). The books work the tax out again from the rates, so a total can
+  differ by a cent from ours when a discount is shared between rates. A sale with no customer is the shop's
+  `walkInCustomer`. Amounts are plain numbers (`159.90`). Cells are quoted as spreadsheets expect, and typed text
+  starting with `=`, `+`, `-` or `@` gets a leading `'` so it isn't run as a formula.
 
 ## Changing
 

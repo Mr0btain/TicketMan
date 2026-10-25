@@ -69,7 +69,7 @@ fun AdminInvoicesTab(
 
     if (exporting) {
         InvoiceExportDialog(
-            onExport = { from, to, onResult -> counter.invoices.export(from, to, onResult) },
+            onExport = { from, to, format, onResult -> counter.invoices.export(from, to, format, onResult) },
             onDismissRequest = { exporting = false }
         )
     }
