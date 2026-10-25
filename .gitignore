@@ -18,3 +18,4 @@ shared/build/kotlinProjectStructureMetadata/kotlin-project-structure-metadata.js
 # Release signing keys, see docs/releasing.md
 *.jks
 *.keystore
+/.mcp.json
