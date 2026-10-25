@@ -107,6 +107,16 @@ Turns kiosk mode on or off, with the idle lock time. The device picks it up next
 - **Body:** `KioskSettings { enabled, idleTimeoutSeconds }`, the timeout 30 to 3600.
 - **`202`** saved. **`400`** the timeout is out of range. **`404`** no such station. **`409`** not approved yet.
 
+### `POST /api/admin/stations/{identifier}/location`
+
+**Auth:** admin
+
+Which [location](location.md) the station is at. A device registering as a station starts at the location it worked
+at; work done on it, PIN logins and clocking in there belong to that location, and it can't pick another.
+
+- **Body:** `StationLocationRequest { locationIdentifier }`.
+- **`202`** saved, audit logged. **`400`** not an active location. **`404`** no such station.
+
 ### `DELETE /api/admin/stations/{identifier}`
 
 **Auth:** admin

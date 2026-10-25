@@ -1,6 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.database.PaymentDatabase
+import org.mr0btain.ticketman.components.database.LocationDatabase
 import org.mr0btain.ticketman.components.payments.CardPayments
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AppointmentDatabase
@@ -46,7 +47,8 @@ class CheckInService(
     private val passcodes: PasscodeDatabase = PasscodeDatabase(),
     private val vault: PasscodeVault? = null,
     private val appointments: AppointmentDatabase = AppointmentDatabase(),
-    private val cards: CardPayments = CardPayments(PaymentDatabase())
+    private val cards: CardPayments = CardPayments(PaymentDatabase()),
+    private val locations: LocationDatabase = LocationDatabase()
 ) {
     private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
 
@@ -55,8 +57,10 @@ class CheckInService(
      * in at the visit gets its own ticket, linked to the others, and the customer's device record. Everything is
      * checked first, then saved together
      */
-    fun checkIn(received: CheckInRequest, takenBy: String, actor: Uuid?): AccountResult<CheckInResponse> {
-        val shopProfile = shop.get()
+    fun checkIn(received: CheckInRequest, takenBy: String, actor: Uuid?, location: Uuid? = null): AccountResult<CheckInResponse> {
+        // Every device is checked in at the counter's location, taxed at its rates
+        val at = location ?: locations.main().identifier
+        val shopProfile = shop.at(at)
         if (customers.getById(received.customerIdentifier) == null) return AccountResult.Invalid("Pick a customer")
 
         // Each device's ticket, checked the same way
@@ -66,7 +70,7 @@ class CheckInService(
                 is CustomStatusRules.Resolved.Ok -> resolved.status
                 is CustomStatusRules.Resolved.Problem -> return AccountResult.Invalid(resolved.message)
             }
-            val ticket = item.ticket.copy(status = status)
+            val ticket = item.ticket.copy(status = status, locationIdentifier = at)
 
             // Check in time is read from the identifier, so it has to be a time based (version 7) one
             if (ticket.identifier.toByteArray()[6].toInt() ushr 4 != 7) return AccountResult.Invalid("Ticket identifier has to be a version 7 UUID")

@@ -115,7 +115,7 @@ and tax rate names, plus a payments export for the bank.
 
 - **Payment processing** [14] (done). Card terminals and payment links (Stripe Terminal or Square), and paying the
   balance from the status page.
-- **More than one location** [21]. One server for every shop, with a location on tickets, stock, stations, users and
+- **More than one location** [21] (done). One server for every shop, with a location on tickets, stock, stations, users and
   numbering. Each location can work on its own: its counter, queue, stock and staff show only its own, so running
   one shop day to day doesn't mean wading through the others. Customers stay company wide: looking one up shows
   their tickets at every location, and their store credit, gift cards and devices go with them. Reports and admin
@@ -129,6 +129,14 @@ before its invoice exists is claimed by the payment that names it. Refunds of ca
 A simulated processor stands in on development servers for the tests and `scripts/counter_e2e.py`. Still to come:
 check in deposits on a reader from the counter's wizard (the server takes them already), sending a payment link by
 email or text, and tipping and surcharges.
+
+Locations are built as above ([Locations API](api/location.md)). Each location numbers its own tickets, invoices and
+orders with its code, keeps its own stock counts of the shared catalog, and can have its own address, contacts and
+tax rates; the main one, made from what was there before, keeps the old numbers. Devices say where they work with
+every request: a station is fixed to its location, staff start at their home location and can pick another, and
+admins can look at all of them at once. Tickets move between locations with their open invoice. Still to come:
+moving stock between locations (a transfer, rather than counting it down at one and up at the other by hand), and a
+customer picking a location when booking from the public page.
 
 ## iOS app
 

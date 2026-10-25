@@ -26,6 +26,7 @@ changes here are made to both sides together.
 | [Appointments](appointment.md) | `/api/appointment` | `AppointmentRoute.kt` |
 | [Time clock](timeclock.md) | `/api/timeclock` | `TimeClockRoute.kt` |
 | [Payments](payment.md) | `/api/payment` | `PaymentRoute.kt` |
+| [Locations](location.md) | `/api/location` | `LocationRoute.kt` |
 | [Status page](status.md) | `/status` | `StatusRoute.kt` |
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 
@@ -53,6 +54,12 @@ Every provider also needs the token to be an access token (not a refresh token) 
 and hasn't expired. A bad, expired or revoked token is a `401` with the text body `Bad Token or Unauthorized`, and
 the client refreshes. A good token whose user doesn't have the access the route needs (or hasn't finished setup) is
 a `403` with `You don't have access to that`, which refreshing wouldn't fix.
+
+## Locations
+
+Every request from the app carries `X-TicketMan-Location` with the [location](location.md) it works at, or `all`
+from an admin looking at every one. Lists of tickets, invoices, stock counts, users, appointments and orders keep to
+it, and new work belongs to it; without it the server uses the caller's home location.
 
 ## Bodies
 

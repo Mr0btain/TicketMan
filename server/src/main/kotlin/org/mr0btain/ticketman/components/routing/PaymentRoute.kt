@@ -49,7 +49,8 @@ fun Route.paymentRoute(
 
     authenticate("restricted") {
         get(PaymentPaths.OPTIONS) {
-            call.respond(HttpStatusCode.OK, service.options())
+            // The readers where the caller works
+            call.respond(HttpStatusCode.OK, service.options(call.locationScope().identifier))
         }
 
         // Polled by the counter while it waits for the card

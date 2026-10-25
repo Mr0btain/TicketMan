@@ -31,7 +31,8 @@ fun Route.appointmentRoute(
                 return@get
             }
 
-            call.respondAccount(service.between(from, to), HttpStatusCode.OK)
+            // The calendar where the caller works
+            call.respondAccount(service.between(from, to, location = call.locationScope().identifier), HttpStatusCode.OK)
         }
 
         get(AppointmentPaths.GET) {
@@ -43,7 +44,7 @@ fun Route.appointmentRoute(
 
     authenticate {
         post(AppointmentPaths.ADD) {
-            call.respondAccount(service.add(call.receive<Appointment>(), call.username(userDatabase), call.getIdentifierFromToken()), HttpStatusCode.Created)
+            call.respondAccount(service.add(call.receive<Appointment>(), call.username(userDatabase), call.getIdentifierFromToken(), call.workingLocation().identifier), HttpStatusCode.Created)
         }
 
         post(AppointmentPaths.UPDATE) {

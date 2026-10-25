@@ -39,7 +39,8 @@ fun AccountPanel(
     versionNotice: VersionNotice? = null,
     connectionProblem: String? = null,
     insecureWarning: String? = null,
-    onPhotoChange: ((StoredImage?) -> Unit)? = null
+    onPhotoChange: ((StoredImage?) -> Unit)? = null,
+    location: (@Composable () -> Unit)? = null
 ) {
     TmPanel(modifier = modifier.fillMaxWidth(), title = "Account", icon = Res.drawable.user) {
         connectionProblem?.let { TmNotice(kind = TmNoticeKind.ERROR, title = "Can't connect", text = it) }
@@ -65,6 +66,9 @@ fun AccountPanel(
                     TmButton(text = "Log out", onClick = onLogout, variant = TmButtonVariant.SECONDARY, leadingIcon = Res.drawable.log_out)
                 }
             )
+
+            // Where the device works, when the shop has more than one location
+            location?.invoke()
 
             // Shown on the admin screen, the user menu and their ID card
             onPhotoChange?.let { change ->

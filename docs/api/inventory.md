@@ -13,6 +13,11 @@ ignoring case. `category` groups items. `reorderPoint` is where the item counts 
 screen's threshold ([low stock](admin.md#get-apiadmininventorylow-stock)). `supplierIdentifier` is who it's
 usually [ordered](purchase.md) from.
 
+**Stock per location.** The catalog is the company's; each [location](location.md) counts its own stock. Every read
+gives `stock` and `reorderPoint` for the location the request works at (`stock` added up and no reorder point for an
+admin working at `all`), and `stockAt` with every location's `LocationStock { locationIdentifier, stock,
+reorderPoint }`. A location with no row has none. Whether an item is tracked is the same everywhere.
+
 ## Reading
 
 ### `GET /api/data/inventory/get/{identifier}`
@@ -70,7 +75,8 @@ The item's own photos (not its notes' photos).
 
 **Auth:** normal
 
-- **Body:** `Inventory`, with an id the client made. **`201`** the `Inventory` as saved.
+- **Body:** `Inventory`, with an id the client made. Its `stock` and `reorderPoint` are the count where the request
+  works; the other locations start with none. **`201`** the `Inventory` as saved.
 - **`400`** `Stock can't be below zero`, a SKU or barcode over 64 characters, a barcode with a space, a category
   over 60 characters, or a negative reorder point. **`409`** another item has that SKU or barcode (`SKU SCR-13 is
   already on iPhone 13 screen`). **`500`** not saved.
@@ -79,7 +85,8 @@ The item's own photos (not its notes' photos).
 
 **Auth:** normal
 
-Replaces everything but the stock count, which is kept as it is on the server whatever is sent.
+Replaces everything but the stock count, which is kept as it is on the server whatever is sent. The reorder point
+is the one where the request works.
 
 - **Body:** `Inventory`. **`202`** saved. **`400`** and **`409`** as for `/add`. **`404`** no such item.
 
@@ -89,8 +96,10 @@ Replaces everything but the stock count, which is kept as it is on the server wh
 
 Sets the stock count by hand, only if it's still what the client last saw, so a pickup in between isn't lost.
 
-- **Body:** `StockChangeRequest { from, to }`. Use `Int.MAX_VALUE` for "not tracked", either way.
-- **`202`** saved. **`400`** `to` below zero. **`404`** no such item.
+- **Body:** `StockChangeRequest { from, to, locationIdentifier }`: the count at that location, where the request works
+  when it's null. Use `Int.MAX_VALUE` for "not tracked", either way, which stops or starts counting it at every
+  location.
+- **`202`** saved. **`400`** `to` below zero, or not an active location. **`404`** no such item.
 - **`409`** the count isn't `from` any more: `Stock changed to 3 since this was opened, check the count and try
   again`.
 

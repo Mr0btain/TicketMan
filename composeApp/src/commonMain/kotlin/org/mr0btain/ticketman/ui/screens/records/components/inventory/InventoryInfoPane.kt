@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.records.components.inventory
 
+import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -64,11 +65,23 @@ fun InventoryInfoPane(
             Column {
                 TmKeyValueRow(label = "Price") { TmMoneyText(Money.fromDollars(inventoryData.price), style = TmTheme.typography.numericLarge) }
                 TmKeyValueRow(label = "Cost") { TmMoneyText(Money.fromDollars(inventoryData.cost)) }
+                val locations = LocalLocations.current
                 TmKeyValueRow(
-                    label = "In stock",
+                    label = when {
+                        !locations.several -> "In stock"
+                        locations.working == null -> "In stock, every location"
+                        else -> "In stock here"
+                    },
                     value = if (inventoryData.tracksStock) inventoryData.stock.toString() else "Not tracked",
                     numeric = inventoryData.tracksStock
                 )
+                // The other locations' counts, so a part can be fetched from across town
+                if (locations.several && inventoryData.tracksStock && locations.working != null) {
+                    locations.all.filter { !it.retired && it.identifier != locations.working }.forEach { location ->
+                        val count = inventoryData.stockAt.firstOrNull { it.locationIdentifier == location.identifier }?.stock ?: 0
+                        TmKeyValueRow(label = "At ${location.name}", value = count.toString(), numeric = true)
+                    }
+                }
                 inventoryData.reorderPoint?.takeIf { inventoryData.tracksStock }?.let {
                     TmKeyValueRow(label = "Reorder at", value = it.toString(), numeric = true)
                 }

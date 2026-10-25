@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.data.inventory
 
+import org.mr0btain.ticketman.data.inventory.LocationStock
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -45,6 +46,9 @@ class InventorySeed: DataSeed("InventorySeed") {
     /** Who it's usually ordered from */
     var supplierIdentifier: Uuid? by mutableStateOf(null)
         private set
+    /** The count at every location, as loaded. Only shown, [stock] is the one changed here */
+    var stockAt: List<LocationStock> by mutableStateOf(emptyList())
+        private set
 
     val inventory: Inventory get() = Inventory(
         identifier = identifier,
@@ -80,6 +84,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         category = data.category
         reorderPoint = data.reorderPoint
         supplierIdentifier = data.supplierIdentifier
+        stockAt = data.stockAt
 
         setNotes(notes)
         setImages(images)
@@ -168,6 +173,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         category = ""
         reorderPoint = null
         supplierIdentifier = null
+        stockAt = emptyList()
         _notes.clear()
         _images.clear()
         isNew = true

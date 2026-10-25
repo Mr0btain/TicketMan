@@ -74,6 +74,7 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Appointments](api/appointment.md): the calendar, and appointments becoming check-ins
 - [Time clock](api/timeclock.md): clocking in and out by PIN or from your own device, timesheets
 - [Payments](api/payment.md): card readers, payment links and paying online through Stripe or Square, refunds onto the card
+- [Locations](api/location.md): more than one shop on one server, each with its own tickets, stock and numbers
 - [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing

@@ -9,10 +9,19 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 12
+const val API_VERSION = 13
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
+
+/**
+ * Header every client request carries with the location it's working at, a location's id, or [ALL_LOCATIONS] for an
+ * admin looking at every one. Without it the server uses the caller's home location
+ */
+const val LOCATION_HEADER = "X-TicketMan-Location"
+
+/** [LOCATION_HEADER]'s value for every location at once, which only admins get */
+const val ALL_LOCATIONS = "all"
 
 /** Where each route file is mounted */
 object ApiRoutes {
@@ -36,6 +45,7 @@ object ApiRoutes {
     const val APPOINTMENT = "/api/appointment"
     const val TIME_CLOCK = "/api/timeclock"
     const val PAYMENT = "/api/payment"
+    const val LOCATION = "/api/location"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -119,6 +129,9 @@ object TicketPaths {
 
     /** `GET` shows the device's passcode (audited), `POST` a `PasscodeBody` sets it, `DELETE` clears it */
     const val PASSCODE = "/passcode/{identifier}"
+
+    /** `POST` a `MoveTicketRequest`: the ticket, and its open invoice, go to another location */
+    const val MOVE = "/move/{identifier}"
 }
 
 object InventoryPaths {
@@ -179,6 +192,9 @@ object AdminPaths {
     const val STATIONS = "/stations"
     const val STATION_APPROVE = "/stations/{identifier}/approve"
     const val STATION_KIOSK = "/stations/{identifier}/kiosk"
+
+    /** `POST` a `StationLocationRequest`: which location the station is at */
+    const val STATION_LOCATION = "/stations/{identifier}/location"
     const val STATION = "/stations/{identifier}"
     const val SERVER = "/server"
     const val BACKUP = "/backup"
@@ -367,6 +383,15 @@ object StatusPaths {
     const val PAYMENT_WEBHOOK = "/payments/{provider}/webhook"
 }
 
+/** The list itself is a GET of [ApiRoutes.LOCATION], for anyone logged in */
+object LocationPaths {
+    /** Admin only, body a `Location` */
+    const val ADD = "/add"
+
+    /** Admin only, body a `Location` */
+    const val UPDATE = "/update"
+}
+
 object PaymentPaths {
     /** Admin only: `GET` the settings without keys, `POST` to save them */
     const val SETTINGS = "/settings"
@@ -404,6 +429,9 @@ object StationPaths {
 /** The profile itself is a GET of [ApiRoutes.SHOP] */
 object ShopPaths {
     const val UPDATE = "/update"
+
+    /** The profile as it applies at the location the caller works at: its address, contacts and tax */
+    const val HERE = "/here"
 }
 
 object ImagePaths {

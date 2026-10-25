@@ -154,7 +154,8 @@ class StatusService(
     }
 
     private fun view(ticket: Ticket): View {
-        val profile = shop.get()
+        // The contacts of the location the device is at
+        val profile = shop.at(ticket.locationIdentifier)
         val statuses = profile.statuses
 
         // A status the shop doesn't share reads as the one it acts as, so two in a row can look the same

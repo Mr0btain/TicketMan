@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.kit.feedback
 
+import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.data.appointment.AppointmentStatus
 import org.mr0btain.ticketman.data.notify.OutboxStatus
 import androidx.compose.foundation.background
@@ -154,4 +156,36 @@ fun TmAccessBadge(level: AccessLevel, modifier: Modifier = Modifier) {
 @Composable
 fun TmUserStatusBadge(status: UserStatus, modifier: Modifier = Modifier) {
     TmBadge(text = formatEnumName(status.name), tone = TmTheme.colors.tone(status), modifier = modifier)
+}
+
+/**
+ * The shop's locations and the one this device works at, for [TmLocationBadge]
+ * @param working The location being worked at, null when looking at every one
+ */
+data class TmLocations(
+    val all: List<Location> = emptyList(),
+    val working: Uuid? = null
+) {
+    /** More than one in use, so it's worth saying where something is */
+    val several: Boolean
+        get() = all.count { !it.retired } > 1
+}
+
+/** The shop's locations, provided in `App` */
+val LocalLocations = staticCompositionLocalOf { TmLocations() }
+
+/**
+ * Where a record is, by its location's name: only when the shop has more than one location, and unless [always],
+ * only when it's somewhere other than where this device works. Nothing otherwise
+ */
+@Composable
+fun TmLocationBadge(locationIdentifier: Uuid?, modifier: Modifier = Modifier, always: Boolean = false) {
+    val locations = LocalLocations.current
+    if (!locations.several) return
+
+    // Records from before locations belong to the main one
+    val location = locations.all.firstOrNull { it.identifier == locationIdentifier } ?: locations.all.firstOrNull { it.main } ?: return
+    if (!always && location.identifier == locations.working) return
+
+    TmBadge(text = location.name, tone = TmTheme.colors.neutral, modifier = modifier, dot = false)
 }

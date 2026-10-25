@@ -15,6 +15,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.database.*
+import kotlin.concurrent.Volatile
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.image.ImageRemoteRepository
@@ -60,8 +61,16 @@ class RemoteHandler(
         getAccessToken = { getAccessToken() },
         getRefreshToken = { getRefreshToken() },
         refreshTokens = { refreshTokens() },
-        onVersionRejected = { _versionRejected.tryEmit(Unit) }
+        onVersionRejected = { _versionRejected.tryEmit(Unit) },
+        getLocation = { location }
     )
+
+    /**
+     * Where this device works, sent with every request: a location's id, `all` for an admin looking at every one,
+     * or null to leave it to the server (the user's home location). Set by the locations handler
+     */
+    @Volatile
+    var location: String? = null
 
     // One per area of the API, all on the same logged in client
     val customerRepo = CustomerRemoteRepository(httpClient)
@@ -80,10 +89,11 @@ class RemoteHandler(
     val appointmentRepo = AppointmentRemoteRepository(httpClient)
     val timeClockRepo = TimeClockRemoteRepository(httpClient)
     val paymentRepo = PaymentRemoteRepository(httpClient)
+    val locationRepo = LocationRemoteRepository(httpClient)
 
     /** Every repository, so [setUrl] points all of them at the server. A new one goes here too */
     private val repositories: List<ServerRepository> =
-        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo, paymentRepo)
+        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo, paymentRepo, locationRepo)
 
     /**
      * Whether an expired session can be fixed by logging in again with the saved username and password.

@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.Op
+import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
@@ -89,11 +91,13 @@ class PurchaseDatabase(
     fun order(identifier: Uuid): PurchaseOrder? =
         dbQuery(ORDER_TAG) { PurchaseOrderTable.selectAll().where { PurchaseOrderTable.id eq identifier }.singleOrNull()?.toOrder() }
 
-    /** Newest first, only [statuses] when given. Null when the read failed */
+    /** Newest first, only [statuses] when given, only the page's location's when it names one. Null when the read failed */
     fun orders(request: PagedRequest, statuses: List<PurchaseStatus>? = null): List<PurchaseOrder>? =
         dbQuery(LIST_TAG) {
-            val query = PurchaseOrderTable.selectAll()
-            statuses?.let { wanted -> query.where { PurchaseOrderTable.status inList wanted.map { it.name } } }
+            val query = PurchaseOrderTable.selectAll().where {
+                val wanted = statuses?.let { list -> PurchaseOrderTable.status inList list.map { it.name } } ?: Op.TRUE
+                wanted and PurchaseOrderTable.location.at(request.location)
+            }
             query
                 .orderBy(PurchaseOrderTable.numberYear to SortOrder.DESC, PurchaseOrderTable.numberSequence to SortOrder.DESC)
                 .offset(request.offset)
@@ -119,16 +123,19 @@ class PurchaseDatabase(
                 .filter { order -> order.lines.any { it.ticketIdentifier == ticketIdentifier } }
         }
 
-    /** Saves a new order with the next number. Called holding the purchase service's lock */
+    /** Saves a new order with the next number at its location. Called holding the purchase service's lock */
     fun add(order: PurchaseOrder): PurchaseOrder? =
         dbQuery(ORDER_TAG) {
             val year = currentYear()
+            val prefix = numberPrefix(order.locationIdentifier)
             val max = PurchaseOrderTable.numberSequence.max()
-            val sequence = (PurchaseOrderTable.select(max).where { PurchaseOrderTable.numberYear eq year }.singleOrNull()?.get(max) ?: 0L) + 1
+            val sequence = (PurchaseOrderTable.select(max).where { (PurchaseOrderTable.numberYear eq year) and (PurchaseOrderTable.numberPrefix eq prefix) }.singleOrNull()?.get(max) ?: 0L) + 1
 
             PurchaseOrderTable.insert { row ->
                 row[PurchaseOrderTable.id] = order.identifier
                 row[numberYear] = year
+                row[numberPrefix] = prefix
+                row[location] = order.locationIdentifier
                 row[numberSequence] = sequence
                 row[supplier] = order.supplierIdentifier
                 row[supplierName] = order.supplierName
@@ -164,7 +171,8 @@ class PurchaseDatabase(
     private fun ResultRow.toOrder(): PurchaseOrder =
         PurchaseOrder(
             identifier = this[PurchaseOrderTable.id].value,
-            number = PurchaseNumber(this[PurchaseOrderTable.numberYear], this[PurchaseOrderTable.numberSequence]),
+            number = PurchaseNumber(this[PurchaseOrderTable.numberYear], this[PurchaseOrderTable.numberSequence], this[PurchaseOrderTable.numberPrefix]),
+            locationIdentifier = this[PurchaseOrderTable.location],
             supplierIdentifier = this[PurchaseOrderTable.supplier],
             supplierName = this[PurchaseOrderTable.supplierName],
             status = PurchaseStatus.valueOf(this[PurchaseOrderTable.status]),

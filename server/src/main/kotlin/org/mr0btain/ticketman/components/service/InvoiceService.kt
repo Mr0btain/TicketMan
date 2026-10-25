@@ -29,6 +29,7 @@ import org.mr0btain.ticketman.data.ticket.WorkEntry
 import org.mr0btain.ticketman.data.ticket.WorkType
 import org.mr0btain.ticketman.components.database.WorkDatabase
 import org.mr0btain.ticketman.components.database.PaymentDatabase
+import org.mr0btain.ticketman.components.database.LocationDatabase
 import org.mr0btain.ticketman.components.payments.CardPayments
 import org.mr0btain.ticketman.components.payments.ProcessorResult
 import org.mr0btain.ticketman.data.payment.CardCharge
@@ -52,7 +53,8 @@ class InvoiceService(
     private val customers: CustomerDatabase = CustomerDatabase(),
     private val values: StoredValueDatabase = StoredValueDatabase(),
     private val passcodes: PasscodeDatabase = PasscodeDatabase(),
-    private val cards: CardPayments = CardPayments(PaymentDatabase())
+    private val cards: CardPayments = CardPayments(PaymentDatabase()),
+    private val locations: LocationDatabase = LocationDatabase()
 ) {
     private val storedValue = StoredValuePayments(values) { money(it) }
 
@@ -64,7 +66,9 @@ class InvoiceService(
         if (existing != null) return AccountResult.Done(syncStorage(existing, ticket))
 
         val customer = tickets.getCustomer(ticketIdentifier)?.identifier
-        val invoice = invoices.getOrCreate(ticketIdentifier, customer, taxRate(), shop.get().taxRates) ?: return AccountResult.Invalid("Couldn't make an invoice")
+        // At the ticket's location's rates
+        val profile = profileAt(ticket.locationIdentifier)
+        val invoice = invoices.getOrCreate(ticketIdentifier, customer, profile.taxBasisPoints, profile.taxRates) ?: return AccountResult.Invalid("Couldn't make an invoice")
 
         auditLog.log(actor, AuditAction.CREATE, "invoice", invoice.identifier.toString(), "Invoice ${invoice.label}")
         return AccountResult.Done(syncStorage(invoice, ticket))
@@ -109,7 +113,7 @@ class InvoiceService(
 
         chargesProblem(charges)?.let { return AccountResult.Invalid(it) }
         if (discount < 0) return AccountResult.Invalid("Discount can't be negative")
-        val rates = ratesFor(invoice.taxRates, charges) ?: return AccountResult.Invalid(unknownClass(charges))
+        val rates = ratesFor(invoice.taxRates, charges, invoice.locationIdentifier) ?: return AccountResult.Invalid(unknownClass(charges))
 
         // Taking the storage line off waives it, so it isn't put back
         invoice.ticketIdentifier?.let { ticket ->
@@ -248,10 +252,12 @@ class InvoiceService(
         storedValue.problem(request.payments, invoice.customerIdentifier)?.let { return AccountResult.Conflict(it) }
         cards.problem(request.payments)?.let { return AccountResult.Conflict(it) }
 
+        // From the invoice's location's stock
+        val location = locationOf(invoice)
         val parts = partsUsed(invoice.charges)
         parts.forEach { (identifier, quantity) ->
-            val item = inventory.getById(identifier) ?: return@forEach
-            if (item.stock != Int.MAX_VALUE && item.stock < quantity) return shortOf(identifier)
+            val stock = inventory.stockAt(identifier, location) ?: return@forEach
+            if (stock != Int.MAX_VALUE && stock < quantity) return shortOf(identifier, location)
         }
 
         val now = Clock.System.now().toEpochMilliseconds()
@@ -262,7 +268,7 @@ class InvoiceService(
 
                 // A count set by hand since the check above can still leave too few, which undoes the lot
                 parts.forEach { (identifier, quantity) ->
-                    if (!inventory.adjustStock(identifier, quantity)) throw ShortOfStock(identifier)
+                    if (!inventory.adjustStock(identifier, location, quantity)) throw ShortOfStock(identifier)
                 }
 
                 loadGiftCards(invoice)
@@ -279,7 +285,7 @@ class InvoiceService(
                 auditLog.log(actor, AuditAction.UPDATE, "ticket", ticket.identifier.toString(), "Ticket ${ticket.label} picked up, ${invoice.label} paid ${money(invoice.totalCents)}")
             }
         } catch (ex: ShortOfStock) {
-            return shortOf(ex.identifier)
+            return shortOf(ex.identifier, location)
         } catch (ex: StoredValuePayments.ShortOfValue) {
             return AccountResult.Conflict(ex.message)
         } catch (ex: CardPayments.ChargeTaken) {
@@ -292,16 +298,18 @@ class InvoiceService(
     /**
      * Sells straight from stock with no ticket. Like a pickup it's all or nothing: the invoice is made with its
      * lines, the payments have to cover it, the parts come out of stock, gift cards on it are loaded and it's saved
-     * PAID
+     * PAID. Taxed at, and taken from the stock of, [location], the main one for null
      */
-    fun sell(request: SaleRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
+    fun sell(request: SaleRequest, receivedBy: String, actor: Uuid?, location: Uuid? = null): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
+        val at = location ?: locations.main().identifier
+        val profile = profileAt(at)
         linesProblem(request.charges)?.let { return AccountResult.Invalid(it) }
         if (request.discountCents < 0) return AccountResult.Invalid("Discount can't be negative")
         if (request.payments.any { it.amountCents <= 0 }) return AccountResult.Invalid("Payments have to be more than zero")
         request.customerIdentifier?.let { if (customers.getById(it) == null) return AccountResult.Invalid("That customer doesn't exist") }
 
-        val taxRate = taxRate()
-        val rates = ratesFor(shop.get().taxRates, request.charges) ?: return AccountResult.Invalid(unknownClass(request.charges))
+        val taxRate = profile.taxBasisPoints
+        val rates = ratesFor(profile.taxRates, request.charges, at) ?: return AccountResult.Invalid(unknownClass(request.charges))
         val totals = InvoiceMath.totals(request.charges, request.discountCents, taxRate, rates)
         val owed = totals.totalCents - request.payments.sumOf { it.amountCents }
         if (owed > 0) return AccountResult.Conflict("${money(owed)} is still owed")
@@ -310,8 +318,8 @@ class InvoiceService(
 
         val parts = partsUsed(request.charges)
         parts.forEach { (identifier, quantity) ->
-            val item = inventory.getById(identifier) ?: return@forEach
-            if (item.stock != Int.MAX_VALUE && item.stock < quantity) return shortOf(identifier)
+            val stock = inventory.stockAt(identifier, at) ?: return@forEach
+            if (stock != Int.MAX_VALUE && stock < quantity) return shortOf(identifier, at)
         }
 
         val now = Clock.System.now().toEpochMilliseconds()
@@ -319,12 +327,12 @@ class InvoiceService(
         val sold = try {
             invoices.whileNumbering {
                 transaction {
-                    val created = invoices.createSale(request.customerIdentifier, taxRate, rates) ?: throw IllegalStateException("Sale not made")
+                    val created = invoices.createSale(request.customerIdentifier, taxRate, rates, at) ?: throw IllegalStateException("Sale not made")
                     val invoice = invoices.setCharges(created.identifier, request.charges, request.discountCents, taxRate, rates) ?: throw IllegalStateException("Sale not made")
                     takePayments(invoice, request.payments, receivedBy)
 
                     parts.forEach { (identifier, quantity) ->
-                        if (!inventory.adjustStock(identifier, quantity)) throw ShortOfStock(identifier)
+                        if (!inventory.adjustStock(identifier, at, quantity)) throw ShortOfStock(identifier)
                     }
 
                     loadGiftCards(invoice)
@@ -335,7 +343,7 @@ class InvoiceService(
                 }
             }
         } catch (ex: ShortOfStock) {
-            return shortOf(ex.identifier)
+            return shortOf(ex.identifier, at)
         } catch (ex: StoredValuePayments.ShortOfValue) {
             return AccountResult.Conflict(ex.message)
         } catch (ex: CardPayments.ChargeTaken) {
@@ -435,7 +443,7 @@ class InvoiceService(
 
         transaction {
             invoices.addPayment(identifier, payment) ?: throw IllegalStateException("Refund not saved")
-            returns.forEach { part -> inventory.adjustStock(part.inventoryIdentifier, -part.quantity) }
+            returns.forEach { part -> inventory.adjustStock(part.inventoryIdentifier, locationOf(invoice), -part.quantity) }
 
             if (request.amountCents > 0) when (request.method) {
                 PaymentMethod.STORE_CREDIT -> if (!values.changeCredit(invoice.customerIdentifier!!, request.amountCents, "Refund on ${invoice.label}: $reason", identifier, givenBy)) {
@@ -466,7 +474,7 @@ class InvoiceService(
                     val returned = invoice.returnedParts
                     partsUsed(invoice.charges).forEach { (identifier, quantity) ->
                         val back = quantity - (returned[identifier] ?: 0)
-                        if (back > 0) inventory.adjustStock(identifier, -back)
+                        if (back > 0) inventory.adjustStock(identifier, locationOf(invoice), -back)
                     }
 
                     invoice.charges.filter { it.type == ChargeType.GIFT_CARD && it.reference.isNotBlank() }.forEach { charge ->
@@ -529,7 +537,7 @@ class InvoiceService(
             else -> return AccountResult.Invalid("Couldn't find or make the invoice")
         }
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}, the estimate can't be added to it")
-        val rates = ratesFor(invoice.taxRates, charges) ?: return AccountResult.Invalid(unknownClass(charges))
+        val rates = ratesFor(invoice.taxRates, charges, invoice.locationIdentifier) ?: return AccountResult.Invalid(unknownClass(charges))
 
         val saved = try {
             transaction {
@@ -601,7 +609,7 @@ class InvoiceService(
             else -> return AccountResult.Invalid("Couldn't find or make the invoice")
         }
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}, work can't be added to it")
-        val rates = ratesFor(invoice.taxRates, charges) ?: return AccountResult.Invalid(unknownClass(charges))
+        val rates = ratesFor(invoice.taxRates, charges, invoice.locationIdentifier) ?: return AccountResult.Invalid(unknownClass(charges))
 
         transaction {
             entries.forEach { work.add(ticketIdentifier, it) }
@@ -656,8 +664,8 @@ class InvoiceService(
 
     private class ShortOfStock(val identifier: Uuid) : Exception()
 
-    private fun shortOf(identifier: Uuid): AccountResult.Conflict {
-        val item = inventory.getById(identifier)
+    private fun shortOf(identifier: Uuid, location: Uuid): AccountResult.Conflict {
+        val item = inventory.getById(identifier, location)
         return AccountResult.Conflict("Only ${item?.stock ?: 0} of ${item?.name?.ifBlank { null } ?: "an item"} in stock, fix the count in Inventory first")
     }
 
@@ -668,15 +676,18 @@ class InvoiceService(
             .groupBy { it.inventoryIdentifier!! }
             .mapValues { (_, charges) -> charges.sumOf { it.quantity.roundToLong().toInt() } }
 
-    // Tax rate from the shop profile, nothing if it's blank or not a number
-    private fun taxRate(): Int = shop.get().taxBasisPoints
+    // The shop profile with a location's own tax rates, address and contacts
+    private fun profileAt(location: Uuid?) = shop.at(location)
+
+    // Where an invoice's stock comes from: its location, the main one for an invoice from before locations
+    private fun locationOf(invoice: Invoice): Uuid = invoice.locationIdentifier ?: locations.main().identifier
 
     /**
      * The tax classes to keep on an invoice that kept [kept] and is getting [charges]: those, plus any of the shop's
      * now that a line uses and it didn't have. Null when a line names a class the shop doesn't have
      */
-    private fun ratesFor(kept: List<TaxRate>, charges: List<Charge>): List<TaxRate>? {
-        val available = TaxClasses.merged(kept, shop.get().taxRates)
+    private fun ratesFor(kept: List<TaxRate>, charges: List<Charge>, location: Uuid?): List<TaxRate>? {
+        val available = TaxClasses.merged(kept, profileAt(location).taxRates)
         val used = charges.filter { it.taxable }.mapNotNull { it.taxClass }.toSet()
         if (used.any { id -> available.none { it.identifier == id } }) return null
         return kept + available.filter { rate -> rate.identifier in used && kept.none { it.identifier == rate.identifier } }

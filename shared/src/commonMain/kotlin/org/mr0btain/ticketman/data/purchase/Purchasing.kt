@@ -46,10 +46,11 @@ enum class PurchaseStatus(val label: String) {
 @Serializable
 data class PurchaseNumber(
     val year: Int,
-    val sequence: Long
+    val sequence: Long,
+    val prefix: String = ""
 ) {
     override fun toString(): String =
-        "PO-${(year % 100).toString().padStart(2, '0')}-${sequence.toString().padStart(8, '0')}"
+        "PO-" + (if (prefix.isBlank()) "" else "$prefix-") + "${(year % 100).toString().padStart(2, '0')}-${sequence.toString().padStart(8, '0')}"
 }
 
 /**
@@ -81,6 +82,7 @@ data class PurchaseLine(
  * @param supplierName The supplier's name, filled in by the server
  * @param createdAt Epoch millis, like the other times
  * @param expectedAt When the supplier said it would arrive, if they did
+ * @param locationIdentifier Where it's delivered, whose stock receiving it adds to. Set by the server
  */
 @Serializable
 @OptIn(ExperimentalUuidApi::class)
@@ -96,7 +98,8 @@ data class PurchaseOrder(
     val createdBy: String = "",
     val orderedAt: Long? = null,
     val receivedAt: Long? = null,
-    val expectedAt: Long? = null
+    val expectedAt: Long? = null,
+    val locationIdentifier: Uuid? = null
 ) {
     val label: String
         get() = number?.toString() ?: identifier.toString().substringBefore("-")

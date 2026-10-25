@@ -21,7 +21,9 @@ data class Station(
     /** Locks the device to the counter with PIN sign in, only for approved stations */
     val kioskEnabled: Boolean = false,
     /** Seconds with nothing touched before a kiosk locks */
-    val idleTimeoutSeconds: Int = DEFAULT_IDLE_TIMEOUT_SECONDS
+    val idleTimeoutSeconds: Int = DEFAULT_IDLE_TIMEOUT_SECONDS,
+    /** The location it's at, which work done on it belongs to. Set by an admin, null for the main location */
+    val locationIdentifier: Uuid? = null
 ) {
     companion object {
         const val DEFAULT_IDLE_TIMEOUT_SECONDS = 120

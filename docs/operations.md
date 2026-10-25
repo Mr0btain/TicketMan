@@ -282,6 +282,29 @@ customer was sent. The server needs to reach the mail server (port 587 or 465 ou
 The mail password and Twilio token are kept in the database, so they're in backups too: treat a backup like the
 passwords it holds.
 
+## More than one location
+
+One server runs every shop. Admin > Locations adds them: each has a name and a short code its numbers start with
+(`DT-26-00000042` at Downtown), and can have its own address, phone, email and tax rates, used on its claim slips,
+invoices, the status page and messages. The first location, made from the existing data on upgrade, keeps the
+numbers it always had. The [Locations API](api/location.md) has the details.
+
+- **Each location keeps its own** tickets, invoices, stock counts, stations, appointments, purchase orders and staff
+  list. The counter's queue, the record lists, low stock, the reports and the admin overview show the location the
+  device works at.
+- **Customers and the catalog are shared.** Looking a customer up shows their tickets at every location, and an item
+  is entered once with a count at each location, so a part can be found across town (the item's detail lists every
+  location's count).
+- **Where a device works** is picked in the user menu at the foot of the rail, or Settings > Account on a phone; it
+  starts at the user's home location (set on the admin Users tab) and is remembered. Admins can pick All
+  locations to see everything at once. A counter station is fixed to its location, set on the admin Stations tab.
+- **Moving a ticket**: **Move** on the ticket card sends it to another location with its open invoice, keeping its
+  number, for a device taken to another shop for the repair.
+- **Card readers** each belong to a location, or every location, on Admin > Payments.
+- **Retiring a location** stops new work there and keeps its records. The main one can't be retired.
+
+With only one location none of this shows.
+
 ## Card payments
 
 The counter can send an amount to a card reader, show the customer a payment link (with a QR code to scan), and the

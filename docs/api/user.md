@@ -48,7 +48,8 @@ Changes your own PIN. Needs your password, so someone at an unlocked screen can'
 
 **Auth:** restricted
 
-A page of users.
+A page of users whose home is the [location](location.md) the request works at (no home counts as the main
+location's), everyone for an admin working at `all`. Search finds everyone.
 
 - **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
 - **`200`** a list of `User`. **`500`** if the database read failed.
@@ -70,10 +71,11 @@ Users whose name, username or id starts with the query. Used to pick a technicia
 
 Adds a user who can log in straight away (`ACTIVE`).
 
-- **Body:** `User` with a plain `password`, which the server hashes.
+- **Body:** `User` with a plain `password`, which the server hashes. `homeLocation` is where their lists start, the
+  location the admin works at when it's null.
 - **`201`** the `User` as saved, with its password blanked.
 - **`400`** no username or password, a username `UsernameRules` refuses, a password `PasswordRules` refuses (under
-  8 characters), or `accessLevel` `NONE`. **`409`** the username is taken.
+  8 characters), `accessLevel` `NONE`, or a home that isn't an active location. **`409`** the username is taken.
 
 ### `POST /api/user/update`
 
@@ -81,7 +83,7 @@ Adds a user who can log in straight away (`ACTIVE`).
 
 Changes everything but the password. Making someone anything other than `ACTIVE` ends all their sessions.
 
-- **Body:** `User`. Its `password` is ignored.
+- **Body:** `User`. Its `password` is ignored; a null `homeLocation` (an older client) keeps theirs.
 - **`202`** saved.
 - **`400`** no username, a new username `UsernameRules` refuses (an unchanged one is left alone, even if it's from
   before the rules), `accessLevel` `NONE` (deactivate with `status` instead), or setting someone back to `PENDING`.

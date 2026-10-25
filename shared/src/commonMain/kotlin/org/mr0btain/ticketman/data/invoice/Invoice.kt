@@ -18,6 +18,8 @@ import kotlin.uuid.Uuid
  * @param paidAt Epoch millis it was paid off at pickup
  * @param ticketIdentifier Its ticket, null for a sale straight from stock
  * @param ticketLabel The ticket's number, kept once the ticket is deleted, blank before
+ * @param locationIdentifier The location it was made at, its ticket's or the counter's for a sale. Its stock is
+ * taken from there
  * @param ticketRemovedAt Epoch millis its ticket was deleted. An invoice with payments, or a void one, outlives its
  * ticket, so the money taken stays on record until an admin deletes it
  */
@@ -41,7 +43,8 @@ data class Invoice(
     val createdAt: Long = 0,
     val paidAt: Long? = null,
     val ticketLabel: String = "",
-    val ticketRemovedAt: Long? = null
+    val ticketRemovedAt: Long? = null,
+    val locationIdentifier: Uuid? = null
 ): MainItem() {
     /** Sold over the counter without a ticket */
     val isSale: Boolean
@@ -104,15 +107,17 @@ enum class InvoiceStatus {
 }
 
 /**
- * Readable invoice number like INV-26-00000042, counted per year like ticket numbers
+ * Readable invoice number like INV-26-00000042, or INV-DT-26-00000042 at a location with a code, counted per
+ * location and year like ticket numbers
  */
 @Serializable
 data class InvoiceNumber(
     val year: Int,
-    val sequence: Long
+    val sequence: Long,
+    val prefix: String = ""
 ) {
     override fun toString(): String =
-        "INV-${(year % 100).toString().padStart(2, '0')}-${sequence.toString().padStart(8, '0')}"
+        "INV-" + (if (prefix.isBlank()) "" else "$prefix-") + "${(year % 100).toString().padStart(2, '0')}-${sequence.toString().padStart(8, '0')}"
 }
 
 /**

@@ -27,17 +27,18 @@ class AppointmentService(
     private val users: UserDatabase,
     private val auditLog: AuditLogDatabase
 ) {
-    /** Those starting from [from] to [to], both included, days in [zone] */
-    fun between(from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault()): AccountResult<List<Appointment>> {
+    /** Those starting from [from] to [to], both included, days in [zone], at [location] or every one for null */
+    fun between(from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault(), location: Uuid? = null): AccountResult<List<Appointment>> {
         if (to < from) return AccountResult.Invalid("Give from and to as days like 2026-10-01, from first")
         if (ChronoUnit.DAYS.between(from, to) >= AppointmentRules.MAX_RANGE_DAYS) return AccountResult.Invalid("Read up to ${AppointmentRules.MAX_RANGE_DAYS} days at once")
 
         val start = from.atStartOfDay(zone).toInstant().toEpochMilli()
         val end = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-        return appointments.between(start, end)?.let { AccountResult.Done(it) } ?: AccountResult.Invalid("Couldn't read the calendar")
+        return appointments.between(start, end, location)?.let { AccountResult.Done(it) } ?: AccountResult.Invalid("Couldn't read the calendar")
     }
 
-    fun add(received: Appointment, createdBy: String, actor: Uuid?): AccountResult<Appointment> {
+    /** Books one at [location], where it was booked from */
+    fun add(received: Appointment, createdBy: String, actor: Uuid?, location: Uuid? = null): AccountResult<Appointment> {
         problem(received)?.let { return AccountResult.Invalid(it) }
         if (appointments.get(received.identifier) != null) return AccountResult.Conflict("That appointment already exists")
 
@@ -46,7 +47,8 @@ class AppointmentService(
             ticketIdentifier = null,
             reminderSentAt = null,
             createdBy = createdBy,
-            createdAt = Clock.System.now().toEpochMilliseconds()
+            createdAt = Clock.System.now().toEpochMilliseconds(),
+            locationIdentifier = location
         )
         if (!appointments.add(appointment)) return AccountResult.Invalid("Couldn't save the appointment")
 

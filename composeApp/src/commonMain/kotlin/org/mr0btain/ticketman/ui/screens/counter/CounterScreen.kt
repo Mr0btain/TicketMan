@@ -58,6 +58,7 @@ fun CounterScreen(
     val saleCustomer by counter.sale.customer.collectAsState()
     val lastSale by counter.sale.last.collectAsState()
     val cardOptions by counter.cards.options.collectAsState()
+    val activeLocations by viewModel.locations.active.collectAsState()
     val readerCharge by counter.cards.active.collectAsState()
     val paymentLink by counter.cards.link.collectAsState()
 
@@ -184,6 +185,10 @@ fun CounterScreen(
                         ),
                         onSendStatusLink = StatusLink.url(shop.publicUrl, detail.ticket)?.let { { counter.estimates.message(detail.ticket.identifier) } },
                         onOpenTicket = { counter.openTicket(it) },
+                        moveTo = if (activeLocations.size > 1) activeLocations.filter { location ->
+                            location.identifier != (detail.ticket.locationIdentifier ?: activeLocations.firstOrNull { it.main }?.identifier)
+                        } else emptyList(),
+                        onMove = { counter.moveTicket(it) },
                         passcode = if (canEdit) PasscodeActions(
                             onShow = { counter.showPasscode(detail.ticket.identifier) },
                             onSet = { passcode, onResult -> counter.setPasscode(detail.ticket.identifier, passcode, onResult) },

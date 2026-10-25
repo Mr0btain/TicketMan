@@ -229,7 +229,8 @@ class NotificationService(
 
     /** What fills in a template's `{fields}` */
     private fun fields(ticket: Ticket, customer: Customer): Map<String, String> {
-        val profile = shop.get()
+        // The ticket's location's name and phone
+        val profile = shop.at(ticket.locationIdentifier)
         fun money(cents: Long) = Money.format(cents, profile.currencySymbol)
 
         val invoice = invoices.getByTicket(ticket.identifier)?.takeIf { it.status != InvoiceStatus.VOID }
@@ -323,7 +324,7 @@ class NotificationService(
 
         return due.count { appointment ->
             val customer = appointment.customerIdentifier?.let { customers.getById(it) } ?: return@count false
-            val profile = shop.get()
+            val profile = shop.at(appointment.locationIdentifier)
             val values = mapOf(
                 "name" to customer.name.trim().substringBefore(' '),
                 "device" to appointment.device.toString().trim().ifBlank { "device" },

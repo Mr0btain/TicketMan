@@ -37,14 +37,14 @@ class AccountingExport(
     private val zone: () -> ZoneId = { ZoneId.systemDefault() }
 ) {
     /** Invoices paid from [from] to [to], both included, oldest first. Null when the read failed */
-    fun paidInRange(from: LocalDate, to: LocalDate): List<Invoice>? =
-        invoices.getPaidBetween(start(from), start(to.plusDays(1)))
+    fun paidInRange(from: LocalDate, to: LocalDate, location: Uuid? = null): List<Invoice>? =
+        invoices.getPaidBetween(start(from), start(to.plusDays(1)), location)
 
     /** Every payment and refund received from [from] to [to], both included, oldest first, with its invoice */
-    fun paymentsInRange(from: LocalDate, to: LocalDate): List<Pair<Invoice, Payment>>? {
+    fun paymentsInRange(from: LocalDate, to: LocalDate, location: Uuid? = null): List<Pair<Invoice, Payment>>? {
         val start = start(from)
         val end = start(to.plusDays(1))
-        return invoices.withPaymentsBetween(start, end)
+        return invoices.withPaymentsBetween(start, end, location)
             ?.flatMap { invoice -> invoice.payments.filter { it.receivedAt in start until end }.map { invoice to it } }
             ?.sortedBy { it.second.receivedAt }
     }

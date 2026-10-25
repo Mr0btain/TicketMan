@@ -53,12 +53,15 @@ def send(request):
         return error.code, error.read(), error.headers
 
 
-def call(method, path, body=None, token=None, expect=None, raw=None, content_type="application/json"):
+def call(method, path, body=None, token=None, expect=None, raw=None, content_type="application/json", location=None):
     data = raw if raw is not None else None if body is None else json.dumps(body).encode()
     request = urllib.request.Request(BASE + path, data=data, method=method)
     request.add_header("Content-Type", content_type)
     if token:
         request.add_header("Authorization", "Bearer " + token)
+    # Where the request works, like the client's X-TicketMan-Location
+    if location:
+        request.add_header("X-TicketMan-Location", location)
     status, content, _ = send(request)
     text = content.decode(errors="replace")
     if expect is not None and status != expect:
@@ -595,6 +598,49 @@ else:
     call("POST", "/api/payment/settings", {**simulated, "enabled": False}, admin, expect=200)
     call("POST", "/api/shop/update", shop, admin, expect=202)
     step(f"Simulated card reader: a declined card changes nothing, $40.00 lands on the iPad mini's invoice, Jane pays the other ${(owed - 4000) / 100:.2f} from her status page, and $10.00 goes back onto the card")
+
+# ------------------------------------------ More than one location ------------------------------------------
+_, locations = call("GET", "/api/location", token=pin, expect=200)
+main_location = next(l for l in locations if l["main"])
+call("POST", "/api/location/add", {"identifier": uid(), "code": "DT", "name": "Downtown"}, pin, expect=403)
+call("POST", "/api/location/add", {"identifier": uid(), "code": "", "name": "Uptown"}, admin, expect=400)
+_, downtown = call("POST", "/api/location/add", {"identifier": uid(), "code": "dt", "name": "Downtown", "phone": "555-0200", "taxRate": "10"}, admin, expect=201)
+dt = downtown["identifier"]
+check(downtown["code"] == "DT", f"location {downtown}")
+
+# Checked in downtown: numbered there, in its queue and not the main one's, taxed at its rate
+_, dt_check_in = call("POST", "/api/counter/check-in", {
+    "ticket": {"identifier": uid(), "device": {"manufacturer": "Samsung", "model": "Galaxy S23"}, "problem": "Won't charge"},
+    "customerIdentifier": jane, "signature": visit["signature"]
+}, pin, expect=201, location=dt)
+dt_ticket = dt_check_in["ticket"]
+check(dt_ticket["number"]["prefix"] == "DT" and dt_ticket["number"]["sequence"] == 1 and dt_ticket["locationIdentifier"] == dt, f"downtown ticket {dt_ticket['number']}")
+_, dt_queue = call("GET", "/api/counter/queue", token=pin, expect=200, location=dt)
+_, main_queue = call("GET", "/api/counter/queue", token=pin, expect=200, location=main_location["identifier"])
+check([t["ticket"]["identifier"] for t in dt_queue["recentlyCheckedIn"]] == [dt_ticket["identifier"]], "downtown's queue has only its ticket")
+check(dt_ticket["identifier"] not in [t["ticket"]["identifier"] for t in main_queue["recentlyCheckedIn"]], "the main queue has no downtown ticket")
+_, found = call("GET", f"/api/data/ticket/number/DT-{dt_ticket['number']['year'] % 100}-1", token=pin, expect=200)
+check(found["identifier"] == dt_ticket["identifier"], "found by its DT number")
+_, dt_invoice = call("POST", f"/api/invoice/ticket/{dt_ticket['identifier']}", token=pin, expect=200, location=dt)
+check(dt_invoice["taxRateBasisPoints"] == 1000 and dt_invoice["number"]["prefix"] == "DT", f"downtown invoice {dt_invoice['number']} at {dt_invoice['taxRateBasisPoints']}")
+_, here = call("GET", "/api/shop/here", token=pin, expect=200, location=dt)
+check(here["phone"] == "555-0200" and here["name"].endswith("Downtown"), f"downtown's details {here['name']} {here['phone']}")
+
+# The screen's count is the main location's; downtown starts with none and gets two by hand
+_, screen_here = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200, location=dt)
+main_count = next((s["stock"] for s in screen_here["stockAt"] if s["locationIdentifier"] == main_location["identifier"]), 0)
+check(screen_here["stock"] == 0 and main_count > 0, f"downtown has {screen_here['stock']}, main {main_count}")
+call("POST", f"/api/data/inventory/set/stock/{screen}", {"from": 0, "to": 2}, pin, expect=202, location=dt)
+_, screen_here = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200, location=dt)
+check(screen_here["stock"] == 2, f"downtown now has {screen_here['stock']}")
+
+# Taken back to the main shop for the repair: its number stays, its open invoice goes with it
+_, moved = call("POST", f"/api/data/ticket/move/{dt_ticket['identifier']}", {"locationIdentifier": main_location["identifier"]}, pin, expect=200)
+_, moved_invoice = call("GET", f"/api/invoice/{dt_invoice['identifier']}", token=pin, expect=200)
+check(moved["locationIdentifier"] == main_location["identifier"] and moved["number"]["prefix"] == "DT" and moved_invoice["locationIdentifier"] == main_location["identifier"], "moved with its invoice")
+
+call("POST", "/api/location/update", {**downtown, "retired": True}, admin, expect=200)
+step(f"A second location, Downtown (DT): its check in is DT-{dt_ticket['number']['year'] % 100}-00000001 at its own 10% tax, only in its queue, its stock counted apart (0, then 2), and it moves to the main shop keeping its number")
 
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}

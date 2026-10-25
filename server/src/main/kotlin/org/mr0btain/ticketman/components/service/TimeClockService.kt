@@ -34,8 +34,9 @@ class TimeClockService(
      * Clocks [user] out when they're on the clock, otherwise in. One at a time across the server, so a double tap
      * can't leave two stretches open
      * @param station Where, blank from their own device
+     * @param location The location they clock in at, the station's or where their device works
      */
-    fun punch(user: User, station: String): AccountResult<PunchResult> = synchronized(PUNCH_LOCK) {
+    fun punch(user: User, station: String, location: Uuid? = null): AccountResult<PunchResult> = synchronized(PUNCH_LOCK) {
         val time = now()
         val open = entries.open(user.identifier)
         val where = station.ifBlank { "their own device" }
@@ -47,7 +48,7 @@ class TimeClockService(
             return AccountResult.Done(PunchResult(closed, clockedIn = false))
         }
 
-        val entry = TimeEntry(userIdentifier = user.identifier, userName = user.name.ifBlank { user.username }, clockedInAt = time, station = station)
+        val entry = TimeEntry(userIdentifier = user.identifier, userName = user.name.ifBlank { user.username }, clockedInAt = time, station = station, locationIdentifier = location)
         if (!entries.add(entry)) return AccountResult.Invalid("Couldn't clock in")
         auditLog.log(user.identifier, AuditAction.CREATE, "time", entry.identifier.toString(), "Clocked in at $where")
         return AccountResult.Done(PunchResult(entries.get(entry.identifier)!!, clockedIn = true))

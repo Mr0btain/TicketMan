@@ -11,6 +11,7 @@ import kotlin.uuid.Uuid
  * @param clockedOutAt Epoch millis, null while still on the clock
  * @param station Where they clocked in, a station's name, or blank from their own device
  * @param editedBy Username of the admin who last changed it by hand, blank for one made by clocking
+ * @param locationIdentifier The location they clocked in at, set by the server
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -22,7 +23,8 @@ data class TimeEntry(
     val clockedOutAt: Long? = null,
     val station: String = "",
     val note: String = "",
-    val editedBy: String = ""
+    val editedBy: String = "",
+    val locationIdentifier: Uuid? = null
 ) {
     val isOpen: Boolean
         get() = clockedOutAt == null

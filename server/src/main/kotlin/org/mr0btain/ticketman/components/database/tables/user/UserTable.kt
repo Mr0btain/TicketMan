@@ -26,4 +26,7 @@ object UserTable : UuidTable("user") {
     // Profile photo (an image row) and ID card code, null when there's none
     val photo = uuid("photo_id").nullable()
     val badgeCode = text("badge_code").nullable()
+
+    // Added with locations: where they usually work, null for the main location
+    val homeLocation = uuid("home_location").nullable()
 }

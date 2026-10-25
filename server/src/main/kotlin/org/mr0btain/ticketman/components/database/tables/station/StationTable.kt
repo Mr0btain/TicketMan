@@ -19,4 +19,7 @@ object StationTable : UuidTable("stations") {
     // Added for kiosk mode
     val kioskEnabled = bool("kiosk_enabled").default(false)
     val idleTimeoutSeconds = integer("idle_timeout_seconds").default(Station.DEFAULT_IDLE_TIMEOUT_SECONDS)
+
+    // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
+    val location = uuid("location_id").nullable().index()
 }

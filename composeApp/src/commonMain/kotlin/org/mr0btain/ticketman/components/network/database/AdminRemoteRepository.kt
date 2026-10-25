@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.server.request.StationLocationRequest
 import org.mr0btain.ticketman.server.AdminPaths
 import org.mr0btain.ticketman.server.ApiQuery
 import org.mr0btain.ticketman.server.ApiRoutes
@@ -161,6 +162,21 @@ class AdminRemoteRepository(
                 url("$adminUrl${AdminPaths.STATION_KIOSK.fill(identifier)}")
                 contentType(ContentType.Application.Json)
                 setBody(settings)
+            }
+        }
+
+        return handleActionHttpResponse(STATIONS_TAG, response)
+    }
+
+    /** Which location a station is at */
+    suspend fun setStationLocation(identifier: Uuid, location: Uuid): EmptyResult<ServerError> {
+        if (baseUrl.isBlank()) return noServerError
+
+        val response = networkRequest(STATIONS_TAG) {
+            client.post {
+                url("$adminUrl${AdminPaths.STATION_LOCATION.fill(identifier)}")
+                contentType(ContentType.Application.Json)
+                setBody(StationLocationRequest(location))
             }
         }
 
@@ -376,6 +392,10 @@ class AdminRemoteRepository(
 
     suspend fun getShopProfile(): ShopProfile? =
         getJson(GET_SHOP_TAG, shopUrl)
+
+    /** The profile as it applies where this device works: that location's address, contacts and tax, for the counter */
+    suspend fun getShopProfileHere(): ShopProfile? =
+        getJson(GET_SHOP_TAG, "$shopUrl${ShopPaths.HERE}")
 
     suspend fun updateShopProfile(profile: ShopProfile): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return noServerError

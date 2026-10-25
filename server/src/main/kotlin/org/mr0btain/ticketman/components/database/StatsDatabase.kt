@@ -35,13 +35,14 @@ import java.time.ZoneId
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.days
 import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Read only queries across tables for the admin screen
  */
 @OptIn(ExperimentalUuidApi::class)
 @Suppress("PrivatePropertyName")
-class StatsDatabase {
+class StatsDatabase(private val inventory: InventoryDatabase = InventoryDatabase()) {
     private val TAG = "StatsDatabase"
     private val GET_STATS_TAG = "$TAG:GetStats"
     private val GET_LOW_STOCK_TAG = "$TAG:GetLowStock"
@@ -52,12 +53,16 @@ class StatsDatabase {
      * @param lowStockThreshold Inventory at or below this stock counts as low
      * @param recentLimit How many of the newest tickets to include
      * @param activeSessions Passed in since sessions live in the token database
+     * @param location Tickets and stock at this location only, every location's for null. Customers and staff are
+     * the company's either way
      */
-    fun getAdminStats(lowStockThreshold: Int, recentLimit: Int, activeSessions: Long): AdminStatsResponse? {
+    fun getAdminStats(lowStockThreshold: Int, recentLimit: Int, activeSessions: Long, location: Uuid? = null): AdminStatsResponse? {
+        val lowStockCount = inventory.lowStock(lowStockThreshold, location)?.size?.toLong() ?: 0
         return dbQuery(GET_STATS_TAG) {
             // Status and priority are json columns so group them here rather than in sql
             val tickets = TicketTable
                 .select(TicketTable.id, TicketTable.status, TicketTable.priority)
+                .where { ticketsAt(location) }
                 .map { row -> Triple(row[TicketTable.id].value, row[TicketTable.status].status, row[TicketTable.priority].priority) }
 
             val openTickets = tickets.filter { (_, status, _) -> status.isOpen }
@@ -69,7 +74,7 @@ class StatsDatabase {
                 ?.let { (identifier, _, _) -> TicketEntity.findById(identifier)?.toTicket() }
 
             val recentTickets = TicketEntity
-                .all()
+                .find { ticketsAt(location) }
                 .orderBy(TicketTable.id to SortOrder.DESC)
                 .limit(recentLimit)
                 .map { it.toTicket() }
@@ -94,7 +99,7 @@ class StatsDatabase {
                 recentTickets = recentTickets,
                 totalCustomers = CustomerTable.selectAll().count(),
                 totalInventory = InventoryTable.selectAll().count(),
-                lowStockCount = InventoryTable.selectAll().where { lowStock(lowStockThreshold) }.count(),
+                lowStockCount = lowStockCount,
                 lowStockThreshold = lowStockThreshold,
                 totalUsers = users.size.toLong(),
                 usersByAccessLevel = listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN)
@@ -111,27 +116,27 @@ class StatsDatabase {
     /**
      * Money taken and work done on [date], in [zone]. The overdue and waiting counts are as of right now
      */
-    fun dailyReport(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): DailyReport? {
+    fun dailyReport(date: LocalDate, zone: ZoneId = ZoneId.systemDefault(), location: Uuid? = null): DailyReport? {
         val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
         val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
         val startOfToday = LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli()
 
         return dbQuery(DAILY_REPORT_TAG) {
-            val payments = InvoicePaymentTable
+            val payments = (InvoicePaymentTable innerJoin InvoiceTable)
                 .select(InvoicePaymentTable.method, InvoicePaymentTable.amountCents)
-                .where { (InvoicePaymentTable.receivedAt greaterEq start) and (InvoicePaymentTable.receivedAt less end) }
+                .where { (InvoicePaymentTable.receivedAt greaterEq start) and (InvoicePaymentTable.receivedAt less end) and invoicesAt(location) }
                 .map { PaymentMethod.valueOf(it[InvoicePaymentTable.method]) to it[InvoicePaymentTable.amountCents] }
 
             val paidInvoices = InvoiceTable
                 .select(InvoiceTable.totalCents, InvoiceTable.taxCents)
                 .where {
                     (InvoiceTable.status eq InvoiceStatus.PAID.name) and
-                        (InvoiceTable.paidAt greaterEq start) and (InvoiceTable.paidAt less end)
+                        (InvoiceTable.paidAt greaterEq start) and (InvoiceTable.paidAt less end) and invoicesAt(location)
                 }
                 .map { it[InvoiceTable.totalCents] to it[InvoiceTable.taxCents] }
 
             // Check in time is in the ticket's identifier, the rest are json, so these are sorted out here
-            val tickets = TicketEntity.all().map { it.toTicket() }
+            val tickets = TicketEntity.find { ticketsAt(location) }.map { it.toTicket() }
 
             val report = DailyReport(
                 date = date.toString(),
@@ -152,21 +157,14 @@ class StatsDatabase {
         }
     }
 
-    // Tracked items at or below their own reorder point, or [threshold] when they have none
-    private fun lowStock(threshold: Int): Op<Boolean> =
-        (InventoryTable.stock neq Int.MAX_VALUE) and
-            (InventoryTable.stock lessEq Coalesce(InventoryTable.reorderPoint, intLiteral(threshold)))
+    private fun ticketsAt(location: Uuid?): Op<Boolean> = TicketTable.location.at(location)
+
+    private fun invoicesAt(location: Uuid?): Op<Boolean> = InvoiceTable.location.at(location)
 
     /**
-     * Inventory items at or below their reorder point, or the threshold when they have none, lowest stock first
+     * Inventory items at or below their reorder point at [location], or the threshold when they have none there,
+     * lowest stock first. For null, ones low at any location
      */
-    fun getLowStock(threshold: Int, limit: Int): List<Inventory>? {
-        return dbQuery(GET_LOW_STOCK_TAG) {
-            InventoryEntity
-                .find { lowStock(threshold) }
-                .orderBy(InventoryTable.stock to SortOrder.ASC, InventoryTable.name to SortOrder.ASC)
-                .limit(limit)
-                .map { it.toInventory() }
-        }
-    }
+    fun getLowStock(threshold: Int, limit: Int, location: Uuid? = null): List<Inventory>? =
+        inventory.lowStock(threshold, location)?.take(limit)
 }

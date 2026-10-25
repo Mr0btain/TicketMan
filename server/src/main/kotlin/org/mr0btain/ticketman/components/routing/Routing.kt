@@ -138,6 +138,13 @@ fun Application.configureRouting(
             )
         }
 
+        route(ApiRoutes.LOCATION) {
+            locationRoute(
+                database = localDatabase.locationDatabase,
+                auditLog = localDatabase.auditLogDatabase
+            )
+        }
+
         route(ApiRoutes.PAYMENT) {
             paymentRoute(
                 service = paymentService,

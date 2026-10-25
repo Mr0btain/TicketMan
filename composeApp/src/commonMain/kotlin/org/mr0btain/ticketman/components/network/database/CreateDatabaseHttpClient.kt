@@ -16,6 +16,7 @@ import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.network.sendAppVersion
 import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.server.LOCATION_HEADER
 
 fun createRemoteHttpClient(
     engine: HttpClientEngine,
@@ -23,7 +24,9 @@ fun createRemoteHttpClient(
     getRefreshToken: () -> String?,
     refreshTokens: suspend () -> Token?,
     /** The server turned a request away for this app's version, see [sendAppVersion] */
-    onVersionRejected: () -> Unit = {}
+    onVersionRejected: () -> Unit = {},
+    /** Where this device works, sent as [LOCATION_HEADER] with every request. Null leaves it to the server */
+    getLocation: () -> String? = { null }
 ): HttpClient {
     val TAG = "CreateRemoteHttpClient"
 
@@ -45,6 +48,11 @@ fun createRemoteHttpClient(
         }
 
         sendAppVersion(onVersionRejected)
+
+        // Asked each request, so picking another location takes effect at once
+        defaultRequest {
+            getLocation()?.takeIf { it.isNotBlank() }?.let { header(LOCATION_HEADER, it) }
+        }
 
         install(Auth) {
             bearer {

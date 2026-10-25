@@ -36,9 +36,18 @@ object InvoiceTable : UuidTable("invoices") {
     // Added with storage terms: staff took the storage line off, so it isn't put back
     val storageWaived = bool("storage_waived").default(false)
 
+    // Added with locations: the location's code its number starts with, blank for the main location's
+    val numberPrefix = text("number_prefix").default("")
+
+    // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
+    val location = uuid("location_id").nullable().index()
+
     init {
-        uniqueIndex("invoices_number_unique", numberYear, numberSequence)
+        // Older databases have it on (year, sequence) alone until LocalDatabase's number-prefix fix
+        uniqueIndex(NUMBER_INDEX, numberPrefix, numberYear, numberSequence)
     }
+
+    const val NUMBER_INDEX = "invoices_number_unique"
 }
 
 /** Lines on an invoice, in order */

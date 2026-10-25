@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin.components
 
+import org.mr0btain.ticketman.data.location.Location
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -58,6 +59,13 @@ class AdminDevices(
 
         scope.launch {
             support.report(admin.setKiosk(station.identifier, settings), message) { reloadStations() }
+        }
+    }
+
+    /** Which location a station is at. The device follows the next time it checks its station */
+    fun setStationLocation(station: Station, location: Location) {
+        scope.launch {
+            support.report(admin.setStationLocation(station.identifier, location.identifier), "${station.name} is at ${location.name}") { reloadStations() }
         }
     }
 

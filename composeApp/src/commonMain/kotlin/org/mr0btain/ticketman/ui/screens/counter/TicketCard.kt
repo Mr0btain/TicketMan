@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import ticketman.composeapp.generated.resources.map_pin
+import org.mr0btain.ticketman.ui.kit.selection.TmMenuItem
+import org.mr0btain.ticketman.ui.kit.selection.TmMenu
+import org.mr0btain.ticketman.data.location.Location
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocationBadge
 import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.data.shop.Storage
 import org.mr0btain.ticketman.ui.kit.data.LocalStorageTerms
@@ -74,6 +79,8 @@ private val PANEL_WIDTH = 400.dp
  * @param onOpenTicket Opens another ticket, one checked in with this or an earlier repair of the device
  * @param passcode Showing and changing the device's passcode, null for anyone who can't
  * @param extraActions Room for buttons added by later screens, like pickup
+ * @param moveTo The other locations it can be sent to, empty with one location
+ * @param onMove Sends it to one of [moveTo]
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -92,7 +99,9 @@ fun TicketCard(
     onOpenTicket: (Uuid) -> Unit = {},
     passcode: PasscodeActions? = null,
     printAction: @Composable () -> Unit = {},
-    extraActions: @Composable RowScope.() -> Unit = {}
+    extraActions: @Composable RowScope.() -> Unit = {},
+    moveTo: List<Location> = emptyList(),
+    onMove: (Location) -> Unit = {}
 ) {
     val ticket = detail.ticket
     var note by remember(ticket.identifier) { mutableStateOf("") }
@@ -123,6 +132,7 @@ fun TicketCard(
                     TmTicketIdText(number = ticket.label, style = TmTheme.typography.numericDisplay)
                     TmStatusBadge(ticket.status.choice)
                     TmPriorityBadge(ticket.priority.priority)
+                    TmLocationBadge(ticket.locationIdentifier, always = true)
                     if (ticket.isOverdue) TmBadge(text = "Overdue", tone = colors.danger, solid = true)
                     if (ticket.warrantyOf != null) TmBadge(text = "Warranty return", tone = colors.accent)
                     if (ticket.abandonedAt != null) TmBadge(text = "Abandoned", tone = colors.danger, solid = true)
@@ -143,6 +153,22 @@ fun TicketCard(
                 TmStatusPicker(selected = ticket.status.choice, onSelect = onStatusChange)
 
                 Spacer(Modifier.weight(1f))
+
+                // Off to another of the shop's locations, keeping its number
+                if (moveTo.isNotEmpty()) {
+                    Box {
+                        var moving by remember(ticket.identifier) { mutableStateOf(false) }
+                        TmButton(text = "Move", variant = TmButtonVariant.SECONDARY, size = TmControlSize.LARGE, leadingIcon = Res.drawable.map_pin, onClick = { moving = true })
+                        TmMenu(expanded = moving, onDismissRequest = { moving = false }) {
+                            moveTo.forEach { location ->
+                                TmMenuItem(text = "To ${location.name}", onClick = {
+                                    moving = false
+                                    onMove(location)
+                                })
+                            }
+                        }
+                    }
+                }
 
                 printAction()
                 extraActions()

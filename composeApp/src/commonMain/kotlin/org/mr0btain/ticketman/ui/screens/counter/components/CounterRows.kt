@@ -1,6 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.Alignment
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocationBadge
+import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -33,8 +38,15 @@ fun TicketRow(
         title = ticket.device.toString().ifBlank { "Unknown device" },
         subtitle = details.joinToString(", ").ifBlank { null },
         onClick = onClick,
-        leading = { TmTicketIdText(ticket.label, Modifier.width(104.dp)) },
-        trailing = if (showStatus) ({ TmStatusBadge(ticket.status.choice) }) else null
+        // Wider for a location's code, like DT-26-00000042
+        leading = { TmTicketIdText(ticket.label, Modifier.widthIn(min = 104.dp)) },
+        trailing = {
+            Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                // Only when it's at another location than this device's
+                TmLocationBadge(ticket.locationIdentifier)
+                if (showStatus) TmStatusBadge(ticket.status.choice)
+            }
+        }
     )
 }
 

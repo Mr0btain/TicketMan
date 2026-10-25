@@ -84,6 +84,7 @@ class TicketDatabase(
     private val BACKFILL_TOKENS_TAG = "$tag:BackfillStatusTokens"
     private val READY_TAG = "$tag:ReadyForPickup"
     private val SET_ESTIMATE_TAG = "$tag:SetEstimate"
+    private val MOVE_TAG = "$tag:Move"
 
     override fun getById(identifier: Uuid): Ticket? =
         dbQuery(GET_BY_ID_TAG) {
@@ -91,9 +92,10 @@ class TicketDatabase(
                 ?: null.also { AppLogger.i(GET_BY_ID_TAG, TicketError.NOT_FOUND) }
         }
 
+    /** Newest first, only the page's location's when it names one */
     override fun getPagedItems(request: PagedRequest): List<Ticket>? =
         dbQuery(GET_PAGED_ITEMS_TAG) {
-            TicketEntity.all()
+            TicketEntity.find { TicketTable.location.at(request.location) }
                 .orderBy(TicketTable.id to SortOrder.DESC)
                 .offset(request.offset)
                 .limit(request.itemsPerPage)
@@ -111,7 +113,7 @@ class TicketDatabase(
                     TicketTable
                         .join(UserTicketTable, JoinType.INNER, TicketTable.id, UserTicketTable.ticket)
                         .selectAll()
-                        .where { UserTicketTable.user eq userId }
+                        .where { (UserTicketTable.user eq userId) and TicketTable.location.at(request.location) }
                         .orderBy(TicketTable.id to SortOrder.DESC)
                         .offset(request.offset)
                         .limit(request.itemsPerPage)
@@ -178,9 +180,10 @@ class TicketDatabase(
             val text = query.trim().lowercase()
             val contains = "%$text%"
 
-            // "26-42" is an exact number, plain digits match a sequence in any year
+            // "26-42" is an exact number, at the main location, "dt-26-42" at that one. Plain digits match a sequence
+            // in any year anywhere
             val numberMatch: Op<Boolean> = TicketNumber.parse(text)
-                ?.let { (TicketTable.numberYear eq it.year) and (TicketTable.numberSequence eq it.sequence) }
+                ?.let { (TicketTable.numberPrefix eq it.prefix) and (TicketTable.numberYear eq it.year) and (TicketTable.numberSequence eq it.sequence) }
                 ?: text.toLongOrNull()?.let { TicketTable.numberSequence eq it }
                 ?: Op.FALSE
 
@@ -211,16 +214,19 @@ class TicketDatabase(
      */
     fun <T> whileNumbering(block: () -> T): T = synchronized(NUMBER_LOCK, block)
 
-    // Must be called inside a transaction while holding NUMBER_LOCK
+    // Must be called inside a transaction while holding NUMBER_LOCK. Numbered at its location
     private fun insertTicket(data: Ticket) {
         val year = currentYear()
+        val prefix = numberPrefix(data.locationIdentifier)
 
         TicketEntity.new(data.identifier) {
             device = data.device
             status = data.status
             priority = data.priority
             numberYear = year
-            numberSequence = nextSequence(year)
+            numberPrefix = prefix
+            numberSequence = nextSequence(year, prefix)
+            location = data.locationIdentifier
             problem = data.problem
             condition = data.condition
             accessories = data.accessories
@@ -235,12 +241,12 @@ class TicketDatabase(
         }
     }
 
-    private fun nextSequence(year: Int): Long {
+    private fun nextSequence(year: Int, prefix: String = ""): Long {
         val max = TicketTable.numberSequence.max()
 
         return (TicketTable
             .select(max)
-            .where { TicketTable.numberYear eq year }
+            .where { (TicketTable.numberYear eq year) and (TicketTable.numberPrefix eq prefix) }
             .singleOrNull()
             ?.get(max) ?: 0L) + 1
     }
@@ -343,6 +349,21 @@ class TicketDatabase(
             true
         }
 
+    /**
+     * Sends a ticket to another location. Its number stays, it's still the same repair. Its invoice goes too while
+     * it's open, so its parts come out of that location's stock at pickup
+     * @return Whether there's such a ticket
+     */
+    fun moveTo(identifier: Uuid, location: Uuid): Boolean =
+        dbWrite(MOVE_TAG) {
+            val ticket = TicketEntity.findById(identifier) ?: return@dbWrite false
+            ticket.location = location
+            InvoiceTable.update(where = { (InvoiceTable.ticket eq identifier) and (InvoiceTable.status eq InvoiceStatus.OPEN.name) }) { row ->
+                row[InvoiceTable.location] = location
+            }
+            true
+        }
+
     /** Tickets waiting to be picked up, ready longest first */
     fun readyForPickup(): List<Ticket>? =
         dbQuery(READY_TAG) {
@@ -373,7 +394,7 @@ class TicketDatabase(
     fun getByNumber(number: TicketNumber): Ticket? =
         dbQuery(GET_BY_NUMBER_TAG) {
             TicketEntity
-                .find { (TicketTable.numberYear eq number.year) and (TicketTable.numberSequence eq number.sequence) }
+                .find { (TicketTable.numberPrefix eq number.prefix) and (TicketTable.numberYear eq number.year) and (TicketTable.numberSequence eq number.sequence) }
                 .firstOrNull()
                 ?.toTicket()
         }

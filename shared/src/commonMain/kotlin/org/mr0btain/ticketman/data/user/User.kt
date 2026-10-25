@@ -30,7 +30,9 @@ data class User(
     /** Their profile photo, set by an admin or themselves. Not changed by an update, see `/api/user/set/photo` */
     val photo: StoredImage? = null,
     /** Has an ID card code, the code itself only goes to admins */
-    val hasBadge: Boolean = false
+    val hasBadge: Boolean = false,
+    /** The location they usually work at, which their lists start on. Null for the main location */
+    val homeLocation: Uuid? = null
 ): MainItem() {
     /** Active, set up, with a real access level. The only kind of user that can do anything */
     fun canAccess(minimum: AccessLevel): Boolean =

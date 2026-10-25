@@ -29,6 +29,7 @@ enum class AppointmentStatus(val label: String) {
  * @param reminderSentAt When the reminder message was queued, null before
  * @param createdBy Username of whoever booked it, set by the server
  * @param createdAt Epoch millis, set by the server
+ * @param locationIdentifier The location it's at, set by the server from where it was booked
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -49,7 +50,8 @@ data class Appointment(
     val ticketIdentifier: Uuid? = null,
     val reminderSentAt: Long? = null,
     val createdBy: String = "",
-    val createdAt: Long = 0
+    val createdAt: Long = 0,
+    val locationIdentifier: Uuid? = null
 ) {
     val endsAt: Long
         get() = startsAt + minutes * 60_000L

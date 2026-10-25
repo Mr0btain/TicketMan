@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.admin.users
 
+import org.mr0btain.ticketman.data.location.Location
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
+import kotlin.uuid.Uuid
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -22,6 +25,8 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
  * @param user User to edit, a blank one when adding
  * @param isSelf Whether this is the logged in admin, they can't change their own access
  * @param onConfirm Gets the edited user and the password for a new user
+ * @param locations Where they could usually work, offered with more than one location
+ * @param defaultLocation Their home when they don't have one yet, where the admin works
  */
 @Composable
 fun UserDialog(
@@ -30,7 +35,9 @@ fun UserDialog(
     isNew: Boolean,
     isSelf: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: (User, String) -> Unit
+    onConfirm: (User, String) -> Unit,
+    locations: List<Location> = emptyList(),
+    defaultLocation: Uuid? = null
 ) {
     if (!isVisible) return
 
@@ -44,6 +51,9 @@ fun UserDialog(
     }
     var password by remember(user) { mutableStateOf("") }
     var confirmPassword by remember(user) { mutableStateOf("") }
+    var homeLocation by remember(user) {
+        mutableStateOf(user.homeLocation ?: (if (isNew) defaultLocation else null) ?: locations.firstOrNull { it.main }?.identifier)
+    }
 
     val error = when {
         // Older usernames from before the rules can stay as they are
@@ -70,7 +80,8 @@ fun UserDialog(
                             name = name.trim(),
                             email = email.trim(),
                             phone = phone.trim(),
-                            accessLevel = accessLevel
+                            accessLevel = accessLevel,
+                            homeLocation = homeLocation
                         ),
                         password
                     )
@@ -94,6 +105,19 @@ fun UserDialog(
             { TmTextField(modifier = it, value = email, onValueChange = { v -> email = v }, label = "Email") },
             { TmTextField(modifier = it, value = phone, onValueChange = { v -> phone = v }, label = "Phone") }
         )
+
+        // Where their lists start, they can still work at the others
+        if (locations.size > 1) {
+            TmDropdown(
+                modifier = Modifier.fillMaxWidth(),
+                label = "Home location",
+                options = locations,
+                selected = locations.firstOrNull { it.identifier == homeLocation },
+                onSelect = { homeLocation = it.identifier },
+                optionLabel = { it.label },
+                supportingText = "Where their lists start. They can work at the others too"
+            )
+        }
 
         if (isSelf) TmNotice(text = "You can't change your own access.")
 

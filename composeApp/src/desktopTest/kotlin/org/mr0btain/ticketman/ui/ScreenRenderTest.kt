@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocations
+import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
+import org.mr0btain.ticketman.data.location.Location
+import org.mr0btain.ticketman.ui.screens.admin.locations.AdminLocationsTab
 import org.mr0btain.ticketman.components.network.versionNoticeOf
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.AppVersion
@@ -527,6 +531,49 @@ class ScreenRenderTest {
                 charges = charges, chargesEnd = true, isBusy = false,
                 onSave = {}, onFindReaders = {}, onRefund = { _, _ -> }, onLoadMore = {}
             )
+        }
+    }
+
+    private val mainStreet = Location(name = "Main Street", city = "Springfield", main = true)
+    private val downtown = Location(code = "DT", name = "Downtown", street = "200 Market St", city = "Springfield", phone = "555-0200", taxRate = "9.5")
+    private val northside = Location(code = "NS", name = "Northside", retired = true)
+
+    /** A shop with three locations, the third retired */
+    @Test
+    fun adminLocations() = screen("admin-locations", rail = "Admin") {
+        AdminLocationsTab(locations = listOf(mainStreet, downtown, northside), taxClasses = listOf(TaxClass("food", "Food", "2")), onSave = { _, _, _ -> })
+    }
+
+    /**
+     * Working at Downtown with two locations: a Downtown ticket with its code, the queue naming the Main Street ones,
+     * and Move on the card
+     */
+    @Test
+    fun counterTicketElsewhere() = bothModes("counter-ticket-locations") {
+        val here = detail.ticket.copy(number = TicketNumber(2026, 7, "DT"), locationIdentifier = downtown.identifier)
+        CompositionLocalProvider(LocalLocations provides TmLocations(listOf(mainStreet, downtown), downtown.identifier)) {
+            Shell("Counter") {
+                CounterLayout(
+                    searchField = { modifier -> TmSearchField(modifier = modifier, query = "", onQueryChange = {}, placeholder = "Search tickets and customers  (F2)", size = TmControlSize.LARGE) },
+                    canEdit = true,
+                    queue = queue.copy(dueToday = listOf(summary(here, dana)) + queue.dueToday.drop(1)),
+                    onCheckIn = {},
+                    onNewCustomer = {},
+                    onSell = {},
+                    onPriceCheck = {},
+                    onQueueTicketClick = {}
+                ) {
+                    TicketCard(
+                        detail = detail.copy(ticket = here),
+                        canEdit = true,
+                        onStatusChange = {},
+                        onAddNote = {},
+                        onCustomerClick = {},
+                        onBack = {},
+                        moveTo = listOf(mainStreet)
+                    )
+                }
+            }
         }
     }
 

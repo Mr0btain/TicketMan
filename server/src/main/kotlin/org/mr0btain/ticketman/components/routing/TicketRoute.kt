@@ -11,6 +11,8 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
+import org.mr0btain.ticketman.components.database.LocationDatabase
+import org.mr0btain.ticketman.server.request.MoveTicketRequest
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.components.database.WorkDatabase
@@ -40,7 +42,8 @@ fun Route.ticketRoute(
     invoiceService: InvoiceService,
     notificationService: NotificationService,
     passcodes: PasscodeDatabase = PasscodeDatabase(),
-    vault: PasscodeVault? = null
+    vault: PasscodeVault? = null,
+    locations: LocationDatabase = LocationDatabase()
 ) {
     val TAG = "TicketRoute"
     val GET_TAG = "$TAG:Get"
@@ -66,8 +69,9 @@ fun Route.ticketRoute(
             }
         }
 
+        // Only where the caller works, or every location for an admin looking at all of them
         get(RecordPaths.FETCH) {
-            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
+            val request = call.pagedRequest()?.at(call.locationScope()) ?: return@get call.respondBadQuery()
 
             val result = database.getPagedItems(request)
 
@@ -81,7 +85,7 @@ fun Route.ticketRoute(
 
         // Tickets assigned to the caller, who comes from the token so nobody can list someone else's
         get(TicketPaths.FETCH_MINE) {
-            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
+            val request = call.pagedRequest()?.at(call.locationScope()) ?: return@get call.respondBadQuery()
             val caller = call.getIdentifierFromToken()
 
             if (caller == null) {
@@ -217,8 +221,11 @@ fun Route.ticketRoute(
                 return@post
             }
 
-            // Device and group links are made by check in, never sent
-            val saved = received.copy(deviceIdentifier = null, groupIdentifier = null, warrantyOf = null, warrantyUntil = null, abandonedAt = null)
+            // Device and group links are made by check in, never sent. It's at the location the caller works at
+            val saved = received.copy(
+                deviceIdentifier = null, groupIdentifier = null, warrantyOf = null, warrantyUntil = null, abandonedAt = null,
+                locationIdentifier = call.workingLocation().identifier
+            )
                 .takeIf { database.add(it) }?.let { database.getById(it.identifier) }
 
             if (saved == null) {
@@ -328,6 +335,23 @@ fun Route.ticketRoute(
         }
 
         // Cuts off the old status page link. Answers with the ticket and its new token
+        // Off to another location: the ticket keeps its number, its open invoice and future stock go with it
+        post(TicketPaths.MOVE) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+            val ticket = database.getById(identifier) ?: return@post call.respond(HttpStatusCode.NotFound)
+            val request = call.receive<MoveTicketRequest>()
+            val location = locations.get(request.locationIdentifier)?.takeIf { !it.retired }
+                ?: return@post call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's")
+
+            if (ticket.status.status == TicketStatusType.PICKED_UP) return@post call.respond(HttpStatusCode.Conflict, "Ticket ${ticket.label} was picked up")
+            if (ticket.locationIdentifier == location.identifier) return@post call.respond(HttpStatusCode.OK, ticket)
+            if (!database.moveTo(identifier, location.identifier)) return@post call.respond(HttpStatusCode.NotFound)
+
+            val from = ticket.locationIdentifier?.let { locations.get(it)?.name } ?: "another location"
+            call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Ticket ${ticket.label} moved from $from to ${location.name}")
+            call.respond(HttpStatusCode.OK, database.getById(identifier)!!)
+        }
+
         post(TicketPaths.STATUS_TOKEN) {
             val identifier = call.uuidParameter("identifier")
             val saved = identifier?.takeIf { database.replaceStatusToken(it) != null }?.let { database.getById(it) }

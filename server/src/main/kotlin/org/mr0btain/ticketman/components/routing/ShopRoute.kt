@@ -31,6 +31,11 @@ fun Route.shopRoute(
         get {
             call.respond(HttpStatusCode.OK, database.get())
         }
+
+        // What the counter prints and charges with: the location's own address, contacts and tax rates
+        get(ShopPaths.HERE) {
+            call.respond(HttpStatusCode.OK, database.at(call.workingLocation().identifier))
+        }
     }
 
     authenticate("admin") {

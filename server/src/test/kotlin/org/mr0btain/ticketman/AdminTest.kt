@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman
 
+import org.mr0btain.ticketman.server.ALL_LOCATIONS
+import org.mr0btain.ticketman.server.LOCATION_HEADER
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -281,7 +283,11 @@ class AdminTest {
         val adminToken = token(admin)
         post("/api/admin/seed", json.encodeToString(SeedRequest(tickets = 6, customers = 2, inventory = 3, users = 0)), adminToken)
 
-        val response = get("/api/admin/stats?lowStock=1000000&recent=4", adminToken)
+        // Every location's, the seed puts some at Downtown
+        val response = client.get("/api/admin/stats?lowStock=1000000&recent=4") {
+            bearerAuth(adminToken)
+            header(LOCATION_HEADER, ALL_LOCATIONS)
+        }
         assertEquals(HttpStatusCode.OK, response.status)
 
         val stats = json.decodeFromString<AdminStatsResponse>(response.bodyAsText())

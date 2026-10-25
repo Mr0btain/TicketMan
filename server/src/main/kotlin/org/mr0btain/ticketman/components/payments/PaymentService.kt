@@ -69,8 +69,8 @@ class PaymentService(
         return AccountResult.Done(settings.withoutSecrets())
     }
 
-    /** What the counter can offer */
-    fun options(): PaymentOptions {
+    /** What the counter can offer at [location]: the readers there and those for every location. All of them for null */
+    fun options(location: Uuid? = null): PaymentOptions {
         val settings = cards.settings()
         cards.processor(settings) ?: return PaymentOptions()
         val public = shop.get().publicUrl.isNotBlank()
@@ -78,7 +78,7 @@ class PaymentService(
         return PaymentOptions(
             enabled = true,
             provider = settings.provider,
-            readers = settings.readers,
+            readers = settings.readers.filter { location == null || it.locationIdentifier == null || it.locationIdentifier == location },
             links = public,
             onlinePayments = settings.onlinePayments && public
         )
@@ -361,7 +361,7 @@ class PaymentService(
 
     // What the customer sees on their statement or the checkout page
     private fun description(invoice: Invoice?): String {
-        val name = shop.get().name.ifBlank { "the shop" }
+        val name = shop.at(invoice?.locationIdentifier).name.ifBlank { "the shop" }
         return invoice?.let { "${it.label} at $name" } ?: "Sale at $name"
     }
 

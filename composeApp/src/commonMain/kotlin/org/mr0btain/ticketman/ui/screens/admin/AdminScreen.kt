@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.admin
 
+import org.mr0btain.ticketman.ui.screens.admin.locations.AdminLocationsTab
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
@@ -96,6 +97,8 @@ private fun AdminContent(
     val outbox by admin.messages.outbox.collectAsState()
     val outboxEnd by admin.messages.outboxEnd.collectAsState()
     val paymentSettings by admin.payments.settings.collectAsState()
+    val allLocations by viewModel.locations.all.collectAsState()
+    val activeLocations by viewModel.locations.active.collectAsState()
     val accountReaders by admin.payments.accountReaders.collectAsState()
     val cardCharges by admin.payments.charges.collectAsState()
     val cardChargesEnd by admin.payments.chargesEnd.collectAsState()
@@ -170,8 +173,9 @@ private fun AdminContent(
         )
     }
 
-    // Fresh numbers whenever a tab is opened, only for that tab
-    LaunchedEffect(selectedTab) {
+    // Fresh numbers whenever a tab is opened, only for that tab, and when the device starts working somewhere else
+    val workingLocation by viewModel.locations.working.collectAsState()
+    LaunchedEffect(selectedTab, workingLocation) {
         admin.refresh(selectedTab)
         if (selectedTab == AdminTab.USERS) viewModel.users.pager.refresh()
     }
@@ -196,7 +200,9 @@ private fun AdminContent(
                 showUserDialog = false
                 viewModel.users.select(user.identifier, force = true)
             })
-        }
+        },
+        locations = activeLocations,
+        defaultLocation = viewModel.locations.working.value.identifier
     )
 
     ResetPasswordDialog(
@@ -324,7 +330,15 @@ private fun AdminContent(
                 stations = stations,
                 onApprove = { admin.devices.approveStation(it) },
                 onKiosk = { station, settings -> admin.devices.setKiosk(station, settings) },
-                onRemove = { admin.devices.removeStation(it) }
+                onRemove = { admin.devices.removeStation(it) },
+                locations = activeLocations,
+                onLocation = { station, location -> admin.devices.setStationLocation(station, location) }
+            )
+
+            AdminTab.LOCATIONS -> AdminLocationsTab(
+                locations = allLocations,
+                taxClasses = shopProfile?.taxClasses.orEmpty(),
+                onSave = { location, isNew, onResult -> viewModel.locations.save(location, isNew, onResult) }
             )
 
             AdminTab.LOW_STOCK -> AdminLowStockTab(

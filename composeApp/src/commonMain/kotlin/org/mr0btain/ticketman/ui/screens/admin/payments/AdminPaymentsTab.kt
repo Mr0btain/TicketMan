@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.admin.payments
 
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
+import org.mr0btain.ticketman.data.location.Location
+import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -221,6 +224,22 @@ private fun ReadersPanel(
                 Column(Modifier.weight(1f)) {
                     Text(text = reader.name, style = TmTheme.typography.label, color = colors.text)
                     Text(text = reader.identifier, style = TmTheme.typography.numeric, color = colors.textMuted)
+                }
+                // Which location's counter offers it, once the shop has more than one
+                val locations = LocalLocations.current
+                if (locations.several) {
+                    val options: List<Location?> = listOf(null) + locations.all.filter { !it.retired }
+                    TmDropdown(
+                        modifier = Modifier.width(180.dp),
+                        options = options,
+                        selected = locations.all.firstOrNull { it.identifier == reader.locationIdentifier },
+                        onSelect = { picked ->
+                            onChange(draft.copy(readers = draft.readers.map { if (it == reader) it.copy(locationIdentifier = picked?.identifier) else it }))
+                        },
+                        optionLabel = { it?.name ?: "Every location" },
+                        placeholder = "Every location",
+                        size = TmControlSize.SMALL
+                    )
                 }
                 TmIconButton(icon = Res.drawable.x, contentDescription = "Remove ${reader.name}", size = TmControlSize.SMALL, onClick = {
                     onChange(draft.copy(readers = draft.readers - reader))

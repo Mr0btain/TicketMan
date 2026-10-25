@@ -12,7 +12,9 @@ customer's device it's on) and `groupIdentifier` (shared by tickets checked in t
 `warrantyUntil` is when the repair's warranty runs out, set at pickup, and `warrantyOf` the earlier ticket this is a
 warranty return of, set at check in; neither comes from `/add` or `/update`. Work logged on a warranty return
 without a price is free. `abandonedAt` is when the hourly sweep treated it as abandoned under the shop's storage
-terms; `/update` clears it when the status is changed, and `/add` ignores it.
+terms; `/update` clears it when the status is changed, and `/add` ignores it. `locationIdentifier` is the
+[location](location.md) it's at: the one the request works at when it's added, changed only by
+[moving it](#post-apidataticketmoveidentifier). Its `number` has that location's code as `prefix` (`DT-26-00000042`).
 
 ## Reading
 
@@ -26,7 +28,8 @@ terms; `/update` clears it when the status is changed, and `/add` ignores it.
 
 **Auth:** restricted
 
-A page of every ticket, newest first.
+A page of the tickets at the [location](location.md) the request works at, newest first; every location's for an
+admin working at `all`.
 
 - **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
 - **`200`** a list of `Ticket`.
@@ -39,6 +42,9 @@ A page of the tickets assigned to the caller, who comes from the token, so nobod
 
 - **Query:** `offset` (default 0), `limit` (default 50, at most 200). **`400`** if either isn't a whole number.
 - **`200`** a list of `Ticket`.
+
+Like `/fetch`, only the ones at the location the request works at.
+
 
 ### `GET /api/data/ticket/search`
 
@@ -157,6 +163,17 @@ Gives the ticket a new `statusToken`, so the [status page](status.md) link hande
 logged.
 
 - **`200`** the `Ticket` with its new token. **`404`** no such ticket.
+
+### `POST /api/data/ticket/move/{identifier}`
+
+**Auth:** normal
+
+Sends the ticket to another location, like a device taken across town to a specialist. It keeps its number; its
+invoice goes with it while it's open, so the parts come out of the new location's stock at pickup. Audit logged.
+
+- **Body:** `MoveTicketRequest { locationIdentifier }`.
+- **`200`** the `Ticket` at its new location (unchanged when it's there already). **`400`** not an active location.
+  **`404`** no such ticket. **`409`** it was picked up.
 
 ## Work log
 

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.server.request.StationLocationRequest
 import org.mr0btain.ticketman.server.AdminPaths
 import io.ktor.http.*
 import io.ktor.server.auth.*
@@ -80,7 +81,8 @@ fun Route.adminRoute(
             val result = database.statsDatabase.getAdminStats(
                 lowStockThreshold = lowStockThreshold,
                 recentLimit = recentLimit,
-                activeSessions = database.tokenDatabase.count()
+                activeSessions = database.tokenDatabase.count(),
+                location = call.locationScope().identifier
             )
 
             if (result != null) {
@@ -106,7 +108,7 @@ fun Route.adminRoute(
                 return@get
             }
 
-            val report = database.statsDatabase.dailyReport(date ?: LocalDate.now())
+            val report = database.statsDatabase.dailyReport(date ?: LocalDate.now(), location = call.locationScope().identifier)
 
             if (report != null) call.respond(HttpStatusCode.OK, report) else call.respond(HttpStatusCode.InternalServerError)
         }
@@ -115,7 +117,7 @@ fun Route.adminRoute(
             val threshold = call.queryParameters["threshold"]?.toIntOrNull() ?: DEFAULT_LOW_STOCK_THRESHOLD
             val limit = (call.queryParameters["limit"]?.toIntOrNull() ?: MAX_LIMIT).coerceIn(1, MAX_LIMIT)
 
-            val result = database.statsDatabase.getLowStock(threshold, limit)
+            val result = database.statsDatabase.getLowStock(threshold, limit, call.locationScope().identifier)
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
@@ -221,6 +223,18 @@ fun Route.adminRoute(
                     call.respond(HttpStatusCode.Accepted)
                 }
             }
+        }
+
+        // Where the station is: work done on it, and PIN logins there, belong to that location
+        post(AdminPaths.STATION_LOCATION) {
+            val station = call.uuidParameter("identifier")?.let { database.stationDatabase.getById(it) }
+                ?: return@post call.respond(HttpStatusCode.NotFound)
+            val location = database.locationDatabase.get(call.receive<StationLocationRequest>().locationIdentifier)?.takeIf { !it.retired }
+                ?: return@post call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's")
+
+            database.stationDatabase.setLocation(station.identifier, location.identifier)
+            call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "station", station.identifier, "${station.name} is at ${location.name}")
+            call.respond(HttpStatusCode.Accepted)
         }
 
         // Removing a station also signs out whoever is PINned in there

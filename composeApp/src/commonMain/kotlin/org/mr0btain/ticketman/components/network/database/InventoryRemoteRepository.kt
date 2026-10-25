@@ -88,14 +88,15 @@ class InventoryRemoteRepository(
      * Sets the stock count, which [update] leaves alone. Refused with a conflict if it isn't [from] any more,
      * like when a pickup took some since the item was opened
      */
-    suspend fun setStock(identifier: Uuid, from: Int, to: Int): EmptyResult<ServerError> {
+    /** The count at [location], where this device works for null */
+    suspend fun setStock(identifier: Uuid, from: Int, to: Int, location: Uuid? = null): EmptyResult<ServerError> {
         if (serverUrl.isBlank()) return noServerError
 
         val response = networkRequest(SET_STOCK_TAG) {
             client.post {
                 url("$serverUrl${InventoryPaths.SET_STOCK.fill(identifier)}")
                 contentType(ContentType.Application.Json)
-                setBody(StockChangeRequest(from, to))
+                setBody(StockChangeRequest(from, to, location))
             }
         }
 

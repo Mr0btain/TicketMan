@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database
 
+import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -64,7 +66,7 @@ class InvoiceDatabase(
     fun <T> whileNumbering(block: () -> T): T = synchronized(NUMBER_LOCK, block)
 
     /**
-     * The ticket's invoice, made empty and OPEN if it doesn't have one yet
+     * The ticket's invoice, made empty and OPEN at the ticket's location if it doesn't have one yet
      */
     fun getOrCreate(ticketIdentifier: Uuid, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate> = emptyList()): Invoice? =
         // Numbers are handed out one at a time like ticket numbers
@@ -74,26 +76,30 @@ class InvoiceDatabase(
                     return@dbQuery it.toInvoice()
                 }
 
-                insert(ticketIdentifier, customerIdentifier, taxRateBasisPoints, taxRates)
+                val location = TicketTable.select(TicketTable.location).where { TicketTable.id eq ticketIdentifier }.firstOrNull()?.get(TicketTable.location)
+                insert(ticketIdentifier, customerIdentifier, taxRateBasisPoints, taxRates, location)
             }
         }
 
-    /** A new empty OPEN invoice with no ticket, for a counter sale. Called inside the sale's transaction */
-    fun createSale(customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>): Invoice? =
+    /** A new empty OPEN invoice with no ticket at [location], for a counter sale. Called inside the sale's transaction */
+    fun createSale(customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>, location: Uuid? = null): Invoice? =
         synchronized(NUMBER_LOCK) {
-            dbQuery(CREATE_TAG) { insert(null, customerIdentifier, taxRateBasisPoints, taxRates) }
+            dbQuery(CREATE_TAG) { insert(null, customerIdentifier, taxRateBasisPoints, taxRates, location) }
         }
 
-    // Must be called inside a transaction, holding the numbering lock
-    private fun insert(ticketIdentifier: Uuid?, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>): Invoice {
+    // Must be called inside a transaction, holding the numbering lock. Numbered at its location
+    private fun insert(ticketIdentifier: Uuid?, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>, location: Uuid?): Invoice {
         val year = currentYear()
+        val prefix = numberPrefix(location)
         val max = InvoiceTable.numberSequence.max()
-        val sequence = (InvoiceTable.select(max).where { InvoiceTable.numberYear eq year }.singleOrNull()?.get(max) ?: 0L) + 1
+        val sequence = (InvoiceTable.select(max).where { (InvoiceTable.numberYear eq year) and (InvoiceTable.numberPrefix eq prefix) }.singleOrNull()?.get(max) ?: 0L) + 1
         val identifier = Uuid.generateV7()
 
         InvoiceTable.insert { row ->
             row[InvoiceTable.id] = identifier
             row[InvoiceTable.numberYear] = year
+            row[InvoiceTable.numberPrefix] = prefix
+            row[InvoiceTable.location] = location
             row[InvoiceTable.numberSequence] = sequence
             row[InvoiceTable.ticket] = ticketIdentifier
             row[InvoiceTable.customer] = customerIdentifier?.toString()
@@ -196,11 +202,11 @@ class InvoiceDatabase(
      * Invoices made from [fromMillis] up to but not including [toMillis], oldest number first, for the export.
      * Null when the read failed
      */
-    fun getCreatedBetween(fromMillis: Long, toMillis: Long): List<Invoice>? =
+    fun getCreatedBetween(fromMillis: Long, toMillis: Long, location: Uuid? = null): List<Invoice>? =
         dbQuery(RANGE_TAG) {
             InvoiceTable
                 .selectAll()
-                .where { (InvoiceTable.createdAt greaterEq fromMillis) and (InvoiceTable.createdAt less toMillis) }
+                .where { (InvoiceTable.createdAt greaterEq fromMillis) and (InvoiceTable.createdAt less toMillis) and at(location) }
                 .orderBy(InvoiceTable.numberYear to SortOrder.ASC, InvoiceTable.numberSequence to SortOrder.ASC)
                 .map { it.toInvoice() }
         }
@@ -209,13 +215,13 @@ class InvoiceDatabase(
      * Invoices paid from [fromMillis] up to but not including [toMillis], oldest payment first, for the reports.
      * Null when the read failed
      */
-    fun getPaidBetween(fromMillis: Long, toMillis: Long): List<Invoice>? =
+    fun getPaidBetween(fromMillis: Long, toMillis: Long, location: Uuid? = null): List<Invoice>? =
         dbQuery(RANGE_TAG) {
             InvoiceTable
                 .selectAll()
                 .where {
                     (InvoiceTable.status eq InvoiceStatus.PAID.name) and
-                        (InvoiceTable.paidAt greaterEq fromMillis) and (InvoiceTable.paidAt less toMillis)
+                        (InvoiceTable.paidAt greaterEq fromMillis) and (InvoiceTable.paidAt less toMillis) and at(location)
                 }
                 .orderBy(InvoiceTable.paidAt to SortOrder.ASC)
                 .map { it.toInvoice() }
@@ -225,7 +231,7 @@ class InvoiceDatabase(
      * Invoices with a payment or refund received from [fromMillis] up to but not including [toMillis], for the
      * payments export. Null when the read failed
      */
-    fun withPaymentsBetween(fromMillis: Long, toMillis: Long): List<Invoice>? =
+    fun withPaymentsBetween(fromMillis: Long, toMillis: Long, location: Uuid? = null): List<Invoice>? =
         dbQuery(RANGE_TAG) {
             val ids = InvoicePaymentTable
                 .select(InvoicePaymentTable.invoice)
@@ -233,7 +239,7 @@ class InvoiceDatabase(
                 .map { it[InvoicePaymentTable.invoice].value }
                 .distinct()
             if (ids.isEmpty()) emptyList() else ids.chunked(COST_CHUNK).flatMap { chunk ->
-                InvoiceTable.selectAll().where { InvoiceTable.id inList chunk }.map { it.toInvoice() }
+                InvoiceTable.selectAll().where { (InvoiceTable.id inList chunk) and at(location) }.map { it.toInvoice() }
             }
         }
 
@@ -277,16 +283,20 @@ class InvoiceDatabase(
                 .map { it.toInvoice() }
         }
 
-    /** Newest first */
+    /** Newest first, only the page's location's when it names one */
     fun getPagedItems(request: PagedRequest): List<Invoice> =
         dbQuery(PAGED_TAG) {
             InvoiceTable
                 .selectAll()
+                .where { InvoiceTable.location.at(request.location) }
                 .orderBy(InvoiceTable.numberYear to SortOrder.DESC, InvoiceTable.numberSequence to SortOrder.DESC)
                 .offset(request.offset)
                 .limit(request.itemsPerPage)
                 .map { it.toInvoice() }
         }.orEmpty()
+
+    // Only [location]'s invoices, every one's for null
+    private fun at(location: Uuid?): Op<Boolean> = InvoiceTable.location.at(location)
 
     // Must be called inside a transaction
     private fun ResultRow.toInvoice(): Invoice {
@@ -334,7 +344,8 @@ class InvoiceDatabase(
 
         return Invoice(
             identifier = identifier,
-            number = InvoiceNumber(this[InvoiceTable.numberYear], this[InvoiceTable.numberSequence]),
+            number = InvoiceNumber(this[InvoiceTable.numberYear], this[InvoiceTable.numberSequence], this[InvoiceTable.numberPrefix]),
+            locationIdentifier = this[InvoiceTable.location],
             ticketIdentifier = this[InvoiceTable.ticket],
             customerIdentifier = this[InvoiceTable.customer]?.let { Uuid.parse(it) },
             status = InvoiceStatus.valueOf(this[InvoiceTable.status]),

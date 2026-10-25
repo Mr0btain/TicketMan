@@ -47,6 +47,8 @@ data class Ticket(
     val warrantyOf: Uuid? = null,
     /** Epoch millis it was left too long after it was ready and treated as abandoned, by the hourly sweep */
     val abandonedAt: Long? = null,
+    /** The [org.mr0btain.ticketman.data.location.Location] it's at, set when it's added and only changed by moving it. The server's to set */
+    val locationIdentifier: Uuid? = null,
 ): MainItem(), SubItem {
     /** Number if it has one, otherwise the start of the identifier */
     val label: String

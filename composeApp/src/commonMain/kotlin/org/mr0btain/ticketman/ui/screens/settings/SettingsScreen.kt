@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.settings
 
+import org.mr0btain.ticketman.ui.screens.locations.LocationPicker
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -237,7 +238,8 @@ fun SettingsScreen(
                         problem?.let { scope.launch { viewModel.snackBarHost.showSnackbar("Couldn't save your photo: $it") } }
                     }
                 }
-            } else null
+            } else null,
+            location = { LocationPicker(viewModel.locations, canSeeAll = currentUser.value?.accessLevel == AccessLevel.ADMIN) }
         )
     }
 

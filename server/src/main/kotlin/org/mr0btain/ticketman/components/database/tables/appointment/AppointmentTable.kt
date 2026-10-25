@@ -25,4 +25,7 @@ object AppointmentTable : UuidTable("appointments") {
     val reminderSentAt = long("reminder_sent_at").nullable()
     val createdBy = text("created_by").default("")
     val createdAt = long("created_at")
+
+    // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
+    val location = uuid("location_id").nullable().index()
 }

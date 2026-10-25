@@ -49,11 +49,14 @@ data class SquareSettings(
 /**
  * A card reader the counter can send an amount to
  * @param identifier The provider's id for it: a Stripe reader `tmr_...` or a Square device id
+ * @param locationIdentifier The location it's at, whose counters offer it. Null for every location
  */
 @Serializable
+@OptIn(ExperimentalUuidApi::class)
 data class CardReader(
     val identifier: String,
-    val name: String
+    val name: String,
+    val locationIdentifier: Uuid? = null
 )
 
 /**

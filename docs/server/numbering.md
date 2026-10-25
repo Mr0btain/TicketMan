@@ -8,11 +8,14 @@ without two counters ever getting the same one.
 
 | | Model | Prints as | Stored as |
 |-|-------|-----------|-----------|
-| Ticket | `TicketNumber(year, sequence)` | `26-00000042` | `number_year`, `number_sequence` on `tickets` |
-| Invoice | `InvoiceNumber(year, sequence)` | `INV-26-00000042` | `number_year`, `number_sequence` on `invoices` |
+| Ticket | `TicketNumber(year, sequence, prefix)` | `26-00000042`, `DT-26-00000042` | `number_prefix`, `number_year`, `number_sequence` on `tickets` |
+| Invoice | `InvoiceNumber(year, sequence, prefix)` | `INV-26-00000042`, `INV-DT-26-00000042` | the same on `invoices` |
+| Purchase order | `PurchaseNumber(year, sequence, prefix)` | `PO-26-00000042`, `PO-DT-26-00000042` | the same on `purchase_orders` |
 
-The year is stored in full (`2026`) and printed as two digits. The sequence is padded to eight digits.
-`TicketNumber.parse()` reads the full form or the short `26-42`. There's no parser for invoice numbers; invoices
+The prefix is the code of the [location](../api/location.md) it was made at, blank at the main location, and each
+location counts on its own: the unique index is on (prefix, year, sequence). The year is stored in full (`2026`) and
+printed as two digits. The sequence is padded to eight digits. `TicketNumber.parse()` reads the full form, the short
+`26-42`, or either with a code (`DT-26-42`). There's no parser for invoice numbers; invoices
 are found through their ticket.
 
 A ticket and its invoice usually end up with the same sequence, but nothing makes them: an invoice is only made

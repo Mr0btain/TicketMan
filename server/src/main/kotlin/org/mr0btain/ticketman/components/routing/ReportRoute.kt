@@ -38,7 +38,8 @@ fun Route.reportRoute(
                 return@get
             }
 
-            val report = database.period(from, to)
+            // Where the admin works, every location's when they look at all of them
+            val report = database.period(from, to, location = call.locationScope().identifier)
             if (report != null) call.respond(HttpStatusCode.OK, report) else call.respond(HttpStatusCode.InternalServerError)
         }
 

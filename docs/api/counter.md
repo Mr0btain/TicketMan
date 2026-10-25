@@ -87,7 +87,8 @@ email, and each matching customer's tickets are added to the tickets.
 
 **Auth:** restricted
 
-What needs attention: open tickets sorted into lists.
+What needs attention: open tickets sorted into lists, only those at the [location](location.md) the request works
+at. Search finds every location's.
 
 - **Query:** `recent`, how many just checked in tickets (default 10, at most 100).
 - **`200`** `CounterQueueResponse { readyForPickup, dueToday, overdue, recentlyCheckedIn, abandoned }`. Tickets the

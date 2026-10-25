@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.screens.login.components.LoginState
+import org.mr0btain.ticketman.ui.screens.locations.components.LocationsHandler
 import androidx.compose.material3.SnackbarHostState
 import org.mr0btain.ticketman.ui.screens.purchasing.components.PurchasingHandler
 import org.mr0btain.ticketman.ui.screens.appointments.components.AppointmentsHandler
@@ -53,6 +55,11 @@ class MainViewModel(
 
         // The server was updated (or rolled back) a major version while this app was open: connect again, which finds
         // the versions apart and shows the update screen. Requests turned away while that runs are let go
+        // Registering as a station, or an admin moving it, changes where this device works
+        viewModelScope.launch {
+            session.station.collect { station -> if (session.loginState.value == LoginState.LOGGED_IN) locations.stationChanged(station) }
+        }
+
         viewModelScope.launch {
             remoteHandler.versionRejected.collect { if (session.serverConnected.value) session.reconnect() }
         }
@@ -133,12 +140,15 @@ class MainViewModel(
         localStorage = localStorage,
         scope = viewModelScope,
         onLoggedIn = {
+            // First, so everything loaded next is for where this device works
+            locations.start(session.currentUser.value, session.station.value)
             refreshPagers()
             counter.refreshShop()
             purchasing.refresh()
             timeClock.refresh()
         },
         onLoggedOut = {
+            locations.clear()
             admin.clear()
             counter.clear()
             customers.clear()
@@ -158,6 +168,22 @@ class MainViewModel(
         onServerUrlChanged = { url -> session.changeServer(url) },
         onPageSizeChanged = { size -> changePageSize(size) },
         onCacheSizeChanged = { size -> listOf(customers.cache, tickets.cache, inventory.cache, users.cache).forEach { it.resize(size) } }
+    )
+
+    /** ----------------------------------------------LOCATIONS------------------------------------------------------------------- */
+
+    /** Where this device works, which every list, the counter and new work keep to */
+    val locations: LocationsHandler = LocationsHandler(
+        remoteHandler = remoteHandler,
+        localStorage = localStorage,
+        scope = viewModelScope,
+        snackBarHost = snackBarHost,
+        onChanged = {
+            refreshPagers()
+            counter.locationChanged()
+            purchasing.refresh()
+            appointments.refresh()
+        }
     )
 
     /** ----------------------------------------------COUNTER------------------------------------------------------------------- */

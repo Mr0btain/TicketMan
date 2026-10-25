@@ -49,7 +49,8 @@ class InvoiceDocuments(
         val customerIdentifier = invoice.customerIdentifier ?: ticket?.let { tickets.getCustomer(it.identifier) }?.identifier
         val customer = customerIdentifier?.let { customers.getById(it) }
 
-        val document = PrintTemplates.invoice(shop.get(), ticket, customer, invoice)
+        // With the address and contacts of the location it was made at
+        val document = PrintTemplates.invoice(shop.at(invoice.locationIdentifier), ticket, customer, invoice)
         return InvoicePdf(fileName = "${invoice.label}.pdf", document = document)
     }
 
@@ -86,11 +87,11 @@ class InvoiceDocuments(
      * Invoices made from [from] to [to], both days included, in the shop's time zone
      * @return Null when the read failed
      */
-    fun inRange(from: LocalDate, to: LocalDate): List<Invoice>? {
+    fun inRange(from: LocalDate, to: LocalDate, location: Uuid? = null): List<Invoice>? {
         val start = from.atStartOfDay(zone()).toInstant().toEpochMilli()
         val end = to.plusDays(1).atStartOfDay(zone()).toInstant().toEpochMilli()
 
-        return invoices.getCreatedBetween(start, end)
+        return invoices.getCreatedBetween(start, end, location)
     }
 
     /**

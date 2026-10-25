@@ -120,6 +120,8 @@ class AdminHandler(
                     }
 
                     AdminTab.USERS, AdminTab.INVOICES -> Unit
+                    // For the tax classes a location can charge its own rates for
+                    AdminTab.LOCATIONS -> server.reloadShopProfile()
                     AdminTab.SESSIONS -> devices.reloadSessions()
                     AdminTab.STATIONS -> devices.reloadStations()
                     AdminTab.LOW_STOCK -> loadLowStock()
@@ -167,7 +169,7 @@ class AdminHandler(
                 AdminTab.TIMESHEETS -> timesheets.load()
                 AdminTab.REPORTS -> reports.reloadReport()
                 AdminTab.AUDIT -> addNewAudit()
-                AdminTab.USERS, AdminTab.INVOICES -> Unit
+                AdminTab.USERS, AdminTab.INVOICES, AdminTab.LOCATIONS -> Unit
             }
         }
     }

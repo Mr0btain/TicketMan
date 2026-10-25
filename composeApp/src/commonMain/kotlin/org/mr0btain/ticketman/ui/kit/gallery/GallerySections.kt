@@ -67,6 +67,10 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
+import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocations
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocationBadge
+import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
@@ -477,8 +481,17 @@ private fun BadgesSection() {
         Specimen("Priority") { TicketPriorityType.entries.forEach { TmPriorityBadge(it) } }
         Specimen("Access level") { AccessLevel.entries.forEach { TmAccessBadge(it) } }
         Specimen("Account") { UserStatus.entries.forEach { TmUserStatusBadge(it) } }
+        Specimen("Location, with more than one") {
+            CompositionLocalProvider(LocalLocations provides sampleLocations) {
+                sampleLocations.all.forEach { TmLocationBadge(it.identifier, always = true) }
+            }
+        }
     }
 }
+
+private val sampleLocations = TmLocations(
+    all = listOf(Location(name = "Main Street", main = true), Location(code = "DT", name = "Downtown"), Location(code = "NS", name = "Northside"))
+)
 
 // --------------------------------------- Lists ---------------------------------------
 

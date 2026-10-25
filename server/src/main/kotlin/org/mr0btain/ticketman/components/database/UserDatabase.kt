@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.components.database
 
+import org.mr0btain.ticketman.components.database.tables.location.LocationTable
+import org.jetbrains.exposed.v1.jdbc.select
+import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.dao.id.EntityID
 import org.jetbrains.exposed.v1.core.Column
 import org.jetbrains.exposed.v1.core.SortOrder
@@ -79,10 +83,10 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
                 ?.toUser()
         }
 
+    /** By name, only those whose home is the page's location when it names one (no home counts as the main one) */
     override fun getPagedItems(request: PagedRequest): List<User>? =
         dbQuery(GET_PAGED_ITEMS_TAG) {
-            UserEntity
-                .all()
+            (request.location?.let { location -> UserEntity.find { homeAt(location) } } ?: UserEntity.all())
                 .orderBy(UserTable.name to SortOrder.ASC, UserTable.id to SortOrder.ASC)
                 .offset(request.offset)
                 .limit(request.itemsPerPage)
@@ -188,7 +192,14 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             access = data.accessLevel
             status = data.status.name
             needsSetup = data.needsSetup
+            homeLocation = data.homeLocation
         }
+    }
+
+    // Users whose home is [location], those with none counting as the main location's. Inside a transaction
+    private fun homeAt(location: Uuid): Op<Boolean> {
+        val main = LocationTable.select(LocationTable.main).where { LocationTable.id eq location }.firstOrNull()?.get(LocationTable.main) == true
+        return if (main) (UserTable.homeLocation eq location) or UserTable.homeLocation.isNull() else UserTable.homeLocation eq location
     }
 
     override fun update(data: User): Boolean =
@@ -201,6 +212,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
             phone = data.phone
             access = data.accessLevel
             status = data.status.name
+            homeLocation = data.homeLocation
         }
 
     /**

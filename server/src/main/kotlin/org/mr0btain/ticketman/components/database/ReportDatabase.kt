@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
@@ -50,13 +51,14 @@ class ReportDatabase(private val invoices: InvoiceDatabase) {
     private val COMMISSIONS_TAG = "$TAG:Commissions"
 
     /**
-     * How the shop did from [from] to [to], both included, with days in [zone]. Null when a read failed
+     * How the shop did from [from] to [to], both included, with days in [zone], at [location] or every location for
+     * null. Null when a read failed
      */
-    fun period(from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault()): PeriodReport? {
+    fun period(from: LocalDate, to: LocalDate, zone: ZoneId = ZoneId.systemDefault(), location: Uuid? = null): PeriodReport? {
         val start = from.atStartOfDay(zone).toInstant().toEpochMilli()
         val end = to.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
-        val paid = invoices.getPaidBetween(start, end) ?: return null
+        val paid = invoices.getPaidBetween(start, end, location) ?: return null
         val costs = invoices.costs(paid.map { it.identifier }) ?: return null
 
         return dbQuery(PERIOD_TAG) {
@@ -89,9 +91,12 @@ class ReportDatabase(private val invoices: InvoiceDatabase) {
                 .filter { it.taxCents != 0L || it.taxableCents != 0L }
 
             // ---------------------------------- Money taken ----------------------------------
-            val payments = InvoicePaymentTable
+            val payments = (InvoicePaymentTable innerJoin InvoiceTable)
                 .selectAll()
-                .where { (InvoicePaymentTable.receivedAt greaterEq start) and (InvoicePaymentTable.receivedAt less end) }
+                .where {
+                    (InvoicePaymentTable.receivedAt greaterEq start) and (InvoicePaymentTable.receivedAt less end) and
+                        InvoiceTable.location.at(location)
+                }
                 .toList()
 
             val takenByMethod = payments
@@ -101,9 +106,9 @@ class ReportDatabase(private val invoices: InvoiceDatabase) {
             val refundRows = payments.filter { it[InvoicePaymentTable.amountCents] < 0 }
             val labels = refundRows.map { it[InvoicePaymentTable.invoice].value }.distinct().let { ids ->
                 if (ids.isEmpty()) emptyMap() else InvoiceTable
-                    .select(InvoiceTable.id, InvoiceTable.numberYear, InvoiceTable.numberSequence)
+                    .select(InvoiceTable.id, InvoiceTable.numberYear, InvoiceTable.numberSequence, InvoiceTable.numberPrefix)
                     .where { InvoiceTable.id inList ids }
-                    .associate { it[InvoiceTable.id].value to InvoiceNumber(it[InvoiceTable.numberYear], it[InvoiceTable.numberSequence]).toString() }
+                    .associate { it[InvoiceTable.id].value to InvoiceNumber(it[InvoiceTable.numberYear], it[InvoiceTable.numberSequence], it[InvoiceTable.numberPrefix]).toString() }
             }
             val refunds = RefundSummary(
                 count = refundRows.size,
@@ -158,7 +163,10 @@ class ReportDatabase(private val invoices: InvoiceDatabase) {
             // ---------------------------------- Turnaround ----------------------------------
             val pickedUp = TicketTable
                 .select(TicketTable.id, TicketTable.pickedUpAt)
-                .where { (TicketTable.pickedUpAt greaterEq start) and (TicketTable.pickedUpAt less end) }
+                .where {
+                    (TicketTable.pickedUpAt greaterEq start) and (TicketTable.pickedUpAt less end) and
+                        TicketTable.location.at(location)
+                }
                 .associate { it[TicketTable.id].value to it[TicketTable.pickedUpAt]!! }
 
             val firstReady = if (pickedUp.isEmpty()) emptyMap() else pickedUp.keys.chunked(CHUNK).flatMap { chunk ->

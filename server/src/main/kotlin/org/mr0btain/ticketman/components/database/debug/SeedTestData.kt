@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.database.debug
 
+import kotlin.uuid.ExperimentalUuidApi
+import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.AccountResult
 import org.mr0btain.ticketman.components.service.InvoiceService
@@ -41,11 +43,16 @@ fun seedTestData(database: LocalDatabase, request: SeedRequest) {
         if (database.userDatabase.getByUsername(staff.username) == null) database.userDatabase.add(staff)
     }
 
+    // A second location, so the demo shows each keeping its own: a quarter of the tickets are there
+    val main = database.locationDatabase.main()
+    val downtown = database.locationDatabase.all().firstOrNull { it.code == DEMO_LOCATION.code }
+        ?: DEMO_LOCATION.takeIf { database.locationDatabase.add(it) }
     val ticketIdentifiers = mutableListOf<Uuid>()
 
-    repeat(request.tickets) {
+    repeat(request.tickets) { index ->
         // Generate random ticket
-        val (ticket, notes) = generateRandomTicket()
+        val (generated, notes) = generateRandomTicket()
+        val ticket = generated.copy(locationIdentifier = if (downtown != null && index % 4 == 3) downtown.identifier else main.identifier)
 
         // Add ticket to database
         database.ticketDatabase.add(ticket)
@@ -165,6 +172,9 @@ private fun seedInvoices(database: LocalDatabase, tickets: List<Uuid>, parts: Li
 }
 
 private val LABOR = listOf("Diagnosis", "Screen replacement", "Battery swap", "Board repair", "Data recovery", "Cleaning")
+
+@OptIn(ExperimentalUuidApi::class)
+private val DEMO_LOCATION = Location(code = "DT", name = "Downtown", street = "200 Market St", phone = "(555) 010-0200")
 
 private val DEMO_SHOP = ShopProfile(
     name = "Bench Repair (test data)",
