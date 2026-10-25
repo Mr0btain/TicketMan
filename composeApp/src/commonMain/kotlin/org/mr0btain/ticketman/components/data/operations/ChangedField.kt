@@ -36,5 +36,6 @@ enum class ChangedField {
     PROMISED,
     CUSTOMER_VISIBLE,
     NOTIFY_EMAIL,
-    NOTIFY_SMS
+    NOTIFY_SMS,
+    TAX_CLASS
 }

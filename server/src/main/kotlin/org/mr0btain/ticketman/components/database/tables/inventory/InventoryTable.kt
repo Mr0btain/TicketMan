@@ -12,4 +12,7 @@ object InventoryTable : UuidTable("inventory") {
 
     val costCents = long("cost_cents").default(0)
     val priceCents = long("price_cents").default(0)
+
+    // Added with tax classes: the shop's class it's sold at, null for the main rate
+    val taxClass = text("tax_class").nullable()
 }

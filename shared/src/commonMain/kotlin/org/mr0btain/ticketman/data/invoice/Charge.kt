@@ -13,6 +13,7 @@ import kotlin.uuid.Uuid
  * @param inventoryIdentifier The inventory item for parts, its stock is taken when the invoice is paid
  * @param reference A gift card's code for [ChargeType.GIFT_CARD], blank until the server gives a new card one when
  * the invoice is paid
+ * @param taxClass The shop's [TaxClass] it's taxed at, null for the shop's main rate. Only counts when [taxable]
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -24,7 +25,8 @@ data class Charge(
     val unitPriceCents: Long = 0,
     val inventoryIdentifier: Uuid? = null,
     val taxable: Boolean = true,
-    val reference: String = ""
+    val reference: String = "",
+    val taxClass: String? = null
 ): SubItem {
     /** Quantity times price, rounded to the cent */
     val totalCents: Long

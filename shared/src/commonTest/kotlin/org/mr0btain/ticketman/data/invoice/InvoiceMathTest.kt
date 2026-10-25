@@ -16,7 +16,13 @@ class InvoiceMathTest {
     fun taxIsOnlyOnTaxableLines() {
         val totals = InvoiceMath.totals(listOf(screen, labor), discountCents = 0, taxRateBasisPoints = 825)
 
-        assertEquals(InvoiceMath.Totals(subtotalCents = 21_000, discountCents = 0, taxCents = 990, totalCents = 21_990), totals)
+        assertEquals(
+            InvoiceMath.Totals(
+                subtotalCents = 21_000, discountCents = 0, taxCents = 990, totalCents = 21_990,
+                taxLines = listOf(TaxLine("Tax", 825, taxableCents = 12_000, taxCents = 990))
+            ),
+            totals
+        )
     }
 
     @Test
@@ -43,6 +49,15 @@ class InvoiceMathTest {
         val all = InvoiceMath.totals(listOf(screen), discountCents = 50_000, taxRateBasisPoints = 825)
         assertEquals(12_000, all.discountCents)
         assertEquals(0, all.totalCents)
+    }
+
+    @Test
+    fun aClassTaxesItsLinesAtItsOwnRate() {
+        val food = Charge(description = "Snack", unitPriceCents = 1_000, taxClass = "food")
+        val totals = InvoiceMath.totals(listOf(screen, food), discountCents = 0, taxRateBasisPoints = 825, taxRates = listOf(TaxRate("food", "Food", 200)))
+
+        assertEquals(listOf("Tax, 8.25%", "Food, 2.0%"), totals.taxLines.map { it.label })
+        assertEquals(990 + 20, totals.taxCents)
     }
 
     @Test

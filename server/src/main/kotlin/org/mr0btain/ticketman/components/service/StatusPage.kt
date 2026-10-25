@@ -135,7 +135,11 @@ object StatusPage {
                 val quantity = if (line.quantity == 1.0) "" else "${formatQuantity(line.quantity)} x "
                 append("""<div><dt>${(quantity + line.description).esc()}</dt><dd class="num">${money(line.totalCents).esc()}</dd></div>""")
             }
-            if (totals.taxCents > 0) append("""<div><dt>Tax</dt><dd class="num">${money(totals.taxCents).esc()}</dd></div>""")
+            // One row per rate when the shop has more than one, named after its class
+            totals.taxLines.filter { it.taxCents > 0 }.forEach { tax ->
+                val name = if (totals.taxLines.size > 1) tax.name else "Tax"
+                append("""<div><dt>${name.esc()}</dt><dd class="num">${money(tax.taxCents).esc()}</dd></div>""")
+            }
             append("""<div class="strong"><dt>Total</dt><dd class="num">${money(totals.totalCents).esc()}</dd></div></dl>""")
 
             if (view.problem != null) append("""<p class="problem" role="alert">${view.problem.esc()}</p>""")

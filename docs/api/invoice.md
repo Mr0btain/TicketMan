@@ -5,8 +5,9 @@ One invoice per ticket, plus counter sales, which have no ticket (`ticketIdentif
 [`POST /api/counter/sale`](counter.md#post-apicountersale)). Anyone logged in can look; Normal access changes an open invoice; only admins void, and
 delete one kept after its ticket was deleted. An invoice with money taken against it, or a void one, outlives its
 ticket: `ticketLabel` keeps the ticket's number and `ticketRemovedAt` says when it went.
-Totals are always worked out by the server with `InvoiceMath` and the shop's tax rate, so a client never sends
-them. Paying an invoice off and closing the ticket is [`POST /api/counter/pickup`](counter.md#post-apicounterpickup).
+Totals are always worked out by the server with `InvoiceMath`, the tax rate the invoice was made with and its
+`taxRates` (the shop's [tax classes](shop.md#post-apishopupdate) then), so a client never sends them. A line's
+`taxClass` picks one of those; a class the shop doesn't have is a `400`. Paying an invoice off and closing the ticket is [`POST /api/counter/pickup`](counter.md#post-apicounterpickup).
 See [Counter: check-in, invoices and pickup](../server/counter.md#invoices) for the rules.
 
 All the changing routes run under `InvoiceService`'s lock, one change at a time.

@@ -61,7 +61,7 @@ class InvoiceDatabase(
     /**
      * The ticket's invoice, made empty and OPEN if it doesn't have one yet
      */
-    fun getOrCreate(ticketIdentifier: Uuid, customerIdentifier: Uuid?, taxRateBasisPoints: Int): Invoice? =
+    fun getOrCreate(ticketIdentifier: Uuid, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate> = emptyList()): Invoice? =
         // Numbers are handed out one at a time like ticket numbers
         synchronized(NUMBER_LOCK) {
             dbQuery(CREATE_TAG) {
@@ -69,18 +69,18 @@ class InvoiceDatabase(
                     return@dbQuery it.toInvoice()
                 }
 
-                insert(ticketIdentifier, customerIdentifier, taxRateBasisPoints)
+                insert(ticketIdentifier, customerIdentifier, taxRateBasisPoints, taxRates)
             }
         }
 
     /** A new empty OPEN invoice with no ticket, for a counter sale. Called inside the sale's transaction */
-    fun createSale(customerIdentifier: Uuid?, taxRateBasisPoints: Int): Invoice? =
+    fun createSale(customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>): Invoice? =
         synchronized(NUMBER_LOCK) {
-            dbQuery(CREATE_TAG) { insert(null, customerIdentifier, taxRateBasisPoints) }
+            dbQuery(CREATE_TAG) { insert(null, customerIdentifier, taxRateBasisPoints, taxRates) }
         }
 
     // Must be called inside a transaction, holding the numbering lock
-    private fun insert(ticketIdentifier: Uuid?, customerIdentifier: Uuid?, taxRateBasisPoints: Int): Invoice {
+    private fun insert(ticketIdentifier: Uuid?, customerIdentifier: Uuid?, taxRateBasisPoints: Int, taxRates: List<TaxRate>): Invoice {
         val year = currentYear()
         val max = InvoiceTable.numberSequence.max()
         val sequence = (InvoiceTable.select(max).where { InvoiceTable.numberYear eq year }.singleOrNull()?.get(max) ?: 0L) + 1
@@ -94,15 +94,21 @@ class InvoiceDatabase(
             row[InvoiceTable.customer] = customerIdentifier?.toString()
             row[InvoiceTable.status] = InvoiceStatus.OPEN.name
             row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
+            row[InvoiceTable.taxRates] = taxRates
             row[InvoiceTable.createdAt] = Clock.System.now().toEpochMilliseconds()
         }
 
         return InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.single().toInvoice()
     }
 
-    /** Replaces the charges and discount and saves the worked out totals */
-    fun setCharges(identifier: Uuid, charges: List<Charge>, discountCents: Long, taxRateBasisPoints: Int): Invoice? =
+    /**
+     * Replaces the charges and discount and saves the worked out totals
+     * @param taxRates The tax classes to keep on it, null for the ones it has
+     */
+    fun setCharges(identifier: Uuid, charges: List<Charge>, discountCents: Long, taxRateBasisPoints: Int, taxRates: List<TaxRate>? = null): Invoice? =
         dbQuery(SET_CHARGES_TAG) {
+            val rates = taxRates ?: InvoiceTable.select(InvoiceTable.taxRates).where { InvoiceTable.id eq identifier }.singleOrNull()?.get(InvoiceTable.taxRates).orEmpty()
+
             InvoiceChargeTable.deleteWhere { InvoiceChargeTable.invoice eq identifier }
 
             charges.forEachIndexed { index, charge ->
@@ -117,14 +123,16 @@ class InvoiceDatabase(
                     row[InvoiceChargeTable.inventory] = charge.inventoryIdentifier?.toString()
                     row[InvoiceChargeTable.taxable] = charge.taxable
                     row[InvoiceChargeTable.reference] = charge.reference
+                    row[InvoiceChargeTable.taxClass] = charge.taxClass
                 }
             }
 
-            val totals = InvoiceMath.totals(charges, discountCents, taxRateBasisPoints)
+            val totals = InvoiceMath.totals(charges, discountCents, taxRateBasisPoints, rates)
 
             InvoiceTable.update(where = { InvoiceTable.id eq identifier }) { row ->
                 row[InvoiceTable.discountCents] = totals.discountCents
                 row[InvoiceTable.taxRateBasisPoints] = taxRateBasisPoints
+                row[InvoiceTable.taxRates] = rates
                 row[subtotalCents] = totals.subtotalCents
                 row[taxCents] = totals.taxCents
                 row[totalCents] = totals.totalCents
@@ -222,7 +230,8 @@ class InvoiceDatabase(
                     unitPriceCents = row[InvoiceChargeTable.unitPriceCents],
                     inventoryIdentifier = row[InvoiceChargeTable.inventory]?.let { Uuid.parse(it) },
                     taxable = row[InvoiceChargeTable.taxable],
-                    reference = row[InvoiceChargeTable.reference]
+                    reference = row[InvoiceChargeTable.reference],
+                    taxClass = row[InvoiceChargeTable.taxClass]
                 )
             }
 
@@ -253,6 +262,7 @@ class InvoiceDatabase(
             payments = payments,
             discountCents = this[InvoiceTable.discountCents],
             taxRateBasisPoints = this[InvoiceTable.taxRateBasisPoints],
+            taxRates = this[InvoiceTable.taxRates],
             subtotalCents = this[InvoiceTable.subtotalCents],
             taxCents = this[InvoiceTable.taxCents],
             totalCents = this[InvoiceTable.totalCents],

@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.min
 import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.*
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -64,7 +65,8 @@ fun PickupScreen(
     val problem = chargesProblem(drafts)
 
     // Preview with the same math the server uses
-    val totals = InvoiceMath.totals(validCharges, discountCents, invoice.taxRateBasisPoints)
+    // The rates the invoice kept, and the shop's for classes it hasn't used yet, like the server does
+    val totals = InvoiceMath.totals(validCharges, discountCents, invoice.taxRateBasisPoints, TaxClasses.merged(invoice.taxRates, LocalTaxes.current.classes))
     val unsaved = problem == null && (validCharges != invoice.charges || discountCents != invoice.discountCents)
 
     Column(

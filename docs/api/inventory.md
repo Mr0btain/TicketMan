@@ -6,7 +6,8 @@ than the other fields: `/update` leaves it alone, it's changed by hand only thro
 by pickups and voids (see [Stock counts](../server/counter.md#stock-counts)). An item's notes are on the
 [Notes](notes.md#inventory) page.
 
-A `stock` of `Int.MAX_VALUE` (2147483647) means the item's stock isn't tracked.
+A `stock` of `Int.MAX_VALUE` (2147483647) means the item's stock isn't tracked. `taxClass` is the shop's
+[tax class](shop.md#post-apishopupdate) it's sold at, null for the main rate; parts added from it start with it.
 
 ## Reading
 

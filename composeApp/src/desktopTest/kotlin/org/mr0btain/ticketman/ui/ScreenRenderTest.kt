@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.ImageComposeScene
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Density
@@ -35,6 +36,10 @@ import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.InvoiceNumber
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
+import org.mr0btain.ticketman.data.invoice.TaxClass
+import org.mr0btain.ticketman.data.invoice.TaxRate
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
+import org.mr0btain.ticketman.ui.kit.data.TmTaxes
 import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
 import org.mr0btain.ticketman.data.shared.EntityReference
@@ -376,6 +381,24 @@ class ScreenRenderTest {
         )
     }
 
+    /** A shop with a second tax rate: each line picks one and the totals show both */
+    @Test
+    fun pickupTaxClasses() = bothModes("pickup-tax-classes") {
+        CompositionLocalProvider(LocalTaxes provides TmTaxes(625, listOf(TaxRate("food", "Food", 200)))) {
+            Shell("Counter") {
+                PickupScreen(
+                    detail = detail.copy(invoice = invoice.copy(charges = invoice.charges + Charge(description = "Snack bar", unitPriceCents = 350, taxClass = "food"))),
+                    onSearchParts = { emptyList() },
+                    onSave = { _, _, _ -> },
+                    onRemovePayment = {},
+                    onLookupGiftCard = { null },
+                    onFinish = { _, _, _, _ -> },
+                    onBack = {}
+                )
+            }
+        }
+    }
+
     @Test
     fun sale() = bothModes("counter-sale") { Shell("Counter") { Sale() } }
 
@@ -562,6 +585,7 @@ class ScreenRenderTest {
                     serverUrl = "https://192.168.1.20:8443",
                     shopProfile = ShopProfile(
                         name = "Fix It Shop", phone = "555-0100", publicUrl = "https://repairs.example.com", taxRate = "8.25",
+                        taxClasses = listOf(TaxClass("food", "Food", "2"), TaxClass("svc", "Services", "")),
                         statuses = listOf(
                             CustomStatus(name = "Diagnosing", actsAs = TicketStatusType.IN_PROGRESS, tone = StatusTone.ACCENT),
                             CustomStatus(name = "Awaiting parts", actsAs = TicketStatusType.ON_HOLD),

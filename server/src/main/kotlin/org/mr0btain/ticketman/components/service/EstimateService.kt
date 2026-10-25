@@ -58,10 +58,14 @@ class EstimateService(
         if (request.note.length > MAX_NOTE) return AccountResult.Invalid("The note can be up to $MAX_NOTE characters")
 
         val profile = shop.get()
+        request.lines.firstOrNull { line -> line.taxable && line.taxClass != null && profile.taxRates.none { it.identifier == line.taxClass } }?.let { line ->
+            return AccountResult.Invalid("\"${line.description}\" has a tax class the shop doesn't have any more, pick another")
+        }
         val estimate = Estimate(
             ticketIdentifier = ticketIdentifier,
             lines = request.lines.map { it.copy(description = it.description.trim()) },
-            taxRateBasisPoints = Money.percentToBasisPoints(profile.taxRate) ?: 0,
+            taxRateBasisPoints = profile.taxBasisPoints,
+            taxRates = profile.taxRates,
             note = request.note.trim(),
             createdAt = now(),
             createdBy = staffName

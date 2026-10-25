@@ -30,6 +30,9 @@ class InventorySeed: DataSeed("InventorySeed") {
         private set
     var price: Double by mutableStateOf(0.0)
         private set
+    /** The shop's tax class it's sold at, null for the main rate */
+    var taxClass: String? by mutableStateOf(null)
+        private set
 
     val inventory: Inventory get() = Inventory(
         identifier = identifier,
@@ -37,7 +40,8 @@ class InventorySeed: DataSeed("InventorySeed") {
         description = description,
         stock = stock,
         costCents = Money.fromDollars(cost),
-        priceCents = Money.fromDollars(price)
+        priceCents = Money.fromDollars(price),
+        taxClass = taxClass
     )
 
     // --- Initial setting up with data ---
@@ -53,6 +57,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         loadedStock = data.stock
         cost = Money.toDollars(data.costCents)
         price = Money.toDollars(data.priceCents)
+        taxClass = data.taxClass
 
         setNotes(notes)
         setImages(images)
@@ -88,12 +93,17 @@ class InventorySeed: DataSeed("InventorySeed") {
         cost = newCost
     }
 
+    fun changeTaxClass(newClass: String?) {
+        taxClass = newClass
+    }
+
     override fun fields() = mapOf(
         ChangedField.NAME to name,
         ChangedField.DESCRIPTION to description,
         ChangedField.STOCK to stock,
         ChangedField.PRICE to price,
-        ChangedField.COST to cost
+        ChangedField.COST to cost,
+        ChangedField.TAX_CLASS to taxClass
     )
 
     // Reset all fields
@@ -105,6 +115,7 @@ class InventorySeed: DataSeed("InventorySeed") {
         loadedStock = 0
         cost = 0.0
         price = 0.0
+        taxClass = null
         _notes.clear()
         _images.clear()
         isNew = true

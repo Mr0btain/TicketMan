@@ -110,8 +110,7 @@ class CheckInService(
             request.technicianIdentifier?.let { tickets.setUser(ticket.identifier, it) }
 
             request.deposit?.let { deposit ->
-                val taxRate = Money.percentToBasisPoints(shopProfile.taxRate) ?: 0
-                invoices.getOrCreate(ticket.identifier, request.customerIdentifier, taxRate)?.let { invoice ->
+                invoices.getOrCreate(ticket.identifier, request.customerIdentifier, shopProfile.taxBasisPoints, shopProfile.taxRates)?.let { invoice ->
                     val payment = storedValue.normalized(
                         Payment(
                             method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,

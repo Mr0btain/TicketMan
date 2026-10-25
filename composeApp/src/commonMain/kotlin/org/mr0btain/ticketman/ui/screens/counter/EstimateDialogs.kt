@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.data.invoice.InvoiceMath
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
@@ -46,7 +47,7 @@ fun EstimateDialog(
 
     val problem = if (drafts.isEmpty()) "Add at least one line" else chargesProblem(drafts)
     val lines = drafts.mapNotNull { it.toCharge() }
-    val totals = InvoiceMath.totals(lines, 0, taxRateBasisPoints)
+    val totals = InvoiceMath.totals(lines, 0, taxRateBasisPoints, LocalTaxes.current.classes)
 
     TmDialog(
         title = "New estimate",
@@ -71,7 +72,7 @@ fun EstimateDialog(
         }
 
         Column {
-            if (totals.taxCents > 0) TmKeyValueRow(label = "Tax, ${taxRateBasisPoints / 100.0}%") { TmMoneyText(totals.taxCents) }
+            totals.taxLines.filter { it.taxCents > 0 }.forEach { tax -> TmKeyValueRow(label = tax.label) { TmMoneyText(tax.taxCents) } }
             TmKeyValueRow(label = "Total") { TmMoneyText(totals.totalCents, style = TmTheme.typography.numericLarge) }
         }
 

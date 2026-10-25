@@ -9,6 +9,7 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.invoice.TaxClasses
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.CustomStatusRules
@@ -56,6 +57,11 @@ fun Route.shopRoute(
                 return@post
             }
 
+            TaxClasses.problem(profile.taxClasses)?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
             // Statuses left out are kept as retired, since tickets may still be in them
             val previous = database.get().statuses
             val statuses = CustomStatusRules.keepingRemoved(previous, profile.statuses)
@@ -73,7 +79,12 @@ fun Route.shopRoute(
                     return@post
                 }
 
-            val saved = profile.copy(currencySymbol = symbol, publicUrl = profile.publicUrl.trim().trimEnd('/'), statuses = statuses)
+            val saved = profile.copy(
+                currencySymbol = symbol,
+                publicUrl = profile.publicUrl.trim().trimEnd('/'),
+                statuses = statuses,
+                taxClasses = profile.taxClasses.map { it.copy(name = it.name.trim(), rate = it.rate.trim()) }
+            )
             if (database.update(saved)) {
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "shop", details = "Updated shop profile")
                 call.respond(HttpStatusCode.Accepted)

@@ -34,8 +34,8 @@ messages and audit entries.
 
 ## `InvoiceMath`
 
-[`InvoiceMath.totals(charges, discountCents, taxRateBasisPoints)`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/data/invoice/InvoiceMath.kt)
-returns a `Totals(subtotalCents, discountCents, taxCents, totalCents)`:
+[`InvoiceMath.totals(charges, discountCents, taxRateBasisPoints, taxRates)`](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/data/invoice/InvoiceMath.kt)
+returns a `Totals(subtotalCents, discountCents, taxCents, totalCents, taxLines)`:
 
 1. **Each line** is `quantity × unitPriceCents`, rounded to the cent (`Charge.totalCents`). Quantity is a `Double`
    with up to two decimals, so it can be 1.5 hours of labor.
@@ -44,6 +44,20 @@ returns a `Totals(subtotalCents, discountCents, taxCents, totalCents)`:
 4. **Tax** is charged only on taxable lines, and the discount comes off those first:
    `tax = applyRate(max(taxable − discount, 0), rate)`.
 5. **Total** is `subtotal − discount + tax`.
+
+### More than one rate
+
+A shop can have tax classes besides its main rate (`ShopProfile.taxClasses`, see [Tax.kt](../../shared/src/commonMain/kotlin/org/mr0btain/ticketman/data/invoice/Tax.kt)).
+A taxable line with a `taxClass` found in `taxRates` is taxed at that class's rate, any other taxable line at the
+main rate. Lines are grouped by rate, the main one first then the classes in the shop's order, and each group is a
+`TaxLine(name, basisPoints, taxableCents, taxCents)`. The discount is shared between the groups by how much each is
+charged on (the last group takes what rounding leaves, so the shares add up), and each group's tax is
+`applyRate(max(group − share, 0), rate)`. With one rate this is exactly the sum above.
+
+An invoice keeps its classes as `Invoice.taxRates` (`TaxRate`), copied from the shop when it's made. A line that
+uses a class made since adds that class, at its rate then (`TaxClasses.merged`, done the same way by the server and
+the pickup preview). A line naming a class the shop doesn't have is refused. Inventory items carry a `taxClass`,
+which parts from them start with; one the shop has since removed is charged at the main rate.
 
 For example, with 8.25% tax on parts only: a $120.00 part (taxable) plus half an hour of labor at $60.00 (not
 taxable) is a subtotal of $150.00, tax of $9.90 on the part, and a total of $159.90.
@@ -55,7 +69,9 @@ expect.
 
 - **Server**: `InvoiceDatabase.setCharges()` runs it every time an invoice's charges or discount change, and saves
   the totals on the invoice. The server's numbers are the real ones.
-- **Client**: the pickup screen runs it on the charges being edited to preview the totals before they're saved.
+- **Client**: the pickup, sale and estimate screens run it on the lines being edited to preview the totals before
+  they're saved, with the shop's classes from the kit's `LocalTaxes`. When the shop has classes, each line's tax
+  tick becomes a choice of rate.
 
 ## Payments and balance
 
@@ -69,7 +85,7 @@ is due. At pickup the payments have to cover the balance; the server refuses a s
   amounts around in code. Keep them as `Long` cents.
 - **Older inventory prices were text.** `InventoryDatabase.migrateLegacyPrices()` converts them to cents with
   `Money.parse` on start.
-- **An invoice keeps the tax rate it was made with.** The rate is read from the shop profile once, when the invoice
+- **An invoice keeps the tax rates it was made with**, its classes' included. The rate is read from the shop profile once, when the invoice
   is made (at check-in, or the first time it's opened), and stored on it. Changing the shop's tax rate only affects
   invoices made after that. See [decisions](../decisions.md#invoices-keep-the-tax-rate-they-were-made-with).
 - **The symbol always goes first**, with a dot before the cents. Shops that write `12,34 €` get `€12.34`.

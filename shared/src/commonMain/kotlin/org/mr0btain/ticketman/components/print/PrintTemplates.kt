@@ -111,6 +111,12 @@ object PrintTemplates {
         return PrintDocument("Invoice ${invoice.label}", shopHeader(shop) + PrintBlock.Divider + PrintBlock.Heading("Invoice") + details + money(shop, invoice))
     }
 
+    // A row for each rate the invoice charged, or one for the main rate when nothing was taxed
+    private fun taxRows(shop: ShopProfile, invoice: Invoice): List<AmountRow> =
+        invoice.totals.taxLines
+            .map { AmountRow("${it.name} (${it.basisPoints / 100.0}%)", Money.format(it.taxCents, shop.currencySymbol)) }
+            .ifEmpty { listOf(AmountRow("Tax (${invoice.taxRateBasisPoints / 100.0}%)", Money.format(invoice.taxCents, shop.currencySymbol))) }
+
     // The charges, totals, payments and the shop's footer, the same on a receipt and an invoice
     private fun money(shop: ShopProfile, invoice: Invoice): List<PrintBlock> {
         val charges = invoice.charges.map { charge ->
@@ -122,7 +128,7 @@ object PrintTemplates {
         val totals = listOfNotNull(
             AmountRow("Subtotal", Money.format(invoice.subtotalCents, shop.currencySymbol)),
             invoice.discountCents.takeIf { it > 0 }?.let { AmountRow("Discount", "-${Money.format(it, shop.currencySymbol)}") },
-            AmountRow("Tax (${invoice.taxRateBasisPoints / 100.0}%)", Money.format(invoice.taxCents, shop.currencySymbol)),
+        ) + taxRows(shop, invoice) + listOfNotNull(
             AmountRow("Total", Money.format(invoice.totalCents, shop.currencySymbol), bold = true)
         )
 

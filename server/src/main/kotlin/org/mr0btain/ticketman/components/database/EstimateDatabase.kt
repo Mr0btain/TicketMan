@@ -50,6 +50,7 @@ class EstimateDatabase {
                 row[ticket] = estimate.ticketIdentifier
                 row[lines] = estimate.lines
                 row[taxRateBasisPoints] = estimate.taxRateBasisPoints
+                row[taxRates] = estimate.taxRates
                 row[note] = estimate.note
                 row[status] = estimate.status.name
                 row[createdAt] = estimate.createdAt
@@ -78,6 +79,7 @@ class EstimateDatabase {
             ticketIdentifier = this[EstimateTable.ticket].value,
             lines = this[EstimateTable.lines],
             taxRateBasisPoints = this[EstimateTable.taxRateBasisPoints],
+            taxRates = this[EstimateTable.taxRates],
             note = this[EstimateTable.note],
             status = EstimateStatus.valueOf(this[EstimateTable.status]),
             createdAt = this[EstimateTable.createdAt],

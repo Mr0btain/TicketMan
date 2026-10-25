@@ -23,7 +23,9 @@ import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.search.TmSearchField
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.gift
@@ -50,10 +52,13 @@ class ChargeDraft(charge: Charge) {
     /** A gift card's code, blank for a new card */
     var reference by mutableStateOf(charge.reference)
 
+    /** The shop's tax class, null for its main rate */
+    var taxClass by mutableStateOf(charge.taxClass)
+
     /** Null while the quantity isn't a number yet */
     fun toCharge(): Charge? {
         val amount = quantity.toDoubleOrNull()?.takeIf { it > 0 } ?: return null
-        return Charge(identifier, type, description.trim(), amount, priceCents, inventoryIdentifier, taxable, reference.trim())
+        return Charge(identifier, type, description.trim(), amount, priceCents, inventoryIdentifier, taxable, reference.trim(), taxClass.takeIf { taxable })
     }
 }
 
@@ -103,7 +108,7 @@ fun ChargeLines(
     }
 
     PartPicker(onSearch = onSearchParts) { part ->
-        drafts.add(ChargeDraft(Charge(type = ChargeType.PART, description = part.name, unitPriceCents = part.priceCents, inventoryIdentifier = part.identifier)))
+        drafts.add(ChargeDraft(Charge(type = ChargeType.PART, description = part.name, unitPriceCents = part.priceCents, inventoryIdentifier = part.identifier, taxClass = part.taxClass)))
     }
 }
 
@@ -217,11 +222,35 @@ private fun RowScope.ChargeNumbers(draft: ChargeDraft, totalModifier: Modifier =
         onCentsChange = { draft.priceCents = it }
     )
 
-    TmCheckbox(checked = draft.taxable, onCheckedChange = { draft.taxable = it }, label = "Tax")
+    TaxPicker(draft)
 
     Box(totalModifier, contentAlignment = Alignment.CenterEnd) {
         if (charge != null) TmMoneyText(charge.totalCents) else Text("", style = TmTheme.typography.numeric)
     }
+}
+
+/** A tick for taxed or not, or a choice of the shop's rates when it has more than one */
+@Composable
+private fun TaxPicker(draft: ChargeDraft) {
+    val taxes = LocalTaxes.current
+
+    if (taxes.classes.isEmpty()) {
+        TmCheckbox(checked = draft.taxable, onCheckedChange = { draft.taxable = it }, label = "Tax")
+        return
+    }
+
+    // None, the main rate, then each class
+    val choices = listOf<Pair<Boolean, String?>>(false to null, true to null) + taxes.classes.map { true to it.identifier }
+    TmDropdown(
+        modifier = Modifier.width(140.dp),
+        options = choices,
+        selected = draft.taxable to draft.taxClass.takeIf { draft.taxable && taxes.classes.any { rate -> rate.identifier == it } },
+        onSelect = { (taxable, taxClass) ->
+            draft.taxable = taxable
+            draft.taxClass = taxClass
+        },
+        optionLabel = { (taxable, taxClass) -> taxes.label(taxable, taxClass) }
+    )
 }
 
 @Composable

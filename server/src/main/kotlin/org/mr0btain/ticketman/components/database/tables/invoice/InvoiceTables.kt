@@ -5,6 +5,7 @@ import org.jetbrains.exposed.v1.core.ReferenceOption
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.json.json
 import org.mr0btain.ticketman.data.invoice.ReturnedPart
+import org.mr0btain.ticketman.data.invoice.TaxRate
 
 /**
  * One invoice per ticket. [ticket] isn't a foreign key, since an invoice with money against it outlives its ticket
@@ -29,6 +30,9 @@ object InvoiceTable : UuidTable("invoices") {
     val ticketLabel = text("ticket_label").default("")
     val ticketRemovedAt = long("ticket_removed_at").nullable()
 
+    // Added with tax classes: the shop's classes when it was made, see Invoice.taxRates
+    val taxRates = json<List<TaxRate>>("tax_rates", Json { ignoreUnknownKeys = true }).default(emptyList())
+
     init {
         uniqueIndex("invoices_number_unique", numberYear, numberSequence)
     }
@@ -47,6 +51,7 @@ object InvoiceChargeTable : UuidTable("invoice_charges") {
 
     // Added with gift cards: the card's code on a GIFT_CARD line
     val reference = text("reference").default("")
+    val taxClass = text("tax_class").nullable()
 }
 
 /** Money taken against an invoice, and refunds as negative amounts */

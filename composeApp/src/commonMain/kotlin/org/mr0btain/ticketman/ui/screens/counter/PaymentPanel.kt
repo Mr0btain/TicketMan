@@ -36,7 +36,7 @@ import ticketman.composeapp.generated.resources.credit_card
 import ticketman.composeapp.generated.resources.x
 
 /**
- * Totals, the payments already on the invoice and the ones being taken now, and the button that finishes. Shared by
+ * Totals with the tax on each rate, the payments already on the invoice and the ones being taken now, and the button that finishes. Shared by
  * pickup and counter sales
  * @param taken Payments already saved on the invoice, like a deposit
  * @param onRemoveTaken Takes one of [taken] off, null when they can't be
@@ -76,7 +76,12 @@ fun PaymentPanel(
         Column {
             TmKeyValueRow(label = "Subtotal") { TmMoneyText(totals.subtotalCents) }
             if (totals.discountCents > 0) TmKeyValueRow(label = "Discount") { TmMoneyText(-totals.discountCents, signed = true) }
-            TmKeyValueRow(label = taxLabel) { TmMoneyText(totals.taxCents) }
+            // One row per rate when there's more than one
+            if (totals.taxLines.size > 1) {
+                totals.taxLines.forEach { tax -> TmKeyValueRow(label = tax.label) { TmMoneyText(tax.taxCents) } }
+            } else {
+                TmKeyValueRow(label = totals.taxLines.singleOrNull()?.label ?: taxLabel) { TmMoneyText(totals.taxCents) }
+            }
             TmKeyValueRow(label = "Total") { TmMoneyText(totals.totalCents, style = TmTheme.typography.numericLarge) }
         }
 

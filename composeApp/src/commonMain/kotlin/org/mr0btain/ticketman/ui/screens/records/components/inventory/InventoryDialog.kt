@@ -20,7 +20,9 @@ import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
 import ticketman.composeapp.generated.resources.Res
@@ -111,6 +113,20 @@ fun InventoryDialog(
             onCheckedChange = { seed.changeTracksStock(it) },
             label = "Track stock"
         )
+
+        // Only when the shop has rates besides its main one
+        val taxes = LocalTaxes.current
+        if (taxes.classes.isNotEmpty()) {
+            TmDropdown(
+                label = "Taxed at",
+                // Blank is the main rate, since the dropdown takes no selection as nothing picked
+                options = listOf("") + taxes.classes.map { it.identifier },
+                selected = seed.taxClass?.takeIf { id -> taxes.classes.any { it.identifier == id } } ?: "",
+                onSelect = { seed.changeTaxClass(it.ifEmpty { null }) },
+                optionLabel = { taxes.label(taxable = true, taxClass = it.ifEmpty { null }) },
+                supportingText = "Parts from inventory start with this on invoices"
+            )
+        }
 
         TmSectionLabel("Photos")
         TmPhotoEditor(

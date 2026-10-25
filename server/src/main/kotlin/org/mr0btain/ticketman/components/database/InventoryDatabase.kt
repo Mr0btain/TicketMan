@@ -109,6 +109,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
             stock = data.stock
             costCents = data.costCents
             priceCents = data.priceCents
+            taxClass = data.taxClass
         }
     }
 
@@ -123,6 +124,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 description = data.description
                 costCents = data.costCents
                 priceCents = data.priceCents
+                taxClass = data.taxClass
             }
 
             true

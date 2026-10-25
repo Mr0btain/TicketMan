@@ -26,13 +26,17 @@ lines are saved. Paid and void invoices keep the rate they had.
   retired }`). Each counts as a built-in status (`actsAs`), which decides where its tickets show; customers see its
   name only when `showCustomer` is on. A status left out of the list is kept with `retired` set, since tickets and
   history may still point at it. `CustomStatusRules` in shared checks them on both sides.
+- **`taxClasses`** are the shop's other tax rates (`TaxClass { identifier, name, rate }`, `rate` a percent as
+  typed), for lines and inventory items taxed differently from `taxRate`. An invoice keeps the classes it was made
+  with in its `taxRates`, and picks up one made later when a line first uses it.
 - **`estimateSentStatus`**, **`estimateApprovedStatus`** and **`estimateDeclinedStatus`** are where sending,
   approving and declining an [estimate](estimate.md) move the ticket, each a `StatusChoice` or null to leave it.
 - **`202`** saved. **`400`** `repeatWindowDays` outside 1 to 3650, `currencySymbol` blank, longer than 4
   characters or holding a digit, a negative `laborRateCents`, a `publicUrl` that isn't an `http(s)://` address, or
   statuses that break the rules: a blank or over 40 character name, two in use with the same name or a built-in
-  one's, one acting as `PICKED_UP`, more than 40, or a saved one whose `actsAs` changed; or an estimate status staff
-  couldn't pick (picked up, retired or unknown).
+  one's, one acting as `PICKED_UP`, more than 40, or a saved one whose `actsAs` changed; an estimate status staff
+  couldn't pick (picked up, retired or unknown); or a tax class with no name, a rate that isn't 0 to 100, or the
+  same identifier twice.
 
 ## See also
 

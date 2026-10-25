@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.data.estimate
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.InvoiceMath
+import org.mr0btain.ticketman.data.invoice.TaxRate
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -50,6 +51,7 @@ data class EstimateDecision(
  * Work the shop proposes on a ticket, for the customer to approve before it's done. Approving puts its lines on the
  * ticket's invoice. A ticket can have several over time, at most one [EstimateStatus.PENDING]
  * @param taxRateBasisPoints The shop's tax rate when it was made, like an invoice's
+ * @param taxRates The shop's tax classes when it was made
  */
 @Serializable
 @OptIn(ExperimentalUuidApi::class)
@@ -58,6 +60,7 @@ data class Estimate(
     val ticketIdentifier: Uuid,
     val lines: List<Charge> = emptyList(),
     val taxRateBasisPoints: Int = 0,
+    val taxRates: List<TaxRate> = emptyList(),
     val note: String = "",
     val status: EstimateStatus = EstimateStatus.PENDING,
     val createdAt: Long = 0,
@@ -65,7 +68,7 @@ data class Estimate(
     val decision: EstimateDecision? = null
 ) {
     val totals: InvoiceMath.Totals
-        get() = InvoiceMath.totals(lines, 0, taxRateBasisPoints)
+        get() = InvoiceMath.totals(lines, 0, taxRateBasisPoints, taxRates)
 
     val totalCents: Long
         get() = totals.totalCents

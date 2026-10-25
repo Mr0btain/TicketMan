@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.search.TmSearchField
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -55,7 +56,7 @@ fun SaleScreen(
 
     val validCharges = drafts.mapNotNull { it.toCharge() }
     val problem = if (drafts.isEmpty()) null else chargesProblem(drafts)
-    val totals = InvoiceMath.totals(validCharges, discountCents, taxRateBasisPoints)
+    val totals = InvoiceMath.totals(validCharges, discountCents, taxRateBasisPoints, LocalTaxes.current.classes)
 
     Column(
         modifier = Modifier

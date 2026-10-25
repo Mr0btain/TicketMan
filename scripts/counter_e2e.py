@@ -395,6 +395,16 @@ _, jane_now = call("GET", f"/api/data/customer/get/{jane}", token=pin, expect=20
 check(jane_now["creditCents"] == 0, f"credit left {jane_now['creditCents']}")
 step(f"A $25 gift card ({code}) sold for cash; $10 spent from it ($30 refused), $15 left; Jane gets $5 store credit and spends it")
 
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+shop["taxClasses"] = [{"identifier": "food", "name": "Food", "rate": "2"}]
+call("POST", "/api/shop/update", shop, admin, expect=202)
+_, mixed = call("POST", "/api/counter/sale", {"charges": [
+    {"type": "OTHER", "description": "Snack bar", "quantity": 1, "unitPriceCents": 1000, "taxClass": "food"},
+    {"type": "OTHER", "description": "Screen wipe", "quantity": 1, "unitPriceCents": 500}
+], "payments": [{"method": "CASH", "amountCents": 2000}]}, pin, expect=201)
+check(mixed["taxCents"] == 20 + 41 and [r["identifier"] for r in mixed["taxRates"]] == ["food"], f"mixed tax {mixed['taxCents']} {mixed['taxRates']}")
+step("A Food tax class at 2%: a $10 snack bar (20c tax) and a $5 wipe at 8.25% (41c) sold together, the invoice keeping the Food rate")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

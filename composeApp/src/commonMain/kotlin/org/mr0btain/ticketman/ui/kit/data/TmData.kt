@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.jetbrains.compose.resources.DrawableResource
 import org.jetbrains.compose.resources.painterResource
+import org.mr0btain.ticketman.data.invoice.TaxRate
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -152,6 +153,22 @@ fun TmCountBar(
  * The shop's currency symbol, put before every amount. Provided from the shop profile in `App`, `$` until it loads
  */
 val LocalCurrencySymbol = staticCompositionLocalOf { Money.DEFAULT_SYMBOL }
+
+/**
+ * The shop's tax rates now: its main rate and its other classes
+ * @param mainBasisPoints The main rate, 825 is 8.25%
+ */
+data class TmTaxes(
+    val mainBasisPoints: Int = 0,
+    val classes: List<TaxRate> = emptyList()
+) {
+    /** What a line is taxed at, by its class */
+    fun label(taxable: Boolean, taxClass: String?): String =
+        if (!taxable) "No tax" else classes.firstOrNull { it.identifier == taxClass }?.let { "${it.name} ${it.basisPoints / 100.0}%" } ?: "Tax ${mainBasisPoints / 100.0}%"
+}
+
+/** The shop's tax rates, provided from the shop profile in `App`, for line editors and previews */
+val LocalTaxes = staticCompositionLocalOf { TmTaxes() }
 
 /** An amount in cents as text, with the shop's currency symbol, for amounts inside a sentence */
 @Composable

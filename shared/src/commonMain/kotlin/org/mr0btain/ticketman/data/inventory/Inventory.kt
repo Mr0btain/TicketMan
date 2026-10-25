@@ -15,5 +15,7 @@ data class Inventory(
     /** What we pay, in cents */
     val costCents: Long = 0,
     /** What we charge, in cents */
-    val priceCents: Long = 0
+    val priceCents: Long = 0,
+    /** The shop's tax class it's sold at, null for the main rate */
+    val taxClass: String? = null
 ): MainItem()

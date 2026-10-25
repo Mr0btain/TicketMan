@@ -1,6 +1,9 @@
 package org.mr0btain.ticketman.data.shop
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.invoice.TaxClass
+import org.mr0btain.ticketman.data.invoice.TaxClasses
+import org.mr0btain.ticketman.data.invoice.TaxRate
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.CustomStatus
 import org.mr0btain.ticketman.data.ticket.StatusChoice
@@ -13,6 +16,7 @@ import org.mr0btain.ticketman.data.ticket.StatusChoice
  * @param estimateSentStatus Where a ticket goes when an estimate is sent, like "Awaiting approval". Null leaves it
  * @param estimateApprovedStatus Where it goes when the customer approves, null leaves it
  * @param estimateDeclinedStatus Where it goes when they decline, null leaves it
+ * @param taxClasses Other rates besides [taxRate], for lines and items that pick one
  */
 @Serializable
 data class ShopProfile(
@@ -40,8 +44,17 @@ data class ShopProfile(
     val statuses: List<CustomStatus> = emptyList(),
     val estimateSentStatus: StatusChoice? = null,
     val estimateApprovedStatus: StatusChoice? = null,
-    val estimateDeclinedStatus: StatusChoice? = null
+    val estimateDeclinedStatus: StatusChoice? = null,
+    val taxClasses: List<TaxClass> = emptyList()
 ) {
+    /** [taxRate] in basis points, 0 when it's blank or not a number */
+    val taxBasisPoints: Int
+        get() = Money.percentToBasisPoints(taxRate) ?: 0
+
+    /** [taxClasses] as rates, leaving out any whose rate isn't a number */
+    val taxRates: List<TaxRate>
+        get() = TaxClasses.rates(taxClasses)
+
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90
 

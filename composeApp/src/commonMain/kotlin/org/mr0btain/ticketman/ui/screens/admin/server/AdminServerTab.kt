@@ -24,6 +24,7 @@ import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.components.network.isSecureServerAddress
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatDuration
+import org.mr0btain.ticketman.data.invoice.TaxClasses
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
@@ -449,7 +450,8 @@ private fun ShopProfileCard(
         actions = {
             TmButton(
                 text = "Save profile",
-                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null && urlProblem == null,
+                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null && urlProblem == null &&
+                    TaxClasses.problem(profile.taxClasses) == null,
                 onClick = { onSave(profile.copy(statuses = shopProfile?.statuses.orEmpty())) }
             )
         }
@@ -509,6 +511,8 @@ private fun ShopProfileCard(
                 )
             }
         )
+
+        TaxClassesEditor(classes = profile.taxClasses, onChange = { profile = profile.copy(taxClasses = it) })
 
         TmFieldPair(
             {

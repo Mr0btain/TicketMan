@@ -154,7 +154,8 @@ class LocalDatabase (
         TicketStatusHistoryTable,
         CustomerTable,
         InvoicePaymentTable,
-        InvoiceChargeTable
+        InvoiceChargeTable,
+        EstimateTable
     )
 
     /**

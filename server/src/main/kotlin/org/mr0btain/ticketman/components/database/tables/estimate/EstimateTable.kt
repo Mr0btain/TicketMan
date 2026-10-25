@@ -7,6 +7,7 @@ import org.jetbrains.exposed.v1.json.json
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.data.estimate.EstimateDecision
 import org.mr0btain.ticketman.data.invoice.Charge
+import org.mr0btain.ticketman.data.invoice.TaxRate
 
 /**
  * Estimates sent to customers, going with their ticket. Lines are kept as sent, since that's what was agreed to
@@ -15,6 +16,7 @@ object EstimateTable : UuidTable("estimates") {
     val ticket = reference("ticket_id", TicketTable, onDelete = ReferenceOption.CASCADE).index()
     val lines = json<List<Charge>>("lines", Json { ignoreUnknownKeys = true })
     val taxRateBasisPoints = integer("tax_rate_bp").default(0)
+    val taxRates = json<List<TaxRate>>("tax_rates", Json { ignoreUnknownKeys = true }).default(emptyList())
     val note = text("note").default("")
     val status = text("status")
     val createdAt = long("created_at")

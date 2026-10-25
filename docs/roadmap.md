@@ -48,13 +48,20 @@ lines go onto the invoice when approved, rather than unapproved lines sitting on
 never see work nobody agreed to. The status page signature is the customer's typed name, since the page has no
 scripts to draw one with. Which statuses an estimate moves the ticket to is the shop's choice in its profile.
 
-## Phase 3: Counter money
+## Phase 3: Counter money (done)
 
 - **Sales without a ticket** [4]. `Invoice.ticketIdentifier` nullable, so the counter sells straight from stock.
 - **Refunds and returns** [5]. A negative payment with a reason, optionally putting parts back in stock, admin only
   (or a new permission), audit logged.
 - **Store credit and gift cards** [16]. A balance on the customer, gift card codes, both taken as payment methods.
 - **Multiple tax rates** [17]. Tax classes on items and charges, kept on the invoice when it's made.
+
+Built as above ([Counter API](api/counter.md#post-apicountersale), [Invoices API](api/invoice.md#post-apiinvoiceidentifierrefund),
+[Gift cards API](api/giftcard.md), [Money](shared/money.md#more-than-one-rate)). Refunds are admin only, on paid
+invoices; an open invoice's payment is still just taken off. Gift cards are sold as a line on any invoice and loaded
+when it's paid, and voiding one that's been spent from is refused. Store credit comes from refunds and admin
+adjustments. Tax classes sit beside the shop's main rate rather than replacing it, and the discount is shared
+between rates by how much each is charged on.
 
 ## Phase 4: Inventory and purchasing
 
