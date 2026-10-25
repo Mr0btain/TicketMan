@@ -13,12 +13,12 @@
 
   <description>
     <p>
-      TicketMan is a ticket tracking app for repair shops, or any shop that runs its work through tickets. Staff check
-      devices in at the counter, track the repair, take payment at pickup and keep customer, inventory and photo
+      TicketMan is a ticket tracking app for shops that run their work through tickets. Staff check
+      devices and such in at the counter, track the work, take payment at pickup and keep customer, inventory and photo
       records along the way.
     </p>
     <p>
-      This is the desktop client. It connects to a TicketMan server that the shop runs itself, so the shop's data
+      This is the desktop client. It connects to a TicketMan server that the shop deploys itself, so the shop's data
       stays on its own server.
     </p>
     <ul>
@@ -102,8 +102,10 @@
       <description>
         <p>The first release on Flathub.</p>
         <ul>
-          <li>The server turns away clients a major version apart, and the app asks to be updated</li>
-          <li>The web client picks up a new build straight away</li>
+          <li>The server now turns away clients a major version apart, and the app asks to be updated</li>
+          <li>The web client picks up a new build straight away since it's tied with the server.</li>
+          <li>A basic payment implementation has been added but not tested.</li>
+          <li>Changed to one main server, multiple location clients.</li>
         </ul>
       </description>
     </release>
