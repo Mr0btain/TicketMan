@@ -3,6 +3,8 @@ package org.mr0btain.ticketman.components.network.user
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
 import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.TimeClockPaths
+import org.mr0btain.ticketman.data.timeclock.PunchResult
 import org.mr0btain.ticketman.server.AuthPaths
 import io.ktor.client.*
 import io.ktor.client.request.*
@@ -176,6 +178,19 @@ class ServerUserClient(
     }
 
     /** People who can PIN in here */
+    /** Clocks someone in or out at this station by their PIN. Sent without a login, so a locked kiosk can do it */
+    suspend fun stationPunch(station: StationCredentials, userIdentifier: Uuid, pin: String): TmResult<PunchResult, ServerError> {
+        val response = networkRequest(STATION_TAG) {
+            userHttpClient.post {
+                url("$serverUrl${ApiRoutes.TIME_CLOCK}${TimeClockPaths.PUNCH}")
+                contentType(ContentType.Application.Json)
+                setBody(PinLoginRequest(station, userIdentifier, pin))
+            }
+        }
+
+        return handleDataHttpResponse(STATION_TAG, response)
+    }
+
     suspend fun stationStaff(station: StationCredentials): TmResult<List<StaffMember>, ServerError> {
         val response = networkRequest(STATION_TAG) {
             userHttpClient.post {

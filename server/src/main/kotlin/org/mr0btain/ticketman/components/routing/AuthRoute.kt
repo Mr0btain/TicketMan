@@ -110,13 +110,7 @@ fun Route.authRoute(
     post(AuthPaths.PIN) {
         when (val result = userService.pinLogin(call.receive<PinLoginRequest>())) {
             is PinLoginResult.Success -> call.respond(HttpStatusCode.Accepted, result.response)
-            PinLoginResult.BadStation -> call.respond(HttpStatusCode.Forbidden, "This device isn't a registered station")
-            PinLoginResult.StationNotApproved -> call.respond(HttpStatusCode.Forbidden, "This station is waiting for an admin to approve it")
-            PinLoginResult.Locked -> call.respond(HttpStatusCode.Locked, "PIN is locked, ask an admin to unlock it")
-            is PinLoginResult.Wrong -> call.respond(
-                HttpStatusCode.Unauthorized,
-                result.attemptsLeft?.let { "Wrong PIN, $it tries left" } ?: "Wrong PIN"
-            )
+            else -> call.respondPinFailure(result)
         }
     }
 
@@ -186,4 +180,18 @@ fun Route.authRoute(
 fun waitText(seconds: Long): String = when {
     seconds < 60 -> "$seconds second${if (seconds == 1L) "" else "s"}"
     else -> ((seconds + 59) / 60).let { "$it minute${if (it == 1L) "" else "s"}" }
+}
+
+/** Why a PIN at a station wasn't taken, the same for signing in and the time clock */
+suspend fun RoutingCall.respondPinFailure(result: PinLoginResult) {
+    when (result) {
+        is PinLoginResult.Success -> respond(HttpStatusCode.Accepted, result.response)
+        PinLoginResult.BadStation -> respond(HttpStatusCode.Forbidden, "This device isn't a registered station")
+        PinLoginResult.StationNotApproved -> respond(HttpStatusCode.Forbidden, "This station is waiting for an admin to approve it")
+        PinLoginResult.Locked -> respond(HttpStatusCode.Locked, "PIN is locked, ask an admin to unlock it")
+        is PinLoginResult.Wrong -> respond(
+            HttpStatusCode.Unauthorized,
+            result.attemptsLeft?.let { "Wrong PIN, $it tries left" } ?: "Wrong PIN"
+        )
+    }
 }

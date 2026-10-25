@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui
 import androidx.compose.material3.SnackbarHostState
 import org.mr0btain.ticketman.ui.screens.purchasing.components.PurchasingHandler
 import org.mr0btain.ticketman.ui.screens.appointments.components.AppointmentsHandler
+import org.mr0btain.ticketman.ui.screens.settings.components.TimeClockHandler
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.ktor.client.engine.HttpClientEngine
@@ -129,6 +130,7 @@ class MainViewModel(
             refreshPagers()
             counter.refreshShop()
             purchasing.refresh()
+            timeClock.refresh()
         },
         onLoggedOut = {
             admin.clear()
@@ -139,6 +141,7 @@ class MainViewModel(
             users.clear()
             purchasing.clear()
             appointments.clear()
+            timeClock.clear()
         },
         onServerMoved = { url -> settings.rememberServerUrl(url) }
     )
@@ -168,6 +171,9 @@ class MainViewModel(
         snackBarHost = snackBarHost,
         canEdit = { session.canEditNow() }
     )
+
+    /** The signed in user's own time clock */
+    val timeClock: TimeClockHandler = TimeClockHandler(remoteHandler, viewModelScope, snackBarHost)
 
     /** ----------------------------------------------APPOINTMENTS------------------------------------------------------------------- */
 

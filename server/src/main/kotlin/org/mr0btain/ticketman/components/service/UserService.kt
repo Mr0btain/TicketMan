@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.database.TokenDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.user.AccessLevel
+import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
 import org.mr0btain.ticketman.data.user.PinRules
 import org.mr0btain.ticketman.data.user.User
@@ -51,6 +52,14 @@ sealed interface PinLoginResult {
     /** Wrong PIN, no PIN set, or not a user that can sign in */
     data class Wrong(val attemptsLeft: Int?) : PinLoginResult
     data object Locked : PinLoginResult
+}
+
+/** A PIN typed at a station, see [UserService.checkStationPin] */
+sealed interface StationPin {
+    data class Passed(val user: User, val station: Station) : StationPin
+
+    /** Why not, never [PinLoginResult.Success] */
+    data class Failed(val result: PinLoginResult) : StationPin
 }
 
 /**
@@ -158,29 +167,42 @@ class UserService(
     /**
      * Switches to a user at a station. Only works on approved stations, and wrong PINs count towards a lock
      */
-    fun pinLogin(request: PinLoginRequest): PinLoginResult {
-        val station = stationDatabase.verify(request.station) ?: return PinLoginResult.BadStation
-        if (station.status != StationStatus.APPROVED) return PinLoginResult.StationNotApproved
+    /**
+     * Checks a PIN typed at a station: the station has to be approved, the user able to log in, and the PIN right.
+     * Wrong ones count towards the lock and are audit logged. Used by PIN login and the time clock
+     */
+    fun checkStationPin(request: PinLoginRequest): StationPin {
+        val station = stationDatabase.verify(request.station) ?: return StationPin.Failed(PinLoginResult.BadStation)
+        if (station.status != StationStatus.APPROVED) return StationPin.Failed(PinLoginResult.StationNotApproved)
 
         val user = database.getById(request.userIdentifier)?.takeIf { it.canAccess(AccessLevel.RESTRICTED) }
 
         if (user == null) {
             PasswordHasher.verifyDummy(request.pin)
-            return PinLoginResult.Wrong(null)
+            return StationPin.Failed(PinLoginResult.Wrong(null))
         }
 
         when (database.checkPin(user.identifier, request.pin)) {
             PinCheck.OK -> Unit
             PinCheck.LOCKED -> {
                 auditLog.log(null, AuditAction.LOGIN_FAILED, "user", user.identifier.toString(), "PIN locked at ${station.name}", actorName = user.username)
-                return PinLoginResult.Locked
+                return StationPin.Failed(PinLoginResult.Locked)
             }
-            PinCheck.NO_PIN -> return PinLoginResult.Wrong(null)
+            PinCheck.NO_PIN -> return StationPin.Failed(PinLoginResult.Wrong(null))
             PinCheck.WRONG -> {
                 auditLog.log(null, AuditAction.LOGIN_FAILED, "user", user.identifier.toString(), "Wrong PIN at ${station.name}", actorName = user.username)
                 val tries = database.getPinFailedAttempts(user.identifier)
-                return PinLoginResult.Wrong(PinRules.MAX_ATTEMPTS - tries)
+                return StationPin.Failed(PinLoginResult.Wrong(PinRules.MAX_ATTEMPTS - tries))
             }
+        }
+
+        return StationPin.Passed(user, station)
+    }
+
+    fun pinLogin(request: PinLoginRequest): PinLoginResult {
+        val (user, station) = when (val check = checkStationPin(request)) {
+            is StationPin.Failed -> return check.result
+            is StationPin.Passed -> check
         }
 
         // On a kiosk the session ends a while after the screen would have locked, in case the device was

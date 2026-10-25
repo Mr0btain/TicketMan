@@ -50,7 +50,11 @@ drawn by `SettingsGroup`, and each item is one kind of the sealed `SettingItem`,
 | `Action(value)` | A row with a chevron, and `value` beside it if there is one | `onClick`, used to open a dialog |
 | `Choice(selected, options)` | A row with a `TmDropdown` of `options` | `onSelect` gets the picked option |
 
-Values are read from the handler's state, so the row updates when the setting changes. `numberSetting(...)` in
+Values are read from the handler's state, so the row updates when the setting changes. Account and station has
+**Clock in**/**Clock out** too, from `viewModel.timeClock` (`TimeClockHandler`): whether you're on the clock and your
+hours this week, clocking from this device through
+[`/api/timeclock/me/punch`](../../api/timeclock.md#post-apitimeclockmepunch). The user menu at the foot of the nav rail
+has the same item. `numberSetting(...)` in
 `SettingsScreen` builds a `Text` row for a whole number in a range, with the range added to its description.
 
 ## Adding a setting

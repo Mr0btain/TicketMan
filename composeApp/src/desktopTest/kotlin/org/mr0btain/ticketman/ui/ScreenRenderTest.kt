@@ -82,6 +82,11 @@ import org.mr0btain.ticketman.ui.kit.search.TmSearchField
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.reports.AdminReportsTab
+import org.mr0btain.ticketman.ui.screens.admin.timesheets.AdminTimesheetsTab
+import org.mr0btain.ticketman.ui.screens.admin.timesheets.TimeEntryDialog
+import org.mr0btain.ticketman.data.timeclock.TimeEntry
+import org.mr0btain.ticketman.data.timeclock.Timesheet
+import org.mr0btain.ticketman.data.timeclock.TimesheetPerson
 import org.mr0btain.ticketman.ui.screens.appointments.AppointmentDialog
 import org.mr0btain.ticketman.ui.screens.appointments.AppointmentTimes
 import org.mr0btain.ticketman.ui.screens.appointments.AppointmentWeek
@@ -510,7 +515,8 @@ class ScreenRenderTest {
                 staff = listOf("Dana Whitfield", "Priya Raman", "Marcus Oyelaran", "June Kowalski").map { StaffMember(kotlin.uuid.Uuid.random(), it.substringBefore(" ").lowercase(), it) },
                 onRefresh = {},
                 onUnlock = { _, _, _ -> },
-                onExit = { _, _, _ -> }
+                onExit = { _, _, _ -> },
+                onPunch = { _, _, _ -> }
             )
         }
     }
@@ -870,6 +876,52 @@ class ScreenRenderTest {
                 isNew = true,
                 onSearchCustomers = { emptyList() },
                 onSearchTechnicians = { emptyList() },
+                onSave = { _, _ -> },
+                onDismissRequest = {}
+            )
+        }
+    }
+
+    @Test
+    fun adminTimesheets() = bothModes("admin-timesheets", height = 1100) {
+        Shell("Admin") {
+            val day = kotlinx.datetime.LocalDate(2026, 10, 26)
+            fun at(hour: Int, minute: Int = 0, plus: Int = 0) = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 26 + plus), hour, minute)
+            val danaId = kotlin.uuid.Uuid.random()
+            val samId = kotlin.uuid.Uuid.random()
+            val danaOn = TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(8, 58, 2), station = "Front Counter")
+            AdminTimesheetsTab(
+                sheet = Timesheet(
+                    from = "2026-10-26", to = "2026-11-01", generatedAt = at(13, 30, 2),
+                    people = listOf(
+                        TimesheetPerson(danaId, "Dana Whitfield", 21.0, listOf(
+                            TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 2), clockedOutAt = at(17, 31), station = "Front Counter"),
+                            TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 0, 1), clockedOutAt = at(17, 0, 1), note = "Forgot to clock out", editedBy = "boss"),
+                            danaOn
+                        )),
+                        TimesheetPerson(samId, "Sam Ortiz", 7.5, listOf(
+                            TimeEntry(userIdentifier = samId, userName = "Sam Ortiz", clockedInAt = at(10, 0), clockedOutAt = at(17, 30))
+                        ))
+                    )
+                ),
+                onNow = listOf(danaOn),
+                users = emptyList(),
+                range = ExportRange.THIS_MONTH,
+                days = null,
+                onPick = {},
+                onShowDays = { _, _ -> },
+                onSave = { _, _, _ -> },
+                onRemove = {}
+            )
+        }
+    }
+
+    @Test
+    fun timeEntryDialog() = bothModes("admin-time-entry-dialog") {
+        Shell("Admin") {
+            TimeEntryDialog(
+                entry = TimeEntry(userIdentifier = kotlin.uuid.Uuid.random(), userName = "Dana Whitfield", clockedInAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 27), 9, 0)),
+                users = emptyList(),
                 onSave = { _, _ -> },
                 onDismissRequest = {}
             )

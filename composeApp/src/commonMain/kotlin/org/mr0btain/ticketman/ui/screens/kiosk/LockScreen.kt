@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
@@ -22,16 +23,20 @@ import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
+import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
+import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.foundation.TmSurface
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.clock
 import ticketman.composeapp.generated.resources.users
 
 /**
  * The kiosk's signed out screen: pick your name, type your PIN
  * @param onUnlock Signs someone in, calls back with what went wrong or null if it worked
  * @param onExit Leaves kiosk mode with an admin's PIN, calls back the same way
+ * @param onPunch Clocks someone in or out with their PIN, calls back with what happened or what went wrong
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -40,10 +45,14 @@ fun LockScreen(
     staff: List<StaffMember>,
     onRefresh: () -> Unit,
     onUnlock: (StaffMember, String, (String?) -> Unit) -> Unit,
-    onExit: (StaffMember, String, (String?) -> Unit) -> Unit
+    onExit: (StaffMember, String, (String?) -> Unit) -> Unit,
+    onPunch: ((StaffMember, String, (String?, String?) -> Unit) -> Unit)? = null
 ) {
     var selected by remember { mutableStateOf<StaffMember?>(null) }
     var exiting by remember { mutableStateOf(false) }
+    var clocking by remember { mutableStateOf(false) }
+    // What the last clock in or out did, shown until someone else is picked
+    var punched by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
     val colors = TmTheme.colors
@@ -65,13 +74,17 @@ fun LockScreen(
         Text(
             text = when {
                 selected == null && exiting -> "Admin, pick your name to leave kiosk mode"
+                selected == null && clocking -> "Pick your name to clock in or out"
                 selected == null -> "Who's at the counter?"
+                clocking -> "${selected!!.name.ifBlank { selected!!.username }}, enter your PIN to clock in or out"
                 else -> "Hi ${selected!!.name.ifBlank { selected!!.username }}, enter your PIN"
             },
             style = TmTheme.typography.display,
             color = colors.text,
             textAlign = TextAlign.Center
         )
+
+        punched?.let { TmNotice(text = it, kind = TmNoticeKind.SUCCESS) }
 
         Spacer(Modifier.height(spacing.xl))
 
@@ -99,6 +112,7 @@ fun LockScreen(
                         onClick = {
                             selected = person
                             error = null
+                            punched = null
                         }
                     ) {
                         Text(
@@ -115,11 +129,23 @@ fun LockScreen(
 
             Spacer(Modifier.height(spacing.xl))
 
-            TmButton(
-                text = if (exiting) "Never mind" else "Leave kiosk mode",
-                onClick = { exiting = !exiting },
-                variant = TmButtonVariant.GHOST
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
+                if (onPunch != null && !exiting) {
+                    TmButton(
+                        text = if (clocking) "Never mind" else "Clock in or out",
+                        onClick = { clocking = !clocking },
+                        variant = if (clocking) TmButtonVariant.GHOST else TmButtonVariant.SECONDARY,
+                        leadingIcon = Res.drawable.clock
+                    )
+                }
+                if (!clocking) {
+                    TmButton(
+                        text = if (exiting) "Never mind" else "Leave kiosk mode",
+                        onClick = { exiting = !exiting },
+                        variant = TmButtonVariant.GHOST
+                    )
+                }
+            }
         } else {
             PinPad(
                 error = error,
@@ -134,10 +160,18 @@ fun LockScreen(
                         if (problem == null) {
                             selected = null
                             exiting = false
+                            clocking = false
                         }
                     }
 
-                    if (exiting) onExit(member, pin, done) else onUnlock(member, pin, done)
+                    when {
+                        clocking && onPunch != null -> onPunch(member, pin) { message, problem ->
+                            punched = message
+                            done(problem)
+                        }
+                        exiting -> onExit(member, pin, done)
+                        else -> onUnlock(member, pin, done)
+                    }
                 }
             )
 

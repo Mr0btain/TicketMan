@@ -61,6 +61,9 @@ class AdminHandler(
 
     val messages = AdminMessages(remoteHandler, support)
 
+    /** Timesheets tab */
+    val timesheets = AdminTimesheets(remoteHandler, support)
+
     /** Reports tab */
     val reports = AdminReports(remoteHandler, support, shopProfile = { server.shopProfile.value })
 
@@ -127,6 +130,7 @@ class AdminHandler(
                         // For the printout's header and paper size
                         server.reloadShopProfile()
                     }
+                    AdminTab.TIMESHEETS -> timesheets.reload()
                     AdminTab.AUDIT -> loadAudit(reset = true)
                 }
             }
@@ -150,6 +154,7 @@ class AdminHandler(
                 AdminTab.LOW_STOCK -> loadLowStock()
                 AdminTab.SERVER -> server.reloadStatus()
                 AdminTab.MESSAGES -> messages.reloadOutbox()
+                AdminTab.TIMESHEETS -> timesheets.load()
                 AdminTab.USERS, AdminTab.INVOICES, AdminTab.REPORTS, AdminTab.AUDIT -> Unit
             }
         }
@@ -231,6 +236,7 @@ class AdminHandler(
         devices.clear()
         server.clear()
         reports.clear()
+        timesheets.clear()
         import.close()
     }
 

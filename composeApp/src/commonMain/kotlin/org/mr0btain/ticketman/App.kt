@@ -82,6 +82,7 @@ fun App() {
     // Admin screen is only listed for admins
     val isAdmin = mainViewModel.session.isAdmin.collectAsState()
     val currentUser = mainViewModel.session.currentUser.collectAsState()
+    val clockedIn = mainViewModel.timeClock.current.collectAsState()
 
     val isDebug = remember { BuildConfigImpl().isDebug() }
 
@@ -167,7 +168,9 @@ fun App() {
                     user = currentUser.value,
                     onLogin = { mainViewModel.session.changeShowLogin(true) },
                     onLogout = { mainViewModel.session.logout() },
-                    onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
+                    onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) },
+                    clockedInAt = clockedIn.value?.clockedInAt,
+                    onPunch = { mainViewModel.timeClock.punch() }
                 ) { host() }
             } else {
                 PhoneAppShell(

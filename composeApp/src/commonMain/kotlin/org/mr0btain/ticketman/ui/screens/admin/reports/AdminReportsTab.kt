@@ -276,7 +276,7 @@ fun AdminReportsTab(
 
 /** The first and last day of a custom range, shown when both are days and in order */
 @Composable
-private fun CustomDays(days: Pair<LocalDate, LocalDate>?, onShowDays: (LocalDate, LocalDate) -> Unit) {
+internal fun CustomDays(days: Pair<LocalDate, LocalDate>?, onShowDays: (LocalDate, LocalDate) -> Unit) {
     var from by remember { mutableStateOf(days?.first?.toString().orEmpty()) }
     var to by remember { mutableStateOf(days?.second?.toString().orEmpty()) }
     val start = runCatching { LocalDate.parse(from.trim()) }.getOrNull()

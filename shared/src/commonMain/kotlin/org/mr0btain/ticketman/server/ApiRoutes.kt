@@ -34,6 +34,7 @@ object ApiRoutes {
     const val ESTIMATE = "/api/estimate"
     const val REPORT = "/api/report"
     const val APPOINTMENT = "/api/appointment"
+    const val TIME_CLOCK = "/api/timeclock"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -264,6 +265,28 @@ object AppointmentPaths {
     /** Body `AppointmentStatusRequest`: cancelled, no show, or booked again */
     const val STATUS = "/status/{identifier}"
     const val REMOVE = "/remove/{identifier}"
+}
+
+/** Under [ApiRoutes.TIME_CLOCK] */
+object TimeClockPaths {
+    /** Body `PinLoginRequest`: clocks in or out at a station by PIN, with no login */
+    const val PUNCH = "/punch"
+
+    /** The caller: whether they're on the clock, and clocking in or out from their own device */
+    const val ME = "/me"
+    const val ME_PUNCH = "/me/punch"
+
+    /** `?from=&to=`: the caller's own time */
+    const val ME_TIMESHEET = "/me/timesheet"
+
+    /** Who's on the clock now */
+    const val NOW = "/now"
+
+    /** `?from=&to=` and optionally `user=`, admin only */
+    const val TIMESHEET = "/timesheet"
+    const val ENTRY_ADD = "/entry/add"
+    const val ENTRY_UPDATE = "/entry/update"
+    const val ENTRY_REMOVE = "/entry/remove/{identifier}"
 }
 
 /** Under [ApiRoutes.REPORT], admin only */

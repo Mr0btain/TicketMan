@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.components.utils.formatHours
+import org.mr0btain.ticketman.components.utils.formatTime
 import org.mr0btain.ticketman.data.station.StaffMember
 import org.mr0btain.ticketman.data.station.Station
 import org.mr0btain.ticketman.data.station.StationStatus
@@ -101,6 +103,27 @@ class KioskHandler(
                     onResult(result.error.message)
                     refreshStaff()
                 }
+            }
+        }
+    }
+
+    /**
+     * Clocks someone in or out with their PIN, leaving the kiosk locked
+     * @param onResult Gets what happened to show them, or null and what went wrong
+     */
+    fun punch(member: StaffMember, pin: String, onResult: (String?, String?) -> Unit) {
+        scope.launch {
+            when (val result = remoteHandler.stationPunch(member.identifier, pin)) {
+                is TmResult.Success -> {
+                    val punch = result.data
+                    val time = formatTime(if (punch.clockedIn) punch.entry.clockedInAt else punch.entry.clockedOutAt ?: now())
+                    onResult(
+                        if (punch.clockedIn) "Clocked in at $time" else "Clocked out at $time, ${formatHours(punch.entry.hours(now()))} on the clock",
+                        null
+                    )
+                }
+
+                is TmResult.Error -> onResult(null, result.error.message)
             }
         }
     }

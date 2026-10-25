@@ -72,6 +72,10 @@ PIN sessions differ from password ones:
 
 A user's password session on the same device isn't touched, since it's a different kind.
 
+Steps 1 to 3 are `UserService.checkStationPin`, which the [time clock](../api/timeclock.md#post-apitimeclockpunch)
+uses too: clocking in by PIN checks the station and PIN the same way, wrong PINs counting towards the same lock, but
+starts no session.
+
 ### Kiosk sessions on the server
 
 The kiosk's idle lock is a timer on the device, so it can't help when the device is switched off or loses its

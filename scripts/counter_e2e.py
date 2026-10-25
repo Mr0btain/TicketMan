@@ -511,6 +511,17 @@ check(appointment["status"] == "ARRIVED" and appointment["ticketIdentifier"] == 
 call("POST", f"/api/appointment/status/{appointment['identifier']}", {"status": "CANCELLED"}, pin, expect=409)
 step(f"Jane books an iPad mini screen for {time.strftime('%H:%M', time.localtime(in_an_hour / 1000))} with Nina; it's on the calendar, and checking it in makes ticket {arrived['ticket']['number']['sequence']} and marks it checked in")
 
+call("POST", "/api/timeclock/punch", {"station": station, "userIdentifier": newtech_id, "pin": "000000"}, expect=401)
+_, clock_in = call("POST", "/api/timeclock/punch", {"station": station, "userIdentifier": newtech_id, "pin": "246813"}, expect=200)
+_, on_now = call("GET", "/api/timeclock/now", token=pin, expect=200)
+check(clock_in["clockedIn"] and clock_in["entry"]["station"] == "Front Counter" and [e["userIdentifier"] for e in on_now] == [newtech_id], f"clocked in {clock_in} {on_now}")
+_, clock_out = call("POST", "/api/timeclock/punch", {"station": station, "userIdentifier": newtech_id, "pin": "246813"}, expect=200)
+check(not clock_out["clockedIn"] and clock_out["entry"]["clockedOutAt"] is not None, f"clocked out {clock_out}")
+call("GET", f"/api/timeclock/timesheet?from={day}&to={day}", token=pin, expect=403)
+_, sheet = call("GET", f"/api/timeclock/timesheet?from={day}&to={day}", token=admin, expect=200)
+check([p["name"] for p in sheet["people"]] == ["Nina Tech"] and len(sheet["people"][0]["entries"]) == 1, f"timesheet {sheet}")
+step("Nina clocks in at the Front Counter with her PIN (a wrong one refused), shows as on the clock, clocks out, and the admin's timesheet has the stretch")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

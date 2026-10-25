@@ -26,6 +26,7 @@ import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.admin.reports.AdminReportsTab
+import org.mr0btain.ticketman.ui.screens.admin.timesheets.AdminTimesheetsTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
 import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
@@ -96,6 +97,10 @@ private fun AdminContent(
     val reportRange by admin.reports.range.collectAsState()
     val commissions by admin.reports.commissions.collectAsState()
     val reportUsers by admin.reports.users.collectAsState()
+    val timesheet by admin.timesheets.sheet.collectAsState()
+    val onTheClock by admin.timesheets.onNow.collectAsState()
+    val timesheetUsers by admin.timesheets.users.collectAsState()
+    val timesheetRange by admin.timesheets.range.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
     val auditEndReached by admin.auditEndReached.collectAsState()
     val serverUrl by viewModel.settings.serverUrl.collectAsState()
@@ -340,6 +345,18 @@ private fun AdminContent(
                 onShowDays = { from, to -> admin.reports.showDays(from, to) },
                 onPrint = { paper, onResult -> admin.reports.print(paper, onResult) },
                 onSaveCommissions = { rates, onSaved -> admin.reports.saveCommissions(rates, onSaved) }
+            )
+
+            AdminTab.TIMESHEETS -> AdminTimesheetsTab(
+                sheet = timesheet,
+                onNow = onTheClock,
+                users = timesheetUsers,
+                range = timesheetRange,
+                days = admin.timesheets.days(),
+                onPick = { admin.timesheets.pick(it) },
+                onShowDays = { from, to -> admin.timesheets.showDays(from, to) },
+                onSave = { entry, isNew, onResult -> admin.timesheets.save(entry, isNew, onResult) },
+                onRemove = { admin.timesheets.remove(it) }
             )
 
             AdminTab.SERVER -> AdminServerTab(

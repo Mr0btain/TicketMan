@@ -25,6 +25,7 @@ import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.error.EmptyResult
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.data.station.StaffMember
+import org.mr0btain.ticketman.data.timeclock.PunchResult
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InviteSetupRequest
 import kotlin.uuid.Uuid
@@ -72,10 +73,11 @@ class RemoteHandler(
     val purchaseRepo = PurchaseRemoteRepository(httpClient)
     val reportRepo = ReportRemoteRepository(httpClient)
     val appointmentRepo = AppointmentRemoteRepository(httpClient)
+    val timeClockRepo = TimeClockRemoteRepository(httpClient)
 
     /** Every repository, so [setUrl] points all of them at the server. A new one goes here too */
     private val repositories: List<ServerRepository> =
-        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo)
+        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo)
 
     /**
      * Whether an expired session can be fixed by logging in again with the saved username and password.
@@ -319,6 +321,14 @@ class RemoteHandler(
     }
 
     /** People who can PIN in at this station, empty if it isn't one */
+    /** Clocks someone in or out at this station by their PIN, without signing them in */
+    suspend fun stationPunch(userIdentifier: Uuid, pin: String): TmResult<PunchResult, ServerError> {
+        val station = localStorage.stationCredentials
+            ?: return TmResult.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
+
+        return userClient.stationPunch(station, userIdentifier, pin)
+    }
+
     suspend fun stationStaff(): TmResult<List<StaffMember>, ServerError> {
         val station = localStorage.stationCredentials
             ?: return TmResult.Error(ServerError(NetworkError.FORBIDDEN, "This device isn't a station"))
