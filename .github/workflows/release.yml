@@ -1,8 +1,8 @@
 # Builds every package (installers and tarballs, APK, jars, server zips and images with and without the web client)
 # and publishes a GitHub release when a v* tag is pushed (git tag v0.8.0 && git push origin v0.8.0). Run it by hand
 # (Actions > Release > Run workflow) to build without publishing. It makes the same files as
-# .gitea/workflows/release.yml, plus the DMG and, when asked, the unsigned iOS app; Gitea doesn't read this folder while
-# .gitea/workflows exists. See docs/releasing.md
+# .gitea/workflows/release.yml, plus the DMGs (arm64 and x64) and, when asked, the unsigned iOS app; Gitea doesn't
+# read this folder while .gitea/workflows exists. See docs/releasing.md
 name: Release
 
 on:
@@ -23,7 +23,11 @@ on:
         type: boolean
         default: false
       skip_mac:
-        description: Skip the macOS DMG
+        description: Skip the macOS arm64 DMG (Apple silicon)
+        type: boolean
+        default: false
+      skip_mac_x64:
+        description: Skip the macOS x64 DMG (Intel Macs)
         type: boolean
         default: false
       skip_tarball:
@@ -85,12 +89,15 @@ jobs:
         env:
           SKIP_WINDOWS: ${{ format('{0}', inputs.skip_windows) == 'true' || vars.SKIP_WINDOWS == 'true' }}
           SKIP_MAC: ${{ format('{0}', inputs.skip_mac) == 'true' || vars.SKIP_MAC == 'true' }}
+          SKIP_MAC_X64: ${{ format('{0}', inputs.skip_mac_x64) == 'true' || vars.SKIP_MAC_X64 == 'true' }}
           SKIP_AMD64: ${{ format('{0}', inputs.skip_amd64) == 'true' || vars.SKIP_AMD64 == 'true' }}
           SKIP_ARM64: ${{ format('{0}', inputs.skip_arm64) == 'true' || vars.SKIP_ARM64 == 'true' }}
         run: |
           entries=()
           [ "$SKIP_WINDOWS" != true ] && entries+=('{"os":"windows-latest","format":"msi","task":"packageMsi"}')
           [ "$SKIP_MAC" != true ] && entries+=('{"os":"macos-latest","format":"dmg","task":"packageDmg"}')
+          # macos-latest is Apple silicon; Intel Macs need a DMG built on an Intel runner
+          [ "$SKIP_MAC_X64" != true ] && entries+=('{"os":"macos-15-intel","format":"dmg","task":"packageDmg"}')
           [ "$SKIP_AMD64" != true ] && entries+=('{"os":"ubuntu-latest","format":"deb","task":"packageDeb"}')
           # Free for public repos; a private one needs ARM runners on its plan
           [ "$SKIP_ARM64" != true ] && entries+=('{"os":"ubuntu-24.04-arm","format":"deb","task":"packageDeb"}')
@@ -121,7 +128,7 @@ jobs:
         if: matrix.format == 'deb'
         run: command -v fakeroot >/dev/null || (sudo apt-get update && sudo apt-get install -y fakeroot dpkg-dev)
 
-      # The build names each file (TicketMan-Linux-<version>-x64.deb, TicketMan-macOS-<version>-arm64.dmg, see
+      # The build names each file (TicketMan-Linux-<version>-x64.deb, TicketMan-macOS-<version>-x64.dmg, see
       # docs/releasing.md), so they're only collected
       - name: Package
         env:

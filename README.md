@@ -61,7 +61,7 @@ Then open `http://localhost:8080` and log in as `admin`. That's plain HTTP, fine
 |----------|--------|
 | Linux | Main target, Done |
 | Windows | Done |
-| macOS | Builds a DMG, not tested on a Mac yet |
+| macOS | Builds arm64 and x64 DMGs, not tested on a Mac yet |
 | Web (Wasm) | Served by the server when built with `-PwithWeb`, Done |
 | Server | Done |
 | Android | Done |
@@ -96,7 +96,7 @@ inventory and purchasing, repair depth, and running the business. What's next, i
 - Run it from source and from the released DMG on Apple silicon
 - Walk through it like Linux and Windows: trusting a server, the session coming back after a restart, photos,
   signatures on a trackpad, printing and labels, file dialogs, the admin tabs and kiosk fullscreen
-- An x64 DMG for Intel Macs if anyone needs one
+- Try the x64 DMG on an Intel Mac
 - Later, with a paid Apple Developer account: sign and notarize the DMG so it opens without a warning
 
 ## Caveats

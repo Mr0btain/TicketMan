@@ -51,7 +51,7 @@ run anywhere:
 
 | Package | File |
 |---|---|
-| Installers and tarball | `TicketMan-<OS>-<version>-<arch>.<ext>`: `TicketMan-Windows-0.8.0-x64.msi`, `TicketMan-macOS-0.8.0-arm64.dmg`, `TicketMan-Linux-0.8.0-x64.deb`, `TicketMan-Linux-0.8.0-arm64.tar.gz` |
+| Installers and tarball | `TicketMan-<OS>-<version>-<arch>.<ext>`: `TicketMan-Windows-0.8.0-x64.msi`, `TicketMan-macOS-0.8.0-arm64.dmg`, `TicketMan-macOS-0.8.0-x64.dmg`, `TicketMan-Linux-0.8.0-x64.deb`, `TicketMan-Linux-0.8.0-arm64.tar.gz` |
 | Desktop jar | `TicketMan-Desktop-<version>.jar` with `-PallPlatforms`, otherwise `TicketMan-<OS>-<version>-<arch>.jar` |
 | APK | `TicketMan-Android-<version>.apk` (`-unsigned` added without a keystore), a copy beside AGP's own `androidApp-release.apk` |
 | Server zip and jar | `TicketMan-Server-Web-<version>.zip` / `.jar` with `-PwithWeb`, `TicketMan-Server-<version>.zip` / `.jar` without |
@@ -97,14 +97,14 @@ builds everything without publishing, which is a good way to try it before taggi
 
 | Workflow | Builds | Publishes to |
 |---|---|---|
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's (the arm64 DEB and tarball built natively), plus the DMG (macOS arm64) and, when asked, the unsigned iOS app | GitHub release, `ghcr.io/<owner>/ticketman` |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's (the arm64 DEB and tarball built natively), plus the DMGs (macOS arm64 on `macos-latest`, x64 for Intel Macs on `macos-15-intel`) and, when asked, the unsigned iOS app | GitHub release, `ghcr.io/<owner>/ticketman` |
 | [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB and tarball (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. Each also has its own copy of the tests ([`.gitea/workflows/ci.yml`](../.gitea/workflows/ci.yml)
 and [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which also compiles iOS on a Mac), so keep the two
 release workflows and the two CIs in step. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
-a runner with Docker access. The MSI needs a Windows runner (below); there's no Mac one, so the DMG is GitHub only.
+a runner with Docker access. The MSI needs a Windows runner (below); there's no Mac one, so the DMGs are GitHub only.
 
 The server zip, APK, web client and Docker image (built for both through QEMU) don't depend on the runner's
 architecture, but a DEB is only for the architecture that built it, since it bundles a Java runtime and Compose's
@@ -138,7 +138,8 @@ tag pushes when set to `true`; the release is published with the rest, and isn't
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
 | Only the Linux tarballs (the DEBs are still built) | `skip_tarball` | `SKIP_TARBALL` |
 | The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
-| The macOS DMG (GitHub only) | `skip_mac` | `SKIP_MAC` |
+| The macOS arm64 DMG (GitHub only) | `skip_mac` | `SKIP_MAC` |
+| The macOS x64 DMG for Intel Macs (GitHub only) | `skip_mac_x64` | `SKIP_MAC_X64` |
 | The desktop jar | `skip_desktop_jar` | `SKIP_DESKTOP_JAR` |
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
 | The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |

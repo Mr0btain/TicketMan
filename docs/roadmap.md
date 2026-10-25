@@ -155,8 +155,8 @@ Not tied to the numbered phases: done whenever work moves to a macOS machine.
 
 ## Phase macOS: Test the desktop app (needs a Mac)
 
-The desktop app is the same JVM code as on Linux and Windows, and the release builds an arm64 DMG on GitHub's Mac
-runner, but nobody has run it on a Mac yet.
+The desktop app is the same JVM code as on Linux and Windows, and the release builds arm64 and x64 DMGs on GitHub's Mac
+runners, but nobody has run it on a Mac yet.
 
 - **Run it from source and from the DMG** on Apple silicon: `./gradlew :composeApp:run`, then the released DMG
   dragged to Applications (unsigned, so `xattr -dr com.apple.quarantine /Applications/TicketMan.app` first, see
@@ -166,7 +166,7 @@ runner, but nobody has run it on a Mac yet.
   pickup, printing a claim slip and an item label through Java2D to a macOS printer, saving an invoice PDF and a
   backup with the file dialogs, restoring, the admin tabs, keyboard shortcuts (F keys need `fn` on most Mac
   keyboards), the app icon, and kiosk mode going fullscreen.
-- **Intel Macs**: an x64 DMG (a `macos-13` runner) if anyone needs one, or the desktop jar with Java 21.
+- **Intel Macs**: try the x64 DMG (built on `macos-15-intel`) the same way.
 - **Fix what it finds** and note what only shows up on macOS in [Platforms](client/platforms.md).
 - **Later, with a paid Apple Developer account:** sign and notarize the DMG (Compose's
   `macOS { signing { } notarization { } }`) so it opens without the quarantine step.
