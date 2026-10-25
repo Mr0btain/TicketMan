@@ -41,6 +41,7 @@ import org.mr0btain.ticketman.ui.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.refresh_cw
 import org.mr0btain.ticketman.ui.screens.CheckForUpdates
+import org.mr0btain.ticketman.components.data.local.UpdateInterval
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportCard
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportDialog
 import ticketman.composeapp.generated.resources.shield
@@ -176,6 +177,7 @@ private fun AdminContent(
     CheckForUpdates(interval = updateInterval, enabled = !dialogOpen && !isLoading) {
         admin.checkForUpdates(selectedTab)
         if (selectedTab == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
+        if (selectedTab == AdminTab.INVOICES) viewModel.counter.invoices.checkForUpdates()
     }
 
     UserDialog(
@@ -229,21 +231,27 @@ private fun AdminContent(
                 badges = if (pending.isNotEmpty()) mapOf(AdminTab.USERS.ordinal to pending.size) else emptyMap()
             )
 
-            TmButton(
-                text = "Refresh",
-                enabled = !isLoading,
-                loading = isLoading,
-                variant = TmButtonVariant.SECONDARY,
-                leadingIcon = Res.drawable.refresh_cw,
-                onClick = {
-                    admin.refresh(selectedTab)
-                    when (selectedTab) {
-                        AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
-                        AdminTab.INVOICES -> viewModel.counter.invoices.load(reset = true)
-                        else -> Unit
+            // Tabs check for changes on their own; this is only for when that's turned off in Settings
+            if (updateInterval == UpdateInterval.OFF) {
+                TmButton(
+                    text = "Refresh",
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    variant = TmButtonVariant.SECONDARY,
+                    leadingIcon = Res.drawable.refresh_cw,
+                    onClick = {
+                        admin.refresh(selectedTab)
+                        when (selectedTab) {
+                            AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
+                            AdminTab.INVOICES -> {
+                                viewModel.counter.invoices.load(reset = true)
+                                viewModel.counter.invoices.loadGiftCards()
+                            }
+                            else -> Unit
+                        }
                     }
-                }
-            )
+                )
+            }
         }
 
         // ------------------------------------------ Content ------------------------------------------

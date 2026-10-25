@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPanel
 import org.mr0btain.ticketman.ui.kit.data.TmColumn
 import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
@@ -41,6 +42,9 @@ import ticketman.composeapp.generated.resources.*
 
 /** Width of a stat tile, they wrap onto new rows */
 private val TILE_WIDTH = 180.dp
+
+/** Narrower than this, techs aren't a table */
+private val TECH_TABLE_WIDTH = 620.dp
 
 /** Width of the smaller panels */
 private val PANEL_WIDTH = 360.dp
@@ -205,7 +209,22 @@ fun AdminReportsTab(
         ) {
             if (report.techs.isEmpty()) {
                 Text(text = "No logged work on these invoices", style = TmTheme.typography.body, color = TmTheme.colors.textMuted)
-            } else {
+            } else BoxWithConstraints {
+                // Narrow: each tech's labor on the right, the rest under their name
+                if (maxWidth < TECH_TABLE_WIDTH) {
+                    Column {
+                        report.techs.forEach { tech ->
+                            TmListRow(
+                                title = tech.name.ifBlank { "Unknown" },
+                                subtitle = "${tech.tickets} tickets · ${formatHours(tech.laborHours)} · parts ${formatMoney(tech.partsCents)}" +
+                                    if (tech.commissionBasisPoints > 0) " · commission ${formatMoney(tech.commissionCents)}" else "",
+                                trailing = { TmMoneyText(tech.laborCents) }
+                            )
+                        }
+                    }
+                    return@BoxWithConstraints
+                }
+
                 val columns = listOf(
                     TmColumn("Tech", weight = 2f),
                     TmColumn("Tickets", width = 72.dp, end = true),
@@ -214,16 +233,18 @@ fun AdminReportsTab(
                     TmColumn("Parts", width = 110.dp, end = true),
                     TmColumn("Commission", width = 120.dp, end = true)
                 )
-                TmTableHeader(columns)
-                report.techs.forEach { tech ->
-                    TmTableRow(columns) { index ->
-                        when (index) {
-                            0 -> Text(text = tech.name.ifBlank { "Unknown" }, style = TmTheme.typography.body, color = TmTheme.colors.text)
-                            1 -> Text(text = tech.tickets.toString(), style = TmTheme.typography.numeric, color = TmTheme.colors.text)
-                            2 -> Text(text = formatHours(tech.laborHours), style = TmTheme.typography.numeric, color = TmTheme.colors.text)
-                            3 -> TmMoneyText(tech.laborCents)
-                            4 -> TmMoneyText(tech.partsCents)
-                            else -> if (tech.commissionBasisPoints > 0) TmMoneyText(tech.commissionCents) else Text(text = "-", style = TmTheme.typography.numeric, color = TmTheme.colors.textMuted)
+                Column {
+                    TmTableHeader(columns)
+                    report.techs.forEach { tech ->
+                        TmTableRow(columns) { index ->
+                            when (index) {
+                                0 -> Text(text = tech.name.ifBlank { "Unknown" }, style = TmTheme.typography.body, color = TmTheme.colors.text)
+                                1 -> Text(text = tech.tickets.toString(), style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+                                2 -> Text(text = formatHours(tech.laborHours), style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+                                3 -> TmMoneyText(tech.laborCents)
+                                4 -> TmMoneyText(tech.partsCents)
+                                else -> if (tech.commissionBasisPoints > 0) TmMoneyText(tech.commissionCents) else Text(text = "-", style = TmTheme.typography.numeric, color = TmTheme.colors.textMuted)
+                            }
                         }
                     }
                 }

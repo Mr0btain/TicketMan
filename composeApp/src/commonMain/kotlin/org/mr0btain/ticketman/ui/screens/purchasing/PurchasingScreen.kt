@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.components.utils.formatDate
 import org.mr0btain.ticketman.data.purchase.PurchaseOrder
 import org.mr0btain.ticketman.data.purchase.PurchaseStatus
 import org.mr0btain.ticketman.ui.MainViewModel
+import org.mr0btain.ticketman.ui.screens.CheckForUpdates
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.containers.TmListRow
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
@@ -48,6 +49,10 @@ fun PurchasingScreen(viewModel: MainViewModel, modifier: Modifier = Modifier) {
     LaunchedEffect(loginState) {
         if (loginState == LoginState.LOGGED_IN) purchasing.refresh()
     }
+
+    // Orders other devices placed or received, on the interval set in Settings
+    val updateInterval by viewModel.settings.updateInterval.collectAsState()
+    CheckForUpdates(interval = updateInterval, enabled = loginState == LoginState.LOGGED_IN) { purchasing.refresh() }
 
     Column(modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
         TmPageHeader(title = "Purchasing", onBack = null, subtitle = "Orders to suppliers, and taking them into stock")

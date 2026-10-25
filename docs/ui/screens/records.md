@@ -25,6 +25,10 @@ with three slots:
 | `detail` | `RecordDetail` | The picked record: a header with an Edit button, then `DetailSection`s scrolling under it. An empty state when nothing is picked |
 
 At 760 dp and wider the list and details sit side by side (56 / 44); narrower, the details stack under the list.
+Under 560 dp (`NARROW_LIST_WIDTH`) each list drops to its name and the one or two columns that matter, with the
+rest as a caption under the name (`RecordNameCell`): customers show their phone and email under the name, tickets
+the device under the number beside the status, and inventory its SKU, category or description under the name
+beside stock and price.
 
 ```mermaid
 sequenceDiagram

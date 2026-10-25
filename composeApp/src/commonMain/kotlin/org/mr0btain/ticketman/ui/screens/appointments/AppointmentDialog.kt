@@ -139,8 +139,9 @@ fun AppointmentDialog(
             )
         }
     ) {
+        // The day on its own line, so a phone shows it whole
+        TmTextField(modifier = Modifier.fillMaxWidth(), value = day, onValueChange = { day = it }, label = "Day", placeholder = "2026-10-27")
         Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
-            TmTextField(modifier = Modifier.weight(1f), value = day, onValueChange = { day = it }, label = "Day", placeholder = "2026-10-27")
             TmTextField(modifier = Modifier.weight(1f), value = time, onValueChange = { time = it }, label = "Time", placeholder = "14:30")
             TmDropdown(
                 modifier = Modifier.weight(1f),

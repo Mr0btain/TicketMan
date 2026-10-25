@@ -139,9 +139,9 @@ class AdminHandler(
 
     /**
      * The periodic check for updates on [tab]: like [refresh] but with no loading spinner, and leaving alone what
-     * would lose someone's place: the audit log and invoices (reloading starts them from the top), the end of day
-     * report (they may be looking at another day), the reports (commission rates may be half edited) and the shop
-     * profile (it may be half edited)
+     * would lose someone's place: the audit log only gets new entries added on top, the end of day report stays on
+     * its day, and the shop profile isn't reloaded (it may be half edited). The users and invoices tabs check their
+     * own lists, see `AdminScreen`
      */
     fun checkForUpdates(tab: AdminTab) {
         scope.launch {
@@ -155,7 +155,9 @@ class AdminHandler(
                 AdminTab.SERVER -> server.reloadStatus()
                 AdminTab.MESSAGES -> messages.reloadOutbox()
                 AdminTab.TIMESHEETS -> timesheets.load()
-                AdminTab.USERS, AdminTab.INVOICES, AdminTab.REPORTS, AdminTab.AUDIT -> Unit
+                AdminTab.REPORTS -> reports.reloadReport()
+                AdminTab.AUDIT -> addNewAudit()
+                AdminTab.USERS, AdminTab.INVOICES -> Unit
             }
         }
     }
@@ -212,6 +214,13 @@ class AdminHandler(
         if (_auditEndReached.value) return
 
         scope.launch { loadAudit(reset = false) }
+    }
+
+    /** New entries since the newest one showing, added on top so the place in the log stays */
+    private suspend fun addNewAudit() {
+        val page = admin.fetchAudit(0, AUDIT_PAGE_SIZE).valueOr { return }
+        val known = _auditEntries.value.map { it.identifier }.toSet()
+        _auditEntries.value = page.filter { it.identifier !in known } + _auditEntries.value
     }
 
     private suspend fun loadAudit(reset: Boolean) {

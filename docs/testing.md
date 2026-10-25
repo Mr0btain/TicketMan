@@ -179,9 +179,12 @@ app:
 | Test | Writes to | Draws |
 |------|-----------|-------|
 | `KitGalleryRenderTest` | `composeApp/build/kit-gallery/` | The gallery in every theme and mode, every font, with reduce transparency, and 720 px wide; the Appearance settings |
-| `ScreenRenderTest` | `composeApp/build/screen-renders/` | Counter ticket, pickup, check-in, kiosk lock, server trust, admin overview, users and server (direct and behind a proxy), the records tabs and view only, each in dark and light |
+| `ScreenRenderTest` | `composeApp/build/screen-renders/` | Every screen, admin tab and the main dialogs: the counter (home, ticket, customer, check-in, pickup, sale, estimate), records tabs and dialogs, purchasing, appointments, settings, kiosk lock, server trust and every admin tab, each in dark and light, and each wide in the shell and at phone width (`<name>-narrow`, 420 px) |
 
 - **They only check a file was written.** Nothing compares pixels. Open the PNGs and look.
+- **`screen(name, rail = ...)` draws both widths**: `name` in the wide shell with that rail item picked, and
+  `name-narrow` in a phone frame, taller since panels stack. Use it for a new screen so its phone layout gets looked
+  at too.
 - **Screens are drawn with sample data**, built in the test from the real models, and with the screen
   composables' own parameters, not a view model. A screen that only takes a `MainViewModel` can't be rendered
   this way; split out a composable that takes its state as parameters.
@@ -263,7 +266,8 @@ address>:8080` from `:server:run`), and that the client keeps connecting after C
   `409`) and each access level that shouldn't get in. Then run `check_api_docs.py` and document it.
 - **A new handler action**: a `commonTest` test on a `MockEngine`, checking what it sends and what state it ends
   in, and that it refuses when `canEdit()` is false if it changes anything.
-- **A new screen or kit component**: add it to `ScreenRenderTest` or the gallery, and look at the render.
+- **A new screen or kit component**: add it to `ScreenRenderTest` (with `screen(...)`, so it's drawn narrow too) or
+  the gallery, and look at both renders.
 - **Money, rules and other shared logic**: a plain test in `shared/src/commonTest/`.
 
 ## CI

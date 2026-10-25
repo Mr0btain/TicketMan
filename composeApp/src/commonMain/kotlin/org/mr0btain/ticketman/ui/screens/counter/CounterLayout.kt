@@ -48,6 +48,7 @@ fun CounterLayout(
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val compact = maxWidth < SIDE_QUEUE_WIDTH
+        val stacked = maxWidth < STACKED_SEARCH_WIDTH
 
         if (compact && showQueue) {
             QueueDialog(
@@ -65,7 +66,58 @@ fun CounterLayout(
             verticalArrangement = Arrangement.spacedBy(spacing.sm)
         ) {
             // ------------------------------------------ Top bar ------------------------------------------
-            Row(
+            // Icon buttons beside the search when the queue can't sit beside the screen
+            val iconButtons: @Composable RowScope.() -> Unit = {
+                if (canEdit) {
+                    TmIconButton(
+                        icon = Res.drawable.plus,
+                        contentDescription = "Check in",
+                        onClick = onCheckIn,
+                        variant = TmButtonVariant.PRIMARY,
+                        size = TmControlSize.LARGE
+                    )
+                    TmIconButton(
+                        icon = Res.drawable.user_plus,
+                        contentDescription = "New customer",
+                        onClick = onNewCustomer,
+                        variant = TmButtonVariant.SECONDARY,
+                        size = TmControlSize.LARGE
+                    )
+                    TmIconButton(
+                        icon = Res.drawable.shopping_cart,
+                        contentDescription = "Sell",
+                        onClick = onSell,
+                        variant = TmButtonVariant.SECONDARY,
+                        size = TmControlSize.LARGE
+                    )
+                }
+
+                TmIconButton(
+                    icon = Res.drawable.tag,
+                    contentDescription = "Price check",
+                    onClick = onPriceCheck,
+                    variant = TmButtonVariant.SECONDARY,
+                    size = TmControlSize.LARGE
+                )
+                TmIconButton(
+                    icon = Res.drawable.inbox,
+                    contentDescription = "Queue",
+                    onClick = { showQueue = true },
+                    variant = TmButtonVariant.SECONDARY,
+                    size = TmControlSize.LARGE
+                )
+            }
+
+            // On a phone the search gets its own line, so there's room to type
+            if (stacked) {
+                searchField(Modifier.fillMaxWidth())
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(spacing.sm, Alignment.End),
+                    content = iconButtons
+                )
+            } else Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(spacing.sm)
@@ -73,44 +125,7 @@ fun CounterLayout(
                 searchField(Modifier.weight(1f))
 
                 if (compact) {
-                    if (canEdit) {
-                        TmIconButton(
-                            icon = Res.drawable.plus,
-                            contentDescription = "Check in",
-                            onClick = onCheckIn,
-                            variant = TmButtonVariant.PRIMARY,
-                            size = TmControlSize.LARGE
-                        )
-                        TmIconButton(
-                            icon = Res.drawable.user_plus,
-                            contentDescription = "New customer",
-                            onClick = onNewCustomer,
-                            variant = TmButtonVariant.SECONDARY,
-                            size = TmControlSize.LARGE
-                        )
-                        TmIconButton(
-                            icon = Res.drawable.shopping_cart,
-                            contentDescription = "Sell",
-                            onClick = onSell,
-                            variant = TmButtonVariant.SECONDARY,
-                            size = TmControlSize.LARGE
-                        )
-                    }
-
-                    TmIconButton(
-                        icon = Res.drawable.tag,
-                        contentDescription = "Price check",
-                        onClick = onPriceCheck,
-                        variant = TmButtonVariant.SECONDARY,
-                        size = TmControlSize.LARGE
-                    )
-                    TmIconButton(
-                        icon = Res.drawable.inbox,
-                        contentDescription = "Queue",
-                        onClick = { showQueue = true },
-                        variant = TmButtonVariant.SECONDARY,
-                        size = TmControlSize.LARGE
-                    )
+                    iconButtons()
                 } else {
                     if (canEdit) {
                         TmButton(text = "Check in${keyHint("F3")}", onClick = onCheckIn, size = TmControlSize.LARGE, leadingIcon = Res.drawable.plus)
@@ -165,3 +180,6 @@ fun CounterLayout(
         }
     }
 }
+
+/** Narrower than this, the search goes above the buttons rather than beside them */
+private val STACKED_SEARCH_WIDTH = 560.dp

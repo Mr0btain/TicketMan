@@ -1,5 +1,16 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.ui.screens.admin.invoices.InvoiceList
+import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
+import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
+import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
+import org.mr0btain.ticketman.ui.screens.counter.SearchResults
+import org.mr0btain.ticketman.data.giftcard.GiftCard
+import org.mr0btain.ticketman.data.audit.AuditEntry
+import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.station.Station
+import org.mr0btain.ticketman.data.station.StationStatus
+import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import org.mr0btain.ticketman.data.estimate.Estimate
 import org.mr0btain.ticketman.data.notify.*
 import org.mr0btain.ticketman.ui.screens.admin.messages.AdminMessagesTab
@@ -317,6 +328,15 @@ class ScreenRenderTest {
         return File(outputDir, "$name-${if (dark) "dark" else "light"}.png").apply { writeBytes(bytes) }
     }
 
+    /**
+     * A screen both ways: in the wide shell with [rail] picked, as [name], and at phone width with no rail, as
+     * `[name]-narrow`, taller since panels stack there
+     */
+    private fun screen(name: String, height: Int = 900, rail: String, narrowHeight: Int = maxOf(1200, height * 3 / 2), content: @Composable () -> Unit) {
+        bothModes(name, height = height) { Shell(rail) { content() } }
+        bothModes("$name-narrow", width = NARROW_WIDTH, height = narrowHeight) { Phone { content() } }
+    }
+
     private fun bothModes(name: String, width: Int = 1440, height: Int = 900, content: @Composable () -> Unit) {
         listOf(true, false).forEach { dark ->
             val file = render(name, dark, width = width, height = height, content = content)
@@ -339,15 +359,7 @@ class ScreenRenderTest {
         Phone { CounterTicketLayout() }
     }
 
-    @Test
-    fun pickupNarrow() = bothModes("pickup-narrow", width = NARROW_WIDTH, height = 860) {
-        Phone { Pickup() }
-    }
 
-    @Test
-    fun checkInNarrow() = bothModes("check-in-narrow", width = NARROW_WIDTH, height = 860) {
-        Phone { CheckIn() }
-    }
 
     /** A phone sized frame, no rail */
     @Composable
@@ -402,7 +414,7 @@ class ScreenRenderTest {
     }
 
     @Test
-    fun pickup() = bothModes("pickup") { Shell("Counter") { Pickup() } }
+    fun pickup() = screen("pickup", rail = "Counter") { Pickup() }
 
     @Composable
     private fun Pickup() {
@@ -436,10 +448,8 @@ class ScreenRenderTest {
     }
 
     @Test
-    fun sale() = bothModes("counter-sale") { Shell("Counter") { Sale() } }
+    fun sale() = screen("counter-sale", rail = "Counter") { Sale() }
 
-    @Test
-    fun saleNarrow() = bothModes("counter-sale-narrow", width = NARROW_WIDTH, height = 860) { Phone { Sale() } }
 
     @Composable
     private fun Sale() {
@@ -462,34 +472,32 @@ class ScreenRenderTest {
 
     /** A customer with store credit, its history and their invoices, as an admin sees it */
     @Test
-    fun counterCustomer() = bothModes("counter-customer") {
-        Shell("Counter") {
-            val sam = dana.copy(creditCents = 2500)
-            CustomerCard(
-                detail = CustomerDetail(
-                    customer = sam,
-                    tickets = listOf(iphone.copy(deviceIdentifier = danaDevices[0].identifier), pixel),
-                    devices = danaDevices,
-                    credit = listOf(
-                        CreditEntry(Uuid.random(), -1500, 2500, "Spent on INV-26-00000040", null, now - 3_600_000, "priya"),
-                        CreditEntry(Uuid.random(), 4000, 4000, "Refund on INV-26-00000031: faulty charger", null, now - 86_400_000 * 3, "boss")
-                    ),
-                    invoices = listOf(
-                        invoice.copy(status = InvoiceStatus.OPEN, createdAt = now - 7_200_000),
-                        Invoice(number = InvoiceNumber(2026, 40), ticketIdentifier = null, status = InvoiceStatus.PAID, totalCents = 2999, createdAt = now - 3_600_000)
-                    )
+    fun counterCustomer() = screen("counter-customer", rail = "Counter") {
+        val sam = dana.copy(creditCents = 2500)
+        CustomerCard(
+            detail = CustomerDetail(
+                customer = sam,
+                tickets = listOf(iphone.copy(deviceIdentifier = danaDevices[0].identifier), pixel),
+                devices = danaDevices,
+                credit = listOf(
+                    CreditEntry(Uuid.random(), -1500, 2500, "Spent on INV-26-00000040", null, now - 3_600_000, "priya"),
+                    CreditEntry(Uuid.random(), 4000, 4000, "Refund on INV-26-00000031: faulty charger", null, now - 86_400_000 * 3, "boss")
                 ),
-                onTicketClick = {},
-                onBack = {},
-                onAdjustCredit = { _, _, _ -> },
-                onSaveDevice = { _, _ -> },
-                onRemoveDevice = {}
-            )
-        }
+                invoices = listOf(
+                    invoice.copy(status = InvoiceStatus.OPEN, createdAt = now - 7_200_000),
+                    Invoice(number = InvoiceNumber(2026, 40), ticketIdentifier = null, status = InvoiceStatus.PAID, totalCents = 2999, createdAt = now - 3_600_000)
+                )
+            ),
+            onTicketClick = {},
+            onBack = {},
+            onAdjustCredit = { _, _, _ -> },
+            onSaveDevice = { _, _ -> },
+            onRemoveDevice = {}
+        )
     }
 
     @Test
-    fun checkIn() = bothModes("check-in") { Shell("Counter") { CheckIn() } }
+    fun checkIn() = screen("check-in", rail = "Counter") { CheckIn() }
 
     @Composable
     private fun CheckIn() {
@@ -527,20 +535,18 @@ class ScreenRenderTest {
         val fingerprint = (0 until 32).joinToString(":") { ((it * 37 + 11) % 256).toString(16).padStart(2, '0').uppercase() }
 
         listOf(null, "AA:BB").forEach { before ->
-            bothModes(if (before == null) "server-trust" else "server-trust-changed") {
-                Shell("Records") {
-                    ServerTrustDialog(
-                        certificate = UntrustedCertificate(
-                            address = "tickets.local:443",
-                            fingerprint = fingerprint,
-                            subject = "CN=Caddy Local Authority - 2026 ECC Root",
-                            isAuthority = true,
-                            trustedBefore = before
-                        ),
-                        onTrust = {},
-                        onDismiss = {}
-                    )
-                }
+            screen(if (before == null) "server-trust" else "server-trust-changed", rail = "Records") {
+                ServerTrustDialog(
+                    certificate = UntrustedCertificate(
+                        address = "tickets.local:443",
+                        fingerprint = fingerprint,
+                        subject = "CN=Caddy Local Authority - 2026 ECC Root",
+                        isAuthority = true,
+                        trustedBefore = before
+                    ),
+                    onTrust = {},
+                    onDismiss = {}
+                )
             }
         }
     }
@@ -574,24 +580,20 @@ class ScreenRenderTest {
                 lastError = "Connection timed out", createdAt = now - 7_200_000, createdBy = "priya")
         )
 
-        bothModes("admin-messages", height = 2000) {
-            Shell("Admin") {
-                AdminMessagesTab(
-                    settings = settings, statuses = sampleStatuses, outbox = outbox, outboxEnd = true, isBusy = false,
-                    onSave = {}, onTest = { _, _, _ -> }, onRetry = {}, onCancel = {}, onLoadMore = {}
-                )
-            }
+        screen("admin-messages", height = 2000, rail = "Admin") {
+            AdminMessagesTab(
+                settings = settings, statuses = sampleStatuses, outbox = outbox, outboxEnd = true, isBusy = false,
+                onSave = {}, onTest = { _, _, _ -> }, onRetry = {}, onCancel = {}, onLoadMore = {}
+            )
         }
     }
 
     @Test
-    fun estimateDialog() = bothModes("counter-estimate-dialog") {
-        Shell("Counter") {
-            EstimateDialog(
-                start = detail.estimates!!.first().lines, laborCents = 6000, taxRateBasisPoints = 625, canNotify = true,
-                onSearchParts = { emptyList() }, onSend = { _, _, _ -> }, onDismiss = {}
-            )
-        }
+    fun estimateDialog() = screen("counter-estimate-dialog", rail = "Counter") {
+        EstimateDialog(
+            start = detail.estimates!!.first().lines, laborCents = 6000, taxRateBasisPoints = 625, canNotify = true,
+            onSearchParts = { emptyList() }, onSend = { _, _, _ -> }, onDismiss = {}
+        )
     }
 
     private val partsCo = Supplier(name = "Parts Co", contactName = "Rae", phone = "555 0199", accountNumber = "A-17")
@@ -613,45 +615,37 @@ class ScreenRenderTest {
     /** An order part way in, and a draft being put together */
     @Test
     fun purchaseOrders() {
-        bothModes("purchasing-order") {
-            Shell("Purchasing") {
-                OrderDetail(
-                    order = purchaseOrder, suppliers = listOf(partsCo), canEdit = true, onSearchParts = { emptyList() },
-                    onSave = { _, _ -> }, onPlace = { _, _ -> }, onReceive = { _, _ -> }, onCancel = {}, onDelete = {}, onClose = null
-                )
-            }
+        screen("purchasing-order", rail = "Purchasing") {
+            OrderDetail(
+                order = purchaseOrder, suppliers = listOf(partsCo), canEdit = true, onSearchParts = { emptyList() },
+                onSave = { _, _ -> }, onPlace = { _, _ -> }, onReceive = { _, _ -> }, onCancel = {}, onDelete = {}, onClose = null
+            )
         }
-        bothModes("purchasing-draft") {
-            Shell("Purchasing") {
-                OrderDetail(
-                    order = purchaseOrder.copy(status = PurchaseStatus.DRAFT, orderedAt = null, lines = purchaseOrder.lines.map { it.copy(receivedQuantity = 0) }),
-                    suppliers = listOf(partsCo), canEdit = true, onSearchParts = { emptyList() },
-                    onSave = { _, _ -> }, onPlace = { _, _ -> }, onReceive = { _, _ -> }, onCancel = {}, onDelete = {}, onClose = null
-                )
-            }
+        screen("purchasing-draft", rail = "Purchasing") {
+            OrderDetail(
+                order = purchaseOrder.copy(status = PurchaseStatus.DRAFT, orderedAt = null, lines = purchaseOrder.lines.map { it.copy(receivedQuantity = 0) }),
+                suppliers = listOf(partsCo), canEdit = true, onSearchParts = { emptyList() },
+                onSave = { _, _ -> }, onPlace = { _, _ -> }, onReceive = { _, _ -> }, onCancel = {}, onDelete = {}, onClose = null
+            )
         }
-        bothModes("purchasing-suppliers") {
-            Shell("Purchasing") {
-                SuppliersPane(suppliers = listOf(partsCo, Supplier(name = "Screens Direct", email = "orders@screens.example")), canEdit = true, onSave = { _, _, _ -> }, onRemove = {})
-            }
+        screen("purchasing-suppliers", rail = "Purchasing") {
+            SuppliersPane(suppliers = listOf(partsCo, Supplier(name = "Screens Direct", email = "orders@screens.example")), canEdit = true, onSave = { _, _, _ -> }, onRemove = {})
         }
     }
 
     /** A paid invoice with its screen part, refunding one */
     @Test
-    fun refundDialog() = bothModes("admin-refund-dialog") {
-        Shell("Admin") {
-            val part = Inventory(name = "iPhone 13 screen, OEM")
-            RefundDialog(
-                invoice = invoice.copy(
-                    status = InvoiceStatus.PAID,
-                    charges = invoice.charges.map { if (it.type == ChargeType.PART) it.copy(inventoryIdentifier = part.identifier) else it },
-                    payments = invoice.payments + Payment(method = PaymentMethod.CASH, amountCents = 11936)
-                ),
-                onRefund = { _, _ -> },
-                onDismissRequest = {}
-            )
-        }
+    fun refundDialog() = screen("admin-refund-dialog", rail = "Admin") {
+        val part = Inventory(name = "iPhone 13 screen, OEM")
+        RefundDialog(
+            invoice = invoice.copy(
+                status = InvoiceStatus.PAID,
+                charges = invoice.charges.map { if (it.type == ChargeType.PART) it.copy(inventoryIdentifier = part.identifier) else it },
+                payments = invoice.payments + Payment(method = PaymentMethod.CASH, amountCents = 11936)
+            ),
+            onRefund = { _, _ -> },
+            onDismissRequest = {}
+        )
     }
 
     /** The Server tab with a daily backup and a restore without photos */
@@ -661,38 +655,36 @@ class ScreenRenderTest {
         val now = System.currentTimeMillis()
         val manifest = BackupManifest(serverVersion = "1.0.0", createdAt = now - 3 * day, includesImages = false, imageCount = 0, imageBytes = 0)
 
-        bothModes("admin-server", height = 2200) {
-            Shell("Admin") {
-                AdminServerTab(
-                    serverInfo = ServerInfoResponse(
-                        name = "Front shop", version = "1.0.0", startedAt = now - day, uptimeMillis = day,
-                        dataPath = "/srv/ticketman", databaseSizeBytes = 48_000_000, imagesSizeBytes = 2_400_000_000,
-                        javaVersion = "21.0.4", operatingSystem = "Linux 6.8", developmentMode = false,
-                        scheduledBackup = ScheduledBackupInfo(folder = "/mnt/usb/ticketman", keep = 7, includesImages = true, lastBackupAt = now - day / 2, lastSizeBytes = 2_300_000_000),
-                        lastRestore = RestoreRecord(manifest, now - day, "pre-restore-${now - day}")
-                    ),
-                    serverUrl = "https://192.168.1.20:8443",
-                    shopProfile = ShopProfile(
-                        name = "Fix It Shop", phone = "555-0100", publicUrl = "https://repairs.example.com", taxRate = "8.25",
-                        taxClasses = listOf(TaxClass("food", "Food", "2"), TaxClass("svc", "Services", "")),
-                        statuses = listOf(
-                            CustomStatus(name = "Diagnosing", actsAs = TicketStatusType.IN_PROGRESS, tone = StatusTone.ACCENT),
-                            CustomStatus(name = "Awaiting parts", actsAs = TicketStatusType.ON_HOLD),
-                            CustomStatus(name = "Waiting on insurer", actsAs = TicketStatusType.ON_HOLD, retired = true)
-                        )
-                    ),
-                    isBusy = false,
-                    backupProgress = null,
-                    pendingRestore = null,
-                    onSaveShopProfile = {},
-                    onBackup = {},
-                    onRestore = {},
-                    onCancelRestore = {},
-                    onRestart = {},
-                    onSeed = {},
-                    importCard = { ImportCard(modifier = Modifier.width(440.dp), isBusy = false, onPicked = { _, _ -> }) }
-                )
-            }
+        screen("admin-server", height = 2200, rail = "Admin") {
+            AdminServerTab(
+                serverInfo = ServerInfoResponse(
+                    name = "Front shop", version = "1.0.0", startedAt = now - day, uptimeMillis = day,
+                    dataPath = "/srv/ticketman", databaseSizeBytes = 48_000_000, imagesSizeBytes = 2_400_000_000,
+                    javaVersion = "21.0.4", operatingSystem = "Linux 6.8", developmentMode = false,
+                    scheduledBackup = ScheduledBackupInfo(folder = "/mnt/usb/ticketman", keep = 7, includesImages = true, lastBackupAt = now - day / 2, lastSizeBytes = 2_300_000_000),
+                    lastRestore = RestoreRecord(manifest, now - day, "pre-restore-${now - day}")
+                ),
+                serverUrl = "https://192.168.1.20:8443",
+                shopProfile = ShopProfile(
+                    name = "Fix It Shop", phone = "555-0100", publicUrl = "https://repairs.example.com", taxRate = "8.25",
+                    taxClasses = listOf(TaxClass("food", "Food", "2"), TaxClass("svc", "Services", "")),
+                    statuses = listOf(
+                        CustomStatus(name = "Diagnosing", actsAs = TicketStatusType.IN_PROGRESS, tone = StatusTone.ACCENT),
+                        CustomStatus(name = "Awaiting parts", actsAs = TicketStatusType.ON_HOLD),
+                        CustomStatus(name = "Waiting on insurer", actsAs = TicketStatusType.ON_HOLD, retired = true)
+                    )
+                ),
+                isBusy = false,
+                backupProgress = null,
+                pendingRestore = null,
+                onSaveShopProfile = {},
+                onBackup = {},
+                onRestore = {},
+                onCancelRestore = {},
+                onRestart = {},
+                onSeed = {},
+                importCard = { ImportCard(modifier = Modifier.width(440.dp), isBusy = false, onPicked = { _, _ -> }) }
+            )
         }
     }
 
@@ -718,23 +710,21 @@ class ScreenRenderTest {
         )
 
         listOf("admin-server-proxy" to proxied, "admin-server-proxy-untrusted" to proxied.copy(clientAddress = "172.18.0.3", forwarded = false, trustedProxies = listOf("127.0.0.1"), canRestart = false)).forEach { (name, info) ->
-            bothModes(name, height = 1100) {
-                Shell("Admin") {
-                    AdminServerTab(
-                        serverInfo = info,
-                        serverUrl = "https://tickets.myshop.com",
-                        shopProfile = null,
-                        isBusy = false,
-                        backupProgress = null,
-                        pendingRestore = waiting.takeIf { info.canRestart },
-                        onSaveShopProfile = {},
-                        onBackup = {},
-                        onRestore = {},
-                        onCancelRestore = {},
-                        onRestart = {},
-                        onSeed = {}
-                    )
-                }
+            screen(name, height = 1100, rail = "Admin") {
+                AdminServerTab(
+                    serverInfo = info,
+                    serverUrl = "https://tickets.myshop.com",
+                    shopProfile = null,
+                    isBusy = false,
+                    backupProgress = null,
+                    pendingRestore = waiting.takeIf { info.canRestart },
+                    onSaveShopProfile = {},
+                    onBackup = {},
+                    onRestore = {},
+                    onCancelRestore = {},
+                    onRestart = {},
+                    onSeed = {}
+                )
             }
         }
     }
@@ -745,187 +735,279 @@ class ScreenRenderTest {
         val now = System.currentTimeMillis()
         val dana = Uuid.random()
 
-        bothModes("admin-sessions", height = 1100) {
-            Shell("Admin") {
-                AdminSessionsTab(
-                    sessions = listOf(
-                        SessionResponse("s1", dana, "dana", "Dana Whitfield", AccessLevel.ADMIN, "Front desk PC", SessionKind.PASSWORD, now - 3_600_000, now - 60_000, now + 86_400_000),
-                        SessionResponse("s2", dana, "dana", "Dana Whitfield", AccessLevel.ADMIN, "Counter", SessionKind.PIN, now - 600_000, now, now + 43_200_000)
+        screen("admin-sessions", height = 1100, rail = "Admin") {
+            AdminSessionsTab(
+                sessions = listOf(
+                    SessionResponse("s1", dana, "dana", "Dana Whitfield", AccessLevel.ADMIN, "Front desk PC", SessionKind.PASSWORD, now - 3_600_000, now - 60_000, now + 86_400_000),
+                    SessionResponse("s2", dana, "dana", "Dana Whitfield", AccessLevel.ADMIN, "Counter", SessionKind.PIN, now - 600_000, now, now + 43_200_000)
+                ),
+                currentUserIdentifier = dana,
+                currentSessionId = "s1",
+                onRevoke = {},
+                loginLimits = LoginLimitsResponse(
+                    locks = listOf(
+                        LoginLock(LoginLockKind.USERNAME, "priya", 8, now + 120_000),
+                        LoginLock(LoginLockKind.ADDRESS, "203.0.113.24", 20, now + 600_000)
                     ),
-                    currentUserIdentifier = dana,
-                    currentSessionId = "s1",
-                    onRevoke = {},
-                    loginLimits = LoginLimitsResponse(
-                        locks = listOf(
-                            LoginLock(LoginLockKind.USERNAME, "priya", 8, now + 120_000),
-                            LoginLock(LoginLockKind.ADDRESS, "203.0.113.24", 20, now + 600_000)
-                        ),
-                        recentFailures = 134,
-                        surge = true
-                    )
+                    recentFailures = 134,
+                    surge = true
                 )
-            }
+            )
         }
     }
 
     @Test
-    fun adminOverview() = bothModes("admin-overview") {
-        Shell("Admin") {
-            AdminOverviewTab(
-                stats = AdminStatsResponse(
-                    totalTickets = 214, openTickets = 18, ticketsCreatedLastWeek = 23,
-                    ticketsByStatus = mapOf(TicketStatusType.IN_PROGRESS to 9, TicketStatusType.ON_HOLD to 4, TicketStatusType.DONE to 5, TicketStatusType.PICKED_UP to 196),
-                    ticketsByPriority = mapOf(TicketPriorityType.LOW to 4, TicketPriorityType.NORMAL to 9, TicketPriorityType.HIGH to 3, TicketPriorityType.URGENT to 2),
-                    oldestOpenTicket = pixel, recentTickets = listOf(iphone, pixel, thinkpad, ps5),
-                    totalCustomers = 482, totalInventory = 96, lowStockCount = 3, lowStockThreshold = 2,
-                    totalUsers = 6, usersByAccessLevel = mapOf(AccessLevel.ADMIN to 1, AccessLevel.NORMAL to 4, AccessLevel.RESTRICTED to 1)
+    fun adminOverview() = screen("admin-overview", rail = "Admin") {
+        AdminOverviewTab(
+            stats = AdminStatsResponse(
+                totalTickets = 214, openTickets = 18, ticketsCreatedLastWeek = 23,
+                ticketsByStatus = mapOf(TicketStatusType.IN_PROGRESS to 9, TicketStatusType.ON_HOLD to 4, TicketStatusType.DONE to 5, TicketStatusType.PICKED_UP to 196),
+                ticketsByPriority = mapOf(TicketPriorityType.LOW to 4, TicketPriorityType.NORMAL to 9, TicketPriorityType.HIGH to 3, TicketPriorityType.URGENT to 2),
+                oldestOpenTicket = pixel, recentTickets = listOf(iphone, pixel, thinkpad, ps5),
+                totalCustomers = 482, totalInventory = 96, lowStockCount = 3, lowStockThreshold = 2,
+                totalUsers = 6, usersByAccessLevel = mapOf(AccessLevel.ADMIN to 1, AccessLevel.NORMAL to 4, AccessLevel.RESTRICTED to 1)
+            ),
+            dailyReport = DailyReport(
+                date = "2026-10-17",
+                takenByMethod = mapOf(PaymentMethod.CARD to 98450, PaymentMethod.CASH to 30000),
+                paymentCount = 11, salesCents = 112000, invoicesPaid = 8,
+                ticketsCheckedIn = 7, ticketsPickedUp = 8, overdueNow = 1, waitingForPickupNow = 5
+            ),
+            defaultPaper = PaperSize.RECEIPT_80MM,
+            onMoveReport = {},
+            onPrintReport = { _, _ -> },
+            onTicketClick = {},
+            onLowStockClick = {}
+        )
+    }
+
+    @Test
+    fun adminReports() = screen("admin-reports", height = 1300, rail = "Admin") {
+        AdminReportsTab(
+            report = PeriodReport(
+                from = "2026-10-01", to = "2026-10-24",
+                sales = SalesSummary(
+                    invoices = 64, totalCents = 1_284_500, taxCents = 41_200, discountCents = 3_000,
+                    laborCents = 812_000, partsCents = 398_300, otherCents = 36_000, partsCostCents = 151_900, partsWithoutCost = 2
                 ),
-                dailyReport = DailyReport(
-                    date = "2026-10-17",
-                    takenByMethod = mapOf(PaymentMethod.CARD to 98450, PaymentMethod.CASH to 30000),
-                    paymentCount = 11, salesCents = 112000, invoicesPaid = 8,
-                    ticketsCheckedIn = 7, ticketsPickedUp = 8, overdueNow = 1, waitingForPickupNow = 5
+                days = listOf(DaySales("2026-10-22", 4, 61_000), DaySales("2026-10-23", 7, 98_450), DaySales("2026-10-24", 3, 30_000)),
+                taxes = listOf(TaxLine("Tax", 750, 512_000, 38_400), TaxLine("Accessories", 500, 56_000, 2_800)),
+                takenByMethod = mapOf(PaymentMethod.CARD to 984_500, PaymentMethod.CASH to 300_000, PaymentMethod.STORE_CREDIT to 5_000),
+                refunds = RefundSummary(1, 4_500, listOf(RefundLine("INV-26-00000187", 4_500, "Case didn't fit", PaymentMethod.CARD, 1_761_300_000_000, "dana"))),
+                techs = listOf(
+                    TechSummary(name = "Dana Whitfield", tickets = 31, laborHours = 58.5, laborCents = 468_000, partsCents = 212_000, commissionBasisPoints = 1_000),
+                    TechSummary(name = "Sam Ortiz", tickets = 24, laborHours = 43.0, laborCents = 344_000, partsCents = 186_300)
                 ),
-                defaultPaper = PaperSize.RECEIPT_80MM,
-                onMoveReport = {},
-                onPrintReport = { _, _ -> },
+                turnaround = Turnaround(pickedUp = 58, readyCount = 55, averageHoursToReady = 41.2, medianHoursToReady = 26.5, averageHoursToPickup = 70.1, medianHoursToPickup = 50.0)
+            ),
+            range = ExportRange.THIS_MONTH,
+            days = null,
+            commissions = emptyList(),
+            users = emptyList(),
+            defaultPaper = PaperSize.RECEIPT_80MM,
+            isBusy = false,
+            onPick = {},
+            onShowDays = { _, _ -> },
+            onPrint = { _, _ -> },
+            onSaveCommissions = { _, _ -> }
+        )
+    }
+
+    @Test
+    fun commissionDialog() = screen("admin-commission-dialog", rail = "Admin") {
+        val dana = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.NORMAL)
+        CommissionDialog(
+            users = listOf(dana, User(username = "sam", name = "Sam Ortiz")),
+            rates = listOf(CommissionRate(dana.identifier, 1_250)),
+            saving = false,
+            onSave = {},
+            onDismissRequest = {}
+        )
+    }
+
+    @Test
+    fun appointments() = screen("appointments", rail = "Calendar") {
+        val monday = kotlinx.datetime.LocalDate(2026, 10, 26)
+        fun at(day: Int, hour: Int, minute: Int = 0) = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, day), hour, minute)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            TmPageHeader(title = "Appointments", onBack = null, subtitle = "Week of Mon Oct 26")
+            AppointmentWeek(
+                weekStart = monday,
+                appointments = listOf(
+                    Appointment(startsAt = at(26, 9, 30), customerName = "Jane Doe", customerIdentifier = dana.identifier, device = Device("Apple", "iPhone 13"), problem = "Cracked screen", technicianName = "Dana Whitfield", status = AppointmentStatus.ARRIVED),
+                    Appointment(startsAt = at(26, 11), minutes = 60, customerName = "Walk In Wendy", phone = "(555) 010-0100", device = Device("Samsung", "Galaxy S23"), problem = "Won't charge"),
+                    Appointment(startsAt = at(27, 14), customerName = "Bob Smith", device = Device("Sony", "PS5"), problem = "HDMI port", notes = "Bringing the controller too", status = AppointmentStatus.NO_SHOW),
+                    Appointment(startsAt = at(29, 10), customerName = "Lee Park", device = Device("Lenovo", "ThinkPad X1"), problem = "Keyboard", status = AppointmentStatus.CANCELLED)
+                ),
+                canEdit = true,
+                onEdit = {},
+                onCheckIn = {},
+                onStatus = { _, _ -> },
+                onDelete = {}
+            )
+        }
+    }
+
+    @Test
+    fun appointmentDialog() = screen("appointment-dialog", height = 1000, rail = "Calendar") {
+        AppointmentDialog(
+            appointment = Appointment(startsAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 27), 14, 30), customerName = "Walk In Wendy", phone = "(555) 010-0100", device = Device("Samsung", "Galaxy S23"), problem = "Won't charge"),
+            isNew = true,
+            onSearchCustomers = { emptyList() },
+            onSearchTechnicians = { emptyList() },
+            onSave = { _, _ -> },
+            onDismissRequest = {}
+        )
+    }
+
+    @Test
+    fun adminTimesheets() = screen("admin-timesheets", height = 1100, rail = "Admin") {
+        val day = kotlinx.datetime.LocalDate(2026, 10, 26)
+        fun at(hour: Int, minute: Int = 0, plus: Int = 0) = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 26 + plus), hour, minute)
+        val danaId = kotlin.uuid.Uuid.random()
+        val samId = kotlin.uuid.Uuid.random()
+        val danaOn = TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(8, 58, 2), station = "Front Counter")
+        AdminTimesheetsTab(
+            sheet = Timesheet(
+                from = "2026-10-26", to = "2026-11-01", generatedAt = at(13, 30, 2),
+                people = listOf(
+                    TimesheetPerson(danaId, "Dana Whitfield", 21.0, listOf(
+                        TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 2), clockedOutAt = at(17, 31), station = "Front Counter"),
+                        TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 0, 1), clockedOutAt = at(17, 0, 1), note = "Forgot to clock out", editedBy = "boss"),
+                        danaOn
+                    )),
+                    TimesheetPerson(samId, "Sam Ortiz", 7.5, listOf(
+                        TimeEntry(userIdentifier = samId, userName = "Sam Ortiz", clockedInAt = at(10, 0), clockedOutAt = at(17, 30))
+                    ))
+                )
+            ),
+            onNow = listOf(danaOn),
+            users = emptyList(),
+            range = ExportRange.THIS_MONTH,
+            days = null,
+            onPick = {},
+            onShowDays = { _, _ -> },
+            onSave = { _, _, _ -> },
+            onRemove = {}
+        )
+    }
+
+    @Test
+    fun timeEntryDialog() = screen("admin-time-entry-dialog", rail = "Admin") {
+        TimeEntryDialog(
+            entry = TimeEntry(userIdentifier = kotlin.uuid.Uuid.random(), userName = "Dana Whitfield", clockedInAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 27), 9, 0)),
+            users = emptyList(),
+            onSave = { _, _ -> },
+            onDismissRequest = {}
+        )
+    }
+
+    /** The counter with nothing open: search, the queue (behind its button on a phone) and search results */
+    @Test
+    fun counterHome() = screen("counter-home", rail = "Counter") {
+        CounterLayout(
+            searchField = { modifier -> TmSearchField(modifier = modifier, query = "dana", onQueryChange = {}, placeholder = "Search tickets and customers", size = TmControlSize.LARGE) },
+            canEdit = true,
+            queue = queue,
+            onCheckIn = {},
+            onNewCustomer = {},
+            onSell = {},
+            onPriceCheck = {},
+            onQueueTicketClick = {}
+        ) {
+            SearchResults(
+                query = "dana",
+                results = CounterSearchResponse(tickets = listOf(summary(iphone, dana), summary(pixel, dana)), customers = listOf(dana)),
+                searching = false,
                 onTicketClick = {},
-                onLowStockClick = {}
+                onCustomerClick = {}
             )
         }
     }
 
     @Test
-    fun adminReports() = bothModes("admin-reports", height = 1300) {
-        Shell("Admin") {
-            AdminReportsTab(
-                report = PeriodReport(
-                    from = "2026-10-01", to = "2026-10-24",
-                    sales = SalesSummary(
-                        invoices = 64, totalCents = 1_284_500, taxCents = 41_200, discountCents = 3_000,
-                        laborCents = 812_000, partsCents = 398_300, otherCents = 36_000, partsCostCents = 151_900, partsWithoutCost = 2
-                    ),
-                    days = listOf(DaySales("2026-10-22", 4, 61_000), DaySales("2026-10-23", 7, 98_450), DaySales("2026-10-24", 3, 30_000)),
-                    taxes = listOf(TaxLine("Tax", 750, 512_000, 38_400), TaxLine("Accessories", 500, 56_000, 2_800)),
-                    takenByMethod = mapOf(PaymentMethod.CARD to 984_500, PaymentMethod.CASH to 300_000, PaymentMethod.STORE_CREDIT to 5_000),
-                    refunds = RefundSummary(1, 4_500, listOf(RefundLine("INV-26-00000187", 4_500, "Case didn't fit", PaymentMethod.CARD, 1_761_300_000_000, "dana"))),
-                    techs = listOf(
-                        TechSummary(name = "Dana Whitfield", tickets = 31, laborHours = 58.5, laborCents = 468_000, partsCents = 212_000, commissionBasisPoints = 1_000),
-                        TechSummary(name = "Sam Ortiz", tickets = 24, laborHours = 43.0, laborCents = 344_000, partsCents = 186_300)
-                    ),
-                    turnaround = Turnaround(pickedUp = 58, readyCount = 55, averageHoursToReady = 41.2, medianHoursToReady = 26.5, averageHoursToPickup = 70.1, medianHoursToPickup = 50.0)
-                ),
-                range = ExportRange.THIS_MONTH,
-                days = null,
-                commissions = emptyList(),
-                users = emptyList(),
-                defaultPaper = PaperSize.RECEIPT_80MM,
-                isBusy = false,
-                onPick = {},
-                onShowDays = { _, _ -> },
-                onPrint = { _, _ -> },
-                onSaveCommissions = { _, _ -> }
+    fun kioskLockNarrow() = bothModes("kiosk-lock-narrow", width = NARROW_WIDTH, height = 900) {
+        TmBackdrop(Modifier.fillMaxSize()) {
+            LockScreen(
+                stationName = "Front counter",
+                staff = listOf("Dana Whitfield", "Priya Raman", "Marcus Oyelaran").map { StaffMember(kotlin.uuid.Uuid.random(), it.substringBefore(" ").lowercase(), it) },
+                onRefresh = {},
+                onUnlock = { _, _, _ -> },
+                onExit = { _, _, _ -> },
+                onPunch = { _, _, _ -> }
             )
         }
     }
 
     @Test
-    fun commissionDialog() = bothModes("admin-commission-dialog") {
-        Shell("Admin") {
-            val dana = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.NORMAL)
-            CommissionDialog(
-                users = listOf(dana, User(username = "sam", name = "Sam Ortiz")),
-                rates = listOf(CommissionRate(dana.identifier, 1_250)),
-                saving = false,
-                onSave = {},
-                onDismissRequest = {}
-            )
-        }
+    fun adminInvoices() = screen("admin-invoices", height = 1100, rail = "Admin") {
+        val kept = Invoice(number = InvoiceNumber(2026, 182), status = InvoiceStatus.PAID, totalCents = 15_990, ticketIdentifier = iphone.identifier,
+            payments = listOf(Payment(method = PaymentMethod.CARD, amountCents = 15_990)), ticketLabel = "26-00000038", ticketRemovedAt = now)
+        InvoiceList(
+            invoices = listOf(
+                Invoice(number = InvoiceNumber(2026, 187), status = InvoiceStatus.PAID, totalCents = 13_490, createdAt = now,
+                    payments = listOf(Payment(method = PaymentMethod.CARD, amountCents = 13_490), Payment(method = PaymentMethod.CARD, amountCents = -4_500))),
+                Invoice(number = InvoiceNumber(2026, 186), ticketIdentifier = iphone.identifier, status = InvoiceStatus.OPEN, totalCents = 14_999, createdAt = now - 3_600_000,
+                    payments = listOf(Payment(method = PaymentMethod.CASH, amountCents = 5_000))),
+                Invoice(number = InvoiceNumber(2026, 185), ticketIdentifier = pixel.identifier, status = InvoiceStatus.VOID, totalCents = 8_900, createdAt = now - 7_200_000),
+                kept.copy(createdAt = now - 86_400_000)
+            ),
+            endReached = false,
+            giftCards = listOf(GiftCard(kotlin.uuid.Uuid.random(), "GC-7KQ2-M9XD-4HTP-WR8B", 1_500, 2_500, now)),
+            onOpenTicket = {},
+            onExport = {},
+            onPdf = {},
+            onRefund = {},
+            onVoid = {},
+            onDelete = {},
+            onLoadMore = {},
+            onAdjustGiftCard = { _, _, _, _ -> }
+        )
     }
 
     @Test
-    fun appointments() = bothModes("appointments") {
-        Shell("Calendar") {
-            val monday = kotlinx.datetime.LocalDate(2026, 10, 26)
-            fun at(day: Int, hour: Int, minute: Int = 0) = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, day), hour, minute)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                TmPageHeader(title = "Appointments", onBack = null, subtitle = "Week of Mon Oct 26")
-                AppointmentWeek(
-                    weekStart = monday,
-                    appointments = listOf(
-                        Appointment(startsAt = at(26, 9, 30), customerName = "Jane Doe", customerIdentifier = dana.identifier, device = Device("Apple", "iPhone 13"), problem = "Cracked screen", technicianName = "Dana Whitfield", status = AppointmentStatus.ARRIVED),
-                        Appointment(startsAt = at(26, 11), minutes = 60, customerName = "Walk In Wendy", phone = "(555) 010-0100", device = Device("Samsung", "Galaxy S23"), problem = "Won't charge"),
-                        Appointment(startsAt = at(27, 14), customerName = "Bob Smith", device = Device("Sony", "PS5"), problem = "HDMI port", notes = "Bringing the controller too", status = AppointmentStatus.NO_SHOW),
-                        Appointment(startsAt = at(29, 10), customerName = "Lee Park", device = Device("Lenovo", "ThinkPad X1"), problem = "Keyboard", status = AppointmentStatus.CANCELLED)
-                    ),
-                    canEdit = true,
-                    onEdit = {},
-                    onCheckIn = {},
-                    onStatus = { _, _ -> },
-                    onDelete = {}
-                )
-            }
-        }
+    fun adminLowStock() = screen("admin-low-stock", rail = "Admin") {
+        AdminLowStockTab(
+            items = listOf(
+                Inventory(name = "iPhone 13 Screen", sku = "IP13-SCR", stock = 1, reorderPoint = 3, priceCents = 12_000),
+                Inventory(name = "Samsung Galaxy S23 Ultra Charging Port Flex", stock = 0, priceCents = 3_500),
+                Inventory(name = "USB-C Cable", stock = 2, priceCents = 1_200)
+            ),
+            threshold = 2,
+            onThresholdChange = {},
+            onItemClick = {},
+            onDraftOrders = { _ -> }
+        )
     }
 
     @Test
-    fun appointmentDialog() = bothModes("appointment-dialog", height = 1000) {
-        Shell("Calendar") {
-            AppointmentDialog(
-                appointment = Appointment(startsAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 27), 14, 30), customerName = "Walk In Wendy", phone = "(555) 010-0100", device = Device("Samsung", "Galaxy S23"), problem = "Won't charge"),
-                isNew = true,
-                onSearchCustomers = { emptyList() },
-                onSearchTechnicians = { emptyList() },
-                onSave = { _, _ -> },
-                onDismissRequest = {}
-            )
-        }
+    fun adminStations() = screen("admin-stations", rail = "Admin") {
+        AdminStationsTab(
+            stations = listOf(
+                Station(kotlin.uuid.Uuid.random(), "Front Counter", "counter-1", StationStatus.APPROVED, "dana", now - 86_400_000, "boss", now, kioskEnabled = true),
+                Station(kotlin.uuid.Uuid.random(), "Back Bench iPad", "bench-2", StationStatus.PENDING, "priya", now)
+            ),
+            onApprove = {},
+            onKiosk = { _, _ -> },
+            onRemove = {}
+        )
     }
 
     @Test
-    fun adminTimesheets() = bothModes("admin-timesheets", height = 1100) {
-        Shell("Admin") {
-            val day = kotlinx.datetime.LocalDate(2026, 10, 26)
-            fun at(hour: Int, minute: Int = 0, plus: Int = 0) = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 26 + plus), hour, minute)
-            val danaId = kotlin.uuid.Uuid.random()
-            val samId = kotlin.uuid.Uuid.random()
-            val danaOn = TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(8, 58, 2), station = "Front Counter")
-            AdminTimesheetsTab(
-                sheet = Timesheet(
-                    from = "2026-10-26", to = "2026-11-01", generatedAt = at(13, 30, 2),
-                    people = listOf(
-                        TimesheetPerson(danaId, "Dana Whitfield", 21.0, listOf(
-                            TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 2), clockedOutAt = at(17, 31), station = "Front Counter"),
-                            TimeEntry(userIdentifier = danaId, userName = "Dana Whitfield", clockedInAt = at(9, 0, 1), clockedOutAt = at(17, 0, 1), note = "Forgot to clock out", editedBy = "boss"),
-                            danaOn
-                        )),
-                        TimesheetPerson(samId, "Sam Ortiz", 7.5, listOf(
-                            TimeEntry(userIdentifier = samId, userName = "Sam Ortiz", clockedInAt = at(10, 0), clockedOutAt = at(17, 30))
-                        ))
-                    )
-                ),
-                onNow = listOf(danaOn),
-                users = emptyList(),
-                range = ExportRange.THIS_MONTH,
-                days = null,
-                onPick = {},
-                onShowDays = { _, _ -> },
-                onSave = { _, _, _ -> },
-                onRemove = {}
-            )
-        }
-    }
-
-    @Test
-    fun timeEntryDialog() = bothModes("admin-time-entry-dialog") {
-        Shell("Admin") {
-            TimeEntryDialog(
-                entry = TimeEntry(userIdentifier = kotlin.uuid.Uuid.random(), userName = "Dana Whitfield", clockedInAt = AppointmentTimes.toMillis(kotlinx.datetime.LocalDate(2026, 10, 27), 9, 0)),
-                users = emptyList(),
-                onSave = { _, _ -> },
-                onDismissRequest = {}
-            )
-        }
+    fun adminAudit() = screen("admin-audit", rail = "Admin") {
+        fun entry(action: AuditAction, actor: String, type: String, details: String, minutesAgo: Int) =
+            AuditEntry(kotlin.uuid.Uuid.random(), null, actor, action, type, null, details, now - minutesAgo * 60_000L)
+        AdminAuditTab(
+            entries = listOf(
+                entry(AuditAction.UPDATE, "newtech", "ticket", "Ticket 26-00000041 picked up, INV-26-00000186 paid $159.90", 3),
+                entry(AuditAction.CREATE, "newtech", "time", "Clocked in at Front Counter", 40),
+                entry(AuditAction.LOGIN, "dana", "user", "PIN at Front Counter", 42),
+                entry(AuditAction.DELETE, "boss", "appointment", "Deleted Walk In Wendy at 2026-10-27 11:00", 90),
+                entry(AuditAction.LOGIN_FAILED, "priya", "user", "Wrong PIN at Front Counter", 120)
+            ),
+            endReached = false,
+            onLoadMore = {}
+        )
     }
 
     @Test
@@ -940,32 +1022,30 @@ class ScreenRenderTest {
             ))
         }
 
-        bothModes("admin-users") {
-            Shell("Admin") {
-                AdminUsersTab(
-                    pending = emptyList(),
-                    onInvite = {},
-                    onApprove = {},
-                    onReject = {},
-                    onRenewInvite = {},
-                    userList = listOf(boss, tech, viewer),
-                    seed = seed,
-                    currentUserIdentifier = boss.identifier,
-                    listState = rememberLazyListState(),
-                    onSelect = {},
-                    onSearchQuery = { emptyList() },
-                    onAdd = {},
-                    onEdit = {},
-                    onResetPassword = {},
-                    onSetActive = {},
-                    onLogOutEverywhere = {},
-                    onUnlockPin = {},
-                    onResetPin = {},
-                    onSaveNote = {},
-                    onRemoveNote = {},
-                    onDelete = {}
-                )
-            }
+        screen("admin-users", rail = "Admin") {
+            AdminUsersTab(
+                pending = emptyList(),
+                onInvite = {},
+                onApprove = {},
+                onReject = {},
+                onRenewInvite = {},
+                userList = listOf(boss, tech, viewer),
+                seed = seed,
+                currentUserIdentifier = boss.identifier,
+                listState = rememberLazyListState(),
+                onSelect = {},
+                onSearchQuery = { emptyList() },
+                onAdd = {},
+                onEdit = {},
+                onResetPassword = {},
+                onSetActive = {},
+                onLogOutEverywhere = {},
+                onUnlockPin = {},
+                onResetPin = {},
+                onSaveNote = {},
+                onRemoveNote = {},
+                onDelete = {}
+            )
         }
     }
 
@@ -983,38 +1063,32 @@ class ScreenRenderTest {
             setTicket(iphone, sampleNotes, EntityReference(dana.identifier, dana.name), EntityReference(dana.identifier, "Priya Raman"))
         }
 
-        bothModes("records-ticket-work", height = 1100) {
-            Shell("Records") {
-                TicketInfoPane(
-                    seed = ticketSeed,
-                    onEditClick = {},
-                    onImageClick = { _, _ -> },
-                    work = { TicketWorkSection(entries = entries, loadError = null, canChange = true, onLog = {}, onRemove = {}) }
-                )
-            }
+        screen("records-ticket-work", height = 1100, rail = "Records") {
+            TicketInfoPane(
+                seed = ticketSeed,
+                onEditClick = {},
+                onImageClick = { _, _ -> },
+                work = { TicketWorkSection(entries = entries, loadError = null, canChange = true, onLog = {}, onRemove = {}) }
+            )
         }
 
-        bothModes("records-ticket-work-dialog") {
-            Shell("Records") {
-                WorkDialog(laborRateCents = 8_000, onPartSearch = { emptyList() }, onFindPart = { null }, onSave = { _, _ -> }, onDismissRequest = {})
-            }
+        screen("records-ticket-work-dialog", rail = "Records") {
+            WorkDialog(laborRateCents = 8_000, onPartSearch = { emptyList() }, onFindPart = { null }, onSave = { _, _ -> }, onDismissRequest = {})
         }
 
-        bothModes("records-ticket-work-dialog-parts") {
-            Shell("Records") {
-                WorkDialog(
-                    laborRateCents = 8_000,
-                    onPartSearch = { emptyList() },
-                    onFindPart = { null },
-                    onSave = { _, _ -> },
-                    onDismissRequest = {},
-                    initialParts = listOf(
-                        PartLine(Inventory(name = "iPhone 13 Screen", stock = 4, priceCents = 12_000)),
-                        PartLine(Inventory(name = "Adhesive strip", stock = 1, priceCents = 300), count = "2"),
-                        PartLine(Inventory(name = "Screw kit", priceCents = 150))
-                    )
+        screen("records-ticket-work-dialog-parts", rail = "Records") {
+            WorkDialog(
+                laborRateCents = 8_000,
+                onPartSearch = { emptyList() },
+                onFindPart = { null },
+                onSave = { _, _ -> },
+                onDismissRequest = {},
+                initialParts = listOf(
+                    PartLine(Inventory(name = "iPhone 13 Screen", stock = 4, priceCents = 12_000)),
+                    PartLine(Inventory(name = "Adhesive strip", stock = 1, priceCents = 300), count = "2"),
+                    PartLine(Inventory(name = "Screw kit", priceCents = 150))
                 )
-            }
+            )
         }
     }
 
@@ -1036,22 +1110,18 @@ class ScreenRenderTest {
             )
         )
 
-        bothModes("admin-import", height = 1000) {
-            Shell("Admin") {
-                ImportDialog(
-                    sheet = sheet, mapping = sheet.mapping, preview = preview, problem = null, importing = false,
-                    onMap = { _, _ -> }, onImport = {}, onDismiss = {}
-                )
-            }
+        screen("admin-import", height = 1000, rail = "Admin") {
+            ImportDialog(
+                sheet = sheet, mapping = sheet.mapping, preview = preview, problem = null, importing = false,
+                onMap = { _, _ -> }, onImport = {}, onDismiss = {}
+            )
         }
     }
 
     /** Choosing the days for the invoice CSV */
     @Test
-    fun invoiceExport() = bothModes("admin-invoice-export") {
-        Shell("Admin") {
-            InvoiceExportDialog(onExport = { _, _, _, _ -> }, onDismissRequest = {})
-        }
+    fun invoiceExport() = screen("admin-invoice-export", rail = "Admin") {
+        InvoiceExportDialog(onExport = { _, _, _, _ -> }, onDismissRequest = {})
     }
 
     /** Editing a customer with one ticket linked already and one picked in the dialog, waiting for Save */
@@ -1059,19 +1129,17 @@ class ScreenRenderTest {
     fun customerDialog() {
         // Remembered from what's linked when the dialog opens, so the pixel is added after it's drawn once
         val seed = CustomerSeed().apply { setCustomer(dana, sampleNotes, listOf(iphone)) }
-        bothModes("records-customer-dialog", height = 1100) {
-            Shell("Records") {
-                CustomerDialog(
-                    seed = seed,
-                    isVisible = true,
-                    onDismiss = {},
-                    onContinue = {},
-                    onImageClick = { _, _ -> },
-                    onTicketSearchQuery = { emptyList() },
-                    onFindTicket = { TmResult.Error(ServerError(NetworkError.NOT_FOUND)) }
-                )
-                LaunchedEffect(Unit) { seed.addTicket(pixel) }
-            }
+        screen("records-customer-dialog", height = 1100, rail = "Records") {
+            CustomerDialog(
+                seed = seed,
+                isVisible = true,
+                onDismiss = {},
+                onContinue = {},
+                onImageClick = { _, _ -> },
+                onTicketSearchQuery = { emptyList() },
+                onFindTicket = { TmResult.Error(ServerError(NetworkError.NOT_FOUND)) }
+            )
+            LaunchedEffect(Unit) { seed.addTicket(pixel) }
         }
     }
 
@@ -1081,18 +1149,16 @@ class ScreenRenderTest {
         val seed = TicketSeed().apply {
             setTicket(iphone, sampleNotes, EntityReference(dana.identifier, dana.name), EntityReference(dana.identifier, "Priya Raman"))
         }
-        bothModes("records-ticket-dialog", height = 1000) {
-            Shell("Records") {
-                TicketDialog(
-                    seed = seed,
-                    isVisible = true,
-                    onCustomerSearchQuery = { emptyList() },
-                    onUserSearchQuery = { emptyList() },
-                    onAddCustomer = { _, _ -> },
-                    onContinue = {},
-                    onDismiss = {}
-                )
-            }
+        screen("records-ticket-dialog", height = 1000, rail = "Records") {
+            TicketDialog(
+                seed = seed,
+                isVisible = true,
+                onCustomerSearchQuery = { emptyList() },
+                onUserSearchQuery = { emptyList() },
+                onAddCustomer = { _, _ -> },
+                onContinue = {},
+                onDismiss = {}
+            )
         }
     }
 
@@ -1103,136 +1169,130 @@ class ScreenRenderTest {
             setTicket(iphone, sampleNotes, EntityReference(dana.identifier, dana.name), EntityReference(dana.identifier, "Priya Raman"))
         }
 
-        bothModes("records-customers") {
-            Shell("Records") {
-                CustomerPanel(
-                    customerList = listOf(dana, marcus, Customer(name = "Priya Raman", phone = "555 0110"), Customer(name = "Tomás Herrera", email = "tomas@example.com")),
-                    seed = customerSeed,
-                    onAddCustomer = {},
-                    onEditCustomer = {},
-                    onCustomerSelectionChange = {},
-                    onSearchQuery = { emptyList() },
-                    onDeleteCustomer = {},
-                    onTicketClick = {},
-                    onImageClick = { _, _ -> },
-                    customerLazyListState = rememberLazyListState()
-                )
-            }
+        screen("records-customers", rail = "Records") {
+            CustomerPanel(
+                customerList = listOf(dana, marcus, Customer(name = "Priya Raman", phone = "555 0110"), Customer(name = "Tomás Herrera", email = "tomas@example.com")),
+                seed = customerSeed,
+                onAddCustomer = {},
+                onEditCustomer = {},
+                onCustomerSelectionChange = {},
+                onSearchQuery = { emptyList() },
+                onDeleteCustomer = {},
+                onTicketClick = {},
+                onImageClick = { _, _ -> },
+                customerLazyListState = rememberLazyListState()
+            )
         }
 
         // A restricted user: no add, edit or delete
-        bothModes("records-view-only") {
-            Shell("Records") {
-                CustomerPanel(
-                    customerList = listOf(dana, marcus),
-                    seed = customerSeed,
-                    onAddCustomer = {},
-                    onEditCustomer = {},
-                    canEdit = false,
-                    onCustomerSelectionChange = {},
-                    onSearchQuery = { emptyList() },
-                    onDeleteCustomer = {},
-                    onTicketClick = {},
-                    onImageClick = { _, _ -> },
-                    customerLazyListState = rememberLazyListState()
-                )
-            }
+        screen("records-view-only", rail = "Records") {
+            CustomerPanel(
+                customerList = listOf(dana, marcus),
+                seed = customerSeed,
+                onAddCustomer = {},
+                onEditCustomer = {},
+                canEdit = false,
+                onCustomerSelectionChange = {},
+                onSearchQuery = { emptyList() },
+                onDeleteCustomer = {},
+                onTicketClick = {},
+                onImageClick = { _, _ -> },
+                customerLazyListState = rememberLazyListState()
+            )
         }
 
         // Untracked stock reads as such rather than as Int.MAX_VALUE
         val screen = Inventory(name = "iPhone 13 Screen", description = "OEM panel", stock = 4, costCents = 6_000, priceCents = 12_000)
         val cable = Inventory(name = "USB-C Cable", description = "1 m braided", costCents = 300, priceCents = 1_200)
         val inventorySeed = InventorySeed().apply { setInitial(cable) }
-        bothModes("records-inventory") {
-            Shell("Records") {
-                InventoryPanel(
-                    inventoryList = listOf(screen, cable, Inventory(name = "Pixel 7 Battery", stock = 0, priceCents = 5_000)),
-                    selectedInventory = inventorySeed,
-                    onSelectedInventoryChange = {},
-                    onSearchQuery = { emptyList() },
-                    onAddInventory = {},
-                    onEditInventory = {},
-                    onDeleteInventory = {},
-                    onImageClick = {},
-                    onNoteImageClick = { _, _ -> },
-                    inventoryListState = rememberLazyListState()
-                )
-                InventoryDialog(seed = inventorySeed, isVisible = true, onDismiss = {}, onContinue = {})
-            }
+        screen("records-inventory", rail = "Records") {
+            InventoryPanel(
+                inventoryList = listOf(
+                    screen, cable, Inventory(name = "Pixel 7 Battery", stock = 0, priceCents = 5_000),
+                    Inventory(name = "Samsung Galaxy S23 Ultra Charging Port Flex", description = "Genuine service pack, includes adhesive", sku = "SAM-S23U-CPF", category = "Charging", stock = 7, priceCents = 3_500),
+                    Inventory(name = "iPad Air 5 Digitizer", sku = "IPA5-DIG", category = "Screens", stock = 2, priceCents = 9_800)
+                ),
+                selectedInventory = inventorySeed,
+                onSelectedInventoryChange = {},
+                onSearchQuery = { emptyList() },
+                onAddInventory = {},
+                onEditInventory = {},
+                onDeleteInventory = {},
+                onImageClick = {},
+                onNoteImageClick = { _, _ -> },
+                inventoryListState = rememberLazyListState()
+            )
+        }
+        screen("records-inventory-dialog", height = 1000, rail = "Records") {
+            InventoryDialog(seed = inventorySeed, isVisible = true, onDismiss = {}, onContinue = {})
         }
 
-        bothModes("records-tickets") {
-            Shell("Records") {
-                TicketPanel(
-                    ticketScope = TicketScope.ALL,
-                    onTicketScopeChange = {},
-                    seed = ticketSeed,
-                    ticketList = listOf(iphone, pixel, thinkpad, ps5),
-                    onAddNewTicket = {},
-                    onEditTicket = {},
-                    onSelectedTicketChange = {},
-                    onSearchQuery = { emptyList() },
-                    onDeleteTicket = {},
-                    onImageClick = { _, _ -> },
-                    ticketListState = rememberLazyListState()
-                )
-            }
+        screen("records-tickets", rail = "Records") {
+            TicketPanel(
+                ticketScope = TicketScope.ALL,
+                onTicketScopeChange = {},
+                seed = ticketSeed,
+                ticketList = listOf(iphone, pixel, thinkpad, ps5),
+                onAddNewTicket = {},
+                onEditTicket = {},
+                onSelectedTicketChange = {},
+                onSearchQuery = { emptyList() },
+                onDeleteTicket = {},
+                onImageClick = { _, _ -> },
+                ticketListState = rememberLazyListState()
+            )
         }
     }
 
     /** Two columns on a wide window, with the start tab as a dropdown under Records */
     @Test
-    fun settings() = bothModes("settings") {
-        Shell("Settings") {
-            SettingsLayout(
-                first = {
-                    AccountPanel(user = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
-                    AppearanceSettings(
-                        palette = TmPalettes.default,
-                        onPaletteChange = {},
-                        darkTheme = true,
-                        onDarkThemeChange = {},
-                        font = TmFonts.default,
-                        onFontChange = {},
-                        reduceTransparency = false,
-                        onReduceTransparencyChange = {},
-                        onOpenGallery = {}
-                    )
-                },
-                second = {
-                    val tabs = listOf("Customers", "Tickets", "Inventory")
-                    val icon = painterResource(Res.drawable.settings)
+    fun settings() = screen("settings", rail = "Settings") {
+        SettingsLayout(
+            first = {
+                AccountPanel(user = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
+                AppearanceSettings(
+                    palette = TmPalettes.default,
+                    onPaletteChange = {},
+                    darkTheme = true,
+                    onDarkThemeChange = {},
+                    font = TmFonts.default,
+                    onFontChange = {},
+                    reduceTransparency = false,
+                    onReduceTransparencyChange = {},
+                    onOpenGallery = {}
+                )
+            },
+            second = {
+                val tabs = listOf("Customers", "Tickets", "Inventory")
+                val icon = painterResource(Res.drawable.settings)
 
-                    SettingsGroup(
-                        settingItemGroup = SettingItemGroup(
-                            label = "Login",
-                            items = listOf(SettingItem.Switch(icon, "Remember login", "Save username and password after logging in", checked = true, onToggle = {}))
+                SettingsGroup(
+                    settingItemGroup = SettingItemGroup(
+                        label = "Login",
+                        items = listOf(SettingItem.Switch(icon, "Remember login", "Save username and password after logging in", checked = true, onToggle = {}))
+                    )
+                )
+                SettingsGroup(
+                    settingItemGroup = SettingItemGroup(
+                        label = "Records",
+                        items = listOf(
+                            SettingItem.Choice(icon, "Start tab", "Records tab shown on start", selected = "Tickets", options = tabs, onSelect = {}),
+                            SettingItem.Text(icon, "Page size", "Number of items loaded per page (5-100)", value = "50", onChange = { true })
                         )
                     )
-                    SettingsGroup(
-                        settingItemGroup = SettingItemGroup(
-                            label = "Records",
-                            items = listOf(
-                                SettingItem.Choice(icon, "Start tab", "Records tab shown on start", selected = "Tickets", options = tabs, onSelect = {}),
-                                SettingItem.Text(icon, "Page size", "Number of items loaded per page (5-100)", value = "50", onChange = { true })
-                            )
-                        )
-                    )
-                }
-            )
-        }
+                )
+            }
+        )
     }
 
     @Test
-    fun settingsAccount() = bothModes("settings-account", height = 480) {
-        Shell("Settings") {
-            Column(Modifier.width(720.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                AccountPanel(user = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
-                AccountPanel(
-                    user = null, onLogin = {}, onLogout = {},
-                    connectionProblem = WrongServerName("10.0.0.5:443", listOf("tickets.myshop.com")).message
-                )
-            }
+    fun settingsAccount() = screen("settings-account", height = 480, rail = "Settings") {
+        Column(Modifier.width(720.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            AccountPanel(user = User(username = "dana", name = "Dana Whitfield", accessLevel = AccessLevel.ADMIN), onLogin = {}, onLogout = {})
+            AccountPanel(
+                user = null, onLogin = {}, onLogout = {},
+                connectionProblem = WrongServerName("10.0.0.5:443", listOf("tickets.myshop.com")).message
+            )
         }
     }
 }

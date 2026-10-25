@@ -59,6 +59,7 @@ fun AdminTimesheetsTab(
         TimeEntryDialog(
             entry = entry,
             users = users,
+            onDelete = entry?.let { { editing = null; deleting = it } },
             onSave = { saved, onResult -> onSave(saved, isNew) { problem -> onResult(problem); if (problem == null) editing = null } },
             onDismissRequest = { editing = null }
         )
@@ -116,13 +117,20 @@ fun AdminTimesheetsTab(
         Text(text = "${sheet.from} to ${sheet.to}", style = TmTheme.typography.title, color = colors.text)
         if (sheet.people.isEmpty()) Text(text = "Nobody was on the clock", style = TmTheme.typography.body, color = colors.textMuted)
 
-        val columns = listOf(
+        val wideColumns = listOf(
             TmColumn("Day", width = 120.dp),
             TmColumn("In", width = 64.dp),
             TmColumn("Out", width = 64.dp),
             TmColumn("Hours", width = 72.dp, end = true),
             TmColumn("Where", weight = 1f),
             TmColumn("", width = 88.dp, end = true)
+        )
+        // Narrow: where and the note go under the day, and tapping the row changes or deletes it
+        val narrowColumns = listOf(
+            TmColumn("Day", weight = 1f),
+            TmColumn("In", width = 52.dp),
+            TmColumn("Out", width = 52.dp),
+            TmColumn("Hours", width = 60.dp, end = true)
         )
 
         sheet.people.forEach { person ->
@@ -133,25 +141,32 @@ fun AdminTimesheetsTab(
                 icon = Res.drawable.user,
                 actions = { Text(text = formatHours(person.hours), style = TmTheme.typography.numericLarge, color = colors.text) }
             ) {
-                TmTableHeader(columns)
-                person.entries.forEach { entry ->
-                    TmTableRow(columns) { index ->
-                        when (index) {
-                            0 -> Text(text = formatDay(entry.clockedInAt), style = TmTheme.typography.body, color = colors.text)
-                            1 -> Text(text = formatTime(entry.clockedInAt), style = TmTheme.typography.numeric, color = colors.text)
-                            2 -> entry.clockedOutAt?.let { Text(text = formatTime(it), style = TmTheme.typography.numeric, color = colors.text) }
-                                ?: TmBadge(text = "On", tone = colors.success)
-                            3 -> Text(text = formatHours(entry.hours(sheet.generatedAt)), style = TmTheme.typography.numeric, color = colors.text)
-                            4 -> Text(
-                                text = listOf(entry.station, entry.note, entry.editedBy.takeIf { it.isNotBlank() }?.let { "changed by $it" }.orEmpty())
-                                    .filter { it.isNotBlank() }.joinToString(", "),
-                                style = TmTheme.typography.caption,
-                                color = colors.textMuted,
-                                maxLines = 2
-                            )
-                            else -> Row {
-                                TmIconButton(icon = Res.drawable.edit_2, contentDescription = "Change", onClick = { editing = entry to false })
-                                TmIconButton(icon = Res.drawable.trash_2, contentDescription = "Delete", onClick = { deleting = entry })
+                BoxWithConstraints {
+                    val narrow = maxWidth < ENTRY_TABLE_WIDTH
+                    val columns = if (narrow) narrowColumns else wideColumns
+
+                    Column {
+                        TmTableHeader(columns)
+                        person.entries.forEach { entry ->
+                            val where = listOf(entry.station, entry.note, entry.editedBy.takeIf { it.isNotBlank() }?.let { "changed by $it" }.orEmpty())
+                                .filter { it.isNotBlank() }.joinToString(", ")
+
+                            TmTableRow(columns, onClick = if (narrow) ({ editing = entry to false }) else null) { index ->
+                                when (index) {
+                                    0 -> Column {
+                                        Text(text = formatDay(entry.clockedInAt), style = TmTheme.typography.body, color = colors.text)
+                                        if (narrow && where.isNotBlank()) Text(text = where, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 1)
+                                    }
+                                    1 -> Text(text = formatTime(entry.clockedInAt), style = TmTheme.typography.numeric, color = colors.text)
+                                    2 -> entry.clockedOutAt?.let { Text(text = formatTime(it), style = TmTheme.typography.numeric, color = colors.text) }
+                                        ?: TmBadge(text = "On", tone = colors.success)
+                                    3 -> Text(text = formatHours(entry.hours(sheet.generatedAt)), style = TmTheme.typography.numeric, color = colors.text)
+                                    4 -> Text(text = where, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 2)
+                                    else -> Row {
+                                        TmIconButton(icon = Res.drawable.edit_2, contentDescription = "Change", onClick = { editing = entry to false })
+                                        TmIconButton(icon = Res.drawable.trash_2, contentDescription = "Delete", onClick = { deleting = entry })
+                                    }
+                                }
                             }
                         }
                     }
@@ -160,3 +175,6 @@ fun AdminTimesheetsTab(
         }
     }
 }
+
+/** Narrower than this, a stretch's place and note go under its day and its buttons are in the dialog */
+private val ENTRY_TABLE_WIDTH = 620.dp

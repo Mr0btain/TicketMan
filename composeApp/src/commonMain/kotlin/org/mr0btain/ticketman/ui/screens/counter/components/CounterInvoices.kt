@@ -42,6 +42,19 @@ class CounterInvoices(
         }
     }
 
+    /**
+     * The periodic check: the newest page again, changed invoices updated where they are and new ones added on top,
+     * so older pages that were loaded and the scroll stay put. Gift cards are reloaded too
+     */
+    suspend fun checkForUpdates() {
+        val page = remoteHandler.invoiceRepo.fetch(0, PAGE_SIZE).valueOr { return }
+        val fresh = page.associateBy { it.identifier }
+        val known = _list.value.map { it.identifier }.toSet()
+
+        _list.value = page.filter { it.identifier !in known } + _list.value.map { fresh[it.identifier] ?: it }
+        remoteHandler.giftCardRepo.fetch(0, GIFT_CARD_PAGE).valueOr { null }?.let { _giftCards.value = it }
+    }
+
     /** Admin only, the server refuses anyone else */
     fun void(invoice: Invoice) {
         support.scope.launch {

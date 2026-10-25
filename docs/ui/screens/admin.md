@@ -13,15 +13,17 @@ documented in [the server pages](#see-also).
 checks `session.isAdmin`. Anyone else who gets here sees "Admin access required" (with a Log in button if they're
 logged out); the server refuses their requests anyway.
 
-For an admin it shows `TmTabs` and a **Refresh** button. Opening a tab calls `AdminHandler.refresh(tab)`, which
-loads only what that tab shows, plus the accounts waiting on someone: the Users tab shows a badge with their number
-from any tab. The Users tab also reloads the users list, and the Invoices tab loads its own list through the
-counter. Refresh does the same for the open tab.
+For an admin it shows `TmTabs`. Opening a tab calls `AdminHandler.refresh(tab)`, which loads only what that tab
+shows, plus the accounts waiting on someone: the Users tab shows a badge with their number from any tab. The Users
+tab also reloads the users list, and the Invoices tab loads its own list through the counter.
 
-On the Settings interval, while no dialog is open and nothing is loading, `CheckForUpdates` calls
-`AdminHandler.checkForUpdates(tab)`: the same reloads without the spinner, leaving out what would lose someone's place
-(the audit log and invoices, which reload from the top, the end of day report, which may be on another day, the
-reports, whose commission rates may be half edited, and the shop profile, which may be half edited). Refresh still does all of it.
+After that every tab keeps itself up to date: on the Settings interval, while no dialog is open and nothing is
+loading, `CheckForUpdates` calls `AdminHandler.checkForUpdates(tab)`, the same reloads without the spinner, done so
+nobody loses their place. The audit log and the invoices only get new entries added on top and changed invoices
+updated where they are (`addNewAudit`, `CounterInvoices.checkForUpdates`), the users list refreshes the loaded pages,
+the reports and timesheets reload for the same days, and the end of day report stays on its day; the shop profile
+isn't reloaded, since it may be half edited. So there's no Refresh button, unless updates are turned off in
+Settings, when one shows beside the tabs.
 
 All the state is in
 [`AdminHandler`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/admin/components/AdminHandler.kt),
@@ -81,7 +83,7 @@ showing "Restarting the server" in the card meanwhile. Then it reloads the tab, 
 | The tabs, in order | `ui/screens/admin/components/AdminTab.kt` |
 | Shared bits (user state chip, access level dropdown) | `ui/screens/admin/components/AdminCommon.kt` |
 | One folder per tab | `ui/screens/admin/<overview|users|sessions|stations|inventory|invoices|reports|timesheets|messages|server|audit>/` |
-| Render tests | `ScreenRenderTest.adminOverview()`, `adminUsers()` |
+| Render tests | `ScreenRenderTest.admin*()`, one per tab, each wide and at phone width (`-narrow`) |
 | Handler tests | `composeApp/src/commonTest/.../ui/screens/admin/AdminHandlerTest.kt` |
 
 ## Adding a tab
@@ -99,8 +101,8 @@ showing "Restarting the server" in the card meanwhile. Then it reloads the tab, 
   handler, sets `changeMainTabIndex` (1 for tickets, 2 for inventory) and navigates to Records with `navigateTo`, so
   the back stack doesn't grow. An invoice opens its ticket on the counter the same way (`onOpenTicketAtCounter`).
 - **The Invoices tab loads through the counter**, whose `counter.invoices` (`CounterInvoices`) owns the invoice
-  list (`load`, `void`).
-  The screen's Refresh reloads it when that tab is open.
+  list (`load`, `checkForUpdates`, `void`). The tab's list itself is `InvoiceList`, without the dialogs, so it can
+  be rendered; under 860 dp each invoice is a compact row with its actions in a menu.
 - **The Users tab is the only place users are edited.** The records screen has no users tab.
 - **After a restart to restore, the device may have to log in again.** The sessions table comes from the backup, so
   this device's session is only there if it was when the backup was made.

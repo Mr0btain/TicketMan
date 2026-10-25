@@ -10,7 +10,11 @@ import org.mr0btain.ticketman.components.utils.formatTime
 import org.mr0btain.ticketman.data.timeclock.TimeEntry
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.data.user.UserStatus
+import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
+import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.trash_2
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
 import org.mr0btain.ticketman.ui.kit.feedback.TmNoticeKind
@@ -27,6 +31,7 @@ import kotlin.uuid.Uuid
  * still on), and a note. Whose time it is only picked when adding
  * @param entry The one being changed, null to add one
  * @param onSave Gets the entry, calls back with what went wrong or null once it's saved
+ * @param onDelete Asks to delete the one being changed, null hides the button
  */
 @OptIn(ExperimentalUuidApi::class)
 @Composable
@@ -34,7 +39,8 @@ fun TimeEntryDialog(
     entry: TimeEntry?,
     users: List<User>,
     onSave: (TimeEntry, (String?) -> Unit) -> Unit,
-    onDismissRequest: () -> Unit
+    onDismissRequest: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     val people = remember(users) { users.filter { it.status != UserStatus.DEACTIVATED } }
     var user by remember { mutableStateOf(entry?.let { e -> people.firstOrNull { it.identifier == e.userIdentifier } }) }
@@ -110,5 +116,9 @@ fun TimeEntryDialog(
 
         error?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }
             ?: problem?.let { TmNotice(text = it, kind = TmNoticeKind.WARNING) }
+
+        onDelete?.let { delete ->
+            TmButton(text = "Delete this time", variant = TmButtonVariant.GHOST, leadingIcon = Res.drawable.trash_2, onClick = delete)
+        }
     }
 }

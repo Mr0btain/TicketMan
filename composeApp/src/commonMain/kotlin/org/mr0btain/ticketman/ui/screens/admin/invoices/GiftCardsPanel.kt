@@ -1,6 +1,13 @@
 package org.mr0btain.ticketman.ui.screens.admin.invoices
 
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
+import org.mr0btain.ticketman.ui.kit.containers.TmListRow
+import org.mr0btain.ticketman.ui.kit.data.formatMoney
+import ticketman.composeapp.generated.resources.edit_2
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
@@ -54,20 +61,41 @@ fun GiftCardsPanel(
             return@TmPanel
         }
 
-        Column {
-            TmTableHeader(CARD_COLUMNS)
+        // Narrow: the code with when it was sold under, and the balance
+        BoxWithConstraints {
+            val narrow = maxWidth < CARD_TABLE_WIDTH
 
-            cards.forEach { card ->
-                TmTableRow(CARD_COLUMNS) { column ->
-                    when (column) {
-                        0 -> Text(card.code, style = TmTheme.typography.numeric, color = TmTheme.colors.text)
-                        1 -> Text(formatDate(card.createdAt), style = TmTheme.typography.body, color = TmTheme.colors.textMuted)
-                        2 -> TmMoneyText(card.issuedCents, color = TmTheme.colors.textMuted)
-                        3 -> TmMoneyText(card.balanceCents)
-                        4 -> TmButton(text = "Adjust", onClick = { adjusting = card }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+            Column {
+                if (!narrow) TmTableHeader(CARD_COLUMNS)
+
+                cards.forEach { card ->
+                    if (narrow) {
+                        TmListRow(
+                            title = card.code,
+                            subtitle = "${formatDate(card.createdAt)} · ${formatMoney(card.issuedCents)} loaded",
+                            trailing = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    TmMoneyText(card.balanceCents)
+                                    TmIconButton(icon = Res.drawable.edit_2, contentDescription = "Adjust ${card.code}", onClick = { adjusting = card })
+                                }
+                            }
+                        )
+                    } else {
+                        TmTableRow(CARD_COLUMNS) { column ->
+                            when (column) {
+                                0 -> Text(card.code, style = TmTheme.typography.numeric, color = TmTheme.colors.text)
+                                1 -> Text(formatDate(card.createdAt), style = TmTheme.typography.body, color = TmTheme.colors.textMuted)
+                                2 -> TmMoneyText(card.issuedCents, color = TmTheme.colors.textMuted)
+                                3 -> TmMoneyText(card.balanceCents)
+                                4 -> TmButton(text = "Adjust", onClick = { adjusting = card }, variant = TmButtonVariant.GHOST, size = TmControlSize.SMALL)
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
+/** Narrower than this, cards aren't a table */
+private val CARD_TABLE_WIDTH = 560.dp

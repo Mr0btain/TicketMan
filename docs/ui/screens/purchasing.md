@@ -21,4 +21,8 @@ loaded at login. Other screens use it too:
 - The admin screen's Low stock tab has **Draft orders**.
 - The inventory dialog picks the item's usual supplier.
 
-Render tests: `ScreenRenderTest.purchaseOrders()` draws a part received order, a draft and the suppliers.
+The order list and suppliers reload on the Settings update interval (`CheckForUpdates`); an open order keeps
+what's typed unless someone else changed it.
+
+Render tests: `ScreenRenderTest.purchaseOrders()` draws a part received order, a draft and the suppliers, wide and
+narrow.

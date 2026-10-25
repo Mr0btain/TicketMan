@@ -24,4 +24,7 @@ State lives in `viewModel.appointments`
 ([`AppointmentsHandler`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/appointments/components/AppointmentsHandler.kt)),
 loaded when the screen opens; saving one shows its week.
 
-Render tests: `ScreenRenderTest.appointments()` and `appointmentDialog()`.
+The week reloads on the Settings update interval while no dialog is open. Under 560 dp a card's status badge sits
+by the name and its buttons go under the details.
+
+Render tests: `ScreenRenderTest.appointments()` and `appointmentDialog()`, wide and narrow.

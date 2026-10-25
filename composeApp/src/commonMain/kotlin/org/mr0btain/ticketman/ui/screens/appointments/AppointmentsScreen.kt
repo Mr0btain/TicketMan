@@ -15,6 +15,7 @@ import org.mr0btain.ticketman.components.utils.formatTime
 import org.mr0btain.ticketman.data.appointment.Appointment
 import org.mr0btain.ticketman.data.appointment.AppointmentStatus
 import org.mr0btain.ticketman.ui.MainViewModel
+import org.mr0btain.ticketman.ui.screens.CheckForUpdates
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
@@ -56,6 +57,12 @@ fun AppointmentsScreen(viewModel: MainViewModel, onCheckInStarted: () -> Unit, m
 
     LaunchedEffect(loginState) {
         if (loginState == LoginState.LOGGED_IN) appointments.refresh()
+    }
+
+    // Bookings from other devices, on the interval set in Settings, unless a dialog here is open
+    val updateInterval by viewModel.settings.updateInterval.collectAsState()
+    CheckForUpdates(interval = updateInterval, enabled = loginState == LoginState.LOGGED_IN && editing == null && deleting == null) {
+        appointments.refresh()
     }
 
     editing?.let { (appointment, isNew) ->
@@ -181,55 +188,85 @@ private fun AppointmentCard(
     var menuOpen by remember { mutableStateOf(false) }
     val muted = appointment.status == AppointmentStatus.CANCELLED || appointment.status == AppointmentStatus.NO_SHOW
 
-    TmSurface(modifier = Modifier.fillMaxWidth(), onClick = if (canEdit && appointment.isOpen) onEdit else null) {
-        Row(
-            modifier = Modifier.padding(spacing.md),
-            horizontalArrangement = Arrangement.spacedBy(spacing.md),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.width(72.dp)) {
-                Text(text = formatTime(appointment.startsAt), style = TmTheme.typography.numeric, color = if (muted) colors.textMuted else colors.text)
-                Text(text = "${appointment.minutes} min", style = TmTheme.typography.caption, color = colors.textMuted)
-            }
+    val time: @Composable () -> Unit = {
+        Column(Modifier.width(72.dp)) {
+            Text(text = formatTime(appointment.startsAt), style = TmTheme.typography.numeric, color = if (muted) colors.textMuted else colors.text)
+            Text(text = "${appointment.minutes} min", style = TmTheme.typography.caption, color = colors.textMuted)
+        }
+    }
 
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(text = appointment.customerName.ifBlank { "No name" }, style = TmTheme.typography.label, color = if (muted) colors.textMuted else colors.text)
-                val device = appointment.device.toString().trim()
-                listOfNotNull(
-                    listOf(device, appointment.problem).filter { it.isNotBlank() }.joinToString(": ").takeIf { it.isNotBlank() },
-                    appointment.phone.takeIf { it.isNotBlank() && appointment.customerIdentifier == null },
-                    appointment.technicianName.takeIf { it.isNotBlank() }?.let { "With $it" },
-                    appointment.notes.takeIf { it.isNotBlank() }
-                ).forEach { line ->
-                    Text(text = line, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 2)
+    val details: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(text = appointment.customerName.ifBlank { "No name" }, style = TmTheme.typography.label, color = if (muted) colors.textMuted else colors.text)
+            val device = appointment.device.toString().trim()
+            listOfNotNull(
+                listOf(device, appointment.problem).filter { it.isNotBlank() }.joinToString(": ").takeIf { it.isNotBlank() },
+                appointment.phone.takeIf { it.isNotBlank() && appointment.customerIdentifier == null },
+                appointment.technicianName.takeIf { it.isNotBlank() }?.let { "With $it" },
+                appointment.notes.takeIf { it.isNotBlank() }
+            ).forEach { line ->
+                Text(text = line, style = TmTheme.typography.caption, color = colors.textMuted, maxLines = 2)
+            }
+        }
+    }
+
+    val actions: @Composable () -> Unit = {
+        if (canEdit && appointment.isOpen) {
+            TmButton(text = "Check in", leadingIcon = Res.drawable.log_in, variant = TmButtonVariant.SECONDARY, onClick = onCheckIn)
+        }
+
+        if (canEdit && appointment.status != AppointmentStatus.ARRIVED) {
+            Box {
+                TmIconButton(icon = Res.drawable.more_vertical, contentDescription = "More", onClick = { menuOpen = true })
+                TmMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    fun pick(action: () -> Unit) {
+                        menuOpen = false
+                        action()
+                    }
+                    if (appointment.isOpen) {
+                        TmMenuItem(text = "Edit", leadingIcon = Res.drawable.edit_2, onClick = { pick(onEdit) })
+                        TmMenuItem(text = "No show", leadingIcon = Res.drawable.user_x, onClick = { pick { onStatus(AppointmentStatus.NO_SHOW) } })
+                        TmMenuItem(text = "Cancel", leadingIcon = Res.drawable.x_circle, onClick = { pick { onStatus(AppointmentStatus.CANCELLED) } })
+                    } else {
+                        TmMenuItem(text = "Book again", leadingIcon = Res.drawable.rotate_ccw, onClick = { pick { onStatus(AppointmentStatus.BOOKED) } })
+                    }
+                    TmMenuItem(text = "Delete", leadingIcon = Res.drawable.trash_2, onClick = { pick(onDelete) })
                 }
             }
+        }
+    }
 
-            TmBadge(text = appointment.status.label, tone = colors.tone(appointment.status))
-
-            if (canEdit && appointment.isOpen) {
-                TmButton(text = "Check in", leadingIcon = Res.drawable.log_in, variant = TmButtonVariant.SECONDARY, onClick = onCheckIn)
-            }
-
-            if (canEdit && appointment.status != AppointmentStatus.ARRIVED) {
-                Box {
-                    TmIconButton(icon = Res.drawable.more_vertical, contentDescription = "More", onClick = { menuOpen = true })
-                    TmMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                        fun pick(action: () -> Unit) {
-                            menuOpen = false
-                            action()
-                        }
-                        if (appointment.isOpen) {
-                            TmMenuItem(text = "Edit", leadingIcon = Res.drawable.edit_2, onClick = { pick(onEdit) })
-                            TmMenuItem(text = "No show", leadingIcon = Res.drawable.user_x, onClick = { pick { onStatus(AppointmentStatus.NO_SHOW) } })
-                            TmMenuItem(text = "Cancel", leadingIcon = Res.drawable.x_circle, onClick = { pick { onStatus(AppointmentStatus.CANCELLED) } })
-                        } else {
-                            TmMenuItem(text = "Book again", leadingIcon = Res.drawable.rotate_ccw, onClick = { pick { onStatus(AppointmentStatus.BOOKED) } })
-                        }
-                        TmMenuItem(text = "Delete", leadingIcon = Res.drawable.trash_2, onClick = { pick(onDelete) })
+    TmSurface(modifier = Modifier.fillMaxWidth(), onClick = if (canEdit && appointment.isOpen) onEdit else null) {
+        BoxWithConstraints {
+            if (maxWidth < CARD_ROW_WIDTH) {
+                // Narrow: time, who and the status on top, then the details, then the buttons
+                Column(Modifier.padding(spacing.md), verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.Top) {
+                        time()
+                        Box(Modifier.weight(1f)) { details() }
+                        TmBadge(text = appointment.status.label, tone = colors.tone(appointment.status))
                     }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.sm, Alignment.End),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) { actions() }
+                }
+            } else {
+                Row(
+                    modifier = Modifier.padding(spacing.md),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    time()
+                    Box(Modifier.weight(1f)) { details() }
+                    TmBadge(text = appointment.status.label, tone = colors.tone(appointment.status))
+                    actions()
                 }
             }
         }
     }
 }
+
+/** Narrower than this, a card's buttons go under its details */
+private val CARD_ROW_WIDTH = 560.dp

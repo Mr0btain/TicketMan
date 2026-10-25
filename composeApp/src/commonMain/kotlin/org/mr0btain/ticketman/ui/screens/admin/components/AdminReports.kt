@@ -56,6 +56,9 @@ class AdminReports(
         _users.value = remoteHandler.userRepo.fetch(0, USER_LIMIT).valueOr { _users.value }
     }
 
+    /** The report again for the same days, for the periodic check */
+    suspend fun reloadReport() = loadReport()
+
     /** Shows [range]; a custom one waits for [showDays] */
     fun pick(range: ExportRange) {
         _range.value = range
