@@ -224,9 +224,9 @@ the GitHub account owns an `io.github` ID). Everything for it is in [`flatpak/`]
 
 | File | What it is |
 |---|---|
-| `io.github.Mr0btain.TicketMan.yml` | The manifest: the freedesktop runtime, a Java 21 runtime from the `openjdk21` extension, the release's `TicketMan-Desktop-<version>.jar`, and the files below from the release's tag |
-| `io.github.Mr0btain.TicketMan.metainfo.xml` | What the store page shows: the description, screenshots (from `docs/images/` at the release's tag) and a `<release>` per version |
-| `io.github.Mr0btain.TicketMan.desktop` | The menu entry. `StartupWMClass` is the window class AWT makes from the main class, so renaming `MainKt` changes it |
+| `org.Mr0btain.TicketMan.yml` | The manifest: the freedesktop runtime, a Java 21 runtime from the `openjdk21` extension, the release's `TicketMan-Desktop-<version>.jar`, and the files below from the release's tag |
+| `org.Mr0btain.TicketMan.metainfo.xml` | What the store page shows: the description, screenshots (from `docs/images/` at the release's tag) and a `<release>` per version |
+| `org.Mr0btain.TicketMan.desktop` | The menu entry. `StartupWMClass` is the window class AWT makes from the main class, so renaming `MainKt` changes it |
 | `ticketman.sh` | Starts the jar, with Skiko's unpacked library moved out of the home folder the sandbox can't write |
 
 The sandbox lets the app use X11 (AWT has no Wayland), the network, CUPS for printing, the keyring for KSafe's key

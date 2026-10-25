@@ -1,7 +1,7 @@
-# The Flathub manifest. The copy in the flathub/io.github.Mr0btain.TicketMan repository is the one Flathub builds;
+# The Flathub manifest. The copy in the flathub/org.Mr0btain.TicketMan repository is the one Flathub builds;
 # keep this one the same. scripts/flatpak.py update <version> fills in the release's jar and tag below, and
 # scripts/flatpak.py build builds this with the jar and files from this checkout instead (docs/releasing.md#flathub)
-id: io.github.Mr0btain.TicketMan
+id: org.Mr0btain.TicketMan
 runtime: org.freedesktop.Platform
 runtime-version: '26.08'
 sdk: org.freedesktop.Sdk

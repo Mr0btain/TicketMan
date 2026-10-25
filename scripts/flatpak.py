@@ -20,7 +20,7 @@ import sys
 import urllib.request
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-APP_ID = "io.github.Mr0btain.TicketMan"
+APP_ID = "org.Mr0btain.TicketMan"
 REPO = "https://github.com/Mr0btain/TicketMan"
 MANIFEST = os.path.join(ROOT, "flatpak", f"{APP_ID}.yml")
 METAINFO = os.path.join(ROOT, "flatpak", f"{APP_ID}.metainfo.xml")
