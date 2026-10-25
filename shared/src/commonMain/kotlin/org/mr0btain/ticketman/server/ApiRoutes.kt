@@ -29,6 +29,7 @@ object ApiRoutes {
     const val INVENTORY = "/api/data/inventory"
 
     const val NOTIFY = "/api/notify"
+    const val GIFT_CARD = "/api/giftcard"
     const val ESTIMATE = "/api/estimate"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
@@ -67,6 +68,12 @@ object NotePaths {
 object CustomerPaths {
     const val GET_TICKETS = "/get/tickets/{identifier}"
     const val ADD_TICKET = "/add/ticket/{identifier}"
+
+    /** `GET` the store credit history, newest first. `POST` a `BalanceAdjustRequest`, admin only */
+    const val CREDIT = "/credit/{identifier}"
+
+    /** The customer's invoices, tickets' and sales', newest first */
+    const val INVOICES = "/get/invoices/{identifier}"
 }
 
 object TicketPaths {
@@ -220,6 +227,17 @@ object NotifyPaths {
 
     /** Body `TicketMessageRequest`: sends one to the ticket's customer now */
     const val TICKET_SEND = "/ticket/{identifier}/send"
+}
+
+object GiftCardPaths {
+    /** Looks a card up by its code, to check the balance */
+    const val GET = "/code/{code}"
+
+    /** Admin only, every card newest first, `?offset=&limit=` */
+    const val FETCH = "/fetch"
+
+    /** Admin only, body `BalanceAdjustRequest` */
+    const val ADJUST = "/code/{code}/adjust"
 }
 
 object EstimatePaths {

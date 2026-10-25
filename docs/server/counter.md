@@ -144,6 +144,31 @@ take the stock, mark it `PAID` and write the audit entry. The answer is `201` wi
 A sale is an invoice like the rest: it's in the invoice list and the export (its Ticket column says `Sale`), has a
 PDF, and an admin can void it, which puts its parts back.
 
+## Store credit and gift cards
+
+Balances the shop holds for customers, in `StoredValueDatabase`: a customer's credit is `customer.credit_cents`, with
+every change in `customer_credit` (`CreditEntry`); gift cards are `gift_cards` rows found by their code. Like stock,
+a balance only changes in a single SQL `UPDATE` that can't take it below zero, so two spends at once can't both go
+through.
+
+- **Paying with them.** `PaymentMethod.STORE_CREDIT` and `GIFT_CARD` (`storedValue`) work anywhere a payment is
+  taken: a deposit at check-in, `POST /api/invoice/{id}/payments`, pickup and sales. `StoredValuePayments.problem`
+  checks first (credit needs a customer on the invoice; a card has to exist with enough on it, counting every
+  payment from it in the request) so the answer says what's short, then `take` spends it inside the same
+  transaction as the payment, throwing `ShortOfValue` (a `409`) if it was spent meanwhile. Taking a payment off an
+  open invoice puts it back.
+- **Selling gift cards.** A `ChargeType.GIFT_CARD` line (one card, untaxed, more than zero) sells or tops up a card.
+  It's loaded when the invoice is paid, at pickup or in a sale: a blank `reference` gets a new code from
+  `GiftCardCode.generate`, saved on the line so the receipt shows it.
+- **Refunds** can go to store credit (the invoice's customer) or onto a gift card (the code given, or a new one).
+- **Voiding** a paid invoice takes back the cards it loaded, and is refused if one has been spent from.
+- **By hand**, admins give or take credit (`POST /api/data/customer/credit/{id}`) and correct a card
+  (`POST /api/giftcard/code/{code}/adjust`), through `StoredValueService`, with a reason that's audited.
+- **Reports**: the day's `takenCents` leaves stored value out, since the money came in when the card or credit was
+  bought; `takenByMethod` still lists it.
+
+A customer with store credit can't be deleted (`409`).
+
 ### One change at a time
 
 Pickup checks things and then writes, so two at once could both pass the checks. Every `InvoiceService` change that

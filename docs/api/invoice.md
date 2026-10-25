@@ -94,15 +94,18 @@ the totals again, with the tax rate the invoice was made with.
 
 Takes a payment, like a deposit, without closing anything.
 
-- **Body:** `PaymentRequest { method, amountCents, note }`. `receivedBy` is filled in from the caller.
+- **Body:** `PaymentRequest { method, amountCents, note, reference }`. `receivedBy` is filled in from the caller.
+  `STORE_CREDIT` spends the invoice's customer's credit; `GIFT_CARD` spends the card whose code is `reference`.
 - **`200`** the updated `Invoice`.
-- **`400`** zero or less. **`404`** no such invoice. **`409`** the invoice is paid or void.
+- **`400`** zero or less. **`404`** no such invoice. **`409`** the invoice is paid or void, store credit with no
+  customer on the invoice or not enough of it (`Only $10.00 of store credit left`), or no such gift card or not
+  enough on it (`Only $5.00 left on gift card GC-...`).
 
 ### `DELETE /api/invoice/{identifier}/payments/{paymentIdentifier}`
 
 **Auth:** normal
 
-Takes a payment back off, for one entered by mistake.
+Takes a payment back off, for one entered by mistake. Store credit or a gift card gets back what it paid.
 
 - **`200`** the updated `Invoice`. **`404`** no such invoice or payment. **`409`** the invoice is paid or void.
 
@@ -110,10 +113,12 @@ Takes a payment back off, for one entered by mistake.
 
 **Auth:** admin
 
-Cancels an invoice. A paid one puts its parts back in stock, less any a refund already put back. The ticket keeps its status; a picked up ticket stays
+Cancels an invoice. A paid one puts its parts back in stock, less any a refund already put back, and takes back
+the gift cards it loaded. The ticket keeps its status; a picked up ticket stays
 picked up.
 
-- **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void.
+- **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void, or a gift card it sold has been
+  spent from (refund instead).
 
 ### `POST /api/invoice/{identifier}/refund`
 
@@ -124,11 +129,13 @@ as a payment with a negative `amountCents`, the reason as its `note` and the par
 stays paid. `paidCents` leaves refunds out, `refundedCents` adds them up and `netPaidCents` is the difference.
 Audited as `REFUND`.
 
-- **Body:** `RefundRequest { method, amountCents, reason, returns }`. `amountCents` is positive, or zero when only
-  parts come back; `returns` is a list of `ReturnedPart { inventoryIdentifier, quantity }`.
+- **Body:** `RefundRequest { method, amountCents, reason, returns, reference }`. `amountCents` is positive, or zero
+  when only parts come back; `returns` is a list of `ReturnedPart { inventoryIdentifier, quantity }`.
+  `STORE_CREDIT` goes to the invoice's customer; `GIFT_CARD` goes onto the card `reference` names, or a new one
+  when it's blank, whose code is the refund's `reference`.
 - **`200`** the `Invoice` with the refund on it.
 - **`400`** no reason, a negative amount, nothing refunded or returned, more than `netPaidCents` (`Only $30.00 was
-  paid on INV-...`), a part the invoice didn't sell, or more of one than it sold less what was already returned
+  paid on INV-...`), store credit on an invoice with no customer, a part the invoice didn't sell, or more of one than it sold less what was already returned
   (`Only 1 of Cable can be returned on INV-...`). **`404`** no such invoice. **`409`** the invoice is open (take the
   payment off instead) or void.
 

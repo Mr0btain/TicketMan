@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
 import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.InvoiceMath
 import org.mr0btain.ticketman.server.request.PaymentRequest
@@ -39,6 +40,7 @@ fun SaleScreen(
     startingCustomer: Customer?,
     onSearchParts: suspend (String) -> List<Inventory>,
     onSearchCustomers: suspend (String) -> List<Customer>,
+    onLookupGiftCard: suspend (String) -> GiftCard?,
     onFinish: (SaleRequest, (String?) -> Unit) -> Unit,
     onBack: () -> Unit
 ) {
@@ -84,7 +86,7 @@ fun SaleScreen(
                         },
                         icon = Res.drawable.shopping_cart
                     ) {
-                        ChargeLines(drafts = drafts, compact = compact, laborCents = laborCents, onSearchParts = onSearchParts)
+                        ChargeLines(drafts = drafts, compact = compact, laborCents = laborCents, onSearchParts = onSearchParts, giftCards = true)
 
                         TmMoneyField(
                             modifier = Modifier.width(200.dp),
@@ -108,6 +110,8 @@ fun SaleScreen(
                     finishText = "Complete sale",
                     finishEnabled = drafts.isNotEmpty() && problem == null,
                     busy = busy,
+                    creditCents = customer?.creditCents,
+                    onLookupGiftCard = onLookupGiftCard,
                     onFinish = {
                         busy = true
                         message = null

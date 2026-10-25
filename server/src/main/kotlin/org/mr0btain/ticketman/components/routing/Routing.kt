@@ -25,6 +25,7 @@ import org.mr0btain.ticketman.components.service.EstimateService
 import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.components.service.StoredValueService
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
 import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 
@@ -48,6 +49,12 @@ fun Application.configureRouting(
         shop = localDatabase.shopDatabase,
         images = imageService,
         estimates = estimateService
+    ),
+    storedValueService: StoredValueService = StoredValueService(
+        values = localDatabase.storedValueDatabase,
+        customers = localDatabase.customerDatabase,
+        shop = localDatabase.shopDatabase,
+        auditLog = localDatabase.auditLogDatabase
     )
 ) {
     install(StatusPages) {
@@ -188,8 +195,15 @@ fun Application.configureRouting(
                 ticketDatabase = localDatabase.ticketDatabase,
                 counterDatabase = localDatabase.counterDatabase,
                 userDatabase = localDatabase.userDatabase,
-                auditLog = localDatabase.auditLogDatabase
+                auditLog = localDatabase.auditLogDatabase,
+                storedValue = localDatabase.storedValueDatabase,
+                storedValueService = storedValueService,
+                invoiceDatabase = localDatabase.invoiceDatabase
             )
+        }
+
+        route(ApiRoutes.GIFT_CARD) {
+            giftCardRoute(localDatabase.storedValueDatabase, storedValueService)
         }
 
         route(ApiRoutes.TICKET) {

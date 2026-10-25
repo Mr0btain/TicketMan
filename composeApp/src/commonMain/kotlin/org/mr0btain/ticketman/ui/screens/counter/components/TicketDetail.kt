@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.ui.screens.counter.components
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.orNullIfNotFound
+import org.mr0btain.ticketman.data.customer.CreditEntry
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.shared.EntityReference
@@ -37,9 +38,16 @@ data class TicketDetail(
         get() = estimates?.firstOrNull { it.status == EstimateStatus.PENDING }
 }
 
+/**
+ * A customer for the counter's customer card
+ * @param credit Their store credit history, newest first
+ * @param invoices Their tickets' invoices and sales, newest first
+ */
 data class CustomerDetail(
     val customer: Customer,
-    val tickets: List<Ticket>
+    val tickets: List<Ticket>,
+    val credit: List<CreditEntry> = emptyList(),
+    val invoices: List<Invoice> = emptyList()
 )
 
 /**

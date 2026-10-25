@@ -56,6 +56,7 @@ fun CounterScreen(
     val lastSale by counter.sale.last.collectAsState()
 
     val canEdit = viewModel.session.canEdit.collectAsState().value
+    val isAdmin = viewModel.session.isAdmin.collectAsState().value
     val searchFocus = remember { FocusRequester() }
 
     // The queue when the counter opens, then changes from other devices on the interval set in Settings. Not in the
@@ -205,6 +206,7 @@ fun CounterScreen(
                         detail = detail,
                         onTicketClick = { counter.openTicket(it) },
                         onBack = { counter.goHome() },
+                        onAdjustCredit = if (isAdmin) { amount, reason, onResult -> counter.adjustCredit(amount, reason, onResult) } else null,
                         actions = {
                             if (canEdit) {
                                 TmButton(text = "Check in a device", onClick = { counter.checkIn.start(detail.customer) }, leadingIcon = Res.drawable.plus)
@@ -261,6 +263,7 @@ fun CounterScreen(
                         onSearchParts = { counter.pickup.searchParts(it) },
                         onSave = { charges, discount, onResult -> counter.pickup.saveCharges(charges, discount, onResult) },
                         onRemovePayment = { counter.pickup.removePayment(it) },
+                        onLookupGiftCard = { counter.findGiftCard(it) },
                         onFinish = { charges, discount, payments, onResult -> counter.pickup.finish(charges, discount, payments, onResult) },
                         onBack = { counter.openTicket(detail.ticket.identifier) }
                     )
@@ -289,6 +292,7 @@ fun CounterScreen(
                     startingCustomer = saleCustomer,
                     onSearchParts = { counter.pickup.searchParts(it) },
                     onSearchCustomers = { counter.checkIn.searchCustomers(it) },
+                    onLookupGiftCard = { counter.findGiftCard(it) },
                     onFinish = { request, onResult -> counter.sale.finish(request, onResult) },
                     onBack = { counter.goHome() }
                 )

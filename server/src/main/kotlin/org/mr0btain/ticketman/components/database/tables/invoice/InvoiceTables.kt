@@ -44,6 +44,9 @@ object InvoiceChargeTable : UuidTable("invoice_charges") {
     val unitPriceCents = long("unit_price_cents")
     val inventory = text("inventory_id").nullable()
     val taxable = bool("taxable")
+
+    // Added with gift cards: the card's code on a GIFT_CARD line
+    val reference = text("reference").default("")
 }
 
 /** Money taken against an invoice, and refunds as negative amounts */
@@ -57,4 +60,7 @@ object InvoicePaymentTable : UuidTable("invoice_payments") {
 
     // Added with refunds: parts a refund put back in stock
     val returns = json<List<ReturnedPart>>("returns", Json { ignoreUnknownKeys = true }).default(emptyList())
+
+    // Added with gift cards: the card's code for a GIFT_CARD payment or refund
+    val reference = text("reference").default("")
 }

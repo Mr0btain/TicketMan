@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.invoice.ChargeType
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
@@ -114,7 +115,8 @@ object PrintTemplates {
     private fun money(shop: ShopProfile, invoice: Invoice): List<PrintBlock> {
         val charges = invoice.charges.map { charge ->
             val quantity = if (charge.quantity == 1.0) "" else "${formatQuantity(charge.quantity)} x "
-            AmountRow("$quantity${charge.description}", Money.format(charge.totalCents, shop.currencySymbol))
+            val code = charge.reference.takeIf { charge.type == ChargeType.GIFT_CARD && it.isNotBlank() }?.let { " $it" }.orEmpty()
+            AmountRow("$quantity${charge.description}$code", Money.format(charge.totalCents, shop.currencySymbol))
         }
 
         val totals = listOfNotNull(
@@ -125,7 +127,7 @@ object PrintTemplates {
         )
 
         val payments = invoice.payments.map { payment ->
-            val how = formatEnumName(payment.method.name).lowercase()
+            val how = formatEnumName(payment.method.name).lowercase() + payment.reference.takeIf { it.isNotBlank() }?.let { " $it" }.orEmpty()
             if (payment.isRefund) AmountRow("Refunded $how", Money.format(payment.amountCents, shop.currencySymbol))
             else AmountRow("Paid $how", Money.format(payment.amountCents, shop.currencySymbol))
         } + listOfNotNull(
@@ -164,8 +166,13 @@ object PrintTemplates {
      */
     fun dailyReport(shop: ShopProfile, report: DailyReport): PrintDocument {
         val taken = PaymentMethod.entries
-            .filter { (report.takenByMethod[it] ?: 0) > 0 }
+            .filter { !it.storedValue && (report.takenByMethod[it] ?: 0) != 0L }
             .map { AmountRow(formatEnumName(it.name), Money.format(report.takenByMethod[it] ?: 0, shop.currencySymbol)) }
+
+        // Store credit and gift cards spent, which aren't money coming in
+        val spent = PaymentMethod.entries
+            .filter { it.storedValue && (report.takenByMethod[it] ?: 0) != 0L }
+            .map { AmountRow("${formatEnumName(it.name)} spent", Money.format(report.takenByMethod[it] ?: 0, shop.currencySymbol)) }
 
         val blocks = shopHeader(shop) + listOf(
             PrintBlock.Divider,
@@ -179,7 +186,8 @@ object PrintTemplates {
                     report.refundedCents.takeIf { it > 0 }?.let { AmountRow("Refunded (${report.refundCount})", "-${Money.format(it, shop.currencySymbol)}") },
                     AmountRow("Total taken (${report.paymentCount} payments)", Money.format(report.takenCents, shop.currencySymbol), bold = true)
                 )
-            ),
+            )
+        ) + (if (spent.isEmpty()) emptyList() else listOf(PrintBlock.Amounts(spent))) + listOf(
             PrintBlock.Gap,
             PrintBlock.Text("Sales", bold = true),
             PrintBlock.Amounts(

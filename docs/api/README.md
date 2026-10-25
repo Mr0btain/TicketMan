@@ -20,6 +20,7 @@ changes here are made to both sides together.
 | [Inventory](inventory.md) | `/api/data/inventory` | `InventoryRoute.kt` |
 | [Messages](notify.md) | `/api/notify` | `NotifyRoute.kt` |
 | [Estimates](estimate.md) | `/api/estimate` | `EstimateRoute.kt` |
+| [Gift cards](giftcard.md) | `/api/giftcard` | `GiftCardRoute.kt` |
 | [Status page](status.md) | `/status` | `StatusRoute.kt` |
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 

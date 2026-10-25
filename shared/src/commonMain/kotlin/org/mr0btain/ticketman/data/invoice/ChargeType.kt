@@ -10,5 +10,8 @@ enum class ChargeType {
     /** An inventory item, its stock goes down when the invoice is paid */
     PART,
 
-    OTHER
+    OTHER,
+
+    /** Selling or topping up a gift card, loaded when the invoice is paid. Never taxed */
+    GIFT_CARD
 }

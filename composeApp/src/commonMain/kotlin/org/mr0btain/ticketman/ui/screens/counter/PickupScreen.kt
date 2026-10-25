@@ -11,6 +11,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.min
+import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.server.request.PaymentRequest
@@ -43,6 +44,7 @@ fun PickupScreen(
     onSearchParts: suspend (String) -> List<Inventory>,
     onSave: (List<Charge>, Long, (String?) -> Unit) -> Unit,
     onRemovePayment: (Payment) -> Unit,
+    onLookupGiftCard: suspend (String) -> GiftCard?,
     onFinish: (List<Charge>, Long, List<PaymentRequest>, (String?) -> Unit) -> Unit,
     onBack: () -> Unit
 ) {
@@ -99,7 +101,7 @@ fun PickupScreen(
                     subtitle = if (drafts.isEmpty()) "No charges yet, add labor or parts below" else if (drafts.size == 1) "1 line" else "${drafts.size} lines",
                     icon = Res.drawable.file_text
                 ) {
-                    ChargeLines(drafts = drafts, compact = compact, laborCents = ticket.estimateCents ?: 0, onSearchParts = onSearchParts)
+                    ChargeLines(drafts = drafts, compact = compact, laborCents = ticket.estimateCents ?: 0, onSearchParts = onSearchParts, giftCards = true)
 
                     TmMoneyField(
                         modifier = Modifier.width(200.dp),
@@ -121,6 +123,8 @@ fun PickupScreen(
                     finishText = "Finish pickup",
                     finishEnabled = problem == null,
                     busy = busy,
+                    creditCents = detail.customer?.creditCents,
+                    onLookupGiftCard = onLookupGiftCard,
                     onFinish = {
                         busy = true
                         message = null

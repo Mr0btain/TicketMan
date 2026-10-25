@@ -32,11 +32,16 @@ data class InvoiceChangeRequest(
 @Serializable
 data class ChargeChange(val before: Charge, val after: Charge)
 
+/**
+ * A payment being taken
+ * @param reference The gift card's code when it's paid with one
+ */
 @Serializable
 data class PaymentRequest(
     val method: PaymentMethod,
     val amountCents: Long,
-    val note: String = ""
+    val note: String = "",
+    val reference: String = ""
 )
 
 /**
@@ -69,13 +74,26 @@ data class PickupRequest(
  * @param amountCents How much goes back, positive. Zero when only parts are coming back, like an exchange
  * @param reason Why, required, kept as the refund's note
  * @param returns Parts coming back, put back in stock. Only ones the invoice sold and not already returned
+ * @param reference For [PaymentMethod.GIFT_CARD], the card it goes back onto; blank makes a new one.
+ * [PaymentMethod.STORE_CREDIT] goes to the invoice's customer
  */
 @Serializable
 data class RefundRequest(
     val method: PaymentMethod,
     val amountCents: Long,
     val reason: String,
-    val returns: List<ReturnedPart> = emptyList()
+    val returns: List<ReturnedPart> = emptyList(),
+    val reference: String = ""
+)
+
+/**
+ * Changes stored value by hand, admin only: store credit given as a goodwill gesture, or a gift card corrected
+ * @param amountCents Added, or negative to take off. A balance can't go below zero
+ */
+@Serializable
+data class BalanceAdjustRequest(
+    val amountCents: Long,
+    val reason: String
 )
 
 /**

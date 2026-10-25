@@ -27,6 +27,7 @@ data class DailyReport(
     val overdueNow: Int = 0,
     val waitingForPickupNow: Int = 0
 ) {
+    /** Money taken, leaving out store credit and gift cards spent, which were money when they were bought */
     val takenCents: Long
-        get() = takenByMethod.values.sum()
+        get() = takenByMethod.filterKeys { !it.storedValue }.values.sum()
 }

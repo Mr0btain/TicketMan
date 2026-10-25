@@ -11,12 +11,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.StatusChoice
 import org.mr0btain.ticketman.data.ticket.label
 import org.mr0btain.ticketman.error.TmResult
+import org.mr0btain.ticketman.error.getOrDefault
+import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import kotlin.uuid.Uuid
@@ -173,8 +176,11 @@ class CounterHandler(
                 support.notify("Couldn't load that customer's tickets: ${error.message}")
                 return@launch
             }
+            // Only shown, never saved back, so a failed read just shows nothing
+            val credit = repo.getCredit(identifier).getOrDefault(emptyList())
+            val invoices = repo.getInvoices(identifier).getOrDefault(emptyList())
 
-            _customer.value = CustomerDetail(customer, tickets)
+            _customer.value = CustomerDetail(customer, tickets, credit, invoices)
             _view.value = CounterView.CUSTOMER
         }
     }
@@ -244,6 +250,28 @@ class CounterHandler(
             reloadTicket()
         }
     }
+
+    /**
+     * Gives or takes the open customer's store credit, admin only
+     * @param onResult Gets null when it's saved, otherwise what went wrong
+     */
+    fun adjustCredit(amountCents: Long, reason: String, onResult: (String?) -> Unit) {
+        val detail = _customer.value ?: return
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.adjustCredit(detail.customer.identifier, BalanceAdjustRequest(amountCents, reason))) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    openCustomer(detail.customer.identifier)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** The gift card with this code, for paying with it. Null when there's none or it couldn't be read */
+    suspend fun findGiftCard(code: String): GiftCard? = remoteHandler.giftCardRepo.get(code).getOrNull()
 
     // ------------------------------------------ Price check ------------------------------------------
 

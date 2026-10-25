@@ -377,6 +377,24 @@ _, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200
 check(item["stock"] == 4, f"stock is {item['stock']}")
 step("The screen comes back: the tech can't refund, the admin refunds $129.90 to the card and it goes back in stock (3 -> 4); twice is refused")
 
+_, card_sale = call("POST", "/api/counter/sale", {
+    "customerIdentifier": jane,
+    "charges": [{"type": "GIFT_CARD", "description": "Gift card", "quantity": 1, "unitPriceCents": 2500, "taxable": False}],
+    "payments": [{"method": "CASH", "amountCents": 2500}]
+}, pin, expect=201)
+code = card_sale["charges"][0]["reference"]
+fee = [{"type": "OTHER", "description": "Data transfer", "quantity": 1, "unitPriceCents": 1000, "taxable": False}]
+call("POST", "/api/counter/sale", {"charges": fee, "payments": [{"method": "GIFT_CARD", "amountCents": 3000, "reference": code}]}, pin, expect=409)
+call("POST", "/api/counter/sale", {"charges": fee, "payments": [{"method": "GIFT_CARD", "amountCents": 1000, "reference": code.lower()}]}, pin, expect=201)
+_, card = call("GET", f"/api/giftcard/code/{code}", token=pin, expect=200)
+check(card["balanceCents"] == 1500, f"card {card}")
+_, jane_now = call("POST", f"/api/data/customer/credit/{jane}", {"amountCents": 500, "reason": "Sorry for the wait"}, admin, expect=200)
+_, paid_with_credit = call("POST", "/api/counter/sale", {"customerIdentifier": jane, "charges": fee, "payments": [
+    {"method": "STORE_CREDIT", "amountCents": 500}, {"method": "CASH", "amountCents": 500}]}, pin, expect=201)
+_, jane_now = call("GET", f"/api/data/customer/get/{jane}", token=pin, expect=200)
+check(jane_now["creditCents"] == 0, f"credit left {jane_now['creditCents']}")
+step(f"A $25 gift card ({code}) sold for cash; $10 spent from it ($30 refused), $15 left; Jane gets $5 store credit and spends it")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

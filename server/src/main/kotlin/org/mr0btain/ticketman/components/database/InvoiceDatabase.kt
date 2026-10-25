@@ -116,6 +116,7 @@ class InvoiceDatabase(
                     row[InvoiceChargeTable.unitPriceCents] = charge.unitPriceCents
                     row[InvoiceChargeTable.inventory] = charge.inventoryIdentifier?.toString()
                     row[InvoiceChargeTable.taxable] = charge.taxable
+                    row[InvoiceChargeTable.reference] = charge.reference
                 }
             }
 
@@ -143,6 +144,7 @@ class InvoiceDatabase(
                 row[InvoicePaymentTable.receivedBy] = payment.receivedBy
                 row[InvoicePaymentTable.note] = payment.note
                 row[InvoicePaymentTable.returns] = payment.returns
+                row[InvoicePaymentTable.reference] = payment.reference
             }
 
             InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
@@ -181,6 +183,17 @@ class InvoiceDatabase(
                 .map { it.toInvoice() }
         }
 
+    /** The customer's invoices, newest first. Null when the read failed */
+    fun getByCustomer(customerIdentifier: Uuid, limit: Int): List<Invoice>? =
+        dbQuery(GET_TAG) {
+            InvoiceTable
+                .selectAll()
+                .where { InvoiceTable.customer eq customerIdentifier.toString() }
+                .orderBy(InvoiceTable.numberYear to SortOrder.DESC, InvoiceTable.numberSequence to SortOrder.DESC)
+                .limit(limit)
+                .map { it.toInvoice() }
+        }
+
     /** Newest first */
     fun getPagedItems(request: PagedRequest): List<Invoice> =
         dbQuery(PAGED_TAG) {
@@ -208,7 +221,8 @@ class InvoiceDatabase(
                     quantity = row[InvoiceChargeTable.quantity],
                     unitPriceCents = row[InvoiceChargeTable.unitPriceCents],
                     inventoryIdentifier = row[InvoiceChargeTable.inventory]?.let { Uuid.parse(it) },
-                    taxable = row[InvoiceChargeTable.taxable]
+                    taxable = row[InvoiceChargeTable.taxable],
+                    reference = row[InvoiceChargeTable.reference]
                 )
             }
 
@@ -224,7 +238,8 @@ class InvoiceDatabase(
                     receivedAt = row[InvoicePaymentTable.receivedAt],
                     receivedBy = row[InvoicePaymentTable.receivedBy],
                     note = row[InvoicePaymentTable.note],
-                    returns = row[InvoicePaymentTable.returns]
+                    returns = row[InvoicePaymentTable.returns],
+                    reference = row[InvoicePaymentTable.reference]
                 )
             }
 

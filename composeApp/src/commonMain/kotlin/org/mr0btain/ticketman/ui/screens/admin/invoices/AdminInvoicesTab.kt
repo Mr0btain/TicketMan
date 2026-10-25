@@ -58,6 +58,7 @@ fun AdminInvoicesTab(
     val counter = viewModel.counter
     val invoices by counter.invoices.list.collectAsState()
     val endReached by counter.invoices.endReached.collectAsState()
+    val giftCards by counter.invoices.giftCards.collectAsState()
     val colors = TmTheme.colors
     val spacing = TmTheme.spacing
 
@@ -75,6 +76,7 @@ fun AdminInvoicesTab(
 
     LaunchedEffect(Unit) {
         counter.invoices.load(reset = true)
+        counter.invoices.loadGiftCards()
     }
 
     voiding?.let { invoice ->
@@ -119,7 +121,8 @@ fun AdminInvoicesTab(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(spacing.md)
     ) {
         TmPanel(
             title = "Invoices",
@@ -135,7 +138,10 @@ fun AdminInvoicesTab(
                     )
                     TmButton(
                         text = "Refresh",
-                        onClick = { counter.invoices.load(reset = true) },
+                        onClick = {
+                            counter.invoices.load(reset = true)
+                            counter.invoices.loadGiftCards()
+                        },
                         variant = TmButtonVariant.SECONDARY,
                         leadingIcon = Res.drawable.refresh_cw
                     )
@@ -206,5 +212,10 @@ fun AdminInvoicesTab(
                 }
             }
         }
+
+        GiftCardsPanel(
+            cards = giftCards,
+            onAdjust = { card, amount, reason, onResult -> counter.invoices.adjustGiftCard(card, amount, reason, onResult) }
+        )
     }
 }

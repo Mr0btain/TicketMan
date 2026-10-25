@@ -17,6 +17,7 @@ import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
+import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
 import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
 import org.mr0btain.ticketman.server.request.SaleRequest
@@ -83,6 +84,31 @@ class CounterRemoteRepositoryTest {
         tickets.fetchMine(20, 20)
 
         assertEquals(listOf("GET /api/data/ticket/fetch", "GET /api/data/ticket/fetch/mine"), requests)
+    }
+
+    @Test
+    fun storedValueRoutes() = runTest {
+        val giftCards = GiftCardRemoteRepository(client).apply { serverUrl = "http://localhost" }
+        val id = Uuid.parse("00000000-0000-7000-8000-000000000001")
+
+        customers.getCredit(id)
+        customers.adjustCredit(id, BalanceAdjustRequest(500, "Goodwill"))
+        customers.getInvoices(id)
+        giftCards.get(" gc-ab12 cd34")
+        giftCards.fetch(0, 10)
+        giftCards.adjust("GC-AB12CD34", BalanceAdjustRequest(-100, "Fix"))
+
+        assertEquals(
+            listOf(
+                "GET /api/data/customer/credit/$id",
+                "POST /api/data/customer/credit/$id",
+                "GET /api/data/customer/get/invoices/$id",
+                "GET /api/giftcard/code/GC-AB12CD34",
+                "GET /api/giftcard/fetch",
+                "POST /api/giftcard/code/GC-AB12CD34/adjust"
+            ),
+            requests
+        )
     }
 
     @Test

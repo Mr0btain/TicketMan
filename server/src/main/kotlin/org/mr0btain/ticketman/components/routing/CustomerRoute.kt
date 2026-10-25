@@ -5,6 +5,10 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.InvoiceDatabase
+import org.mr0btain.ticketman.components.database.StoredValueDatabase
+import org.mr0btain.ticketman.components.service.StoredValueService
+import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CounterDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
@@ -25,7 +29,10 @@ fun Route.customerRoute(
     ticketDatabase: TicketDatabase,
     counterDatabase: CounterDatabase,
     userDatabase: UserDatabase,
-    auditLog: AuditLogDatabase
+    auditLog: AuditLogDatabase,
+    storedValue: StoredValueDatabase,
+    storedValueService: StoredValueService,
+    invoiceDatabase: InvoiceDatabase
 ) {
     val TAG = "CustomerRoute"
     val GET_TAG = "$TAG:Get"
@@ -85,6 +92,49 @@ fun Route.customerRoute(
 
             call.respond(HttpStatusCode.OK, counterDatabase.customerTickets(identifier).map { it.ticket })
         }
+
+        // Store credit given and spent, newest first
+        get(CustomerPaths.CREDIT) {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null || database.getById(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@get
+            }
+
+            val history = storedValue.creditHistory(identifier, HISTORY_LIMIT)
+            if (history != null) call.respond(HttpStatusCode.OK, history) else call.respond(HttpStatusCode.InternalServerError)
+        }
+
+        // Tickets' invoices and sales, newest first
+        get(CustomerPaths.INVOICES) {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null || database.getById(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@get
+            }
+
+            val invoices = invoiceDatabase.getByCustomer(identifier, HISTORY_LIMIT)
+            if (invoices != null) call.respond(HttpStatusCode.OK, invoices) else call.respond(HttpStatusCode.InternalServerError)
+        }
+    }
+
+    authenticate("admin") {
+        // Store credit given or taken by hand
+        post(CustomerPaths.CREDIT) {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null) {
+                call.respond(HttpStatusCode.BadRequest)
+                return@post
+            }
+
+            call.respondAccount(
+                storedValueService.adjustCredit(identifier, call.receive<BalanceAdjustRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                HttpStatusCode.OK
+            )
+        }
     }
 
     // ------------------------------------------ Changing ------------------------------------------
@@ -124,6 +174,13 @@ fun Route.customerRoute(
         delete(RecordPaths.REMOVE) {
             val identifier = call.uuidParameter("identifier")
 
+            // Their credit would go with them
+            val credit = identifier?.let { database.getById(it) }?.creditCents ?: 0
+            if (credit > 0) {
+                call.respondText("They still have store credit, take it off first", status = HttpStatusCode.Conflict)
+                return@delete
+            }
+
             if (identifier == null || !database.remove(identifier)) {
                 call.respond(HttpStatusCode.NotFound)
             } else {
@@ -148,3 +205,5 @@ fun Route.customerRoute(
 
     noteRoute(database, userDatabase, auditLog, ENTITY_TYPE)
 }
+
+private const val HISTORY_LIMIT = 200

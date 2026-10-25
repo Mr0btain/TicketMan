@@ -6,6 +6,8 @@ import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
+import org.mr0btain.ticketman.components.database.StoredValueDatabase
+import org.mr0btain.ticketman.data.giftcard.GiftCardCode
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.invoice.*
@@ -37,8 +39,11 @@ class InvoiceService(
     private val shop: ShopDatabase,
     private val auditLog: AuditLogDatabase,
     private val work: WorkDatabase = WorkDatabase(),
-    private val customers: CustomerDatabase = CustomerDatabase()
+    private val customers: CustomerDatabase = CustomerDatabase(),
+    private val values: StoredValueDatabase = StoredValueDatabase()
 ) {
+    private val storedValue = StoredValuePayments(values) { money(it) }
+
     /** The ticket's invoice, made if it doesn't have one */
     fun forTicket(ticketIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> {
         tickets.getById(ticketIdentifier) ?: return AccountResult.NotFound
@@ -78,32 +83,47 @@ class InvoiceService(
         return AccountResult.Done(saved)
     }
 
-    /** Takes a payment, like a deposit at check in */
+    /** Takes a payment, like a deposit at check in. Store credit and gift cards are spent then */
     fun addPayment(identifier: Uuid, request: PaymentRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Invoice ${invoice.label} is ${invoice.status.name.lowercase()}")
         if (request.amountCents <= 0) return AccountResult.Invalid("Payment has to be more than zero")
+        storedValue.problem(listOf(request), invoice.customerIdentifier)?.let { return AccountResult.Conflict(it) }
 
-        val saved = invoices.addPayment(identifier, request.toPayment(receivedBy)) ?: return AccountResult.Invalid("Couldn't save the payment")
+        val payment = request.toPayment(receivedBy)
+        val saved = try {
+            transaction {
+                val saved = invoices.addPayment(identifier, payment) ?: throw IllegalStateException("Payment not saved")
+                storedValue.take(payment, invoice.customerIdentifier, identifier, invoice.label, receivedBy)
+                saved
+            }
+        } catch (ex: StoredValuePayments.ShortOfValue) {
+            return AccountResult.Conflict(ex.message)
+        }
 
-        auditLog.log(actor, AuditAction.CREATE, "payment", identifier.toString(), "${money(request.amountCents)} ${request.method.name.lowercase()} on ${invoice.label}")
+        auditLog.log(actor, AuditAction.CREATE, "payment", identifier.toString(), "${money(request.amountCents)} ${describe(payment)} on ${invoice.label}")
         return AccountResult.Done(saved)
     }
 
-    /** Takes a payment back off an open invoice, for one entered by mistake */
+    /** Takes a payment back off an open invoice, for one entered by mistake. Store credit or a gift card gets it back */
     fun removePayment(identifier: Uuid, paymentIdentifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status != InvoiceStatus.OPEN) return AccountResult.Conflict("Payments on a ${invoice.status.name.lowercase()} invoice can't be removed")
-        if (!invoices.removePayment(identifier, paymentIdentifier)) return AccountResult.NotFound
+        val payment = invoice.payments.firstOrNull { it.identifier == paymentIdentifier } ?: return AccountResult.NotFound
 
-        auditLog.log(actor, AuditAction.DELETE, "payment", identifier.toString(), "Removed a payment from ${invoice.label}")
+        transaction {
+            if (!invoices.removePayment(identifier, paymentIdentifier)) throw IllegalStateException("Payment not removed")
+            storedValue.giveBack(payment, invoice.customerIdentifier, identifier, invoice.label, payment.receivedBy)
+            auditLog.log(actor, AuditAction.DELETE, "payment", identifier.toString(), "Removed ${money(payment.amountCents)} ${describe(payment)} from ${invoice.label}")
+        }
+
         return AccountResult.Done(invoices.getById(identifier)!!)
     }
 
     /**
      * Hands the ticket back. Everything happens together or not at all: the payments are taken, the invoice has to
-     * end up paid in full, parts come out of stock and the ticket is closed. A part without enough in stock stops
-     * the pickup, so the count gets fixed instead of going below zero
+     * end up paid in full, parts come out of stock, gift cards on it are loaded and the ticket is closed. A part
+     * without enough in stock stops the pickup, so the count gets fixed instead of going below zero
      */
     fun pickup(request: PickupRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val ticket = tickets.getById(request.ticketIdentifier) ?: return AccountResult.NotFound
@@ -120,6 +140,7 @@ class InvoiceService(
         val paying = request.payments.sumOf { it.amountCents }
         val owed = invoice.balanceCents - paying
         if (owed > 0) return AccountResult.Conflict("${money(owed)} is still owed on ${invoice.label}")
+        storedValue.problem(request.payments, invoice.customerIdentifier)?.let { return AccountResult.Conflict(it) }
 
         val parts = partsUsed(invoice.charges)
         parts.forEach { (identifier, quantity) ->
@@ -131,13 +152,14 @@ class InvoiceService(
 
         try {
             transaction {
-                request.payments.forEach { payment -> invoices.addPayment(invoice.identifier, payment.toPayment(receivedBy)) }
+                takePayments(invoice, request.payments, receivedBy)
 
                 // A count set by hand since the check above can still leave too few, which undoes the lot
                 parts.forEach { (identifier, quantity) ->
                     if (!inventory.adjustStock(identifier, quantity)) throw ShortOfStock(identifier)
                 }
 
+                loadGiftCards(invoice)
                 invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
                 tickets.markPickedUp(ticket.identifier, now)
                 tickets.recordStatusChange(ticket.identifier, TicketStatus(TicketStatusType.PICKED_UP), receivedBy)
@@ -147,6 +169,8 @@ class InvoiceService(
             }
         } catch (ex: ShortOfStock) {
             return shortOf(ex.identifier)
+        } catch (ex: StoredValuePayments.ShortOfValue) {
+            return AccountResult.Conflict(ex.message)
         }
 
         return AccountResult.Done(invoices.getById(invoice.identifier)!!)
@@ -154,7 +178,8 @@ class InvoiceService(
 
     /**
      * Sells straight from stock with no ticket. Like a pickup it's all or nothing: the invoice is made with its
-     * lines, the payments have to cover it, the parts come out of stock and it's saved PAID
+     * lines, the payments have to cover it, the parts come out of stock, gift cards on it are loaded and it's saved
+     * PAID
      */
     fun sell(request: SaleRequest, receivedBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         linesProblem(request.charges)?.let { return AccountResult.Invalid(it) }
@@ -166,6 +191,7 @@ class InvoiceService(
         val totals = InvoiceMath.totals(request.charges, request.discountCents, taxRate)
         val owed = totals.totalCents - request.payments.sumOf { it.amountCents }
         if (owed > 0) return AccountResult.Conflict("${money(owed)} is still owed")
+        storedValue.problem(request.payments, request.customerIdentifier)?.let { return AccountResult.Conflict(it) }
 
         val parts = partsUsed(request.charges)
         parts.forEach { (identifier, quantity) ->
@@ -178,14 +204,15 @@ class InvoiceService(
         val sold = try {
             invoices.whileNumbering {
                 transaction {
-                    val invoice = invoices.createSale(request.customerIdentifier, taxRate) ?: throw IllegalStateException("Sale not made")
-                    invoices.setCharges(invoice.identifier, request.charges, request.discountCents, taxRate)
-                    request.payments.forEach { payment -> invoices.addPayment(invoice.identifier, payment.toPayment(receivedBy)) }
+                    val created = invoices.createSale(request.customerIdentifier, taxRate) ?: throw IllegalStateException("Sale not made")
+                    val invoice = invoices.setCharges(created.identifier, request.charges, request.discountCents, taxRate) ?: throw IllegalStateException("Sale not made")
+                    takePayments(invoice, request.payments, receivedBy)
 
                     parts.forEach { (identifier, quantity) ->
                         if (!inventory.adjustStock(identifier, quantity)) throw ShortOfStock(identifier)
                     }
 
+                    loadGiftCards(invoice)
                     invoices.setStatus(invoice.identifier, InvoiceStatus.PAID, paidAt = now)
                     auditLog.log(actor, AuditAction.CREATE, "invoice", invoice.identifier.toString(), "Sold ${invoice.label}, ${money(totals.totalCents)}")
                     invoice.identifier
@@ -193,15 +220,40 @@ class InvoiceService(
             }
         } catch (ex: ShortOfStock) {
             return shortOf(ex.identifier)
+        } catch (ex: StoredValuePayments.ShortOfValue) {
+            return AccountResult.Conflict(ex.message)
         }
 
         return AccountResult.Done(invoices.getById(sold)!!)
     }
 
+    // Adds each payment and spends any stored value it uses. Inside a transaction
+    private fun takePayments(invoice: Invoice, requests: List<PaymentRequest>, receivedBy: String) {
+        requests.forEach { request ->
+            val payment = request.toPayment(receivedBy)
+            invoices.addPayment(invoice.identifier, payment)
+            storedValue.take(payment, invoice.customerIdentifier, invoice.identifier, invoice.label, receivedBy)
+        }
+    }
+
+    // Loads the gift cards the invoice sells, giving new ones a code. Inside the transaction that pays it
+    private fun loadGiftCards(invoice: Invoice) {
+        if (invoice.charges.none { it.type == ChargeType.GIFT_CARD }) return
+
+        val charges = invoice.charges.map { charge ->
+            if (charge.type != ChargeType.GIFT_CARD) return@map charge
+            val code = charge.reference.ifBlank { GiftCardCode.generate() }
+            values.loadGiftCard(code, charge.totalCents, invoice.identifier, invoice.customerIdentifier) ?: throw IllegalStateException("Gift card not loaded")
+            charge.copy(reference = GiftCardCode.normalize(code))
+        }
+        invoices.setCharges(invoice.identifier, charges, invoice.discountCents, invoice.taxRateBasisPoints)
+    }
+
     /**
      * Gives money back on a paid invoice, and puts returned parts back in stock, together. Admin only. The refund is
      * a payment with a negative amount and the reason as its note; it can't be more than was paid less earlier
-     * refunds, and a part can't come back more times than it was sold
+     * refunds, and a part can't come back more times than it was sold. Store credit goes to the invoice's customer,
+     * a gift card refund onto the card given or a new one
      */
     fun refund(identifier: Uuid, request: RefundRequest, givenBy: String, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
@@ -215,6 +267,8 @@ class InvoiceService(
         if (request.amountCents < 0) return AccountResult.Invalid("Refund the amount as a positive number")
         if (request.amountCents == 0L && request.returns.isEmpty()) return AccountResult.Invalid("Refund an amount or return a part")
         if (request.amountCents > invoice.netPaidCents) return AccountResult.Invalid("Only ${money(invoice.netPaidCents)} was paid on ${invoice.label}")
+        if (request.method == PaymentMethod.STORE_CREDIT && invoice.customerIdentifier == null) return AccountResult.Invalid("${invoice.label} has no customer to give store credit to")
+        if (request.method == PaymentMethod.GIFT_CARD && request.reference.isNotBlank()) GiftCardCode.problem(request.reference)?.let { return AccountResult.Invalid(it) }
 
         // Each item once, added up, and only what was sold and not already returned
         val returns = request.returns.groupBy { it.inventoryIdentifier }.map { (item, lines) -> ReturnedPart(item, lines.sumOf { it.quantity }) }
@@ -230,45 +284,65 @@ class InvoiceService(
             }
         }
 
+        val card = if (request.method == PaymentMethod.GIFT_CARD && request.amountCents > 0) GiftCardCode.normalize(request.reference.ifBlank { GiftCardCode.generate() }) else ""
         val payment = Payment(
             method = request.method,
             amountCents = -request.amountCents,
             receivedAt = Clock.System.now().toEpochMilliseconds(),
             receivedBy = givenBy,
             note = reason,
-            returns = returns
+            returns = returns,
+            reference = card
         )
 
         transaction {
             invoices.addPayment(identifier, payment) ?: throw IllegalStateException("Refund not saved")
             returns.forEach { part -> inventory.adjustStock(part.inventoryIdentifier, -part.quantity) }
 
+            if (request.amountCents > 0) when (request.method) {
+                PaymentMethod.STORE_CREDIT -> if (!values.changeCredit(invoice.customerIdentifier!!, request.amountCents, "Refund on ${invoice.label}: $reason", identifier, givenBy)) {
+                    throw IllegalStateException("Store credit not given")
+                }
+                PaymentMethod.GIFT_CARD -> values.loadGiftCard(card, request.amountCents, identifier, invoice.customerIdentifier) ?: throw IllegalStateException("Gift card not loaded")
+                else -> {}
+            }
+
             val back = if (returns.isEmpty()) "" else ", ${returns.sumOf { it.quantity }} part${if (returns.sumOf { it.quantity } == 1) "" else "s"} back in stock"
-            auditLog.log(actor, AuditAction.REFUND, "invoice", identifier.toString(), "Refunded ${money(request.amountCents)} ${request.method.name.lowercase()} on ${invoice.label}$back: $reason")
+            auditLog.log(actor, AuditAction.REFUND, "invoice", identifier.toString(), "Refunded ${money(request.amountCents)} ${describe(payment)} on ${invoice.label}$back: $reason")
         }
 
         return AccountResult.Done(invoices.getById(identifier)!!)
     }
 
     /**
-     * Cancels an invoice. A paid one puts its parts back in stock, less any a refund already returned. The ticket
-     * stays as it is
+     * Cancels an invoice. A paid one puts its parts back in stock, less any a refund already returned, and takes back
+     * the gift cards it loaded, refusing if one has been spent since. The ticket stays as it is
      */
     fun void(identifier: Uuid, actor: Uuid?): AccountResult<Invoice> = synchronized(CHANGE_LOCK) {
         val invoice = invoices.getById(identifier) ?: return AccountResult.NotFound
         if (invoice.status == InvoiceStatus.VOID) return AccountResult.Conflict("Invoice ${invoice.label} is already void")
 
-        transaction {
-            if (invoice.status == InvoiceStatus.PAID) {
-                val returned = invoice.returnedParts
-                partsUsed(invoice.charges).forEach { (identifier, quantity) ->
-                    val back = quantity - (returned[identifier] ?: 0)
-                    if (back > 0) inventory.adjustStock(identifier, -back)
-                }
-            }
+        try {
+            transaction {
+                if (invoice.status == InvoiceStatus.PAID) {
+                    val returned = invoice.returnedParts
+                    partsUsed(invoice.charges).forEach { (identifier, quantity) ->
+                        val back = quantity - (returned[identifier] ?: 0)
+                        if (back > 0) inventory.adjustStock(identifier, -back)
+                    }
 
-            invoices.setStatus(identifier, InvoiceStatus.VOID)
-            auditLog.log(actor, AuditAction.DELETE, "invoice", identifier.toString(), "Voided ${invoice.label}")
+                    invoice.charges.filter { it.type == ChargeType.GIFT_CARD && it.reference.isNotBlank() }.forEach { charge ->
+                        if (!values.unloadGiftCard(charge.reference, charge.totalCents)) {
+                            throw StoredValuePayments.ShortOfValue("Gift card ${charge.reference} has been spent, refund instead of voiding")
+                        }
+                    }
+                }
+
+                invoices.setStatus(identifier, InvoiceStatus.VOID)
+                auditLog.log(actor, AuditAction.DELETE, "invoice", identifier.toString(), "Voided ${invoice.label}")
+            }
+        } catch (ex: StoredValuePayments.ShortOfValue) {
+            return AccountResult.Conflict(ex.message)
         }
 
         return AccountResult.Done(invoices.getById(identifier)!!)
@@ -465,6 +539,9 @@ class InvoiceService(
                 charge.type == ChargeType.PART && charge.inventoryIdentifier == null -> return "Parts need an inventory item"
                 charge.type == ChargeType.PART && charge.quantity % 1.0 != 0.0 -> return "Parts are counted in whole numbers"
                 charge.inventoryIdentifier != null && inventory.getById(charge.inventoryIdentifier!!) == null -> return "Inventory item for \"${charge.description}\" doesn't exist"
+                charge.type == ChargeType.GIFT_CARD && (charge.quantity != 1.0 || charge.taxable || charge.inventoryIdentifier != null) -> return "A gift card line is one card, untaxed"
+                charge.type == ChargeType.GIFT_CARD && charge.unitPriceCents <= 0 -> return "Put an amount on the gift card"
+                charge.type == ChargeType.GIFT_CARD && charge.reference.isNotBlank() && GiftCardCode.problem(charge.reference) != null -> return GiftCardCode.problem(charge.reference)
             }
         }
 
@@ -472,13 +549,20 @@ class InvoiceService(
     }
 
     private fun PaymentRequest.toPayment(receivedBy: String): Payment =
-        Payment(
-            method = method,
-            amountCents = amountCents,
-            receivedAt = Clock.System.now().toEpochMilliseconds(),
-            receivedBy = receivedBy,
-            note = note.trim()
+        storedValue.normalized(
+            Payment(
+                method = method,
+                amountCents = amountCents,
+                receivedAt = Clock.System.now().toEpochMilliseconds(),
+                receivedBy = receivedBy,
+                note = note.trim(),
+                reference = if (method == PaymentMethod.GIFT_CARD) reference else ""
+            )
         )
+
+    // How it was paid, for the audit log, with the gift card's code
+    private fun describe(payment: Payment): String =
+        payment.method.name.lowercase().replace('_', ' ') + if (payment.reference.isNotBlank()) " ${payment.reference}" else ""
 
     companion object {
         /**

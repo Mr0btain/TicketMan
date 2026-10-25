@@ -40,6 +40,7 @@ fun RefundDialog(
     var amountCents by remember { mutableLongStateOf(invoice.netPaidCents) }
     var method by remember { mutableStateOf(invoice.payments.lastOrNull { !it.isRefund }?.method ?: PaymentMethod.CASH) }
     var reason by remember { mutableStateOf("") }
+    var cardCode by remember { mutableStateOf("") }
     val returning = remember { mutableStateMapOf<Uuid, String>() }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -77,7 +78,7 @@ fun RefundDialog(
                 onConfirm = {
                     busy = true
                     error = null
-                    onRefund(RefundRequest(method, amountCents, reason.trim(), returns)) { failed ->
+                    onRefund(RefundRequest(method, amountCents, reason.trim(), returns, reference = if (method == PaymentMethod.GIFT_CARD) cardCode.trim() else "")) { failed ->
                         busy = false
                         error = failed
                         if (failed == null) onDismissRequest()
@@ -95,11 +96,22 @@ fun RefundDialog(
 
         TmSegmented(
             label = "Given back as",
-            options = PaymentMethod.entries,
+            // Store credit needs a customer to go to
+            options = PaymentMethod.entries.filter { it != PaymentMethod.STORE_CREDIT || invoice.customerIdentifier != null },
             selected = method,
             onSelect = { method = it },
             optionLabel = { formatEnumName(it.name) }
         )
+
+        if (method == PaymentMethod.GIFT_CARD) {
+            TmTextField(
+                value = cardCode,
+                onValueChange = { cardCode = it },
+                label = "Onto gift card",
+                placeholder = "Its code, blank for a new card",
+                textStyle = TmTheme.typography.numeric
+            )
+        }
 
         TmTextField(value = reason, onValueChange = { reason = it }, label = "Reason", placeholder = "Didn't fit, faulty, changed their mind")
 

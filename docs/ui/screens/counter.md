@@ -129,7 +129,10 @@ opens with the ticket's invoice, made if it doesn't have one yet.
 If the pickup is refused (short on stock, someone else picked it up), the screen reloads the invoice and shows the
 server's message.
 
-`PaymentPanel` (`PaymentPanel.kt`) is the totals and payment side, shared with sales.
+`PaymentPanel` (`PaymentPanel.kt`) is the totals and payment side, shared with sales. Its "Paid by" chips add
+**Store credit** when the customer has some (it shows how much and won't take more) and **Gift card**, which asks
+for the code and checks the card's balance (`CounterHandler.findGiftCard`) before taking it. **Add gift card** puts
+a gift card line on the invoice (a code to top up, or blank for a new card, loaded when it's paid).
 
 ### Sales
 
@@ -139,6 +142,12 @@ sells from stock with no ticket: the same `ChargeLines` and `PaymentPanel` as pi
 `SaleRequest` to `POST /api/counter/sale`; the server makes the invoice, takes the payments and the stock, and
 saves it paid, or refuses all of it. `PickedUpView` then shows it as "Sold", with the receipt (printed by
 `CounterPrinter.printSale`, since there's no ticket to load) and Save PDF.
+
+### Customer
+
+`CustomerCard` shows the customer's contact details, tickets, **store credit** (balance and recent changes, with
+**Adjust** for admins through the kit's `TmAdjustBalanceDialog`) and **invoices**, their repairs' and sales.
+`openCustomer` loads the credit history and invoices with them; they're only shown, so a failed read shows nothing.
 
 ### Printing
 
@@ -166,7 +175,7 @@ the handler and its parts refuse those actions anyway.
 | Ticket and customer rows, `isOverdue`, `isClosed` | `ui/screens/counter/components/CounterRows.kt` |
 | Each view | `TicketCard.kt`, `CustomerCard.kt`, `SearchResults.kt`, `QueuePanel.kt` (with `QueueDialog`), `PriceCheck.kt`, `CheckInWizard.kt`, `CheckedInView.kt`, `NewCustomerScreen.kt` (new customer, the kit's `TmCustomerForm` under a header), `PickupScreen.kt` (with `PickedUpView`), `SaleScreen.kt`, and `PaymentPanel.kt` shared by the last two |
 | Print button | `ui/screens/counter/PrintButton.kt` |
-| Render tests | `ScreenRenderTest.counterTicket()`, `pickup()`, `sale()`, `checkIn()`, and `counterTicketNarrow()`, `pickupNarrow()`, `saleNarrow()`, `checkInNarrow()` at phone width |
+| Render tests | `ScreenRenderTest.counterTicket()`, `pickup()`, `sale()`, `counterCustomer()`, `checkIn()`, and `counterTicketNarrow()`, `pickupNarrow()`, `saleNarrow()`, `checkInNarrow()` at phone width |
 | Handler tests | `composeApp/src/commonTest/.../ui/screens/counter/CounterHandlerTest.kt` |
 
 ## Gotchas

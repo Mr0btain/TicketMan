@@ -4,13 +4,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.invoice.Invoice
+import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.components.data.saveFile
 
-/** The invoice list, newest first, shown on the admin screen's Invoices tab */
+/** The invoice list, newest first, and the gift cards, shown on the admin screen's Invoices tab */
 class CounterInvoices(
     private val remoteHandler: RemoteHandler,
     private val support: CounterSupport
@@ -20,6 +22,10 @@ class CounterInvoices(
 
     private val _endReached = MutableStateFlow(false)
     val endReached = _endReached.asStateFlow()
+
+    private val _giftCards = MutableStateFlow<List<GiftCard>>(emptyList())
+    /** Newest first, admin only */
+    val giftCards = _giftCards.asStateFlow()
 
     /** Loads the list, from the start or the next page */
     fun load(reset: Boolean) {
@@ -97,12 +103,41 @@ class CounterInvoices(
         }
     }
 
+    /** Loads the newest gift cards */
+    fun loadGiftCards() {
+        support.scope.launch {
+            _giftCards.value = remoteHandler.giftCardRepo.fetch(0, GIFT_CARD_PAGE).valueOr { error ->
+                support.notify("Couldn't load gift cards: ${error.message}")
+                return@launch
+            }
+        }
+    }
+
+    /**
+     * Corrects a gift card's balance, admin only
+     * @param onResult Gets null when it's saved, otherwise what went wrong
+     */
+    fun adjustGiftCard(card: GiftCard, amountCents: Long, reason: String, onResult: (String?) -> Unit) {
+        support.scope.launch {
+            when (val result = remoteHandler.giftCardRepo.adjust(card.code, BalanceAdjustRequest(amountCents, reason))) {
+                is TmResult.Success -> {
+                    _giftCards.value = _giftCards.value.map { if (it.identifier == card.identifier) result.data else it }
+                    onResult(null)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
     fun clear() {
+        _giftCards.value = emptyList()
         _list.value = emptyList()
         _endReached.value = false
     }
 
     private companion object {
         const val PAGE_SIZE = 50
+        const val GIFT_CARD_PAGE = 200
     }
 }

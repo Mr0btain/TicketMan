@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
+import org.mr0btain.ticketman.components.database.StoredValueDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
@@ -29,8 +30,11 @@ class CheckInService(
     private val users: UserDatabase,
     private val invoices: InvoiceDatabase,
     private val shop: ShopDatabase,
-    private val auditLog: AuditLogDatabase
+    private val auditLog: AuditLogDatabase,
+    values: StoredValueDatabase = StoredValueDatabase()
 ) {
+    private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
+
     /**
      * Makes the ticket, links the customer and tech, takes any deposit and saves the signature. Everything is
      * checked first, then saved together
@@ -61,21 +65,28 @@ class CheckInService(
             if (technician == null || !technician.canAccess(AccessLevel.NORMAL)) return AccountResult.Invalid("That technician can't take tickets")
         }
 
-        request.deposit?.let { if (it.amountCents <= 0) return AccountResult.Invalid("Deposit has to be more than zero") }
+        request.deposit?.let { deposit ->
+            if (deposit.amountCents <= 0) return AccountResult.Invalid("Deposit has to be more than zero")
+            storedValue.problem(listOf(deposit), request.customerIdentifier)?.let { return AccountResult.Conflict(it) }
+        }
 
         request.signature?.problem()?.let { return AccountResult.Invalid(it) }
         if (shopProfile.repairTerms.isNotBlank() && request.signature == null) return AccountResult.Invalid("The customer has to sign the repair terms")
 
         // Both numbering locks are held until the transaction commits, so a check in at the same moment waits and
         // gets the next number instead of this one. Always ticket then invoice, never the other way round, so two can't deadlock
-        val added = tickets.whileNumbering {
-            invoices.whileNumbering {
-                // Under the lock, so the same ticket sent twice at once is only made once
-                if (tickets.getById(ticket.identifier) != null) return@whileNumbering false
+        val added = try {
+            tickets.whileNumbering {
+                invoices.whileNumbering {
+                    // Under the lock, so the same ticket sent twice at once is only made once
+                    if (tickets.getById(ticket.identifier) != null) return@whileNumbering false
 
-                saveCheckIn(request, takenBy, actor, shopProfile)
-                true
+                    saveCheckIn(request, takenBy, actor, shopProfile)
+                    true
+                }
             }
+        } catch (ex: StoredValuePayments.ShortOfValue) {
+            return AccountResult.Conflict(ex.message)
         }
 
         if (!added) return AccountResult.Conflict("That ticket already exists")
@@ -101,10 +112,14 @@ class CheckInService(
             request.deposit?.let { deposit ->
                 val taxRate = Money.percentToBasisPoints(shopProfile.taxRate) ?: 0
                 invoices.getOrCreate(ticket.identifier, request.customerIdentifier, taxRate)?.let { invoice ->
-                    invoices.addPayment(
-                        invoice.identifier,
-                        Payment(method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy, note = deposit.note.ifBlank { "Deposit" })
+                    val payment = storedValue.normalized(
+                        Payment(
+                            method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,
+                            note = deposit.note.ifBlank { "Deposit" }, reference = deposit.reference
+                        )
                     )
+                    invoices.addPayment(invoice.identifier, payment)
+                    storedValue.take(payment, request.customerIdentifier, invoice.identifier, invoice.label, takenBy)
                 }
             }
 

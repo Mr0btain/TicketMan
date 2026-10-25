@@ -109,6 +109,7 @@ data class InvoiceNumber(
  * @param receivedBy Username of whoever took it or gave it back
  * @param note For a refund, the reason
  * @param returns Parts a refund put back in stock
+ * @param reference The gift card's code for [PaymentMethod.GIFT_CARD]
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -119,7 +120,8 @@ data class Payment(
     val receivedAt: Long = 0,
     val receivedBy: String = "",
     val note: String = "",
-    val returns: List<ReturnedPart> = emptyList()
+    val returns: List<ReturnedPart> = emptyList(),
+    val reference: String = ""
 ) {
     val isRefund: Boolean
         get() = amountCents < 0
@@ -133,10 +135,20 @@ data class ReturnedPart(
     val quantity: Int
 )
 
+/**
+ * How a payment was made
+ * @param storedValue Spends a balance the shop holds (store credit or a gift card) rather than taking money
+ */
 @Serializable
-enum class PaymentMethod {
+enum class PaymentMethod(val storedValue: Boolean = false) {
     CASH,
     CARD,
     CHECK,
-    OTHER
+    OTHER,
+
+    /** The invoice's customer's store credit */
+    STORE_CREDIT(storedValue = true),
+
+    /** A gift card, its code in [Payment.reference] */
+    GIFT_CARD(storedValue = true)
 }

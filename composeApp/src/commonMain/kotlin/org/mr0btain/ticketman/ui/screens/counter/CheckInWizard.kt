@@ -449,7 +449,8 @@ private fun RepairStep(
 
             TmSegmented(
                 label = "Paid by",
-                options = PaymentMethod.entries,
+                // Store credit when they have some; a gift card is taken at pickup, where its balance is checked
+                options = PaymentMethod.entries.filter { !it.storedValue || (it == PaymentMethod.STORE_CREDIT && (form.customer?.creditCents ?: 0) > 0) },
                 selected = form.depositMethod,
                 onSelect = { form.depositMethod = it },
                 optionLabel = { formatEnumName(it.name) }

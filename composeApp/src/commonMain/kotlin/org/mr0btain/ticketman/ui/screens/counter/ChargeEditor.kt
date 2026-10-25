@@ -26,6 +26,7 @@ import org.mr0btain.ticketman.ui.kit.search.TmSearchField
 import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.gift
 import ticketman.composeapp.generated.resources.package_icon
 import ticketman.composeapp.generated.resources.plus
 import ticketman.composeapp.generated.resources.x
@@ -46,23 +47,29 @@ class ChargeDraft(charge: Charge) {
     var priceCents by mutableLongStateOf(charge.unitPriceCents)
     var taxable by mutableStateOf(charge.taxable)
 
+    /** A gift card's code, blank for a new card */
+    var reference by mutableStateOf(charge.reference)
+
     /** Null while the quantity isn't a number yet */
     fun toCharge(): Charge? {
         val amount = quantity.toDoubleOrNull()?.takeIf { it > 0 } ?: return null
-        return Charge(identifier, type, description.trim(), amount, priceCents, inventoryIdentifier, taxable)
+        return Charge(identifier, type, description.trim(), amount, priceCents, inventoryIdentifier, taxable, reference.trim())
     }
 }
 
 /**
  * The lines with buttons to add labor, something else, or a part from inventory
  * @param laborCents Price a new labor line starts at
+ * @param giftCards Offers a gift card line, sold when the invoice is paid. Not on estimates
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ChargeLines(
     drafts: SnapshotStateList<ChargeDraft>,
     compact: Boolean,
     laborCents: Long,
-    onSearchParts: suspend (String) -> List<Inventory>
+    onSearchParts: suspend (String) -> List<Inventory>,
+    giftCards: Boolean = false
 ) {
     val spacing = TmTheme.spacing
 
@@ -70,7 +77,7 @@ fun ChargeLines(
         drafts.forEach { draft -> ChargeRow(draft, compact = compact, onRemove = { drafts.remove(draft) }) }
     }
 
-    Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalArrangement = Arrangement.spacedBy(spacing.sm)) {
         TmButton(
             text = "Add labor",
             variant = TmButtonVariant.SECONDARY,
@@ -84,6 +91,15 @@ fun ChargeLines(
             leadingIcon = Res.drawable.plus,
             onClick = { drafts.add(ChargeDraft(Charge(type = ChargeType.OTHER, description = ""))) }
         )
+
+        if (giftCards) {
+            TmButton(
+                text = "Add gift card",
+                variant = TmButtonVariant.SECONDARY,
+                leadingIcon = Res.drawable.gift,
+                onClick = { drafts.add(ChargeDraft(Charge(type = ChargeType.GIFT_CARD, description = "Gift card", taxable = false))) }
+            )
+        }
     }
 
     PartPicker(onSearch = onSearchParts) { part ->
@@ -97,6 +113,7 @@ fun chargesProblem(drafts: List<ChargeDraft>): String? {
     return when {
         charges.any { it == null } -> "Fix the quantity on each line"
         charges.any { it!!.description.isBlank() } -> "Every line needs a description"
+        charges.any { it!!.type == ChargeType.GIFT_CARD && it.unitPriceCents <= 0 } -> "Put an amount on the gift card"
         else -> null
     }
 }
@@ -168,6 +185,22 @@ private fun ChargeDescription(draft: ChargeDraft, modifier: Modifier) {
 @Composable
 private fun RowScope.ChargeNumbers(draft: ChargeDraft, totalModifier: Modifier = Modifier.width(88.dp)) {
     val charge = draft.toCharge()
+
+    // One card, never taxed: its code goes where the quantity and tax would
+    if (draft.type == ChargeType.GIFT_CARD) {
+        TmTextField(
+            modifier = Modifier.width(80.dp + 120.dp + TmTheme.spacing.sm),
+            value = draft.reference,
+            onValueChange = { draft.reference = it },
+            placeholder = "Code, blank for new",
+            textStyle = TmTheme.typography.numeric
+        )
+        TmMoneyField(modifier = Modifier.width(120.dp), cents = draft.priceCents, onCentsChange = { draft.priceCents = it })
+        Box(totalModifier, contentAlignment = Alignment.CenterEnd) {
+            if (charge != null) TmMoneyText(charge.totalCents)
+        }
+        return
+    }
 
     TmTextField(
         modifier = Modifier.width(80.dp),

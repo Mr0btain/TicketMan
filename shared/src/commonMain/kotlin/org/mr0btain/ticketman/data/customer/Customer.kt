@@ -16,5 +16,7 @@ data class Customer(
     /** Agreed to messages about their repairs by email */
     val notifyEmail: Boolean = false,
     /** Agreed to messages about their repairs by text */
-    val notifySms: Boolean = false
+    val notifySms: Boolean = false,
+    /** Store credit they can spend, the server's to change (refunds and admin adjustments), never a save's */
+    val creditCents: Long = 0
 ): MainItem()

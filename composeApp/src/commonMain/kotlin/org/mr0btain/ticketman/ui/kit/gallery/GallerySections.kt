@@ -39,6 +39,7 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
+import org.mr0btain.ticketman.ui.kit.containers.TmAdjustBalanceDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
@@ -740,6 +741,7 @@ private fun DialogSection() {
     var open by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var editText by remember { mutableStateOf(false) }
+    var adjust by remember { mutableStateOf(false) }
 
     GallerySection(title = "Dialog", description = "Glass sheet, actions at the bottom right") {
         TmDialogSurface(
@@ -756,6 +758,16 @@ private fun DialogSection() {
             TmButton(text = "Open as a real dialog", onClick = { open = true }, variant = TmButtonVariant.SECONDARY)
             TmButton(text = "Two step delete", onClick = { confirmDelete = true }, variant = TmButtonVariant.SECONDARY)
             TmButton(text = "Edit one value", onClick = { editText = true }, variant = TmButtonVariant.SECONDARY)
+            TmButton(text = "Adjust a balance", onClick = { adjust = true }, variant = TmButtonVariant.SECONDARY)
+        }
+
+        if (adjust) {
+            TmAdjustBalanceDialog(
+                title = "Store credit for Dana",
+                balanceCents = 2500,
+                onSave = { _, _, done -> done(null) },
+                onDismissRequest = { adjust = false }
+            )
         }
 
         TmConfirmDeleteDialog(

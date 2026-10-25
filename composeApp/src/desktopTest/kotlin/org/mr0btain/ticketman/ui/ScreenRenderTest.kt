@@ -79,6 +79,9 @@ import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
 import org.mr0btain.ticketman.ui.screens.counter.CheckInWizard
 import org.mr0btain.ticketman.ui.screens.counter.CounterLayout
 import org.mr0btain.ticketman.ui.screens.counter.PickupScreen
+import org.mr0btain.ticketman.ui.screens.counter.CustomerCard
+import org.mr0btain.ticketman.ui.screens.counter.components.CustomerDetail
+import org.mr0btain.ticketman.data.customer.CreditEntry
 import org.mr0btain.ticketman.ui.screens.admin.invoices.RefundDialog
 import org.mr0btain.ticketman.ui.screens.counter.SaleScreen
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
@@ -367,6 +370,7 @@ class ScreenRenderTest {
             onSearchParts = { emptyList() },
             onSave = { _, _, _ -> },
             onRemovePayment = {},
+            onLookupGiftCard = { null },
             onFinish = { _, _, _, _ -> },
             onBack = {}
         )
@@ -386,9 +390,35 @@ class ScreenRenderTest {
             startingCustomer = dana,
             onSearchParts = { emptyList() },
             onSearchCustomers = { emptyList() },
+            onLookupGiftCard = { null },
             onFinish = { _, _ -> },
             onBack = {}
         )
+    }
+
+    /** A customer with store credit, its history and their invoices, as an admin sees it */
+    @Test
+    fun counterCustomer() = bothModes("counter-customer") {
+        Shell("Counter") {
+            val sam = dana.copy(creditCents = 2500)
+            CustomerCard(
+                detail = CustomerDetail(
+                    customer = sam,
+                    tickets = listOf(iphone, pixel),
+                    credit = listOf(
+                        CreditEntry(Uuid.random(), -1500, 2500, "Spent on INV-26-00000040", null, now - 3_600_000, "priya"),
+                        CreditEntry(Uuid.random(), 4000, 4000, "Refund on INV-26-00000031: faulty charger", null, now - 86_400_000 * 3, "boss")
+                    ),
+                    invoices = listOf(
+                        invoice.copy(status = InvoiceStatus.OPEN),
+                        Invoice(number = InvoiceNumber(2026, 40), ticketIdentifier = null, status = InvoiceStatus.PAID, totalCents = 2999, createdAt = now - 3_600_000)
+                    )
+                ),
+                onTicketClick = {},
+                onBack = {},
+                onAdjustCredit = { _, _, _ -> }
+            )
+        }
     }
 
     @Test
