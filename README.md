@@ -104,6 +104,11 @@ inventory and purchasing, repair depth, and running the business. What's next, i
 If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0 
 for now, but 1.0.0->2.0.0 when we hit stable.
 
+### Flatpak and maybe other linux distros.
+On high DPI monitors the app can show small GUI. You may be able ot fis this running: 
+  flatpak override --user --env=GDK_SCALE=2 io.github.Mr0btain.TicketMan
+On Windows I'm not sure what would need changed.
+
 ## Documentation
 
 Developer docs are in [`docs/`](docs/README.md): how the code is organized, how a request travels from the UI to the
