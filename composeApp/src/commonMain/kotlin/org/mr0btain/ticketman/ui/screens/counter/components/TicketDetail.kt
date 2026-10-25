@@ -5,6 +5,7 @@ import org.mr0btain.ticketman.components.network.ServerError
 import org.mr0btain.ticketman.components.network.orNullIfNotFound
 import org.mr0btain.ticketman.data.customer.CreditEntry
 import org.mr0btain.ticketman.data.customer.Customer
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
@@ -34,8 +35,18 @@ data class TicketDetail(
     /** Newest first. Null when they couldn't be read */
     val estimates: List<Estimate>? = emptyList(),
     /** Purchase orders with parts for it, newest first. Null when they couldn't be read */
-    val purchases: List<PurchaseOrder>? = emptyList()
+    val purchases: List<PurchaseOrder>? = emptyList(),
+    /** The customer's other tickets checked in with it, or on the same device, newest first */
+    val related: List<Ticket> = emptyList()
 ) {
+    /** Checked in at the same visit */
+    val linked: List<Ticket>
+        get() = ticket.groupIdentifier?.let { group -> related.filter { it.groupIdentifier == group } }.orEmpty()
+
+    /** Earlier repairs on the same device */
+    val deviceHistory: List<Ticket>
+        get() = ticket.deviceIdentifier?.let { device -> related.filter { it.deviceIdentifier == device } }.orEmpty()
+
     /** The estimate waiting for the customer */
     val pendingEstimate: Estimate?
         get() = estimates?.firstOrNull { it.status == EstimateStatus.PENDING }
@@ -49,6 +60,7 @@ data class TicketDetail(
 data class CustomerDetail(
     val customer: Customer,
     val tickets: List<Ticket>,
+    val devices: List<CustomerDevice> = emptyList(),
     val credit: List<CreditEntry> = emptyList(),
     val invoices: List<Invoice> = emptyList()
 )
@@ -76,7 +88,11 @@ suspend fun RemoteHandler.loadTicketDetail(identifier: Uuid): TmResult<TicketDet
             // Only shown, so the card still opens without them
             messages = notifyRepo.forTicket(identifier).getOrNull(),
             estimates = estimateRepo.forTicket(identifier).getOrNull(),
-            purchases = purchaseRepo.forTicket(identifier).getOrNull()
+            purchases = purchaseRepo.forTicket(identifier).getOrNull(),
+            // Only shown, and only needed when it was checked in with others or on a known device
+            related = customer?.takeIf { ticket.groupIdentifier != null || ticket.deviceIdentifier != null }
+                ?.let { customerRepo.getTickets(it.identifier).getOrNull() }.orEmpty()
+                .filter { it.identifier != ticket.identifier }
         )
     )
 }

@@ -199,7 +199,8 @@ fun Application.configureRouting(
                 auditLog = localDatabase.auditLogDatabase,
                 storedValue = localDatabase.storedValueDatabase,
                 storedValueService = storedValueService,
-                invoiceDatabase = localDatabase.invoiceDatabase
+                invoiceDatabase = localDatabase.invoiceDatabase,
+                deviceDatabase = localDatabase.deviceDatabase
             )
         }
 

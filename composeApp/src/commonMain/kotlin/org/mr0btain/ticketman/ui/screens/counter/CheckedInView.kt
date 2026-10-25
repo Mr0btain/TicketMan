@@ -49,6 +49,14 @@ fun CheckedInView(
 
         Text(text = ticket.device.toString(), style = TmTheme.typography.title, color = colors.text)
 
+        // The rest of the visit's devices, each with its own number to read out
+        result.linked.forEach { linked ->
+            Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
+                TmTicketIdText(number = linked.label, style = TmTheme.typography.numericDisplay)
+                Text(text = linked.device.toString(), style = TmTheme.typography.title, color = colors.text)
+            }
+        }
+
         val details = listOfNotNull(
             ticket.promisedAt?.let { "Promised ${formatDayInSentence(it)}" },
             result.invoice?.let { "Deposit taken ${formatMoney(it.paidCents)}" }

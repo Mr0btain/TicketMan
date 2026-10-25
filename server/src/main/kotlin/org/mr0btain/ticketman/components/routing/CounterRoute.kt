@@ -74,7 +74,7 @@ fun Route.counterRoute(
 
             call.respond(
                 HttpStatusCode.OK,
-                database.repeatCheck(request.customerIdentifier, request.device, windowDays, request.excludeTicket)
+                database.repeatCheck(request.customerIdentifier, request.device, windowDays, request.excludeTicket, request.deviceIdentifier)
             )
         }
     }

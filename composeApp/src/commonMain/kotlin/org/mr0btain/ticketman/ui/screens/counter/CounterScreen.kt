@@ -177,6 +177,7 @@ fun CounterScreen(
                             onWithdraw = { counter.estimates.withdraw(it) }
                         ),
                         onSendStatusLink = StatusLink.url(shop.publicUrl, detail.ticket)?.let { { counter.estimates.message(detail.ticket.identifier) } },
+                        onOpenTicket = { counter.openTicket(it) },
                         parts = PartsActions(
                             suppliers = suppliers,
                             onSearchParts = { counter.pickup.searchParts(it) },
@@ -219,6 +220,8 @@ fun CounterScreen(
                         onTicketClick = { counter.openTicket(it) },
                         onBack = { counter.goHome() },
                         onAdjustCredit = if (isAdmin) { amount, reason, onResult -> counter.adjustCredit(amount, reason, onResult) } else null,
+                        onSaveDevice = if (canEdit) { device, onResult -> counter.saveDevice(device, onResult) } else null,
+                        onRemoveDevice = if (canEdit) { device -> counter.removeDevice(device) } else null,
                         actions = {
                             if (canEdit) {
                                 TmButton(text = "Check in a device", onClick = { counter.checkIn.start(detail.customer) }, leadingIcon = Res.drawable.plus)
@@ -245,10 +248,11 @@ fun CounterScreen(
                     onSearchCustomers = { counter.checkIn.searchCustomers(it) },
                     onAddCustomer = { customer, onResult -> counter.checkIn.addCustomer(customer, onResult) },
                     onSearchTechnicians = { counter.checkIn.searchTechnicians(it) },
-                    onRepeatCheck = { customer, device, exclude -> counter.checkIn.repeatCheck(customer, device, exclude) },
+                    onRepeatCheck = { customer, device, exclude, known -> counter.checkIn.repeatCheck(customer, device, exclude, known) },
                     onOpenTicket = { counter.openTicket(it) },
                     onSubmit = { request, onResult -> counter.checkIn.submit(request, onResult) },
-                    onCancel = { counter.goHome() }
+                    onCancel = { counter.goHome() },
+                    onLoadDevices = { counter.checkIn.devices(it) }
                 )
 
                 CounterView.CHECKED_IN -> lastCheckIn?.let { result ->

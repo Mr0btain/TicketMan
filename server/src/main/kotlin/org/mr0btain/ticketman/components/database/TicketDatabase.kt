@@ -226,6 +226,8 @@ class TicketDatabase(
             accessories = data.accessories
             estimateCents = data.estimateCents
             promisedAt = data.promisedAt
+            deviceRef = data.deviceIdentifier
+            group = data.groupIdentifier
             // Never the client's, so nobody picks a link they know
             statusToken = newStatusToken()
         }

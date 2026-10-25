@@ -31,14 +31,21 @@ checks everything first and answers `400` (or `409` for an existing ticket) with
 - a deposit, if given, is more than zero,
 - the signature, if given, passes `SignatureInput.problem()`, and there **is** one if the shop has repair terms.
 
-Then, in one `transaction { }`:
+Then, in one `transaction { }`, for each device (the ticket, then each of `more`):
 
-1. add the ticket (number and pickup time cleared, so the server assigns them),
+1. find or make the customer's device record (`DeviceDatabase`, `customer_devices`): the one picked (updated with what
+   was typed), theirs with the same serial, or a new one,
+2. add the ticket pointing at it, with the visit's `groupIdentifier` when there's more than one (number and pickup
+   time cleared, so the server assigns them),
 2. record its first status change,
 3. link the customer and tech,
-4. if there's a deposit, make the invoice (with the shop's tax rate, which it keeps) and add the payment,
-5. if there's a signature, save it with a copy of the shop's terms, the time, and who took it,
+4. for the first ticket, if there's a deposit, make the invoice (with the shop's tax rate, which it keeps) and add
+   the payment,
+5. if there's a signature, save it with a copy of the shop's terms, the time, and who took it, on every ticket,
 6. write the `CREATE` audit entry.
+
+Tickets saved before devices were kept got theirs from what was typed on them, one per customer for each serial or
+make and model (the `customer-devices` data fix). A device's repairs are `GET /api/data/customer/device/{id}/tickets`.
 
 If anything throws, none of it is saved, the audit entry included. The response is `201` with a `CheckInResponse`
 (the saved ticket, with its number, and the invoice if one was made).

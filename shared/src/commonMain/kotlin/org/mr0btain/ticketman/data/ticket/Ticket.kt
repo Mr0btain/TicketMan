@@ -33,6 +33,10 @@ data class Ticket(
      * ticket is added and only changed by replacing it, null until then
      */
     val statusToken: String? = null,
+    /** The customer's [CustomerDevice] this repair is on, set at check in. The server's to set */
+    val deviceIdentifier: Uuid? = null,
+    /** Shared by tickets checked in together, several devices at one visit. The server's to set */
+    val groupIdentifier: Uuid? = null,
 ): MainItem(), SubItem {
     /** Number if it has one, otherwise the start of the identifier */
     val label: String

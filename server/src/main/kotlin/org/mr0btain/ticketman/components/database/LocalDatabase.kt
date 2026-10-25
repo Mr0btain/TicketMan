@@ -39,6 +39,7 @@ import org.mr0btain.ticketman.components.database.tables.storedvalue.CustomerCre
 import org.mr0btain.ticketman.components.database.tables.storedvalue.GiftCardTable
 import org.mr0btain.ticketman.components.database.tables.purchase.PurchaseOrderTable
 import org.mr0btain.ticketman.components.database.tables.purchase.SupplierTable
+import org.mr0btain.ticketman.components.database.tables.device.CustomerDeviceTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.InviteTable
@@ -99,6 +100,7 @@ class LocalDatabase (
     val estimateDatabase = EstimateDatabase()
     val storedValueDatabase = StoredValueDatabase()
     val purchaseDatabase = PurchaseDatabase()
+    val deviceDatabase = DeviceDatabase()
     val imageDatabase = ImageDatabase { recordDatabases }
 
     /**
@@ -141,6 +143,7 @@ class LocalDatabase (
         GiftCardTable,
         SupplierTable,
         PurchaseOrderTable,
+        CustomerDeviceTable,
         DataFixTable
     )
 
@@ -204,6 +207,8 @@ class LocalDatabase (
         runOnce("invoice-ticket-nullable") {
             TransactionManager.current().exec("ALTER TABLE ${InvoiceTable.tableName} ALTER COLUMN ${InvoiceTable.ticket.name} SET NULL")
         }
+        // Devices are kept per customer since; older tickets get theirs from what was typed on them
+        runOnce("customer-devices") { deviceDatabase.backfill() }
         removeDetachedNotes()
     }
 

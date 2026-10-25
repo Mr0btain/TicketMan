@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.giftcard.GiftCard
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shop.ShopProfile
@@ -179,8 +180,9 @@ class CounterHandler(
             // Only shown, never saved back, so a failed read just shows nothing
             val credit = repo.getCredit(identifier).getOrDefault(emptyList())
             val invoices = repo.getInvoices(identifier).getOrDefault(emptyList())
+            val devices = repo.getDevices(identifier).getOrDefault(emptyList())
 
-            _customer.value = CustomerDetail(customer, tickets, credit, invoices)
+            _customer.value = CustomerDetail(customer, tickets, devices, credit, invoices)
             _view.value = CounterView.CUSTOMER
         }
     }
@@ -287,6 +289,39 @@ class CounterHandler(
             _results.value = CounterSearchResponse()
             _priceResults.value = listOf(item)
             _view.value = CounterView.PRICE_CHECK
+        }
+    }
+
+    /**
+     * Saves a device's details on the open customer
+     * @param onResult Gets null when it's saved, otherwise what went wrong
+     */
+    fun saveDevice(device: CustomerDevice, onResult: (String?) -> Unit) {
+        val detail = _customer.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.updateDevice(device)) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    openCustomer(detail.customer.identifier)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** Deletes one of the open customer's devices. Its tickets stay */
+    fun removeDevice(device: CustomerDevice) {
+        val detail = _customer.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.removeDevice(device.identifier)) {
+                is TmResult.Success -> openCustomer(detail.customer.identifier)
+                is TmResult.Error -> support.notify(result.error.message)
+            }
         }
     }
 

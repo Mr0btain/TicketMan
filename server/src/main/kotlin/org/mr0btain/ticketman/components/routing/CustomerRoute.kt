@@ -5,7 +5,9 @@ import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import org.mr0btain.ticketman.components.database.DeviceDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.components.database.StoredValueDatabase
 import org.mr0btain.ticketman.components.service.StoredValueService
 import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
@@ -32,7 +34,8 @@ fun Route.customerRoute(
     auditLog: AuditLogDatabase,
     storedValue: StoredValueDatabase,
     storedValueService: StoredValueService,
-    invoiceDatabase: InvoiceDatabase
+    invoiceDatabase: InvoiceDatabase,
+    deviceDatabase: DeviceDatabase
 ) {
     val TAG = "CustomerRoute"
     val GET_TAG = "$TAG:Get"
@@ -104,6 +107,30 @@ fun Route.customerRoute(
 
             val history = storedValue.creditHistory(identifier, HISTORY_LIMIT)
             if (history != null) call.respond(HttpStatusCode.OK, history) else call.respond(HttpStatusCode.InternalServerError)
+        }
+
+        get(CustomerPaths.DEVICES) {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null || database.getById(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@get
+            }
+
+            val devices = deviceDatabase.forCustomer(identifier)
+            if (devices != null) call.respond(HttpStatusCode.OK, devices) else call.respond(HttpStatusCode.InternalServerError)
+        }
+
+        get(CustomerPaths.DEVICE_TICKETS) {
+            val identifier = call.uuidParameter("identifier")
+
+            if (identifier == null || deviceDatabase.get(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@get
+            }
+
+            val tickets = deviceDatabase.tickets(identifier)
+            if (tickets != null) call.respond(HttpStatusCode.OK, tickets) else call.respond(HttpStatusCode.InternalServerError)
         }
 
         // Tickets' invoices and sales, newest first
@@ -189,6 +216,53 @@ fun Route.customerRoute(
             }
         }
 
+        // A device for the customer, like one being kept on file before it's ever repaired
+        post(CustomerPaths.DEVICES) {
+            val identifier = call.uuidParameter("identifier")
+            val received = call.receive<CustomerDevice>()
+
+            if (identifier == null || database.getById(identifier) == null) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+            deviceProblem(received)?.let { return@post call.respond(HttpStatusCode.BadRequest, it) }
+
+            val device = received.copy(customerIdentifier = identifier, createdAt = System.currentTimeMillis())
+            if (!deviceDatabase.add(device)) {
+                call.respond(HttpStatusCode.Conflict, "That device already exists")
+                return@post
+            }
+
+            call.audit(auditLog, AuditAction.CREATE, "device", device.identifier, device.label)
+            call.respond(HttpStatusCode.Created, deviceDatabase.get(device.identifier)!!)
+        }
+
+        post(CustomerPaths.DEVICE_UPDATE) {
+            val received = call.receive<CustomerDevice>()
+            deviceProblem(received)?.let { return@post call.respond(HttpStatusCode.BadRequest, it) }
+
+            if (!deviceDatabase.update(received)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@post
+            }
+
+            call.audit(auditLog, AuditAction.UPDATE, "device", received.identifier, received.label)
+            call.respond(HttpStatusCode.OK, deviceDatabase.get(received.identifier)!!)
+        }
+
+        delete(CustomerPaths.DEVICE) {
+            val identifier = call.uuidParameter("identifier")
+            val device = identifier?.let { deviceDatabase.get(it) }
+
+            if (device == null || !deviceDatabase.remove(device.identifier)) {
+                call.respond(HttpStatusCode.NotFound)
+                return@delete
+            }
+
+            call.audit(auditLog, AuditAction.DELETE, "device", device.identifier, device.label)
+            call.respond(HttpStatusCode.Accepted)
+        }
+
         // Link a ticket to this customer, the body is the ticket's identifier
         post(CustomerPaths.ADD_TICKET) {
             val identifier = call.uuidParameter("identifier")
@@ -207,3 +281,9 @@ fun Route.customerRoute(
 }
 
 private const val HISTORY_LIMIT = 200
+
+/** What's wrong with a device's details, or null */
+private fun deviceProblem(device: CustomerDevice): String? = when {
+    device.device.manufacturer.isBlank() && device.device.model.isBlank() -> "Enter the device"
+    else -> null
+}

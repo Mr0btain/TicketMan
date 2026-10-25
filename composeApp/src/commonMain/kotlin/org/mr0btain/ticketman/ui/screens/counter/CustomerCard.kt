@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.utils.formatDate
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -33,6 +34,8 @@ import kotlin.uuid.Uuid
 /**
  * A customer with their tickets, store credit and purchases, newest first
  * @param onAdjustCredit Gives or takes store credit, null for anyone but admins
+ * @param onSaveDevice Saves a device's details, null for view only
+ * @param onRemoveDevice Deletes a device, null for view only
  * @param actions Room for buttons added by later screens, like checking in a device for them
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -42,6 +45,8 @@ fun CustomerCard(
     onTicketClick: (Uuid) -> Unit,
     onBack: () -> Unit,
     onAdjustCredit: ((Long, String, (String?) -> Unit) -> Unit)? = null,
+    onSaveDevice: ((CustomerDevice, (String?) -> Unit) -> Unit)? = null,
+    onRemoveDevice: ((CustomerDevice) -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {}
 ) {
     val customer = detail.customer
@@ -100,6 +105,16 @@ fun CustomerCard(
                     }
                 }
             }
+
+            // ------------------------------------------ Devices ------------------------------------------
+            DevicesPanel(
+                modifier = Modifier.widthIn(max = 640.dp).fillMaxWidth(),
+                devices = detail.devices,
+                tickets = detail.tickets,
+                onTicketClick = onTicketClick,
+                onSave = onSaveDevice,
+                onRemove = onRemoveDevice
+            )
 
             // ------------------------------------------ Store credit ------------------------------------------
             if (customer.creditCents > 0 || detail.credit.isNotEmpty() || onAdjustCredit != null) {

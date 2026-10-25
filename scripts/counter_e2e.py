@@ -432,6 +432,21 @@ _, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200
 check(order["status"] == "RECEIVED" and two["status"]["status"] == "IN_PROGRESS" and two["status"].get("custom") is None and item["stock"] == 6, f"after receiving {order['status']} {two['status']} {item['stock']}")
 step("Two screens ordered for Jane's iPad from Parts Co: placing it puts the ticket in Awaiting parts, receiving them puts it back in progress and stock 4 -> 6")
 
+# ------------------------------------------ Repair depth ------------------------------------------
+_, devices = call("GET", f"/api/data/customer/devices/{jane}", token=pin, expect=200)
+check(len(devices) == 1 and devices[0]["device"]["serial"] == "SN123", f"devices {devices}")
+visit = {
+    "ticket": {"identifier": uid(), "device": devices[0]["device"], "problem": "Battery swelling"},
+    "customerIdentifier": jane, "deviceIdentifier": devices[0]["identifier"],
+    "signature": {"strokes": [[{"x": 0.1, "y": 0.5}, {"x": 0.9, "y": 0.5}]], "aspectRatio": 3, "signedName": "Jane Doe"},
+    "more": [{"ticket": {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "Watch", "kind": "WATCH"}, "problem": "Won't pair"}}]
+}
+_, visited = call("POST", "/api/counter/check-in", visit, pin, expect=201)
+check(len(visited["linked"]) == 1 and visited["ticket"]["groupIdentifier"] == visited["linked"][0]["groupIdentifier"], f"linked {visited}")
+_, history = call("GET", f"/api/data/customer/device/{devices[0]['identifier']}/tickets", token=pin, expect=200)
+check(len(history) == 2, f"history {len(history)}")
+step(f"Jane's iPhone is on file from her first visit; she brings it back with her watch: two linked tickets ({visited['ticket']['number']['sequence']} and {visited['linked'][0]['number']['sequence']}), the iPhone's history now two repairs")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

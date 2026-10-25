@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.service
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.CustomerDatabase
+import org.mr0btain.ticketman.components.database.DeviceDatabase
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.StoredValueDatabase
@@ -16,7 +17,9 @@ import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.CustomStatusRules
 import org.mr0btain.ticketman.data.ticket.TicketSignature
 import org.mr0btain.ticketman.data.ticket.TicketStatusType
+import org.mr0btain.ticketman.server.request.CheckInItem
 import org.mr0btain.ticketman.server.request.CheckInRequest
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
@@ -31,34 +34,46 @@ class CheckInService(
     private val invoices: InvoiceDatabase,
     private val shop: ShopDatabase,
     private val auditLog: AuditLogDatabase,
-    values: StoredValueDatabase = StoredValueDatabase()
+    values: StoredValueDatabase = StoredValueDatabase(),
+    private val devices: DeviceDatabase = DeviceDatabase()
 ) {
     private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
 
     /**
-     * Makes the ticket, links the customer and tech, takes any deposit and saves the signature. Everything is
+     * Makes the ticket, links the customer and tech, takes any deposit and saves the signature. Every device brought
+     * in at the visit gets its own ticket, linked to the others, and the customer's device record. Everything is
      * checked first, then saved together
      */
     fun checkIn(received: CheckInRequest, takenBy: String, actor: Uuid?): AccountResult<CheckInResponse> {
         val shopProfile = shop.get()
+        if (customers.getById(received.customerIdentifier) == null) return AccountResult.Invalid("Pick a customer")
 
-        // A custom status is saved with the built-in one it acts as, which is then checked like any other
-        val status = when (val resolved = CustomStatusRules.resolve(received.ticket.status, shopProfile.statuses)) {
-            is CustomStatusRules.Resolved.Ok -> resolved.status
-            is CustomStatusRules.Resolved.Problem -> return AccountResult.Invalid(resolved.message)
-        }
-        val request = received.copy(ticket = received.ticket.copy(status = status))
-        val ticket = request.ticket
+        // Each device's ticket, checked the same way
+        val items = (listOf(CheckInItem(received.ticket, received.deviceIdentifier)) + received.more).map { item ->
+            // A custom status is saved with the built-in one it acts as, which is then checked like any other
+            val status = when (val resolved = CustomStatusRules.resolve(item.ticket.status, shopProfile.statuses)) {
+                is CustomStatusRules.Resolved.Ok -> resolved.status
+                is CustomStatusRules.Resolved.Problem -> return AccountResult.Invalid(resolved.message)
+            }
+            val ticket = item.ticket.copy(status = status)
 
-        // Check in time is read from the identifier, so it has to be a time based (version 7) one
-        if (ticket.identifier.toByteArray()[6].toInt() ushr 4 != 7) return AccountResult.Invalid("Ticket identifier has to be a version 7 UUID")
-        if (customers.getById(request.customerIdentifier) == null) return AccountResult.Invalid("Pick a customer")
-        if (ticket.device.manufacturer.isBlank() && ticket.device.model.isBlank()) return AccountResult.Invalid("Enter the device")
-        if (ticket.problem.isBlank()) return AccountResult.Invalid("Describe the problem")
-        if (ticket.status.status != TicketStatusType.IN_PROGRESS && ticket.status.status != TicketStatusType.ON_HOLD) {
-            return AccountResult.Invalid("New tickets start in progress or on hold")
+            // Check in time is read from the identifier, so it has to be a time based (version 7) one
+            if (ticket.identifier.toByteArray()[6].toInt() ushr 4 != 7) return AccountResult.Invalid("Ticket identifier has to be a version 7 UUID")
+            if (ticket.device.manufacturer.isBlank() && ticket.device.model.isBlank()) return AccountResult.Invalid("Enter the device")
+            if (ticket.problem.isBlank()) return AccountResult.Invalid("Describe the problem")
+            if (ticket.status.status != TicketStatusType.IN_PROGRESS && ticket.status.status != TicketStatusType.ON_HOLD) {
+                return AccountResult.Invalid("New tickets start in progress or on hold")
+            }
+            if ((ticket.estimateCents ?: 0) < 0) return AccountResult.Invalid("Estimate can't be negative")
+            item.deviceIdentifier?.let { device ->
+                if (devices.get(device)?.customerIdentifier != received.customerIdentifier) return AccountResult.Invalid("That device isn't the customer's")
+            }
+
+            item.copy(ticket = ticket)
         }
-        if ((ticket.estimateCents ?: 0) < 0) return AccountResult.Invalid("Estimate can't be negative")
+        if (items.map { it.ticket.identifier }.toSet().size != items.size) return AccountResult.Invalid("Each device needs its own ticket")
+        if (items.size > MAX_DEVICES) return AccountResult.Invalid("Check in up to $MAX_DEVICES devices at once")
+        val request = received.copy(ticket = items.first().ticket, more = items.drop(1))
 
         request.technicianIdentifier?.let { identifier ->
             val technician = users.getById(identifier)
@@ -79,9 +94,9 @@ class CheckInService(
             tickets.whileNumbering {
                 invoices.whileNumbering {
                     // Under the lock, so the same ticket sent twice at once is only made once
-                    if (tickets.getById(ticket.identifier) != null) return@whileNumbering false
+                    if (items.any { tickets.getById(it.ticket.identifier) != null }) return@whileNumbering false
 
-                    saveCheckIn(request, takenBy, actor, shopProfile)
+                    saveCheckIn(request, items, takenBy, actor, shopProfile)
                     true
                 }
             }
@@ -91,57 +106,87 @@ class CheckInService(
 
         if (!added) return AccountResult.Conflict("That ticket already exists")
 
-        val saved = tickets.getById(ticket.identifier) ?: return AccountResult.Invalid("Couldn't save the ticket")
-        val invoice = invoices.getByTicket(ticket.identifier)
+        val saved = items.map { tickets.getById(it.ticket.identifier) ?: return AccountResult.Invalid("Couldn't save the ticket") }
+        val invoice = invoices.getByTicket(saved.first().identifier)
 
-        return AccountResult.Done(CheckInResponse(saved, invoice))
+        return AccountResult.Done(CheckInResponse(saved.first(), invoice, saved.drop(1)))
     }
 
     // Everything checked in goes in together or not at all
-    private fun saveCheckIn(request: CheckInRequest, takenBy: String, actor: Uuid?, shopProfile: ShopProfile) {
-        val ticket = request.ticket
+    private fun saveCheckIn(request: CheckInRequest, items: List<CheckInItem>, takenBy: String, actor: Uuid?, shopProfile: ShopProfile) {
         val now = Clock.System.now().toEpochMilliseconds()
+        // Linked when more than one came in, by the first ticket's id
+        val group = if (items.size > 1) items.first().ticket.identifier else null
 
         transaction {
-            // Pickup fields are the server's to set
-            tickets.add(ticket.copy(pickedUpAt = null, number = null))
-            tickets.recordStatusChange(ticket.identifier, ticket.status, takenBy)
-            tickets.setCustomer(ticket.identifier, request.customerIdentifier)
-            request.technicianIdentifier?.let { tickets.setUser(ticket.identifier, it) }
+            items.forEachIndexed { index, item ->
+                val ticket = item.ticket.copy(pickedUpAt = null, number = null, deviceIdentifier = deviceFor(request.customerIdentifier, item, now), groupIdentifier = group)
 
-            request.deposit?.let { deposit ->
-                invoices.getOrCreate(ticket.identifier, request.customerIdentifier, shopProfile.taxBasisPoints, shopProfile.taxRates)?.let { invoice ->
-                    val payment = storedValue.normalized(
-                        Payment(
-                            method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,
-                            note = deposit.note.ifBlank { "Deposit" }, reference = deposit.reference
+                // Pickup fields are the server's to set
+                tickets.add(ticket)
+                tickets.recordStatusChange(ticket.identifier, ticket.status, takenBy)
+                tickets.setCustomer(ticket.identifier, request.customerIdentifier)
+                request.technicianIdentifier?.let { tickets.setUser(ticket.identifier, it) }
+
+                request.deposit?.takeIf { index == 0 }?.let { deposit ->
+                    invoices.getOrCreate(ticket.identifier, request.customerIdentifier, shopProfile.taxBasisPoints, shopProfile.taxRates)?.let { invoice ->
+                        val payment = storedValue.normalized(
+                            Payment(
+                                method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,
+                                note = deposit.note.ifBlank { "Deposit" }, reference = deposit.reference
+                            )
+                        )
+                        invoices.addPayment(invoice.identifier, payment)
+                        storedValue.take(payment, request.customerIdentifier, invoice.identifier, invoice.label, takenBy)
+                    }
+                }
+
+                // One signature at the counter covers every device left
+                request.signature?.let { signature ->
+                    tickets.setSignature(
+                        ticket.identifier,
+                        TicketSignature(
+                            strokes = signature.strokes,
+                            aspectRatio = signature.aspectRatio,
+                            signedName = signature.signedName.trim(),
+                            terms = shopProfile.repairTerms,
+                            signedAt = now,
+                            takenBy = takenBy
                         )
                     )
-                    invoices.addPayment(invoice.identifier, payment)
-                    storedValue.take(payment, request.customerIdentifier, invoice.identifier, invoice.label, takenBy)
                 }
-            }
 
-            request.signature?.let { signature ->
-                tickets.setSignature(
-                    ticket.identifier,
-                    TicketSignature(
-                        strokes = signature.strokes,
-                        aspectRatio = signature.aspectRatio,
-                        signedName = signature.signedName.trim(),
-                        terms = shopProfile.repairTerms,
-                        signedAt = now,
-                        takenBy = takenBy
-                    )
+                // Inside the transaction so the entry is only there if the check in is. The number was just assigned
+                val label = tickets.getById(ticket.identifier)?.label ?: ticket.label
+                auditLog.log(
+                    actor, AuditAction.CREATE, "ticket", ticket.identifier.toString(),
+                    "Checked in $label" + (request.deposit?.takeIf { index == 0 }?.let { " with a ${Money.format(it.amountCents, shopProfile.currencySymbol)} deposit" } ?: "")
                 )
             }
-
-            // Inside the transaction so the entry is only there if the check in is. The number was just assigned
-            val label = tickets.getById(ticket.identifier)?.label ?: ticket.label
-            auditLog.log(
-                actor, AuditAction.CREATE, "ticket", ticket.identifier.toString(),
-                "Checked in $label" + (request.deposit?.let { " with a ${Money.format(it.amountCents, shopProfile.currencySymbol)} deposit" } ?: "")
-            )
         }
+    }
+
+    /**
+     * The customer's device record for a ticket: the one picked, kept up to date with what was typed; theirs with the
+     * same serial; or a new one. Inside the check in's transaction
+     */
+    private fun deviceFor(customer: Uuid, item: CheckInItem, now: Long): Uuid {
+        val typed = item.ticket.device
+        val existing = item.deviceIdentifier?.let { devices.get(it) }
+            ?: typed.serial.trim().takeIf { it.isNotEmpty() }?.let { devices.withSerial(customer, it) }
+
+        if (existing != null) {
+            if (existing.device != typed) devices.update(existing.copy(device = typed))
+            return existing.identifier
+        }
+
+        val made = CustomerDevice(customerIdentifier = customer, device = typed, createdAt = now)
+        if (!devices.add(made)) throw IllegalStateException("Device not saved")
+        return made.identifier
+    }
+
+    companion object {
+        /** Most devices at one check in */
+        const val MAX_DEVICES = 10
     }
 }

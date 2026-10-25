@@ -7,6 +7,7 @@ import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.getOrDefault
@@ -53,9 +54,16 @@ class CounterCheckIn(
     suspend fun searchTechnicians(text: String): List<SearchResult> =
         remoteHandler.userRepo.search(text.trim(), CounterHandler.SEARCH_LIMIT).getOrDefault(emptyList())
 
-    /** Earlier repairs of this device for the customer, for the repeat warning */
-    suspend fun repeatCheck(customer: Uuid, device: Device, excludeTicket: Uuid): List<TicketSummary> =
-        remoteHandler.counterRepo.repeatCheck(RepeatCheckRequest(customer, device, excludeTicket))
+    /**
+     * Earlier repairs of this device for the customer, for the repeat warning
+     * @param known The customer's device record, when one was picked
+     */
+    suspend fun repeatCheck(customer: Uuid, device: Device, excludeTicket: Uuid, known: Uuid? = null): List<TicketSummary> =
+        remoteHandler.counterRepo.repeatCheck(RepeatCheckRequest(customer, device, excludeTicket, known))
+
+    /** The customer's devices, to pick one at check in. Only offered, so a failed read just offers none */
+    suspend fun devices(customer: Uuid): List<CustomerDevice> =
+        remoteHandler.customerRepo.getDevices(customer).getOrDefault(emptyList())
 
     /**
      * Adds a customer

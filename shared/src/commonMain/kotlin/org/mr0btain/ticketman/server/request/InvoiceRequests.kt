@@ -49,6 +49,10 @@ data class PaymentRequest(
  * @param ticket The new ticket, its number is given by the server
  * @param technicianIdentifier Who it's assigned to, if anyone yet
  * @param deposit Money taken now, goes on the ticket's invoice
+ * @param deviceIdentifier The customer's device it is, when one they had before was picked. Null makes one, or finds
+ * theirs with the same serial
+ * @param more Other devices checked in at the same visit: each gets its own ticket, all linked, with the same
+ * technician and signature. The deposit goes on the first
  */
 @Serializable
 data class CheckInRequest(
@@ -56,7 +60,16 @@ data class CheckInRequest(
     val customerIdentifier: Uuid,
     val technicianIdentifier: Uuid? = null,
     val deposit: PaymentRequest? = null,
-    val signature: SignatureInput? = null
+    val signature: SignatureInput? = null,
+    val deviceIdentifier: Uuid? = null,
+    val more: List<CheckInItem> = emptyList()
+)
+
+/** Another device at the same check in */
+@Serializable
+data class CheckInItem(
+    val ticket: Ticket,
+    val deviceIdentifier: Uuid? = null
 )
 
 /**

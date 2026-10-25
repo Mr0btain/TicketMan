@@ -118,7 +118,8 @@ fun Application.module() {
             invoices = database.invoiceDatabase,
             shop = database.shopDatabase,
             auditLog = database.auditLogDatabase,
-            values = database.storedValueDatabase
+            values = database.storedValueDatabase,
+            devices = database.deviceDatabase
         )
 
         val imageService = ImageService(database.imageDatabase, database.imageStore)

@@ -4,7 +4,9 @@
 Anyone logged in can look; Normal access changes. A ticket's customer and technician are links, set with their own
 routes rather than fields on the ticket. Devices coming in at the counter go through
 [`POST /api/counter/check-in`](counter.md#post-apicountercheck-in) instead of `/add`, which saves the links,
-deposit and signature with it. A ticket's notes are on the [Notes](notes.md#tickets) page.
+deposit and signature with it. A ticket's notes are on the [Notes](notes.md#tickets) page. `deviceIdentifier` (the
+customer's device it's on) and `groupIdentifier` (shared by tickets checked in together) are set by check in;
+`/add` ignores them and `/update` leaves them alone.
 
 ## Reading
 

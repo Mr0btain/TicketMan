@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 10
+const val API_VERSION = 11
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -75,6 +75,18 @@ object CustomerPaths {
 
     /** The customer's invoices, tickets' and sales', newest first */
     const val INVOICES = "/get/invoices/{identifier}"
+
+    /** `GET` the customer's devices, `POST` a `CustomerDevice` to add one */
+    const val DEVICES = "/devices/{identifier}"
+
+    /** Body `CustomerDevice` */
+    const val DEVICE_UPDATE = "/device/update"
+
+    /** `DELETE`: the device goes, its tickets stay */
+    const val DEVICE = "/device/{identifier}"
+
+    /** The device's tickets, newest first */
+    const val DEVICE_TICKETS = "/device/{identifier}/tickets"
 }
 
 object TicketPaths {

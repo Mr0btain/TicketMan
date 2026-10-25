@@ -1,6 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.ui.kit.data.formatMoney
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
+import org.mr0btain.ticketman.data.ticket.DeviceKind
+import org.mr0btain.ticketman.server.request.CheckInItem
+import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
+import ticketman.composeapp.generated.resources.plus
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import org.mr0btain.ticketman.ui.kit.inputs.TmFieldPair
 import androidx.compose.foundation.background
@@ -61,6 +66,9 @@ import kotlin.uuid.Uuid
 /** Widest the wizard's panels get, so lines stay readable on big screens */
 private val FORM_WIDTH = 680.dp
 
+/** Most devices at one check in, like the server's */
+private const val MAX_DEVICES = 10
+
 private enum class CheckInStep(val label: String) {
     CUSTOMER("Customer"),
     DEVICE("Device"),
@@ -72,13 +80,20 @@ private enum class CheckInStep(val label: String) {
 /** Everything typed into the wizard, kept here so going back a step doesn't lose it */
 @OptIn(ExperimentalUuidApi::class)
 private class CheckInForm(customer: Customer?) {
-    // Made up front so the repeat check can leave this ticket out
-    val ticketIdentifier: Uuid = Uuid.generateV7()
+    // Made up front so the repeat check can leave this ticket out. A new one for each device added
+    var ticketIdentifier: Uuid by mutableStateOf(Uuid.generateV7())
 
     var customer by mutableStateOf(customer)
     var manufacturer by mutableStateOf("")
     var model by mutableStateOf("")
     var serial by mutableStateOf("")
+    var kind by mutableStateOf(DeviceKind.PHONE)
+
+    /** One of the customer's devices, when it was picked rather than typed */
+    var deviceIdentifier by mutableStateOf<Uuid?>(null)
+
+    /** Devices already filled in for this visit, checked in along with the one being typed */
+    val extra = mutableStateListOf<CheckInItem>()
     var condition by mutableStateOf("")
     var accessories by mutableStateOf("")
     var problem by mutableStateOf("")
@@ -93,7 +108,39 @@ private class CheckInForm(customer: Customer?) {
     var signedName by mutableStateOf(customer?.name.orEmpty())
 
     val device: Device
-        get() = Device(manufacturer.trim(), model.trim(), serial.trim())
+        get() = Device(manufacturer.trim(), model.trim(), serial.trim(), kind)
+
+    /** Fills the device in from one of the customer's, or clears it for a new one */
+    fun pick(device: CustomerDevice?) {
+        deviceIdentifier = device?.identifier
+        manufacturer = device?.device?.manufacturer.orEmpty()
+        model = device?.device?.model.orEmpty()
+        serial = device?.device?.serial.orEmpty()
+        kind = device?.device?.kind ?: DeviceKind.PHONE
+    }
+
+    /** Keeps the device being typed for this visit and starts on another, keeping the customer, tech and deposit */
+    fun addAnother() {
+        extra += CheckInItem(ticket(), deviceIdentifier)
+        ticketIdentifier = Uuid.generateV7()
+        pick(null)
+        condition = ""
+        accessories = ""
+        problem = ""
+        estimateCents = 0
+    }
+
+    private fun ticket(): Ticket =
+        Ticket(
+            identifier = ticketIdentifier,
+            device = device,
+            priority = priority,
+            problem = problem.trim(),
+            condition = condition.trim(),
+            accessories = accessories.trim(),
+            estimateCents = estimateCents.takeIf { it > 0 },
+            promisedAt = promisedInDays?.let { promiseTimeInDays(it) }
+        )
 
     val depositCents: Long?
         get() = depositInput.takeIf { it > 0 }
@@ -116,20 +163,13 @@ private class CheckInForm(customer: Customer?) {
 
     fun toRequest(needsSignature: Boolean): CheckInRequest =
         CheckInRequest(
-            ticket = Ticket(
-                identifier = ticketIdentifier,
-                device = device,
-                priority = priority,
-                problem = problem.trim(),
-                condition = condition.trim(),
-                accessories = accessories.trim(),
-                estimateCents = estimateCents.takeIf { it > 0 },
-                promisedAt = promisedInDays?.let { promiseTimeInDays(it) }
-            ),
+            ticket = ticket(),
             customerIdentifier = customer!!.identifier,
             technicianIdentifier = technician?.identifier,
             deposit = depositCents?.let { PaymentRequest(depositMethod, it, "Deposit") },
-            signature = if (needsSignature) SignatureInput(strokes, aspectRatio, signedName.trim()) else null
+            signature = if (needsSignature) SignatureInput(strokes, aspectRatio, signedName.trim()) else null,
+            deviceIdentifier = deviceIdentifier,
+            more = extra.toList()
         )
 }
 
@@ -145,10 +185,11 @@ fun CheckInWizard(
     onSearchCustomers: suspend (String) -> List<Customer>,
     onAddCustomer: (Customer, (Customer?, String?) -> Unit) -> Unit,
     onSearchTechnicians: suspend (String) -> List<SearchResult>,
-    onRepeatCheck: suspend (Uuid, Device, Uuid) -> List<TicketSummary>,
+    onRepeatCheck: suspend (Uuid, Device, Uuid, Uuid?) -> List<TicketSummary>,
     onOpenTicket: (Uuid) -> Unit,
     onSubmit: (CheckInRequest, (String?) -> Unit) -> Unit,
-    onCancel: () -> Unit
+    onCancel: () -> Unit,
+    onLoadDevices: suspend (Uuid) -> List<CustomerDevice> = { emptyList() }
 ) {
     val form = remember(startingCustomer) { CheckInForm(startingCustomer) }
     val needsSignature = terms.isNotBlank()
@@ -161,6 +202,12 @@ fun CheckInWizard(
 
     val problem = form.problem(step, needsSignature)
     val index = steps.indexOf(step)
+
+    // The customer's devices, to pick from instead of typing
+    var devices by remember { mutableStateOf<List<CustomerDevice>>(emptyList()) }
+    LaunchedEffect(form.customer) {
+        devices = form.customer?.let { onLoadDevices(it.identifier) }.orEmpty()
+    }
 
     Column(
         modifier = Modifier
@@ -184,7 +231,7 @@ fun CheckInWizard(
         ) {
             when (step) {
                 CheckInStep.CUSTOMER -> CustomerStep(form, onSearchCustomers, onAddCustomer)
-                CheckInStep.DEVICE -> DeviceStep(form, onRepeatCheck, onOpenTicket)
+                CheckInStep.DEVICE -> DeviceStep(form, devices, onRepeatCheck, onOpenTicket)
                 CheckInStep.REPAIR -> RepairStep(form, onSearchTechnicians)
                 CheckInStep.SIGN -> SignStep(form, terms)
                 CheckInStep.REVIEW -> ReviewStep(form, needsSignature)
@@ -205,6 +252,21 @@ fun CheckInWizard(
                     TmButton(text = "Back", onClick = { step = steps[index - 1] }, variant = TmButtonVariant.SECONDARY, size = TmControlSize.LARGE)
                 }
 
+                // Another device at the same visit: this one is kept, and the device step starts again
+                if (step == CheckInStep.REVIEW && form.extra.size + 1 < MAX_DEVICES) {
+                    TmButton(
+                        text = "Add another device",
+                        enabled = steps.all { form.problem(it, needsSignature) == null },
+                        variant = TmButtonVariant.SECONDARY,
+                        size = TmControlSize.LARGE,
+                        leadingIcon = Res.drawable.plus,
+                        onClick = {
+                            form.addAnother()
+                            step = CheckInStep.DEVICE
+                        }
+                    )
+                }
+
                 if (step != CheckInStep.REVIEW) {
                     TmButton(
                         text = "Next: ${steps[index + 1].label.lowercase()}",
@@ -214,7 +276,7 @@ fun CheckInWizard(
                     )
                 } else {
                     TmButton(
-                        text = "Check in",
+                        text = if (form.extra.isEmpty()) "Check in" else "Check in ${form.extra.size + 1} devices",
                         enabled = steps.all { form.problem(it, needsSignature) == null },
                         loading = submitting,
                         size = TmControlSize.LARGE,
@@ -309,22 +371,47 @@ private fun CustomerStep(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun DeviceStep(
     form: CheckInForm,
-    onRepeatCheck: suspend (Uuid, Device, Uuid) -> List<TicketSummary>,
+    devices: List<CustomerDevice>,
+    onRepeatCheck: suspend (Uuid, Device, Uuid, Uuid?) -> List<TicketSummary>,
     onOpenTicket: (Uuid) -> Unit
 ) {
     var repeats by remember { mutableStateOf<List<TicketSummary>>(emptyList()) }
 
     // Look for a repeat repair once they've stopped typing the device
-    LaunchedEffect(form.customer, form.manufacturer, form.model, form.serial) {
+    LaunchedEffect(form.customer, form.manufacturer, form.model, form.serial, form.deviceIdentifier) {
         delay(500)
         val customer = form.customer ?: return@LaunchedEffect
-        repeats = onRepeatCheck(customer.identifier, form.device, form.ticketIdentifier)
+        repeats = onRepeatCheck(customer.identifier, form.device, form.ticketIdentifier, form.deviceIdentifier)
     }
 
-    TmPanel(title = "Device", icon = Res.drawable.smartphone) {
+    TmPanel(
+        title = if (form.extra.isEmpty()) "Device" else "Device ${form.extra.size + 1}",
+        subtitle = if (form.extra.isEmpty()) null else "Checked in with ${form.extra.joinToString(", ") { it.ticket.device.toString().trim() }}",
+        icon = Res.drawable.smartphone
+    ) {
+        // Theirs from before, so its repairs follow it
+        if (devices.isNotEmpty()) {
+            Text(text = "Their devices", style = TmTheme.typography.label, color = TmTheme.colors.textMuted)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs), verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
+                devices.forEach { device ->
+                    TmFilterChip(text = device.label, selected = form.deviceIdentifier == device.identifier, onClick = { form.pick(device) })
+                }
+                TmFilterChip(text = "Another device", selected = form.deviceIdentifier == null, onClick = { form.pick(null) })
+            }
+        }
+
+        TmDropdown(
+            label = "Kind",
+            options = DeviceKind.entries,
+            selected = form.kind,
+            onSelect = { form.kind = it },
+            optionLabel = { it.label }
+        )
+
         TmFieldPair(
             { TmTextField(modifier = it, value = form.manufacturer, onValueChange = { v -> form.manufacturer = v }, label = "Make", placeholder = "Apple") },
             { TmTextField(modifier = it, value = form.model, onValueChange = { v -> form.model = v }, label = "Model", placeholder = "iPhone 13") }
@@ -547,6 +634,15 @@ private fun SignStep(form: CheckInForm, terms: String) {
 @Composable
 private fun ReviewStep(form: CheckInForm, needsSignature: Boolean) {
     TmPanel(title = "Check everything over", icon = Res.drawable.check_square) {
+        if (form.extra.isNotEmpty()) {
+            Column {
+                form.extra.forEach { item ->
+                    TmKeyValueRow(label = item.ticket.device.toString().trim(), value = item.ticket.problem)
+                }
+            }
+            TmDivider()
+        }
+
         Column {
             TmKeyValueRow(label = "Customer", value = form.customer?.name.orEmpty())
             TmKeyValueRow(label = "Device", value = form.device.toString().trim())

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -66,6 +67,7 @@ private val PANEL_WIDTH = 400.dp
  * @param estimates Sending estimates and writing down answers, null hides them (view only, or in previews)
  * @param onSendStatusLink Sends the customer their link now, null when there's no link to send
  * @param parts Ordering parts for the ticket, null hides the panel (in previews)
+ * @param onOpenTicket Opens another ticket, one checked in with this or an earlier repair of the device
  * @param extraActions Room for buttons added by later screens, like pickup
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -82,6 +84,7 @@ fun TicketCard(
     estimates: EstimateActions? = null,
     onSendStatusLink: (() -> Unit)? = null,
     parts: PartsActions? = null,
+    onOpenTicket: (Uuid) -> Unit = {},
     printAction: @Composable () -> Unit = {},
     extraActions: @Composable RowScope.() -> Unit = {}
 ) {
@@ -373,6 +376,20 @@ fun TicketCard(
                                     TmKeyValueRow(label = if (balance >= 0) "Balance" else "Change given") {
                                         TmMoneyText(if (balance >= 0) balance else -balance, style = TmTheme.typography.numericLarge)
                                     }
+                                }
+                            }
+                        }
+
+                        // ------------------------------------------ Visit and device ------------------------------------------
+                        if (detail.linked.isNotEmpty() || detail.deviceHistory.isNotEmpty()) {
+                            TmPanel(modifier = Modifier.width(panelWidth), title = "Related repairs", icon = deviceIcon(ticket.device.kind)) {
+                                if (detail.linked.isNotEmpty()) {
+                                    Text(text = "Checked in with it", style = TmTheme.typography.label, color = colors.textMuted)
+                                    Column { detail.linked.forEach { TicketRow(it, onClick = { onOpenTicket(it.identifier) }) } }
+                                }
+                                if (detail.deviceHistory.isNotEmpty()) {
+                                    Text(text = "This device before", style = TmTheme.typography.label, color = colors.textMuted)
+                                    Column { detail.deviceHistory.forEach { TicketRow(it, onClick = { onOpenTicket(it.identifier) }) } }
                                 }
                             }
                         }

@@ -51,6 +51,23 @@ The customer's store credit history, newest first, up to 200.
 - **`200`** a list of `CreditEntry { identifier, amountCents, balanceAfterCents, reason, invoiceIdentifier, at, by }`,
   `amountCents` negative when spent. **`404`** no such customer.
 
+### `GET /api/data/customer/devices/{identifier}`
+
+**Auth:** restricted
+
+The customer's devices, oldest first. They're made at check in, or kept on file with the `POST` below.
+
+- **`200`** a list of `CustomerDevice { identifier, customerIdentifier, device, color, notes, createdAt }`, `device`
+  being a `Device { manufacturer, model, serial, kind }`. **`404`** no such customer.
+
+### `GET /api/data/customer/device/{identifier}/tickets`
+
+**Auth:** restricted
+
+The device's tickets, newest first: its repairs over time.
+
+- **`200`** a list of `Ticket`. **`404`** no such device.
+
 ### `GET /api/data/customer/get/invoices/{identifier}`
 
 **Auth:** restricted
@@ -71,6 +88,31 @@ Gives store credit, or takes it off, by hand. Written to the credit history and 
 - **`200`** the `Customer` with the new `creditCents`. **`400`** zero, or no reason. **`404`** no such customer.
   **`409`** taking off more than they have (`Sam only has $20.00 of store credit`).
 
+### `POST /api/data/customer/devices/{identifier}`
+
+**Auth:** normal
+
+Keeps a device on file for the customer in the path, whatever `customerIdentifier` the body says.
+
+- **Body:** `CustomerDevice`, with an id the client made. **`201`** the `CustomerDevice`. **`400`** no make or
+  model. **`404`** no such customer. **`409`** that id is taken.
+
+### `POST /api/data/customer/device/update`
+
+**Auth:** normal
+
+Saves a device's details, never who owns it. Tickets keep the copy of the details they were checked in with.
+
+- **Body:** `CustomerDevice`. **`200`** the `CustomerDevice`. **`400`** no make or model. **`404`** no such device.
+
+### `DELETE /api/data/customer/device/{identifier}`
+
+**Auth:** normal
+
+Deletes the device. Its tickets stay, with their copy of its details.
+
+- **`202`** deleted. **`404`** no such device.
+
 ### `POST /api/data/customer/add`
 
 **Auth:** normal
@@ -90,8 +132,8 @@ Replaces the customer's details.
 
 **Auth:** normal
 
-Deletes the customer and their notes; the note photos are cleared up by the next sweep. Their tickets stay, with
-no customer.
+Deletes the customer, their notes and their devices; the note photos are cleared up by the next sweep. Their tickets
+stay, with no customer.
 
 - **`202`** deleted. **`404`** no such customer. **`409`** they still have store credit, which would go with them.
 

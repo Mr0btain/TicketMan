@@ -14,10 +14,17 @@ rule they check, is in [Counter: check-in, invoices and pickup](../server/counte
 A device coming in. Saves the ticket, its customer and technician links, the deposit and the signature together,
 or none of them. The ticket gets its number here.
 
-- **Body:** `CheckInRequest { ticket, customerIdentifier, technicianIdentifier, deposit, signature }`. `deposit`
-  is a `PaymentRequest`; `signature` is needed when the shop has repair terms.
-- **`201`** `CheckInResponse { ticket, invoice }`, with the numbered ticket and the invoice if a deposit made one.
-- **`400`** with the reason: the ticket id isn't a version 7 UUID, no such customer, no make or model, no problem,
+- **Body:** `CheckInRequest { ticket, customerIdentifier, technicianIdentifier, deposit, signature, deviceIdentifier,
+  more }`. `deposit` is a `PaymentRequest`; `signature` is needed when the shop has repair terms.
+  `deviceIdentifier` is one of the customer's [devices](customer.md#get-apidatacustomerdevicesidentifier), when
+  one was picked; without it the server finds theirs with the same serial or makes one, and the ticket's
+  `deviceIdentifier` points at it either way. `more` is a list of `CheckInItem { ticket, deviceIdentifier }`, other
+  devices left at the same visit: each gets its own numbered ticket, all sharing a `groupIdentifier` (the first
+  ticket's id), the same technician and signature; the deposit goes on the first. Up to 10 devices.
+- **`201`** `CheckInResponse { ticket, invoice, linked }`, with the numbered ticket, the invoice if a deposit made
+  one, and the other tickets made with it.
+- **`400`** with the reason: a ticket id isn't a version 7 UUID or is used twice, a picked device isn't the
+  customer's, more than 10 devices, no such customer, no make or model, no problem,
   a status other than in progress or on hold (or one of the shop's own counting as them; an unknown or retired one is refused too), a negative estimate, a technician without Normal access, a deposit
   of zero or less, or a missing or bad signature. **`409`** a ticket with that id already exists.
 
@@ -81,8 +88,9 @@ What needs attention: open tickets sorted into four lists.
 Earlier tickets for the same device and customer within the shop's repeat window (`repeatWindowDays` on the shop
 profile), to warn at check-in that it's back.
 
-- **Body:** `RepeatCheckRequest { customerIdentifier, device, excludeTicket }`. `excludeTicket` leaves out the
-  ticket being checked in.
+- **Body:** `RepeatCheckRequest { customerIdentifier, device, excludeTicket, deviceIdentifier }`. `excludeTicket`
+  leaves out the ticket being checked in. With `deviceIdentifier` (a device picked at check in) that device's
+  tickets match, as well as the serial or make and model.
 - **`200`** a list of `TicketSummary`, empty when it's not a repeat.
 
 ## See also

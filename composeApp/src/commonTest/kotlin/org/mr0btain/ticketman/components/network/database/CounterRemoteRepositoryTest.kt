@@ -11,6 +11,7 @@ import org.mr0btain.ticketman.data.invoice.Charge
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.data.invoice.InvoiceStatus
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
@@ -99,6 +100,11 @@ class CounterRemoteRepositoryTest {
         customers.getCredit(id)
         customers.adjustCredit(id, BalanceAdjustRequest(500, "Goodwill"))
         customers.getInvoices(id)
+        customers.getDevices(id)
+        customers.addDevice(id, CustomerDevice(customerIdentifier = id))
+        customers.updateDevice(CustomerDevice(identifier = id, customerIdentifier = id))
+        customers.removeDevice(id)
+        customers.getDeviceTickets(id)
         giftCards.get(" gc-ab12 cd34")
         giftCards.fetch(0, 10)
         giftCards.adjust("GC-AB12CD34", BalanceAdjustRequest(-100, "Fix"))
@@ -108,6 +114,11 @@ class CounterRemoteRepositoryTest {
                 "GET /api/data/customer/credit/$id",
                 "POST /api/data/customer/credit/$id",
                 "GET /api/data/customer/get/invoices/$id",
+                "GET /api/data/customer/devices/$id",
+                "POST /api/data/customer/devices/$id",
+                "POST /api/data/customer/device/update",
+                "DELETE /api/data/customer/device/$id",
+                "GET /api/data/customer/device/$id/tickets",
                 "GET /api/giftcard/code/GC-AB12CD34",
                 "GET /api/giftcard/fetch",
                 "POST /api/giftcard/code/GC-AB12CD34/adjust"

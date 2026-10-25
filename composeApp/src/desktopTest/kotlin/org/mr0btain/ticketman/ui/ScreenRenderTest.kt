@@ -94,6 +94,8 @@ import org.mr0btain.ticketman.data.purchase.Supplier
 import org.mr0btain.ticketman.ui.screens.counter.CustomerCard
 import org.mr0btain.ticketman.ui.screens.counter.components.CustomerDetail
 import org.mr0btain.ticketman.data.customer.CreditEntry
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
+import org.mr0btain.ticketman.data.ticket.DeviceKind
 import org.mr0btain.ticketman.ui.screens.admin.invoices.RefundDialog
 import org.mr0btain.ticketman.ui.screens.counter.SaleScreen
 import org.mr0btain.ticketman.ui.screens.counter.TicketCard
@@ -428,6 +430,11 @@ class ScreenRenderTest {
         )
     }
 
+    private val danaDevices = listOf(
+        CustomerDevice(customerIdentifier = dana.identifier, device = Device("Apple", "iPhone 13", "F2LXK3QHN7", DeviceKind.PHONE), color = "Blue"),
+        CustomerDevice(customerIdentifier = dana.identifier, device = Device("Apple", "iPad Air", kind = DeviceKind.TABLET))
+    )
+
     /** A customer with store credit, its history and their invoices, as an admin sees it */
     @Test
     fun counterCustomer() = bothModes("counter-customer") {
@@ -436,19 +443,22 @@ class ScreenRenderTest {
             CustomerCard(
                 detail = CustomerDetail(
                     customer = sam,
-                    tickets = listOf(iphone, pixel),
+                    tickets = listOf(iphone.copy(deviceIdentifier = danaDevices[0].identifier), pixel),
+                    devices = danaDevices,
                     credit = listOf(
                         CreditEntry(Uuid.random(), -1500, 2500, "Spent on INV-26-00000040", null, now - 3_600_000, "priya"),
                         CreditEntry(Uuid.random(), 4000, 4000, "Refund on INV-26-00000031: faulty charger", null, now - 86_400_000 * 3, "boss")
                     ),
                     invoices = listOf(
-                        invoice.copy(status = InvoiceStatus.OPEN),
+                        invoice.copy(status = InvoiceStatus.OPEN, createdAt = now - 7_200_000),
                         Invoice(number = InvoiceNumber(2026, 40), ticketIdentifier = null, status = InvoiceStatus.PAID, totalCents = 2999, createdAt = now - 3_600_000)
                     )
                 ),
                 onTicketClick = {},
                 onBack = {},
-                onAdjustCredit = { _, _, _ -> }
+                onAdjustCredit = { _, _, _ -> },
+                onSaveDevice = { _, _ -> },
+                onRemoveDevice = {}
             )
         }
     }
@@ -464,10 +474,11 @@ class ScreenRenderTest {
             onSearchCustomers = { emptyList() },
             onAddCustomer = { _, _ -> },
             onSearchTechnicians = { emptyList() },
-            onRepeatCheck = { _, _, _ -> emptyList() },
+            onRepeatCheck = { _, _, _, _ -> emptyList() },
             onOpenTicket = {},
             onSubmit = { _, _ -> },
-            onCancel = {}
+            onCancel = {},
+            onLoadDevices = { danaDevices }
         )
     }
 

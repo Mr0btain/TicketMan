@@ -19,7 +19,9 @@ data class CounterSearchResponse(
 @Serializable
 data class CheckInResponse(
     val ticket: Ticket,
-    val invoice: Invoice? = null
+    val invoice: Invoice? = null,
+    /** The other tickets checked in with it, in the order sent */
+    val linked: List<Ticket> = emptyList()
 )
 
 /**

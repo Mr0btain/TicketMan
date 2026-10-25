@@ -211,7 +211,9 @@ fun Route.ticketRoute(
                 return@post
             }
 
-            val saved = received.takeIf { database.add(it) }?.let { database.getById(it.identifier) }
+            // Device and group links are made by check in, never sent
+            val saved = received.copy(deviceIdentifier = null, groupIdentifier = null)
+                .takeIf { database.add(it) }?.let { database.getById(it.identifier) }
 
             if (saved == null) {
                 call.respond(HttpStatusCode.InternalServerError)

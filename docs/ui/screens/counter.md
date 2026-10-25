@@ -106,7 +106,13 @@ walks through steps with a `TmStepper`:
 
 ![Check-in on the device step](../../images/check-in.png)
 
-Everything typed is kept in one `CheckInForm`, so going back a step loses nothing. The stepper only opens a step
+Everything typed is kept in one `CheckInForm`, so going back a step loses nothing. The device step offers the
+customer's devices from before as chips (`onLoadDevices`), filling the fields in and keeping the ticket on that
+device's history, and a kind (phone, tablet, laptop, ...). On the review step **Add another device** keeps what's
+been filled in (`CheckInForm.extra`) and starts the device step again with the same customer, technician and
+deposit; checking in then sends them all in one request as linked tickets, and `CheckedInView` reads out every
+number. The customer card's **Devices** panel (`DevicesPanel`) lists their devices, each opening to its repairs,
+and the ticket card's **Related repairs** shows the tickets checked in with it and the device's earlier ones. The stepper only opens a step
 when every step before it is filled in. The form makes the ticket's id up front, so the **repeat check** can leave
 it out: half a second after the device stops changing, it asks the server for this customer's earlier tickets for
 the same device and warns if it's been in recently.

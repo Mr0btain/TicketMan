@@ -27,6 +27,10 @@ object TicketTable: UuidTable("tickets") {
     // The customer status page's link. Nullable so it can be added to existing rows, which get one on start
     val statusToken = varchar("status_token", 64).nullable()
 
+    // Added with customer devices: the customer's device it's on, and the tickets checked in with it
+    val deviceRef = uuid("device_id").nullable()
+    val group = uuid("group_id").nullable()
+
     // Unique on (year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"
 
