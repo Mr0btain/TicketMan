@@ -25,7 +25,8 @@ or none of them. The ticket gets its number here.
   ticket's `checklist` is the intake checklist as filled in. A ticket with `warrantyOf` is a warranty return of
   that earlier ticket, which has to be the customer's and still under warranty. `appointmentIdentifier` is the
   booked [appointment](appointment.md) this visit is: it's marked `ARRIVED` with the first ticket (and linked to the
-  customer when it had none) in the same transaction.
+  customer when it had none) in the same transaction. A deposit taken on a card reader names its
+  [charge](payment.md) in `chargeIdentifier`.
 - **`201`** `CheckInResponse { ticket, invoice, linked }`, with the numbered ticket, the invoice if a deposit made
   one, and the other tickets made with it.
 - **`400`** with the reason: a ticket id isn't a version 7 UUID or is used twice, a picked device isn't the
@@ -59,7 +60,8 @@ Sells from stock with no ticket: makes the invoice (with no `ticketIdentifier`),
 from stock and marks it paid, in one transaction.
 
 - **Body:** `SaleRequest { customerIdentifier, charges, discountCents, payments }`. `customerIdentifier` is
-  optional. Lines follow the same rules as an invoice's.
+  optional. Lines follow the same rules as an invoice's. A payment taken on a card reader names its
+  [charge](payment.md) in `chargeIdentifier`, claimed in the sale's transaction.
 - **`201`** the paid `Invoice`.
 - **`400`** no lines, a bad line, a negative discount, a payment of zero or less, or no such customer.
 - **`409`** the payments don't cover the total (`$8.00 is still owed`), there isn't enough of a part in stock, or

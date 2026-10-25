@@ -35,6 +35,7 @@ object ApiRoutes {
     const val REPORT = "/api/report"
     const val APPOINTMENT = "/api/appointment"
     const val TIME_CLOCK = "/api/timeclock"
+    const val PAYMENT = "/api/payment"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -358,6 +359,42 @@ object StatusPaths {
 
     /** A photo from an update the customer can see, `thumb` or `display` */
     const val PHOTO = "/{token}/photo/{identifier}/{variant}"
+
+    /** Off to the processor's checkout page for the balance, when the shop takes payments online */
+    const val PAY = "/{token}/pay"
+
+    /** The card processor telling the server a payment changed, `stripe` or `square`. Here so it's reachable from outside */
+    const val PAYMENT_WEBHOOK = "/payments/{provider}/webhook"
+}
+
+object PaymentPaths {
+    /** Admin only: `GET` the settings without keys, `POST` to save them */
+    const val SETTINGS = "/settings"
+
+    /** Admin only: the readers on the processor account, with the saved settings */
+    const val ACCOUNT_READERS = "/readers"
+
+    /** What the counter can offer, no keys */
+    const val OPTIONS = "/options"
+
+    /** Body `ReaderChargeRequest`: sends an amount to a card reader */
+    const val READER = "/charge/reader"
+
+    /** Body `PaymentLinkRequest`: a checkout page for an invoice's balance */
+    const val LINK = "/charge/link"
+
+    /** A charge, checked with the processor first while it's waiting */
+    const val CHARGE = "/charge/{identifier}"
+    const val CANCEL = "/charge/{identifier}/cancel"
+
+    /** Admin only: gives back a paid charge that never made it onto an invoice */
+    const val REFUND = "/charge/{identifier}/refund"
+
+    /** Admin only: every charge, newest first, `?offset=&limit=` */
+    const val CHARGES = "/charges"
+
+    /** An invoice's charges, newest first */
+    const val FOR_INVOICE = "/charges/invoice/{identifier}"
 }
 
 object StationPaths {

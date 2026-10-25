@@ -207,7 +207,7 @@ private fun SmsPanel(draft: NotificationSettings, onChange: (NotificationSetting
  * A password or token that never comes back from the server. Left empty it keeps the saved one; typing replaces it
  */
 @Composable
-private fun SecretField(modifier: Modifier, value: String?, saved: Boolean, label: String, onChange: (String?) -> Unit) {
+internal fun SecretField(modifier: Modifier, value: String?, saved: Boolean, label: String, onChange: (String?) -> Unit) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xxs)) {
         TmPasswordField(modifier = Modifier.fillMaxWidth(), value = value.orEmpty(), onValueChange = { onChange(it.ifEmpty { null }) }, label = label)
         Text(

@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.database.CustomerDatabase
+import org.mr0btain.ticketman.components.payments.PaymentService
+import org.mr0btain.ticketman.server.request.PaymentLinkRequest
 import org.mr0btain.ticketman.components.database.InvoiceDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
@@ -39,7 +41,10 @@ class StatusService(
     // Wrong lookups per device, and per ticket number so guessing 4 digits from many addresses goes nowhere
     private val lookupsByAddress: RequestLimiter = RequestLimiter(LOOKUPS_PER_ADDRESS, 15.minutes),
     private val lookupsByNumber: RequestLimiter = RequestLimiter(LOOKUPS_PER_NUMBER, 24.hours),
-    private val badLinksByAddress: RequestLimiter = RequestLimiter(BAD_LINKS_PER_ADDRESS, 15.minutes)
+    private val badLinksByAddress: RequestLimiter = RequestLimiter(BAD_LINKS_PER_ADDRESS, 15.minutes),
+    private val payments: PaymentService? = null,
+    // Each one asks the processor for a checkout page, so a script can't make thousands
+    private val paysByAddress: RequestLimiter = RequestLimiter(PAYS_PER_ADDRESS, 15.minutes)
 ) {
     private val TAG = "StatusService"
     private val LOOKUP_TAG = "$TAG:Lookup"
@@ -64,7 +69,11 @@ class StatusService(
         /** The newest one they answered, shown when nothing's waiting */
         val answered: Estimate? = null,
         /** Why their last answer didn't go through */
-        val problem: String? = null
+        val problem: String? = null,
+        /** The balance can be paid from the page */
+        val payOnline: Boolean = false,
+        /** Why paying didn't start */
+        val payProblem: String? = null
     )
 
     sealed interface Found {
@@ -87,6 +96,34 @@ class StatusService(
 
         val ticket = tickets.getByStatusToken(token) ?: return Found.NotFound.also { badLinksByAddress.record(address) }
         return Found.Page(view(ticket))
+    }
+
+    sealed interface Pay {
+        /** Off to the processor's checkout page */
+        data class Checkout(val url: String) : Pay
+
+        /** Shown on the page again, with why */
+        data class Problem(val view: View) : Pay
+        data object NotFound : Pay
+        data object Limited : Pay
+    }
+
+    /** A checkout page for the balance, for the customer's Pay button */
+    fun pay(token: String, address: String): Pay {
+        if (badLinksByAddress.isLimited(address)) return Pay.Limited
+        val ticket = tickets.getByStatusToken(token) ?: return Pay.NotFound.also { badLinksByAddress.record(address) }
+        if (!paysByAddress.tryAcquire(address)) return Pay.Limited
+
+        val view = view(ticket)
+        val invoice = view.invoice
+        if (payments == null || !view.payOnline || invoice == null) return Pay.Problem(view.copy(payProblem = "There's nothing to pay online right now"))
+
+        return when (val result = payments.link(PaymentLinkRequest(invoice.identifier), CUSTOMER, null)) {
+            is AccountResult.Done -> Pay.Checkout(result.value.url)
+            is AccountResult.Conflict -> Pay.Problem(view.copy(payProblem = "Paying online didn't start, call us to pay. (${result.message})"))
+            is AccountResult.Invalid -> Pay.Problem(view.copy(payProblem = "Paying online didn't start, call us to pay. (${result.message})"))
+            AccountResult.NotFound -> Pay.Problem(view.copy(payProblem = "There's nothing to pay online right now"))
+        }
     }
 
     sealed interface Answer {
@@ -133,6 +170,15 @@ class StatusService(
 
         val customer = tickets.getCustomer(ticket.identifier)?.let { customers.getById(it.identifier) }
 
+        // Back from paying, the link's payment is asked about so the balance is up to date
+        var invoice = invoices.getByTicket(ticket.identifier)?.takeIf { it.status != InvoiceStatus.VOID }
+        if (payments != null && invoice != null && invoice.status == InvoiceStatus.OPEN) {
+            payments.refreshLinks(invoice.identifier)
+            invoice = invoices.getByTicket(ticket.identifier) ?: invoice
+        }
+        val payOnline = invoice != null && invoice.status == InvoiceStatus.OPEN && invoice.balanceCents > 0 &&
+            payments?.options()?.onlinePayments == true
+
         return View(
             shop = profile,
             ticket = ticket,
@@ -140,9 +186,10 @@ class StatusService(
             current = statuses.customerChoice(ticket.status.choice),
             timeline = timeline,
             updates = updates,
-            invoice = invoices.getByTicket(ticket.identifier)?.takeIf { it.status != InvoiceStatus.VOID },
+            invoice = invoice,
             estimate = estimates.pending(ticket.identifier),
-            answered = estimates.lastAnswered(ticket.identifier)
+            answered = estimates.lastAnswered(ticket.identifier),
+            payOnline = payOnline
         )
     }
 
@@ -192,6 +239,10 @@ class StatusService(
         const val BAD_LINKS_PER_ADDRESS = 30
         const val MIN_NAME = 2
         const val MAX_NAME = 100
+        const val PAYS_PER_ADDRESS = 10
+
+        /** Who started a payment from the status page, in the charge and the audit log */
+        const val CUSTOMER = "customer"
 
         /** The original is only for staff */
         val PHOTO_VARIANTS = setOf(ImageVariant.THUMB, ImageVariant.DISPLAY)

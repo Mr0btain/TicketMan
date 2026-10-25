@@ -87,7 +87,14 @@ object StatusPage {
                     val cls = if (strong) """ class="strong"""" else ""
                     append("""<div$cls><dt>${label.esc()}</dt><dd class="num">${amount.esc()}</dd></div>""")
                 }
-                append("</dl></section>")
+                append("</dl>")
+                if (view.payProblem != null) append("""<p class="problem" role="alert">${view.payProblem.esc()}</p>""")
+                // A link rather than a form, so the redirect to the processor's checkout isn't held to form-action
+                if (view.payOnline) {
+                    val balance = Money.format(view.invoice!!.balanceCents, shop.currencySymbol)
+                    append("""<p><a class="button" href="${token.esc()}/pay" rel="nofollow">Pay ${balance.esc()} online</a></p>""")
+                }
+                append("</section>")
             }
 
             append(contact(shop))
@@ -253,6 +260,7 @@ input{font:inherit;padding:.6em .7em;border-radius:10px;border:1px solid var(--l
 button{font:inherit;font-weight:600;padding:.7em;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
 .problem{color:var(--danger);font-weight:600}
 .buttons{display:flex;gap:10px}.buttons button{flex:1}
+a.button{display:block;text-align:center;text-decoration:none;font-weight:600;padding:.7em;border-radius:10px;background:var(--accent);color:#fff}
 button.secondary{background:transparent;color:var(--text);border:1px solid var(--line)}
 footer{color:var(--muted);font-size:.85rem;padding-bottom:28px}
 """.trimIndent().replace("\n", "")

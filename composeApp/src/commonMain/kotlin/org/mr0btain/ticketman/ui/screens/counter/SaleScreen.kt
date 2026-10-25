@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.inventory.Inventory
+import org.mr0btain.ticketman.data.payment.CardReader
 import org.mr0btain.ticketman.data.invoice.InvoiceMath
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.SaleRequest
@@ -32,6 +33,8 @@ import ticketman.composeapp.generated.resources.user
  * Sells from stock without a ticket: lines, an optional customer, and payment, all sent at once when it's paid
  * @param taxRateBasisPoints The shop's rate now, which the server uses too
  * @param onFinish Sends the sale, calls back with what went wrong or null if it worked
+ * @param onReaderCharge Sends an amount to a card reader, calling back with the payment that names the charge once
+ * it's paid
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -44,7 +47,9 @@ fun SaleScreen(
     onLookupGiftCard: suspend (String) -> GiftCard?,
     onFindCode: (suspend (String) -> Inventory?)? = null,
     onFinish: (SaleRequest, (String?) -> Unit) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    readers: List<CardReader> = emptyList(),
+    onReaderCharge: ((CardReader, Long, (PaymentRequest) -> Unit) -> Unit)? = null
 ) {
     val spacing = TmTheme.spacing
 
@@ -114,6 +119,8 @@ fun SaleScreen(
                     busy = busy,
                     creditCents = customer?.creditCents,
                     onLookupGiftCard = onLookupGiftCard,
+                    readers = readers,
+                    onReaderCharge = onReaderCharge?.let { charge -> { reader, amount -> charge(reader, amount) { pending.add(it) } } },
                     onFinish = {
                         busy = true
                         message = null

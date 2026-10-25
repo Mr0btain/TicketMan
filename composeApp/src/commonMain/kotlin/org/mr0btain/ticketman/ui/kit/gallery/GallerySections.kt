@@ -56,6 +56,7 @@ import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.images.TmImagePager
 import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmQrCode
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.data.TmCountBar
@@ -648,6 +649,11 @@ private fun DataSection() {
         TmKeyValueRow(label = "Invoice") { TmTicketIdText("INV-26-00000041") }
         TmKeyValueRow(label = "Refund") { TmMoneyText(-2500, signed = true) }
         TmKeyValueRow(label = "SKU", value = "SCR-IP13-BLK", numeric = true)
+
+        TmDivider()
+
+        // A payment link or status page, for the customer's phone at the counter
+        TmQrCode(text = "https://repairs.example.com/status/0123456789abcdef0123456789abcdef", size = 120.dp)
     }
 }
 

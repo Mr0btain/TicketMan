@@ -85,7 +85,9 @@ Without one the APK comes out unsigned (`TicketMan-Android-<version>-unsigned.ap
 
 ## Making a release
 
-1. Set `ticketman.version` in `gradle.properties` and merge that to master.
+1. Set `ticketman.version` in `gradle.properties`, add a `<release>` for it at the top of the Flathub metainfo and
+   point its screenshots at the new tag (see [Flathub](#flathub); CI's `flatpak.py check` fails until both are
+   done), and merge that to master.
 2. Tag the commit and push the tag:
 
    ```bash
@@ -214,3 +216,50 @@ The MSI and DMG aren't code signed. Windows SmartScreen warns about the MSI (Mor
 the app "can't be opened". Right click it and choose Open, or run `xattr -dr com.apple.quarantine
 /Applications/TicketMan.app`. Signing the MSI needs a code signing certificate, and signing the DMG needs an Apple
 Developer account plus notarization (Compose's `macOS { signing { } notarization { } }`).
+
+## Flathub
+
+The desktop app is packaged for [Flathub](https://flathub.org) as `io.github.Mr0btain.TicketMan` (Flathub checks
+the GitHub account owns an `io.github` ID). Everything for it is in [`flatpak/`](../flatpak):
+
+| File | What it is |
+|---|---|
+| `io.github.Mr0btain.TicketMan.yml` | The manifest: the freedesktop runtime, a Java 21 runtime from the `openjdk21` extension, the release's `TicketMan-Desktop-<version>.jar`, and the files below from the release's tag |
+| `io.github.Mr0btain.TicketMan.metainfo.xml` | What the store page shows: the description, screenshots (from `docs/images/` at the release's tag) and a `<release>` per version |
+| `io.github.Mr0btain.TicketMan.desktop` | The menu entry. `StartupWMClass` is the window class AWT makes from the main class, so renaming `MainKt` changes it |
+| `ticketman.sh` | Starts the jar, with Skiko's unpacked library moved out of the home folder the sandbox can't write |
+
+The sandbox lets the app use X11 (AWT has no Wayland), the network, CUPS for printing, the keyring for KSafe's key
+(through the secret portal when there is one) and `~/.eu_anifantakis_ksafe` for KSafe's settings, which the sandbox
+keeps in `~/.var/app/io.github.Mr0btain.TicketMan/`. The app's own folders already follow `XDG_DATA_HOME` and
+`XDG_CACHE_HOME`, and file dialogs go through the portal, so nothing else is needed. Settings from the DEB aren't
+carried over, so someone moving to the Flatpak connects and logs in again.
+
+[`scripts/flatpak.py`](../scripts/flatpak.py) does the work (it needs `flatpak install flathub org.flatpak.Builder`):
+
+```bash
+python3 scripts/flatpak.py check              # the metainfo has a <release> for ticketman.version, screenshots at its tag
+python3 scripts/flatpak.py build --install    # build the jar, then the Flatpak from this checkout, lint, install
+flatpak run io.github.Mr0btain.TicketMan
+python3 scripts/flatpak.py update 0.9.1       # once the GitHub release is out: the jar's url and sha256, the tag's commit
+```
+
+`build` lints the manifest and the built repo with `flatpak-builder-lint`. The repo check always reports
+`appstream-external-screenshot-url` and `appstream-remote-icon-not-mirrored`, which only clear on Flathub's own
+build, and `appstream-missing-screenshots` until the tag is on GitHub (the screenshot URLs point at it).
+
+**Submitting the first time.** Flathub builds from its own repository, so the manifest is copied there:
+
+1. Release the version on GitHub (the tag and the desktop jar have to be there), then run
+   `python3 scripts/flatpak.py update <version>` and commit the manifest.
+2. Fork [flathub/flathub](https://github.com/flathub/flathub), branch from `new-pr`, add the manifest at the root,
+   and open a pull request against `new-pr` named `Add io.github.Mr0btain.TicketMan`. Their
+   [submission guide](https://docs.flathub.org/docs/for-app-authors/submission) has the checklist.
+3. Comment `bot, build` on the pull request for a test build, and answer the reviewers. Once it's merged Flathub
+   makes `flathub/io.github.Mr0btain.TicketMan` and invites you to it; accept within a week.
+4. Verify the app on Flathub's developer portal by logging in with the GitHub account, which gives it the
+   verified badge.
+
+**Each release after that.** Flathub's checker bot reads `x-checker-data` in the manifest and opens a pull request
+on `flathub/io.github.Mr0btain.TicketMan` when a new GitHub release has a desktop jar. Merge it once its test build
+passes. If the manifest here changed too (new permissions), make the same change there.

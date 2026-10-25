@@ -207,7 +207,8 @@ class MainViewModel(
             }
         },
         onShopChanged = { profile -> counter.shopChanged(profile) },
-        onImported = { refreshPagers() }
+        onImported = { refreshPagers() },
+        onPaymentsChanged = { counter.cards.refreshOptions() }
     )
 
     /** ----------------------------------------------KIOSK------------------------------------------------------------------- */

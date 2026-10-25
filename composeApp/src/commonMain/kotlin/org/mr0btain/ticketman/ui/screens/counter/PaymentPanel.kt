@@ -14,6 +14,7 @@ import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.invoice.InvoiceMath
 import org.mr0btain.ticketman.data.invoice.Payment
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
+import org.mr0btain.ticketman.data.payment.CardReader
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -45,6 +46,9 @@ import ticketman.composeapp.generated.resources.x
  * @param creditCents The customer's store credit, offered as a way to pay when there's some. Null with no customer
  * @param onLookupGiftCard Finds a gift card by its code, null when gift cards can't be taken here
  * @param secondaryAction A button beside the finishing one, like saving the invoice
+ * @param readers The shop's card readers, offered for card payments when [onReaderCharge] is set
+ * @param onReaderCharge Sends an amount to a reader, null when there's no processor
+ * @param onPaymentLink Shows a payment link for the balance, null when links can't be made here
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -62,6 +66,9 @@ fun PaymentPanel(
     modifier: Modifier = Modifier,
     creditCents: Long? = null,
     onLookupGiftCard: (suspend (String) -> GiftCard?)? = null,
+    readers: List<CardReader> = emptyList(),
+    onReaderCharge: ((CardReader, Long) -> Unit)? = null,
+    onPaymentLink: (() -> Unit)? = null,
     secondaryAction: @Composable RowScope.() -> Unit = {}
 ) {
     val colors = TmTheme.colors
@@ -99,13 +106,14 @@ fun PaymentPanel(
                     )
                 }
 
-                // Taken now, sent when finishing
+                // Taken now, sent when finishing. One from the card reader is already taken, so it stays
                 pending.forEach { payment ->
+                    val onReader = payment.chargeIdentifier != null
                     PaymentRow(
                         amountCents = payment.amountCents,
                         method = payment.method,
-                        detail = listOfNotNull(payment.reference.ifBlank { null }, "Taking now").joinToString(", "),
-                        onRemove = { pending.remove(payment) }
+                        detail = listOfNotNull(payment.reference.ifBlank { null }, if (onReader) "Paid on the reader" else "Taking now").joinToString(", "),
+                        onRemove = if (onReader) null else ({ pending.remove(payment) })
                     )
                 }
             }
@@ -210,12 +218,38 @@ fun PaymentPanel(
             )
         }
 
+        // The amount goes to a reader instead, and is only on the invoice once the card goes through
+        var readerIdentifier by remember { mutableStateOf<String?>(null) }
+        val reader = readers.firstOrNull { it.identifier == readerIdentifier } ?: readers.firstOrNull()
+        if (paymentMethod == PaymentMethod.CARD && reader != null && onReaderCharge != null) {
+            if (readers.size > 1) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(spacing.xs), verticalArrangement = Arrangement.spacedBy(spacing.xs)) {
+                    readers.forEach { option ->
+                        TmFilterChip(text = option.name, selected = option == reader, onClick = { readerIdentifier = option.identifier })
+                    }
+                }
+            }
+            TmButton(
+                modifier = Modifier.fillMaxWidth(),
+                text = amount?.let { "Charge ${formatMoney(it)} on ${reader.name}" } ?: "Charge on ${reader.name}",
+                enabled = amount != null && !busy,
+                onClick = {
+                    amount?.let { onReaderCharge(reader, it) }
+                    paymentCents = 0
+                }
+            )
+        }
+
         if (balance > 0) {
             Text(
                 text = "Leave it at 0.00 to take the full ${formatMoney(balance)}",
                 style = TmTheme.typography.caption,
                 color = colors.textMuted
             )
+        }
+
+        if (onPaymentLink != null && balance > 0) {
+            TmButton(text = "Payment link for the customer", variant = TmButtonVariant.GHOST, enabled = !busy, onClick = onPaymentLink)
         }
 
         problem?.let { TmNotice(text = it, kind = TmNoticeKind.ERROR) }

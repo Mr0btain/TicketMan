@@ -40,7 +40,8 @@ class AdminHandler(
     private val localStorage: LocalStorage,
     onUsersChanged: (Uuid?) -> Unit,
     onShopChanged: (ShopProfile) -> Unit = {},
-    onImported: () -> Unit = {}
+    onImported: () -> Unit = {},
+    onPaymentsChanged: () -> Unit = {}
 ) {
     private val admin get() = remoteHandler.adminRepo
 
@@ -60,6 +61,9 @@ class AdminHandler(
     val devices = AdminDevices(remoteHandler, support, reloadOverview = { loadOverview() })
 
     val messages = AdminMessages(remoteHandler, support)
+
+    /** Payments tab */
+    val payments = AdminPayments(remoteHandler, support, onSaved = onPaymentsChanged)
 
     /** Timesheets tab */
     val timesheets = AdminTimesheets(remoteHandler, support)
@@ -130,6 +134,11 @@ class AdminHandler(
                         // For the printout's header and paper size
                         server.reloadShopProfile()
                     }
+                    AdminTab.PAYMENTS -> {
+                        payments.reload()
+                        // For whether paying online can work, which needs the public address
+                        server.reloadShopProfile()
+                    }
                     AdminTab.TIMESHEETS -> timesheets.reload()
                     AdminTab.AUDIT -> loadAudit(reset = true)
                 }
@@ -154,6 +163,7 @@ class AdminHandler(
                 AdminTab.LOW_STOCK -> loadLowStock()
                 AdminTab.SERVER -> server.reloadStatus()
                 AdminTab.MESSAGES -> messages.reloadOutbox()
+                AdminTab.PAYMENTS -> payments.reloadCharges()
                 AdminTab.TIMESHEETS -> timesheets.load()
                 AdminTab.REPORTS -> reports.reloadReport()
                 AdminTab.AUDIT -> addNewAudit()

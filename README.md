@@ -109,3 +109,8 @@ for now, but 1.0.0->2.0.0 when we hit stable.
 Developer docs are in [`docs/`](docs/README.md): how the code is organized, how a request travels from the UI to the
 database, configuration, running a server and more. Pretty much all of this is AI generated. I haven't looked through 
 it yet so it may or may not be accurate.
+
+## License
+
+TicketMan is released under the [MIT License](LICENSE). The fonts it bundles (Barlow, Atkinson Hyperlegible and
+JetBrains Mono) are under the SIL Open Font License, with their licenses in [`composeApp/licenses/`](composeApp/licenses).

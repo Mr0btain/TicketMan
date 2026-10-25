@@ -194,7 +194,7 @@ class CounterHandlerTest {
         settle { counter.view.value == CounterView.PICKED_UP }
 
         assertNull(error)
-        assertEquals(listOf("POST /api/invoice/${invoice.identifier}/update", "POST /api/counter/pickup"), requests.filter { "queue" !in it && "shop" !in it })
+        assertEquals(listOf("POST /api/invoice/${invoice.identifier}/update", "POST /api/counter/pickup"), requests.filter { "queue" !in it && "shop" !in it && "payment/options" !in it })
         assertEquals(InvoiceStatus.PAID, counter.pickup.last.value?.status)
     }
 

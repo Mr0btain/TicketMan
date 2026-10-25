@@ -18,6 +18,15 @@ import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import org.mr0btain.ticketman.data.estimate.Estimate
 import org.mr0btain.ticketman.data.notify.*
 import org.mr0btain.ticketman.ui.screens.admin.messages.AdminMessagesTab
+import org.mr0btain.ticketman.ui.screens.admin.payments.AdminPaymentsTab
+import org.mr0btain.ticketman.ui.screens.counter.ReaderChargeDialog
+import org.mr0btain.ticketman.ui.screens.counter.PaymentLinkDialog
+import org.mr0btain.ticketman.data.payment.CardCharge
+import org.mr0btain.ticketman.data.payment.CardChargeKind
+import org.mr0btain.ticketman.data.payment.CardChargeStatus
+import org.mr0btain.ticketman.data.payment.CardReader
+import org.mr0btain.ticketman.data.payment.PaymentProvider
+import org.mr0btain.ticketman.data.payment.PaymentSettings
 import org.mr0btain.ticketman.ui.screens.counter.EstimateActions
 import org.mr0btain.ticketman.ui.screens.counter.EstimateDialog
 import org.mr0btain.ticketman.components.network.UntrustedCertificate
@@ -441,6 +450,84 @@ class ScreenRenderTest {
             onFinish = { _, _, _, _ -> },
             onBack = {}
         )
+    }
+
+    /** Card readers set up: a deposit already taken on the reader, two readers to pick from and a payment link */
+    @Test
+    fun pickupCardReader() = screen("pickup-card-reader", height = 1000, rail = "Counter") {
+        val card = Payment(method = PaymentMethod.CARD, amountCents = 4_000, receivedAt = now - 86_400_000, note = "Front counter", processor = PaymentProvider.STRIPE, processorReference = "pi_1")
+        PickupScreen(
+            detail = detail.copy(invoice = invoice.copy(payments = listOf(card))),
+            onSearchParts = { emptyList() },
+            onSave = { _, _, _ -> },
+            onRemovePayment = {},
+            onLookupGiftCard = { null },
+            onFinish = { _, _, _, _ -> },
+            onBack = {},
+            readers = listOf(CardReader("tmr_1", "Front counter"), CardReader("tmr_2", "Back bench")),
+            onReaderCharge = { _, _ -> },
+            onPaymentLink = {}
+        )
+    }
+
+    @Test
+    fun readerChargeWaiting() = screen("counter-reader-waiting", rail = "Counter") {
+        ReaderChargeDialog(
+            charge = CardCharge(kind = CardChargeKind.READER, provider = PaymentProvider.STRIPE, amountCents = 11_224, currency = "USD", readerName = "Front counter"),
+            onCancel = {}, onClose = {}
+        )
+    }
+
+    @Test
+    fun readerChargeDeclined() = screen("counter-reader-declined", rail = "Counter") {
+        ReaderChargeDialog(
+            charge = CardCharge(
+                kind = CardChargeKind.READER, provider = PaymentProvider.SQUARE, status = CardChargeStatus.FAILED, amountCents = 11_224,
+                currency = "USD", readerName = "Front counter", error = "Your card was declined."
+            ),
+            onCancel = {}, onClose = {}
+        )
+    }
+
+    @Test
+    fun paymentLink() = screen("counter-payment-link", height = 1000, rail = "Counter") {
+        PaymentLinkDialog(
+            charge = CardCharge(
+                kind = CardChargeKind.LINK, provider = PaymentProvider.SQUARE, amountCents = 11_224, currency = "USD",
+                invoiceLabel = "INV-26-00000041", url = "https://square.link/u/AbCdEf12"
+            ),
+            onClose = {}
+        )
+    }
+
+    /** The Payments tab set up for Stripe with a reader, and charges in each state, one paid but never on an invoice */
+    @Test
+    fun adminPayments() {
+        val settings = PaymentSettings(
+            enabled = true,
+            provider = PaymentProvider.STRIPE,
+            stripeKeySet = true,
+            readers = listOf(CardReader("tmr_FfX3a9", "Front counter")),
+            onlinePayments = true
+        )
+        val charges = listOf(
+            CardCharge(kind = CardChargeKind.READER, provider = PaymentProvider.STRIPE, status = CardChargeStatus.PENDING, amountCents = 4_000, currency = "USD",
+                invoiceLabel = "INV-26-00000042", readerName = "Front counter", createdAt = now - 30_000, createdBy = "priya"),
+            CardCharge(kind = CardChargeKind.LINK, provider = PaymentProvider.STRIPE, status = CardChargeStatus.SUCCEEDED, amountCents = 11_224, currency = "USD",
+                invoiceLabel = "INV-26-00000041", createdAt = now - 3_600_000, createdBy = "customer", paymentIdentifier = kotlin.uuid.Uuid.random()),
+            CardCharge(kind = CardChargeKind.READER, provider = PaymentProvider.STRIPE, status = CardChargeStatus.SUCCEEDED, amountCents = 1_999, currency = "USD",
+                readerName = "Front counter", createdAt = now - 7_200_000, createdBy = "dana"),
+            CardCharge(kind = CardChargeKind.READER, provider = PaymentProvider.STRIPE, status = CardChargeStatus.FAILED, amountCents = 8_999, currency = "USD",
+                invoiceLabel = "INV-26-00000040", readerName = "Front counter", error = "Your card was declined.", createdAt = now - 86_400_000, createdBy = "dana")
+        )
+
+        screen("admin-payments", height = 1500, rail = "Admin") {
+            AdminPaymentsTab(
+                settings = settings, publicUrl = "https://repairs.example.com", accountReaders = listOf(CardReader("tmr_Gg71", "Back bench")),
+                charges = charges, chargesEnd = true, isBusy = false,
+                onSave = {}, onFindReaders = {}, onRefund = { _, _ -> }, onLoadMore = {}
+            )
+        }
     }
 
     /** A shop with a second tax rate: each line picks one and the totals show both */

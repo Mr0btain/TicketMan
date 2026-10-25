@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.components.service
 
+import org.mr0btain.ticketman.components.database.PaymentDatabase
+import org.mr0btain.ticketman.components.payments.CardPayments
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AppointmentDatabase
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
@@ -43,7 +45,8 @@ class CheckInService(
     private val devices: DeviceDatabase = DeviceDatabase(),
     private val passcodes: PasscodeDatabase = PasscodeDatabase(),
     private val vault: PasscodeVault? = null,
-    private val appointments: AppointmentDatabase = AppointmentDatabase()
+    private val appointments: AppointmentDatabase = AppointmentDatabase(),
+    private val cards: CardPayments = CardPayments(PaymentDatabase())
 ) {
     private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
 
@@ -95,6 +98,7 @@ class CheckInService(
         request.deposit?.let { deposit ->
             if (deposit.amountCents <= 0) return AccountResult.Invalid("Deposit has to be more than zero")
             storedValue.problem(listOf(deposit), request.customerIdentifier)?.let { return AccountResult.Conflict(it) }
+            cards.problem(listOf(deposit))?.let { return AccountResult.Conflict(it) }
         }
 
         request.appointmentIdentifier?.let { identifier ->
@@ -121,6 +125,8 @@ class CheckInService(
                 }
             }
         } catch (ex: StoredValuePayments.ShortOfValue) {
+            return AccountResult.Conflict(ex.message)
+        } catch (ex: CardPayments.ChargeTaken) {
             return AccountResult.Conflict(ex.message)
         } catch (ex: AppointmentTaken) {
             return AccountResult.Conflict("That appointment was checked in already")
@@ -155,14 +161,18 @@ class CheckInService(
 
                 request.deposit?.takeIf { index == 0 }?.let { deposit ->
                     invoices.getOrCreate(ticket.identifier, request.customerIdentifier, shopProfile.taxBasisPoints, shopProfile.taxRates)?.let { invoice ->
-                        val payment = storedValue.normalized(
-                            Payment(
-                                method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,
-                                note = deposit.note.ifBlank { "Deposit" }, reference = deposit.reference
-                            )
+                        val payment = cards.withCharge(
+                            storedValue.normalized(
+                                Payment(
+                                    method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,
+                                    note = deposit.note.ifBlank { "Deposit" }, reference = deposit.reference
+                                )
+                            ),
+                            deposit.chargeIdentifier
                         )
                         invoices.addPayment(invoice.identifier, payment)
                         storedValue.take(payment, request.customerIdentifier, invoice.identifier, invoice.label, takenBy)
+                        cards.claim(payment, invoice.identifier, invoice.label)
                     }
                 }
 

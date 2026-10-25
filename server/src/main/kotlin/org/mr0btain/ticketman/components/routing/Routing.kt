@@ -28,6 +28,8 @@ import org.mr0btain.ticketman.components.service.LoginLimiter
 import org.mr0btain.ticketman.components.service.StatusService
 import org.mr0btain.ticketman.components.service.EstimateService
 import org.mr0btain.ticketman.components.notify.NotificationService
+import org.mr0btain.ticketman.components.payments.CardPayments
+import org.mr0btain.ticketman.components.payments.PaymentService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.components.service.PasscodeVault
@@ -50,13 +52,22 @@ fun Application.configureRouting(
     localDatabase: LocalDatabase,
     loginLimiter: LoginLimiter = LoginLimiter(),
     passcodeVault: PasscodeVault? = null,
+    paymentService: PaymentService = PaymentService(
+        cards = CardPayments(localDatabase.paymentDatabase),
+        invoiceService = invoiceService,
+        invoices = localDatabase.invoiceDatabase,
+        tickets = localDatabase.ticketDatabase,
+        shop = localDatabase.shopDatabase,
+        auditLog = localDatabase.auditLogDatabase
+    ),
     statusService: StatusService = StatusService(
         tickets = localDatabase.ticketDatabase,
         customers = localDatabase.customerDatabase,
         invoices = localDatabase.invoiceDatabase,
         shop = localDatabase.shopDatabase,
         images = imageService,
-        estimates = estimateService
+        estimates = estimateService,
+        payments = paymentService
     ),
     appointmentService: AppointmentService = AppointmentService(
         appointments = localDatabase.appointmentDatabase,
@@ -122,7 +133,15 @@ fun Application.configureRouting(
         route(ApiRoutes.STATUS) {
             statusRoute(
                 service = statusService,
-                shopDatabase = localDatabase.shopDatabase
+                shopDatabase = localDatabase.shopDatabase,
+                payments = paymentService
+            )
+        }
+
+        route(ApiRoutes.PAYMENT) {
+            paymentRoute(
+                service = paymentService,
+                userDatabase = localDatabase.userDatabase
             )
         }
 

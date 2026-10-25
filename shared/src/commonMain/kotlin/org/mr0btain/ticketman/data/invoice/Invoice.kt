@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.data.invoice
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToLong
 import org.mr0btain.ticketman.data.MainItem
+import org.mr0btain.ticketman.data.payment.PaymentProvider
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -62,6 +63,10 @@ data class Invoice(
     val refundedCents: Long
         get() = -payments.filter { it.isRefund }.sumOf { it.amountCents }
 
+    /** What's left to give back of [payment] through the processor, after refunds made against it */
+    fun refundableCents(payment: Payment): Long =
+        payment.amountCents + payments.filter { it.refundOf == payment.identifier }.sumOf { it.amountCents }
+
     /** Paid less refunded, what the shop kept */
     val netPaidCents: Long
         get() = paidCents - refundedCents
@@ -118,6 +123,10 @@ data class InvoiceNumber(
  * @param note For a refund, the reason
  * @param returns Parts a refund put back in stock
  * @param reference The gift card's code for [PaymentMethod.GIFT_CARD]
+ * @param processor Taken or given back through the shop's card processor, null for money taken by hand
+ * @param processorReference The processor's id for the money: what a refund goes against, or the refund itself
+ * @param chargeIdentifier The [org.mr0btain.ticketman.data.payment.CardCharge] it came from
+ * @param refundOf For a refund through the processor, the payment it gives back
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -129,7 +138,11 @@ data class Payment(
     val receivedBy: String = "",
     val note: String = "",
     val returns: List<ReturnedPart> = emptyList(),
-    val reference: String = ""
+    val reference: String = "",
+    val processor: PaymentProvider? = null,
+    val processorReference: String = "",
+    val chargeIdentifier: Uuid? = null,
+    val refundOf: Uuid? = null
 ) {
     val isRefund: Boolean
         get() = amountCents < 0

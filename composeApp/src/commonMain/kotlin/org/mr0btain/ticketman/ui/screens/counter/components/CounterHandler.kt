@@ -43,7 +43,8 @@ enum class CounterView {
 /**
  * State and actions for the shop counter. Owned by the main view model. Holds the search, queue, shop profile,
  * ticket and customer cards and price check itself, and one part each for [checkIn], [pickup], [sale], the
- * [invoices] list, the [printer] and the open ticket's [estimates] and messages
+ * [invoices] list, the [printer], card payments through the processor ([cards]) and the open ticket's [estimates]
+ * and messages
  * @param canEdit Whether the signed in user can change things, restricted users can only look
  */
 class CounterHandler(
@@ -89,6 +90,7 @@ class CounterHandler(
     val invoices = CounterInvoices(remoteHandler, support)
     val printer = CounterPrinter(remoteHandler, support, shop = { _shop.value })
     val estimates = CounterEstimates(remoteHandler, support, reload = { reloadTicket() })
+    val cards = CounterCards(remoteHandler, support)
 
     private var searchJob: Job? = null
     private var priceJob: Job? = null
@@ -124,6 +126,7 @@ class CounterHandler(
     /** Loads the shop profile, done at login since amounts everywhere use its currency */
     fun refreshShop() {
         scope.launch { remoteHandler.adminRepo.getShopProfile()?.let { _shop.value = it } }
+        cards.refreshOptions()
     }
 
     /** An admin saved the shop profile on this device */
@@ -137,6 +140,7 @@ class CounterHandler(
             remoteHandler.counterRepo.queue(RECENT_LIMIT)?.let { _queue.value = it }
             remoteHandler.adminRepo.getShopProfile()?.let { _shop.value = it }
         }
+        cards.refreshOptions()
     }
 
     // ------------------------------------------ Moving around ------------------------------------------

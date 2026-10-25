@@ -14,7 +14,8 @@ cuts off the old link.
 The page shows the device (make and model, not the serial), the status and a timeline of status changes, the
 [estimate](estimate.md) waiting for an answer with its lines and a form to approve or decline it (or what they said
 to the last one), the promised date while it's open, notes marked `customerVisible` with their photos, the estimate, the invoice's total,
-paid and balance (not a void one, and no lines), the customer's first name and the shop's contact details. A status
+paid and balance (not a void one, and no lines), a **Pay online** button for the balance when the shop takes
+[payments online](payment.md), the customer's first name and the shop's contact details. A status
 the shop doesn't share (`CustomStatus.showCustomer` off) reads as the built-in one it acts as, and repeats it makes
 are dropped from the timeline. Never internal notes, who changed what, the serial or the customer's contact details.
 
@@ -50,6 +51,8 @@ The form's answer.
 
 **Auth:** none
 
+Waiting payment links on the ticket's invoice are asked about first, so a customer back from paying sees it paid.
+
 - **`200`** the ticket's page. **`404`** a page saying the link doesn't work, with a link to the form, for a token
   that isn't one or was replaced. **`429`** too many unknown links from this address.
 
@@ -74,7 +77,33 @@ A photo on one of the ticket's notes marked for the customer, `thumb` or `displa
 
 - **`200`** the JPEG. **`404`** a wrong link, a photo not on a shared note of this ticket, or another variant.
 
+### `GET /status/{token}/pay`
+
+**Auth:** none
+
+The page's **Pay online** button: a checkout page for the open invoice's balance, through
+[`PaymentService.link`](payment.md#post-apipaymentchargelink) (made by `customer`, the same link again while it's
+waiting). A plain link rather than a form, so the redirect to the processor isn't held to the page's `form-action`.
+Each address gets 10 in 15 minutes, and unknown links count toward the page's limit.
+
+- **`303`** to the processor's checkout, which comes back to the ticket's page.
+- **`409`** the page again saying why: paying online is off, nothing is owed, or the processor refused.
+  **`404`** an unknown link. **`429`** too many tries.
+
+### `POST /status/payments/{provider}/webhook`
+
+**Auth:** none
+
+The card processor, `stripe` or `square`, saying a payment changed. Here because the status page is the only part
+the proxy lets outside addresses reach. The signature is checked with the saved webhook secret (Stripe) or
+signature key over the shop's public address of this path (Square); a good one only makes the server ask the
+processor about the waiting charges it names. Bodies past 512 KB are cut off.
+
+- **`200`** checked. **`400`** a bad or missing signature, or no key saved. **`404`** not `stripe` or `square`, or
+  that processor isn't set up.
+
 ## See also
 
+- [Payments API](payment.md)
 - [Running a server: the customer status page](../operations.md#the-customer-status-page)
 - [Photos](../server/photos.md)

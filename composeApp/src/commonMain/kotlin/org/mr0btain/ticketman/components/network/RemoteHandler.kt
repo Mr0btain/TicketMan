@@ -79,10 +79,11 @@ class RemoteHandler(
     val reportRepo = ReportRemoteRepository(httpClient)
     val appointmentRepo = AppointmentRemoteRepository(httpClient)
     val timeClockRepo = TimeClockRemoteRepository(httpClient)
+    val paymentRepo = PaymentRemoteRepository(httpClient)
 
     /** Every repository, so [setUrl] points all of them at the server. A new one goes here too */
     private val repositories: List<ServerRepository> =
-        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo)
+        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo, paymentRepo)
 
     /**
      * Whether an expired session can be fixed by logging in again with the saved username and password.

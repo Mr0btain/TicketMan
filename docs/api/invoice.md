@@ -117,20 +117,27 @@ the totals again, with the tax rate the invoice was made with.
 
 Takes a payment, like a deposit, without closing anything.
 
-- **Body:** `PaymentRequest { method, amountCents, note, reference }`. `receivedBy` is filled in from the caller.
-  `STORE_CREDIT` spends the invoice's customer's credit; `GIFT_CARD` spends the card whose code is `reference`.
+- **Body:** `PaymentRequest { method, amountCents, note, reference, chargeIdentifier }`. `receivedBy` is filled in
+  from the caller. `STORE_CREDIT` spends the invoice's customer's credit; `GIFT_CARD` spends the card whose code is
+  `reference`. `chargeIdentifier` claims a card reader [charge](payment.md) paid with no invoice: method `CARD`, the
+  charge's amount, and the payment carries its `processor` and `processorReference`. Reader charges sent for this
+  invoice land on it by themselves.
 - **`200`** the updated `Invoice`.
 - **`400`** zero or less. **`404`** no such invoice. **`409`** the invoice is paid or void, store credit with no
-  customer on the invoice or not enough of it (`Only $10.00 of store credit left`), or no such gift card or not
-  enough on it (`Only $5.00 left on gift card GC-...`).
+  customer on the invoice or not enough of it (`Only $10.00 of store credit left`), no such gift card or not
+  enough on it (`Only $5.00 left on gift card GC-...`), or a named charge that isn't paid, is already on an invoice
+  or is for another amount.
 
 ### `DELETE /api/invoice/{identifier}/payments/{paymentIdentifier}`
 
 **Auth:** normal
 
-Takes a payment back off, for one entered by mistake. Store credit or a gift card gets back what it paid.
+Takes a payment back off, for one entered by mistake. Store credit or a gift card gets back what it paid. One taken
+through the [card processor](payment.md) is refunded onto its card first (what's left of it), then taken off with
+its charge marked `REFUNDED`.
 
-- **`200`** the updated `Invoice`. **`404`** no such invoice or payment. **`409`** the invoice is paid or void.
+- **`200`** the updated `Invoice`. **`404`** no such invoice or payment. **`409`** the invoice is paid or void, it's
+  a refund, or the processor didn't refund it (the payment stays).
 
 ### `POST /api/invoice/{identifier}/void`
 
@@ -152,15 +159,19 @@ as a payment with a negative `amountCents`, the reason as its `note` and the par
 stays paid. `paidCents` leaves refunds out, `refundedCents` adds them up and `netPaidCents` is the difference.
 Audited as `REFUND`.
 
-- **Body:** `RefundRequest { method, amountCents, reason, returns, reference }`. `amountCents` is positive, or zero
+- **Body:** `RefundRequest { method, amountCents, reason, returns, reference, paymentIdentifier }`. `amountCents` is positive, or zero
   when only parts come back; `returns` is a list of `ReturnedPart { inventoryIdentifier, quantity }`.
   `STORE_CREDIT` goes to the invoice's customer; `GIFT_CARD` goes onto the card `reference` names, or a new one
-  when it's blank, whose code is the refund's `reference`.
+  when it's blank, whose code is the refund's `reference`. `paymentIdentifier` names a card payment taken through
+  the [processor](payment.md) to give the money back onto that card (method `CARD`): the processor is asked first,
+  and the refund keeps its id as `processorReference` and the payment's as `refundOf`. `Invoice.refundableCents`
+  says what's left of a payment after refunds against it.
 - **`200`** the `Invoice` with the refund on it.
 - **`400`** no reason, a negative amount, nothing refunded or returned, more than `netPaidCents` (`Only $30.00 was
   paid on INV-...`), store credit on an invoice with no customer, a part the invoice didn't sell, or more of one than it sold less what was already returned
-  (`Only 1 of Cable can be returned on INV-...`). **`404`** no such invoice. **`409`** the invoice is open (take the
-  payment off instead) or void.
+  (`Only 1 of Cable can be returned on INV-...`), a `paymentIdentifier` that isn't a processor card payment on this
+  invoice, or more than is left of it. **`404`** no such invoice. **`409`** the invoice is open (take the payment off
+  instead) or void, or the processor refused the refund (nothing is saved).
 
 ### `DELETE /api/invoice/{identifier}`
 

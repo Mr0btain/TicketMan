@@ -33,6 +33,8 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketWorkTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHistoryTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.notify.NotifySettingsTable
+import org.mr0btain.ticketman.components.database.tables.payment.CardChargeTable
+import org.mr0btain.ticketman.components.database.tables.payment.PaymentSettingsTable
 import org.mr0btain.ticketman.components.database.tables.notify.OutboxTable
 import org.mr0btain.ticketman.components.database.tables.estimate.EstimateTable
 import org.mr0btain.ticketman.components.database.tables.storedvalue.CustomerCreditTable
@@ -109,6 +111,7 @@ class LocalDatabase (
     val reportDatabase = ReportDatabase(invoiceDatabase)
     val appointmentDatabase = AppointmentDatabase()
     val timeClockDatabase = TimeClockDatabase()
+    val paymentDatabase = PaymentDatabase()
     val imageDatabase = ImageDatabase { recordDatabases }
 
     /**
@@ -156,6 +159,8 @@ class LocalDatabase (
         CommissionRateTable,
         AppointmentTable,
         TimeEntryTable,
+        PaymentSettingsTable,
+        CardChargeTable,
         DataFixTable
     )
 

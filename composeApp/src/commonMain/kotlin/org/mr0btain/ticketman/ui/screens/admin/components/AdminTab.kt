@@ -11,6 +11,7 @@ enum class AdminTab(val label: String) {
     REPORTS("Reports"),
     TIMESHEETS("Timesheets"),
     MESSAGES("Messages"),
+    PAYMENTS("Payments"),
     SERVER("Server and data"),
     AUDIT("Audit log")
 }

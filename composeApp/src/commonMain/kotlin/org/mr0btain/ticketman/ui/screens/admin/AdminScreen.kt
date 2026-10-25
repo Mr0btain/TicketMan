@@ -21,6 +21,7 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
 import org.mr0btain.ticketman.ui.screens.admin.messages.AdminMessagesTab
+import org.mr0btain.ticketman.ui.screens.admin.payments.AdminPaymentsTab
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
@@ -94,6 +95,10 @@ private fun AdminContent(
     val messageSettings by admin.messages.settings.collectAsState()
     val outbox by admin.messages.outbox.collectAsState()
     val outboxEnd by admin.messages.outboxEnd.collectAsState()
+    val paymentSettings by admin.payments.settings.collectAsState()
+    val accountReaders by admin.payments.accountReaders.collectAsState()
+    val cardCharges by admin.payments.charges.collectAsState()
+    val cardChargesEnd by admin.payments.chargesEnd.collectAsState()
     val report by admin.reports.report.collectAsState()
     val reportRange by admin.reports.range.collectAsState()
     val commissions by admin.reports.commissions.collectAsState()
@@ -400,6 +405,19 @@ private fun AdminContent(
                 onRetry = { admin.messages.retry(it) },
                 onCancel = { admin.messages.cancel(it) },
                 onLoadMore = { admin.messages.loadMore() }
+            )
+
+            AdminTab.PAYMENTS -> AdminPaymentsTab(
+                settings = paymentSettings,
+                publicUrl = shopProfile?.publicUrl.orEmpty(),
+                accountReaders = accountReaders,
+                charges = cardCharges,
+                chargesEnd = cardChargesEnd,
+                isBusy = isLoading,
+                onSave = { admin.payments.save(it) },
+                onFindReaders = { admin.payments.findReaders() },
+                onRefund = { charge, reason -> admin.payments.refund(charge, reason) },
+                onLoadMore = { admin.payments.loadMore() }
             )
 
             AdminTab.AUDIT -> AdminAuditTab(

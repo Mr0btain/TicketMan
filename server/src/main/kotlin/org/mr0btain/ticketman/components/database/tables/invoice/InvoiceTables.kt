@@ -77,4 +77,11 @@ object InvoicePaymentTable : UuidTable("invoice_payments") {
 
     // Added with gift cards: the card's code for a GIFT_CARD payment or refund
     val reference = text("reference").default("")
+
+    // Added with card processing: the processor, its id for the money, the charge it came from and what a refund
+    // gives back
+    val processor = text("processor").nullable()
+    val processorReference = text("processor_reference").default("")
+    val charge = uuid("charge_id").nullable()
+    val refundOf = uuid("refund_of").nullable()
 }

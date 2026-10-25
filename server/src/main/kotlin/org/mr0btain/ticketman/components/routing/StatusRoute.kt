@@ -6,6 +6,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.ShopDatabase
+import org.mr0btain.ticketman.components.payments.PaymentService
 import org.mr0btain.ticketman.components.service.StatusPage
 import org.mr0btain.ticketman.components.service.StatusService
 import org.mr0btain.ticketman.data.image.ImageVariant
@@ -20,7 +21,8 @@ import kotlin.uuid.ExperimentalUuidApi
 @OptIn(ExperimentalUuidApi::class)
 fun Route.statusRoute(
     service: StatusService,
-    shopDatabase: ShopDatabase
+    shopDatabase: ShopDatabase,
+    payments: PaymentService? = null
 ) {
     // The lookup form
     get {
@@ -104,6 +106,46 @@ fun Route.statusRoute(
         }
     }
 
+    // Off to the processor's checkout for the balance. A GET from a plain link, see StatusPage
+    get(StatusPaths.PAY) {
+        val token = call.parameters["token"].orEmpty()
+        val shop = shopDatabase.get()
+
+        when (val pay = service.pay(token, call.request.origin.remoteHost)) {
+            is StatusService.Pay.Checkout -> {
+                call.response.header(HttpHeaders.Location, pay.url)
+                call.response.header(HttpHeaders.CacheControl, "no-store")
+                call.response.header("Referrer-Policy", "no-referrer")
+                call.respond(HttpStatusCode.SeeOther)
+            }
+
+            is StatusService.Pay.Problem -> call.respondStatusPage(HttpStatusCode.Conflict, StatusPage.ticket(pay.view))
+
+            StatusService.Pay.NotFound -> call.respondStatusPage(
+                HttpStatusCode.NotFound,
+                StatusPage.message(shop, "That link doesn't work", "It may have been replaced by a newer one. Call us to pay.", "../../status")
+            )
+
+            StatusService.Pay.Limited -> call.respondStatusPage(
+                HttpStatusCode.TooManyRequests,
+                StatusPage.message(shop, "Too many tries", "Wait a while and try again.", "../../status")
+            )
+        }
+    }
+
+    // The card processor saying a payment changed. Checked against its signature, then only used to ask about charges
+    post(StatusPaths.PAYMENT_WEBHOOK) {
+        if (payments == null) return@post call.respond(HttpStatusCode.NotFound)
+        val body = call.receiveText().take(MAX_WEBHOOK)
+        val headers = call.request.headers
+
+        when (payments.webhook(call.parameters["provider"].orEmpty(), { headers[it] }, body)) {
+            PaymentService.Webhook.Done -> call.respond(HttpStatusCode.OK)
+            PaymentService.Webhook.NotFound -> call.respond(HttpStatusCode.NotFound)
+            PaymentService.Webhook.Refused -> call.respond(HttpStatusCode.BadRequest)
+        }
+    }
+
     get(StatusPaths.PHOTO) {
         val identifier = call.uuidParameter("identifier")
         val variant = call.parameters["variant"]?.let { ImageVariant.fromPath(it) }
@@ -143,3 +185,6 @@ private suspend fun RoutingCall.respondStatusPage(status: HttpStatusCode, html: 
 
 /** Longer than any ticket number or phone, so a huge field isn't parsed */
 private const val MAX_FIELD = 40
+
+/** Far more than a payment event, which is a few KB */
+private const val MAX_WEBHOOK = 512 * 1024

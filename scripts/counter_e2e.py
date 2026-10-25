@@ -533,6 +533,69 @@ payment_rows = paid_csv.decode().strip().split("\r\n")
 check(status == 200 and any(",-129.90," in r and "Cracked in the box" in r for r in payment_rows), f"payments {status}: {payment_rows[:3]}")
 step(f"Today's books export: {len(qb_rows) - 1} QuickBooks lines, {len(xero_rows) - 1} Xero lines and {len(payment_rows) - 1} payments, the screen's refund among them")
 
+# ------------------------------------------ Card payments ------------------------------------------
+def charge_settled(identifier, seconds=20):
+    """Asks about a reader charge like the counter does, until it's no longer waiting"""
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        _, charge = call("GET", f"/api/payment/charge/{identifier}", token=pin, expect=200)
+        if charge["status"] != "PENDING":
+            return charge
+        time.sleep(0.5)
+    raise SystemExit(f"FAIL charge {identifier} still waiting after {seconds}s")
+
+
+simulated = {"enabled": True, "provider": "SIMULATED", "readers": [{"identifier": "sim_reader_1", "name": "Front reader"}], "onlinePayments": True}
+status, _ = call("POST", "/api/payment/settings", simulated, admin)
+if status == 400:
+    step("Card payments skipped: the simulated processor only runs on a server in development mode")
+else:
+    check(status == 200, f"payment settings answered {status}")
+    _, shop = call("GET", "/api/shop", token=admin, expect=200)
+    call("POST", "/api/shop/update", {**shop, "publicUrl": BASE}, admin, expect=202)
+    _, options = call("GET", "/api/payment/options", token=pin, expect=200)
+    check(options["enabled"] and options["links"] and options["onlinePayments"] and [r["name"] for r in options["readers"]] == ["Front reader"], f"options {options}")
+
+    mini = arrived["ticket"]
+    _, mini_invoice = call("POST", f"/api/invoice/ticket/{mini['identifier']}", token=pin, expect=200)
+    _, mini_invoice = call("POST", f"/api/invoice/{mini_invoice['identifier']}/update", {
+        "added": [{"identifier": uid(), "type": "LABOR", "description": "iPad mini screen", "quantity": 1, "unitPriceCents": 9000, "taxable": False}]
+    }, pin, expect=200)
+    invoice_id = mini_invoice["identifier"]
+    owed = mini_invoice["totalCents"] - sum(p["amountCents"] for p in mini_invoice["payments"])
+
+    reader = {"readerIdentifier": "sim_reader_1", "invoiceIdentifier": invoice_id}
+    call("POST", "/api/payment/charge/reader", {**reader, "amountCents": owed + 1}, pin, expect=400)
+    _, declined = call("POST", "/api/payment/charge/reader", {**reader, "amountCents": 1002}, pin, expect=201)
+    declined = charge_settled(declined["identifier"])
+    check(declined["status"] == "FAILED" and "declined" in declined["error"], f"declined {declined}")
+    _, deposit = call("POST", "/api/payment/charge/reader", {**reader, "amountCents": 4000}, pin, expect=201)
+    deposit = charge_settled(deposit["identifier"])
+    _, mini_invoice = call("GET", f"/api/invoice/{invoice_id}", token=pin, expect=200)
+    card = next(p for p in mini_invoice["payments"] if p.get("chargeIdentifier") == deposit["identifier"])
+    check(deposit["status"] == "SUCCEEDED" and card["method"] == "CARD" and card["processor"] == "SIMULATED" and card["amountCents"] == 4000, f"reader payment {deposit} {card}")
+
+    # The rest from Jane's status page: off to the checkout, which sends her back paid
+    status, html, _ = page(f"/status/{mini['statusToken']}")
+    check(f"Pay ${(owed - 4000) / 100:,.2f} online" in html, "status page should offer paying online")
+    status, _, headers = page(f"/status/{mini['statusToken']}/pay")
+    check(status == 303 and headers["Location"].endswith(f"/status/{mini['statusToken']}"), f"pay answered {status} {headers.get('Location')}")
+    status, html, _ = page(f"/status/{mini['statusToken']}")
+    _, mini_invoice = call("GET", f"/api/invoice/{invoice_id}", token=pin, expect=200)
+    paid = sum(p["amountCents"] for p in mini_invoice["payments"])
+    check("online</a>" not in html and paid == mini_invoice["totalCents"], f"after paying online, paid {paid} of {mini_invoice['totalCents']}")
+
+    call("POST", "/api/counter/pickup", {"ticketIdentifier": mini["identifier"]}, pin, expect=200)
+    call("POST", f"/api/invoice/{invoice_id}/refund", {"method": "CARD", "amountCents": 1000, "reason": "Goodwill", "paymentIdentifier": card["identifier"]}, pin, expect=403)
+    _, refunded = call("POST", f"/api/invoice/{invoice_id}/refund", {"method": "CARD", "amountCents": 1000, "reason": "Goodwill", "paymentIdentifier": card["identifier"]}, admin, expect=200)
+    refund = next(p for p in refunded["payments"] if p.get("refundOf") == card["identifier"])
+    check(refund["amountCents"] == -1000 and refund["processorReference"].startswith("sim_re_"), f"card refund {refund}")
+    call("POST", f"/api/invoice/{invoice_id}/refund", {"method": "CARD", "amountCents": 3001, "reason": "Too much", "paymentIdentifier": card["identifier"]}, admin, expect=400)
+
+    call("POST", "/api/payment/settings", {**simulated, "enabled": False}, admin, expect=200)
+    call("POST", "/api/shop/update", shop, admin, expect=202)
+    step(f"Simulated card reader: a declined card changes nothing, $40.00 lands on the iPad mini's invoice, Jane pays the other ${(owed - 4000) / 100:.2f} from her status page, and $10.00 goes back onto the card")
+
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}
 check(("newtech", "Front Counter", "PIN") in kinds and ("newtech", "Back Desk", "PASSWORD") in kinds, f"sessions {kinds}")

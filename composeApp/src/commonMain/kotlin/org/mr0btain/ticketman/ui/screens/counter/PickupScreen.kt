@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.min
 import org.mr0btain.ticketman.data.giftcard.GiftCard
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.invoice.*
+import org.mr0btain.ticketman.data.payment.CardReader
 import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
@@ -39,6 +40,8 @@ private val INVOICE_MIN_WIDTH = 560.dp
  * Builds the invoice, takes payment and hands the ticket back
  * @param onFinish Saves the lines if they changed, takes [PaymentRequest]s and finishes, calls back with what went
  * wrong or null if it worked
+ * @param onReaderCharge Sends an amount to a card reader for the invoice, which lands on it once paid
+ * @param onPaymentLink Shows a link the customer pays the balance from
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -50,7 +53,10 @@ fun PickupScreen(
     onLookupGiftCard: suspend (String) -> GiftCard?,
     onFindCode: (suspend (String) -> Inventory?)? = null,
     onFinish: (List<Charge>, Long, List<PaymentRequest>, (String?) -> Unit) -> Unit,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    readers: List<CardReader> = emptyList(),
+    onReaderCharge: ((CardReader, Long) -> Unit)? = null,
+    onPaymentLink: (() -> Unit)? = null
 ) {
     val ticket = detail.ticket
     val invoice = detail.invoice ?: return
@@ -71,6 +77,18 @@ fun PickupScreen(
     // The rates the invoice kept, and the shop's for classes it hasn't used yet, like the server does
     val totals = InvoiceMath.totals(validCharges, discountCents, invoice.taxRateBasisPoints, TaxClasses.merged(invoice.taxRates, LocalTaxes.current.classes))
     val unsaved = problem == null && (validCharges != invoice.charges || discountCents != invoice.discountCents)
+
+    // Runs [then] once the lines on screen are saved, straight away when nothing changed
+    fun savedThen(then: () -> Unit) {
+        if (!unsaved) return then()
+        busy = true
+        message = null
+        onSave(validCharges, discountCents) { failed ->
+            busy = false
+            message = failed
+            if (failed == null) then()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -134,6 +152,12 @@ fun PickupScreen(
                     busy = busy,
                     creditCents = detail.customer?.creditCents,
                     onLookupGiftCard = onLookupGiftCard,
+                    readers = readers,
+                    // The server checks against the saved balance, so lines changed on screen are saved first
+                    onReaderCharge = onReaderCharge?.let { charge ->
+                        { reader, amount -> savedThen { charge(reader, amount) } }
+                    },
+                    onPaymentLink = onPaymentLink?.let { link -> { savedThen(link) } },
                     onFinish = {
                         busy = true
                         message = null

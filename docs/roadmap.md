@@ -113,10 +113,22 @@ and tax rate names, plus a payments export for the bank.
 
 ## Phase 7: Big integrations
 
-- **Payment processing** [14]. Card terminals and payment links (Stripe Terminal or Square), and paying the balance
-  from the status page.
-- **More than one location** [21]. A location on tickets, stock, stations, users and numbering. It touches nearly
-  every query, so it comes last.
+- **Payment processing** [14] (done). Card terminals and payment links (Stripe Terminal or Square), and paying the
+  balance from the status page.
+- **More than one location** [21]. One server for every shop, with a location on tickets, stock, stations, users and
+  numbering. Each location can work on its own: its counter, queue, stock and staff show only its own, so running
+  one shop day to day doesn't mean wading through the others. Customers stay company wide: looking one up shows
+  their tickets at every location, and their store credit, gift cards and devices go with them. Reports and admin
+  can look at one location or all of them. It touches nearly every query, so it comes last.
+
+Payments are built as above ([Payments API](api/payment.md)), with Stripe and Square behind one
+`PaymentProcessor`, so a shop picks either. Every try at a card is a charge the server follows itself, asking the
+processor while the counter waits, every so often after, and when a webhook says so (webhooks are optional and only
+say what to ask about). A paid charge lands on its invoice as a card payment; one taken for a sale or a deposit
+before its invoice exists is claimed by the payment that names it. Refunds of card payments go back onto the card.
+A simulated processor stands in on development servers for the tests and `scripts/counter_e2e.py`. Still to come:
+check in deposits on a reader from the counter's wizard (the server takes them already), sending a payment link by
+email or text, and tipping and surcharges.
 
 ## iOS app
 
@@ -176,6 +188,6 @@ runners, but nobody has run it on a Mac yet.
 - Phase 1 (settled): the server is reached from the internet through the proxy, which lets outside addresses
   reach only `/status`. Nothing is pushed elsewhere.
 - Phase 2 (settled): Twilio for texts behind an `SmsSender` interface, and shops bring their own SMTP server.
-- Phase 7: which payment processor, and is "more than one location" one server for several shops or one server
-  per shop with reporting across them?
+- Phase 7 (settled): both Stripe and Square, behind one interface. More than one location is one server for every
+  shop, each able to keep to its own tickets, stock and staff, with customers shared across them.
 - iOS: is it shared by sideloading, or is a paid Apple Developer account worth it for TestFlight and the App Store?

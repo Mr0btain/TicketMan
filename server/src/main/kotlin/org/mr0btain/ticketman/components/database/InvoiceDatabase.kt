@@ -17,6 +17,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceChargeTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoicePaymentTable
+import org.mr0btain.ticketman.data.payment.PaymentProvider
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceTable
 import org.mr0btain.ticketman.data.invoice.*
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -158,6 +159,10 @@ class InvoiceDatabase(
                 row[InvoicePaymentTable.note] = payment.note
                 row[InvoicePaymentTable.returns] = payment.returns
                 row[InvoicePaymentTable.reference] = payment.reference
+                row[InvoicePaymentTable.processor] = payment.processor?.name
+                row[InvoicePaymentTable.processorReference] = payment.processorReference
+                row[InvoicePaymentTable.charge] = payment.chargeIdentifier
+                row[InvoicePaymentTable.refundOf] = payment.refundOf
             }
 
             InvoiceTable.selectAll().where { InvoiceTable.id eq identifier }.firstOrNull()?.toInvoice()
@@ -319,7 +324,11 @@ class InvoiceDatabase(
                     receivedBy = row[InvoicePaymentTable.receivedBy],
                     note = row[InvoicePaymentTable.note],
                     returns = row[InvoicePaymentTable.returns],
-                    reference = row[InvoicePaymentTable.reference]
+                    reference = row[InvoicePaymentTable.reference],
+                    processor = row[InvoicePaymentTable.processor]?.let { name -> PaymentProvider.entries.firstOrNull { it.name == name } },
+                    processorReference = row[InvoicePaymentTable.processorReference],
+                    chargeIdentifier = row[InvoicePaymentTable.charge],
+                    refundOf = row[InvoicePaymentTable.refundOf]
                 )
             }
 

@@ -282,6 +282,35 @@ customer was sent. The server needs to reach the mail server (port 587 or 465 ou
 The mail password and Twilio token are kept in the database, so they're in backups too: treat a backup like the
 passwords it holds.
 
+## Card payments
+
+The counter can send an amount to a card reader, show the customer a payment link (with a QR code to scan), and the
+status page can take the balance online. They go through the shop's own [Stripe](https://stripe.com) or
+[Square](https://squareup.com) account; Admin > Payments sets it up and lists every charge. The
+[Payments API](api/payment.md) has the details.
+
+- **Stripe** needs the account's secret key (a restricted key with PaymentIntents, Checkout Sessions, Refunds and
+  Terminal readers is enough). Readers are Stripe Terminal readers registered to the account (server driven, like
+  the WisePOS E or S700); **Find the account's readers** lists them to add.
+- **Square** needs an access token, the location payment links are made for, and Production or Sandbox. Readers are
+  Square Terminals paired through device codes in the Square dashboard.
+- **Paying online and payment links** need the [public address](#the-customer-status-page), since the checkout comes
+  back to the ticket's status page. With **Customers can pay the balance from their status page** on, the page
+  shows a **Pay online** button while something is owed.
+- **Webhooks are optional.** The server asks the processor about each waiting charge itself: every 10 seconds while
+  the counter waits on a reader, every minute for a new link, every 5 minutes after that, and gives up on a reader
+  after 30 minutes and a link after 7 days. To hear sooner, point a webhook at
+  `https://<public address>/status/payments/stripe/webhook` (`payment_intent.*` and `checkout.session.*` events) or
+  `.../square/webhook` (`payment.updated` and `terminal.checkout.updated`) and save its signing secret or signature
+  key. That path is under `/status`, so the proxy rules above already let the processor reach it.
+- **Refunds** of card payments go back onto the card through the processor: an admin's refund on a paid invoice
+  picks the payment, and taking a card payment off an open invoice refunds it first. A charge paid on a reader but
+  never put on an invoice (a sale nobody finished) shows on Admin > Payments as not on an invoice, with **Refund**.
+- **Simulated** pretends to take cards, for trying the counter out on a server started in development mode only.
+
+The server needs to reach `api.stripe.com` or `connect.squareup.com` (443 out). The keys are kept in the database,
+so they're in backups too, like the mail password.
+
 ## Web client
 
 A server built with `-PwithWeb` serves the web client at `/`, on the same address as the API:
