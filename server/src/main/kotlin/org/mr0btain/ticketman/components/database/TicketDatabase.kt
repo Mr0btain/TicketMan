@@ -39,6 +39,7 @@ import org.mr0btain.ticketman.data.search.SearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
+import org.mr0btain.ticketman.data.ticket.StatusLink
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.data.ticket.TicketNumber
 import org.mr0btain.ticketman.data.ticket.TicketSignature
@@ -50,6 +51,7 @@ import org.mr0btain.ticketman.error.CustomerError
 import org.mr0btain.ticketman.error.TicketError
 import org.mr0btain.ticketman.error.UserError
 import org.mr0btain.ticketman.logging.AppLogger
+import java.security.SecureRandom
 import java.time.Instant
 import java.time.Year
 import java.time.ZoneId
@@ -78,6 +80,10 @@ class TicketDatabase(
     private val GET_USER_TAG = "$tag:GetUser"
     private val GET_PAGED_FOR_USER_TAG = "$tag:GetPagedForUser"
     private val MARK_PICKED_UP_TAG = "$tag:MarkPickedUp"
+    private val STATUS_TOKEN_TAG = "$tag:StatusToken"
+    private val BACKFILL_TOKENS_TAG = "$tag:BackfillStatusTokens"
+    private val READY_TAG = "$tag:ReadyForPickup"
+    private val SET_ESTIMATE_TAG = "$tag:SetEstimate"
 
     override fun getById(identifier: Uuid): Ticket? =
         dbQuery(GET_BY_ID_TAG) {
@@ -161,10 +167,14 @@ class TicketDatabase(
 
     /**
      * Tickets matching a number ("26-42" exact, "42" any year), part of the id, device make/model/serial or problem.
-     * Newest number first
+     * A status page link (the claim slip's QR, scanned) finds just its ticket. Newest number first
      */
     fun searchTickets(query: String, limit: Int): List<Ticket>? =
         dbQuery(SEARCH_TAG) {
+            StatusLink.tokenIn(query)?.let { token ->
+                return@dbQuery TicketEntity.find { TicketTable.statusToken eq token }.limit(1).map { it.toTicket() }
+            }
+
             val text = query.trim().lowercase()
             val contains = "%$text%"
 
@@ -216,6 +226,12 @@ class TicketDatabase(
             accessories = data.accessories
             estimateCents = data.estimateCents
             promisedAt = data.promisedAt
+            deviceRef = data.deviceIdentifier
+            group = data.groupIdentifier
+            checklist = data.checklist
+            warrantyOf = data.warrantyOf
+            // Never the client's, so nobody picks a link they know
+            statusToken = newStatusToken()
         }
     }
 
@@ -253,6 +269,46 @@ class TicketDatabase(
         }
     }
 
+    /**
+     * Gives tickets made before status links one each
+     */
+    fun backfillStatusTokens() {
+        dbWrite(BACKFILL_TOKENS_TAG) {
+            TicketEntity.find { TicketTable.statusToken.isNull() }.forEach { ticketEntity ->
+                ticketEntity.statusToken = newStatusToken()
+            }
+
+            true
+        }
+    }
+
+    /** The ticket whose status page link has [token], null for a token that isn't one or was replaced */
+    fun getByStatusToken(token: String): Ticket? {
+        if (!StatusLink.isToken(token)) return null
+
+        return dbQuery(STATUS_TOKEN_TAG) {
+            TicketEntity.find { TicketTable.statusToken eq token }.firstOrNull()?.toTicket()
+        }
+    }
+
+    /**
+     * Gives the ticket a new status token, so a link handed out before stops working
+     * @return The new token, null when there's no such ticket
+     */
+    fun replaceStatusToken(identifier: Uuid): String? {
+        val token = newStatusToken()
+
+        return token.takeIf {
+            dbWrite(STATUS_TOKEN_TAG) {
+                val ticketEntity = TicketEntity.findById(identifier)
+                    ?: return@dbWrite false.also { AppLogger.i(STATUS_TOKEN_TAG, TicketError.NOT_FOUND) }
+
+                ticketEntity.statusToken = token
+                true
+            }
+        }
+    }
+
     /** Saves the check in signature, replacing any the ticket had */
     fun setSignature(identifier: Uuid, signature: TicketSignature): Boolean =
         dbWrite(SIGNATURE_TAG) {
@@ -275,13 +331,42 @@ class TicketDatabase(
         }
 
     /** Closes a ticket as picked up at [time] */
-    fun markPickedUp(identifier: Uuid, time: Long): Boolean =
+    /** @param warrantyUntil When its repair's warranty runs out, null for none */
+    fun markPickedUp(identifier: Uuid, time: Long, warrantyUntil: Long? = null): Boolean =
         dbWrite(MARK_PICKED_UP_TAG) {
             val ticket = TicketEntity.findById(identifier)
                 ?: return@dbWrite false.also { AppLogger.i(MARK_PICKED_UP_TAG, TicketError.NOT_FOUND) }
 
             ticket.status = TicketStatus(TicketStatusType.PICKED_UP, time)
             ticket.pickedUpAt = time
+            ticket.warrantyUntil = warrantyUntil
+            true
+        }
+
+    /** Tickets waiting to be picked up, ready longest first */
+    fun readyForPickup(): List<Ticket>? =
+        dbQuery(READY_TAG) {
+            TicketEntity.find { TicketTable.pickedUpAt.isNull() and TicketTable.abandonedAt.isNull() }
+                .map { it.toTicket() }
+                .filter { it.status.status == TicketStatusType.DONE }
+                .sortedBy { it.status.time }
+        }
+
+    /** Treats the ticket as abandoned from [time], left too long after it was ready */
+    fun markAbandoned(identifier: Uuid, time: Long): Boolean =
+        dbWrite(READY_TAG) {
+            val ticket = TicketEntity.findById(identifier) ?: return@dbWrite false
+            ticket.abandonedAt = time
+            true
+        }
+
+    /** Sets the quoted price, like when the customer approves an estimate */
+    fun setEstimate(identifier: Uuid, cents: Long?): Boolean =
+        dbWrite(SET_ESTIMATE_TAG) {
+            val ticket = TicketEntity.findById(identifier)
+                ?: return@dbWrite false.also { AppLogger.i(SET_ESTIMATE_TAG, TicketError.NOT_FOUND) }
+
+            ticket.estimateCents = cents
             true
         }
 
@@ -333,10 +418,12 @@ class TicketDatabase(
             val item = TicketEntity.findById(data.identifier)
                 ?: return@dbWrite false.also { AppLogger.i(UPDATE_TAG, TicketError.NOT_FOUND) }
 
-            // Number and pick up time are owned by the server, so they aren't taken from the client. Neither is a
+            // Number, status token and pick up time are owned by the server, so they aren't taken from the client. Nor a
             // picked up status: only pickup sets it, and once set it stays, even if the client sent an older status
             item.device = data.device
             if (item.status.status != TicketStatusType.PICKED_UP && data.status.status != TicketStatusType.PICKED_UP) {
+                // Moved on by hand, so it's not abandoned any more and its ready time starts again
+                if (item.status.choice != data.status.choice) item.abandonedAt = null
                 item.status = data.status
             }
             item.priority = data.priority
@@ -345,6 +432,7 @@ class TicketDatabase(
             item.accessories = data.accessories
             item.estimateCents = data.estimateCents
             item.promisedAt = data.promisedAt
+            item.checklist = data.checklist
 
             true
         }
@@ -462,5 +550,13 @@ class TicketDatabase(
     companion object {
         // Shared by every instance so numbering stays one at a time
         private val NUMBER_LOCK = Any()
+
+        private val random = SecureRandom()
+
+        /** 16 random bytes as hex: lowercase, so it survives the search's lowercasing, and safe in a link */
+        fun newStatusToken(): String {
+            val bytes = ByteArray(StatusLink.TOKEN_LENGTH / 2).also { random.nextBytes(it) }
+            return bytes.joinToString("") { "%02x".format(it) }
+        }
     }
 }

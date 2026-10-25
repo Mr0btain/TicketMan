@@ -13,6 +13,7 @@ shared/build/kotlinProjectStructureMetadata/kotlin-project-structure-metadata.js
 /kotlin-js-store/
 # docker-compose.yml settings
 /.env
+/docker/.env
 
 # Release signing keys, see docs/releasing.md
 *.jks

@@ -13,21 +13,24 @@ documented in [the server pages](#see-also).
 checks `session.isAdmin`. Anyone else who gets here sees "Admin access required" (with a Log in button if they're
 logged out); the server refuses their requests anyway.
 
-For an admin it shows `TmTabs` and a **Refresh** button. Opening a tab calls `AdminHandler.refresh(tab)`, which
-loads only what that tab shows, plus the accounts waiting on someone: the Users tab shows a badge with their number
-from any tab. The Users tab also reloads the users list, and the Invoices tab loads its own list through the
-counter. Refresh does the same for the open tab.
+For an admin it shows `TmTabs`. Opening a tab calls `AdminHandler.refresh(tab)`, which loads only what that tab
+shows, plus the accounts waiting on someone: the Users tab shows a badge with their number from any tab. The Users
+tab also reloads the users list, and the Invoices tab loads its own list through the counter.
 
-On the Settings interval, while no dialog is open and nothing is loading, `CheckForUpdates` calls
-`AdminHandler.checkForUpdates(tab)`: the same reloads without the spinner, leaving out what would lose someone's place
-(the audit log and invoices, which reload from the top, the end of day report, which may be on another day, and the
-shop profile, which may be half edited). Refresh still does all of it.
+After that every tab keeps itself up to date: on the Settings interval, while no dialog is open and nothing is
+loading, `CheckForUpdates` calls `AdminHandler.checkForUpdates(tab)`, the same reloads without the spinner, done so
+nobody loses their place. The audit log and the invoices only get new entries added on top and changed invoices
+updated where they are (`addNewAudit`, `CounterInvoices.checkForUpdates`), the users list refreshes the loaded pages,
+the reports and timesheets reload for the same days, and the end of day report stays on its day; the shop profile
+isn't reloaded, since it may be half edited. So there's no Refresh button, unless updates are turned off in
+Settings, when one shows beside the tabs.
 
 All the state is in
 [`AdminHandler`](../../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/screens/admin/components/AdminHandler.kt),
 which holds the overview, low stock and audit log itself and one part per group of tabs: `admin.accounts`
 (`AdminAccounts`, the Users tab), `admin.devices` (`AdminDevices`, Stations and Sessions) and `admin.server`
-(`AdminServer`, the Server tab). The parts share an `AdminSupport`: every change goes through its `report(...)`,
+(`AdminServer`, the Server tab), plus `admin.messages` (`AdminMessages`) and `admin.reports` (`AdminReports`, the
+Reports tab, whose ranges are the invoice export's `ExportRange`) and `admin.timesheets` (`AdminTimesheets`). The parts share an `AdminSupport`: every change goes through its `report(...)`,
 which shows a snackbar and reloads the audit log. The users list itself comes from the shared `UserRecords` pager
 and seed, like the record lists.
 
@@ -40,8 +43,10 @@ and seed, like the record lists.
 | **Sessions** | Logged in devices grouped by user, with password or PIN, when they logged in, were last active and expire; **Blocked logins**: usernames and device addresses locked out for wrong passwords, until when, and a warning during a server wide surge | Log out one device (not this device's own session); let a blocked username or address try again | [Authentication and sessions](../../server/auth.md#sessions), [Wrong password limits](../../server/auth.md#wrong-password-limits) |
 | **Stations** | Devices that asked to be counter stations | Approve, remove, turn kiosk mode on and set its idle timeout | [PINs and stations](../../server/pins-and-stations.md) |
 | **Low stock** | Tracked items at or below a threshold (5 by default, saved on this device) | Change the threshold; click an item to open it on the records screen | |
-| **Invoices** | Every invoice, newest first, with its status, total, paid and balance; one kept after its ticket was deleted says "Ticket 26-... deleted" under its number | Click one to open its ticket at the counter (not a kept one); save one as a PDF; void any that isn't void yet; delete a kept one, after a confirm saying its payments leave the books; load older ones; **Export CSV** for a month, a year or chosen days (`InvoiceExportDialog`) | `GET /api/invoice/fetch`, `/{id}/pdf`, `/export`, [Invoices API](../../api/invoice.md) |
-| **Server and data** | Server address (badged **Not secure** over plain HTTP), name, version, uptime, database and photo sizes, Java and OS, mode, time zone, "Handled by reverse proxy", this device's address as the server sees it with whether it was forwarded (warned when not) and the trusted proxies; the shop profile; backup and restore, the daily backup's folder and last run, and the last restore (warned when it had no photos); mock data on development servers | Edit the shop profile (name, contact, tax rate, currency symbol, invoice footer, repair terms, repeat window, default paper), download a backup, upload one to restore on next start (warned when the file looks database only), cancel a waiting restore or restart the server to apply it (when `canRestart`), import customers or inventory from a CSV (`ImportCard`, `ImportDialog`, `AdminImport`), seed test data | [Backup and restore](../../server/backup-restore.md), [Running a server](../../operations.md) |
+| **Invoices** | Every invoice, newest first, with its status, total, paid (and refunded) and balance; one kept after its ticket was deleted says "Ticket 26-... deleted" under its number, a sale says "Counter sale" | Click one to open its ticket at the counter (not a kept one or a sale); save one as a PDF; **Refund** a paid one (`RefundDialog`: amount, how it goes back, a reason, and how many of each part come back to stock); void any that isn't void yet; delete a kept one, after a confirm saying its payments leave the books; load older ones; **Export CSV** for a month, a year or chosen days, as invoices for a spreadsheet, QuickBooks or Xero's import, or the payments (`InvoiceExportDialog`); under it, **Gift cards** (`GiftCardsPanel`) lists every card with what was loaded and what's left, with **Adjust** | `GET /api/invoice/fetch`, `/{id}/pdf`, `/{id}/refund`, `/export`, `/api/giftcard/fetch`, [Invoices API](../../api/invoice.md) |
+| **Reports** | Pick this month, last month, this year, last year or chosen days: stat tiles (sales, net sales, gross profit with the parts cost, tax, money taken, refunded), a warning when part lines have no cost, sales by type, money taken by method, tax by rate, turnaround (median and average to ready and to pickup), techs with tickets, hours, labor, parts and commission, sales by day, and the refunds | Print it; **Commission rates** (`CommissionDialog`) sets each user's percent of the labor they bill | `GET /api/report/period`, `/commissions`, [Reports API](../../api/report.md) |
+| **Timesheets** | Who's on the clock now, then each person's time on the clock over this month, last month, this year, last year or chosen days, with their total hours, each stretch's day, in, out, hours, station, note and who changed it | **Add time** for a forgotten clock in, change or delete a stretch (`TimeEntryDialog`: day, in, out (blank is still on, earlier than in runs past midnight), note) | `GET /api/timeclock/timesheet`, `/now`, `/entry/*`, [Time clock API](../../api/timeclock.md) |
+| **Server and data** | Server address (badged **Not secure** over plain HTTP), name, version, uptime, database and photo sizes, Java and OS, mode, time zone, "Handled by reverse proxy", this device's address as the server sees it with whether it was forwarded (warned when not) and the trusted proxies; the shop profile; backup and restore, the daily backup's folder and last run, and the last restore (warned when it had no photos); mock data on development servers | Edit the shop profile (name, contact, tax rate, currency symbol, invoice footer, repair terms, repeat window, default paper, and the accounting export's names, `AccountingSettingsEditor`), download a backup, upload one to restore on next start (warned when the file looks database only), cancel a waiting restore or restart the server to apply it (when `canRestart`), import customers or inventory from a CSV (`ImportCard`, `ImportDialog`, `AdminImport`), seed test data | [Backup and restore](../../server/backup-restore.md), [Running a server](../../operations.md) |
 | **Audit log** | Who did what, newest first, colored by action | Load more | [Audit log](../../server/audit-log.md) |
 
 ![The Users tab](../../images/admin-users.png)
@@ -77,8 +82,8 @@ showing "Restarting the server" in the card meanwhile. Then it reloads the tab, 
 | State and actions | `ui/screens/admin/components/AdminHandler.kt`, and its parts `AdminAccounts.kt`, `AdminDevices.kt`, `AdminServer.kt`, `AdminSupport.kt` |
 | The tabs, in order | `ui/screens/admin/components/AdminTab.kt` |
 | Shared bits (user state chip, access level dropdown) | `ui/screens/admin/components/AdminCommon.kt` |
-| One folder per tab | `ui/screens/admin/<overview|users|sessions|stations|inventory|invoices|server|audit>/` |
-| Render tests | `ScreenRenderTest.adminOverview()`, `adminUsers()` |
+| One folder per tab | `ui/screens/admin/<overview|users|sessions|stations|inventory|invoices|reports|timesheets|messages|server|audit>/` |
+| Render tests | `ScreenRenderTest.admin*()`, one per tab, each wide and at phone width (`-narrow`) |
 | Handler tests | `composeApp/src/commonTest/.../ui/screens/admin/AdminHandlerTest.kt` |
 
 ## Adding a tab
@@ -96,8 +101,8 @@ showing "Restarting the server" in the card meanwhile. Then it reloads the tab, 
   handler, sets `changeMainTabIndex` (1 for tickets, 2 for inventory) and navigates to Records with `navigateTo`, so
   the back stack doesn't grow. An invoice opens its ticket on the counter the same way (`onOpenTicketAtCounter`).
 - **The Invoices tab loads through the counter**, whose `counter.invoices` (`CounterInvoices`) owns the invoice
-  list (`load`, `void`).
-  The screen's Refresh reloads it when that tab is open.
+  list (`load`, `checkForUpdates`, `void`). The tab's list itself is `InvoiceList`, without the dialogs, so it can
+  be rendered; under 860 dp each invoice is a compact row with its actions in a menu.
 - **The Users tab is the only place users are edited.** The records screen has no users tab.
 - **After a restart to restore, the device may have to log in again.** The sessions table comes from the backup, so
   this device's session is only there if it was when the backup was made.

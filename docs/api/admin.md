@@ -30,7 +30,8 @@ overdue or waiting for pickup now. For printing at close.
 
 **Auth:** admin
 
-Tracked items at or below a stock count.
+Tracked items at or below their own `reorderPoint`, or `threshold` for items without one. `lowStockCount` in
+`/stats` counts the same way with its `lowStock` query.
 
 - **Query:** `threshold` (default 5), `limit` (default and most 200).
 - **`200`** a list of `Inventory`.

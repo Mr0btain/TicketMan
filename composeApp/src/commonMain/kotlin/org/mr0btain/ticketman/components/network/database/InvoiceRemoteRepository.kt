@@ -15,12 +15,14 @@ import org.mr0btain.ticketman.components.network.handleHttpResponse
 import org.mr0btain.ticketman.components.network.networkErrorTryCatch
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.invoice.Charge
+import org.mr0btain.ticketman.data.invoice.ExportFormat
 import org.mr0btain.ticketman.data.invoice.Invoice
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.error.onSuccess
 import org.mr0btain.ticketman.server.NetworkError
 import org.mr0btain.ticketman.server.request.InvoiceChangeRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
+import org.mr0btain.ticketman.server.request.RefundRequest
 import org.mr0btain.ticketman.error.EmptyResult
 import kotlin.uuid.Uuid
 
@@ -90,6 +92,16 @@ class InvoiceRemoteRepository(
     suspend fun void(identifier: Uuid): TmResult<Invoice, ServerError> =
         change { client.post { url("$baseUrl${InvoicePaths.VOID.fill(identifier)}") } }
 
+    /** Admin only: money back on a paid invoice, and parts back in stock */
+    suspend fun refund(identifier: Uuid, request: RefundRequest): TmResult<Invoice, ServerError> =
+        change {
+            client.post {
+                url("$baseUrl${InvoicePaths.REFUND.fill(identifier)}")
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
+
     /** Admin only: deletes an invoice kept after its ticket was deleted */
     suspend fun remove(identifier: Uuid): EmptyResult<ServerError> {
         if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
@@ -122,16 +134,18 @@ class InvoiceRemoteRepository(
         file(FILE_TAG) { client.get { url("$baseUrl${InvoicePaths.PDF.fill(identifier)}") } }
 
     /**
-     * Invoices made between two days as CSV, admin only
+     * Invoices or payments between two days as CSV, admin only
      * @param from First day, like 2026-10-01
      * @param to Last day, included
+     * @param format What's written: invoices for a spreadsheet, QuickBooks or Xero's import, or payments
      */
-    suspend fun export(from: String, to: String): TmResult<ByteArray, ServerError> =
+    suspend fun export(from: String, to: String, format: ExportFormat = ExportFormat.INVOICES): TmResult<ByteArray, ServerError> =
         file(FILE_TAG) {
             client.get {
                 url("$baseUrl${InvoicePaths.EXPORT}")
                 parameter("from", from)
                 parameter("to", to)
+                parameter("format", format.name.lowercase())
             }
         }
 

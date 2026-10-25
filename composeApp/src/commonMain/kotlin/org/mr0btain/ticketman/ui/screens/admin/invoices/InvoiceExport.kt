@@ -6,6 +6,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
+import org.mr0btain.ticketman.data.invoice.ExportFormat
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.feedback.TmNotice
@@ -37,15 +38,25 @@ enum class ExportRange(val label: String) {
     }
 }
 
+/** What each export format holds, under the picker */
+private fun ExportFormat.description(): String = when (this) {
+    ExportFormat.INVOICES -> "Every invoice made in these days, with totals, tax and what's been paid, for a spreadsheet"
+    ExportFormat.QUICKBOOKS -> "Invoices paid in these days, a row per line, for QuickBooks Online's invoice import. Item names are set on the Server tab"
+    ExportFormat.XERO -> "Invoices paid in these days, a row per line, for Xero's sales invoice import. Accounts and tax rates are set on the Server tab"
+    ExportFormat.PAYMENTS -> "Every payment and refund taken in these days, for matching against the bank"
+}
+
 /**
- * Picks the days to export invoices for, as CSV for the books
- * @param onExport Gets the first and last day, like 2026-10-01; calls back with what went wrong or null when done
+ * Picks what to export and the days, as CSV for the books
+ * @param onExport Gets the first and last day, like 2026-10-01, and the format; calls back with what went wrong or
+ * null when done
  */
 @Composable
 fun InvoiceExportDialog(
-    onExport: (from: String, to: String, onResult: (String?) -> Unit) -> Unit,
+    onExport: (from: String, to: String, format: ExportFormat, onResult: (String?) -> Unit) -> Unit,
     onDismissRequest: () -> Unit
 ) {
+    var format by remember { mutableStateOf(ExportFormat.INVOICES) }
     val today = remember { Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date }
     var range by remember { mutableStateOf(ExportRange.THIS_MONTH) }
     var from by remember { mutableStateOf(LocalDate(today.year, today.month, 1).toString()) }
@@ -60,8 +71,8 @@ fun InvoiceExportDialog(
     }
 
     TmDialog(
-        title = "Export invoices",
-        description = "A CSV of every invoice made in these days, with totals, tax and what's been paid, for a spreadsheet or the books",
+        title = "Export for the books",
+        description = format.description(),
         onDismissRequest = onDismissRequest,
         actions = {
             TmButtonRow(
@@ -73,7 +84,7 @@ fun InvoiceExportDialog(
                     val (start, end) = days ?: return@TmButtonRow
                     exporting = true
                     error = null
-                    onExport(start.toString(), end.toString()) { problem ->
+                    onExport(start.toString(), end.toString(), format) { problem ->
                         exporting = false
                         error = problem
                         if (problem == null) onDismissRequest()
@@ -83,7 +94,15 @@ fun InvoiceExportDialog(
         }
     ) {
         TmSegmented(
-            label = "Invoices made",
+            label = "Export",
+            options = ExportFormat.entries,
+            selected = format,
+            onSelect = { format = it },
+            optionLabel = { it.label }
+        )
+
+        TmSegmented(
+            label = if (format == ExportFormat.INVOICES) "Invoices made" else if (format == ExportFormat.PAYMENTS) "Taken" else "Invoices paid",
             options = ExportRange.entries,
             selected = range,
             onSelect = { range = it },

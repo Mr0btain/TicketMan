@@ -12,5 +12,11 @@ data class Customer(
     val name: String = "",
     val address: Address = Address(),
     val email: String = "",
-    val phone: String = ""
+    val phone: String = "",
+    /** Agreed to messages about their repairs by email */
+    val notifyEmail: Boolean = false,
+    /** Agreed to messages about their repairs by text */
+    val notifySms: Boolean = false,
+    /** Store credit they can spend, the server's to change (refunds and admin adjustments), never a save's */
+    val creditCents: Long = 0
 ): MainItem()

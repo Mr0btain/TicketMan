@@ -285,17 +285,18 @@ locking it down.
 **Revisit if:** a shop wants a kiosk nobody can leave. That means a `DeviceAdminReceiver` and making the app device
 owner through an MDM or `dpm set-device-owner`, after which lock task mode starts without asking.
 
-### iOS parked, not removed
+### iOS only on a Mac
 
-**Chosen:** the iOS targets stay commented out, with the `iosMain` source sets and `iosApp` left in the repository
-as they are.
+**Chosen:** the iOS targets are added only when Gradle runs on macOS. Every `expect` has an iOS `actual`, and GitHub's
+CI compiles them on a Mac runner. The release builds an unsigned IPA only when asked (`build_ios`), for sideloading.
 
-**Why:** shops run the app on counter PCs, Android tablets and browsers, and building iOS needs a Mac. Keeping the
-files means picking it up later starts from the Xcode project and the few `actual`s already there.
+**Why:** iOS needs Xcode, so on Linux and Windows the targets could only be skipped with a warning on every build,
+and the Gitea runners and most of the work happen there. An unsigned IPA needs no Apple Developer account.
 
-**Costs:** the `iosMain` files don't compile and fall behind as `expect`s are added (they already lack several).
-Turning iOS on means writing those `actual`s first. If it's clear iOS won't happen, delete them rather than keep
-fixing around them.
+**Costs:** nothing on Linux checks the iOS code, so a change to an `expect` can break iOS without anyone here
+noticing until GitHub's CI runs. An unsigned IPA has to be signed again by whoever installs it, every 7 days with a
+free Apple ID. **Revisit if:** the shop pays for an Apple Developer account, then sign the release and offer
+TestFlight.
 
 ### Handlers on one view model
 

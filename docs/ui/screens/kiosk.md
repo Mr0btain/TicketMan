@@ -60,6 +60,14 @@ reloads the staff list; five wrong tries lock that person's PIN until an admin r
 `unlock()` calls `RemoteHandler.pinLogin`. On success `onSignedIn` loads the user and the lists, and the counter
 shows.
 
+### Clocking in and out
+
+**Clock in or out** on the lock screen asks someone to pick their name and type their PIN, then `KioskHandler.punch`
+sends it to [`POST /api/timeclock/punch`](../../api/timeclock.md#post-apitimeclockpunch) through
+`RemoteHandler.stationPunch` (the unauthenticated client, so a locked kiosk with no session can). Nobody is signed
+in: the kiosk stays locked and shows "Clocked in at 09:02" or "Clocked out at 17:31, 8.48h on the clock" until
+someone is picked.
+
 ### Leaving kiosk mode
 
 "Leave kiosk mode" on the lock screen asks for an admin to pick their name and PIN. `exit()` PINs them in, then:

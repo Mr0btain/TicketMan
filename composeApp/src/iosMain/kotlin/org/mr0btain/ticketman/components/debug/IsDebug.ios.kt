@@ -1,11 +1,10 @@
-
+package org.mr0btain.ticketman.components.debug
 
 import kotlin.experimental.ExperimentalNativeApi
 
-actual class BuildConfigImpl() : BuildConfig {
-
+@Suppress(names = ["EXPECT_ACTUAL_CLASSIFIERS_ARE_IN_BETA_WARNING"])
+actual class BuildConfigImpl actual constructor() : BuildConfig {
+    // Xcode's Debug configuration builds the framework as a debug binary, Release doesn't
     @OptIn(ExperimentalNativeApi::class)
-    override fun isDebug(): Boolean {
-        return Platform.isDebugBinary
-    }
+    actual override fun isDebug(): Boolean = Platform.isDebugBinary
 }

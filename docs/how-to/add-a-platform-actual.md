@@ -70,9 +70,9 @@ Each target only checks its own `actual`s, so build them all:
 ./gradlew :composeApp:compileKotlinDesktop :composeApp:compileKotlinWasmJs :composeApp:compileAndroidMain
 ```
 
-A missing `actual` fails the target it's missing from with "expected ... has no actual declaration". The iOS
-targets are commented out, so `iosMain` doesn't need one; a few `iosMain` files exist from before and aren't
-built.
+A missing `actual` fails the target it's missing from with "expected ... has no actual declaration". iOS needs one
+too, in `iosMain`, but its targets only exist on a Mac: from Linux, GitHub's CI (`iOS compile`) is what catches a
+missing or broken one.
 
 ## 5. Test what you can
 

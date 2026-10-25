@@ -12,8 +12,10 @@ struct ComposeView: UIViewControllerRepresentable {
 
 struct ContentView: View {
     var body: some View {
+        // Edge to edge like Android: the app's shells pad themselves out of the notch, the home indicator and the
+        // keyboard
         ComposeView()
-                .ignoresSafeArea(.keyboard) // Compose has own keyboard handler
+                .ignoresSafeArea()
     }
 }
 

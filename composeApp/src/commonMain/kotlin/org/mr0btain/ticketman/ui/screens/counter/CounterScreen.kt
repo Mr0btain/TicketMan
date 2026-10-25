@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
+import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.ticket.StatusLink
 import androidx.compose.foundation.layout.*
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import androidx.compose.runtime.*
@@ -14,6 +16,7 @@ import org.mr0btain.ticketman.ui.screens.counter.components.CounterView
 import org.mr0btain.ticketman.ui.screens.login.components.LoginState
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
+import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.search.TmSearchField
@@ -21,6 +24,7 @@ import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.dollar_sign
 import ticketman.composeapp.generated.resources.lock
 import ticketman.composeapp.generated.resources.plus
+import ticketman.composeapp.generated.resources.shopping_cart
 
 /**
  * The shop counter. One search box for everything, the queue on the side (in a dialog on narrow windows, see
@@ -45,11 +49,16 @@ fun CounterScreen(
     val priceResults by counter.priceResults.collectAsState()
     val shop by counter.shop.collectAsState()
     val checkInCustomer by counter.checkIn.customer.collectAsState()
+    val checkInAppointment by counter.checkIn.appointment.collectAsState()
     val lastCheckIn by counter.checkIn.last.collectAsState()
     val pickup by counter.pickup.detail.collectAsState()
     val lastPickup by counter.pickup.last.collectAsState()
+    val saleCustomer by counter.sale.customer.collectAsState()
+    val lastSale by counter.sale.last.collectAsState()
 
     val canEdit = viewModel.session.canEdit.collectAsState().value
+    val isAdmin = viewModel.session.isAdmin.collectAsState().value
+    val suppliers by viewModel.purchasing.suppliers.collectAsState()
     val searchFocus = remember { FocusRequester() }
 
     // The queue when the counter opens, then changes from other devices on the interval set in Settings. Not in the
@@ -95,6 +104,11 @@ fun CounterScreen(
                         true
                     }
 
+                    Key.F6 -> {
+                        counter.sale.start()
+                        true
+                    }
+
                     Key.Escape -> {
                         if (view == CounterView.HOME) counter.clearSearch() else counter.goHome()
                         true
@@ -122,15 +136,17 @@ fun CounterScreen(
                     modifier = fieldModifier.focusRequester(searchFocus),
                     query = query,
                     onQueryChange = { counter.setQuery(it) },
-                    placeholder = "Search tickets and customers${keyHint("F2")}",
+                    placeholder = "Search tickets and customers, or scan a part${keyHint("F2")}",
                     loading = searching,
-                    size = TmControlSize.LARGE
+                    size = TmControlSize.LARGE,
+                    onSearch = { counter.scan(it) }
                 )
             },
             canEdit = canEdit,
             queue = queue,
             onCheckIn = { counter.checkIn.start() },
             onNewCustomer = { counter.checkIn.startNewCustomer() },
+            onSell = { counter.sale.start() },
             onPriceCheck = { counter.openPriceCheck() },
             onQueueTicketClick = { counter.openTicket(it) }
         ) {
@@ -151,6 +167,33 @@ fun CounterScreen(
                         onAddNote = { counter.addTicketNote(it) },
                         onCustomerClick = { detail.customer?.let { counter.openCustomer(it.identifier) } },
                         onBack = { counter.goHome() },
+                        statusLink = StatusLink.url(shop.publicUrl, detail.ticket),
+                        onReplaceStatusLink = { counter.replaceStatusLink() },
+                        estimates = EstimateActions(
+                            laborCents = shop.laborRateCents,
+                            taxRateBasisPoints = Money.percentToBasisPoints(shop.taxRate) ?: 0,
+                            onSearchParts = { counter.pickup.searchParts(it) },
+                            onSend = { lines, note, notify, onSent -> counter.estimates.send(detail.ticket.identifier, lines, note, notify, onSent) },
+                            onAnswer = { estimate, approved, method, note -> counter.estimates.decide(estimate, approved, method, note) },
+                            onWithdraw = { counter.estimates.withdraw(it) }
+                        ),
+                        onSendStatusLink = StatusLink.url(shop.publicUrl, detail.ticket)?.let { { counter.estimates.message(detail.ticket.identifier) } },
+                        onOpenTicket = { counter.openTicket(it) },
+                        passcode = if (canEdit) PasscodeActions(
+                            onShow = { counter.showPasscode(detail.ticket.identifier) },
+                            onSet = { passcode, onResult -> counter.setPasscode(detail.ticket.identifier, passcode, onResult) },
+                            onClear = { counter.clearPasscode(detail.ticket.identifier) }
+                        ) else null,
+                        parts = PartsActions(
+                            suppliers = suppliers,
+                            onSearchParts = { counter.pickup.searchParts(it) },
+                            onOrder = { item, quantity, supplier, onResult ->
+                                viewModel.purchasing.orderPart(detail.ticket.identifier, item, quantity, supplier) { failed ->
+                                    onResult(failed)
+                                    if (failed == null) counter.reloadTicket()
+                                }
+                            }
+                        ),
                         printAction = {
                             Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
                                 PrintButton(
@@ -182,9 +225,18 @@ fun CounterScreen(
                         detail = detail,
                         onTicketClick = { counter.openTicket(it) },
                         onBack = { counter.goHome() },
+                        onAdjustCredit = if (isAdmin) { amount, reason, onResult -> counter.adjustCredit(amount, reason, onResult) } else null,
+                        onSaveDevice = if (canEdit) { device, onResult -> counter.saveDevice(device, onResult) } else null,
+                        onRemoveDevice = if (canEdit) { device -> counter.removeDevice(device) } else null,
                         actions = {
                             if (canEdit) {
                                 TmButton(text = "Check in a device", onClick = { counter.checkIn.start(detail.customer) }, leadingIcon = Res.drawable.plus)
+                                TmButton(
+                                    text = "Sell",
+                                    onClick = { counter.sale.start(detail.customer) },
+                                    variant = TmButtonVariant.SECONDARY,
+                                    leadingIcon = Res.drawable.shopping_cart
+                                )
                             }
                         }
                     )
@@ -198,14 +250,17 @@ fun CounterScreen(
 
                 CounterView.CHECK_IN -> CheckInWizard(
                     startingCustomer = checkInCustomer,
+                    appointment = checkInAppointment,
                     terms = shop.repairTerms,
+                    checklists = shop.checklists,
                     onSearchCustomers = { counter.checkIn.searchCustomers(it) },
                     onAddCustomer = { customer, onResult -> counter.checkIn.addCustomer(customer, onResult) },
                     onSearchTechnicians = { counter.checkIn.searchTechnicians(it) },
-                    onRepeatCheck = { customer, device, exclude -> counter.checkIn.repeatCheck(customer, device, exclude) },
+                    onRepeatCheck = { customer, device, exclude, known -> counter.checkIn.repeatCheck(customer, device, exclude, known) },
                     onOpenTicket = { counter.openTicket(it) },
                     onSubmit = { request, onResult -> counter.checkIn.submit(request, onResult) },
-                    onCancel = { counter.goHome() }
+                    onCancel = { counter.goHome() },
+                    onLoadDevices = { counter.checkIn.devices(it) }
                 )
 
                 CounterView.CHECKED_IN -> lastCheckIn?.let { result ->
@@ -232,6 +287,8 @@ fun CounterScreen(
                         onSearchParts = { counter.pickup.searchParts(it) },
                         onSave = { charges, discount, onResult -> counter.pickup.saveCharges(charges, discount, onResult) },
                         onRemovePayment = { counter.pickup.removePayment(it) },
+                        onLookupGiftCard = { counter.findGiftCard(it) },
+                        onFindCode = { counter.findItem(it) },
                         onFinish = { charges, discount, payments, onResult -> counter.pickup.finish(charges, discount, payments, onResult) },
                         onBack = { counter.openTicket(detail.ticket.identifier) }
                     )
@@ -247,7 +304,37 @@ fun CounterScreen(
                                 size = TmControlSize.LARGE,
                                 templates = listOf(PrintTemplate.RECEIPT),
                                 defaultPaper = shop.defaultPaper,
-                                onPrint = { template, paper, onResult -> counter.printer.print(invoice.ticketIdentifier, template, paper, onResult) }
+                                onPrint = { template, paper, onResult -> invoice.ticketIdentifier?.let { counter.printer.print(it, template, paper, onResult) } }
+                            )
+                            SavePdfButton { counter.printer.savePdf(invoice) }
+                        }
+                    )
+                }
+
+                CounterView.SALE -> SaleScreen(
+                    taxRateBasisPoints = Money.percentToBasisPoints(shop.taxRate) ?: 0,
+                    laborCents = shop.laborRateCents,
+                    startingCustomer = saleCustomer,
+                    onSearchParts = { counter.pickup.searchParts(it) },
+                    onSearchCustomers = { counter.checkIn.searchCustomers(it) },
+                    onLookupGiftCard = { counter.findGiftCard(it) },
+                    onFindCode = { counter.findItem(it) },
+                    onFinish = { request, onResult -> counter.sale.finish(request, onResult) },
+                    onBack = { counter.goHome() }
+                )
+
+                CounterView.SOLD -> lastSale?.let { invoice ->
+                    PickedUpView(
+                        invoice = invoice,
+                        title = "Sold",
+                        onDone = { counter.goHome() },
+                        actions = {
+                            PrintButton(
+                                label = "Print receipt",
+                                size = TmControlSize.LARGE,
+                                templates = listOf(PrintTemplate.RECEIPT),
+                                defaultPaper = shop.defaultPaper,
+                                onPrint = { _, paper, onResult -> counter.printer.printSale(invoice, paper, onResult) }
                             )
                             SavePdfButton { counter.printer.savePdf(invoice) }
                         }

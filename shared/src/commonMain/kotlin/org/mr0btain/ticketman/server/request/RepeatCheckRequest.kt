@@ -12,5 +12,7 @@ import kotlin.uuid.Uuid
 data class RepeatCheckRequest(
     val customerIdentifier: Uuid,
     val device: Device,
-    val excludeTicket: Uuid? = null
+    val excludeTicket: Uuid? = null,
+    /** The customer's device, when one was picked: its own tickets are the repeats */
+    val deviceIdentifier: Uuid? = null
 )

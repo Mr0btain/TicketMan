@@ -1,14 +1,33 @@
 package org.mr0btain.ticketman.data.shop
 
 import kotlinx.serialization.Serializable
+import org.mr0btain.ticketman.data.invoice.AccountingSettings
+import org.mr0btain.ticketman.data.invoice.TaxClass
+import org.mr0btain.ticketman.data.invoice.TaxClasses
+import org.mr0btain.ticketman.data.invoice.TaxRate
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.IntakeChecklist
+import org.mr0btain.ticketman.data.ticket.StatusChoice
 
 /**
  * Shop details used on invoices and anything else customer facing
  * @param publicUrl Where customers reach this server from outside the shop, like `https://repairs.example.com`,
  * used for status links. Blank until the shop sets it
  * @param statuses The shop's own ticket statuses, retired ones included (see [CustomStatus])
+ * @param estimateSentStatus Where a ticket goes when an estimate is sent, like "Awaiting approval". Null leaves it
+ * @param estimateApprovedStatus Where it goes when the customer approves, null leaves it
+ * @param estimateDeclinedStatus Where it goes when they decline, null leaves it
+ * @param taxClasses Other rates besides [taxRate], for lines and items that pick one
+ * @param partsOrderedStatus Where a ticket goes when a part ordered for it is sent to the supplier, like "Awaiting
+ * parts". Null leaves it
+ * @param partsArrivedStatus Where it goes once every part ordered for it has arrived, null leaves it
+ * @param warrantyDays How long repairs are guaranteed from pickup, for labor and parts lines that don't say. 0 for
+ * no warranty
+ * @param storage Fees for devices left after they're ready, and when they're abandoned
+ * @param accounting The names the shop's books use, for the QuickBooks and Xero exports
+ * @param checklists The shop's own intake checklists, by kind of device. Kinds without one use
+ * [org.mr0btain.ticketman.data.ticket.IntakeChecklists.defaults]
  */
 @Serializable
 data class ShopProfile(
@@ -33,8 +52,26 @@ data class ShopProfile(
     /** Per hour, for time logged on a ticket's work log. 0 until it's set */
     val laborRateCents: Long = 0,
     val publicUrl: String = "",
-    val statuses: List<CustomStatus> = emptyList()
+    val statuses: List<CustomStatus> = emptyList(),
+    val estimateSentStatus: StatusChoice? = null,
+    val estimateApprovedStatus: StatusChoice? = null,
+    val estimateDeclinedStatus: StatusChoice? = null,
+    val taxClasses: List<TaxClass> = emptyList(),
+    val partsOrderedStatus: StatusChoice? = null,
+    val partsArrivedStatus: StatusChoice? = null,
+    val checklists: List<IntakeChecklist> = emptyList(),
+    val warrantyDays: Int = 0,
+    val storage: StorageTerms = StorageTerms(),
+    val accounting: AccountingSettings = AccountingSettings()
 ) {
+    /** [taxRate] in basis points, 0 when it's blank or not a number */
+    val taxBasisPoints: Int
+        get() = Money.percentToBasisPoints(taxRate) ?: 0
+
+    /** [taxClasses] as rates, leaving out any whose rate isn't a number */
+    val taxRates: List<TaxRate>
+        get() = TaxClasses.rates(taxClasses)
+
     companion object {
         const val DEFAULT_REPEAT_WINDOW_DAYS = 90
 
@@ -53,5 +90,8 @@ data class ShopProfile(
 @Serializable
 enum class PaperSize(val label: String) {
     RECEIPT_80MM("80mm receipt"),
-    LETTER("Letter")
+    LETTER("Letter"),
+
+    /** A sticky label from a label printer, 2.25 by 1.25 inches, one page each */
+    LABEL("Label 57 x 32mm")
 }

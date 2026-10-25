@@ -32,6 +32,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
     private val SET_STOCK_TAG = "$tag:SetStock"
     private val MIGRATE_PRICES_TAG = "$tag:MigrateLegacyPrices"
     private val NAMES_TAG = "$tag:Names"
+    private val CODE_TAG = "$tag:Code"
 
     override fun getById(identifier: Uuid): Inventory? =
         dbQuery(GET_BY_ID_TAG) {
@@ -73,6 +74,9 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 .find {
                     (InventoryTable.name.lowerCase() like contains) or
                             (InventoryTable.description.lowerCase() like contains) or
+                            (InventoryTable.category.lowerCase() like contains) or
+                            (InventoryTable.sku.lowerCase() like pattern) or
+                            (InventoryTable.barcode.lowerCase() like pattern) or
                             (InventoryTable.id.castTo(VarCharColumnType()) like pattern)
                 }
                 .orderBy(InventoryTable.name.lowerCase() to SortOrder.ASC, InventoryTable.id to SortOrder.ASC)
@@ -87,6 +91,46 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                         }
                     )
                 }
+        }
+
+    /** What the shop last paid for one, set when an order arrives */
+    fun setCost(identifier: Uuid, costCents: Long): Boolean =
+        dbWrite(UPDATE_TAG) {
+            InventoryTable.update(where = { InventoryTable.id eq identifier }) { row -> row[InventoryTable.costCents] = costCents } > 0
+        }
+
+    /** The item whose barcode or SKU is exactly [code], ignoring case, barcodes first */
+    fun getByCode(code: String): Inventory? =
+        dbQuery(CODE_TAG) {
+            val wanted = code.trim().lowercase()
+            if (wanted.isEmpty()) return@dbQuery null
+            InventoryEntity.find { InventoryTable.barcode.lowerCase() eq wanted }.firstOrNull()?.toInventory()
+                ?: InventoryEntity.find { InventoryTable.sku.lowerCase() eq wanted }.firstOrNull()?.toInventory()
+        }
+
+    /**
+     * Another item already using [item]'s SKU or barcode, so two can't share one
+     * @return What's taken and by what, or null
+     */
+    fun codeClash(item: Inventory): String? =
+        dbQuery(CODE_TAG) {
+            fun other(column: Column<String>, value: String) =
+                value.trim().takeIf { it.isNotEmpty() }?.let { code ->
+                    InventoryEntity.find { (column.lowerCase() eq code.lowercase()) and (InventoryTable.id neq item.identifier) }.firstOrNull()
+                }
+
+            other(InventoryTable.sku, item.sku)?.let { return@dbQuery "SKU ${item.sku.trim()} is already on ${it.name}" }
+            other(InventoryTable.barcode, item.barcode)?.let { return@dbQuery "Barcode ${item.barcode.trim()} is already on ${it.name}" }
+            null
+        }
+
+    /** Every category in use, by name */
+    fun categories(): List<String>? =
+        dbQuery(CODE_TAG) {
+            InventoryTable.select(InventoryTable.category).withDistinct()
+                .map { it[InventoryTable.category] }
+                .filter { it.isNotBlank() }
+                .sortedBy { it.lowercase() }
         }
 
     /** Every item's name, for an import to find ones already there. Null when the read failed */
@@ -109,6 +153,12 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
             stock = data.stock
             costCents = data.costCents
             priceCents = data.priceCents
+            taxClass = data.taxClass
+            sku = data.sku.trim()
+            barcode = data.barcode.trim()
+            category = data.category.trim()
+            reorderPoint = data.reorderPoint
+            supplier = data.supplierIdentifier
         }
     }
 
@@ -123,6 +173,12 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 description = data.description
                 costCents = data.costCents
                 priceCents = data.priceCents
+                taxClass = data.taxClass
+                sku = data.sku.trim()
+                barcode = data.barcode.trim()
+                category = data.category.trim()
+                reorderPoint = data.reorderPoint
+                supplier = data.supplierIdentifier
             }
 
             true

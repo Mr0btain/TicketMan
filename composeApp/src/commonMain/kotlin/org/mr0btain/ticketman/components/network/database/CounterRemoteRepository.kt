@@ -20,6 +20,7 @@ import org.mr0btain.ticketman.server.request.CheckInRequest
 import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.server.request.PickupRequest
 import org.mr0btain.ticketman.server.request.RepeatCheckRequest
+import org.mr0btain.ticketman.server.request.SaleRequest
 import org.mr0btain.ticketman.server.response.CheckInResponse
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
@@ -38,6 +39,7 @@ class CounterRemoteRepository(
     private val REPEAT_TAG = "$TAG:RepeatCheck"
     private val PICKUP_TAG = "$TAG:Pickup"
     private val CHECK_IN_TAG = "$TAG:CheckIn"
+    private val SALE_TAG = "$TAG:Sale"
 
     private var baseUrl = ""
 
@@ -107,6 +109,21 @@ class CounterRemoteRepository(
         }
 
         return handleDataHttpResponse(PICKUP_TAG, response)
+    }
+
+    /** Sells from stock without a ticket. Refused with what's still owed if the payments don't cover it */
+    suspend fun sale(request: SaleRequest): TmResult<Invoice, ServerError> {
+        if (baseUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        val response = networkRequest(SALE_TAG) {
+            client.post {
+                url("$baseUrl${CounterPaths.SALE}")
+                contentType(ContentType.Application.Json)
+                setBody(request)
+            }
+        }
+
+        return handleDataHttpResponse(SALE_TAG, response)
     }
 
     /** Earlier repairs on this device for the customer, newest first */

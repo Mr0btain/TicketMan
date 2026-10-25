@@ -34,6 +34,29 @@ class InventoryRemoteRepository(
     private val GET_IMAGES_TAG = "$tag:GetImages"
     private val SET_IMAGES_TAG = "$tag:SetImages"
     private val SET_STOCK_TAG = "$tag:SetStock"
+    private val CODE_TAG = "$tag:Code"
+
+    /** The item with exactly this barcode or SKU, `NOT_FOUND` when there's none */
+    suspend fun getByCode(code: String): TmResult<Inventory, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
+
+        val response = networkRequest(CODE_TAG) {
+            client.get { url("$serverUrl${InventoryPaths.BY_CODE.fill(code.trim().encodeURLPathPart())}") }
+        }
+
+        return handleDataHttpResponse(CODE_TAG, response)
+    }
+
+    /** Every category in use, by name */
+    suspend fun categories(): TmResult<List<String>, ServerError> {
+        if (serverUrl.isBlank()) return noServer()
+
+        val response = networkRequest(CODE_TAG) {
+            client.get { url("$serverUrl${InventoryPaths.CATEGORIES}") }
+        }
+
+        return handleDataHttpResponse(CODE_TAG, response)
+    }
 
     /** Photos of the item itself */
     suspend fun getImages(identifier: Uuid): TmResult<List<StoredImage>, ServerError> {

@@ -54,40 +54,50 @@ fun AdminAuditTab(
     }
 
     TmSurface(modifier = Modifier.widthIn(max = 1100.dp).fillMaxSize()) {
-        LazyColumn(Modifier.padding(TmTheme.spacing.sm)) {
-            stickyHeader {
-                TmSurface(border = false) { Column { TmTableHeader(COLUMNS) } }
-            }
+        BoxWithConstraints {
+            // Narrow: who, the action and when on one line, the details under, no table
+            val narrow = maxWidth < TABLE_WIDTH
 
-            items(entries, key = { it.identifier }) { entry ->
-                TmTableRow(COLUMNS) { column ->
-                    when (column) {
-                        0 -> Text(formatDateTime(entry.time), style = TmTheme.typography.caption, color = colors.textMuted)
-                        1 -> Text(entry.actorName, style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        2 -> TmBadge(text = formatEnumName(entry.action.name), tone = colors.tone(entry.action), dot = false)
-                        3 -> Text(formatEnumName(entry.entityType), style = TmTheme.typography.body, color = colors.text)
-                        4 -> Text(
-                            text = entry.details.ifBlank { entry.entityIdentifier ?: "" },
-                            style = TmTheme.typography.caption,
-                            color = colors.textMuted,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis
-                        )
+            LazyColumn(Modifier.padding(TmTheme.spacing.sm)) {
+                if (!narrow) stickyHeader {
+                    TmSurface(border = false) { Column { TmTableHeader(COLUMNS) } }
+                }
+
+                items(entries, key = { it.identifier }) { entry ->
+                    if (narrow) {
+                        NarrowEntry(entry)
+                        return@items
+                    }
+
+                    TmTableRow(COLUMNS) { column ->
+                        when (column) {
+                            0 -> Text(formatDateTime(entry.time), style = TmTheme.typography.caption, color = colors.textMuted)
+                            1 -> Text(entry.actorName, style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            2 -> TmBadge(text = formatEnumName(entry.action.name), tone = colors.tone(entry.action), dot = false)
+                            3 -> Text(formatEnumName(entry.entityType), style = TmTheme.typography.body, color = colors.text)
+                            4 -> Text(
+                                text = entry.details.ifBlank { entry.entityIdentifier ?: "" },
+                                style = TmTheme.typography.caption,
+                                color = colors.textMuted,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
-            }
 
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(TmTheme.spacing.md),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (endReached) {
-                        Text("That's the whole log", style = TmTheme.typography.caption, color = colors.textFaint)
-                    } else {
-                        TmButton(text = "Load older entries", onClick = onLoadMore, variant = TmButtonVariant.SECONDARY)
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(TmTheme.spacing.md),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (endReached) {
+                            Text("That's the whole log", style = TmTheme.typography.caption, color = colors.textFaint)
+                        } else {
+                            TmButton(text = "Load older entries", onClick = onLoadMore, variant = TmButtonVariant.SECONDARY)
+                        }
                     }
                 }
             }
@@ -95,9 +105,37 @@ fun AdminAuditTab(
     }
 }
 
+/** Narrower than this, entries aren't a table */
+private val TABLE_WIDTH = 760.dp
+
+@Composable
+private fun NarrowEntry(entry: AuditEntry) {
+    val colors = TmTheme.colors
+    val spacing = TmTheme.spacing
+
+    Column(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = spacing.sm, vertical = spacing.xs),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(spacing.sm)) {
+            TmBadge(text = formatEnumName(entry.action.name), tone = colors.tone(entry.action), dot = false)
+            Text(entry.actorName, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(formatDateTime(entry.time), style = TmTheme.typography.caption, color = colors.textMuted)
+        }
+        Text(
+            text = listOf(formatEnumName(entry.entityType), entry.details.ifBlank { entry.entityIdentifier.orEmpty() }).filter { it.isNotBlank() }.joinToString(": "),
+            style = TmTheme.typography.caption,
+            color = colors.textMuted,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
 private fun TmColors.tone(action: AuditAction): TmTone = when (action) {
     AuditAction.DELETE, AuditAction.LOGIN_FAILED, AuditAction.SESSION_REVOKE -> danger
     AuditAction.CREATE, AuditAction.LOGIN -> success
     AuditAction.UPDATE, AuditAction.PASSWORD_RESET, AuditAction.SETTINGS_UPDATE -> accent
+    AuditAction.REFUND -> warning
     else -> neutral
 }

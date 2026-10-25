@@ -32,7 +32,8 @@ fun InventoryInfoPane(
     onEditClick: () -> Unit,
     canEdit: Boolean = true,
     onImageClick: (page: Int) -> Unit = {},
-    onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> }
+    onNoteImageClick: (noteIdentifier: Uuid, page: Int) -> Unit = { _, _ -> },
+    printAction: @Composable () -> Unit = {}
 ) {
     RecordDetail(
         title = inventoryData.name.ifBlank { "Unnamed item" },
@@ -49,6 +50,16 @@ fun InventoryInfoPane(
             }
         }
 
+        DetailSection("Details") {
+            Column {
+                if (inventoryData.sku.isNotBlank()) TmKeyValueRow(label = "SKU", value = inventoryData.sku, numeric = true)
+                if (inventoryData.barcode.isNotBlank()) TmKeyValueRow(label = "Barcode", value = inventoryData.barcode, numeric = true)
+                if (inventoryData.category.isNotBlank()) TmKeyValueRow(label = "Category", value = inventoryData.category)
+            }
+            // Anyone can print a label, the scanner at the counter reads its barcode
+            printAction()
+        }
+
         DetailSection("Pricing") {
             Column {
                 TmKeyValueRow(label = "Price") { TmMoneyText(Money.fromDollars(inventoryData.price), style = TmTheme.typography.numericLarge) }
@@ -58,6 +69,9 @@ fun InventoryInfoPane(
                     value = if (inventoryData.tracksStock) inventoryData.stock.toString() else "Not tracked",
                     numeric = inventoryData.tracksStock
                 )
+                inventoryData.reorderPoint?.takeIf { inventoryData.tracksStock }?.let {
+                    TmKeyValueRow(label = "Reorder at", value = it.toString(), numeric = true)
+                }
                 TmKeyValueRow(label = "Added", value = formatDateTime(inventoryData.time.toEpochMilliseconds()))
             }
         }

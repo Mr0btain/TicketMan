@@ -15,7 +15,7 @@ package is built from it:
 | Android | `androidApp/build.gradle.kts` `versionName`, and `versionCode` from it | `major * 10000 + minor * 100 + patch`, so 0.8.0 is 800 |
 
 `API_VERSION` is separate: it only changes when older clients can't use the server any more (see
-[decisions](decisions.md)). The iOS app isn't built, so `iosApp/Configuration/Config.xcconfig` is updated by hand.
+[decisions](decisions.md)). `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
 
 ## The icon
 
@@ -97,11 +97,13 @@ builds everything without publishing, which is a good way to try it before taggi
 
 | Workflow | Builds | Publishes to |
 |---|---|---|
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | MSI (Windows x64), DMG (macOS arm64), DEB (x64 and arm64), APK, desktop jar, server zip and jar, Docker image for amd64 and arm64 | GitHub release, `ghcr.io/<owner>/ticketman` |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's (the arm64 DEB and tarball built natively), plus the DMG (macOS arm64) and, when asked, the unsigned iOS app | GitHub release, `ghcr.io/<owner>/ticketman` |
 | [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB and tarball (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
-workflow in its own place. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
+workflow in its own place. Each also has its own copy of the tests ([`.gitea/workflows/ci.yml`](../.gitea/workflows/ci.yml)
+and [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which also compiles iOS on a Mac), so keep the two
+release workflows and the two CIs in step. The Gitea one's `ubuntu-latest` runner has to be x86 for the APK, and the image step needs
 a runner with Docker access. The MSI needs a Windows runner (below); there's no Mac one, so the DMG is GitHub only.
 
 The server zip, APK, web client and Docker image (built for both through QEMU) don't depend on the runner's
@@ -110,7 +112,7 @@ native graphics. GitHub builds the arm64 one on its `ubuntu-24.04-arm` runner, w
 On Gitea the runner is x86, so the arm64 DEB is built in an arm64 container emulated through QEMU
 ([`docker/deb.Dockerfile`](../docker/deb.Dockerfile)), which needs Docker access like the image step. Everything runs
 emulated, so it's several times slower than the other jobs, and a release waits for it unless it's skipped (below).
-Beside each DEB the Gitea workflow releases `TicketMan-Linux-<version>-<arch>.tar.gz`, the same app unpacked, for
+Beside each DEB both workflows release `TicketMan-Linux-<version>-<arch>.tar.gz`, the same app unpacked, for
 systems without dpkg: extract it anywhere and run `TicketMan/bin/TicketMan`. The same Dockerfile builds a DEB (and
 the tarball) by hand:
 
@@ -118,15 +120,16 @@ the tarball) by hand:
 docker buildx build --platform linux/arm64 -f docker/deb.Dockerfile --output type=local,dest=dist .
 ```
 
-The Gitea workflow releases the server twice, with the web client built in and without it (`/` is then a plain up
-check):
+Both workflows release the server twice, with the web client built in and without it (`/` is then a plain up
+check). GitHub pushes the same tags to `ghcr.io/<owner>/ticketman` in place of Gitea's registry; only Gitea pushes
+to Docker Hub:
 
 | Server | Zip | Jar | Gitea image tags | Docker Hub image |
 |---|---|---|---|---|
 | With the web client | `TicketMan-Server-Web-<version>.zip` | `TicketMan-Server-Web-<version>.jar` | `<version>`, `latest` | `<user>/ticketman:<version>`, `latest` |
 | Without it | `TicketMan-Server-<version>.zip` | `TicketMan-Server-<version>.jar` | `<version>-noweb`, `latest-noweb` | `<user>/ticketman-server:<version>`, `latest` |
 
-Any part can be left out. Each has a box to tick when running the workflow by hand, and a variable that skips it for
+Any part can be left out, the same way in both workflows. Each has a box to tick when running the workflow by hand, and a variable that skips it for
 tag pushes when set to `true`; the release is published with the rest, and isn't published if a build fails:
 
 | Leaves out | Input | Variable |
@@ -135,10 +138,16 @@ tag pushes when set to `true`; the release is published with the rest, and isn't
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
 | Only the Linux tarballs (the DEBs are still built) | `skip_tarball` | `SKIP_TARBALL` |
 | The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
+| The macOS DMG (GitHub only) | `skip_mac` | `SKIP_MAC` |
 | The desktop jar | `skip_desktop_jar` | `SKIP_DESKTOP_JAR` |
 | The server with the web client | `skip_server_web` | `SKIP_SERVER_WEB` |
 | The server without the web client | `skip_server_noweb` | `SKIP_SERVER_NOWEB` |
 | Only the server jars (the zips and images are still built) | `skip_server_jars` | `SKIP_SERVER_JARS` |
+
+The GitHub workflow can also build the iOS app, unsigned (`TicketMan-iOS-<version>-unsigned.ipa`). That works the
+other way round until it's been tried on a device: it's only built with the `build_ios` box or the `BUILD_IOS`
+variable set to `true`, and a failed iOS build doesn't stop the release. It's installed by sideloading (AltStore,
+Sideloadly), which signs it with the person's own Apple ID.
 
 ## One time setup
 
@@ -189,8 +198,8 @@ also add a `REGISTRY` variable under Settings > Actions > Variables set to Gitea
 HTTP registry.
 
 For Docker Hub, also add a `DOCKERHUB_USERNAME` variable (like `mr0btain`) and create the two repositories there,
-`ticketman` (with the web client) and `ticketman-server` (without it). With neither `REGISTRY_TOKEN` nor
-`DOCKERHUB_TOKEN` set, no image is built.
+`ticketman` (with the web client) and `ticketman-server` (without it). Only the Gitea workflow pushes to Docker Hub,
+so these go on Gitea only. With neither `REGISTRY_TOKEN` nor `DOCKERHUB_TOKEN` set, no image is built there.
 
 GitHub pushes the image with its own `GITHUB_TOKEN`. The first time it does, the package is private: make it public
 under the package's settings if anyone should pull it without logging in.

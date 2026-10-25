@@ -59,7 +59,8 @@ Every handler gets `viewModelScope` to launch work in and, where it shows messag
 | `customers`, `tickets`, `inventory`, `users` | `CustomerRecords`, `TicketRecords`, `InventoryRecords`, `UserRecords` | Records | Per record type: cache, pager, seed, selection, save, remove, search. See [Records](records.md) |
 | `session` | `SessionHandler` | Login, Settings | Connecting, login and logout, `currentUser`, `isAdmin`, `canEdit`, account requests and setup, this device's station |
 | `settings` | `SettingsHandler` | Settings | Saved settings as state flows. Each change is written to `LocalStorage` at once |
-| `counter` | `CounterHandler` | Counter | Search, queue, the open ticket and customer, price check. Its parts: `checkIn` (`CounterCheckIn`), `pickup` (`CounterPickup`), `invoices` (`CounterInvoices`, the invoice list) and `printer` (`CounterPrinter`) |
+| `counter` | `CounterHandler` | Counter | Search, queue, the open ticket and customer, price check. Its parts: `checkIn` (`CounterCheckIn`), `pickup` (`CounterPickup`), `sale` (`CounterSale`), `invoices` (`CounterInvoices`, the invoice list and gift cards) and `printer` (`CounterPrinter`) |
+| `purchasing` | `PurchasingHandler` | Purchasing | Suppliers, purchase orders, receiving; also ordering a part from a ticket and drafting orders for low stock |
 | `admin` | `AdminHandler` | Admin | Overview, daily report, low stock, audit log. Its parts: `accounts` (`AdminAccounts`: users, requests, invites, PINs), `devices` (`AdminDevices`: stations, sessions, blocked logins) and `server` (`AdminServer`: server info, shop profile, backup and restore, mock data) |
 | `kiosk` | `KioskHandler` | Kiosk | Kiosk on or off, the PIN lock, the idle timer |
 

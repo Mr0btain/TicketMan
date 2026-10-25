@@ -15,6 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
+import org.mr0btain.ticketman.components.utils.formatHours
+import org.mr0btain.ticketman.components.utils.formatTime
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.unit.dp
@@ -59,6 +62,9 @@ fun SettingsScreen(
     val currentUser = viewModel.session.currentUser.collectAsState()
 
     var showChangePin by remember { mutableStateOf(false) }
+    val clockedIn = viewModel.timeClock.current.collectAsState()
+    val weekHours = viewModel.timeClock.weekHours.collectAsState()
+    LaunchedEffect(Unit) { viewModel.timeClock.refresh() }
     var showStation by remember { mutableStateOf(false) }
 
     ChangePinDialog(
@@ -186,6 +192,17 @@ fun SettingsScreen(
                     },
                     enabled = currentUser.value != null,
                     onClick = { showChangePin = true }
+                ),
+                SettingItem.Action(
+                    icon = painterResource(Res.drawable.clock),
+                    label = if (clockedIn.value != null) "Clock out" else "Clock in",
+                    description = when {
+                        currentUser.value == null -> "Log in to use the time clock"
+                        else -> (clockedIn.value?.let { "On the clock since ${formatTime(it.clockedInAt)}" } ?: "Off the clock") +
+                            (weekHours.value?.let { ", ${formatHours(it)} this week" } ?: "")
+                    },
+                    enabled = currentUser.value != null,
+                    onClick = { viewModel.timeClock.punch() }
                 ),
                 SettingItem.Action(
                     icon = painterResource(Res.drawable.monitor),

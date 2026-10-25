@@ -26,10 +26,35 @@ lines are saved. Paid and void invoices keep the rate they had.
   retired }`). Each counts as a built-in status (`actsAs`), which decides where its tickets show; customers see its
   name only when `showCustomer` is on. A status left out of the list is kept with `retired` set, since tickets and
   history may still point at it. `CustomStatusRules` in shared checks them on both sides.
+- **`taxClasses`** are the shop's other tax rates (`TaxClass { identifier, name, rate }`, `rate` a percent as
+  typed), for lines and inventory items taxed differently from `taxRate`. An invoice keeps the classes it was made
+  with in its `taxRates`, and picks up one made later when a line first uses it.
+- **`warrantyDays`** is how long repairs are guaranteed from pickup, 0 to 3650, for labor and part lines that don't
+  set their own `warrantyDays`. 0 is none.
+- **`storage`** is `StorageTerms { feeAfterDays, dailyFeeCents, abandonAfterDays }`: a device ready longer than
+  `feeAfterDays` is charged `dailyFeeCents` for each day past them (a line synced onto its invoice when it's opened,
+  see [invoices](invoice.md)), and one ready `abandonAfterDays` is treated as abandoned by the hourly sweep. 0 turns
+  either off. The terms are printed on the claim slip and the status page says when the fee starts.
+- **`accounting`** is `AccountingSettings`, the names the shop's books use for the
+  [QuickBooks and Xero exports](invoice.md#get-apiinvoiceexport): QuickBooks items per kind of line (`laborItem`,
+  `partsItem`, `otherItem`, `giftCardItem`), Xero's `salesAccount`, `giftCardAccount` (blank is the sales account),
+  `taxType`, `exemptTaxType` and `classTaxTypes` (tax class id to Xero tax rate), `walkInCustomer` for sales with no
+  customer, `dueDays` (0 to 365) and `dateFormat` (`MONTH_FIRST`, `DAY_FIRST` or `ISO`).
+- **`checklists`** are the shop's own intake checklists (`IntakeChecklist { kind, items }`), one per `DeviceKind`;
+  a kind without one uses the built in list (`IntakeChecklists.defaults`), and an empty list means nothing's
+  checked. Items are saved trimmed, blank and repeated ones dropped, up to 30 of 60 characters each.
+- **`partsOrderedStatus`** and **`partsArrivedStatus`** are where a ticket goes when a [purchase order](purchase.md)
+  with a part for it is placed, and when every part ordered for it has arrived, each a `StatusChoice` or null.
+- **`estimateSentStatus`**, **`estimateApprovedStatus`** and **`estimateDeclinedStatus`** are where sending,
+  approving and declining an [estimate](estimate.md) move the ticket, each a `StatusChoice` or null to leave it.
 - **`202`** saved. **`400`** `repeatWindowDays` outside 1 to 3650, `currencySymbol` blank, longer than 4
   characters or holding a digit, a negative `laborRateCents`, a `publicUrl` that isn't an `http(s)://` address, or
   statuses that break the rules: a blank or over 40 character name, two in use with the same name or a built-in
-  one's, one acting as `PICKED_UP`, more than 40, or a saved one whose `actsAs` changed.
+  one's, one acting as `PICKED_UP`, more than 40, or a saved one whose `actsAs` changed; an estimate or parts status
+  staff couldn't pick (picked up, retired or unknown); or a tax class with no name, a rate that isn't 0 to 100, or the
+  same identifier twice; or a warranty outside 0 to 3650 days; or storage terms with days outside 0 to 3650, a negative fee, or an
+  abandon limit that isn't after the fee starts; or accounting names left blank or over 100 characters, or `dueDays`
+  outside 0 to 365.
 
 ## See also
 

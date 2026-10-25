@@ -82,7 +82,10 @@ class CounterDatabase(
 
         return CounterQueueResponse(
             readyForPickup = ticketDatabase.summarize(
-                tickets.filter { it.status.status == TicketStatusType.DONE }.sortedBy { it.status.time }
+                tickets.filter { it.status.status == TicketStatusType.DONE && it.abandonedAt == null }.sortedBy { it.status.time }
+            ),
+            abandoned = ticketDatabase.summarize(
+                tickets.filter { it.status.status == TicketStatusType.DONE && it.abandonedAt != null }.sortedBy { it.abandonedAt }
             ),
             dueToday = ticketDatabase.summarize(
                 open.filter { ticket -> ticket.promisedAt?.let { it in startOfToday until startOfTomorrow } == true }
@@ -100,11 +103,11 @@ class CounterDatabase(
      * Earlier tickets for the same customer and device made within the window, newest first. Matches on serial
      * when one is given, otherwise make and model. A ticket's time is when it was picked up, or made if it wasn't
      */
-    fun repeatCheck(customerIdentifier: Uuid, device: Device, windowDays: Int, excludeTicket: Uuid?): List<TicketSummary> {
+    fun repeatCheck(customerIdentifier: Uuid, device: Device, windowDays: Int, excludeTicket: Uuid?, deviceIdentifier: Uuid? = null): List<TicketSummary> {
         val since = (Clock.System.now() - windowDays.days).toEpochMilliseconds()
         val serial = device.serial.trim()
 
-        if (serial.isBlank() && (device.manufacturer.isBlank() || device.model.isBlank())) return emptyList()
+        if (deviceIdentifier == null && serial.isBlank() && (device.manufacturer.isBlank() || device.model.isBlank())) return emptyList()
 
         val matches = dbQuery(REPEAT_TAG) {
             val identifiers = CustomerTicketTable
@@ -121,7 +124,10 @@ class CounterDatabase(
                 .filter { ticket ->
                     val previous = ticket.device
 
-                    if (serial.isNotBlank()) {
+                    // The same device record is the surest match, then the serial, then make and model
+                    if (deviceIdentifier != null && ticket.deviceIdentifier == deviceIdentifier) {
+                        true
+                    } else if (serial.isNotBlank()) {
                         previous.serial.trim().equals(serial, ignoreCase = true)
                     } else {
                         previous.manufacturer.trim().equals(device.manufacturer.trim(), ignoreCase = true) &&

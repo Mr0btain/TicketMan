@@ -25,6 +25,14 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var estimateCents by TicketTable.estimateCents
     var promisedAt by TicketTable.promisedAt
     var pickedUpAt by TicketTable.pickedUpAt
+    var statusToken by TicketTable.statusToken
+    var deviceRef by TicketTable.deviceRef
+    var group by TicketTable.group
+    var checklist by TicketTable.checklist
+    val passcodeSet by TicketTable.passcodeSet
+    var warrantyUntil by TicketTable.warrantyUntil
+    var warrantyOf by TicketTable.warrantyOf
+    var abandonedAt by TicketTable.abandonedAt
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -41,7 +49,15 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             accessories = accessories,
             estimateCents = estimateCents,
             promisedAt = promisedAt,
-            pickedUpAt = pickedUpAt
+            pickedUpAt = pickedUpAt,
+            statusToken = statusToken,
+            deviceIdentifier = deviceRef,
+            groupIdentifier = group,
+            checklist = checklist,
+            passcodeSet = passcodeSet,
+            warrantyUntil = warrantyUntil,
+            warrantyOf = warrantyOf,
+            abandonedAt = abandonedAt
         )
     }
 }

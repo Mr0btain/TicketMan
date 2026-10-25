@@ -129,7 +129,9 @@ private fun seedInvoices(database: LocalDatabase, tickets: List<Uuid>, parts: Li
         inventory = database.inventoryDatabase,
         shop = database.shopDatabase,
         auditLog = database.auditLogDatabase,
-        work = database.workDatabase
+        work = database.workDatabase,
+        customers = database.customerDatabase,
+        values = database.storedValueDatabase
     )
     val tech = database.userDatabase.getByUsername(DEMO_STAFF.first().username)
     val techName = tech?.username ?: "tech"
@@ -153,7 +155,7 @@ private fun seedInvoices(database: LocalDatabase, tickets: List<Uuid>, parts: Li
         // Done ones mostly go home, paid off in one go
         if (ticket.status.status == TicketStatusType.DONE && Random.nextInt(3) > 0) {
             val owed = (service.forTicket(identifier, tech?.identifier) as? AccountResult.Done)?.value?.balanceCents ?: return@forEach
-            val payments = if (owed > 0) listOf(PaymentRequest(PaymentMethod.entries.random(), owed)) else emptyList()
+            val payments = if (owed > 0) listOf(PaymentRequest(PaymentMethod.entries.filter { !it.storedValue }.random(), owed)) else emptyList()
 
             if (service.pickup(PickupRequest(identifier, payments), techName, tech?.identifier) is AccountResult.Done) pickedUp++
         }

@@ -232,7 +232,13 @@ private fun DailyReportCard(
             // Tiles share the row so a busy day shrinks them instead of wrapping one onto its own line
             val tile = Modifier.widthIn(min = 150.dp).weight(1f)
 
-            TmStatTile(modifier = tile, label = "Taken", value = formatMoney(report.takenCents), icon = Res.drawable.dollar_sign, caption = "${report.paymentCount} payments")
+            TmStatTile(
+                modifier = tile,
+                label = "Taken",
+                value = formatMoney(report.takenCents),
+                icon = Res.drawable.dollar_sign,
+                caption = "${report.paymentCount} payments" + if (report.refundCount > 0) ", ${formatMoney(report.refundedCents)} refunded" else ""
+            )
 
             PaymentMethod.entries.filter { (report.takenByMethod[it] ?: 0) > 0 }.forEach { method ->
                 TmStatTile(modifier = tile, label = formatEnumName(method.name), value = formatMoney(report.takenByMethod[method] ?: 0), icon = Res.drawable.credit_card)

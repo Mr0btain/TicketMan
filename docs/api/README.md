@@ -18,6 +18,14 @@ changes here are made to both sides together.
 | [Customers](customer.md) | `/api/data/customer` | `CustomerRoute.kt` |
 | [Tickets](ticket.md) | `/api/data/ticket` | `TicketRoute.kt` |
 | [Inventory](inventory.md) | `/api/data/inventory` | `InventoryRoute.kt` |
+| [Messages](notify.md) | `/api/notify` | `NotifyRoute.kt` |
+| [Estimates](estimate.md) | `/api/estimate` | `EstimateRoute.kt` |
+| [Gift cards](giftcard.md) | `/api/giftcard` | `GiftCardRoute.kt` |
+| [Purchasing](purchase.md) | `/api/purchase` | `PurchaseRoute.kt` |
+| [Reports](report.md) | `/api/report` | `ReportRoute.kt` |
+| [Appointments](appointment.md) | `/api/appointment` | `AppointmentRoute.kt` |
+| [Time clock](timeclock.md) | `/api/timeclock` | `TimeClockRoute.kt` |
+| [Status page](status.md) | `/status` | `StatusRoute.kt` |
 | [Notes](notes.md) | `.../note/...` on each record type | `NoteRoute.kt` |
 
 The prefixes are set in

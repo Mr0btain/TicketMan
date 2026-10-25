@@ -1,6 +1,10 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.Coalesce
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.intLiteral
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greaterEq
@@ -90,7 +94,7 @@ class StatsDatabase {
                 recentTickets = recentTickets,
                 totalCustomers = CustomerTable.selectAll().count(),
                 totalInventory = InventoryTable.selectAll().count(),
-                lowStockCount = InventoryTable.selectAll().where { InventoryTable.stock lessEq lowStockThreshold }.count(),
+                lowStockCount = InventoryTable.selectAll().where { lowStock(lowStockThreshold) }.count(),
                 lowStockThreshold = lowStockThreshold,
                 totalUsers = users.size.toLong(),
                 usersByAccessLevel = listOf(AccessLevel.RESTRICTED, AccessLevel.NORMAL, AccessLevel.ADMIN)
@@ -132,7 +136,9 @@ class StatsDatabase {
             val report = DailyReport(
                 date = date.toString(),
                 takenByMethod = payments.groupBy({ it.first }, { it.second }).mapValues { (_, amounts) -> amounts.sum() },
-                paymentCount = payments.size,
+                paymentCount = payments.count { it.second > 0 },
+                refundedCents = -payments.filter { it.second < 0 }.sumOf { it.second },
+                refundCount = payments.count { it.second < 0 },
                 salesCents = paidInvoices.sumOf { it.first },
                 taxCents = paidInvoices.sumOf { it.second },
                 invoicesPaid = paidInvoices.size,
@@ -146,13 +152,18 @@ class StatsDatabase {
         }
     }
 
+    // Tracked items at or below their own reorder point, or [threshold] when they have none
+    private fun lowStock(threshold: Int): Op<Boolean> =
+        (InventoryTable.stock neq Int.MAX_VALUE) and
+            (InventoryTable.stock lessEq Coalesce(InventoryTable.reorderPoint, intLiteral(threshold)))
+
     /**
-     * Inventory items at or below the threshold, lowest stock first
+     * Inventory items at or below their reorder point, or the threshold when they have none, lowest stock first
      */
     fun getLowStock(threshold: Int, limit: Int): List<Inventory>? {
         return dbQuery(GET_LOW_STOCK_TAG) {
             InventoryEntity
-                .find { InventoryTable.stock lessEq threshold }
+                .find { lowStock(threshold) }
                 .orderBy(InventoryTable.stock to SortOrder.ASC, InventoryTable.name to SortOrder.ASC)
                 .limit(limit)
                 .map { it.toInventory() }

@@ -11,6 +11,11 @@ import kotlin.uuid.Uuid
  * @param quantity Hours for labor, count for parts. Up to two decimals
  * @param unitPriceCents Price of one
  * @param inventoryIdentifier The inventory item for parts, its stock is taken when the invoice is paid
+ * @param reference A gift card's code for [ChargeType.GIFT_CARD], blank until the server gives a new card one when
+ * the invoice is paid
+ * @param taxClass The shop's [TaxClass] it's taxed at, null for the shop's main rate. Only counts when [taxable]
+ * @param warrantyDays How long the repair is guaranteed for this line, from pickup. Null for the shop's
+ * `warrantyDays` on labor and parts, nothing on other lines
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -21,7 +26,10 @@ data class Charge(
     val quantity: Double = 1.0,
     val unitPriceCents: Long = 0,
     val inventoryIdentifier: Uuid? = null,
-    val taxable: Boolean = true
+    val taxable: Boolean = true,
+    val reference: String = "",
+    val taxClass: String? = null,
+    val warrantyDays: Int? = null
 ): SubItem {
     /** Quantity times price, rounded to the cent */
     val totalCents: Long

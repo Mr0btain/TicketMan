@@ -20,6 +20,12 @@ class InventoryEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var legacyPrice by InventoryTable.legacyPrice
     var costCents by InventoryTable.costCents
     var priceCents by InventoryTable.priceCents
+    var taxClass by InventoryTable.taxClass
+    var sku by InventoryTable.sku
+    var barcode by InventoryTable.barcode
+    var category by InventoryTable.category
+    var reorderPoint by InventoryTable.reorderPoint
+    var supplier by InventoryTable.supplier
 
     // For notes
     var notes by NoteEntity via InventoryNoteTable
@@ -34,7 +40,13 @@ class InventoryEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             description = description,
             stock = stock,
             costCents = costCents,
-            priceCents = priceCents
+            priceCents = priceCents,
+            taxClass = taxClass,
+            sku = sku,
+            barcode = barcode,
+            category = category,
+            reorderPoint = reorderPoint,
+            supplierIdentifier = supplier
         )
     }
 }

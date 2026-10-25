@@ -30,6 +30,7 @@ import ticketman.composeapp.generated.resources.monitor
 /**
  * Devices staff can PIN in at. Devices register themselves from Settings, admins approve them here
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun AdminStationsTab(
     stations: List<Station>,
@@ -65,7 +66,12 @@ fun AdminStationsTab(
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(spacing.md), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                                // The badge goes under the name when there's no room beside it
+                                FlowRow(
+                                    horizontalArrangement = Arrangement.spacedBy(spacing.sm),
+                                    verticalArrangement = Arrangement.spacedBy(spacing.xs),
+                                    itemVerticalAlignment = Alignment.CenterVertically
+                                ) {
                                     Text(text = station.name, style = TmTheme.typography.subtitle, color = colors.text)
                                     TmBadge(text = if (approved) "Approved" else "Waiting for approval", tone = if (approved) colors.success else colors.warning)
                                 }
@@ -92,15 +98,18 @@ fun AdminStationsTab(
 /**
  * Kiosk mode switch and idle lock time for one station
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun KioskControls(station: Station, onKiosk: (Station, KioskSettings) -> Unit) {
     var timeout by remember(station) { mutableStateOf(station.idleTimeoutSeconds.toString()) }
     val seconds = timeout.toIntOrNull()?.takeIf { it in Station.IDLE_TIMEOUT_RANGE }
     val spacing = TmTheme.spacing
 
-    Row(
+    // Wraps on a narrow window, the time with its unit staying together
+    FlowRow(
         horizontalArrangement = Arrangement.spacedBy(spacing.md),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(spacing.sm),
+        itemVerticalAlignment = Alignment.CenterVertically
     ) {
         TmSwitch(
             checked = station.kioskEnabled,
@@ -114,16 +123,18 @@ private fun KioskControls(station: Station, onKiosk: (Station, KioskSettings) ->
             color = TmTheme.colors.text
         )
 
-        TmTextField(
-            modifier = Modifier.width(90.dp),
-            value = timeout,
-            onValueChange = { text -> timeout = text.filter { it.isDigit() }.take(4) },
-            textStyle = TmTheme.typography.numeric,
-            size = TmControlSize.SMALL,
-            error = if (seconds == null) "" else null
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+            TmTextField(
+                modifier = Modifier.width(90.dp),
+                value = timeout,
+                onValueChange = { text -> timeout = text.filter { it.isDigit() }.take(4) },
+                textStyle = TmTheme.typography.numeric,
+                size = TmControlSize.SMALL,
+                error = if (seconds == null) "" else null
+            )
 
-        Text(text = "seconds", style = TmTheme.typography.body, color = TmTheme.colors.textMuted)
+            Text(text = "seconds", style = TmTheme.typography.body, color = TmTheme.colors.textMuted, maxLines = 1)
+        }
 
         TmButton(
             text = "Save",

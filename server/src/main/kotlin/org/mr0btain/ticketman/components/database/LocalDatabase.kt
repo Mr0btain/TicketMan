@@ -32,6 +32,18 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketSignatureT
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketWorkTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHistoryTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
+import org.mr0btain.ticketman.components.database.tables.notify.NotifySettingsTable
+import org.mr0btain.ticketman.components.database.tables.notify.OutboxTable
+import org.mr0btain.ticketman.components.database.tables.estimate.EstimateTable
+import org.mr0btain.ticketman.components.database.tables.storedvalue.CustomerCreditTable
+import org.mr0btain.ticketman.components.database.tables.storedvalue.GiftCardTable
+import org.mr0btain.ticketman.components.database.tables.purchase.PurchaseOrderTable
+import org.mr0btain.ticketman.components.database.tables.purchase.SupplierTable
+import org.mr0btain.ticketman.components.database.tables.device.CustomerDeviceTable
+import org.mr0btain.ticketman.components.database.tables.ticket.TicketPasscodeTable
+import org.mr0btain.ticketman.components.database.tables.report.CommissionRateTable
+import org.mr0btain.ticketman.components.database.tables.appointment.AppointmentTable
+import org.mr0btain.ticketman.components.database.tables.timeclock.TimeEntryTable
 import org.mr0btain.ticketman.components.database.tables.user.UserNoteTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.InviteTable
@@ -88,6 +100,15 @@ class LocalDatabase (
     val stationDatabase = StationDatabase()
     val invoiceDatabase = InvoiceDatabase()
     val workDatabase = WorkDatabase()
+    val notifyDatabase = NotifyDatabase()
+    val estimateDatabase = EstimateDatabase()
+    val storedValueDatabase = StoredValueDatabase()
+    val purchaseDatabase = PurchaseDatabase()
+    val deviceDatabase = DeviceDatabase()
+    val passcodeDatabase = PasscodeDatabase()
+    val reportDatabase = ReportDatabase(invoiceDatabase)
+    val appointmentDatabase = AppointmentDatabase()
+    val timeClockDatabase = TimeClockDatabase()
     val imageDatabase = ImageDatabase { recordDatabases }
 
     /**
@@ -123,6 +144,18 @@ class LocalDatabase (
         InvoiceTable,
         InvoiceChargeTable,
         InvoicePaymentTable,
+        NotifySettingsTable,
+        OutboxTable,
+        EstimateTable,
+        CustomerCreditTable,
+        GiftCardTable,
+        SupplierTable,
+        PurchaseOrderTable,
+        CustomerDeviceTable,
+        TicketPasscodeTable,
+        CommissionRateTable,
+        AppointmentTable,
+        TimeEntryTable,
         DataFixTable
     )
 
@@ -138,7 +171,11 @@ class LocalDatabase (
         ImageTable,
         InvoiceTable,
         NoteTable,
-        TicketStatusHistoryTable
+        TicketStatusHistoryTable,
+        CustomerTable,
+        InvoicePaymentTable,
+        InvoiceChargeTable,
+        EstimateTable
     )
 
     /**
@@ -159,11 +196,16 @@ class LocalDatabase (
                 "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.NUMBER_INDEX} " +
                     "ON ${TicketTable.tableName} (${TicketTable.numberYear.name}, ${TicketTable.numberSequence.name})"
             )
+            exec(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.STATUS_TOKEN_INDEX} " +
+                    "ON ${TicketTable.tableName} (${TicketTable.statusToken.name})"
+            )
 
             AppLogger.m(INIT_TAG, SimpleResult.SUCCESS)
         }
 
         ticketDatabase.backfillNumbers()
+        ticketDatabase.backfillStatusTokens()
         userDatabase.migrateDeactivatedUsers()
         tokenDatabase.clearLegacySessions()
         tokenDatabase.backfillExpiry()
@@ -173,6 +215,12 @@ class LocalDatabase (
             userDatabase.migrateLegacyNames()
         }
         runOnce("invoice-ticket-key") { dropInvoiceTicketKey() }
+        // Counter sales have no ticket. H2's unique index allows any number of nulls
+        runOnce("invoice-ticket-nullable") {
+            TransactionManager.current().exec("ALTER TABLE ${InvoiceTable.tableName} ALTER COLUMN ${InvoiceTable.ticket.name} SET NULL")
+        }
+        // Devices are kept per customer since; older tickets get theirs from what was typed on them
+        runOnce("customer-devices") { deviceDatabase.backfill() }
         removeDetachedNotes()
     }
 

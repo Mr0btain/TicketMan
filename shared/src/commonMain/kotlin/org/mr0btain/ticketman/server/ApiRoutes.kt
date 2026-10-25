@@ -9,7 +9,7 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 6
+const val API_VERSION = 12
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
@@ -27,6 +27,17 @@ object ApiRoutes {
     const val CUSTOMER = "/api/data/customer"
     const val TICKET = "/api/data/ticket"
     const val INVENTORY = "/api/data/inventory"
+
+    const val NOTIFY = "/api/notify"
+    const val GIFT_CARD = "/api/giftcard"
+    const val PURCHASE = "/api/purchase"
+    const val ESTIMATE = "/api/estimate"
+    const val REPORT = "/api/report"
+    const val APPOINTMENT = "/api/appointment"
+    const val TIME_CLOCK = "/api/timeclock"
+
+    /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
+    const val STATUS = "/status"
 }
 
 /** Query parameters the paged and search reads take */
@@ -61,6 +72,24 @@ object NotePaths {
 object CustomerPaths {
     const val GET_TICKETS = "/get/tickets/{identifier}"
     const val ADD_TICKET = "/add/ticket/{identifier}"
+
+    /** `GET` the store credit history, newest first. `POST` a `BalanceAdjustRequest`, admin only */
+    const val CREDIT = "/credit/{identifier}"
+
+    /** The customer's invoices, tickets' and sales', newest first */
+    const val INVOICES = "/get/invoices/{identifier}"
+
+    /** `GET` the customer's devices, `POST` a `CustomerDevice` to add one */
+    const val DEVICES = "/devices/{identifier}"
+
+    /** Body `CustomerDevice` */
+    const val DEVICE_UPDATE = "/device/update"
+
+    /** `DELETE`: the device goes, its tickets stay */
+    const val DEVICE = "/device/{identifier}"
+
+    /** The device's tickets, newest first */
+    const val DEVICE_TICKETS = "/device/{identifier}/tickets"
 }
 
 object TicketPaths {
@@ -83,12 +112,24 @@ object TicketPaths {
 
     /** Takes the work entry with this identifier off, and its invoice line */
     const val REMOVE_WORK = "/remove/work/{identifier}"
+
+    /** `POST`: gives the ticket a new status token, so the old status page link stops working */
+    const val STATUS_TOKEN = "/status-token/{identifier}"
+
+    /** `GET` shows the device's passcode (audited), `POST` a `PasscodeBody` sets it, `DELETE` clears it */
+    const val PASSCODE = "/passcode/{identifier}"
 }
 
 object InventoryPaths {
     const val GET_IMAGES = "/get/images/{identifier}"
     const val SET_IMAGES = "/set/images/{identifier}"
     const val SET_STOCK = "/set/stock/{identifier}"
+
+    /** The item whose barcode or SKU is exactly this, for a scanner */
+    const val BY_CODE = "/code/{code}"
+
+    /** Every category in use, by name */
+    const val CATEGORIES = "/categories"
 }
 
 object UserPaths {
@@ -161,6 +202,9 @@ object CounterPaths {
     const val CHECK_IN = "/check-in"
     const val PICKUP = "/pickup"
 
+    /** Body `SaleRequest`: sells from stock without a ticket, paid there and then */
+    const val SALE = "/sale"
+
     /** `?query=&limit=` */
     const val SEARCH = "/search"
     const val QUEUE = "/queue"
@@ -178,6 +222,9 @@ object InvoicePaths {
     const val PAYMENT = "/{identifier}/payments/{paymentIdentifier}"
     const val VOID = "/{identifier}/void"
 
+    /** Admin only, body `RefundRequest`: money back on a paid invoice, optionally parts back in stock */
+    const val REFUND = "/{identifier}/refund"
+
     /** `DELETE`, admin only: an invoice kept after its ticket was deleted */
     const val REMOVE = "/{identifier}"
 
@@ -186,6 +233,131 @@ object InvoicePaths {
 
     /** Invoices made in a range as CSV, `?from=2026-10-01&to=2026-10-31`, both days included */
     const val EXPORT = "/export"
+}
+
+object NotifyPaths {
+    /** Admin only: `GET` the settings without passwords, `POST` to save them */
+    const val SETTINGS = "/settings"
+
+    /** Admin only: sends a `TestMessageRequest` now */
+    const val TEST = "/test"
+
+    /** Admin only: every message, newest first, `?offset=&limit=` */
+    const val OUTBOX = "/outbox"
+    const val RETRY = "/outbox/{identifier}/retry"
+    const val CANCEL = "/outbox/{identifier}/cancel"
+
+    /** The messages sent about a ticket, newest first */
+    const val TICKET = "/ticket/{identifier}"
+
+    /** Body `TicketMessageRequest`: sends one to the ticket's customer now */
+    const val TICKET_SEND = "/ticket/{identifier}/send"
+}
+
+/** Under [ApiRoutes.APPOINTMENT] */
+object AppointmentPaths {
+    /** `?from=&to=` days like 2026-10-01, both included, by when they start */
+    const val RANGE = "/range"
+    const val GET = "/get/{identifier}"
+    const val ADD = "/add"
+    const val UPDATE = "/update"
+
+    /** Body `AppointmentStatusRequest`: cancelled, no show, or booked again */
+    const val STATUS = "/status/{identifier}"
+    const val REMOVE = "/remove/{identifier}"
+}
+
+/** Under [ApiRoutes.TIME_CLOCK] */
+object TimeClockPaths {
+    /** Body `PinLoginRequest`: clocks in or out at a station by PIN, with no login */
+    const val PUNCH = "/punch"
+
+    /** The caller: whether they're on the clock, and clocking in or out from their own device */
+    const val ME = "/me"
+    const val ME_PUNCH = "/me/punch"
+
+    /** `?from=&to=`: the caller's own time */
+    const val ME_TIMESHEET = "/me/timesheet"
+
+    /** Who's on the clock now */
+    const val NOW = "/now"
+
+    /** `?from=&to=` and optionally `user=`, admin only */
+    const val TIMESHEET = "/timesheet"
+    const val ENTRY_ADD = "/entry/add"
+    const val ENTRY_UPDATE = "/entry/update"
+    const val ENTRY_REMOVE = "/entry/remove/{identifier}"
+}
+
+/** Under [ApiRoutes.REPORT], admin only */
+object ReportPaths {
+    /** `?from=&to=` days like 2026-10-01, both included: a `PeriodReport` */
+    const val PERIOD = "/period"
+
+    /** Each user's commission on labor, read and replaced as a whole list */
+    const val COMMISSIONS = "/commissions"
+}
+
+object PurchasePaths {
+    /** Every supplier, by name */
+    const val SUPPLIERS = "/suppliers"
+    const val SUPPLIER_ADD = "/suppliers/add"
+    const val SUPPLIER_UPDATE = "/suppliers/update"
+    const val SUPPLIER = "/suppliers/{identifier}"
+
+    /** A page of orders, newest first, `?status=&offset=&limit=` */
+    const val ORDERS = "/orders"
+    const val ORDER = "/orders/{identifier}"
+
+    /** Orders with lines for a ticket */
+    const val TICKET = "/orders/ticket/{ticketIdentifier}"
+
+    /** Body `PurchaseOrderRequest`: a new draft */
+    const val ADD = "/orders/add"
+
+    /** Body `PurchaseOrderRequest`: changes a draft */
+    const val UPDATE = "/orders/{identifier}/update"
+
+    /** The draft goes to the supplier */
+    const val PLACE = "/orders/{identifier}/place"
+
+    /** Body `ReceiveRequest` */
+    const val RECEIVE = "/orders/{identifier}/receive"
+    const val CANCEL = "/orders/{identifier}/cancel"
+
+    /** Body `OrderPartRequest`: a part for a ticket onto the supplier's draft */
+    const val PART = "/orders/part"
+}
+
+object GiftCardPaths {
+    /** Looks a card up by its code, to check the balance */
+    const val GET = "/code/{code}"
+
+    /** Admin only, every card newest first, `?offset=&limit=` */
+    const val FETCH = "/fetch"
+
+    /** Admin only, body `BalanceAdjustRequest` */
+    const val ADJUST = "/code/{code}/adjust"
+}
+
+object EstimatePaths {
+    /** `GET` the ticket's estimates, newest first. `POST` an `EstimateRequest` to send a new one */
+    const val TICKET = "/ticket/{ticketIdentifier}"
+
+    /** Body `EstimateDecisionRequest`: what the customer said, written down by staff */
+    const val DECIDE = "/{identifier}/decide"
+    const val WITHDRAW = "/{identifier}/withdraw"
+}
+
+/** Under [ApiRoutes.STATUS], whose own path is the lookup form (`GET`) and its answer (`POST`) */
+object StatusPaths {
+    const val PAGE = "/{token}"
+
+    /** The customer approving or declining the waiting estimate: form fields `decision` and `name` */
+    const val ESTIMATE = "/{token}/estimate"
+
+    /** A photo from an update the customer can see, `thumb` or `display` */
+    const val PHOTO = "/{token}/photo/{identifier}/{variant}"
 }
 
 object StationPaths {

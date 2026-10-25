@@ -30,18 +30,20 @@ kotlin {
     }
     
 
-    /*
-    listOf(
-        iosX64(),
-        iosArm64(),
-        iosSimulatorArm64()
-    ).forEach { iosTarget ->
-        iosTarget.binaries.framework {
-            baseName = "ComposeApp"
-            isStatic = true
+    // iOS only builds on a Mac (it needs Xcode), so elsewhere the targets are left out. Xcode builds the framework
+    // through embedAndSignAppleFrameworkForXcode (iosApp's build phase); iosX64 is left out since Intel simulators
+    // aren't worth the build time
+    if (System.getProperty("os.name").startsWith("Mac")) {
+        listOf(
+            iosArm64(),
+            iosSimulatorArm64()
+        ).forEach { iosTarget ->
+            iosTarget.binaries.framework {
+                baseName = "ComposeApp"
+                isStatic = true
+            }
         }
     }
-     */
     
     jvm("desktop")
 
@@ -134,12 +136,10 @@ kotlin {
             implementation(libs.ktor.client.mock)
         }
 
-        /*
-        nativeMain.dependencies {
-            // ktor
+        // Only there on a Mac, see the targets above
+        findByName("iosMain")?.dependencies {
             implementation(libs.ktor.client.darwin)
         }
-         */
 
         val desktopTest = getByName("desktopTest") {
             dependencies {
@@ -148,6 +148,9 @@ kotlin {
 
                 // Self-signed certificates for a real HTTPS server to connect to
                 implementation(libs.ktor.network.tls.certificates)
+
+                // Typing and keys into real composables, like a scanner's Enter
+                implementation(libs.ui.test)
             }
         }
 

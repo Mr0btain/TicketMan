@@ -12,6 +12,12 @@ object HtmlPrintRenderer {
         val (pageSize, width, fontSize, largeSize) = when (paper) {
             PaperSize.RECEIPT_80MM -> PageStyle("80mm auto", "72mm", "11px", "26px")
             PaperSize.LETTER -> PageStyle("letter", "7in", "14px", "40px")
+            PaperSize.LABEL -> PageStyle("57mm 32mm", "53mm", "9px", "16px")
+        }
+        val margin = when (paper) {
+            PaperSize.RECEIPT_80MM -> "4mm"
+            PaperSize.LETTER -> "0.5in"
+            PaperSize.LABEL -> "2mm"
         }
 
         val body = document.blocks.joinToString("\n") { block(it, paper) }
@@ -23,7 +29,7 @@ object HtmlPrintRenderer {
             <meta charset="utf-8">
             <title>${escape(document.title)}</title>
             <style>
-              @page { size: $pageSize; margin: ${if (paper == PaperSize.LETTER) "0.5in" else "4mm"}; }
+              @page { size: $pageSize; margin: $margin; }
               body { font-family: Helvetica, Arial, sans-serif; font-size: $fontSize; color: #000; margin: 0; }
               .page { width: $width; margin: 0 auto; }
               h1 { font-size: 1.4em; text-align: center; margin: 0.3em 0; }
@@ -37,7 +43,8 @@ object HtmlPrintRenderer {
               .row { display: flex; justify-content: space-between; margin: 0.1em 0; }
               hr { border: none; border-top: 1px dashed #000; margin: 0.6em 0; }
               .gap { height: 0.6em; }
-              .qr, .signature, .photo { display: block; margin: 0.4em auto; }
+              .qr, .signature, .photo, .barcode { display: block; margin: 0.4em auto; }
+              .barcode { max-width: 100%; }
               .photo { object-fit: contain; }
               .signature { max-width: ${if (paper == PaperSize.LETTER) "4in" else "100%"}; }
               .caption { font-size: 0.85em; text-align: center; }
@@ -48,6 +55,29 @@ object HtmlPrintRenderer {
             </div></body>
             </html>
         """.trimIndent()
+    }
+
+    private fun qrSize(paper: PaperSize): String = when (paper) {
+        PaperSize.RECEIPT_80MM -> "30mm"
+        PaperSize.LETTER -> "1.4in"
+        PaperSize.LABEL -> "16mm"
+    }
+
+    /** A Code 128 barcode as SVG bars with its quiet zones, scaled to the width it's given; null when it can't be one */
+    fun barcodeSvg(text: String, height: String): String? {
+        val widths = Code128.encode(text) ?: return null
+        val total = Code128.modules(widths) + Code128.QUIET_ZONE * 2
+
+        val bars = buildString {
+            var x = Code128.QUIET_ZONE
+            widths.forEachIndexed { index, width ->
+                if (index % 2 == 0) append("M$x,0h${width}v1h-${width}z")
+                x += width
+            }
+        }
+
+        return "<svg class=\"barcode\" width=\"100%\" height=\"$height\" viewBox=\"0 0 $total 1\" preserveAspectRatio=\"none\" shape-rendering=\"crispEdges\">" +
+            "<rect width=\"$total\" height=\"1\" fill=\"#fff\"/><path d=\"$bars\" fill=\"#000\"/></svg>"
     }
 
     private data class PageStyle(val pageSize: String, val width: String, val fontSize: String, val largeSize: String)
@@ -68,8 +98,10 @@ object HtmlPrintRenderer {
 
         PrintBlock.Divider -> "<hr>"
         PrintBlock.Gap -> "<div class=\"gap\"></div>"
-        is PrintBlock.Qr -> qrSvg(block.text, if (paper == PaperSize.LETTER) "1.4in" else "30mm")
-        is PrintBlock.Photo -> photoImg(block, if (paper == PaperSize.LETTER) "1.4in" else "30mm")
+        is PrintBlock.Qr -> qrSvg(block.text, qrSize(paper))
+        is PrintBlock.Barcode -> barcodeSvg(block.text, if (paper == PaperSize.LABEL) "9mm" else "12mm")
+            ?.let { "$it<div class=\"caption\">${escape(block.text)}</div>" }.orEmpty()
+        is PrintBlock.Photo -> photoImg(block, qrSize(paper))
         is PrintBlock.Signature -> signatureSvg(block) + "<div class=\"caption\">${escape(block.caption)}</div>"
     }
 

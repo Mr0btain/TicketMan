@@ -25,7 +25,7 @@ done
 export DOMAIN=localhost CERTIFICATE=private TZ="${TZ:-America/New_York}" ADMIN_PASSWORD=admin_pass
 export HTTPS_PORT="${HTTPS_PORT:-8445}" HTTP_PORT="${HTTP_PORT:-8081}" SUBNET="${SUBNET:-172.30.81.0/24}"
 BASE="https://localhost:$HTTPS_PORT"
-compose() { docker compose -p ticketman-smoke -f "$ROOT/docker-compose.yml" "$@"; }
+compose() { docker compose -p ticketman-smoke -f "$ROOT/docker/docker-compose.yml" "$@"; }
 
 cleanup() {
     if $KEEP; then
@@ -68,7 +68,7 @@ redirect="$(curl -s -o /dev/null -w '%{redirect_url}' "http://localhost:$HTTP_PO
 echo "Caddy answers without SNI and sends plain HTTP to $BASE"
 
 echo "Walking the counter through the proxy, then restoring with a restart"
-python3 "$ROOT/scripts/counter_e2e.py" "$BASE" --insecure --restart
+python3 "$ROOT/scripts/counter_e2e.py" "$BASE" --insecure --restart --no-mail
 
 restarts="$(docker inspect --format '{{.RestartCount}}' "$(compose ps -q ticketman)")"
 [[ "$restarts" -ge 1 ]] || { echo "FAIL Docker didn't restart the server (restart count $restarts)" >&2; exit 1; }

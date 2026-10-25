@@ -8,6 +8,9 @@ enum class AdminTab(val label: String) {
     STATIONS("Stations"),
     LOW_STOCK("Low stock"),
     INVOICES("Invoices"),
+    REPORTS("Reports"),
+    TIMESHEETS("Timesheets"),
+    MESSAGES("Messages"),
     SERVER("Server and data"),
     AUDIT("Audit log")
 }

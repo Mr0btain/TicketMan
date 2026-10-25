@@ -25,6 +25,10 @@ with three slots:
 | `detail` | `RecordDetail` | The picked record: a header with an Edit button, then `DetailSection`s scrolling under it. An empty state when nothing is picked |
 
 At 760 dp and wider the list and details sit side by side (56 / 44); narrower, the details stack under the list.
+Under 560 dp (`NARROW_LIST_WIDTH`) each list drops to its name and the one or two columns that matter, with the
+rest as a caption under the name (`RecordNameCell`): customers show their phone and email under the name, tickets
+the device under the number beside the status, and inventory its SKU, category or description under the name
+beside stock and price.
 
 ```mermaid
 sequenceDiagram
@@ -49,7 +53,7 @@ sequenceDiagram
 |-----|--------------|---------|--------|
 | Customers | Name, phone, email, street | Contact, their tickets (click to open), notes | `CustomerDialog`: first and last name, phone, email, address, their tickets and a search to link more, notes |
 | Tickets | Number, device, priority, status | Status and priority badges, customer, technician, device, created, estimate, problem, work log (`TicketWorkSection`, with Log work), updates | `TicketDialog`: customer and technician search, New customer, device, problem, status, priority, updates |
-| Inventory | Name, description, stock, cost, price | Description, price, cost, stock, photos, notes | `InventoryDialog`: name, description, stock (or untracked), cost, price, photos, notes |
+| Inventory | Name, SKU and category (or description), stock, cost, price | Description, SKU, barcode, category and **Print label**, price, cost, stock, reorder point, photos, notes | `InventoryDialog`: name, description, SKU, barcode, category, reorder point, stock (or untracked), cost, price, usual supplier, tax class when the shop has more than one rate, photos, notes |
 
 Users are records too (`UserRecords`), but they're managed on the [admin screen](admin.md), not here.
 

@@ -10,6 +10,7 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.Instant
+import kotlin.math.roundToLong
 
 // Turning times, sizes and enum names into text for the screen. Times are shown in this device's time zone
 
@@ -23,6 +24,12 @@ private fun localDate(millis: Long): LocalDate =
 fun formatDateTime(millis: Long): String {
     val time = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone)
     return "${time.date} ${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
+}
+
+/** Epoch millis as the time of day, "14:03" */
+fun formatTime(millis: Long): String {
+    val time = Instant.fromEpochMilliseconds(millis).toLocalDateTime(zone)
+    return "${time.hour.toString().padStart(2, '0')}:${time.minute.toString().padStart(2, '0')}"
 }
 
 /** [formatDay] for the middle of a sentence: "due today", but still "due Fri Oct 17" */
@@ -115,3 +122,11 @@ fun formatEnumName(name: String): String =
 /** Quantities like 2 or 1.5, whole numbers without the .0 */
 fun formatQuantity(quantity: Double): String =
     if (quantity % 1.0 == 0.0) quantity.toLong().toString() else quantity.toString()
+
+/** Hours worked like "1.5h", to two decimals at most */
+fun formatHours(hours: Double): String =
+    "${formatQuantity((hours * 100).roundToLong() / 100.0)}h"
+
+/** A number of hours as a length of time, like "2d 3h" */
+fun formatHoursAsDuration(hours: Double): String =
+    formatDuration((hours * 3_600_000).roundToLong())

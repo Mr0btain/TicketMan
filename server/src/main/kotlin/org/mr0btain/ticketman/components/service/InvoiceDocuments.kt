@@ -45,7 +45,7 @@ class InvoiceDocuments(
      */
     fun pdf(identifier: Uuid): InvoicePdf? {
         val invoice = invoices.getById(identifier) ?: return null
-        val ticket = tickets.getById(invoice.ticketIdentifier)
+        val ticket = invoice.ticketIdentifier?.let { tickets.getById(it) }
         val customerIdentifier = invoice.customerIdentifier ?: ticket?.let { tickets.getCustomer(it.identifier) }?.identifier
         val customer = customerIdentifier?.let { customers.getById(it) }
 
@@ -109,10 +109,11 @@ class InvoiceDocuments(
         out.write(CSV_HEADER.joinToString(",", postfix = "\r\n") { csvCell(it) })
 
         list.forEach { invoice ->
-            val ticket = ticketLabels.getOrPut(invoice.ticketIdentifier) {
-                tickets.getById(invoice.ticketIdentifier)?.label ?: invoice.ticketLabel
-            }
-            val customerIdentifier = invoice.customerIdentifier ?: tickets.getCustomer(invoice.ticketIdentifier)?.identifier
+            // A sale has no ticket, its column says so
+            val ticket = invoice.ticketIdentifier?.let { identifier ->
+                ticketLabels.getOrPut(identifier) { tickets.getById(identifier)?.label ?: invoice.ticketLabel }
+            } ?: SALE_LABEL
+            val customerIdentifier = invoice.customerIdentifier ?: invoice.ticketIdentifier?.let { tickets.getCustomer(it)?.identifier }
             val customer = customerIdentifier?.let { id -> customerNames.getOrPut(id) { customers.getById(id)?.name.orEmpty() } }.orEmpty()
 
             val row = listOf(
@@ -127,15 +128,19 @@ class InvoiceDocuments(
                 money(invoice.taxCents),
                 money(invoice.totalCents),
                 money(invoice.paidCents),
-                money(invoice.balanceCents)
+                money(invoice.balanceCents),
+                money(invoice.refundedCents)
             )
             out.write(row.joinToString(",", postfix = "\r\n") { csvCell(it) })
         }
     }
 
     companion object {
+        /** In the Ticket column for a sale without one */
+        const val SALE_LABEL = "Sale"
+
         val CSV_HEADER = listOf(
-            "Invoice", "Date", "Status", "Paid on", "Ticket", "Customer", "Subtotal", "Discount", "Tax", "Total", "Paid", "Balance"
+            "Invoice", "Date", "Status", "Paid on", "Ticket", "Customer", "Subtotal", "Discount", "Tax", "Total", "Paid", "Balance", "Refunded"
         )
 
         /** One CSV cell, quoted when it has to be */

@@ -1,5 +1,10 @@
 package org.mr0btain.ticketman.ui.screens.admin.server
 
+import org.mr0btain.ticketman.data.ticket.CustomStatus
+import org.mr0btain.ticketman.data.ticket.StatusChoice
+import org.mr0btain.ticketman.data.ticket.label
+import org.mr0btain.ticketman.data.ticket.selectable
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -19,6 +24,7 @@ import org.mr0btain.ticketman.components.utils.formatBytes
 import org.mr0btain.ticketman.components.network.isSecureServerAddress
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatDuration
+import org.mr0btain.ticketman.data.invoice.TaxClasses
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.PaperSize
 import org.mr0btain.ticketman.data.shop.ShopProfile
@@ -444,7 +450,8 @@ private fun ShopProfileCard(
         actions = {
             TmButton(
                 text = "Save profile",
-                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null && urlProblem == null,
+                enabled = shopProfile != null && profile != loaded && profile.repeatWindowDays in REPEAT_WINDOW_RANGE && symbolProblem == null && urlProblem == null && profile.storage.problem() == null && profile.accounting.problem() == null &&
+                    TaxClasses.problem(profile.taxClasses) == null,
                 onClick = { onSave(profile.copy(statuses = shopProfile?.statuses.orEmpty())) }
             )
         }
@@ -471,6 +478,8 @@ private fun ShopProfileCard(
             supportingText = "Where customers reach this server from outside the shop, for ticket status links",
             error = urlProblem
         )
+        EstimateStatusPickers(statuses = shopProfile.statuses, profile = profile, onChange = { profile = it })
+
         TmTextField(modifier = Modifier.fillMaxWidth(), value = profile.street, onValueChange = { profile = profile.copy(street = it) }, label = "Street")
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
             TmTextField(modifier = Modifier.weight(2f), value = profile.city, onValueChange = { profile = profile.copy(city = it) }, label = "City")
@@ -502,6 +511,25 @@ private fun ShopProfileCard(
                 )
             }
         )
+
+        TaxClassesEditor(classes = profile.taxClasses, onChange = { profile = profile.copy(taxClasses = it) })
+
+        TmTextField(
+            modifier = Modifier.width(240.dp),
+            value = profile.warrantyDays.takeIf { it > 0 }?.toString().orEmpty(),
+            onValueChange = { text -> profile = profile.copy(warrantyDays = text.filter { it.isDigit() }.take(4).toIntOrNull()?.coerceAtMost(3650) ?: 0) },
+            label = "Repair warranty",
+            placeholder = "None",
+            supportingText = "Days from pickup that labor and parts are guaranteed",
+            textStyle = TmTheme.typography.numeric,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+        )
+
+        ChecklistsEditor(checklists = profile.checklists, onChange = { profile = profile.copy(checklists = it) })
+
+        StorageTermsEditor(terms = profile.storage, onChange = { profile = profile.copy(storage = it) })
+
+        AccountingSettingsEditor(settings = profile.accounting, taxClasses = profile.taxClasses, onChange = { profile = profile.copy(accounting = it) })
 
         TmFieldPair(
             {
@@ -564,3 +592,58 @@ private const val DATABASE_ONLY_SUFFIX = "-database.zip"
 
 // Days a repaired device can come back and be flagged as a repeat
 private val REPEAT_WINDOW_RANGE = 1..3650
+
+/** Where sending, approving and declining an estimate move its ticket, each optional */
+@Composable
+private fun EstimateStatusPickers(statuses: List<CustomStatus>, profile: ShopProfile, onChange: (ShopProfile) -> Unit) {
+    val options: List<StatusChoice?> = listOf(null) + statuses.selectable()
+    fun label(choice: StatusChoice?) = choice?.let { statuses.label(it) } ?: "Leave it"
+
+    Text(text = "Estimates move the ticket to", style = TmTheme.typography.label, color = TmTheme.colors.text)
+    Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "When sent",
+            options = options,
+            selected = profile.estimateSentStatus,
+            onSelect = { onChange(profile.copy(estimateSentStatus = it)) },
+            optionLabel = ::label
+        )
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "Approved",
+            options = options,
+            selected = profile.estimateApprovedStatus,
+            onSelect = { onChange(profile.copy(estimateApprovedStatus = it)) },
+            optionLabel = ::label
+        )
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "Declined",
+            options = options,
+            selected = profile.estimateDeclinedStatus,
+            onSelect = { onChange(profile.copy(estimateDeclinedStatus = it)) },
+            optionLabel = ::label
+        )
+    }
+
+    Text(text = "Parts ordered for a ticket move it to", style = TmTheme.typography.label, color = TmTheme.colors.text)
+    Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "When the order is placed",
+            options = options,
+            selected = profile.partsOrderedStatus,
+            onSelect = { onChange(profile.copy(partsOrderedStatus = it)) },
+            optionLabel = ::label
+        )
+        TmDropdown(
+            modifier = Modifier.weight(1f),
+            label = "When they've all arrived",
+            options = options,
+            selected = profile.partsArrivedStatus,
+            onSelect = { onChange(profile.copy(partsArrivedStatus = it)) },
+            optionLabel = ::label
+        )
+    }
+}

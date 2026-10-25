@@ -7,6 +7,8 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Getting started](getting-started.md): tools, building and running each target, tests, hot reload
 - [Configuration](configuration.md): server settings and the env vars that override them, dev mode, test data
 - [Running a server](operations.md): first start, the data folder, backup and restore, stations and kiosks
+- [Run TicketMan in Docker](how-to/run-in-docker.md): the published image, trying it from the source, a shop's server
+- [Screenshots](screenshots.md): every screen, wide and on a phone, from the render tests
 - [Releasing](releasing.md): the version, building each package, the release workflows and their secrets
 
 ## Architecture
@@ -30,7 +32,8 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Authentication and sessions](server/auth.md): login, tokens, per device sessions, the auth providers
 - [Users and accounts](server/users-and-accounts.md): status and access level, requests, invites, first login setup
 - [PINs and stations](server/pins-and-stations.md): station registration, PIN login, kiosk mode
-- [Counter](server/counter.md): check-in, invoices, pickup, the queue
+- [Counter](server/counter.md): check-in, invoices, pickup, sales, refunds, store credit and gift cards, the queue
+- [Purchasing](server/purchasing.md): suppliers, purchase orders, receiving into stock, tickets waiting on parts
 - [Photos](server/photos.md): upload, processing, linking, serving, the sweep
 - [Backup and restore](server/backup-restore.md): building, downloading, staging and applying
 - [Audit log](server/audit-log.md): what's logged and how to log something new
@@ -51,7 +54,9 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Kit rules](ui/kit-rules.md): what `UiKitRulesTest` checks, and adding a component, theme or font
 - [App shell and navigation](ui/screens/navigation.md): the shells, destinations, adding a screen
 - [Records screen](ui/screens/records.md): the shared records layout, dialogs, view only
-- [Counter screen](ui/screens/counter.md): views, shortcuts, check-in wizard, pickup
+- [Counter screen](ui/screens/counter.md): views, shortcuts, check-in wizard, pickup, sales
+- [Purchasing screen](ui/screens/purchasing.md): orders, receiving, suppliers
+- [Appointments screen](ui/screens/appointments.md): the week's calendar, booking, checking an appointment in
 - [Kiosk](ui/screens/kiosk.md): the lock screen, PIN pad, idle lock, leaving kiosk mode
 - [Admin screen](ui/screens/admin.md): every tab and what it's backed by
 - [Settings screen](ui/screens/settings.md): what each setting does, adding one
@@ -63,6 +68,12 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Auth](api/auth.md), [Users](api/user.md), [Admin](api/admin.md), [Counter](api/counter.md),
   [Invoices](api/invoice.md), [Stations](api/station.md), [Shop profile](api/shop.md), [Photos](api/image.md)
 - [Customers](api/customer.md), [Tickets](api/ticket.md), [Inventory](api/inventory.md), [Notes](api/notes.md)
+- [Messages](api/notify.md) and [Estimates](api/estimate.md): talking to customers
+- [Gift cards](api/giftcard.md) and [Purchasing](api/purchase.md)
+- [Reports](api/report.md): sales, profit, tax, techs and turnaround over some days
+- [Appointments](api/appointment.md): the calendar, and appointments becoming check-ins
+- [Time clock](api/timeclock.md): clocking in and out by PIN or from your own device, timesheets
+- [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing
 

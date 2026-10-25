@@ -52,6 +52,8 @@ actual suspend fun printDocument(document: PrintDocument, paper: PaperSize): Str
                                 // 80mm wide, long enough for a slip, the printer driver trims the rest
                                 PaperSize.RECEIPT_80MM -> PrintAttributes.MediaSize("receipt_80mm", "80mm receipt", 3150, 11000)
                                 PaperSize.LETTER -> PrintAttributes.MediaSize.NA_LETTER
+                                // In thousandths of an inch
+                                PaperSize.LABEL -> PrintAttributes.MediaSize("label_57x32mm", "57 x 32mm label", 2244, 1260)
                             }
                         )
                         .build()

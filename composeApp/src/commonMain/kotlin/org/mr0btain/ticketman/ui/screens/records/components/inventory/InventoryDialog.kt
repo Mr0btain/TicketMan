@@ -10,6 +10,7 @@ import androidx.compose.ui.unit.dp
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.components.data.note.NoteSeed
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.purchase.Supplier
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
 import org.mr0btain.ticketman.ui.kit.notes.TmEditNoteDialog
@@ -20,7 +21,9 @@ import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.foundation.TmControlSize
 import org.mr0btain.ticketman.ui.kit.inputs.TmMoneyField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.selection.TmCheckbox
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.kit.containers.TmSectionLabel
 import ticketman.composeapp.generated.resources.Res
@@ -35,7 +38,8 @@ fun InventoryDialog(
     seed: InventorySeed,
     isVisible: Boolean,
     onDismiss: () -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    suppliers: List<Supplier> = emptyList()
 ) {
     if (!isVisible) return
 
@@ -80,6 +84,42 @@ fun InventoryDialog(
             singleLine = false,
             minLines = 2
         )
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+            TmTextField(
+                modifier = Modifier.weight(1f),
+                value = seed.sku,
+                onValueChange = { seed.changeSku(it.take(64)) },
+                label = "SKU",
+                textStyle = TmTheme.typography.numeric
+            )
+            TmTextField(
+                modifier = Modifier.weight(1f),
+                value = seed.barcode,
+                onValueChange = { seed.changeBarcode(it.filterNot(Char::isWhitespace).take(64)) },
+                label = "Barcode",
+                placeholder = "Scan it here",
+                textStyle = TmTheme.typography.numeric
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.md)) {
+            TmTextField(
+                modifier = Modifier.weight(2f),
+                value = seed.category,
+                onValueChange = { seed.changeCategory(it.take(60)) },
+                label = "Category",
+                placeholder = "Screens, batteries"
+            )
+            TmTextField(
+                modifier = Modifier.weight(1f),
+                value = seed.reorderPoint?.toString().orEmpty(),
+                onValueChange = { text -> seed.changeReorderPoint(text.filter { it.isDigit() }.take(6).toIntOrNull()) },
+                label = "Reorder at",
+                placeholder = "Default",
+                enabled = seed.tracksStock,
+                textStyle = TmTheme.typography.numeric,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+            )
+        }
 
         Row(horizontalArrangement = Arrangement.spacedBy(spacing.md)) {
             TmTextField(
@@ -111,6 +151,31 @@ fun InventoryDialog(
             onCheckedChange = { seed.changeTracksStock(it) },
             label = "Track stock"
         )
+
+        if (suppliers.isNotEmpty()) {
+            // Blank is none, since the dropdown takes no selection as nothing picked
+            TmDropdown(
+                label = "Usually ordered from",
+                options = listOf("") + suppliers.map { it.identifier.toString() },
+                selected = seed.supplierIdentifier?.toString()?.takeIf { id -> suppliers.any { it.identifier.toString() == id } } ?: "",
+                onSelect = { id -> seed.changeSupplier(suppliers.firstOrNull { it.identifier.toString() == id }?.identifier) },
+                optionLabel = { id -> suppliers.firstOrNull { it.identifier.toString() == id }?.name ?: "No supplier" }
+            )
+        }
+
+        // Only when the shop has rates besides its main one
+        val taxes = LocalTaxes.current
+        if (taxes.classes.isNotEmpty()) {
+            TmDropdown(
+                label = "Taxed at",
+                // Blank is the main rate, since the dropdown takes no selection as nothing picked
+                options = listOf("") + taxes.classes.map { it.identifier },
+                selected = seed.taxClass?.takeIf { id -> taxes.classes.any { it.identifier == id } } ?: "",
+                onSelect = { seed.changeTaxClass(it.ifEmpty { null }) },
+                optionLabel = { taxes.label(taxable = true, taxClass = it.ifEmpty { null }) },
+                supportingText = "Parts from inventory start with this on invoices"
+            )
+        }
 
         TmSectionLabel("Photos")
         TmPhotoEditor(

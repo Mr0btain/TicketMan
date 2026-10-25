@@ -32,5 +32,8 @@ enum class AuditAction {
     SESSION_REVOKE,
     SETTINGS_UPDATE,
     BACKUP,
-    SEED
+    SEED,
+
+    /** Money given back on an invoice */
+    REFUND
 }

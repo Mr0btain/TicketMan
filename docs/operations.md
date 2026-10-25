@@ -17,11 +17,11 @@ The usual setup is the server in Docker behind a reverse proxy that does HTTPS. 
 
    ```bash
    ./gradlew :server:installDist -PwithWeb
-   docker compose up -d --build
+   docker compose -f docker/docker-compose.yml up -d --build
    ```
 
 4. Open `https://tickets.myshop.com` in a browser, or point a client at it (Settings > Server), and log in as
-   `admin`. Without `ADMIN_PASSWORD` the password is in `docker compose logs ticketman`.
+   `admin`. Without `ADMIN_PASSWORD` the password is in `docker compose -f docker/docker-compose.yml logs ticketman`.
 5. Set up the shop profile on the admin screen's **Server** tab (name, address and contact details, tax rate, invoice footer, repair terms, default
    paper size). Tax and everything printed come from it, so do this before taking money.
 6. Change the admin password, and set an admin PIN if the shop will use kiosks (leaving kiosk mode needs one).
@@ -45,7 +45,7 @@ Android SDK. The copied files are plain JVM jars, so the same build makes an amd
 
 ```bash
 ./gradlew :server:installDist -PwithWeb
-docker build -f server/Dockerfile -t ticketman .          # or docker compose build
+docker build -f server/Dockerfile -t ticketman .          # or docker compose -f docker/docker-compose.yml build
 docker buildx build --platform linux/amd64,linux/arm64 -f server/Dockerfile -t <registry>/ticketman .
 ```
 
@@ -124,7 +124,8 @@ server/
 │       ├── original.jpg
 │       ├── display.jpg
 │       └── thumb.jpg
-├── secret                     What tokens are signed with, when SECRET isn't set. Deleting it logs every device out
+├── secret                     What tokens are signed with and device passcodes sealed with, when SECRET isn't set.
+│                              Deleting it logs every device out and makes passcodes on file unreadable
 ├── backups/                   Backups waiting to be downloaded, removed once their link runs out
 ├── restore/                   An uploaded backup waiting for the next restart, last.json for the last restore,
 │                              and failed-<time>.zip for ones that couldn't be applied
@@ -199,6 +200,87 @@ machine (`localhost`) is left alone.
 
 An address typed with no scheme means `https://`. Caddy sends plain HTTP on to HTTPS; a device saved with an
 `http://` address sees that when it connects, switches to the `https://` address and saves it.
+
+## The customer status page
+
+Each ticket has a page customers check from their phone, at `/status/{token}`, with a lookup form at `/status`
+(ticket number and the last 4 digits of their phone). The [Status page API](api/status.md) lists what's on it and
+how it's limited. Set the shop profile's **Public address** (Admin > Server) to where customers reach it, like
+`https://repairs.example.com`. From then on the claim slip's QR is the ticket's link, and the counter's ticket card
+shows it, with **New link** to cut off one that went somewhere it shouldn't. Without a public address the QR stays
+the ticket number.
+
+The status page is the only part of the server meant for the internet. Everything else, logins included, should
+stay on the shop's network. Port forwarding sends all of port 443 to the proxy whatever name was asked for, so it's
+not enough to give the status page its own name: anyone could still ask for the app's name at the shop's public
+address. The proxy has to turn away outside addresses on every site but the status page. With Caddy, in
+[`docker/Caddyfile`](../docker/Caddyfile):
+
+```caddyfile
+# The public name, with a public certificate. Only the status page, nothing else
+repairs.example.com {
+	@status path /status /status/*
+	handle @status {
+		reverse_proxy ticketman:8080
+	}
+	handle {
+		respond 404
+	}
+}
+
+{$DOMAIN:localhost} {
+	import certificate-{$CERTIFICATE:public}
+
+	# Addresses outside the shop's network only get the status page
+	@outside {
+		not remote_ip private_ranges
+		not path /status /status/*
+	}
+	handle @outside {
+		respond 404
+	}
+
+	# ... the ca.pem and reverse_proxy handles as they are
+}
+```
+
+Then forward ports 80 and 443 on the router to the machine running Caddy, and point `repairs.example.com` at the
+shop's public address. Check it from a phone off the shop's Wi-Fi: the status page loads, and
+`https://repairs.example.com/api/ping` is a 404. Two things to watch:
+
+- **Caddy has to see the real address.** `private_ranges` covers the LAN and Docker's own networks, so if every
+  request looks like it comes from Docker's gateway, outsiders pass as insiders. Docker's default port publishing
+  keeps the real IPv4 address; check Caddy's access log for a request from outside to make sure.
+- **Staff working from outside the shop** lose the app with this. Use a VPN into the shop's network rather than
+  leaving the whole server open.
+
+The page's own limits count devices by `X-Forwarded-For`, which Caddy sends and the server believes from
+[`TRUSTED_PROXIES`](configuration.md#trusted_proxies) (private ranges by default). The page sends no scripts and
+asks not to be indexed or cached. Anyone with a link sees that ticket's page, so links are only on the claim slip
+and whatever staff send; the page never shows the customer's contact details or internal notes.
+
+## Messages to customers
+
+The server can email and text customers about their repairs: when it's ready, when an estimate needs approving,
+pickup reminders, and chosen status changes. Admin > Messages sets it up; the [Messages API](api/notify.md) has the
+details.
+
+- **Email** goes through the shop's own mail server: its host, port, security (STARTTLS on 587 is usual, TLS on 465),
+  login and the from address. A Google Workspace or Microsoft 365 mailbox works with an app password; many hosts
+  only let a from address the login owns through.
+- **Texts** go through a [Twilio](https://www.twilio.com) account: the account SID, auth token and a number from
+  it. Numbers saved without a country code get the one set there (1 for the US and Canada).
+- **Try it** sends a test with what's on screen before saving, and says what the mail server or Twilio answered.
+- **Customers opt in** per channel on their record or when they're added at the counter. Automatic messages only go
+  to those who did; **Send status link** on a ticket goes regardless, since someone chose to send it.
+- **Wording** is the shop's own per message, with `{name}`, `{device}`, `{link}` and the like filled in. Set the
+  public address (see [the status page](#the-customer-status-page)) or `{link}` comes out blank.
+
+Messages wait in an outbox and are sent within about 10 seconds; one that can't go is tried again for a few hours,
+then marked failed. Admin > Messages lists them with Retry and Cancel, and each ticket's card shows what its
+customer was sent. The server needs to reach the mail server (port 587 or 465 out) or `api.twilio.com` (443 out).
+The mail password and Twilio token are kept in the database, so they're in backups too: treat a backup like the
+passwords it holds.
 
 ## Web client
 
@@ -321,6 +403,11 @@ To undo a restore by hand: stop the server, move `database/` and `images/` out o
 `pre-restore-<time>/` back, and start it again. The hourly sweep deletes `pre-restore-*` folders and
 `restore/failed-*.zip` files after `RESTORE_KEEP_DAYS` (30), so undo within that time or copy the folder elsewhere.
 
+Device passcodes are sealed with a key made from the server's secret (`SECRET`, or the `secret` file in the data
+folder), which backups don't contain. Restoring onto a server with a different secret brings the tickets back but
+not their passcodes: showing one says it can't be read, and staff ask the customer again. To move passcodes to a new
+machine, give it the same `SECRET`, or copy the `secret` file across.
+
 If a backup without photos is restored, `images/` is replaced with an empty folder and photos on records won't load.
 The app warns before uploading a file named like a database only backup, the waiting restore says the backup has no
 photos, and after the restart the Server tab says it was restored from one.
@@ -338,6 +425,9 @@ While the server runs it sweeps once an hour:
 - **Restore leftovers** (`pre-restore-*` folders, `restore/failed-*.zip`) older than `RESTORE_KEEP_DAYS` (30 days)
   are deleted.
 - **The daily backup** is made, if `BACKUP_DIR` is set and the newest one is a day old.
+- **Pickup reminders**, **appointment reminders** and **storage notices** are queued, and devices left past the shop's abandon limit
+  (`ShopProfile.storage`) are treated as abandoned (`StorageService`), with the customer told when the shop turned
+  that message on.
 
 Photos are deleted a day late on purpose. A backup copies the database first and the photos after, and the delay
 means a photo the database still lists can't vanish between the two.

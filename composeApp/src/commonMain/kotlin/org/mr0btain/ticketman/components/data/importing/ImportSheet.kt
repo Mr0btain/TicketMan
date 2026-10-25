@@ -38,7 +38,11 @@ enum class ImportField(
     DESCRIPTION(ImportKind.INVENTORY, "Description", listOf("description", "details", "notes")),
     STOCK(ImportKind.INVENTORY, "Stock", listOf("stock", "qty", "quantity", "on hand", "in stock", "count", "inventory")),
     COST(ImportKind.INVENTORY, "Cost", listOf("cost", "unit cost", "cost price", "buy price", "purchase price")),
-    PRICE(ImportKind.INVENTORY, "Price", listOf("price", "retail", "retail price", "sell price", "sale price", "unit price", "msrp"));
+    PRICE(ImportKind.INVENTORY, "Price", listOf("price", "retail", "retail price", "sell price", "sale price", "unit price", "msrp")),
+    SKU(ImportKind.INVENTORY, "SKU", listOf("sku", "item code", "product code", "part number", "part no", "mpn")),
+    BARCODE(ImportKind.INVENTORY, "Barcode", listOf("barcode", "upc", "ean", "gtin", "bar code")),
+    CATEGORY(ImportKind.INVENTORY, "Category", listOf("category", "type", "group", "department")),
+    REORDER_POINT(ImportKind.INVENTORY, "Reorder point", listOf("reorder point", "reorder level", "reorder at", "min stock", "minimum", "low stock"));
 
     fun matches(header: String): Boolean = normalize(header) in headers
 
@@ -99,17 +103,26 @@ class ImportSheet(
             val stock = if (stockText.isBlank()) Int.MAX_VALUE else stockText.toDoubleOrNull()?.takeIf { it % 1.0 == 0.0 }?.toInt()
             val cost = cell(ImportField.COST).let { if (it.isBlank()) 0L else Money.parse(it) }
             val price = cell(ImportField.PRICE).let { if (it.isBlank()) 0L else Money.parse(it) }
+            val reorderText = cell(ImportField.REORDER_POINT)
+            val reorder = reorderText.takeIf { it.isNotBlank() }?.toDoubleOrNull()?.takeIf { it % 1.0 == 0.0 && it >= 0 }?.toInt()
 
             val problem = when {
                 name.isBlank() -> "No name"
                 stock == null -> "Stock \"$stockText\" isn't a whole number"
+                reorderText.isNotBlank() && reorder == null -> "Reorder point \"$reorderText\" isn't a whole number"
                 cost == null -> "Cost \"${cell(ImportField.COST)}\" isn't an amount"
                 price == null -> "Price \"${cell(ImportField.PRICE)}\" isn't an amount"
                 else -> null
             }
 
             if (problem != null) ImportRow(index + 2, null, problem)
-            else ImportRow(index + 2, Inventory(name = name, description = cell(ImportField.DESCRIPTION), stock = stock!!, costCents = cost!!, priceCents = price!!))
+            else ImportRow(
+                index + 2,
+                Inventory(
+                    name = name, description = cell(ImportField.DESCRIPTION), stock = stock!!, costCents = cost!!, priceCents = price!!,
+                    sku = cell(ImportField.SKU), barcode = cell(ImportField.BARCODE), category = cell(ImportField.CATEGORY), reorderPoint = reorder
+                )
+            )
         }
 
     companion object {

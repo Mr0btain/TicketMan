@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.database.tables.ticket
 import kotlinx.serialization.json.Json
 import org.jetbrains.exposed.v1.core.dao.id.UuidTable
 import org.jetbrains.exposed.v1.json.json
+import org.mr0btain.ticketman.data.ticket.ChecklistItem
 import org.mr0btain.ticketman.data.ticket.Device
 import org.mr0btain.ticketman.data.ticket.TicketPriority
 import org.mr0btain.ticketman.data.ticket.TicketStatus
@@ -24,6 +25,27 @@ object TicketTable: UuidTable("tickets") {
     val promisedAt = long("promised_at").nullable()
     val pickedUpAt = long("picked_up_at").nullable()
 
+    // The customer status page's link. Nullable so it can be added to existing rows, which get one on start
+    val statusToken = varchar("status_token", 64).nullable()
+
+    // Added with customer devices: the customer's device it's on, and the tickets checked in with it
+    val deviceRef = uuid("device_id").nullable()
+    val group = uuid("group_id").nullable()
+
+    // Added with intake: what was checked at check in, and whether a sealed passcode is in ticket_passcodes
+    val checklist = json<List<ChecklistItem>>("checklist", Json { ignoreUnknownKeys = true }).default(emptyList())
+    val passcodeSet = bool("passcode_set").default(false)
+
+    // Added with warranties: when it runs out, set at pickup, and the ticket this is a warranty return of
+    val warrantyUntil = long("warranty_until").nullable()
+    val warrantyOf = uuid("warranty_of").nullable()
+
+    // Added with storage terms: when it was treated as abandoned
+    val abandonedAt = long("abandoned_at").nullable()
+
     // Unique on (year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"
+
+    // Unique, made the same way
+    const val STATUS_TOKEN_INDEX = "tickets_status_token_unique"
 }

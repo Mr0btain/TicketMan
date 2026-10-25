@@ -10,6 +10,9 @@ then:
 Or through a reverse proxy (scripts/dev_proxy.sh), whose certificate it can't check:
     python3 scripts/counter_e2e.py https://localhost:8444 --insecure
 
+Customer emails go to a small mail catcher the script runs on a free port, which the server has to reach at
+--mail-host (127.0.0.1 by default). --no-mail skips the emails, for a server that can't reach this machine (Docker).
+
 The last steps send a big photo, download a backup and upload it to restore, since those are what proxies break.
 With --restart, against a server started with RESTART_ON_EXIT=true and something to start it again (the Docker
 image, scripts/docker_smoke.sh), the restore isn't cancelled: the server restarts to apply it and the data is checked.
@@ -18,9 +21,13 @@ import argparse
 import hashlib
 import json
 import os
+import socket
+import socketserver
 import ssl
 import struct
+import threading
 import time
+import urllib.parse
 import urllib.request
 import uuid
 import zlib
@@ -29,6 +36,8 @@ parser = argparse.ArgumentParser(description="Walk check-in to pickup against a 
 parser.add_argument("base", nargs="?", default="http://localhost:8098", help="the server's (or proxy's) address")
 parser.add_argument("--insecure", action="store_true", help="don't check the HTTPS certificate")
 parser.add_argument("--restart", action="store_true", help="finish the restore by restarting the server from the admin route")
+parser.add_argument("--mail-host", default="127.0.0.1", help="where the server reaches this script's mail catcher")
+parser.add_argument("--no-mail", action="store_true", help="don't check customer emails")
 args = parser.parse_args()
 
 BASE = args.base.rstrip("/")
@@ -64,6 +73,72 @@ def step(text):
     global step_number
     step_number += 1
     print(f"{step_number:2}. {text}")
+
+
+class NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+def page(path, form=None, forwarded_for=None):
+    """A status page as a browser gets it, without following redirects: (status, html, headers)"""
+    data = urllib.parse.urlencode(form).encode() if form is not None else None
+    request = urllib.request.Request(BASE + path, data=data, method="POST" if form is not None else "GET")
+    if forwarded_for:
+        request.add_header("X-Forwarded-For", forwarded_for)
+    opener = urllib.request.build_opener(NoRedirect, urllib.request.HTTPSHandler(context=CONTEXT))
+    try:
+        with opener.open(request, timeout=60) as response:
+            return response.status, response.read().decode(errors="replace"), response.headers
+    except urllib.error.HTTPError as error:
+        return error.code, error.read().decode(errors="replace"), error.headers
+
+
+class MailCatcher(socketserver.ThreadingTCPServer):
+    """Just enough SMTP to take messages, kept in .messages as their raw text"""
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def __init__(self):
+        super().__init__(("0.0.0.0", 0), MailHandler)
+        self.messages = []
+        threading.Thread(target=self.serve_forever, daemon=True).start()
+
+    def wait_for(self, text, seconds=40):
+        deadline = time.time() + seconds
+        while time.time() < deadline:
+            found = [m for m in self.messages if text in m]
+            if found:
+                return found[0]
+            time.sleep(0.5)
+        raise SystemExit(f"FAIL no email with {text!r} in {seconds}s, got {len(self.messages)}")
+
+
+class MailHandler(socketserver.StreamRequestHandler):
+    def handle(self):
+        def reply(line):
+            self.wfile.write((line + "\r\n").encode())
+        reply("220 e2e")
+        data = None
+        for raw in self.rfile:
+            line = raw.decode(errors="replace").rstrip("\r\n")
+            if data is not None:
+                if line == ".":
+                    self.server.messages.append("\n".join(data))
+                    data = None
+                    reply("250 queued")
+                else:
+                    data.append(line)
+            elif line.upper().startswith("EHLO") or line.upper().startswith("HELO"):
+                reply("250 e2e")
+            elif line.upper() == "DATA":
+                data = []
+                reply("354 go on")
+            elif line.upper() == "QUIT":
+                reply("221 bye")
+                return
+            else:
+                reply("250 ok")
 
 
 def check(condition, message):
@@ -118,6 +193,15 @@ call("POST", "/api/shop/update", {
 call("POST", "/api/data/inventory/add", {"identifier": (screen := uid()), "name": "iPhone 14 Screen", "stock": 5, "priceCents": 12000, "costCents": 6000}, admin, expect=201)
 step("Shop profile (8.25% tax, terms, letter paper) and a screen in stock (5 at $120)")
 
+mail = None if args.no_mail else MailCatcher()
+if mail:
+    call("POST", "/api/notify/settings", {
+        "emailEnabled": True,
+        "smtp": {"host": args.mail_host, "port": mail.server_address[1], "security": "NONE", "fromAddress": "shop@fixit.test", "fromName": "Fix It Shop"},
+        "events": ["READY_FOR_PICKUP", "ESTIMATE_READY"]
+    }, admin, expect=200)
+    step(f"Customer emails on, through the script's mail catcher at {args.mail_host}:{mail.server_address[1]}")
+
 # ------------------------------------------ New employee asks for an account ------------------------------------------
 call("POST", "/api/auth/request-account", {"username": "newtech", "password": "newtech_pass", "name": "Nina Tech"}, expect=202)
 _, pending_login = call("POST", "/api/auth", {"username": "newtech", "password": "newtech_pass"}, expect=202)
@@ -162,14 +246,15 @@ pin = pin_auth["accessToken"]
 step("Kiosk lists who can PIN in; the tech PINs in")
 
 # ------------------------------------------ Check in at the counter ------------------------------------------
-call("POST", "/api/data/customer/add", {"identifier": (jane := uid()), "name": "Jane Doe", "phone": "(555) 123-4567"}, pin, expect=201)
+call("POST", "/api/data/customer/add", {"identifier": (jane := uid()), "name": "Jane Doe", "phone": "(555) 123-4567", "email": "jane@home.test", "notifyEmail": True}, pin, expect=201)
 signature = {"strokes": [[{"x": 0.1, "y": 0.5}, {"x": 0.5, "y": 0.3}, {"x": 0.9, "y": 0.6}]], "aspectRatio": 3.0, "signedName": "Jane Doe"}
-ticket_one = {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "iPhone 14", "serial": "SN123"}, "problem": "Cracked screen",
-              "accessories": "Case", "estimateCents": 15000, "priority": {"priority": "NORMAL", "time": 0}}
+ticket_one = {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "iPhone 14", "serial": "SN123", "kind": "PHONE"}, "problem": "Cracked screen",
+              "accessories": "Case", "estimateCents": 15000, "priority": {"priority": "NORMAL", "time": 0},
+              "checklist": [{"name": "Powers on", "result": "WORKS"}, {"name": "Front camera", "result": "FAULTY"}]}
 call("POST", "/api/counter/check-in", {"ticket": ticket_one, "customerIdentifier": jane}, pin, expect=400)
 _, checked_in = call("POST", "/api/counter/check-in", {
     "ticket": ticket_one, "customerIdentifier": jane, "technicianIdentifier": newtech_id,
-    "deposit": {"method": "CARD", "amountCents": 5000}, "signature": signature
+    "deposit": {"method": "CARD", "amountCents": 5000}, "signature": signature, "passcode": "2580"
 }, pin, expect=201)
 number = checked_in["ticket"]["number"]
 label = f"{number['year'] % 100:02d}-{number['sequence']:08d}"
@@ -191,14 +276,59 @@ clerk = clerk_auth["accessToken"]
 call("GET", "/api/user/me", token=pin, expect=401)
 call("GET", "/api/counter/queue", token=clerk, expect=200)
 call("POST", "/api/data/ticket/update", {**checked_in["ticket"], "status": {"status": "DONE", "time": 0}}, clerk, expect=403)
-step("Clerk PINs in (tech's PIN session ends); clerk can see the queue but can't change the ticket")
+call("GET", f"/api/data/ticket/passcode/{ticket_one['identifier']}", token=clerk, expect=403)
+step("Clerk PINs in (tech's PIN session ends); clerk can see the queue but can't change the ticket or see its passcode")
 
 _, pin_auth = call("POST", "/api/auth/pin", {"station": station, "userIdentifier": newtech_id, "pin": "246813"}, expect=202)
 pin = pin_auth["accessToken"]
 call("POST", "/api/data/ticket/update", {**checked_in["ticket"], "status": {"status": "DONE", "time": 0}}, pin, expect=202)
 _, queue = call("GET", "/api/counter/queue", token=pin, expect=200)
 check(any(t["ticket"]["identifier"] == ticket_one["identifier"] for t in queue["readyForPickup"]), "ticket should be ready for pickup")
-step("Tech PINs back in and marks it ready; it shows in the ready-for-pickup queue")
+_, shown = call("GET", f"/api/data/ticket/passcode/{ticket_one['identifier']}", token=pin, expect=200)
+check(shown["passcode"] == "2580" and checked_in["ticket"]["passcodeSet"] and checked_in["ticket"]["checklist"][1]["result"] == "FAULTY", f"intake {shown} {checked_in['ticket']}")
+step("Tech PINs back in, reads the passcode Jane gave (written to the audit log), and marks it ready; it shows in the ready-for-pickup queue")
+
+# ------------------------------------------ The customer checks on it ------------------------------------------
+call("POST", f"/api/data/ticket/add/note/{ticket_one['identifier']}", {"identifier": uid(), "message": "Screen fitted, ready for you", "customerVisible": True}, pin, expect=201)
+call("POST", f"/api/data/ticket/add/note/{ticket_one['identifier']}", {"identifier": uid(), "message": "Passcode written on the bag"}, pin, expect=201)
+_, ready_ticket = call("GET", f"/api/data/ticket/get/{ticket_one['identifier']}", token=pin, expect=200)
+status_token = ready_ticket["statusToken"]
+status, html, headers = page(f"/status/{status_token}")
+check(status == 200 and headers.get("Content-Type", "").startswith("text/html"), f"status page answered {status}")
+check(all(text in html for text in (label, "Apple iPhone 14", "Ready for pickup", "Screen fitted, ready for you", "Hi Jane.")), "status page is missing something")
+check(not any(text in html for text in ("Passcode", "123-4567", "jane@home.test", "SN123", "newtech")), "status page shows something internal")
+status, _, headers = page("/status", {"number": label, "phone": "4567"})
+check(status == 303 and headers["Location"] == f"status/{status_token}", f"lookup answered {status} {headers.get('Location')}")
+status, _, _ = page("/status", {"number": label, "phone": "0000"})
+check(status == 404, f"wrong phone digits answered {status}")
+step(f"Jane's status page shows it ready with the shared note only; the lookup form finds it by {label} and 4567, not 0000")
+
+if mail:
+    ready_mail = mail.wait_for("Subject: Your Apple iPhone 14 is ready")
+    check("To: jane@home.test" in ready_mail and label in ready_mail, "ready email is missing something")
+    _, sent = call("GET", f"/api/notify/ticket/{ticket_one['identifier']}", token=pin, expect=200)
+    check([m["status"] for m in sent] == ["SENT"], f"messages {sent}")
+    step("Jane is emailed that it's ready, and the ticket shows the message as sent")
+
+# ------------------------------------------ An estimate, approved on the status page ------------------------------------------
+call("POST", "/api/data/ticket/add", {"identifier": (ticket_two := uid()), "device": {"manufacturer": "Apple", "model": "iPad Air"}, "problem": "Won't charge"}, pin, expect=201)
+call("POST", f"/api/data/ticket/set/customer/{ticket_two}", jane, pin, expect=202)
+_, estimate = call("POST", f"/api/estimate/ticket/{ticket_two}", {"lines": [
+    {"identifier": uid(), "type": "LABOR", "description": "Clean charge port", "quantity": 0.5, "unitPriceCents": 6000, "taxable": False}
+], "note": "Lint in the port, no parts needed"}, pin, expect=201)
+check(estimate["status"] == "PENDING", f"estimate {estimate}")
+if mail:
+    mail.wait_for("Subject: Estimate for your Apple iPad Air")
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+status, html, _ = page(f"/status/{two['statusToken']}")
+check(status == 200 and "Clean charge port" in html and 'value="approve"' in html, "status page should offer the estimate")
+status, _, headers = page(f"/status/{two['statusToken']}/estimate", {"decision": "approve", "name": "Jane Doe"})
+check(status == 303, f"approving answered {status}")
+_, estimates = call("GET", f"/api/estimate/ticket/{ticket_two}", token=pin, expect=200)
+check(estimates[0]["status"] == "APPROVED" and estimates[0]["decision"]["signedName"] == "Jane Doe", f"estimates {estimates}")
+_, two_invoice = call("POST", f"/api/invoice/ticket/{ticket_two}", token=pin, expect=200)
+check([c["description"] for c in two_invoice["charges"]] == ["Clean charge port"] and two_invoice["totalCents"] == 3000, f"invoice {two_invoice}")
+step(f"A $30 estimate on Jane's iPad{' is emailed,' if mail else ''} approved on her status page with her name, and lands on its invoice")
 
 # ------------------------------------------ Pickup ------------------------------------------
 invoice = checked_in["invoice"]
@@ -214,21 +344,194 @@ _, paid = call("POST", "/api/counter/pickup", {"ticketIdentifier": ticket_one["i
 check(paid["status"] == "PAID" and paid["totalCents"] - sum(p["amountCents"] for p in paid["payments"]) == -10, "should be paid with 10 cents change")
 _, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
 check(item["stock"] == 4, f"stock is {item['stock']}")
-step("Pickup: $120 screen + half hour labor + 8.25% tax on the part = $159.90; short payment refused; paid with cash, 10c change, stock 5 -> 4")
+call("GET", f"/api/data/ticket/passcode/{ticket_one['identifier']}", token=pin, expect=404)
+step("Pickup: $120 screen + half hour labor + 8.25% tax on the part = $159.90; short payment refused; paid with cash, 10c change, stock 5 -> 4, passcode forgotten")
 
 # ------------------------------------------ Admin wraps up ------------------------------------------
 _, report = call("GET", "/api/admin/report/daily", token=admin, expect=200)
 check(report["takenByMethod"] == {"CARD": 5000, "CASH": 11000}, f"taken {report['takenByMethod']}")
-check(report["ticketsCheckedIn"] == 1 and report["ticketsPickedUp"] == 1 and report["invoicesPaid"] == 1, f"report {report}")
-step(f"End of day: card $50.00, cash $110.00, sales ${report['salesCents'] / 100:.2f}, 1 in, 1 out")
+check(report["ticketsCheckedIn"] == 2 and report["ticketsPickedUp"] == 1 and report["invoicesPaid"] == 1, f"report {report}")
+step(f"End of day: card $50.00, cash $110.00, sales ${report['salesCents'] / 100:.2f}, 2 in (one the iPad), 1 out")
 
 status, pdf, headers = send(urllib.request.Request(f"{BASE}/api/invoice/{paid['identifier']}/pdf", headers={"Authorization": "Bearer " + pin}))
 check(status == 200 and pdf[:5] == b"%PDF-" and headers.get("Content-Type", "").startswith("application/pdf"), f"invoice PDF answered {status}")
 day = report["date"]
 status, csv, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}", headers={"Authorization": "Bearer " + admin}))
 rows = csv.decode().strip().split("\r\n")
-check(status == 200 and len(rows) == 2 and rows[1].startswith(f"INV-{paid['number']['year'] % 100:02d}-{paid['number']['sequence']:08d},") and ",paid," in rows[1] and ",159.90," in rows[1], f"export answered {status}: {rows}")
-step(f"The invoice comes back as a {len(pdf) // 1000 or 1} KB PDF, and today's CSV export has it, paid, at $159.90")
+check(status == 200 and len(rows) == 3 and rows[1].startswith(f"INV-{paid['number']['year'] % 100:02d}-{paid['number']['sequence']:08d},") and ",paid," in rows[1] and ",159.90," in rows[1], f"export answered {status}: {rows}")
+step(f"The invoice comes back as a {len(pdf) // 1000 or 1} KB PDF, and today's CSV export has it, paid, at $159.90, beside the iPad's open one")
+
+# ------------------------------------------ Counter money ------------------------------------------
+sale_lines = [
+    {"type": "PART", "description": "iPhone 14 Screen", "quantity": 1, "unitPriceCents": 12000, "inventoryIdentifier": screen},
+    {"type": "OTHER", "description": "Fitting kit", "quantity": 1, "unitPriceCents": 500, "taxable": False},
+]
+call("POST", "/api/counter/sale", {"charges": sale_lines, "payments": [{"method": "CARD", "amountCents": 13000}]}, pin, expect=409)
+_, sale = call("POST", "/api/counter/sale", {"charges": sale_lines, "payments": [{"method": "CARD", "amountCents": 13490}]}, pin, expect=201)
+check(sale["status"] == "PAID" and sale.get("ticketIdentifier") is None and sale["totalCents"] == 13490, f"sale {sale}")
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+check(item["stock"] == 3, f"stock is {item['stock']}")
+step("Counter sale with no ticket: a $120 screen and a $5 untaxed kit = $134.90; short card refused, then paid; stock 4 -> 3")
+
+refund = {"method": "CARD", "amountCents": 12990, "reason": "Cracked in the box", "returns": [{"inventoryIdentifier": screen, "quantity": 1}]}
+call("POST", f"/api/invoice/{sale['identifier']}/refund", refund, pin, expect=403)
+_, refunded = call("POST", f"/api/invoice/{sale['identifier']}/refund", refund, admin, expect=200)
+check(refunded["status"] == "PAID" and [p["amountCents"] for p in refunded["payments"]] == [13490, -12990], f"refund {refunded['payments']}")
+call("POST", f"/api/invoice/{sale['identifier']}/refund", refund, admin, expect=400)
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+check(item["stock"] == 4, f"stock is {item['stock']}")
+step("The screen comes back: the tech can't refund, the admin refunds $129.90 to the card and it goes back in stock (3 -> 4); twice is refused")
+
+_, card_sale = call("POST", "/api/counter/sale", {
+    "customerIdentifier": jane,
+    "charges": [{"type": "GIFT_CARD", "description": "Gift card", "quantity": 1, "unitPriceCents": 2500, "taxable": False}],
+    "payments": [{"method": "CASH", "amountCents": 2500}]
+}, pin, expect=201)
+code = card_sale["charges"][0]["reference"]
+fee = [{"type": "OTHER", "description": "Data transfer", "quantity": 1, "unitPriceCents": 1000, "taxable": False}]
+call("POST", "/api/counter/sale", {"charges": fee, "payments": [{"method": "GIFT_CARD", "amountCents": 3000, "reference": code}]}, pin, expect=409)
+call("POST", "/api/counter/sale", {"charges": fee, "payments": [{"method": "GIFT_CARD", "amountCents": 1000, "reference": code.lower()}]}, pin, expect=201)
+_, card = call("GET", f"/api/giftcard/code/{code}", token=pin, expect=200)
+check(card["balanceCents"] == 1500, f"card {card}")
+_, jane_now = call("POST", f"/api/data/customer/credit/{jane}", {"amountCents": 500, "reason": "Sorry for the wait"}, admin, expect=200)
+_, paid_with_credit = call("POST", "/api/counter/sale", {"customerIdentifier": jane, "charges": fee, "payments": [
+    {"method": "STORE_CREDIT", "amountCents": 500}, {"method": "CASH", "amountCents": 500}]}, pin, expect=201)
+_, jane_now = call("GET", f"/api/data/customer/get/{jane}", token=pin, expect=200)
+check(jane_now["creditCents"] == 0, f"credit left {jane_now['creditCents']}")
+step(f"A $25 gift card ({code}) sold for cash; $10 spent from it ($30 refused), $15 left; Jane gets $5 store credit and spends it")
+
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+shop["taxClasses"] = [{"identifier": "food", "name": "Food", "rate": "2"}]
+call("POST", "/api/shop/update", shop, admin, expect=202)
+_, mixed = call("POST", "/api/counter/sale", {"charges": [
+    {"type": "OTHER", "description": "Snack bar", "quantity": 1, "unitPriceCents": 1000, "taxClass": "food"},
+    {"type": "OTHER", "description": "Screen wipe", "quantity": 1, "unitPriceCents": 500}
+], "payments": [{"method": "CASH", "amountCents": 2000}]}, pin, expect=201)
+check(mixed["taxCents"] == 20 + 41 and [r["identifier"] for r in mixed["taxRates"]] == ["food"], f"mixed tax {mixed['taxCents']} {mixed['taxRates']}")
+step("A Food tax class at 2%: a $10 snack bar (20c tax) and a $5 wipe at 8.25% (41c) sold together, the invoice keeping the Food rate")
+
+# ------------------------------------------ Inventory and purchasing ------------------------------------------
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+call("POST", "/api/data/inventory/update", {**item, "sku": "SCR-14", "barcode": "0194253401", "category": "Screens", "reorderPoint": 5}, admin, expect=202)
+call("POST", "/api/data/inventory/add", {"identifier": uid(), "name": "Copy", "sku": "scr-14"}, admin, expect=409)
+_, scanned = call("GET", "/api/data/inventory/code/0194253401", token=pin, expect=200)
+_, low = call("GET", "/api/admin/inventory/low-stock?threshold=1", token=admin, expect=200)
+check(scanned["identifier"] == screen and screen in [i["identifier"] for i in low], f"low stock {low}")
+step(f"The screen gets SKU SCR-14, a barcode the scanner finds, and a reorder point of 5, so at {scanned['stock']} it shows as low stock even with the threshold at 1")
+
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+waiting = {"identifier": uid(), "name": "Awaiting parts", "actsAs": "ON_HOLD"}
+shop["statuses"] = shop["statuses"] + [waiting]
+shop["partsOrderedStatus"] = {"status": "ON_HOLD", "custom": waiting["identifier"]}
+shop["partsArrivedStatus"] = {"status": "IN_PROGRESS"}
+call("POST", "/api/shop/update", shop, admin, expect=202)
+_, supplier = call("POST", "/api/purchase/suppliers/add", {"identifier": uid(), "name": "Parts Co", "phone": "555-0199"}, pin, expect=201)
+_, order = call("POST", "/api/purchase/orders/part", {"ticketIdentifier": ticket_two, "inventoryIdentifier": screen, "quantity": 2, "supplierIdentifier": supplier["identifier"]}, pin, expect=200)
+_, order = call("POST", f"/api/purchase/orders/{order['identifier']}/place", token=pin, expect=200)
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+check(two["status"].get("custom") == waiting["identifier"], f"ticket status {two['status']}")
+line = order["lines"][0]
+_, order = call("POST", f"/api/purchase/orders/{order['identifier']}/receive", {"lines": [{"lineIdentifier": line["identifier"], "quantity": 2}]}, pin, expect=200)
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+_, item = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200)
+check(order["status"] == "RECEIVED" and two["status"]["status"] == "IN_PROGRESS" and two["status"].get("custom") is None and item["stock"] == 6, f"after receiving {order['status']} {two['status']} {item['stock']}")
+step("Two screens ordered for Jane's iPad from Parts Co: placing it puts the ticket in Awaiting parts, receiving them puts it back in progress and stock 4 -> 6")
+
+# ------------------------------------------ Repair depth ------------------------------------------
+_, devices = call("GET", f"/api/data/customer/devices/{jane}", token=pin, expect=200)
+check(len(devices) == 1 and devices[0]["device"]["serial"] == "SN123", f"devices {devices}")
+visit = {
+    "ticket": {"identifier": uid(), "device": devices[0]["device"], "problem": "Battery swelling"},
+    "customerIdentifier": jane, "deviceIdentifier": devices[0]["identifier"],
+    "signature": {"strokes": [[{"x": 0.1, "y": 0.5}, {"x": 0.9, "y": 0.5}]], "aspectRatio": 3, "signedName": "Jane Doe"},
+    "more": [{"ticket": {"identifier": uid(), "device": {"manufacturer": "Apple", "model": "Watch", "kind": "WATCH"}, "problem": "Won't pair"}}]
+}
+_, visited = call("POST", "/api/counter/check-in", visit, pin, expect=201)
+check(len(visited["linked"]) == 1 and visited["ticket"]["groupIdentifier"] == visited["linked"][0]["groupIdentifier"], f"linked {visited}")
+_, history = call("GET", f"/api/data/customer/device/{devices[0]['identifier']}/tickets", token=pin, expect=200)
+check(len(history) == 2, f"history {len(history)}")
+step(f"Jane's iPhone is on file from her first visit; she brings it back with her watch: two linked tickets ({visited['ticket']['number']['sequence']} and {visited['linked'][0]['number']['sequence']}), the iPhone's history now two repairs")
+
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+call("POST", "/api/shop/update", {**shop, "warrantyDays": 90}, admin, expect=202)
+battery_ticket = visited["ticket"]["identifier"]
+call("POST", f"/api/data/ticket/add/work/{battery_ticket}", {"type": "LABOR", "description": "Battery swap", "quantity": 1, "unitPriceCents": 4000}, pin, expect=201)
+_, bill = call("GET", f"/api/invoice/ticket/{battery_ticket}", token=pin, expect=200)
+call("POST", "/api/counter/pickup", {"ticketIdentifier": battery_ticket, "payments": [{"method": "CARD", "amountCents": bill["totalCents"]}]}, pin, expect=200)
+_, swapped = call("GET", f"/api/data/ticket/get/{battery_ticket}", token=pin, expect=200)
+check(swapped["warrantyUntil"] - swapped["pickedUpAt"] == 90 * 24 * 3600 * 1000, f"warranty {swapped}")
+_, back = call("POST", "/api/counter/check-in", {
+    "ticket": {"identifier": uid(), "device": devices[0]["device"], "problem": "Battery drains again", "warrantyOf": battery_ticket},
+    "customerIdentifier": jane, "deviceIdentifier": devices[0]["identifier"], "signature": visit["signature"]
+}, pin, expect=201)
+call("POST", f"/api/data/ticket/add/work/{back['ticket']['identifier']}", {"type": "LABOR", "description": "Battery swap again", "quantity": 1}, pin, expect=201)
+_, free = call("GET", f"/api/invoice/ticket/{back['ticket']['identifier']}", token=pin, expect=200)
+check(free["totalCents"] == 0 and back["ticket"]["warrantyOf"] == battery_ticket, f"warranty return {free['totalCents']}")
+step("With a 90 day warranty, the iPhone's battery swap is picked up covered; it comes back as a warranty return and the redo starts free")
+
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+call("POST", "/api/shop/update", {**shop, "storage": {"feeAfterDays": 3, "dailyFeeCents": 200, "abandonAfterDays": 30}}, admin, expect=202)
+_, two = call("GET", f"/api/data/ticket/get/{ticket_two}", token=pin, expect=200)
+five_days_ago = int(time.time() * 1000) - 5 * 24 * 3600 * 1000 - 60000
+call("POST", "/api/data/ticket/update", {**two, "status": {"status": "DONE", "time": five_days_ago}}, pin, expect=202)
+_, two_invoice = call("POST", f"/api/invoice/ticket/{ticket_two}", token=pin, expect=200)
+storage = [c for c in two_invoice["charges"] if c["description"].startswith("Storage")]
+check(len(storage) == 1 and storage[0]["description"] == "Storage, 2 days" and storage[0]["unitPriceCents"] == 200, f"storage {two_invoice['charges']}")
+status, html, _ = page(f"/status/{two['statusToken']}")
+check("Storage is $2.00 a day" in html, "status page should say when storage starts")
+step("Storage terms of $2 a day after 3 days: Jane's iPad, ready 5 days, gets 2 days of storage on its invoice, and her status page says so")
+
+# ------------------------------------------ Running the business ------------------------------------------
+call("POST", "/api/report/commissions", [{"userIdentifier": newtech_id, "basisPoints": 1000}], newtech, expect=403)
+call("POST", "/api/report/commissions", [{"userIdentifier": newtech_id, "basisPoints": 1000}], admin, expect=202)
+call("GET", f"/api/report/period?from={day}&to={day}", token=newtech, expect=403)
+_, period = call("GET", f"/api/report/period?from={day}&to={day}", token=admin, expect=200)
+sales = period["sales"]
+nina = next((t for t in period["techs"] if t.get("userIdentifier") == newtech_id), None)
+check(sales["invoices"] >= 3 and sales["partsCostCents"] >= 6000, f"sales {sales}")
+check(nina is not None and nina["laborHours"] >= 1 and nina["laborCents"] >= 4000 and nina["commissionBasisPoints"] == 1000, f"techs {period['techs']}")
+check(any(r["reason"] == "Cracked in the box" for r in period["refunds"]["refunds"]), f"refunds {period['refunds']}")
+check(period["turnaround"]["pickedUp"] >= 2, f"turnaround {period['turnaround']}")
+step(f"Today's report: {sales['invoices']} invoices, ${sales['totalCents'] / 100:.2f} sales, parts cost ${sales['partsCostCents'] / 100:.2f}, Nina's {nina['laborHours']}h at 10% commission, the screen's refund listed")
+
+in_an_hour = int(time.time() * 1000) + 3600 * 1000
+_, appointment = call("POST", "/api/appointment/add", {
+    "startsAt": in_an_hour, "minutes": 30, "customerIdentifier": jane, "device": {"manufacturer": "Apple", "model": "iPad mini"},
+    "problem": "Cracked screen", "technicianIdentifier": newtech_id
+}, pin, expect=201)
+booked_day = time.strftime("%Y-%m-%d", time.localtime(in_an_hour / 1000))
+_, calendar = call("GET", f"/api/appointment/range?from={booked_day}&to={booked_day}", token=pin, expect=200)
+check(any(a["identifier"] == appointment["identifier"] and a["customerName"] == "Jane Doe" and a["technicianName"] == "Nina Tech" for a in calendar), f"calendar {calendar}")
+_, arrived = call("POST", "/api/counter/check-in", {
+    "ticket": {"identifier": uid(), "device": appointment["device"], "problem": appointment["problem"]},
+    "customerIdentifier": jane, "technicianIdentifier": newtech_id, "signature": visit["signature"], "appointmentIdentifier": appointment["identifier"]
+}, pin, expect=201)
+_, appointment = call("GET", f"/api/appointment/get/{appointment['identifier']}", token=pin, expect=200)
+check(appointment["status"] == "ARRIVED" and appointment["ticketIdentifier"] == arrived["ticket"]["identifier"], f"appointment {appointment}")
+call("POST", f"/api/appointment/status/{appointment['identifier']}", {"status": "CANCELLED"}, pin, expect=409)
+step(f"Jane books an iPad mini screen for {time.strftime('%H:%M', time.localtime(in_an_hour / 1000))} with Nina; it's on the calendar, and checking it in makes ticket {arrived['ticket']['number']['sequence']} and marks it checked in")
+
+call("POST", "/api/timeclock/punch", {"station": station, "userIdentifier": newtech_id, "pin": "000000"}, expect=401)
+_, clock_in = call("POST", "/api/timeclock/punch", {"station": station, "userIdentifier": newtech_id, "pin": "246813"}, expect=200)
+_, on_now = call("GET", "/api/timeclock/now", token=pin, expect=200)
+check(clock_in["clockedIn"] and clock_in["entry"]["station"] == "Front Counter" and [e["userIdentifier"] for e in on_now] == [newtech_id], f"clocked in {clock_in} {on_now}")
+_, clock_out = call("POST", "/api/timeclock/punch", {"station": station, "userIdentifier": newtech_id, "pin": "246813"}, expect=200)
+check(not clock_out["clockedIn"] and clock_out["entry"]["clockedOutAt"] is not None, f"clocked out {clock_out}")
+call("GET", f"/api/timeclock/timesheet?from={day}&to={day}", token=pin, expect=403)
+_, sheet = call("GET", f"/api/timeclock/timesheet?from={day}&to={day}", token=admin, expect=200)
+check([p["name"] for p in sheet["people"]] == ["Nina Tech"] and len(sheet["people"][0]["entries"]) == 1, f"timesheet {sheet}")
+step("Nina clocks in at the Front Counter with her PIN (a wrong one refused), shows as on the clock, clocks out, and the admin's timesheet has the stretch")
+
+status, qb, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}&format=quickbooks", headers={"Authorization": "Bearer " + admin}))
+qb_rows = qb.decode().strip().split("\r\n")
+check(status == 200 and qb_rows[0].startswith("InvoiceNo,Customer,InvoiceDate") and any(",Parts,iPhone 14 Screen," in r for r in qb_rows), f"quickbooks {status}: {qb_rows[:3]}")
+status, xero, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}&format=xero", headers={"Authorization": "Bearer " + admin}))
+xero_rows = xero.decode().strip().split("\r\n")
+check(status == 200 and xero_rows[0].startswith("*ContactName") and any(r.startswith("Jane Doe,jane@home.test,") and r.endswith(",200,Tax on Sales") for r in xero_rows), f"xero {status}: {xero_rows[:3]}")
+status, paid_csv, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?from={day}&to={day}&format=payments", headers={"Authorization": "Bearer " + admin}))
+payment_rows = paid_csv.decode().strip().split("\r\n")
+check(status == 200 and any(",-129.90," in r and "Cracked in the box" in r for r in payment_rows), f"payments {status}: {payment_rows[:3]}")
+step(f"Today's books export: {len(qb_rows) - 1} QuickBooks lines, {len(xero_rows) - 1} Xero lines and {len(payment_rows) - 1} payments, the screen's refund among them")
 
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}

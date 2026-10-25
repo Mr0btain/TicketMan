@@ -6,6 +6,9 @@ import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import org.mr0btain.ticketman.ui.kit.data.LocalCurrencySymbol
+import org.mr0btain.ticketman.ui.kit.data.LocalStorageTerms
+import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
+import org.mr0btain.ticketman.ui.kit.data.TmTaxes
 import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -35,6 +38,8 @@ import ticketman.composeapp.generated.resources.home
 import ticketman.composeapp.generated.resources.layers
 import ticketman.composeapp.generated.resources.monitor
 import ticketman.composeapp.generated.resources.settings
+import ticketman.composeapp.generated.resources.truck
+import ticketman.composeapp.generated.resources.calendar
 
 @OptIn(ExperimentalMaterial3WindowSizeClassApi::class)
 @Composable
@@ -77,6 +82,7 @@ fun App() {
     // Admin screen is only listed for admins
     val isAdmin = mainViewModel.session.isAdmin.collectAsState()
     val currentUser = mainViewModel.session.currentUser.collectAsState()
+    val clockedIn = mainViewModel.timeClock.current.collectAsState()
 
     val isDebug = remember { BuildConfigImpl().isDebug() }
 
@@ -84,6 +90,8 @@ fun App() {
     val navDestination = listOfNotNull(
         NavigationItem("Records", Res.drawable.home, Destination.RECORDS),
         NavigationItem("Counter", Res.drawable.monitor, Destination.COUNTER),
+        NavigationItem("Purchasing", Res.drawable.truck, Destination.PURCHASING),
+        NavigationItem("Calendar", Res.drawable.calendar, Destination.APPOINTMENTS),
         NavigationItem("Settings", Res.drawable.settings, Destination.SETTINGS),
         if (isAdmin.value) NavigationItem("Admin", Res.drawable.archive, Destination.ADMIN) else null,
         // Component gallery is for working on the ui kit, so only listed in debug builds
@@ -99,6 +107,8 @@ fun App() {
     CompositionLocalProvider(
         LocalImageClient provides mainViewModel.imageClient,
         LocalCurrencySymbol provides shop.currencySymbol,
+        LocalTaxes provides TmTaxes(shop.taxBasisPoints, shop.taxRates),
+        LocalStorageTerms provides shop.storage,
         LocalTicketStatuses provides shop.statuses
     ) {
         TmTheme(
@@ -158,7 +168,9 @@ fun App() {
                     user = currentUser.value,
                     onLogin = { mainViewModel.session.changeShowLogin(true) },
                     onLogout = { mainViewModel.session.logout() },
-                    onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) }
+                    onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) },
+                    clockedInAt = clockedIn.value?.clockedInAt,
+                    onPunch = { mainViewModel.timeClock.punch() }
                 ) { host() }
             } else {
                 PhoneAppShell(

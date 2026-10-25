@@ -39,6 +39,7 @@ import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonRow
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
 import org.mr0btain.ticketman.ui.kit.buttons.TmIconButton
+import org.mr0btain.ticketman.ui.kit.containers.TmAdjustBalanceDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmDialog
 import org.mr0btain.ticketman.ui.kit.containers.TmPageHeader
@@ -82,6 +83,7 @@ import org.mr0btain.ticketman.ui.kit.inputs.TmPasswordField
 import org.mr0btain.ticketman.ui.kit.inputs.TmPinField
 import org.mr0btain.ticketman.ui.kit.inputs.TmTextField
 import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerForm
+import org.mr0btain.ticketman.ui.kit.inputs.TmMessageConsent
 import org.mr0btain.ticketman.ui.kit.inputs.TmCustomerDialog
 import org.mr0btain.ticketman.ui.kit.navigation.TmBottomNav
 import org.mr0btain.ticketman.ui.kit.navigation.TmNavItem
@@ -366,6 +368,8 @@ private fun SelectionSection() {
     var urgent by remember { mutableStateOf(false) }
     var kiosk by remember { mutableStateOf(true) }
     var tax by remember { mutableStateOf(true) }
+    var consentEmail by remember { mutableStateOf(true) }
+    var consentSms by remember { mutableStateOf(false) }
     var payment by remember { mutableStateOf("Card") }
     var builtIn by remember { mutableStateOf(StatusChoice(TicketStatusType.IN_PROGRESS)) }
     var custom by remember { mutableStateOf(sampleStatuses[1].choice) }
@@ -414,6 +418,10 @@ private fun SelectionSection() {
             TmSwitch(checked = false, onCheckedChange = {}, enabled = false)
             TmCheckbox(checked = tax, onCheckedChange = { tax = it }, label = "Charge tax")
             TmCheckbox(checked = false, onCheckedChange = {}, label = "Disabled", enabled = false)
+        }
+
+        Specimen("Message consent") {
+            TmMessageConsent(email = consentEmail, sms = consentSms, onEmailChange = { consentEmail = it }, onSmsChange = { consentSms = it }, hasEmail = true, hasPhone = true)
         }
 
         Specimen("Radio") {
@@ -733,6 +741,7 @@ private fun DialogSection() {
     var open by remember { mutableStateOf(false) }
     var confirmDelete by remember { mutableStateOf(false) }
     var editText by remember { mutableStateOf(false) }
+    var adjust by remember { mutableStateOf(false) }
 
     GallerySection(title = "Dialog", description = "Glass sheet, actions at the bottom right") {
         TmDialogSurface(
@@ -749,6 +758,16 @@ private fun DialogSection() {
             TmButton(text = "Open as a real dialog", onClick = { open = true }, variant = TmButtonVariant.SECONDARY)
             TmButton(text = "Two step delete", onClick = { confirmDelete = true }, variant = TmButtonVariant.SECONDARY)
             TmButton(text = "Edit one value", onClick = { editText = true }, variant = TmButtonVariant.SECONDARY)
+            TmButton(text = "Adjust a balance", onClick = { adjust = true }, variant = TmButtonVariant.SECONDARY)
+        }
+
+        if (adjust) {
+            TmAdjustBalanceDialog(
+                title = "Store credit for Dana",
+                balanceCents = 2500,
+                onSave = { _, _, done -> done(null) },
+                onDismissRequest = { adjust = false }
+            )
         }
 
         TmConfirmDeleteDialog(

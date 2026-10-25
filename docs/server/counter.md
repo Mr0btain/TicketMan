@@ -1,6 +1,6 @@
 # Counter: check-in, invoices and pickup
 
-The counter is where a device comes in and goes back out. On the server that's three services working on tickets,
+The counter is where a device comes in and goes back out, and where things are sold from stock. On the server that's three services working on tickets,
 invoices and inventory together: `CheckInService`, `InvoiceService` and the read only `CounterDatabase`. This page
 covers the rules they enforce and which steps happen together. The maths behind totals is on
 [Money](../shared/money.md).
@@ -31,14 +31,21 @@ checks everything first and answers `400` (or `409` for an existing ticket) with
 - a deposit, if given, is more than zero,
 - the signature, if given, passes `SignatureInput.problem()`, and there **is** one if the shop has repair terms.
 
-Then, in one `transaction { }`:
+Then, in one `transaction { }`, for each device (the ticket, then each of `more`):
 
-1. add the ticket (number and pickup time cleared, so the server assigns them),
+1. find or make the customer's device record (`DeviceDatabase`, `customer_devices`): the one picked (updated with what
+   was typed), theirs with the same serial, or a new one,
+2. add the ticket pointing at it, with the visit's `groupIdentifier` when there's more than one (number and pickup
+   time cleared, so the server assigns them),
 2. record its first status change,
 3. link the customer and tech,
-4. if there's a deposit, make the invoice (with the shop's tax rate, which it keeps) and add the payment,
-5. if there's a signature, save it with a copy of the shop's terms, the time, and who took it,
+4. for the first ticket, if there's a deposit, make the invoice (with the shop's tax rate, which it keeps) and add
+   the payment,
+5. if there's a signature, save it with a copy of the shop's terms, the time, and who took it, on every ticket,
 6. write the `CREATE` audit entry.
+
+Tickets saved before devices were kept got theirs from what was typed on them, one per customer for each serial or
+make and model (the `customer-devices` data fix). A device's repairs are `GET /api/data/customer/device/{id}/tickets`.
 
 If anything throws, none of it is saved, the audit entry included. The response is `201` with a `CheckInResponse`
 (the saved ticket, with its number, and the invoice if one was made).
@@ -61,6 +68,7 @@ owns the rules; `InvoiceDatabase` just stores.
 | `POST /{id}/payments` | Normal | Add a payment |
 | `DELETE /{id}/payments/{paymentId}` | Normal | Remove a payment |
 | `POST /{id}/void` | Admin | Void it |
+| `POST /{id}/refund` | Admin | Give money back, parts back in stock |
 
 Rules:
 
@@ -71,7 +79,19 @@ Rules:
 - Saving charges recalculates the totals with `InvoiceMath`, using the tax rate stored on the invoice when it was
   made. Changing the shop's rate later doesn't touch invoices that already exist.
 
-Voiding a paid invoice puts its parts back in stock. Voiding never changes the ticket.
+Voiding a paid invoice puts its parts back in stock, less any a refund already returned. Voiding never changes the
+ticket.
+
+### Refunds
+
+`POST /api/invoice/{id}/refund` (admin) gives money back on a `PAID` invoice with a `RefundRequest(method,
+amountCents, reason, returns)`. `InvoiceService.refund` checks there's a reason, that the amount isn't more than was
+paid less earlier refunds (`Invoice.netPaidCents`), and that each returned part was sold on the invoice and hasn't
+all come back already (`partsSold` less `returnedParts`). Then in one transaction it adds a payment with the
+negative amount, the reason as its note and the returned parts on it, puts those parts back with
+`adjustStock(id, -n)`, and writes a `REFUND` audit entry. The invoice stays paid and nothing becomes owed:
+`balanceCents` only counts money taken. The day's report nets refunds out of `takenByMethod` and lists them in
+`refundedCents`/`refundCount`; the export has a Refunded column. An open invoice's payment is taken off instead.
 
 `InvoiceService` returns an `AccountResult` (`Done`, `Invalid`, `Conflict`, `NotFound`, the same type the account
 code uses), and routes turn it into a status with `respondAccount()`: `400`, `409`, `404`, or the success code.
@@ -114,15 +134,70 @@ Then, in one `transaction { }`:
 2. take each part's quantity out of stock (untracked items are left alone). If a count set by hand since step 4
    leaves too few, this throws, the whole transaction rolls back and the answer is the same `409`,
 3. mark the invoice `PAID` with the time,
-4. set the ticket's `pickedUpAt` and status `PICKED_UP`, and record the status change,
+4. set the ticket's `pickedUpAt`, status `PICKED_UP` and `warrantyUntil` (shared `Warranty.days`: the longest of
+   the labor and part lines' `warrantyDays`, the shop's `warrantyDays` for those that don't say), record the status
+   change, and clear its passcode,
 5. write the audit entry.
 
 The response is the paid invoice, which the client uses for the receipt.
 
+## Sales
+
+`POST /api/counter/sale` with a `SaleRequest(customerIdentifier, charges, discountCents, payments)`, Normal access,
+sells from stock with no ticket. `InvoiceService.sell` checks the lines like any invoice's (at least one), that the
+customer exists if one is given, that the payments cover the total worked out with the shop's tax rate now (`409`
+"$x is still owed" otherwise) and that the parts are in stock. Then, in one transaction holding the invoice
+numbering lock: make an invoice with no ticket (`ticket_id` null, `Invoice.isSale`), set its lines, add the payments,
+take the stock, mark it `PAID` and write the audit entry. The answer is `201` with the paid invoice.
+
+A sale is an invoice like the rest: it's in the invoice list and the export (its Ticket column says `Sale`), has a
+PDF, and an admin can void it, which puts its parts back.
+
+## Storage and abandoned devices
+
+`ShopProfile.storage` (`StorageTerms`) sets a daily fee for devices left after they're ready and a limit after which
+they're abandoned. "Ready since" is the ticket's status time while it's `DONE` (shared `Storage.readySince`).
+
+- **The fee** is one untaxed line on the ticket's invoice, `Storage, N days`, whose id comes from the ticket's
+  (`Storage.lineIdentifier`). `InvoiceService.forTicket` brings it up to date whenever the invoice is opened, and
+  pickup does the same before checking what's owed, so the counter always shows today's fee. It's taken off again if
+  the ticket stops being ready. Removing it in an invoice update waives it (`invoices.storage_waived`), and it isn't
+  put back.
+- **The hourly sweep** (`StorageService.sweep`) queues the `STORAGE_FEE` message a day before the fee starts, once
+  since the ticket was ready, and marks tickets ready `abandonAfterDays` as abandoned (`Ticket.abandonedAt`, audit
+  logged, the `ABANDONED` message queued). Abandoned tickets leave the ready list for the queue's `abandoned` list and
+  get no more pickup reminders. Changing an abandoned ticket's status by hand clears it.
+- The terms are printed on the claim slip (`Storage.termsText`), and the status page says when the fee starts.
+
+## Store credit and gift cards
+
+Balances the shop holds for customers, in `StoredValueDatabase`: a customer's credit is `customer.credit_cents`, with
+every change in `customer_credit` (`CreditEntry`); gift cards are `gift_cards` rows found by their code. Like stock,
+a balance only changes in a single SQL `UPDATE` that can't take it below zero, so two spends at once can't both go
+through.
+
+- **Paying with them.** `PaymentMethod.STORE_CREDIT` and `GIFT_CARD` (`storedValue`) work anywhere a payment is
+  taken: a deposit at check-in, `POST /api/invoice/{id}/payments`, pickup and sales. `StoredValuePayments.problem`
+  checks first (credit needs a customer on the invoice; a card has to exist with enough on it, counting every
+  payment from it in the request) so the answer says what's short, then `take` spends it inside the same
+  transaction as the payment, throwing `ShortOfValue` (a `409`) if it was spent meanwhile. Taking a payment off an
+  open invoice puts it back.
+- **Selling gift cards.** A `ChargeType.GIFT_CARD` line (one card, untaxed, more than zero) sells or tops up a card.
+  It's loaded when the invoice is paid, at pickup or in a sale: a blank `reference` gets a new code from
+  `GiftCardCode.generate`, saved on the line so the receipt shows it.
+- **Refunds** can go to store credit (the invoice's customer) or onto a gift card (the code given, or a new one).
+- **Voiding** a paid invoice takes back the cards it loaded, and is refused if one has been spent from.
+- **By hand**, admins give or take credit (`POST /api/data/customer/credit/{id}`) and correct a card
+  (`POST /api/giftcard/code/{code}/adjust`), through `StoredValueService`, with a reason that's audited.
+- **Reports**: the day's `takenCents` leaves stored value out, since the money came in when the card or credit was
+  bought; `takenByMethod` still lists it.
+
+A customer with store credit can't be deleted (`409`).
+
 ### One change at a time
 
 Pickup checks things and then writes, so two at once could both pass the checks. Every `InvoiceService` change that
-does that (update, add or remove a payment, pickup, void) runs inside `synchronized(CHANGE_LOCK)`, so the second waits,
+does that (update, add or remove a payment, pickup, sale, refund, void) runs inside `synchronized(CHANGE_LOCK)`, so the second waits,
 then sees the ticket is picked up and gets a `409`. Reads and `forTicket` don't need it. A new change of that kind
 should take the lock too.
 
@@ -146,8 +221,8 @@ at once can't lose one:
 
 | Where | What it does |
 |-------|--------------|
-| Pickup | `InventoryDatabase.adjustStock(id, n)`: `stock = stock - n` where `stock >= n`. Returns false when it's short |
-| Void of a paid invoice | `adjustStock(id, -n)`: puts the parts back |
+| Pickup and sale | `InventoryDatabase.adjustStock(id, n)`: `stock = stock - n` where `stock >= n`. Returns false when it's short |
+| Void of a paid invoice, refund | `adjustStock(id, -n)`: puts the parts back |
 | By hand | `POST /api/data/inventory/set/stock/{id}` with `StockChangeRequest(from, to)`: `stock = to` where `stock = from` |
 
 `POST /api/data/inventory/update` saves everything else about an item but not its stock. Without that, a dialog

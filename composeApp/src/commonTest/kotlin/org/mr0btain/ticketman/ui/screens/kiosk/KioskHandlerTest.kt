@@ -40,6 +40,10 @@ class KioskHandlerTest {
             SERVER_PING_PATH -> respond(SERVER_PING_BODY, HttpStatusCode.OK)
             "/" -> respond("", HttpStatusCode.OK)
             "/api/auth/pin" -> respond("""{"id":null,"accessToken":"pin","refreshToken":"pin-refresh"}""", HttpStatusCode.Accepted, jsonHeaders)
+            "/api/timeclock/punch" -> respond(
+                """{"entry":{"userIdentifier":"${member.identifier}","userName":"Terry Tech","clockedInAt":3600000,"station":"Front Counter"},"clockedIn":true}""",
+                HttpStatusCode.OK, jsonHeaders
+            )
             "/api/auth/station/staff" -> respond("""[{"identifier":"${member.identifier}","username":"tech","name":"Terry Tech"}]""", HttpStatusCode.OK, jsonHeaders)
             else -> respond("", HttpStatusCode.Accepted)
         }
@@ -203,5 +207,27 @@ class KioskHandlerTest {
         advanceTimeBy(2_000.milliseconds)
         runCurrent()
         assertEquals(1, requests.count { it == "GET /api/user/me" })
+    }
+
+    @Test
+    fun clockingInByPinLeavesTheKioskLocked() = runTest {
+        val kiosk = handler()
+        station.value = approvedKiosk
+        settle { kiosk.staff.value.isNotEmpty() }
+        requests.clear()
+
+        var said: String? = null
+        var problem: String? = "not called"
+        kiosk.punch(member, "246813") { message, error ->
+            said = message
+            problem = error
+        }
+        settle { said != null || problem != "not called" }
+
+        assertNull(problem)
+        assertTrue(said!!.startsWith("Clocked in at "), said)
+        assertEquals(listOf("POST /api/timeclock/punch"), requests)
+        assertTrue(kiosk.locked.value)
+        assertEquals(0, signedIn)
     }
 }

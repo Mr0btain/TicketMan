@@ -34,5 +34,13 @@ enum class ChangedField {
     ACCESSORIES,
     ESTIMATE,
     PROMISED,
-    CUSTOMER_VISIBLE
+    CUSTOMER_VISIBLE,
+    NOTIFY_EMAIL,
+    NOTIFY_SMS,
+    TAX_CLASS,
+    SKU,
+    BARCODE,
+    CATEGORY,
+    REORDER_POINT,
+    SUPPLIER
 }

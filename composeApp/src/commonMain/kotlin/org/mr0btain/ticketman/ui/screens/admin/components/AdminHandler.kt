@@ -59,6 +59,14 @@ class AdminHandler(
     /** Stations and Sessions tabs */
     val devices = AdminDevices(remoteHandler, support, reloadOverview = { loadOverview() })
 
+    val messages = AdminMessages(remoteHandler, support)
+
+    /** Timesheets tab */
+    val timesheets = AdminTimesheets(remoteHandler, support)
+
+    /** Reports tab */
+    val reports = AdminReports(remoteHandler, support, shopProfile = { server.shopProfile.value })
+
     /** Server tab */
     val server = AdminServer(remoteHandler, support, onShopChanged, onSeeded = {
         onUsersChanged(null)
@@ -112,6 +120,17 @@ class AdminHandler(
                     AdminTab.STATIONS -> devices.reloadStations()
                     AdminTab.LOW_STOCK -> loadLowStock()
                     AdminTab.SERVER -> server.reload()
+                    AdminTab.MESSAGES -> {
+                        messages.reload()
+                        // For the statuses that can send a message
+                        server.reloadShopProfile()
+                    }
+                    AdminTab.REPORTS -> {
+                        reports.reload()
+                        // For the printout's header and paper size
+                        server.reloadShopProfile()
+                    }
+                    AdminTab.TIMESHEETS -> timesheets.reload()
                     AdminTab.AUDIT -> loadAudit(reset = true)
                 }
             }
@@ -120,8 +139,9 @@ class AdminHandler(
 
     /**
      * The periodic check for updates on [tab]: like [refresh] but with no loading spinner, and leaving alone what
-     * would lose someone's place: the audit log and invoices (reloading starts them from the top), the end of day
-     * report (they may be looking at another day) and the shop profile (it may be half edited)
+     * would lose someone's place: the audit log only gets new entries added on top, the end of day report stays on
+     * its day, and the shop profile isn't reloaded (it may be half edited). The users and invoices tabs check their
+     * own lists, see `AdminScreen`
      */
     fun checkForUpdates(tab: AdminTab) {
         scope.launch {
@@ -133,7 +153,11 @@ class AdminHandler(
                 AdminTab.STATIONS -> devices.reloadStations()
                 AdminTab.LOW_STOCK -> loadLowStock()
                 AdminTab.SERVER -> server.reloadStatus()
-                AdminTab.USERS, AdminTab.INVOICES, AdminTab.AUDIT -> Unit
+                AdminTab.MESSAGES -> messages.reloadOutbox()
+                AdminTab.TIMESHEETS -> timesheets.load()
+                AdminTab.REPORTS -> reports.reloadReport()
+                AdminTab.AUDIT -> addNewAudit()
+                AdminTab.USERS, AdminTab.INVOICES -> Unit
             }
         }
     }
@@ -192,6 +216,13 @@ class AdminHandler(
         scope.launch { loadAudit(reset = false) }
     }
 
+    /** New entries since the newest one showing, added on top so the place in the log stays */
+    private suspend fun addNewAudit() {
+        val page = admin.fetchAudit(0, AUDIT_PAGE_SIZE).valueOr { return }
+        val known = _auditEntries.value.map { it.identifier }.toSet()
+        _auditEntries.value = page.filter { it.identifier !in known } + _auditEntries.value
+    }
+
     private suspend fun loadAudit(reset: Boolean) {
         val offset = if (reset) 0L else _auditEntries.value.size.toLong()
         val page = admin.fetchAudit(offset, AUDIT_PAGE_SIZE).valueOr { error ->
@@ -213,6 +244,8 @@ class AdminHandler(
         accounts.clear()
         devices.clear()
         server.clear()
+        reports.clear()
+        timesheets.clear()
         import.close()
     }
 

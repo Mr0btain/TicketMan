@@ -116,6 +116,10 @@ fun List<CustomStatus>.label(choice: StatusChoice): String =
 fun List<CustomStatus>.customerLabel(choice: StatusChoice): String =
     customFor(choice)?.takeIf { it.showCustomer }?.name ?: choice.status.label
 
+/** [choice] as customers see it: itself if the shop shares its name, otherwise the built-in status it acts as */
+fun List<CustomStatus>.customerChoice(choice: StatusChoice): StatusChoice =
+    if (customFor(choice)?.showCustomer == true) choice else StatusChoice(choice.status)
+
 fun List<CustomStatus>.tone(choice: StatusChoice): StatusTone =
     customFor(choice)?.tone ?: choice.status.tone
 

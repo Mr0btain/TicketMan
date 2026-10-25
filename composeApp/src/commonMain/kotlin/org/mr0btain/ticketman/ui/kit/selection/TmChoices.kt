@@ -17,6 +17,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
@@ -69,7 +71,8 @@ fun TmFilterChip(
 }
 
 /**
- * A few options side by side where one is always picked, like Dark / Light
+ * A few options side by side where one is always picked, like Dark / Light. When they don't fit the width, like on a
+ * phone, it's a dropdown of the same options instead
  * @param optionLabel Text shown for an option
  */
 @Composable
@@ -84,17 +87,45 @@ fun <T> TmSegmented(
     size: TmControlSize = TmControlSize.MEDIUM
 ) {
     val colors = TmTheme.colors
-    val trackShape = TmTheme.shapes.control
-    val segmentShape = TmTheme.shapes.chip
 
     Column(
-        modifier = modifier.alpha(if (enabled) 1f else TM_DISABLED_ALPHA),
+        modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)
     ) {
         if (label != null) {
-            Text(text = label, style = TmTheme.typography.caption, color = colors.textMuted)
+            Text(text = label, style = TmTheme.typography.caption, color = colors.textMuted, modifier = Modifier.alpha(if (enabled) 1f else TM_DISABLED_ALPHA))
         }
 
+        // The track at its natural width, or the dropdown when that's wider than there's room for
+        SubcomposeLayout { constraints ->
+            val track = subcompose("track") { SegmentedTrack(options, selected, onSelect, optionLabel, enabled, size) }
+                .map { it.measure(constraints.copy(minWidth = 0, maxWidth = Constraints.Infinity)) }
+            val fits = constraints.maxWidth == Constraints.Infinity || track.maxOf { it.width } <= constraints.maxWidth
+            val shown = if (fits) track else subcompose("dropdown") {
+                TmDropdown(options = options, selected = selected, onSelect = onSelect, optionLabel = optionLabel, enabled = enabled, size = size)
+            }.map { it.measure(constraints.copy(minWidth = 0)) }
+
+            layout(shown.maxOf { it.width }, shown.maxOf { it.height }) {
+                shown.forEach { it.place(0, 0) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun <T> SegmentedTrack(
+    options: List<T>,
+    selected: T,
+    onSelect: (T) -> Unit,
+    optionLabel: (T) -> String,
+    enabled: Boolean,
+    size: TmControlSize
+) {
+    val colors = TmTheme.colors
+    val trackShape = TmTheme.shapes.control
+    val segmentShape = TmTheme.shapes.chip
+
+    Box(Modifier.alpha(if (enabled) 1f else TM_DISABLED_ALPHA)) {
         Row(
             modifier = Modifier
                 .height(size.height)

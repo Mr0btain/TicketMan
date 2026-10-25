@@ -23,6 +23,8 @@ import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.Housekeeping
 import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
+import org.mr0btain.ticketman.components.service.EstimateService
+import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
@@ -31,7 +33,9 @@ import org.mr0btain.ticketman.components.routing.waitText
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.server.response.LoginLockKind
 import org.mr0btain.ticketman.components.service.ServerRestart
+import org.mr0btain.ticketman.components.service.PasscodeVault
 import org.mr0btain.ticketman.components.service.ServerSecret
+import org.mr0btain.ticketman.components.service.StorageService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.components.proxy.ProxySettings
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -72,6 +76,7 @@ fun Application.module() {
         monitor.subscribe(ApplicationStopped) { database.close() }
         val secret = ServerSecret.resolve(environment.config.propertyOrNull("jwt.secret")?.getString().orEmpty(), dataPath)
         val jwtService = JwtService(this, database.userDatabase, database.tokenDatabase, secret)
+        val passcodeVault = PasscodeVault(secret)
         val userService = UserService(
             database = database.userDatabase,
             jwtService = jwtService,
@@ -104,7 +109,10 @@ fun Application.module() {
             inventory = database.inventoryDatabase,
             shop = database.shopDatabase,
             auditLog = database.auditLogDatabase,
-            work = database.workDatabase
+            work = database.workDatabase,
+            customers = database.customerDatabase,
+            values = database.storedValueDatabase,
+            passcodes = database.passcodeDatabase
         )
 
         val checkInService = CheckInService(
@@ -113,7 +121,12 @@ fun Application.module() {
             users = database.userDatabase,
             invoices = database.invoiceDatabase,
             shop = database.shopDatabase,
-            auditLog = database.auditLogDatabase
+            auditLog = database.auditLogDatabase,
+            values = database.storedValueDatabase,
+            devices = database.deviceDatabase,
+            passcodes = database.passcodeDatabase,
+            vault = passcodeVault,
+            appointments = database.appointmentDatabase
         )
 
         val imageService = ImageService(database.imageDatabase, database.imageStore)
@@ -157,13 +170,43 @@ fun Application.module() {
             }
         )
 
-        configureRouting(
-            userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
-            restoreService, database, loginLimiter
+        val notificationService = NotificationService(
+            database = database.notifyDatabase,
+            tickets = database.ticketDatabase,
+            customers = database.customerDatabase,
+            invoices = database.invoiceDatabase,
+            shop = database.shopDatabase,
+            estimates = database.estimateDatabase,
+            auditLog = database.auditLogDatabase,
+            appointments = database.appointmentDatabase
+        )
+        val estimateService = EstimateService(
+            estimates = database.estimateDatabase,
+            tickets = database.ticketDatabase,
+            invoices = invoiceService,
+            shop = database.shopDatabase,
+            notifications = notificationService,
+            auditLog = database.auditLogDatabase
         )
 
+        val storageService = StorageService(database.ticketDatabase, database.shopDatabase, notificationService, database.auditLogDatabase)
+
+        configureRouting(
+            userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
+            restoreService, notificationService, estimateService, database, loginLimiter, passcodeVault
+        )
+
+        // Sends customer messages as they're queued, and tries again the ones that didn't go
+        launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(NotificationService.SEND_INTERVAL)
+                notificationService.sendDue()
+            }
+        }
+
         // Clears out photos deleted or never saved a day ago, backups whose link has run out, sessions that have
-        // expired, old audit entries and old restore leftovers, and makes the daily backup. Stops with the application
+        // expired, old audit entries and old restore leftovers, makes the daily backup and queues pickup and appointment reminders. Stops
+        // with the application
         launch(Dispatchers.IO) {
             while (isActive) {
                 imageService.sweep()
@@ -172,6 +215,9 @@ fun Application.module() {
                 housekeeping.auditCutoff()?.let { database.auditLogDatabase.removeOlderThan(it) }
                 restoreService.sweepLeftovers(housekeeping.restoreLeftoverAge)
                 backupService.runSchedule()
+                notificationService.queueReminders()
+                notificationService.queueAppointmentReminders()
+                storageService.sweep()
                 delay(ImageService.SWEEP_INTERVAL)
             }
         }

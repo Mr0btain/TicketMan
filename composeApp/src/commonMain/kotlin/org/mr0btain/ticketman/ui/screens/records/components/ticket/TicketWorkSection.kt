@@ -267,8 +267,8 @@ private fun PartLineRow(line: PartLine, onChange: (PartLine) -> Unit, onRemove: 
     val count = line.count.trim().toIntOrNull()
     val stocked = line.item.stock != Int.MAX_VALUE
 
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
-        Column(Modifier.weight(1f)) {
+    val name: @Composable () -> Unit = {
+        Column {
             Text(line.item.name, style = TmTheme.typography.body, color = colors.text)
             if (stocked) {
                 Text(
@@ -278,6 +278,9 @@ private fun PartLineRow(line: PartLine, onChange: (PartLine) -> Unit, onRemove: 
                 )
             }
         }
+    }
+
+    val fields: @Composable RowScope.() -> Unit = {
         TmTextField(
             modifier = Modifier.width(72.dp),
             value = line.count,
@@ -299,4 +302,22 @@ private fun PartLineRow(line: PartLine, onChange: (PartLine) -> Unit, onRemove: 
             size = TmControlSize.SMALL
         )
     }
+
+    BoxWithConstraints {
+        // Narrow: the name on its own line, the fields under it
+        if (maxWidth < PART_ROW_WIDTH) {
+            Column(verticalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
+                name()
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), content = fields)
+            }
+        } else {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm)) {
+                Box(Modifier.weight(1f)) { name() }
+                fields()
+            }
+        }
+    }
 }
+
+/** Narrower than this, a part's fields go under its name */
+private val PART_ROW_WIDTH = 440.dp

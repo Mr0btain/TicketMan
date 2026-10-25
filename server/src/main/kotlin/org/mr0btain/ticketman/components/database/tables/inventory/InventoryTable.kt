@@ -12,4 +12,16 @@ object InventoryTable : UuidTable("inventory") {
 
     val costCents = long("cost_cents").default(0)
     val priceCents = long("price_cents").default(0)
+
+    // Added with tax classes: the shop's class it's sold at, null for the main rate
+    val taxClass = text("tax_class").nullable()
+
+    // Added with item details. Blank when not set; unique when set, checked when saving
+    val sku = text("sku").default("")
+    val barcode = text("barcode").default("")
+    val category = text("category").default("")
+    val reorderPoint = integer("reorder_point").nullable()
+
+    // Added with purchase orders: who it's usually ordered from. No foreign key, a deleted supplier just isn't found
+    val supplier = uuid("supplier_id").nullable()
 }

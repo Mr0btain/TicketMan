@@ -34,6 +34,8 @@ import org.mr0btain.ticketman.ui.screens.admin.components.UserStateChip
 import org.mr0btain.ticketman.ui.screens.records.components.DetailSection
 import org.mr0btain.ticketman.ui.screens.records.components.RecordDetail
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsLayout
+import org.mr0btain.ticketman.ui.screens.records.components.NARROW_LIST_WIDTH
+import org.mr0btain.ticketman.ui.screens.records.components.RecordNameCell
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsList
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.plus
@@ -44,6 +46,11 @@ import org.mr0btain.ticketman.ui.kit.images.TmPhotoEditor
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
 import ticketman.composeapp.generated.resources.printer
 import kotlin.uuid.Uuid
+
+private val NARROW_COLUMNS = listOf(
+    TmColumn("User"),
+    TmColumn("Access", width = 120.dp, end = true)
+)
 
 private val COLUMNS = listOf(
     TmColumn("Username", weight = 1f),
@@ -150,26 +157,33 @@ private fun UserListPane(
 ) {
     val colors = TmTheme.colors
 
-    RecordsList(
-        columns = COLUMNS,
-        state = state,
-        isEmpty = userList.isEmpty(),
-        emptyTitle = "No users loaded",
-        emptyIcon = Res.drawable.users
-    ) {
-        items(userList, key = { it.identifier }) { user ->
-            TmTableRow(COLUMNS, selected = selected == user.identifier, onClick = { onClick(user.identifier) }) { column ->
-                when (column) {
-                    0 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
-                        TmAvatar(name = user.name.ifBlank { user.username }, photo = user.photo, size = 24.dp)
-                        Text(user.username, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    BoxWithConstraints {
+        // Narrow: the avatar, the name with the username under it, and their access
+        val narrow = maxWidth < NARROW_LIST_WIDTH
+        val columns = if (narrow) NARROW_COLUMNS else COLUMNS
+
+        RecordsList(
+            columns = columns,
+            state = state,
+            isEmpty = userList.isEmpty(),
+            emptyTitle = "No users loaded",
+            emptyIcon = Res.drawable.users
+        ) {
+            items(userList, key = { it.identifier }) { user ->
+                TmTableRow(columns, selected = selected == user.identifier, onClick = { onClick(user.identifier) }) { column ->
+                    when (if (narrow) listOf(0, 2)[column] else column) {
+                        0 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.sm), verticalAlignment = Alignment.CenterVertically) {
+                            TmAvatar(name = user.name.ifBlank { user.username }, photo = user.photo, size = if (narrow) 32.dp else 24.dp)
+                            if (narrow) RecordNameCell(user.name.ifBlank { user.username }, user.username)
+                            else Text(user.username, style = TmTheme.typography.label, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        1 -> Text(user.name, style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        2 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs), verticalAlignment = Alignment.CenterVertically) {
+                            UserStateChip(user)
+                            if (user.pinLocked) TmBadge(text = "PIN", tone = colors.danger, dot = false)
+                        }
+                        3 -> Text(user.email, style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
-                    1 -> Text(user.name, style = TmTheme.typography.body, color = colors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    2 -> Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs), verticalAlignment = Alignment.CenterVertically) {
-                        UserStateChip(user)
-                        if (user.pinLocked) TmBadge(text = "PIN", tone = colors.danger, dot = false)
-                    }
-                    3 -> Text(user.email, style = TmTheme.typography.body, color = colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

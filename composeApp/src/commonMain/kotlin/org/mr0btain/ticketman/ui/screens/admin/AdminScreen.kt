@@ -20,10 +20,13 @@ import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
+import org.mr0btain.ticketman.ui.screens.admin.messages.AdminMessagesTab
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
 import org.mr0btain.ticketman.ui.screens.admin.overview.AdminOverviewTab
+import org.mr0btain.ticketman.ui.screens.admin.reports.AdminReportsTab
+import org.mr0btain.ticketman.ui.screens.admin.timesheets.AdminTimesheetsTab
 import org.mr0btain.ticketman.ui.screens.admin.server.AdminServerTab
 import org.mr0btain.ticketman.ui.screens.admin.sessions.AdminSessionsTab
 import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
@@ -38,6 +41,7 @@ import org.mr0btain.ticketman.ui.MainViewModel
 import ticketman.composeapp.generated.resources.Res
 import ticketman.composeapp.generated.resources.refresh_cw
 import org.mr0btain.ticketman.ui.screens.CheckForUpdates
+import org.mr0btain.ticketman.components.data.local.UpdateInterval
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportCard
 import org.mr0btain.ticketman.ui.screens.admin.server.ImportDialog
 import ticketman.composeapp.generated.resources.shield
@@ -87,6 +91,17 @@ private fun AdminContent(
     val backupProgress by admin.server.backupProgress.collectAsState()
     val pendingRestore by admin.server.pendingRestore.collectAsState()
     val shopProfile by admin.server.shopProfile.collectAsState()
+    val messageSettings by admin.messages.settings.collectAsState()
+    val outbox by admin.messages.outbox.collectAsState()
+    val outboxEnd by admin.messages.outboxEnd.collectAsState()
+    val report by admin.reports.report.collectAsState()
+    val reportRange by admin.reports.range.collectAsState()
+    val commissions by admin.reports.commissions.collectAsState()
+    val reportUsers by admin.reports.users.collectAsState()
+    val timesheet by admin.timesheets.sheet.collectAsState()
+    val onTheClock by admin.timesheets.onNow.collectAsState()
+    val timesheetUsers by admin.timesheets.users.collectAsState()
+    val timesheetRange by admin.timesheets.range.collectAsState()
     val auditEntries by admin.auditEntries.collectAsState()
     val auditEndReached by admin.auditEndReached.collectAsState()
     val serverUrl by viewModel.settings.serverUrl.collectAsState()
@@ -162,6 +177,7 @@ private fun AdminContent(
     CheckForUpdates(interval = updateInterval, enabled = !dialogOpen && !isLoading) {
         admin.checkForUpdates(selectedTab)
         if (selectedTab == AdminTab.USERS) viewModel.users.pager.refreshCurrentData()
+        if (selectedTab == AdminTab.INVOICES) viewModel.counter.invoices.checkForUpdates()
     }
 
     UserDialog(
@@ -215,21 +231,27 @@ private fun AdminContent(
                 badges = if (pending.isNotEmpty()) mapOf(AdminTab.USERS.ordinal to pending.size) else emptyMap()
             )
 
-            TmButton(
-                text = "Refresh",
-                enabled = !isLoading,
-                loading = isLoading,
-                variant = TmButtonVariant.SECONDARY,
-                leadingIcon = Res.drawable.refresh_cw,
-                onClick = {
-                    admin.refresh(selectedTab)
-                    when (selectedTab) {
-                        AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
-                        AdminTab.INVOICES -> viewModel.counter.invoices.load(reset = true)
-                        else -> Unit
+            // Tabs check for changes on their own; this is only for when that's turned off in Settings
+            if (updateInterval == UpdateInterval.OFF) {
+                TmButton(
+                    text = "Refresh",
+                    enabled = !isLoading,
+                    loading = isLoading,
+                    variant = TmButtonVariant.SECONDARY,
+                    leadingIcon = Res.drawable.refresh_cw,
+                    onClick = {
+                        admin.refresh(selectedTab)
+                        when (selectedTab) {
+                            AdminTab.USERS -> scope.launch { viewModel.users.pager.refresh() }
+                            AdminTab.INVOICES -> {
+                                viewModel.counter.invoices.load(reset = true)
+                                viewModel.counter.invoices.loadGiftCards()
+                            }
+                            else -> Unit
+                        }
                     }
-                }
-            )
+                )
+            }
         }
 
         // ------------------------------------------ Content ------------------------------------------
@@ -304,6 +326,9 @@ private fun AdminContent(
                 items = lowStock,
                 threshold = lowStockThreshold,
                 onThresholdChange = { admin.setLowStockThreshold(it) },
+                onDraftOrders = if (viewModel.session.canEditNow()) {
+                    { onResult -> viewModel.purchasing.draftForLowStock(lowStock, lowStockThreshold, onResult) }
+                } else null,
                 onItemClick = { identifier ->
                     viewModel.inventory.select(identifier)
                     viewModel.changeMainTabIndex(INVENTORY_TAB)
@@ -314,6 +339,32 @@ private fun AdminContent(
             AdminTab.INVOICES -> AdminInvoicesTab(
                 viewModel = viewModel,
                 onOpenTicket = onOpenTicketAtCounter
+            )
+
+            AdminTab.REPORTS -> AdminReportsTab(
+                report = report,
+                range = reportRange,
+                days = admin.reports.days(),
+                commissions = commissions,
+                users = reportUsers,
+                defaultPaper = shopProfile?.defaultPaper ?: PaperSize.RECEIPT_80MM,
+                isBusy = isLoading,
+                onPick = { admin.reports.pick(it) },
+                onShowDays = { from, to -> admin.reports.showDays(from, to) },
+                onPrint = { paper, onResult -> admin.reports.print(paper, onResult) },
+                onSaveCommissions = { rates, onSaved -> admin.reports.saveCommissions(rates, onSaved) }
+            )
+
+            AdminTab.TIMESHEETS -> AdminTimesheetsTab(
+                sheet = timesheet,
+                onNow = onTheClock,
+                users = timesheetUsers,
+                range = timesheetRange,
+                days = admin.timesheets.days(),
+                onPick = { admin.timesheets.pick(it) },
+                onShowDays = { from, to -> admin.timesheets.showDays(from, to) },
+                onSave = { entry, isNew, onResult -> admin.timesheets.save(entry, isNew, onResult) },
+                onRemove = { admin.timesheets.remove(it) }
             )
 
             AdminTab.SERVER -> AdminServerTab(
@@ -336,6 +387,19 @@ private fun AdminContent(
                         onPicked = { kind, file -> admin.import.openFile(kind, file) }
                     )
                 }
+            )
+
+            AdminTab.MESSAGES -> AdminMessagesTab(
+                settings = messageSettings,
+                statuses = shopProfile?.statuses.orEmpty(),
+                outbox = outbox,
+                outboxEnd = outboxEnd,
+                isBusy = isLoading,
+                onSave = { admin.messages.save(it) },
+                onTest = { settings, channel, recipient -> admin.messages.test(settings, channel, recipient) },
+                onRetry = { admin.messages.retry(it) },
+                onCancel = { admin.messages.cancel(it) },
+                onLoadMore = { admin.messages.loadMore() }
             )
 
             AdminTab.AUDIT -> AdminAuditTab(

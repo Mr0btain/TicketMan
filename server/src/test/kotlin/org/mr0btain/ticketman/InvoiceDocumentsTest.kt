@@ -129,7 +129,7 @@ class InvoiceDocumentsTest {
         assertEquals(InvoiceDocuments.CSV_HEADER.joinToString(","), lines[0])
         assertEquals(3, lines.size)
         assertTrue(lines[1].startsWith("${first.label},$today,open,,"), lines[1])
-        assertTrue(lines[1].endsWith(",Jane Doe,150.00,0.00,9.90,159.90,0.00,159.90"), lines[1])
+        assertTrue(lines[1].endsWith(",Jane Doe,150.00,0.00,9.90,159.90,0.00,159.90,0.00"), lines[1])
         // Typed text that looks like a formula isn't run as one, and the comma is quoted
         assertTrue(lines[2].startsWith(second.label) && lines[2].contains(",\"'=Smith, Bob\","), lines[2])
 

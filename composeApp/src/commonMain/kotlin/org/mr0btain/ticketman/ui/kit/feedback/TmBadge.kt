@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.kit.feedback
 
+import org.mr0btain.ticketman.data.appointment.AppointmentStatus
+import org.mr0btain.ticketman.data.notify.OutboxStatus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -82,6 +84,13 @@ fun TmColors.tone(tone: StatusTone): TmTone = when (tone) {
 
 fun TmColors.tone(status: TicketStatusType): TmTone = tone(status.tone)
 
+fun TmColors.tone(status: AppointmentStatus): TmTone = when (status) {
+    AppointmentStatus.BOOKED -> accent
+    AppointmentStatus.ARRIVED -> success
+    AppointmentStatus.NO_SHOW -> warning
+    AppointmentStatus.CANCELLED -> neutral
+}
+
 fun TmColors.tone(priority: TicketPriorityType): TmTone = when (priority) {
     TicketPriorityType.LOW -> neutral
     TicketPriorityType.NORMAL -> accent
@@ -100,6 +109,13 @@ fun TmColors.tone(status: UserStatus): TmTone = when (status) {
     UserStatus.PENDING -> warning
     UserStatus.ACTIVE -> success
     UserStatus.DEACTIVATED -> neutral
+}
+
+fun TmColors.tone(status: OutboxStatus): TmTone = when (status) {
+    OutboxStatus.PENDING -> warning
+    OutboxStatus.SENT -> success
+    OutboxStatus.FAILED -> danger
+    OutboxStatus.CANCELLED -> neutral
 }
 
 /** The shop's own ticket statuses, from its profile, so status badges and pickers anywhere below can name them */

@@ -80,7 +80,8 @@ fun KioskShell(viewModel: MainViewModel) {
                         staff = staff,
                         onRefresh = { kiosk.refreshStaff() },
                         onUnlock = { member, pin, onResult -> kiosk.unlock(member, pin, onResult) },
-                        onExit = { member, pin, onResult -> kiosk.exit(member, pin, onResult) }
+                        onExit = { member, pin, onResult -> kiosk.exit(member, pin, onResult) },
+                        onPunch = { member, pin, onResult -> kiosk.punch(member, pin, onResult) }
                     )
                 } else {
                     Column(

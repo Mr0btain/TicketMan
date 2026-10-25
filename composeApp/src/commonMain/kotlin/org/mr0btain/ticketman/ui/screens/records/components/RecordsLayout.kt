@@ -12,6 +12,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.style.TextOverflow
 import org.jetbrains.compose.resources.DrawableResource
 import org.mr0btain.ticketman.ui.kit.buttons.TmButton
 import org.mr0btain.ticketman.ui.kit.buttons.TmButtonVariant
@@ -56,6 +57,21 @@ fun RecordsLayout(
                     TmSurface(Modifier.weight(0.5f).fillMaxWidth()) { detail() }
                 }
             }
+        }
+    }
+}
+
+/** Narrower than this, record lists drop to a name and the one or two columns that matter, details under the name */
+val NARROW_LIST_WIDTH = 560.dp
+
+/** A record's name with a line of detail under it, for narrow lists. The caption is left off when blank */
+@Composable
+fun RecordNameCell(name: String, caption: String, nameContent: (@Composable () -> Unit)? = null) {
+    Column {
+        if (nameContent != null) nameContent()
+        else Text(name, style = TmTheme.typography.label, color = TmTheme.colors.text, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        if (caption.isNotBlank()) {
+            Text(caption, style = TmTheme.typography.caption, color = TmTheme.colors.textMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

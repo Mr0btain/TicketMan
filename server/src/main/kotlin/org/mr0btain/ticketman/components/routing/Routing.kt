@@ -12,6 +12,9 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.service.AccountService
+import org.mr0btain.ticketman.components.service.AccountingExport
+import org.mr0btain.ticketman.components.service.AppointmentService
+import org.mr0btain.ticketman.components.service.TimeClockService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.RestoreService
@@ -20,8 +23,14 @@ import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.InvoiceDocuments
 import org.mr0btain.ticketman.components.service.LoginLimiter
+import org.mr0btain.ticketman.components.service.StatusService
+import org.mr0btain.ticketman.components.service.EstimateService
+import org.mr0btain.ticketman.components.notify.NotificationService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
+import org.mr0btain.ticketman.components.service.PasscodeVault
+import org.mr0btain.ticketman.components.service.PurchaseService
+import org.mr0btain.ticketman.components.service.StoredValueService
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
 import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 
@@ -34,8 +43,36 @@ fun Application.configureRouting(
     imageService: ImageService,
     backupService: BackupService,
     restoreService: RestoreService,
+    notificationService: NotificationService,
+    estimateService: EstimateService,
     localDatabase: LocalDatabase,
-    loginLimiter: LoginLimiter = LoginLimiter()
+    loginLimiter: LoginLimiter = LoginLimiter(),
+    passcodeVault: PasscodeVault? = null,
+    statusService: StatusService = StatusService(
+        tickets = localDatabase.ticketDatabase,
+        customers = localDatabase.customerDatabase,
+        invoices = localDatabase.invoiceDatabase,
+        shop = localDatabase.shopDatabase,
+        images = imageService,
+        estimates = estimateService
+    ),
+    appointmentService: AppointmentService = AppointmentService(
+        appointments = localDatabase.appointmentDatabase,
+        customers = localDatabase.customerDatabase,
+        users = localDatabase.userDatabase,
+        auditLog = localDatabase.auditLogDatabase
+    ),
+    timeClockService: TimeClockService = TimeClockService(
+        entries = localDatabase.timeClockDatabase,
+        users = localDatabase.userDatabase,
+        auditLog = localDatabase.auditLogDatabase
+    ),
+    storedValueService: StoredValueService = StoredValueService(
+        values = localDatabase.storedValueDatabase,
+        customers = localDatabase.customerDatabase,
+        shop = localDatabase.shopDatabase,
+        auditLog = localDatabase.auditLogDatabase
+    )
 ) {
     install(StatusPages) {
         // A body that isn't valid JSON, has a field this server doesn't know, or is missing one. The details stay
@@ -76,6 +113,52 @@ fun Application.configureRouting(
                     AppLogger.m("ROUTE.CHECK", "Client hit")
                 }
             }
+        }
+
+        route(ApiRoutes.STATUS) {
+            statusRoute(
+                service = statusService,
+                shopDatabase = localDatabase.shopDatabase
+            )
+        }
+
+        route(ApiRoutes.NOTIFY) {
+            notifyRoute(
+                service = notificationService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.TIME_CLOCK) {
+            timeClockRoute(
+                service = timeClockService,
+                database = localDatabase.timeClockDatabase,
+                userService = userService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.APPOINTMENT) {
+            appointmentRoute(
+                database = localDatabase.appointmentDatabase,
+                service = appointmentService,
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.REPORT) {
+            reportRoute(
+                database = localDatabase.reportDatabase,
+                userDatabase = localDatabase.userDatabase,
+                auditLog = localDatabase.auditLogDatabase
+            )
+        }
+
+        route(ApiRoutes.ESTIMATE) {
+            estimateRoute(
+                service = estimateService,
+                userDatabase = localDatabase.userDatabase
+            )
         }
 
         route(ApiRoutes.AUTH) {
@@ -122,7 +205,13 @@ fun Application.configureRouting(
                     customers = localDatabase.customerDatabase,
                     shop = localDatabase.shopDatabase
                 ),
-                auditLog = localDatabase.auditLogDatabase
+                auditLog = localDatabase.auditLogDatabase,
+                accounting = AccountingExport(
+                    invoices = localDatabase.invoiceDatabase,
+                    tickets = localDatabase.ticketDatabase,
+                    customers = localDatabase.customerDatabase,
+                    shop = localDatabase.shopDatabase
+                )
             )
         }
 
@@ -154,8 +243,30 @@ fun Application.configureRouting(
                 ticketDatabase = localDatabase.ticketDatabase,
                 counterDatabase = localDatabase.counterDatabase,
                 userDatabase = localDatabase.userDatabase,
-                auditLog = localDatabase.auditLogDatabase
+                auditLog = localDatabase.auditLogDatabase,
+                storedValue = localDatabase.storedValueDatabase,
+                storedValueService = storedValueService,
+                invoiceDatabase = localDatabase.invoiceDatabase,
+                deviceDatabase = localDatabase.deviceDatabase
             )
+        }
+
+        route(ApiRoutes.PURCHASE) {
+            purchaseRoute(
+                database = localDatabase.purchaseDatabase,
+                service = PurchaseService(
+                    purchases = localDatabase.purchaseDatabase,
+                    inventory = localDatabase.inventoryDatabase,
+                    tickets = localDatabase.ticketDatabase,
+                    shop = localDatabase.shopDatabase,
+                    auditLog = localDatabase.auditLogDatabase
+                ),
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.GIFT_CARD) {
+            giftCardRoute(localDatabase.storedValueDatabase, storedValueService)
         }
 
         route(ApiRoutes.TICKET) {
@@ -165,7 +276,10 @@ fun Application.configureRouting(
                 auditLog = localDatabase.auditLogDatabase,
                 workDatabase = localDatabase.workDatabase,
                 shopDatabase = localDatabase.shopDatabase,
-                invoiceService = invoiceService
+                invoiceService = invoiceService,
+                notificationService = notificationService,
+                passcodes = localDatabase.passcodeDatabase,
+                vault = passcodeVault
             )
         }
 

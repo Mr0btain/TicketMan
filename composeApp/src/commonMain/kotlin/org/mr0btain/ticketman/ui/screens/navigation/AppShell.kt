@@ -37,10 +37,12 @@ import org.mr0btain.ticketman.ui.kit.foundation.glassSource
 import org.mr0btain.ticketman.ui.kit.navigation.TmBottomNav
 import org.mr0btain.ticketman.ui.kit.selection.TmMenu
 import org.mr0btain.ticketman.ui.kit.selection.TmMenuItem
+import org.mr0btain.ticketman.components.utils.formatTime
 import org.mr0btain.ticketman.ui.kit.navigation.TmNavItem
 import org.mr0btain.ticketman.ui.kit.navigation.TmNavRail
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import ticketman.composeapp.generated.resources.Res
+import ticketman.composeapp.generated.resources.clock
 import ticketman.composeapp.generated.resources.log_in
 import ticketman.composeapp.generated.resources.log_out
 import ticketman.composeapp.generated.resources.settings
@@ -60,6 +62,8 @@ val shellInsets: WindowInsets
 /**
  * Wide screen layout: glass nav rail on the left, the current screen beside it
  * @param user Signed in user shown at the bottom of the rail, null shows a log in button
+ * @param clockedInAt When they clocked in, null when they're off the clock
+ * @param onPunch Clocks them in or out, from the user menu
  */
 @Composable
 fun WideAppShell(
@@ -70,6 +74,8 @@ fun WideAppShell(
     onLogin: () -> Unit,
     onLogout: () -> Unit,
     onOpenSettings: () -> Unit,
+    clockedInAt: Long? = null,
+    onPunch: (() -> Unit)? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
     val spacing = TmTheme.spacing
@@ -105,7 +111,7 @@ fun WideAppShell(
                             TmIconButton(icon = Res.drawable.log_in, contentDescription = "Log in", onClick = onLogin)
                         }
                     } else {
-                        UserMenu(user = user, expanded = expanded, onOpenSettings = onOpenSettings, onLogout = onLogout)
+                        UserMenu(user = user, expanded = expanded, clockedInAt = clockedInAt, onPunch = onPunch, onOpenSettings = onOpenSettings, onLogout = onLogout)
                     }
                 }
             )
@@ -166,7 +172,7 @@ fun PhoneAppShell(
 
 /** The signed in user at the bottom of the rail, clicking it offers settings and logging out */
 @Composable
-private fun UserMenu(user: User, expanded: Boolean, onOpenSettings: () -> Unit, onLogout: () -> Unit) {
+private fun UserMenu(user: User, expanded: Boolean, clockedInAt: Long?, onPunch: (() -> Unit)?, onOpenSettings: () -> Unit, onLogout: () -> Unit) {
     var open by remember { mutableStateOf(false) }
     val name = user.name.trim().ifBlank { user.username }
 
@@ -183,6 +189,17 @@ private fun UserMenu(user: User, expanded: Boolean, onOpenSettings: () -> Unit, 
         }
 
         TmMenu(expanded = open, onDismissRequest = { open = false }) {
+            onPunch?.let { punch ->
+                TmMenuItem(
+                    text = if (clockedInAt != null) "Clock out" else "Clock in",
+                    leadingIcon = Res.drawable.clock,
+                    trailingText = clockedInAt?.let { "since ${formatTime(it)}" },
+                    onClick = {
+                        open = false
+                        punch()
+                    }
+                )
+            }
             TmMenuItem(text = "Settings", leadingIcon = Res.drawable.settings, onClick = {
                 open = false
                 onOpenSettings()

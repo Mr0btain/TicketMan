@@ -11,12 +11,16 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.RemoteHandler
+import org.mr0btain.ticketman.data.giftcard.GiftCard
+import org.mr0btain.ticketman.data.ticket.CustomerDevice
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.StatusChoice
 import org.mr0btain.ticketman.data.ticket.label
 import org.mr0btain.ticketman.error.TmResult
+import org.mr0btain.ticketman.error.getOrDefault
+import org.mr0btain.ticketman.server.request.BalanceAdjustRequest
 import org.mr0btain.ticketman.server.response.CounterQueueResponse
 import org.mr0btain.ticketman.server.response.CounterSearchResponse
 import kotlin.uuid.Uuid
@@ -31,13 +35,15 @@ enum class CounterView {
     CHECKED_IN,
     NEW_CUSTOMER,
     PICKUP,
-    PICKED_UP
+    PICKED_UP,
+    SALE,
+    SOLD
 }
 
 /**
  * State and actions for the shop counter. Owned by the main view model. Holds the search, queue, shop profile,
- * ticket and customer cards and price check itself, and one part each for [checkIn], [pickup], the [invoices]
- * list and the [printer]
+ * ticket and customer cards and price check itself, and one part each for [checkIn], [pickup], [sale], the
+ * [invoices] list, the [printer] and the open ticket's [estimates] and messages
  * @param canEdit Whether the signed in user can change things, restricted users can only look
  */
 class CounterHandler(
@@ -79,8 +85,10 @@ class CounterHandler(
 
     val checkIn = CounterCheckIn(remoteHandler, support)
     val pickup = CounterPickup(remoteHandler, support)
+    val sale = CounterSale(remoteHandler, support)
     val invoices = CounterInvoices(remoteHandler, support)
     val printer = CounterPrinter(remoteHandler, support, shop = { _shop.value })
+    val estimates = CounterEstimates(remoteHandler, support, reload = { reloadTicket() })
 
     private var searchJob: Job? = null
     private var priceJob: Job? = null
@@ -169,8 +177,12 @@ class CounterHandler(
                 support.notify("Couldn't load that customer's tickets: ${error.message}")
                 return@launch
             }
+            // Only shown, never saved back, so a failed read just shows nothing
+            val credit = repo.getCredit(identifier).getOrDefault(emptyList())
+            val invoices = repo.getInvoices(identifier).getOrDefault(emptyList())
+            val devices = repo.getDevices(identifier).getOrDefault(emptyList())
 
-            _customer.value = CustomerDetail(customer, tickets)
+            _customer.value = CustomerDetail(customer, tickets, devices, credit, invoices)
             _view.value = CounterView.CUSTOMER
         }
     }
@@ -210,6 +222,23 @@ class CounterHandler(
         }
     }
 
+    /** Replaces the open ticket's status page link, for when the old one went somewhere it shouldn't */
+    fun replaceStatusLink() {
+        val detail = _ticket.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.ticketRepo.replaceStatusToken(detail.ticket.identifier)) {
+                is TmResult.Success -> {
+                    support.notify("Ticket ${detail.ticket.label} has a new status link, the old one no longer works")
+                    reloadTicket()
+                }
+
+                is TmResult.Error -> support.notify("Link not replaced: ${result.error.message}")
+            }
+        }
+    }
+
     /** Adds a text note to the open ticket straight away, signed by whoever is signed in, then reloads it */
     fun addTicketNote(message: String) {
         val detail = _ticket.value ?: return
@@ -223,6 +252,115 @@ class CounterHandler(
             reloadTicket()
         }
     }
+
+    /**
+     * Gives or takes the open customer's store credit, admin only
+     * @param onResult Gets null when it's saved, otherwise what went wrong
+     */
+    fun adjustCredit(amountCents: Long, reason: String, onResult: (String?) -> Unit) {
+        val detail = _customer.value ?: return
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.adjustCredit(detail.customer.identifier, BalanceAdjustRequest(amountCents, reason))) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    openCustomer(detail.customer.identifier)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** The item with exactly this barcode or SKU, for a scan. Null when there's none or it couldn't be read */
+    suspend fun findItem(code: String): Inventory? = remoteHandler.inventoryRepo.getByCode(code).getOrNull()
+
+    /**
+     * Enter in the main search, which is how a barcode scanner ends what it types: an item's code opens the price
+     * check on it. Anything else stays a search
+     */
+    fun scan(code: String) {
+        if (code.isBlank()) return
+        scope.launch {
+            val item = findItem(code.trim()) ?: return@launch
+            searchJob?.cancel()
+            _query.value = ""
+            _searching.value = false
+            _results.value = CounterSearchResponse()
+            _priceResults.value = listOf(item)
+            _view.value = CounterView.PRICE_CHECK
+        }
+    }
+
+    /**
+     * Saves a device's details on the open customer
+     * @param onResult Gets null when it's saved, otherwise what went wrong
+     */
+    fun saveDevice(device: CustomerDevice, onResult: (String?) -> Unit) {
+        val detail = _customer.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.updateDevice(device)) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    openCustomer(detail.customer.identifier)
+                }
+
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    /** Deletes one of the open customer's devices. Its tickets stay */
+    fun removeDevice(device: CustomerDevice) {
+        val detail = _customer.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.customerRepo.removeDevice(device.identifier)) {
+                is TmResult.Success -> openCustomer(detail.customer.identifier)
+                is TmResult.Error -> support.notify(result.error.message)
+            }
+        }
+    }
+
+    /** The ticket's passcode, which the server writes down as looked at */
+    suspend fun showPasscode(ticket: Uuid): Result<String> =
+        when (val result = remoteHandler.ticketRepo.getPasscode(ticket)) {
+            is TmResult.Success -> Result.success(result.data.passcode)
+            is TmResult.Error -> Result.failure(Exception(if (result.error.isNotFound) "There's no passcode on file" else result.error.message))
+        }
+
+    /**
+     * Saves a new passcode for the ticket
+     * @param onResult Gets null when it's saved, otherwise what went wrong
+     */
+    fun setPasscode(ticket: Uuid, passcode: String, onResult: (String?) -> Unit) {
+        if (!support.canEdit()) return
+        scope.launch {
+            when (val result = remoteHandler.ticketRepo.setPasscode(ticket, passcode)) {
+                is TmResult.Success -> {
+                    onResult(null)
+                    reloadTicket()
+                }
+                is TmResult.Error -> onResult(result.error.message)
+            }
+        }
+    }
+
+    fun clearPasscode(ticket: Uuid) {
+        if (!support.canEdit()) return
+        scope.launch {
+            when (val result = remoteHandler.ticketRepo.clearPasscode(ticket)) {
+                is TmResult.Success -> reloadTicket()
+                is TmResult.Error -> support.notify(result.error.message)
+            }
+        }
+    }
+
+    /** The gift card with this code, for paying with it. Null when there's none or it couldn't be read */
+    suspend fun findGiftCard(code: String): GiftCard? = remoteHandler.giftCardRepo.get(code).getOrNull()
 
     // ------------------------------------------ Price check ------------------------------------------
 
@@ -260,6 +398,7 @@ class CounterHandler(
         _shop.value = ShopProfile()
         checkIn.clear()
         pickup.clear()
+        sale.clear()
         invoices.clear()
     }
 

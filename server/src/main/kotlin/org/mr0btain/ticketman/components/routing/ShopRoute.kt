@@ -9,9 +9,12 @@ import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
+import org.mr0btain.ticketman.data.invoice.TaxClasses
+import org.mr0btain.ticketman.data.invoice.Warranty
 import org.mr0btain.ticketman.data.money.Money
 import org.mr0btain.ticketman.data.shop.ShopProfile
 import org.mr0btain.ticketman.data.ticket.CustomStatusRules
+import org.mr0btain.ticketman.data.ticket.selectable
 import org.mr0btain.ticketman.logging.AppLogger
 
 /**
@@ -55,6 +58,26 @@ fun Route.shopRoute(
                 return@post
             }
 
+            if (profile.warrantyDays !in 0..Warranty.MAX_DAYS) {
+                call.respond(HttpStatusCode.BadRequest, "Warranty can be 0 to ${Warranty.MAX_DAYS} days")
+                return@post
+            }
+
+            profile.storage.problem()?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
+            profile.accounting.problem()?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
+            TaxClasses.problem(profile.taxClasses)?.let { problem ->
+                call.respond(HttpStatusCode.BadRequest, problem)
+                return@post
+            }
+
             // Statuses left out are kept as retired, since tickets may still be in them
             val previous = database.get().statuses
             val statuses = CustomStatusRules.keepingRemoved(previous, profile.statuses)
@@ -63,7 +86,31 @@ fun Route.shopRoute(
                 return@post
             }
 
-            val saved = profile.copy(currencySymbol = symbol, publicUrl = profile.publicUrl.trim().trimEnd('/'), statuses = statuses)
+            // The statuses estimates move tickets to have to be ones staff could pick
+            val pickable = statuses.selectable()
+            listOfNotNull(profile.estimateSentStatus, profile.estimateApprovedStatus, profile.estimateDeclinedStatus)
+                .firstOrNull { it !in pickable }
+                ?.let {
+                    call.respond(HttpStatusCode.BadRequest, "An estimate can only move a ticket to a status staff can pick")
+                    return@post
+                }
+            listOfNotNull(profile.partsOrderedStatus, profile.partsArrivedStatus)
+                .firstOrNull { it !in pickable }
+                ?.let {
+                    call.respond(HttpStatusCode.BadRequest, "Ordering parts can only move a ticket to a status staff can pick")
+                    return@post
+                }
+
+            val saved = profile.copy(
+                currencySymbol = symbol,
+                publicUrl = profile.publicUrl.trim().trimEnd('/'),
+                statuses = statuses,
+                taxClasses = profile.taxClasses.map { it.copy(name = it.name.trim(), rate = it.rate.trim()) },
+                // One list per kind, the last sent winning, with blank and repeated checks dropped
+                checklists = profile.checklists.associateBy { it.kind }.values.map { list ->
+                    list.copy(items = list.items.map { it.trim().take(MAX_CHECK) }.filter { it.isNotEmpty() }.distinct().take(MAX_CHECKS))
+                }
+            )
             if (database.update(saved)) {
                 call.audit(auditLog, AuditAction.SETTINGS_UPDATE, "shop", details = "Updated shop profile")
                 call.respond(HttpStatusCode.Accepted)
@@ -74,3 +121,6 @@ fun Route.shopRoute(
         }
     }
 }
+
+private const val MAX_CHECK = 60
+private const val MAX_CHECKS = 30

@@ -19,15 +19,17 @@ import ticketman.composeapp.generated.resources.user_plus
  * Fields for a new customer, on a panel: the counter's quick add and check-in. Only the name and a phone or email
  * are required
  * @param onSave Gets the customer to save, calls back with what went wrong or null if it worked
+ * @param initial Name, phone and email to start with, like from an appointment
  */
 @Composable
 fun TmCustomerForm(
     onSave: (Customer, (String?) -> Unit) -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
-    title: String = "New customer"
+    title: String = "New customer",
+    initial: Customer? = null
 ) {
-    val form = rememberCustomerFormState()
+    val form = rememberCustomerFormState(initial)
 
     TmPanel(modifier = modifier.widthIn(max = 640.dp), title = title, icon = Res.drawable.user_plus) {
         CustomerFields(form)
@@ -66,6 +68,8 @@ private class CustomerFormState {
     var city by mutableStateOf("")
     var state by mutableStateOf("")
     var zip by mutableStateOf("")
+    var notifyEmail by mutableStateOf(false)
+    var notifySms by mutableStateOf(false)
     var saving by mutableStateOf(false)
     var error by mutableStateOf<String?>(null)
 
@@ -81,12 +85,22 @@ private class CustomerFormState {
             name = name.trim(),
             phone = phone.trim(),
             email = email.trim(),
-            address = Address(street.trim(), city.trim(), state.trim(), zip.trim())
+            address = Address(street.trim(), city.trim(), state.trim(), zip.trim()),
+            notifyEmail = notifyEmail && email.isNotBlank(),
+            notifySms = notifySms && phone.isNotBlank()
         )
 }
 
 @Composable
-private fun rememberCustomerFormState() = remember { CustomerFormState() }
+private fun rememberCustomerFormState(initial: Customer? = null) = remember(initial) {
+    CustomerFormState().apply {
+        initial?.let {
+            name = it.name
+            phone = it.phone
+            email = it.email
+        }
+    }
+}
 
 @Composable
 private fun CustomerFields(form: CustomerFormState) {
@@ -103,6 +117,15 @@ private fun CustomerFields(form: CustomerFormState) {
         TmTextField(modifier = Modifier.weight(1f), value = form.state, onValueChange = { form.state = it }, label = "State")
         TmTextField(modifier = Modifier.weight(1f), value = form.zip, onValueChange = { form.zip = it }, label = "Zip")
     }
+
+    TmMessageConsent(
+        email = form.notifyEmail,
+        sms = form.notifySms,
+        onEmailChange = { form.notifyEmail = it },
+        onSmsChange = { form.notifySms = it },
+        hasEmail = form.email.isNotBlank(),
+        hasPhone = form.phone.isNotBlank()
+    )
 
     (form.error ?: form.problem.takeIf { form.name.isNotEmpty() || form.phone.isNotEmpty() })?.let {
         TmNotice(text = it, kind = if (form.error != null) TmNoticeKind.ERROR else TmNoticeKind.WARNING)

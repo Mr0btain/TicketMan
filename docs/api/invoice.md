@@ -1,12 +1,19 @@
 # Invoices API
 
 `/api/invoice`, from [`InvoiceRoute.kt`](../../server/src/main/kotlin/org/mr0btain/ticketman/components/routing/InvoiceRoute.kt).
-One invoice per ticket. Anyone logged in can look; Normal access changes an open invoice; only admins void, and
+One invoice per ticket, plus counter sales, which have no ticket (`ticketIdentifier` null; made by
+[`POST /api/counter/sale`](counter.md#post-apicountersale)). Anyone logged in can look; Normal access changes an open invoice; only admins void, and
 delete one kept after its ticket was deleted. An invoice with money taken against it, or a void one, outlives its
 ticket: `ticketLabel` keeps the ticket's number and `ticketRemovedAt` says when it went.
-Totals are always worked out by the server with `InvoiceMath` and the shop's tax rate, so a client never sends
-them. Paying an invoice off and closing the ticket is [`POST /api/counter/pickup`](counter.md#post-apicounterpickup).
+Totals are always worked out by the server with `InvoiceMath`, the tax rate the invoice was made with and its
+`taxRates` (the shop's [tax classes](shop.md#post-apishopupdate) then), so a client never sends them. A line's
+`taxClass` picks one of those; a class the shop doesn't have is a `400`. Paying an invoice off and closing the ticket is [`POST /api/counter/pickup`](counter.md#post-apicounterpickup).
 See [Counter: check-in, invoices and pickup](../server/counter.md#invoices) for the rules.
+
+Opening a ticket's invoice (`POST /api/invoice/ticket/{id}`) and picking it up bring its storage fee up to date: one
+untaxed `OTHER` line, `Storage, 2 days`, whose id is made from the ticket's (`Storage.lineIdentifier`), a day's fee
+for each day the ticket has been ready past the shop's free days. Taking that line off in an update waives it for
+good (`storageWaived`).
 
 All the changing routes run under `InvoiceService`'s lock, one change at a time.
 
@@ -49,15 +56,32 @@ Streamed, with `Content-Disposition: attachment; filename=INV-26-00000042.pdf`.
 
 **Auth:** admin
 
-Invoices made between two days, in the shop's time zone, as CSV for the books. Audited (`BACKUP` on `invoices`, with
-the count and days).
+Invoices or payments between two days, in the shop's time zone, as CSV for a spreadsheet or the books. Audited
+(`BACKUP` on `invoices`, with the format, count and days). The accounting formats are written by
+`AccountingExport`, with names from the shop profile's [`accounting`](shop.md#post-apishopupdate).
 
-- **Query:** `from` and `to`, days like `2026-10-01`, both included. **`400`** either missing, not a day, or `to`
-  before `from`.
-- **`200`** `text/csv`, one row per invoice, oldest number first: `Invoice, Date, Status, Paid on, Ticket,
-  Customer, Subtotal, Discount, Tax, Total, Paid, Balance`. Amounts are plain numbers (`159.90`) so a spreadsheet adds
-  them up. Cells are quoted as spreadsheets expect, and typed text starting with `=`, `+`, `-` or `@` gets a leading
-  `'` so it isn't run as a formula.
+- **Query:** `from` and `to`, days like `2026-10-01`, both included; `format`, one of `invoices` (the default),
+  `quickbooks`, `xero` or `payments`. **`400`** a day missing or not a day, `to` before `from`, or another format.
+- **`200`** `text/csv`, named `<format>-<from>-to-<to>.csv`:
+  - `invoices`: one row per invoice made in the days, oldest number first: `Invoice, Date, Status, Paid on, Ticket,
+    Customer, Subtotal, Discount, Tax, Total, Paid, Balance, Refunded`. A sale's Ticket is `Sale`.
+  - `quickbooks`: one row per line of each invoice **paid** in the days, in QuickBooks Online's invoice import
+    columns: `InvoiceNo, Customer, InvoiceDate, DueDate, Memo, Item(Product/Service), ItemDescription,
+    ItemQuantity, ItemRate, ItemAmount, Taxable, TaxRate`. The item is the shop's name for the line's type; the
+    rate is the one the line was taxed at (its class's, or the main rate); the memo the ticket number or "Counter
+    sale".
+  - `xero`: the same lines in Xero's sales invoice import columns: `*ContactName, EmailAddress, *InvoiceNumber,
+    Reference, *InvoiceDate, *DueDate, *Description, *Quantity, *UnitAmount, *AccountCode, *TaxType`, the account
+    and tax rate from the shop's settings.
+  - `payments`: one row per payment or refund received in the days, oldest first: `Date, Invoice, Customer, Method,
+    Amount, Reference, Note, Received by`, refunds negative.
+
+  Invoice dates in the accounting formats are when it was paid, the due date `dueDays` later, written in the
+  shop's `dateFormat`. A discount is its own `Discount` line, negative, taxed at the main rate when anything on the
+  invoice is (it comes off the taxed lines first). The books work the tax out again from the rates, so a total can
+  differ by a cent from ours when a discount is shared between rates. A sale with no customer is the shop's
+  `walkInCustomer`. Amounts are plain numbers (`159.90`). Cells are quoted as spreadsheets expect, and typed text
+  starting with `=`, `+`, `-` or `@` gets a leading `'` so it isn't run as a formula.
 
 ## Changing
 
@@ -93,15 +117,18 @@ the totals again, with the tax rate the invoice was made with.
 
 Takes a payment, like a deposit, without closing anything.
 
-- **Body:** `PaymentRequest { method, amountCents, note }`. `receivedBy` is filled in from the caller.
+- **Body:** `PaymentRequest { method, amountCents, note, reference }`. `receivedBy` is filled in from the caller.
+  `STORE_CREDIT` spends the invoice's customer's credit; `GIFT_CARD` spends the card whose code is `reference`.
 - **`200`** the updated `Invoice`.
-- **`400`** zero or less. **`404`** no such invoice. **`409`** the invoice is paid or void.
+- **`400`** zero or less. **`404`** no such invoice. **`409`** the invoice is paid or void, store credit with no
+  customer on the invoice or not enough of it (`Only $10.00 of store credit left`), or no such gift card or not
+  enough on it (`Only $5.00 left on gift card GC-...`).
 
 ### `DELETE /api/invoice/{identifier}/payments/{paymentIdentifier}`
 
 **Auth:** normal
 
-Takes a payment back off, for one entered by mistake.
+Takes a payment back off, for one entered by mistake. Store credit or a gift card gets back what it paid.
 
 - **`200`** the updated `Invoice`. **`404`** no such invoice or payment. **`409`** the invoice is paid or void.
 
@@ -109,10 +136,31 @@ Takes a payment back off, for one entered by mistake.
 
 **Auth:** admin
 
-Cancels an invoice. A paid one puts its parts back in stock. The ticket keeps its status; a picked up ticket stays
+Cancels an invoice. A paid one puts its parts back in stock, less any a refund already put back, and takes back
+the gift cards it loaded. The ticket keeps its status; a picked up ticket stays
 picked up.
 
-- **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void.
+- **`200`** the void `Invoice`. **`404`** no such invoice. **`409`** already void, or a gift card it sold has been
+  spent from (refund instead).
+
+### `POST /api/invoice/{identifier}/refund`
+
+**Auth:** admin
+
+Gives money back on a paid invoice, and puts returned parts back in stock, in one transaction. The refund is saved
+as a payment with a negative `amountCents`, the reason as its `note` and the parts as its `returns`; the invoice
+stays paid. `paidCents` leaves refunds out, `refundedCents` adds them up and `netPaidCents` is the difference.
+Audited as `REFUND`.
+
+- **Body:** `RefundRequest { method, amountCents, reason, returns, reference }`. `amountCents` is positive, or zero
+  when only parts come back; `returns` is a list of `ReturnedPart { inventoryIdentifier, quantity }`.
+  `STORE_CREDIT` goes to the invoice's customer; `GIFT_CARD` goes onto the card `reference` names, or a new one
+  when it's blank, whose code is the refund's `reference`.
+- **`200`** the `Invoice` with the refund on it.
+- **`400`** no reason, a negative amount, nothing refunded or returned, more than `netPaidCents` (`Only $30.00 was
+  paid on INV-...`), store credit on an invoice with no customer, a part the invoice didn't sell, or more of one than it sold less what was already returned
+  (`Only 1 of Cable can be returned on INV-...`). **`404`** no such invoice. **`409`** the invoice is open (take the
+  payment off instead) or void.
 
 ### `DELETE /api/invoice/{identifier}`
 
