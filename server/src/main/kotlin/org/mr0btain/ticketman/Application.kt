@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
+import org.mr0btain.ticketman.components.plugins.configureClientVersionCheck
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureCors
 import org.mr0btain.ticketman.components.plugins.configureProxy
@@ -103,6 +104,7 @@ fun Application.module() {
         configureTransfers()
         configureProxy(proxy)
         configureCors(environment.config.propertyOrNull("cors.hosts")?.getString().orEmpty())
+        configureClientVersionCheck()
         val invoiceService = InvoiceService(
             invoices = database.invoiceDatabase,
             tickets = database.ticketDatabase,

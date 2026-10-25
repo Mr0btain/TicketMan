@@ -343,15 +343,19 @@ constants. Moving the reads to `GET` was a breaking change, the reason `API_VERS
 
 ### Client and server updated together, with a version check
 
-**Chosen:** one API version, `API_VERSION`, sent in the `X-TicketMan-Api` header of `/api/ping`. The client warns
-when the server's isn't its own, but carries on. There are no versioned routes. The server refuses fields it doesn't
+**Chosen:** the release version, `APP_VERSION`, and one API version, `API_VERSION`, sent in the
+`X-TicketMan-Version` and `X-TicketMan-Api` headers of `/api/ping`. A client a major version away from the server
+(a minor before 1.0) won't connect and shows an update screen; a minor apart, or another `API_VERSION`, warns but
+carries on. There are no versioned routes. The server refuses fields it doesn't
 know; the client ignores fields it doesn't know.
 
 **Why:** a shop runs one server and its own few devices, normally updated together. The warning catches the device
 that was missed, without keeping old routes around.
 
-**Costs:** a new field has to reach the server before any client sends it, and a mismatched device gets errors on
-whatever changed until it's updated.
+**Costs:** a new field has to reach the server before any client sends it, and a device a minor version off gets
+errors on whatever changed until it's updated. Releases have to follow the rule: a breaking change needs a major
+bump, or clients it breaks still connect. The server also refuses calls from a client that says it's a major version away (`426`), but a client from before 0.9
+doesn't say, so it still gets through.
 
 **Revisit if:** shops can't update every device at once, which would need the server to keep older routes working.
 

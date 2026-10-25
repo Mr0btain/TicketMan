@@ -22,6 +22,8 @@ import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.login.ServerTrustDialog
+import org.mr0btain.ticketman.ui.screens.login.components.LoginState
+import org.mr0btain.ticketman.ui.screens.update.UpdateRequiredScreen
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.PhoneAppShell
 import org.mr0btain.ticketman.ui.screens.navigation.WideAppShell
@@ -62,11 +64,15 @@ fun App() {
     // A server with its own certificate has to be checked before this device talks to it
     val untrustedCertificate = mainViewModel.session.untrustedCertificate.collectAsState()
 
-    // Said once each time it connects to a server from another version, and kept on Settings > Account
-    val apiMismatch = mainViewModel.session.apiMismatch.collectAsState()
-    LaunchedEffect(apiMismatch.value) {
-        apiMismatch.value?.let { snackBarHostState.showSnackbar(it) }
+    // Said once each time it connects to a server a minor version away, and kept on Settings > Account
+    val versionNotice = mainViewModel.session.versionNotice.collectAsState()
+    LaunchedEffect(versionNotice.value) {
+        versionNotice.value?.takeIf { !it.blocking }?.let { snackBarHostState.showSnackbar(it.message) }
     }
+
+    // A server a major version away can't be used at all, so the update screen takes the whole app
+    val updateRequired = mainViewModel.session.updateRequired.collectAsState()
+    val loginState = mainViewModel.session.loginState.collectAsState()
 
     // Same for a server on plain HTTP, also said on the login popup and Settings > Account
     val insecureWarning = mainViewModel.session.insecureWarning.collectAsState()
@@ -117,6 +123,22 @@ fun App() {
             darkTheme = mainViewModel.settings.darkMode.collectAsState().value,
             reduceTransparency = mainViewModel.settings.reduceTransparency.collectAsState().value
         ) {
+            updateRequired.value?.let { notice ->
+                UpdateRequiredScreen(
+                    notice = notice,
+                    retrying = loginState.value == LoginState.LOADING,
+                    onRetry = { mainViewModel.session.retryConnection() },
+                    // A kiosk has no login popup to type another address into
+                    onChangeServer = if (kioskActive.value) null else {
+                        {
+                            mainViewModel.session.dismissUpdateRequired()
+                            mainViewModel.session.changeShowLogin(true)
+                        }
+                    }
+                )
+                return@TmTheme
+            }
+
             if (kioskActive.value) {
                 KioskShell(mainViewModel)
                 return@TmTheme

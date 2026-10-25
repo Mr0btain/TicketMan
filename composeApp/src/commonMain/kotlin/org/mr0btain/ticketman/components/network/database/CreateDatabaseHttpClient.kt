@@ -13,6 +13,7 @@ import io.ktor.client.request.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import kotlinx.serialization.json.Json
+import org.mr0btain.ticketman.components.network.sendAppVersion
 import org.mr0btain.ticketman.data.token.Token
 import org.mr0btain.ticketman.logging.AppLogger
 
@@ -20,7 +21,9 @@ fun createRemoteHttpClient(
     engine: HttpClientEngine,
     getAccessToken: () -> String?,
     getRefreshToken: () -> String?,
-    refreshTokens: suspend () -> Token?
+    refreshTokens: suspend () -> Token?,
+    /** The server turned a request away for this app's version, see [sendAppVersion] */
+    onVersionRejected: () -> Unit = {}
 ): HttpClient {
     val TAG = "CreateRemoteHttpClient"
 
@@ -40,6 +43,8 @@ fun createRemoteHttpClient(
         install(ContentNegotiation) {
             json(json = Json { ignoreUnknownKeys = true })
         }
+
+        sendAppVersion(onVersionRejected)
 
         install(Auth) {
             bearer {

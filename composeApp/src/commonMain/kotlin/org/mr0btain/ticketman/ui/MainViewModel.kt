@@ -51,6 +51,12 @@ class MainViewModel(
             }
         }
 
+        // The server was updated (or rolled back) a major version while this app was open: connect again, which finds
+        // the versions apart and shows the update screen. Requests turned away while that runs are let go
+        viewModelScope.launch {
+            remoteHandler.versionRejected.collect { if (session.serverConnected.value) session.reconnect() }
+        }
+
         viewModelScope.launch {
             settings.load()
             tickets.load()

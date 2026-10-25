@@ -218,7 +218,7 @@ fun SettingsScreen(
         )
     )
 
-    val apiMismatch = viewModel.session.apiMismatch.collectAsState()
+    val versionNotice = viewModel.session.versionNotice.collectAsState()
     val connectionProblem = viewModel.session.connectionProblem.collectAsState()
     val insecureWarning = viewModel.session.insecureWarning.collectAsState()
     val scope = rememberCoroutineScope()
@@ -228,7 +228,7 @@ fun SettingsScreen(
             user = currentUser.value,
             onLogin = { viewModel.session.changeShowLogin(true) },
             onLogout = { viewModel.session.logout() },
-            apiMismatch = apiMismatch.value,
+            versionNotice = versionNotice.value,
             connectionProblem = connectionProblem.value,
             insecureWarning = insecureWarning.value,
             onPhotoChange = if (currentUser.value?.canAccess(AccessLevel.NORMAL) == true) {

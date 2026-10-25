@@ -17,21 +17,6 @@ application {
     applicationDefaultJvmArgs = listOf("-Dio.ktor.development=$isDevelopment")
 }
 
-// BuildInfo.VERSION, so the server reports the version it was built as
-val generateBuildInfo = tasks.register("generateBuildInfo") {
-    val outputDir = layout.buildDirectory.dir("generated/buildInfo")
-    val appVersion = version.toString()
-    inputs.property("version", appVersion)
-    outputs.dir(outputDir)
-    doLast {
-        val file = outputDir.get().file("org/mr0btain/ticketman/BuildInfo.kt").asFile
-        file.parentFile.mkdirs()
-        file.writeText("package org.mr0btain.ticketman\n\nobject BuildInfo {\n    const val VERSION = \"$appVersion\"\n}\n")
-    }
-}
-
-kotlin.sourceSets.main { kotlin.srcDir(generateBuildInfo) }
-
 // Release file names: TicketMan-Server-Web-<version> with the web client built in (-PwithWeb), TicketMan-Server-<version>
 // without. The zip and jar run on any system with Java 21, so they carry no OS or architecture
 val releaseName = if (project.hasProperty("withWeb")) "TicketMan-Server-Web-$version" else "TicketMan-Server-$version"

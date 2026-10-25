@@ -13,6 +13,7 @@ import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.ConnectionResult
 import org.mr0btain.ticketman.components.network.RemoteHandler
 import org.mr0btain.ticketman.components.network.UntrustedCertificate
+import org.mr0btain.ticketman.components.network.VersionNotice
 import org.mr0btain.ticketman.components.network.isSecureServerAddress
 import org.mr0btain.ticketman.components.network.trustAddressOf
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
@@ -82,11 +83,22 @@ class SessionHandler(
      */
     val connectionProblem = _connectionProblem.asStateFlow()
 
-    // Set when the server and this app are from different versions, see RemoteHandler.apiMismatch
-    private val _apiMismatch: MutableStateFlow<String?> = MutableStateFlow(null)
+    // Set when the server and this app are from different versions, see RemoteHandler.versionNotice
+    private val _versionNotice: MutableStateFlow<VersionNotice?> = MutableStateFlow(null)
 
-    /** Why this app and the server may not work together, null when they're the same version */
-    val apiMismatch = _apiMismatch.asStateFlow()
+    /** How this app and the server differ in version and which to update, null when they're the same version */
+    val versionNotice = _versionNotice.asStateFlow()
+
+    // Whether the update screen was put away to change the address, until the next connect
+    private val updateRequiredDismissed: MutableStateFlow<Boolean> = MutableStateFlow(false)
+
+    /**
+     * Set while the server is a major version away from this app, so nothing loads from it until one of them is
+     * updated. Shown as the update screen, until it's dismissed to change the address
+     */
+    val updateRequired: StateFlow<VersionNotice?> = combine(_versionNotice, updateRequiredDismissed) { notice, dismissed ->
+        notice?.takeIf { it.blocking && !dismissed }
+    }.stateIn(scope, SharingStarted.Eagerly, null)
 
     // The address connected to last, so trusting its certificate can try it again
     private val _serverUrl: MutableStateFlow<String> = MutableStateFlow("")
@@ -148,6 +160,7 @@ class SessionHandler(
     /** Points every repository at [url] and logs in with any stored credentials */
     suspend fun connect(url: String) {
         _serverUrl.value = url
+        updateRequiredDismissed.value = false
         val result = remoteHandler.setUrl(url)
 
         // Kept even when the certificate still needs trusting, since trusting connects to this address again
@@ -162,9 +175,12 @@ class SessionHandler(
             ConnectionResult.UNREACHABLE -> if (url.isBlank()) null else UNREACHABLE_MESSAGE
             ConnectionResult.WRONG_NAME -> remoteHandler.trust.wrongName.value?.message
             ConnectionResult.SERVER_NOT_ANSWERING -> SERVER_NOT_ANSWERING_MESSAGE
+            ConnectionResult.INCOMPATIBLE -> remoteHandler.versionNotice?.message
             ConnectionResult.UNTRUSTED, ConnectionResult.CONNECTED, ConnectionResult.LOGGED_IN -> null
         }
-        _apiMismatch.value = if (_serverConnected.value) remoteHandler.apiMismatch else null
+        _versionNotice.value = if (_serverConnected.value || result == ConnectionResult.INCOMPATIBLE) {
+            remoteHandler.versionNotice
+        } else null
 
         if (result == ConnectionResult.LOGGED_IN) {
             _loginState.value = LoginState.LOGGED_IN
@@ -177,6 +193,17 @@ class SessionHandler(
 
         // Station status only needs a reachable server, not a login
         if (_serverConnected.value) refreshStation()
+    }
+
+    /** Tries the server again, like after it or this app was updated */
+    fun retryConnection() = changeServer(_serverUrl.value)
+
+    /** Checks the server connected to again, without reloading what's shown, like when it turned this app away */
+    suspend fun reconnect() = connect(_serverUrl.value)
+
+    /** Puts the update screen away so the server address can be changed. Nothing loads until it connects */
+    fun dismissUpdateRequired() {
+        updateRequiredDismissed.value = true
     }
 
     /** Trusts the certificate in [untrustedCertificate] for this server from now on, then connects again */

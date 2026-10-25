@@ -1,5 +1,9 @@
 package org.mr0btain.ticketman.ui
 
+import org.mr0btain.ticketman.components.network.versionNoticeOf
+import org.mr0btain.ticketman.server.API_VERSION
+import org.mr0btain.ticketman.server.AppVersion
+import org.mr0btain.ticketman.ui.screens.update.UpdateRequiredScreen
 import org.mr0btain.ticketman.ui.screens.admin.invoices.InvoiceList
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.stations.AdminStationsTab
@@ -345,6 +349,16 @@ class ScreenRenderTest {
     }
 
     // ------------------------------------------ Screens ------------------------------------------
+
+    /** A server a major version ahead: the whole app is this until one is updated */
+    @Test
+    fun updateRequired() {
+        val notice = versionNoticeOf(AppVersion(2, 0, 0), API_VERSION, appVersion = AppVersion(1, 4, 2))!!
+        bothModes("update-required") { UpdateRequiredScreen(notice = notice, onRetry = {}, onChangeServer = {}) }
+        bothModes("update-required-narrow", width = NARROW_WIDTH, height = 860) {
+            UpdateRequiredScreen(notice = notice, onRetry = {}, onChangeServer = {})
+        }
+    }
 
     @Test
     fun counterTicket() = bothModes("counter-ticket") { CounterTicket() }

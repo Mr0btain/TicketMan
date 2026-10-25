@@ -136,10 +136,26 @@ Run it after adding, moving or re-guarding a route. It follows `route()`, `authe
 
 ## Versions
 
-`GET /api/ping` answers with an `X-TicketMan-Api` header holding the server's `API_VERSION` (in shared's
-`ApiRoutes.kt`). The client reads it when it connects and, if it isn't its own, warns once with a snackbar and keeps
-a notice on Settings > Account saying which side to update. A server too old to send the header counts as older.
-It's only a warning: nothing is refused.
+`GET /api/ping` answers with two headers: `X-TicketMan-Version`, the server's release (`APP_VERSION`, from
+`ticketman.version`, in shared's `server/AppVersion.kt`), and `X-TicketMan-Api`, its `API_VERSION` (in shared's
+`ApiRoutes.kt`). The client reads both when it connects (`versionNoticeOf`, giving a `VersionNotice`):
+
+- **A major version apart** (`1.x` and `2.x`; before 1.0 a minor apart too, `0.8` and `0.9`): breaking changes
+  between them, so the client doesn't connect (`ConnectionResult.INCOMPATIBLE`). No repository gets the address, so
+  nothing loads, and the update screen (`UpdateRequiredScreen`, from `SessionHandler.updateRequired`) takes the whole
+  app, saying which side is behind and what to update it to, with **Try again** and **Change server**.
+- **A minor version apart** (from 1.0 on): it connects, warns once with a snackbar and keeps a notice on
+  Settings > Account saying which side to update.
+- **A patch apart**: nothing.
+- **The same release but another `API_VERSION`** (two builds between releases), or a server too old to send
+  `X-TicketMan-Version` (before 0.9): the old warning, a server without `X-TicketMan-Api` counting as older. It
+  never blocks.
+
+The client also sends its own `X-TicketMan-Version` with every request (`sendAppVersion`), and the server turns away
+any `/api/` call from a client a major version away (a minor before 1.0) with `426 Upgrade Required` and a line saying
+which to update (`plugins/ClientVersion.kt`). `/api/ping` always answers, and a request without the header (clients
+from before 0.9, scripts, the status page) goes through. A client turned away mid-session, like after the server was
+updated under it, connects again (`RemoteHandler.versionRejected`), which brings up the update screen.
 
 Bump `API_VERSION` when a change means an older client and the new server, or the other way round, can't work
 together, like moving a route or changing what one takes. Adding an endpoint or an optional field doesn't need it.

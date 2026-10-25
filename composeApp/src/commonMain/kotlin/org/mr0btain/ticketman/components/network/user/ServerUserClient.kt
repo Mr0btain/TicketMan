@@ -2,6 +2,8 @@ package org.mr0btain.ticketman.components.network.user
 
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.APP_VERSION_HEADER
+import org.mr0btain.ticketman.server.AppVersion
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.TimeClockPaths
 import org.mr0btain.ticketman.data.timeclock.PunchResult
@@ -297,15 +299,23 @@ class ServerUserClient(
         private set
 
     /**
+     * The release the server reported the last time [checkServerConnection] reached it, null for a server from before
+     * it reported one
+     */
+    var serverAppVersion: AppVersion? = null
+        private set
+
+    /**
      * Whether a TicketMan server answers at [url]. Asks `/api/ping`, then `/` for servers older than that. Only a
      * reply that isn't a web page counts from `/`, so the web client's dev server isn't mistaken for one. Also notes
-     * the server's [serverApiVersion]
+     * the server's [serverApiVersion] and [serverAppVersion]
      */
     suspend fun checkServerConnection(url: String): Boolean = checkServer(url) == ServerCheck.UP
 
     /** Like [checkServerConnection], also saying when a reverse proxy answered for a server that didn't */
     suspend fun checkServer(url: String): ServerCheck {
         serverApiVersion = null
+        serverAppVersion = null
         if (url.isBlank()) return ServerCheck.DOWN
         val base = url.trimEnd('/')
 
@@ -313,6 +323,7 @@ class ServerUserClient(
             ?: return ServerCheck.DOWN
         if (ping.status == HttpStatusCode.OK) {
             serverApiVersion = ping.headers[API_VERSION_HEADER]?.trim()?.toIntOrNull()
+            serverAppVersion = AppVersion.parse(ping.headers[APP_VERSION_HEADER])
             return if (ping.bodyAsText().trim() == SERVER_PING_BODY) ServerCheck.UP else ServerCheck.DOWN
         }
         if (networkErrorFor(ping.status.value) == NetworkError.PROXY_SERVER_DOWN) return ServerCheck.PROXY_ONLY

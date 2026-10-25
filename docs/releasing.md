@@ -10,12 +10,15 @@ package is built from it:
 
 | Package | Where it goes | Notes |
 |---|---|---|
-| Server | `server/build.gradle.kts` `version`, and the generated `BuildInfo.VERSION` | `AdminService.SERVER_VERSION` (admin screen, backup manifests) |
+| Server | `server/build.gradle.kts` `version` | `AdminService.SERVER_VERSION` (admin screen, backup manifests) |
+| Shared | The generated `BuildInfo.VERSION` (`shared/build.gradle.kts`), as `APP_VERSION` | The server sends it on `/api/ping` and every client compares it with its own (see [Versions](api/README.md#versions)) |
 | Desktop installers | `composeApp/build.gradle.kts` `packageVersion` | A `-rc1` suffix is dropped, since installers only take numbers. macOS refuses a version starting with 0, so 0.x app bundles say 1.0.0 inside |
 | Android | `androidApp/build.gradle.kts` `versionName`, and `versionCode` from it | `major * 10000 + minor * 100 + patch`, so 0.8.0 is 800 |
 
-`API_VERSION` is separate: it only changes when older clients can't use the server any more (see
-[decisions](decisions.md)). `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
+Pick the number with that check in mind: a client and server a major version apart (a minor version before 1.0)
+refuse to work together, so a release with breaking API changes bumps the major (the minor while still on 0.x), and
+one that only adds things bumps the minor. `API_VERSION` is separate: it only changes when older clients can't use
+the server any more (see [decisions](decisions.md)), and only ever warns. `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
 
 ## The icon
 

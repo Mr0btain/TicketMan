@@ -10,6 +10,9 @@ enum class NetworkError(override val message: String) : Error {
     NOT_FOUND("Not found on the server"),
     CONFLICT("That conflicts with existing data"),
     TOO_MANY_REQUESTS("Too many tries, wait a moment and try again"),
+
+    /** The server turned this app away for being a major version away from it (426) */
+    INCOMPATIBLE_VERSION("This app and the server are a major version apart. Update the older one"),
     NO_INTERNET("Couldn't reach the server"),
     PAYLOAD_TOO_LARGE("That's too big to send"),
 

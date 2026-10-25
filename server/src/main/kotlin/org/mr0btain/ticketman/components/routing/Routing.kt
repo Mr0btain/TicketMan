@@ -2,6 +2,8 @@ package org.mr0btain.ticketman.components.routing
 
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.APP_VERSION
+import org.mr0btain.ticketman.server.APP_VERSION_HEADER
 import org.mr0btain.ticketman.server.ApiRoutes
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -97,9 +99,11 @@ fun Application.configureRouting(
 
     routing {
         // Tells clients the server is up, and that it's this app
-        // The header says which API this server speaks, so a client can warn when it's from another version
+        // The headers say which API and release this server is, so a client can warn when it's from another version,
+        // and stop when it's a major version apart
         get(SERVER_PING_PATH) {
             call.response.header(API_VERSION_HEADER, API_VERSION.toString())
+            call.response.header(APP_VERSION_HEADER, APP_VERSION)
             call.respondText(SERVER_PING_BODY)
         }
 
