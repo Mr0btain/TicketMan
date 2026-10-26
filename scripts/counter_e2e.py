@@ -21,6 +21,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import socket
 import socketserver
 import ssl
@@ -696,6 +697,28 @@ check(any(e["requestIdentifier"] == asked["identifier"] and e["kind"] == "TIME_O
 _, mine = call("GET", f"/api/timeoff/me?year={_off_day.year}", token=pin, expect=200)
 check(mine["balance"]["takenHours"] == 16 and mine["balance"]["allowanceHours"] == 40, f"balance {mine['balance']}")
 step(f"Nina's time off: refused without an allowance, 40 hours a year set by the admin, two days ({_off_day.isoformat()}) asked for and approved onto the schedule, 24 hours left; asking for 40 more refused")
+
+# ------------------------------------------ Booking online ------------------------------------------
+# Booking turned on; Nina works 9 to 11 one day, so the page offers those times and a customer books one
+_book_day = _monday + _dt.timedelta(days=24)  # past her time off above, which takes her shifts off the page
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+page_status, _, _ = page("/status/book")
+check(page_status == 404, f"booking off answered {page_status}")
+shop["booking"] = {"enabled": True, "minutes": 30, "daysAhead": 40, "leadMinutes": 0, "note": "Bring your charger"}
+call("POST", "/api/shop/update", shop, admin, expect=202)
+call("POST", "/api/schedule/add", {"entry": {"identifier": uid(), "userIdentifier": newtech_id, "kind": "SHIFT", "startsAt": local_millis(_book_day, 9), "endsAt": local_millis(_book_day, 11)}}, admin, expect=201)
+page_status, html, _ = page(f"/status/book?day={_book_day.isoformat()}")
+offered = [int(t) for t in re.findall(r'name="time" value="(\d+)"', html)]
+check(page_status == 200 and offered == [local_millis(_book_day, 9) + i * 1800000 for i in range(4)], f"offered {offered}")
+page_status, html, _ = page("/status/book", {"time": str(offered[1]), "name": "Grace Hopper", "phone": "555 010 2030", "device": "Pixel 8", "problem": "Won't charge"})
+check(page_status == 200 and "You're booked" in html, f"booking answered {page_status}")
+_, booked = call("GET", f"/api/appointment/range?from={_book_day.isoformat()}&to={_book_day.isoformat()}", token=pin, expect=200)
+check(any(a["customerName"] == "Grace Hopper" and a["startsAt"] == offered[1] and a["createdBy"] == "customer" for a in booked), f"on the calendar {booked}")
+page_status, _, _ = page("/status/book", {"time": str(offered[1]), "name": "Someone Else", "phone": "555 010 9999"})
+check(page_status == 400, f"the same time again answered {page_status}")
+shop["booking"]["enabled"] = False
+call("POST", "/api/shop/update", shop, admin, expect=202)
+step(f"Booking online: {len(offered)} half hours offered in Nina's shift on {_book_day.isoformat()}, Grace books 9:30 and it's on the calendar, the same time refused after")
 
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}

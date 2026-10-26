@@ -419,6 +419,9 @@ object EstimatePaths {
 object StatusPaths {
     const val PAGE = "/{token}"
 
+    /** Booking a visit, when the shop takes bookings online: `GET` the page (`?location=&day=`), `POST` the form */
+    const val BOOK = "/book"
+
     /** The customer approving or declining the waiting estimate: form fields `decision` and `name` */
     const val ESTIMATE = "/{token}/estimate"
 

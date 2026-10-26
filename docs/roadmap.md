@@ -46,12 +46,13 @@ typed for it. Waiting requests show on the calendar, to the person and to admins
 1 January with nothing carried over (see Open questions). The allowance is on the Time off tab rather than the
 Users tab, beside the balances it makes.
 
-## Phase 11: Leftovers
+## Phase 11: Leftovers (done)
 
-Smaller pieces left from earlier phases, picked up as they're needed.
+Smaller pieces left from earlier phases, each its own commit.
 
-- **Booking from the status page.** Customers picking an appointment time themselves, at a location, from the
-  times staff are scheduled.
+- **Booking from the status page** (done). With booking online on (Admin, Server and data), `/status/book` offers
+  the times inside the shifts on the staff schedule at a location, less what's booked and anyone off, and books one
+  as an appointment ([Status page](api/status.md#get-statusbook)). No confirmation message goes out yet.
 - **Card readers at check-in** (done). The wizard's repair step sends a card deposit to a reader, and the check in
   claims the paid charge; the counter's payment link dialog emails or texts the link to the customer
   ([`/charge/{identifier}/send`](api/payment.md#post-apipaymentchargeidentifiersend)).

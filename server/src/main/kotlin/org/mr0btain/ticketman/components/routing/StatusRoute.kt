@@ -9,6 +9,10 @@ import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.payments.PaymentService
 import org.mr0btain.ticketman.components.service.StatusPage
 import org.mr0btain.ticketman.components.service.StatusService
+import org.mr0btain.ticketman.components.service.BookingService
+import kotlinx.datetime.LocalDate
+import org.mr0btain.ticketman.data.appointment.BookingRules
+import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.server.StatusPaths
 import kotlin.uuid.ExperimentalUuidApi
@@ -22,11 +26,55 @@ import kotlin.uuid.ExperimentalUuidApi
 fun Route.statusRoute(
     service: StatusService,
     shopDatabase: ShopDatabase,
-    payments: PaymentService? = null
+    payments: PaymentService? = null,
+    booking: BookingService? = null
 ) {
+    fun canBook() = booking != null && shopDatabase.get().booking.enabled
+
     // The lookup form
     get {
-        call.respondStatusPage(HttpStatusCode.OK, StatusPage.lookupForm(shopDatabase.get()))
+        call.respondStatusPage(HttpStatusCode.OK, StatusPage.lookupForm(shopDatabase.get(), canBook = canBook()))
+    }
+
+    // Booking a visit: before the ticket's page, whose {token} would take "book" too
+    get(StatusPaths.BOOK) {
+        val location = call.queryParameters["location"]?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+        val day = call.queryParameters["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val choices = booking?.choices(location) ?: return@get call.respondStatusPage(
+            HttpStatusCode.NotFound,
+            StatusPage.message(shopDatabase.get(), "Booking online is off", "Call us to book a visit.", "../status")
+        )
+        call.respondStatusPage(HttpStatusCode.OK, StatusPage.booking(choices, day))
+    }
+
+    post(StatusPaths.BOOK) {
+        val params = call.receiveParameters()
+        val form = BookingService.Form(
+            location = params["location"]?.let { runCatching { Uuid.parse(it) }.getOrNull() },
+            startsAt = params["time"]?.toLongOrNull(),
+            name = params["name"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            phone = params["phone"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            email = params["email"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            device = params["device"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            problem = params["problem"].orEmpty().take(BookingRules.MAX_PROBLEM + 1)
+        )
+        val shop = shopDatabase.get()
+
+        when (val booked = booking?.book(form, call.request.origin.remoteHost) ?: BookingService.Booked.Off) {
+            is BookingService.Booked.Done -> call.respondStatusPage(HttpStatusCode.OK, StatusPage.booked(booked.choices, booked.appointment))
+            is BookingService.Booked.Problem -> {
+                val day = form.startsAt?.let { time -> booked.choices.days.firstOrNull { time in it.times }?.date }
+                call.respondStatusPage(HttpStatusCode.BadRequest, StatusPage.booking(booked.choices, day, form, booked.message))
+            }
+            BookingService.Booked.Limited -> call.respondStatusPage(
+                HttpStatusCode.TooManyRequests,
+                StatusPage.message(shop, "Too many bookings", "Wait a while, or call us to book.", "../status")
+            )
+            BookingService.Booked.Off -> call.respondStatusPage(
+                HttpStatusCode.NotFound,
+                StatusPage.message(shop, "Booking online is off", "Call us to book a visit.", "../status")
+            )
+        }
     }
 
     // The form's answer: off to the ticket's page, or the form again saying why not

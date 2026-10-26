@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.data.shop
 
+import org.mr0btain.ticketman.data.appointment.OnlineBooking
 import kotlinx.serialization.Serializable
 import org.mr0btain.ticketman.data.invoice.AccountingSettings
 import org.mr0btain.ticketman.data.invoice.TaxClass
@@ -62,7 +63,9 @@ data class ShopProfile(
     val checklists: List<IntakeChecklist> = emptyList(),
     val warrantyDays: Int = 0,
     val storage: StorageTerms = StorageTerms(),
-    val accounting: AccountingSettings = AccountingSettings()
+    val accounting: AccountingSettings = AccountingSettings(),
+    /** Customers booking a visit from the status page */
+    val booking: OnlineBooking = OnlineBooking()
 ) {
     /** [taxRate] in basis points, 0 when it's blank or not a number */
     val taxBasisPoints: Int
