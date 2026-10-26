@@ -157,7 +157,16 @@ when it has no tickets yet, so a restart doesn't add more: 150 tickets, 60 custo
 users, then work logged on about two thirds of the tickets, some deposits, and most of the done ones picked up and
 paid, all through `InvoiceService` like the counter. A blank shop profile is filled in (`Bench Repair (test data)`,
 6% tax, $80 an hour labor), and staff with known passwords are added: `tech` / `tech_pass` (Normal) and `clerk` /
-`clerk_pass` (Restricted). The log warns when it happens. `scripts/docker_local.sh` turns it on. Never set it on a
+`clerk_pass` (Restricted). A second location, Downtown, gets a quarter of the tickets and some of the staff.
+
+Then what the shop runs its days with (`SeedOperations.kt`): everyone's weekly shifts from last week to six weeks
+ahead, with training and a staff meeting; time off allowances and requests waiting, approved and declined; the time
+clock over the shifts so far, with a few late starts and a missed shift; appointments over the past week (checked
+in, no shows, cancelled) and the next ten days, with online booking turned on; three suppliers and a purchase order
+in each state, one with a part for a ticket; stock moved to Downtown; store credit, gift cards and commission rates.
+On a server in development mode the simulated card processor is turned on too, with tips and a reader per location.
+Seeding again from the admin screen adds more records but leaves the schedule and suppliers alone once there are some.
+The log warns when it happens. `scripts/docker_local.sh` turns it on. Never set it on a
 shop's real server.
 
 ## Logging

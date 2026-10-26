@@ -404,7 +404,7 @@ fun Route.adminRoute(
                 return@post
             }
 
-            seedTestData(database, request)
+            seedTestData(database, request, developmentMode = true)
 
             call.audit(auditLog, AuditAction.SEED, "database", details = request.toString())
             call.respond(HttpStatusCode.Accepted)

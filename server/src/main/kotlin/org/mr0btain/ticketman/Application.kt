@@ -255,7 +255,7 @@ fun Application.module() {
         val seed = environment.config.propertyOrNull("env.seedTestData")?.getString()?.trim().toBoolean()
         if (seed && database.ticketDatabase.count() == 0L) {
             AppLogger.e("SERVER:Seed", "SEED_TEST_DATA is on, filling the empty database with made up records. Never on a shop's real server")
-            seedTestData(database = database, request = SeedRequest(tickets = 150, customers = 60, inventory = 40, users = 6))
+            seedTestData(database = database, request = SeedRequest(tickets = 150, customers = 60, inventory = 40, users = 6), developmentMode = developmentMode)
         }
     }
 }
