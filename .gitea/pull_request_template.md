@@ -12,4 +12,3 @@
 - [ ] Database changed: new columns have a default or are nullable, and the table is in `migratedTables`
       (or `addUserColumns()`); tried on a data folder from before the change
 - [ ] Check-in, pickup, invoices, stations or PIN login changed: ran `scripts/counter_e2e.py` against a fresh server
-- [ ] A choice someone might want to undo later: added to `docs/decisions.md`

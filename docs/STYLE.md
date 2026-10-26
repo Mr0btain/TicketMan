@@ -75,6 +75,5 @@ When a change makes a page wrong, fix the page in the same PR. When a page is ad
 - Every relative link and heading anchor in `docs/` and `CLAUDE.md` is checked by
   `python3 scripts/check_doc_links.py`. Run it after moving or renaming a page or heading.
 - CI (`.gitea/workflows/ci.yml`) runs both checks on every pull request, with the tests.
-- A choice someone might want to undo later gets an entry in [`decisions.md`](decisions.md).
 - KDoc on the code covers what a class or function does; these pages cover how the pieces fit and why. Don't
   copy one into the other.

@@ -1,11 +1,12 @@
 # TicketMan
 
-A ticket tracking app for repair shops, or any shop that runs its work through tickets. Staff check devices in at
-the counter, track the repair, take payment at pickup and keep customer, inventory and photo records along the way.
+A ticket tracking app for shop that run their work through tickets. Staff check devices in at
+the counter, track the repair, take payment at pickup and keep customer, inventory and photo records
+along the way.
 
 It's a Kotlin Multiplatform project: a Compose Multiplatform client with a Ktor server with an H2 database.
 
-There will most likely be breaking changes often so this is nowhere near production ready. But it does work!
+There will most likely be breaking changes often!
 
 ![The counter screen showing a ticket, its invoice and the queue](docs/images/counter.png)
 
@@ -37,17 +38,19 @@ PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pde
 ./gradlew :composeApp:run
 ```
 
-On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:PORT = "8098"` and so on first.
+## Running the server in Docker
 
-[Getting started](docs/getting-started.md) covers the other targets, tests and hot reload.
-
-## Running it in Docker
-
+With the web client
 ```bash
 docker run -d --name ticketman -p 8080:8080 -e ADMIN_PASSWORD=change_me -v ticketman-data:/data mr0btain/ticketman:latest
 ```
 
-Then open `http://localhost:8080` and log in as `admin`. That's plain HTTP, fine for a look on one machine.
+Without the web client
+```bash
+docker run -d --name ticketman -p 8080:8080 -e ADMIN_PASSWORD=change_me -v ticketman-data:/data mr0btain/ticketman-server:latest
+```
+
+Then open `http://localhost:8080` and log in as `admin` with whatever you set the password to be.
 
 - [Run TicketMan in Docker](docs/how-to/run-in-docker.md): the published image, trying it from the source with
   made up records (`scripts/docker_local.sh`), and a shop's server behind Caddy with HTTPS
@@ -69,34 +72,13 @@ Then open `http://localhost:8080` and log in as `admin`. That's plain HTTP, fine
 
 ## Roadmap
 
-Phases 0 to 11 are done: custom statuses, the customer status page, messages and estimates, counter money,
-inventory and purchasing, repair depth, running the business, card payments, more than one location, the staff
-schedule, the calendar's Day, Week, Month and Staff views, time off requests against yearly allowances, and the
-leftovers (booking online, card reader deposits and payment links by message, tips and surcharges, stock transfers,
-timesheets against the schedule). What's next ([the full roadmap](docs/roadmap.md)):
-
-**iOS: test and fix (needs a Mac)**
-
-- Make it build: `./gradlew :composeApp:compileKotlinIosSimulatorArm64`, then the app from Xcode on a simulator,
-  fixing the Security framework and Foundation calls written without a compiler
-- Walk through it on a simulator, an iPhone and an iPad: connecting and trusting a server, logging in, records and
-  photos, check-in with a signature, pickup, AirPrint, saving PDFs and backups to Files, restoring, the admin tabs
-  and kiosk mode with Guided Access
-- Fix what it finds, then build the IPA in every release
-- Later, with a paid Apple Developer account: a signed IPA, or TestFlight and the App Store
-
-**macOS: test the desktop app (needs a Mac)**
-
-- Run it from source and from the released DMG on Apple silicon
-- Walk through it like Linux and Windows: trusting a server, the session coming back after a restart, photos,
-  signatures on a trackpad, printing and labels, file dialogs, the admin tabs and kiosk fullscreen
-- Try the x64 DMG on an Intel Mac
-- Later, with a paid Apple Developer account: sign and notarize the DMG so it opens without a warning
+([the full roadmap](docs/roadmap.md)):
 
 ## Caveats
 
-If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0 
-for now, but 1.0.0->2.0.0 when we hit stable.
+If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0.
+At the moment there will be breaking changes all throughout, but when we hit stable a 1.0.0 release then we can
+stick to this break between majors.
 
 ### Flatpak and maybe other linux distros.
 On high DPI monitors the app can show small GUI. You may be able ot fis this running: 

@@ -1,93 +1,18 @@
 # Roadmap
 
-What's planned beyond what TicketMan does now, in the order it's meant to be built. Each phase leans on the ones
-before it: the calendar views draw the staff schedule, and time off requests land on it.
-
-Every phase follows the usual rules: new columns go in `migratedTables` with a default, one off data fixes in
-`runOnce`, `API_VERSION` goes up when older clients can't follow, `docs/api` is kept in step (both doc checks pass),
-and each phase gets server tests plus a step in `scripts/counter_e2e.py`.
-
-## Done so far
-
-Phases 0 to 7 are built: custom statuses and customer visible updates, the [customer status page](api/status.md),
-[messages](api/notify.md) and [estimates](api/estimate.md), counter money (sales, refunds, store credit and
-[gift cards](api/giftcard.md), tax classes), [inventory and purchasing](server/purchasing.md), repair depth (customer
-devices, intake checklists and passcodes, warranties, storage fees), running the business ([reports](api/report.md),
-[appointments](api/appointment.md), the [time clock](api/timeclock.md), accounting exports), and the big
-integrations ([card payments](api/payment.md) and [more than one location](api/location.md)). How each works is in
-the linked pages and [the docs index](README.md); git history has how they were planned.
-
-## Phase 8: Staff schedule (done)
-
-Who works when, kept beside the appointments on the calendar. Admins write it; everyone logged in sees it. Built
-([Staff schedule API](api/schedule.md)) as shifts, time off, training and other entries per person, time off in
-whole days, a shift repeating on chosen weekdays until a date as a series, and changes or removals going to one entry,
-the later ones or the whole series. Each person's scheduled hours per day come from their timed entries.
-
-## Phase 9: Calendar views (done)
-
-The calendar has Day, Week, Month and Staff views, remembered per device, each with back, today and forward. Day
-shows who's working on a timeline of the day's hours above its appointments; Week is the list of days with each
-day's staff; Month is day squares with what runs over more than a day drawn as bars across them, broken at each week
-and picked up on the next, and each square's appointments and who's on shift; Staff is a row per person and a
-column per day for two weeks, entries as blocks from start to end, rows growing for overlaps, the day's scheduled
-hours under each row, the names fixed while the days scroll sideways on a phone. Admins add an entry from the Staff
-board's empty cells or the Schedule button, and open one to change it from any view. Still to come: booking an
-appointment straight from an empty time slot, and dragging blocks to move them.
-
-## Phase 10: Time off requests and budgets (done)
-
-Built ([Time off API](api/timeoff.md)) as planned: admins set each person's yearly allowance in hours on the admin
-Time off tab, which also lists the requests (waiting ones first, with a badge on the tab) to approve or decline with
-a reason. Staff ask from the calendar's Time off button, which shows their balance (allowance, taken, waiting, left)
-and their requests, ones still waiting withdrawable. A request can't be more than what's left; approving puts it on
-the schedule as time off taking its hours, and time off an admin writes straight onto the schedule takes the hours
-typed for it. Waiting requests show on the calendar, to the person and to admins. The allowance starts over each
-1 January with nothing carried over (see Open questions). The allowance is on the Time off tab rather than the
-Users tab, beside the balances it makes.
-
-## Phase 11: Leftovers (done)
-
-Smaller pieces left from earlier phases, each its own commit.
-
-- **Booking from the status page** (done). With booking online on (Admin, Server and data), `/status/book` offers
-  the times inside the shifts on the staff schedule at a location, less what's booked and anyone off, and books one
-  as an appointment ([Status page](api/status.md#get-statusbook)). No confirmation message goes out yet.
-- **Card readers at check-in** (done). The wizard's repair step sends a card deposit to a reader, and the check in
-  claims the paid charge; the counter's payment link dialog emails or texts the link to the customer
-  ([`/charge/{identifier}/send`](api/payment.md#post-apipaymentchargeidentifiersend)).
-- **Tips and surcharges** on card payments (done). Tips picked at the counter before a reader charge, a capped
-  surcharge on every card payment, both charged on the card but kept off the invoice, shown on receipts and in the
-  period report ([Payments API](api/payment.md)).
-- **Stock transfers** between locations (done). **Move stock** on an item in the records screen takes parts from one
-  location and puts them at another together, refused past what's there, with the item's recent moves listed
-  ([`/transfer`](api/inventory.md#post-apidatainventorytransferidentifier)). Moved straight across; parts in transit
-  between the two aren't tracked.
-- **Clocking against the schedule** (done). Timesheets show each person's scheduled hours beside worked ones, with
-  late starts and missed shifts flagged on the admin Timesheets tab (`TimeClockRules.check`), and Settings shows your
-  week's hours against your schedule.
+What's planned.
 
 ## iOS app
 
 The code is written (on Linux, where it can't compile); testing it needs a Mac. See
 [Platforms](client/platforms.md#ios) for how it fits together.
 
-- **Port the app** (done, untested). iOS targets on in `shared` and `composeApp` when Gradle runs on a Mac,
-  `iosApp` wired to the `ComposeApp` framework (bundle `org.mr0btain.ticketman`, iOS 16+), and every `actual`: the
-  Darwin HTTP engine with `DarwinTrust` checking certificates against `ServerTrust`, `AppDir`, `AppLogger`,
-  `saveFile`, `saveDownload`, `fileBody`, `printDocument` (`UIPrintInteractionController` with
-  `HtmlPrintRenderer`'s HTML), `shrinkForUpload`, `imageDiskCache`, `TmVerticalScrollbar`, `defaultServerAddress`,
-  `alwaysWide`, the platform module (KSafe in the keychain), and kiosk pinning through Guided Access.
-- **Build it in CI** (done, not yet run). An `iOS compile` job on `macos-latest` in `.github/workflows/ci.yml`.
-- **Release it** (done, opt in). An unsigned IPA in the GitHub release when `build_ios` or `BUILD_IOS` is set.
+- **Need to test every `actual`: the Darwin HTTP engine with `DarwinTrust` checking certificates against 
+ ` ServerTrust`, `AppDir`, `AppLogger`, `saveFile`, `saveDownload`, `fileBody`, `printDocument` 
+   (`UIPrintInteractionController` with `HtmlPrintRenderer`'s HTML), `shrinkForUpload`, `imageDiskCache`,
+ ` TmVerticalScrollbar`, `defaultServerAddress`, `alwaysWide`, the platform module (KSafe in the keychain), 
+   and kiosk pinning through Guided Access.
 
-## Phase iOS: Test and fix (needs a Mac)
-
-Not tied to the numbered phases: done whenever work moves to a macOS machine.
-
-- **Make it build.** `./gradlew :composeApp:compileKotlinIosSimulatorArm64`, then the app from Xcode on a simulator.
-  Expect fixes in the Security framework and Foundation calls in `DarwinTrust`, `PrintDocument.ios.kt` and
-  `MainViewController.kt`, which were written without a compiler.
 - **Walk through it on a simulator and a real iPhone and iPad**, the way Android was: connecting (local network
   permission, plain HTTP to a local address, refused to an internet one), trusting a Caddy CA through the trust
   dialog and the proxy's `ca.pem`, a wrong name, logging in and the session coming back after a restart, records,
@@ -102,10 +27,7 @@ Not tied to the numbered phases: done whenever work moves to a macOS machine.
 - **Later, with a paid Apple Developer account:** a signed IPA, or TestFlight and the App Store, with the certificate
   and provisioning profile as secrets.
 
-## Phase macOS: Test the desktop app (needs a Mac)
-
-The desktop app is the same JVM code as on Linux and Windows, and the release builds arm64 and x64 DMGs on GitHub's Mac
-runners, but nobody has run it on a Mac yet.
+## Phase macOS: Test the desktop app
 
 - **Run it from source and from the DMG** on Apple silicon: `./gradlew :composeApp:run`, then the released DMG
   dragged to Applications (unsigned, so `xattr -dr com.apple.quarantine /Applications/TicketMan.app` first, see
@@ -122,6 +44,5 @@ runners, but nobody has run it on a Mac yet.
 
 ## Open questions
 
-- Phase 10: should a time off allowance start over on each person's start date rather than 1 January, or carry
-  unused time over? Built as starting over each calendar year with no carry over.
-- iOS: is it shared by sideloading, or is a paid Apple Developer account worth it for TestFlight and the App Store?
+- Phase 10: should a time off allowance carry unused time over? Built as starting over each calendar year 
+   with no carry over.

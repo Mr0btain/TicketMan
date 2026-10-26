@@ -18,7 +18,7 @@ package is built from it:
 Pick the number with that check in mind: a client and server a major version apart (a minor version before 1.0)
 refuse to work together, so a release with breaking API changes bumps the major (the minor while still on 0.x), and
 one that only adds things bumps the minor. `API_VERSION` is separate: it only changes when older clients can't use
-the server any more (see [decisions](decisions.md)), and only ever warns. `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
+the server any more, and only ever warns. `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
 
 ## The icon
 

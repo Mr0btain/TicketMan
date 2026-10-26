@@ -40,8 +40,7 @@ trusts. Either way, without `SECRET` the server makes its own and keeps it in th
 ## The Docker image
 
 [`server/Dockerfile`](../server/Dockerfile) copies in the server built on the host, rather than building it inside
-Docker (see [decisions](decisions.md#the-docker-image-is-built-from-the-hosts-build)). The build doesn't need the
-Android SDK. The copied files are plain JVM jars, so the same build makes an amd64 or an arm64 image:
+Docker. 
 
 ```bash
 ./gradlew :server:installDist -PwithWeb
