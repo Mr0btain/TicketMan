@@ -56,6 +56,9 @@ python3 scripts/flatpak.py check             # the metainfo has a <release> for 
 python3 scripts/flatpak.py build --install   # build the jar and the Flatpak from this checkout, lint, install
 python3 scripts/flatpak.py update <version>  # after a GitHub release: the manifest's jar sha256 and tag commit
 
+# Snap (docs/releasing.md#snap): snap/snapcraft.yaml packs this machine's packageTarball (bundled Java), per architecture
+./gradlew :composeApp:packageTarball && snapcraft pack   # needs snapcraft and LXD
+
 python3 scripts/check_api_docs.py            # docs/api against the route files (--list prints every endpoint)
 python3 scripts/check_doc_links.py           # every relative link and anchor in docs/ and CLAUDE.md resolves
 ```

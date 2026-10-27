@@ -1,0 +1,83 @@
+# The Snap of the desktop app. It packs the tarball the build already makes for this machine's architecture
+# (./gradlew :composeApp:packageTarball: the app with its own Java runtime and Skia), so build that first on the
+# same architecture, then run snapcraft here (docs/releasing.md#snap)
+name: ticketman
+title: TicketMan
+summary: Track repairs, customers and stock for a repair shop
+description: |
+  TicketMan is a ticket tracking app for shops that run their work through tickets. Staff check devices and such in
+  at the counter, track the work, take payment at pickup and keep customer, inventory and photo records along the way.
+
+  This is the desktop client. It connects to a TicketMan server that the shop deploys itself, so the shop's data
+  stays on its own server.
+license: MIT
+website: https://github.com/Mr0btain/TicketMan
+source-code: https://github.com/Mr0btain/TicketMan
+issues: https://github.com/Mr0btain/TicketMan/issues
+contact: https://github.com/Mr0btain/TicketMan/issues
+icon: composeApp/icons/ticketman.png
+adopt-info: ticketman
+base: core24
+grade: stable
+confinement: strict
+
+# The Java runtime and Java's printing load these with dlopen, which the library linter can't see, so it also takes
+# what they link to (libXtst, libasound, and libcups's libavahi-client) as unused
+lint:
+  ignore:
+    - library:
+        - opt/ticketman/lib/**
+        - usr/lib/*/libcups.so*
+        - usr/lib/*/libavahi-client.so*
+        - usr/lib/*/libXtst.so*
+        - usr/lib/*/libasound.so*
+
+platforms:
+  amd64:
+  arm64:
+
+apps:
+  ticketman:
+    command: opt/ticketman/bin/TicketMan
+    # Fonts, GL, X11, theming and the portals for file dialogs
+    extensions: [gnome]
+    environment:
+      # Java takes user.home from the passwd entry, not $HOME, so it would be the real home folder the snap can't
+      # write. KSafe keeps its settings in ~/.eu_anifantakis_ksafe
+      JAVA_TOOL_OPTIONS: -Duser.home=$SNAP_USER_DATA
+    plugs:
+      # The TicketMan server
+      - network
+      # Receipts, labels and invoices go through Java's printing, which talks to CUPS
+      - cups
+      # KSafe keeps the key for the saved login in the keyring (libsecret). Not connected by itself:
+      # snap connect ticketman:password-manager-service
+      - password-manager-service
+      # Saving invoices, exports and backups where the file dialog points
+      - home
+
+parts:
+  ticketman:
+    plugin: nil
+    source: composeApp/build/compose/binaries/main/tar
+    override-build: |
+      case "$CRAFT_ARCH_BUILD_FOR" in
+        amd64) arch=x64 ;;
+        *) arch="$CRAFT_ARCH_BUILD_FOR" ;;
+      esac
+      tarball=$(ls TicketMan-Linux-*-"$arch".tar.gz 2>/dev/null | head -n 1)
+      if [ -z "$tarball" ]; then
+        echo "No TicketMan-Linux-*-$arch.tar.gz: run ./gradlew :composeApp:packageTarball on $CRAFT_ARCH_BUILD_FOR first" >&2
+        exit 1
+      fi
+      version=${tarball#TicketMan-Linux-}
+      craftctl set version="${version%-$arch.tar.gz}"
+      mkdir -p "$CRAFT_PART_INSTALL/opt"
+      tar xzf "$tarball" -C "$CRAFT_PART_INSTALL/opt"
+      mv "$CRAFT_PART_INSTALL/opt/TicketMan" "$CRAFT_PART_INSTALL/opt/ticketman"
+    # What the bundled runtime and Skia link to that the gnome extension doesn't bring (libcups is loaded by Java's
+    # printing at run time, so ldd doesn't show it)
+    stage-packages:
+      - libasound2t64
+      - libcups2t64
+      - libxtst6
