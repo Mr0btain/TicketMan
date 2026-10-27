@@ -70,7 +70,7 @@ Then open `http://localhost:8080` and log in as `admin` with whatever you set th
 | Android | Done |
 | iOS | Builds but not tested yet (needs a Mac) |
 
-## Roadmap
+## Roadmap / TODOs
 
 ([the full roadmap](docs/roadmap.md)):
 
@@ -80,10 +80,7 @@ If there has to be Any breaking changes they should be made between Major revisi
 At the moment there will be breaking changes all throughout, but when we hit stable a 1.0.0 release then we can
 stick to this break between majors.
 
-### Flatpak and maybe other linux distros.
-On high DPI monitors the app can show small GUI. You may be able ot fis this running: 
-  flatpak override --user --env=GDK_SCALE=2 io.github.Mr0btain.TicketMan
-On Windows I'm not sure what would need changed.
+On high DPI monitors the app can show small GUI. This is intermittent for me.
 
 ## Documentation
 

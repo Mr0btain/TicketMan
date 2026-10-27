@@ -1,18 +1,26 @@
-# Roadmap
+# Roadmap / TODO
 
-What's planned.
+What's planned to add or fix.
+
+## TODOs
+
+- **Recvords Search** When searching for a name or such in the records tab, we should scroll to the item, not just
+  set the selected item.
+- **Calendar** The calendar on mobile phones when in month view seems a bit smashed. Needs addressed.
+- **Admin Screen** When we select a ticker or something that redirects us to another screen, we should add a
+  back button or some navigation to return to where we were on the admin screen.
+- **Screen States** Some screens done save state when switching to another.
 
 ## iOS app
 
 The code is written (on Linux, where it can't compile); testing it needs a Mac. See
 [Platforms](client/platforms.md#ios) for how it fits together.
 
-- **Need to test every `actual`: the Darwin HTTP engine with `DarwinTrust` checking certificates against 
+- **Test every `actual`**: the Darwin HTTP engine with `DarwinTrust` checking certificates against 
  ` ServerTrust`, `AppDir`, `AppLogger`, `saveFile`, `saveDownload`, `fileBody`, `printDocument` 
    (`UIPrintInteractionController` with `HtmlPrintRenderer`'s HTML), `shrinkForUpload`, `imageDiskCache`,
  ` TmVerticalScrollbar`, `defaultServerAddress`, `alwaysWide`, the platform module (KSafe in the keychain), 
    and kiosk pinning through Guided Access.
-
 - **Walk through it on a simulator and a real iPhone and iPad**, the way Android was: connecting (local network
   permission, plain HTTP to a local address, refused to an internet one), trusting a Caddy CA through the trust
   dialog and the proxy's `ca.pem`, a wrong name, logging in and the session coming back after a restart, records,
