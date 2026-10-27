@@ -85,9 +85,7 @@ Without one the APK comes out unsigned (`TicketMan-Android-<version>-unsigned.ap
 
 ## Making a release
 
-1. Set `ticketman.version` in `gradle.properties`, add a `<release>` for it at the top of the Flathub metainfo and
-   point its screenshots at the new tag (see [Flathub](#flathub); CI's `flatpak.py check` fails until both are
-   done), and merge that to master.
+1. Set `ticketman.version` in `gradle.properties`, and merge that to master.
 2. Tag the commit and push the tag:
 
    ```bash
