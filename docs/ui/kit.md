@@ -3,7 +3,7 @@
 Every piece of shared UI lives in the kit, under
 [`ui/kit/`](../../composeApp/src/commonMain/kotlin/org/mr0btain/ticketman/ui/kit). Screens are put together from
 kit components and take their colors, type, corners and spacing from `TmTheme`, so a change made in the kit shows
-up everywhere. Read this before building or changing a screen.
+up everywhere.
 
 ![The top of the component gallery in the Bench theme, dark mode](../images/kit-gallery.png)
 

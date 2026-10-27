@@ -263,3 +263,32 @@ build, and `appstream-missing-screenshots` until the tag is on GitHub (the scree
 **Each release after that.** Flathub's checker bot reads `x-checker-data` in the manifest and opens a pull request
 on `flathub/io.github.Mr0btain.TicketMan` when a new GitHub release has a desktop jar. Merge it once its test build
 passes. If the manifest here changed too (new permissions), make the same change there.
+
+## Snap
+
+The desktop app is also packaged as the `ticketman` snap. Everything for it is in [`snap/`](../snap):
+`snapcraft.yaml` and the menu entry in `gui/ticketman.desktop`. Unlike the Flatpak it doesn't use the jar: it packs
+the tarball from `packageTarball`, which already has its own Java runtime and Skia, so there is no Java in the snap
+besides the app's own. jpackage only builds for the machine it runs on, so each architecture's snap is packed on that
+architecture (or in the same arm64 container as the arm64 DEB) from that machine's tarball:
+
+```bash
+./gradlew :composeApp:packageTarball          # composeApp/build/compose/binaries/main/tar/TicketMan-Linux-<version>-<arch>.tar.gz
+snapcraft pack                                # needs snapcraft and LXD: sudo snap install snapcraft --classic; sudo snap install lxd; sudo lxd init --auto
+sudo snap install --dangerous ./ticketman_<version>_<arch>.snap
+snap connect ticketman:password-manager-service
+ticketman
+```
+
+The version comes from the tarball's name. The snap is strictly confined, with the `gnome` extension (X11, GL,
+fonts, portals for file dialogs), `network`, `cups` for printing, `home`, and `password-manager-service` for KSafe's
+key in the keyring. That last one isn't connected on install unless the store grants it (ask on the
+[Snapcraft forum](https://forum.snapcraft.io/c/store-requests/19)), so until then users connect it themselves.
+Java reads its home folder from the user's account, not `$HOME`, so `JAVA_TOOL_OPTIONS` points `user.home` at the
+snap's own folder, where KSafe keeps `~/.eu_anifantakis_ksafe` (`~/snap/ticketman/current/`). Settings from the DEB
+or the Flatpak aren't carried over.
+
+**Publishing.** Once: make an account on [snapcraft.io](https://snapcraft.io), `snapcraft login` and
+`snapcraft register ticketman`. Each release: `snapcraft upload --release=edge ticketman_<version>_<arch>.snap` for
+both architectures, try it, then promote it with `snapcraft release ticketman <revision> stable` (or from the
+snapcraft.io dashboard).
