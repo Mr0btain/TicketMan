@@ -107,6 +107,17 @@ class CounterPickup(
         }
     }
 
+    /** Loads the invoice again, like after a card reader payment landed on it */
+    fun reloadInvoice() {
+        val ticket = _detail.value?.ticket ?: return
+
+        scope.launch {
+            remoteHandler.invoiceRepo.getForTicket(ticket.identifier)?.let { latest ->
+                if (_detail.value?.ticket?.identifier == ticket.identifier) _detail.value = _detail.value?.copy(invoice = latest)
+            }
+        }
+    }
+
     /** Takes a deposit or other payment off the open invoice */
     fun removePayment(payment: Payment) {
         val invoice = _detail.value?.invoice ?: return

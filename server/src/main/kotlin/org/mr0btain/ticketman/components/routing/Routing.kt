@@ -2,6 +2,8 @@ package org.mr0btain.ticketman.components.routing
 
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.APP_VERSION
+import org.mr0btain.ticketman.server.APP_VERSION_HEADER
 import org.mr0btain.ticketman.server.ApiRoutes
 import io.ktor.http.*
 import io.ktor.server.application.*
@@ -15,6 +17,9 @@ import org.mr0btain.ticketman.components.service.AccountService
 import org.mr0btain.ticketman.components.service.AccountingExport
 import org.mr0btain.ticketman.components.service.AppointmentService
 import org.mr0btain.ticketman.components.service.TimeClockService
+import org.mr0btain.ticketman.components.service.ScheduleService
+import org.mr0btain.ticketman.components.service.TimeOffService
+import org.mr0btain.ticketman.components.service.BookingService
 import org.mr0btain.ticketman.components.service.AdminService
 import org.mr0btain.ticketman.components.service.BackupService
 import org.mr0btain.ticketman.components.service.RestoreService
@@ -26,6 +31,8 @@ import org.mr0btain.ticketman.components.service.LoginLimiter
 import org.mr0btain.ticketman.components.service.StatusService
 import org.mr0btain.ticketman.components.service.EstimateService
 import org.mr0btain.ticketman.components.notify.NotificationService
+import org.mr0btain.ticketman.components.payments.CardPayments
+import org.mr0btain.ticketman.components.payments.PaymentService
 import org.mr0btain.ticketman.components.service.UserService
 import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.components.service.PasscodeVault
@@ -48,13 +55,22 @@ fun Application.configureRouting(
     localDatabase: LocalDatabase,
     loginLimiter: LoginLimiter = LoginLimiter(),
     passcodeVault: PasscodeVault? = null,
+    paymentService: PaymentService = PaymentService(
+        cards = CardPayments(localDatabase.paymentDatabase),
+        invoiceService = invoiceService,
+        invoices = localDatabase.invoiceDatabase,
+        tickets = localDatabase.ticketDatabase,
+        shop = localDatabase.shopDatabase,
+        auditLog = localDatabase.auditLogDatabase
+    ),
     statusService: StatusService = StatusService(
         tickets = localDatabase.ticketDatabase,
         customers = localDatabase.customerDatabase,
         invoices = localDatabase.invoiceDatabase,
         shop = localDatabase.shopDatabase,
         images = imageService,
-        estimates = estimateService
+        estimates = estimateService,
+        payments = paymentService
     ),
     appointmentService: AppointmentService = AppointmentService(
         appointments = localDatabase.appointmentDatabase,
@@ -65,7 +81,8 @@ fun Application.configureRouting(
     timeClockService: TimeClockService = TimeClockService(
         entries = localDatabase.timeClockDatabase,
         users = localDatabase.userDatabase,
-        auditLog = localDatabase.auditLogDatabase
+        auditLog = localDatabase.auditLogDatabase,
+        schedule = localDatabase.scheduleDatabase
     ),
     storedValueService: StoredValueService = StoredValueService(
         values = localDatabase.storedValueDatabase,
@@ -97,9 +114,11 @@ fun Application.configureRouting(
 
     routing {
         // Tells clients the server is up, and that it's this app
-        // The header says which API this server speaks, so a client can warn when it's from another version
+        // The headers say which API and release this server is, so a client can warn when it's from another version,
+        // and stop when it's a major version apart
         get(SERVER_PING_PATH) {
             call.response.header(API_VERSION_HEADER, API_VERSION.toString())
+            call.response.header(APP_VERSION_HEADER, APP_VERSION)
             call.respondText(SERVER_PING_BODY)
         }
 
@@ -118,7 +137,46 @@ fun Application.configureRouting(
         route(ApiRoutes.STATUS) {
             statusRoute(
                 service = statusService,
-                shopDatabase = localDatabase.shopDatabase
+                shopDatabase = localDatabase.shopDatabase,
+                payments = paymentService,
+                booking = BookingService(
+                    appointments = localDatabase.appointmentDatabase,
+                    appointmentService = appointmentService,
+                    schedule = localDatabase.scheduleDatabase,
+                    shop = localDatabase.shopDatabase,
+                    locations = localDatabase.locationDatabase
+                )
+            )
+        }
+
+        route(ApiRoutes.SCHEDULE) {
+            scheduleRoute(
+                database = localDatabase.scheduleDatabase,
+                service = ScheduleService(localDatabase.scheduleDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase),
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.TIME_OFF) {
+            timeOffRoute(
+                database = localDatabase.timeOffDatabase,
+                service = TimeOffService(localDatabase.timeOffDatabase, localDatabase.scheduleDatabase, localDatabase.userDatabase, localDatabase.auditLogDatabase),
+                userDatabase = localDatabase.userDatabase
+            )
+        }
+
+        route(ApiRoutes.LOCATION) {
+            locationRoute(
+                database = localDatabase.locationDatabase,
+                auditLog = localDatabase.auditLogDatabase
+            )
+        }
+
+        route(ApiRoutes.PAYMENT) {
+            paymentRoute(
+                service = paymentService,
+                userDatabase = localDatabase.userDatabase,
+                notifications = notificationService
             )
         }
 

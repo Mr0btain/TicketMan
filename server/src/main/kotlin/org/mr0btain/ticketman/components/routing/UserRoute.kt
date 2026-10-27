@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.routing
 
+import org.mr0btain.ticketman.components.database.LocationDatabase
 import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
@@ -39,7 +40,8 @@ fun Route.userRoute(
     database: UserDatabase,
     tokenDatabase: TokenDatabase,
     accountService: AccountService,
-    auditLog: AuditLogDatabase
+    auditLog: AuditLogDatabase,
+    locations: LocationDatabase = LocationDatabase()
 ) {
     val TAG = "UserRoute"
     val GET_TAG = "$TAG:Get"
@@ -98,8 +100,9 @@ fun Route.userRoute(
             }
         }
 
+        // Those whose home is where the caller works, everyone for an admin looking at every location
         get(RecordPaths.FETCH) {
-            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
+            val request = call.pagedRequest()?.at(call.locationScope()) ?: return@get call.respondBadQuery()
 
             val result = database.getPagedItems(request)
 
@@ -294,8 +297,12 @@ fun Route.userRoute(
                     call.respond(HttpStatusCode.BadRequest, "Pick an access level")
                 }
 
-                // Users made by an admin are ready to go
-                !database.add(user.copy(status = UserStatus.ACTIVE)) -> {
+                user.homeLocation != null && locations.get(user.homeLocation!!)?.takeIf { !it.retired } == null -> {
+                    call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's")
+                }
+
+                // Users made by an admin are ready to go, working where the admin is unless they said
+                !database.add(user.copy(status = UserStatus.ACTIVE, homeLocation = user.homeLocation ?: call.workingLocation().identifier)) -> {
                     call.respond(HttpStatusCode.InternalServerError, "The user couldn't be saved")
                 }
 
@@ -353,9 +360,14 @@ fun Route.userRoute(
                     call.respond(HttpStatusCode.Conflict, "There has to be at least one admin")
                 }
 
+                user.homeLocation != null && user.homeLocation != existing.homeLocation && locations.get(user.homeLocation!!)?.takeIf { !it.retired } == null -> {
+                    call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's")
+                }
+
                 else -> {
-                    // Pending users stay pending until approved
-                    val saved = if (existing.status == UserStatus.PENDING) user.copy(status = UserStatus.PENDING) else user
+                    // Pending users stay pending until approved. No home location sent (an older client) keeps theirs
+                    val saved = (if (existing.status == UserStatus.PENDING) user.copy(status = UserStatus.PENDING) else user)
+                        .let { it.copy(homeLocation = it.homeLocation ?: existing.homeLocation) }
 
                     if (!database.update(saved.withoutPassword())) {
                         call.respond(HttpStatusCode.InternalServerError, "The user couldn't be saved")

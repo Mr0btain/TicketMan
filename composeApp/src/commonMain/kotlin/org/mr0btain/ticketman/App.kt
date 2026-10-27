@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman
 
+import androidx.compose.runtime.getValue
+import org.mr0btain.ticketman.ui.screens.navigation.ShellLocations
 import androidx.compose.material3.windowsizeclass.ExperimentalMaterial3WindowSizeClassApi
 import androidx.compose.material3.windowsizeclass.WindowWidthSizeClass
 import androidx.compose.material3.windowsizeclass.calculateWindowSizeClass
@@ -10,6 +12,8 @@ import org.mr0btain.ticketman.ui.kit.data.LocalStorageTerms
 import org.mr0btain.ticketman.ui.kit.data.LocalTaxes
 import org.mr0btain.ticketman.ui.kit.data.TmTaxes
 import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
+import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocations
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.remember
@@ -22,6 +26,8 @@ import org.mr0btain.ticketman.ui.screens.kiosk.KioskShell
 import org.mr0btain.ticketman.ui.screens.login.AccountSetupDialog
 import org.mr0btain.ticketman.ui.screens.login.LoginPopup
 import org.mr0btain.ticketman.ui.screens.login.ServerTrustDialog
+import org.mr0btain.ticketman.ui.screens.login.components.LoginState
+import org.mr0btain.ticketman.ui.screens.update.UpdateRequiredScreen
 import org.mr0btain.ticketman.ui.MainViewModel
 import org.mr0btain.ticketman.ui.screens.navigation.PhoneAppShell
 import org.mr0btain.ticketman.ui.screens.navigation.WideAppShell
@@ -62,11 +68,15 @@ fun App() {
     // A server with its own certificate has to be checked before this device talks to it
     val untrustedCertificate = mainViewModel.session.untrustedCertificate.collectAsState()
 
-    // Said once each time it connects to a server from another version, and kept on Settings > Account
-    val apiMismatch = mainViewModel.session.apiMismatch.collectAsState()
-    LaunchedEffect(apiMismatch.value) {
-        apiMismatch.value?.let { snackBarHostState.showSnackbar(it) }
+    // Said once each time it connects to a server a minor version away, and kept on Settings > Account
+    val versionNotice = mainViewModel.session.versionNotice.collectAsState()
+    LaunchedEffect(versionNotice.value) {
+        versionNotice.value?.takeIf { !it.blocking }?.let { snackBarHostState.showSnackbar(it.message) }
     }
+
+    // A server a major version away can't be used at all, so the update screen takes the whole app
+    val updateRequired = mainViewModel.session.updateRequired.collectAsState()
+    val loginState = mainViewModel.session.loginState.collectAsState()
 
     // Same for a server on plain HTTP, also said on the login popup and Settings > Account
     val insecureWarning = mainViewModel.session.insecureWarning.collectAsState()
@@ -104,7 +114,11 @@ fun App() {
     // Photos anywhere below can upload and load through the server.
     // Amounts anywhere below show the shop's currency, and ticket statuses the shop's own names
     val shop = mainViewModel.counter.shop.collectAsState().value
+    // Which location records are at, named on them when it's not where this device works
+    val allLocations = mainViewModel.locations.all.collectAsState().value
+    val workingLocation = mainViewModel.locations.working.collectAsState().value
     CompositionLocalProvider(
+        LocalLocations provides TmLocations(allLocations, workingLocation.identifier.takeIf { !workingLocation.all }),
         LocalImageClient provides mainViewModel.imageClient,
         LocalCurrencySymbol provides shop.currencySymbol,
         LocalTaxes provides TmTaxes(shop.taxBasisPoints, shop.taxRates),
@@ -117,6 +131,22 @@ fun App() {
             darkTheme = mainViewModel.settings.darkMode.collectAsState().value,
             reduceTransparency = mainViewModel.settings.reduceTransparency.collectAsState().value
         ) {
+            updateRequired.value?.let { notice ->
+                UpdateRequiredScreen(
+                    notice = notice,
+                    retrying = loginState.value == LoginState.LOADING,
+                    onRetry = { mainViewModel.session.retryConnection() },
+                    // A kiosk has no login popup to type another address into
+                    onChangeServer = if (kioskActive.value) null else {
+                        {
+                            mainViewModel.session.dismissUpdateRequired()
+                            mainViewModel.session.changeShowLogin(true)
+                        }
+                    }
+                )
+                return@TmTheme
+            }
+
             if (kioskActive.value) {
                 KioskShell(mainViewModel)
                 return@TmTheme
@@ -156,6 +186,22 @@ fun App() {
                 )
             }
 
+            // Where this device works, offered in the user menu once the shop has more than one location
+            val locations = mainViewModel.locations
+            val severalLocations by locations.several.collectAsState()
+            val activeLocations by locations.active.collectAsState()
+            val working by locations.working.collectAsState()
+            val fixedLocation by locations.fixed.collectAsState()
+            val isAdmin by mainViewModel.session.isAdmin.collectAsState()
+            val shellLocations = if (!severalLocations) null else ShellLocations(
+                options = activeLocations,
+                working = working,
+                canSeeAll = isAdmin,
+                fixed = fixedLocation,
+                label = if (working.all) "All locations" else activeLocations.firstOrNull { it.identifier == working.identifier }?.name.orEmpty(),
+                onChoose = { locations.choose(it) }
+            )
+
             // Desktop always gets the rail, phones and tablets go by window width
             val wide = alwaysWide ||
                     calculateWindowSizeClass().widthSizeClass == WindowWidthSizeClass.Expanded
@@ -170,7 +216,8 @@ fun App() {
                     onLogout = { mainViewModel.session.logout() },
                     onOpenSettings = { navigator.navigateTo(Destination.SETTINGS.route) },
                     clockedInAt = clockedIn.value?.clockedInAt,
-                    onPunch = { mainViewModel.timeClock.punch() }
+                    onPunch = { mainViewModel.timeClock.punch() },
+                    locations = shellLocations
                 ) { host() }
             } else {
                 PhoneAppShell(

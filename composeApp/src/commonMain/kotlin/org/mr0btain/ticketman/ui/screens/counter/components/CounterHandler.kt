@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.counter.components
 
+import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.error.getOrNull
 import org.mr0btain.ticketman.error.valueOr
 import org.mr0btain.ticketman.components.network.isNotFound
@@ -43,7 +44,8 @@ enum class CounterView {
 /**
  * State and actions for the shop counter. Owned by the main view model. Holds the search, queue, shop profile,
  * ticket and customer cards and price check itself, and one part each for [checkIn], [pickup], [sale], the
- * [invoices] list, the [printer] and the open ticket's [estimates] and messages
+ * [invoices] list, the [printer], card payments through the processor ([cards]) and the open ticket's [estimates]
+ * and messages
  * @param canEdit Whether the signed in user can change things, restricted users can only look
  */
 class CounterHandler(
@@ -89,6 +91,7 @@ class CounterHandler(
     val invoices = CounterInvoices(remoteHandler, support)
     val printer = CounterPrinter(remoteHandler, support, shop = { _shop.value })
     val estimates = CounterEstimates(remoteHandler, support, reload = { reloadTicket() })
+    val cards = CounterCards(remoteHandler, support)
 
     private var searchJob: Job? = null
     private var priceJob: Job? = null
@@ -121,22 +124,36 @@ class CounterHandler(
 
     fun clearSearch() = setQuery("")
 
-    /** Loads the shop profile, done at login since amounts everywhere use its currency */
+    /**
+     * Loads the shop profile as it applies where this device works (that location's address, phone and tax), done
+     * at login since amounts everywhere use its currency
+     */
     fun refreshShop() {
-        scope.launch { remoteHandler.adminRepo.getShopProfile()?.let { _shop.value = it } }
+        scope.launch { remoteHandler.adminRepo.getShopProfileHere()?.let { _shop.value = it } }
+        cards.refreshOptions()
     }
 
-    /** An admin saved the shop profile on this device */
-    fun shopChanged(profile: ShopProfile) {
-        _shop.value = profile
+    /** An admin saved the shop profile on this device, which is loaded again for this location */
+    fun shopChanged(@Suppress("UNUSED_PARAMETER") profile: ShopProfile) {
+        refreshShop()
+    }
+
+    /** The device works somewhere else now: back to the counter's home with that location's queue and details */
+    fun locationChanged() {
+        _view.value = CounterView.HOME
+        _ticket.value = null
+        _customer.value = null
+        refreshQueue()
+        refreshShop()
     }
 
     /** Reloads the queue, and the shop profile with it so new terms and paper sizes show up */
     fun refreshQueue() {
         scope.launch {
             remoteHandler.counterRepo.queue(RECENT_LIMIT)?.let { _queue.value = it }
-            remoteHandler.adminRepo.getShopProfile()?.let { _shop.value = it }
+            remoteHandler.adminRepo.getShopProfileHere()?.let { _shop.value = it }
         }
+        cards.refreshOptions()
     }
 
     // ------------------------------------------ Moving around ------------------------------------------
@@ -235,6 +252,24 @@ class CounterHandler(
                 }
 
                 is TmResult.Error -> support.notify("Link not replaced: ${result.error.message}")
+            }
+        }
+    }
+
+    /** Sends the open ticket to another location, like when the device goes across town for a specialist */
+    fun moveTicket(location: Location) {
+        val detail = _ticket.value ?: return
+        if (!support.canEdit()) return
+
+        scope.launch {
+            when (val result = remoteHandler.ticketRepo.moveTo(detail.ticket.identifier, location.identifier)) {
+                is TmResult.Success -> {
+                    support.notify("Ticket ${detail.ticket.label} moved to ${location.name}")
+                    reloadTicket()
+                    refreshQueue()
+                }
+
+                is TmResult.Error -> support.notify("Not moved: ${result.error.message}")
             }
         }
     }

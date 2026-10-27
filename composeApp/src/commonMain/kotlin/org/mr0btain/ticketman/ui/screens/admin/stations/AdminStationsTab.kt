@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin.stations
 
+import org.mr0btain.ticketman.data.location.Location
+import org.mr0btain.ticketman.ui.kit.selection.TmDropdown
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -29,6 +31,7 @@ import ticketman.composeapp.generated.resources.monitor
 
 /**
  * Devices staff can PIN in at. Devices register themselves from Settings, admins approve them here
+ * @param locations The locations a station can be at, offered with more than one
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -36,7 +39,9 @@ fun AdminStationsTab(
     stations: List<Station>,
     onApprove: (Station) -> Unit,
     onKiosk: (Station, KioskSettings) -> Unit,
-    onRemove: (Station) -> Unit
+    onRemove: (Station) -> Unit,
+    locations: List<Location> = emptyList(),
+    onLocation: (Station, Location) -> Unit = { _, _ -> }
 ) {
     val colors = TmTheme.colors
     val spacing = TmTheme.spacing
@@ -85,6 +90,19 @@ fun AdminStationsTab(
 
                             if (!approved) TmButton(text = "Approve", onClick = { onApprove(station) })
                             TmButton(text = "Remove", onClick = { onRemove(station) }, variant = TmButtonVariant.GHOST)
+                        }
+
+                        // Where it is, once the shop has more than one location
+                        if (locations.size > 1) {
+                            TmDropdown(
+                                modifier = Modifier.widthIn(max = 320.dp),
+                                label = "Location",
+                                options = locations,
+                                selected = locations.firstOrNull { it.identifier == station.locationIdentifier } ?: locations.firstOrNull { it.main },
+                                onSelect = { onLocation(station, it) },
+                                optionLabel = { it.label },
+                                size = TmControlSize.SMALL
+                            )
                         }
 
                         if (approved) KioskControls(station, onKiosk)

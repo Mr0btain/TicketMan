@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=TicketMan
+GenericName=Repair Ticket Tracker
+Comment=Track repairs, customers and stock for a repair shop
+Exec=ticketman
+Icon=org.Mr0btain.TicketMan
+Terminal=false
+Categories=Office;
+Keywords=repair;ticket;shop;invoice;inventory;point of sale;POS;
+StartupWMClass=org-mr0btain-ticketman-MainKt

@@ -43,7 +43,13 @@ object TicketTable: UuidTable("tickets") {
     // Added with storage terms: when it was treated as abandoned
     val abandonedAt = long("abandoned_at").nullable()
 
-    // Unique on (year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
+    // Added with locations: the location's code its number starts with, blank for the main location's
+    val numberPrefix = text("number_prefix").default("")
+
+    // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
+    val location = uuid("location_id").nullable().index()
+
+    // Unique on (prefix, year, sequence), created by LocalDatabase.initDatabase so new and existing databases match
     const val NUMBER_INDEX = "tickets_number_unique"
 
     // Unique, made the same way

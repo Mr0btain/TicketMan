@@ -6,12 +6,15 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
 import org.mr0btain.ticketman.components.database.tables.shop.ShopTable
 import org.mr0btain.ticketman.data.shop.ShopProfile
+import org.mr0btain.ticketman.data.location.at
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 
 /**
  * Stores the shop profile, there is only ever one
  */
 @Suppress("PrivatePropertyName")
-class ShopDatabase {
+class ShopDatabase(private val locations: LocationDatabase = LocationDatabase()) {
     private val TAG = "ShopDatabase"
     private val GET_TAG = "$TAG:Get"
     private val UPDATE_TAG = "$TAG:Update"
@@ -28,6 +31,17 @@ class ShopDatabase {
                 ?.get(ShopTable.profile)
                 ?: ShopProfile()
         } ?: ShopProfile()
+
+    /**
+     * The profile as it applies at [location]: its address, contacts and tax rates, and its name after the shop's
+     * when there's more than one location. The main location for null
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    fun at(location: Uuid?): ShopProfile {
+        val all = locations.all()
+        val here = all.firstOrNull { it.identifier == location } ?: all.firstOrNull { it.main }
+        return get().at(here, named = all.count { !it.retired } > 1)
+    }
 
     fun update(profile: ShopProfile): Boolean =
         dbWrite(UPDATE_TAG) {

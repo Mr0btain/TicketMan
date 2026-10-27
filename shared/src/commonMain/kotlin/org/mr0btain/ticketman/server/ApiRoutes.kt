@@ -9,10 +9,19 @@ package org.mr0btain.ticketman.server
  */
 
 /** Bumped when a change means an older client and this server can't work together */
-const val API_VERSION = 12
+const val API_VERSION = 13
 
 /** Header the server answers `/api/ping` with, holding its [API_VERSION] */
 const val API_VERSION_HEADER = "X-TicketMan-Api"
+
+/**
+ * Header every client request carries with the location it's working at, a location's id, or [ALL_LOCATIONS] for an
+ * admin looking at every one. Without it the server uses the caller's home location
+ */
+const val LOCATION_HEADER = "X-TicketMan-Location"
+
+/** [LOCATION_HEADER]'s value for every location at once, which only admins get */
+const val ALL_LOCATIONS = "all"
 
 /** Where each route file is mounted */
 object ApiRoutes {
@@ -35,6 +44,10 @@ object ApiRoutes {
     const val REPORT = "/api/report"
     const val APPOINTMENT = "/api/appointment"
     const val TIME_CLOCK = "/api/timeclock"
+    const val PAYMENT = "/api/payment"
+    const val LOCATION = "/api/location"
+    const val SCHEDULE = "/api/schedule"
+    const val TIME_OFF = "/api/timeoff"
 
     /** The customer status page, server rendered HTML with no login. The only part meant for the internet */
     const val STATUS = "/status"
@@ -118,12 +131,21 @@ object TicketPaths {
 
     /** `GET` shows the device's passcode (audited), `POST` a `PasscodeBody` sets it, `DELETE` clears it */
     const val PASSCODE = "/passcode/{identifier}"
+
+    /** `POST` a `MoveTicketRequest`: the ticket, and its open invoice, go to another location */
+    const val MOVE = "/move/{identifier}"
 }
 
 object InventoryPaths {
     const val GET_IMAGES = "/get/images/{identifier}"
     const val SET_IMAGES = "/set/images/{identifier}"
     const val SET_STOCK = "/set/stock/{identifier}"
+
+    /** `POST` a `StockTransferRequest`: parts from one location to another */
+    const val TRANSFER = "/transfer/{identifier}"
+
+    /** An item's moves between locations, newest first */
+    const val TRANSFERS = "/transfers/{identifier}"
 
     /** The item whose barcode or SKU is exactly this, for a scanner */
     const val BY_CODE = "/code/{code}"
@@ -178,6 +200,9 @@ object AdminPaths {
     const val STATIONS = "/stations"
     const val STATION_APPROVE = "/stations/{identifier}/approve"
     const val STATION_KIOSK = "/stations/{identifier}/kiosk"
+
+    /** `POST` a `StationLocationRequest`: which location the station is at */
+    const val STATION_LOCATION = "/stations/{identifier}/location"
     const val STATION = "/stations/{identifier}"
     const val SERVER = "/server"
     const val BACKUP = "/backup"
@@ -267,6 +292,47 @@ object AppointmentPaths {
     const val REMOVE = "/remove/{identifier}"
 }
 
+/** Under [ApiRoutes.SCHEDULE] */
+object SchedulePaths {
+    /** `?from=&to=` days like 2026-10-01, both included, every entry touching them. `&user=` for one person's */
+    const val RANGE = "/range"
+    const val GET = "/get/{identifier}"
+
+    /** Admin only, body `ScheduleRequest`: answers with every entry it made */
+    const val ADD = "/add"
+
+    /** Admin only, body `ScheduleEntry`, `?scope=` ONE, FOLLOWING or SERIES: answers with every entry changed */
+    const val UPDATE = "/update"
+
+    /** Admin only, `?scope=` like update */
+    const val REMOVE = "/remove/{identifier}"
+}
+
+/** Under [ApiRoutes.TIME_OFF] */
+object TimeOffPaths {
+    /** The caller's requests and balance, `?year=` or this year */
+    const val ME = "/me"
+
+    /** Body `TimeOffRequest`: asks for time off */
+    const val REQUEST = "/request"
+
+    /** Takes back the caller's own request while it's waiting */
+    const val WITHDRAW = "/withdraw/{identifier}"
+
+    /** Admin only: requests, `?status=PENDING` for those waiting */
+    const val REQUESTS = "/requests"
+
+    /** Admin only, body `TimeOffDecision` */
+    const val APPROVE = "/approve/{identifier}"
+    const val DECLINE = "/decline/{identifier}"
+
+    /** Admin only: every active user's balance, `?year=` or this year */
+    const val BALANCES = "/balances"
+
+    /** Admin only, body `TimeOffAllowance`: someone's yearly allowance */
+    const val ALLOWANCE = "/allowance/{identifier}"
+}
+
 /** Under [ApiRoutes.TIME_CLOCK] */
 object TimeClockPaths {
     /** Body `PinLoginRequest`: clocks in or out at a station by PIN, with no login */
@@ -353,11 +419,62 @@ object EstimatePaths {
 object StatusPaths {
     const val PAGE = "/{token}"
 
+    /** Booking a visit, when the shop takes bookings online: `GET` the page (`?location=&day=`), `POST` the form */
+    const val BOOK = "/book"
+
     /** The customer approving or declining the waiting estimate: form fields `decision` and `name` */
     const val ESTIMATE = "/{token}/estimate"
 
     /** A photo from an update the customer can see, `thumb` or `display` */
     const val PHOTO = "/{token}/photo/{identifier}/{variant}"
+
+    /** Off to the processor's checkout page for the balance, when the shop takes payments online */
+    const val PAY = "/{token}/pay"
+
+    /** The card processor telling the server a payment changed, `stripe` or `square`. Here so it's reachable from outside */
+    const val PAYMENT_WEBHOOK = "/payments/{provider}/webhook"
+}
+
+/** The list itself is a GET of [ApiRoutes.LOCATION], for anyone logged in */
+object LocationPaths {
+    /** Admin only, body a `Location` */
+    const val ADD = "/add"
+
+    /** Admin only, body a `Location` */
+    const val UPDATE = "/update"
+}
+
+object PaymentPaths {
+    /** Admin only: `GET` the settings without keys, `POST` to save them */
+    const val SETTINGS = "/settings"
+
+    /** Admin only: the readers on the processor account, with the saved settings */
+    const val ACCOUNT_READERS = "/readers"
+
+    /** What the counter can offer, no keys */
+    const val OPTIONS = "/options"
+
+    /** Body `ReaderChargeRequest`: sends an amount to a card reader */
+    const val READER = "/charge/reader"
+
+    /** Body `PaymentLinkRequest`: a checkout page for an invoice's balance */
+    const val LINK = "/charge/link"
+
+    /** A charge, checked with the processor first while it's waiting */
+    const val CHARGE = "/charge/{identifier}"
+    const val CANCEL = "/charge/{identifier}/cancel"
+
+    /** Body `SendLinkRequest`: emails or texts a waiting payment link to the invoice's customer */
+    const val SEND = "/charge/{identifier}/send"
+
+    /** Admin only: gives back a paid charge that never made it onto an invoice */
+    const val REFUND = "/charge/{identifier}/refund"
+
+    /** Admin only: every charge, newest first, `?offset=&limit=` */
+    const val CHARGES = "/charges"
+
+    /** An invoice's charges, newest first */
+    const val FOR_INVOICE = "/charges/invoice/{identifier}"
 }
 
 object StationPaths {
@@ -367,6 +484,9 @@ object StationPaths {
 /** The profile itself is a GET of [ApiRoutes.SHOP] */
 object ShopPaths {
     const val UPDATE = "/update"
+
+    /** The profile as it applies at the location the caller works at: its address, contacts and tax */
+    const val HERE = "/here"
 }
 
 object ImagePaths {

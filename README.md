@@ -1,11 +1,12 @@
 # TicketMan
 
-A ticket tracking app for repair shops, or any shop that runs its work through tickets. Staff check devices in at
-the counter, track the repair, take payment at pickup and keep customer, inventory and photo records along the way.
+A ticket tracking app for shop that run their work through tickets. Staff check devices in at
+the counter, track the repair, take payment at pickup and keep customer, inventory and photo records
+along the way.
 
 It's a Kotlin Multiplatform project: a Compose Multiplatform client with a Ktor server with an H2 database.
 
-There will most likely be breaking changes often so this is nowhere near production ready. But it does work!
+There will most likely be breaking changes often!
 
 ![The counter screen showing a ticket, its invoice and the queue](docs/images/counter.png)
 
@@ -37,17 +38,19 @@ PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pde
 ./gradlew :composeApp:run
 ```
 
-On Windows use `.\gradlew.bat` in PowerShell, and set the variables with `$env:PORT = "8098"` and so on first.
+## Running the server in Docker
 
-[Getting started](docs/getting-started.md) covers the other targets, tests and hot reload.
-
-## Running it in Docker
-
+With the web client
 ```bash
 docker run -d --name ticketman -p 8080:8080 -e ADMIN_PASSWORD=change_me -v ticketman-data:/data mr0btain/ticketman:latest
 ```
 
-Then open `http://localhost:8080` and log in as `admin`. That's plain HTTP, fine for a look on one machine.
+Without the web client
+```bash
+docker run -d --name ticketman -p 8080:8080 -e ADMIN_PASSWORD=change_me -v ticketman-data:/data mr0btain/ticketman-server:latest
+```
+
+Then open `http://localhost:8080` and log in as `admin` with whatever you set the password to be.
 
 - [Run TicketMan in Docker](docs/how-to/run-in-docker.md): the published image, trying it from the source with
   made up records (`scripts/docker_local.sh`), and a shop's server behind Caddy with HTTPS
@@ -61,50 +64,31 @@ Then open `http://localhost:8080` and log in as `admin`. That's plain HTTP, fine
 |----------|--------|
 | Linux | Main target, Done |
 | Windows | Done |
-| macOS | Builds arm64 and x64 DMGs, not tested on a Mac yet |
+| macOS | Builds arm64 and x64 DMGs, not tested yet |
 | Web (Wasm) | Served by the server when built with `-PwithWeb`, Done |
 | Server | Done |
 | Android | Done |
-| iOS | Written, not built or tested yet (needs a Mac) |
+| iOS | Builds but not tested yet (needs a Mac) |
 
-## Roadmap
+## Roadmap / TODOs
 
-Phases 0 to 6 are done: custom statuses, the customer status page, messages and estimates, counter money,
-inventory and purchasing, repair depth, and running the business. What's next, in order
 ([the full roadmap](docs/roadmap.md)):
-
-**Phase 7: Big integrations**
-
-- **Payment processing**: card terminals and payment links (Stripe Terminal or Square), and paying the balance from
-  the status page
-- **More than one location**: a location on tickets, stock, stations, users and numbering. It touches nearly every
-  query, so it comes last
-- **Booking from the status page**: customers picking an appointment time themselves, left over from Phase 6
-
-**iOS: test and fix (needs a Mac)**
-
-- Make it build: `./gradlew :composeApp:compileKotlinIosSimulatorArm64`, then the app from Xcode on a simulator,
-  fixing the Security framework and Foundation calls written without a compiler
-- Walk through it on a simulator, an iPhone and an iPad: connecting and trusting a server, logging in, records and
-  photos, check-in with a signature, pickup, AirPrint, saving PDFs and backups to Files, restoring, the admin tabs
-  and kiosk mode with Guided Access
-- Fix what it finds, then build the IPA in every release
-- Later, with a paid Apple Developer account: a signed IPA, or TestFlight and the App Store
-
-**macOS: test the desktop app (needs a Mac)**
-
-- Run it from source and from the released DMG on Apple silicon
-- Walk through it like Linux and Windows: trusting a server, the session coming back after a restart, photos,
-  signatures on a trackpad, printing and labels, file dialogs, the admin tabs and kiosk fullscreen
-- Try the x64 DMG on an Intel Mac
-- Later, with a paid Apple Developer account: sign and notarize the DMG so it opens without a warning
 
 ## Caveats
 
-If there has to be Any breaking changes (changes that require both client and server to be updated) they should be made between Major revisions only once were stable. Ex: 1.0.0->2.0.0. For now theres going to be Breaking changes that are just thrown in untill we hit 1.0.
+If there has to be Any breaking changes they should be made between Major revisions only. Ex: 0.8.0->0.9.0.
+At the moment there will be breaking changes all throughout, but when we hit stable a 1.0.0 release then we can
+stick to this break between majors.
+
+On high DPI monitors the app can show small GUI. This is intermittent for me.
 
 ## Documentation
 
 Developer docs are in [`docs/`](docs/README.md): how the code is organized, how a request travels from the UI to the
 database, configuration, running a server and more. Pretty much all of this is AI generated. I haven't looked through 
 it yet so it may or may not be accurate.
+
+## License
+
+TicketMan is released under the [MIT License](LICENSE). The fonts it bundles (Barlow, Atkinson Hyperlegible and
+JetBrains Mono) are under the SIL Open Font License, with their licenses in [`composeApp/licenses/`](composeApp/licenses).

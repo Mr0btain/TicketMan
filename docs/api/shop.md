@@ -13,6 +13,16 @@ Everyone reads it, to print invoices and slips and show the terms at check-in.
 
 - **`200`** `ShopProfile`. A server that's never saved one sends the defaults.
 
+### `GET /api/shop/here`
+
+**Auth:** restricted
+
+The profile as it applies at the [location](location.md) the request works at, for the counter to print and charge
+with: that location's street, city, state, zip, phone, email and tax rates where it has them, and its name after
+the shop's (`Fix It, Downtown`) when there's more than one location. Admins edit the company's at `/api/shop`.
+
+- **`200`** `ShopProfile`.
+
 ### `POST /api/shop/update`
 
 **Auth:** admin

@@ -1,5 +1,11 @@
 package org.mr0btain.ticketman.ui.screens.navigation
 
+import org.mr0btain.ticketman.ui.kit.foundation.TmDivider
+import ticketman.composeapp.generated.resources.map
+import ticketman.composeapp.generated.resources.map_pin
+import kotlin.uuid.Uuid
+import org.mr0btain.ticketman.ui.screens.locations.components.WorkingLocation
+import org.mr0btain.ticketman.data.location.Location
 import androidx.compose.foundation.clickable
 import org.mr0btain.ticketman.ui.kit.images.TmAvatar
 import androidx.compose.runtime.getValue
@@ -64,6 +70,7 @@ val shellInsets: WindowInsets
  * @param user Signed in user shown at the bottom of the rail, null shows a log in button
  * @param clockedInAt When they clocked in, null when they're off the clock
  * @param onPunch Clocks them in or out, from the user menu
+ * @param locations Where the device works, picked in the user menu. Null with only one location
  */
 @Composable
 fun WideAppShell(
@@ -76,6 +83,7 @@ fun WideAppShell(
     onOpenSettings: () -> Unit,
     clockedInAt: Long? = null,
     onPunch: (() -> Unit)? = null,
+    locations: ShellLocations? = null,
     content: @Composable BoxScope.() -> Unit
 ) {
     val spacing = TmTheme.spacing
@@ -111,7 +119,7 @@ fun WideAppShell(
                             TmIconButton(icon = Res.drawable.log_in, contentDescription = "Log in", onClick = onLogin)
                         }
                     } else {
-                        UserMenu(user = user, expanded = expanded, clockedInAt = clockedInAt, onPunch = onPunch, onOpenSettings = onOpenSettings, onLogout = onLogout)
+                        UserMenu(user = user, expanded = expanded, clockedInAt = clockedInAt, onPunch = onPunch, onOpenSettings = onOpenSettings, onLogout = onLogout, locations = locations)
                     }
                 }
             )
@@ -170,15 +178,45 @@ fun PhoneAppShell(
     }
 }
 
-/** The signed in user at the bottom of the rail, clicking it offers settings and logging out */
+/**
+ * Where the device works, for the user menu
+ * @param options The locations that can be picked
+ * @param canSeeAll Offers every location at once, for admins
+ * @param fixed A station, which stays at its own location
+ * @param label The location being worked at, as shown
+ * @param onChoose Picks a location, null for every one
+ */
+data class ShellLocations(
+    val options: List<Location>,
+    val working: WorkingLocation,
+    val canSeeAll: Boolean,
+    val fixed: Boolean,
+    val label: String,
+    val onChoose: (Uuid?) -> Unit
+)
+
+/** The signed in user at the bottom of the rail, clicking it offers where to work, settings and logging out */
 @Composable
-private fun UserMenu(user: User, expanded: Boolean, clockedInAt: Long?, onPunch: (() -> Unit)?, onOpenSettings: () -> Unit, onLogout: () -> Unit) {
+private fun UserMenu(
+    user: User,
+    expanded: Boolean,
+    clockedInAt: Long?,
+    onPunch: (() -> Unit)?,
+    onOpenSettings: () -> Unit,
+    onLogout: () -> Unit,
+    locations: ShellLocations? = null
+) {
     var open by remember { mutableStateOf(false) }
     val name = user.name.trim().ifBlank { user.username }
 
     Box {
         if (expanded) {
-            TmListRow(title = name, subtitle = user.username, leading = { TmAvatar(name = name, photo = user.photo, size = 28.dp) }, onClick = { open = true })
+            TmListRow(
+                title = name,
+                subtitle = locations?.label?.ifBlank { null } ?: user.username,
+                leading = { TmAvatar(name = name, photo = user.photo, size = 28.dp) },
+                onClick = { open = true }
+            )
         } else {
             TmAvatar(
                 name = name,
@@ -189,6 +227,32 @@ private fun UserMenu(user: User, expanded: Boolean, clockedInAt: Long?, onPunch:
         }
 
         TmMenu(expanded = open, onDismissRequest = { open = false }) {
+            // Where this device works. A station stays where it is
+            locations?.let { shell ->
+                if (shell.fixed) {
+                    TmMenuItem(text = "At ${shell.label}", leadingIcon = Res.drawable.map_pin, enabled = false, onClick = {})
+                } else {
+                    shell.options.forEach { location ->
+                        TmMenuItem(
+                            text = location.name,
+                            leadingIcon = Res.drawable.map_pin,
+                            trailingText = location.code.ifBlank { null },
+                            selected = !shell.working.all && shell.working.identifier == location.identifier,
+                            onClick = {
+                                open = false
+                                shell.onChoose(location.identifier)
+                            }
+                        )
+                    }
+                    if (shell.canSeeAll) {
+                        TmMenuItem(text = "All locations", leadingIcon = Res.drawable.map, selected = shell.working.all, onClick = {
+                            open = false
+                            shell.onChoose(null)
+                        })
+                    }
+                }
+                TmDivider()
+            }
             onPunch?.let { punch ->
                 TmMenuItem(
                     text = if (clockedInAt != null) "Clock out" else "Clock in",

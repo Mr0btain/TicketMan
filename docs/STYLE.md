@@ -4,14 +4,11 @@ How pages in `docs/` are written, so they read as one set.
 
 ## Who they're for
 
-Developers working on TicketMan. Assume the reader knows Kotlin and has the repo open, but not this codebase.
+Developers working on TicketMan.
 
 ## Tone
 
 - Plain, short sentences. Say what the code does, then why if it isn't obvious.
-- Explain the shape and the reasons. Don't restate code line by line; link to it instead.
-- Write about the code as it is now. If something is unfinished or odd, say so in a **Known gaps** section rather
-  than hiding it.
 
 ## Linking to code
 
@@ -20,7 +17,7 @@ Developers working on TicketMan. Assume the reader knows Kotlin and has the repo
 - Long package paths get noisy. After the first link on a page, shorten paths by their module and the part after
   `ticketman/`, like `server/.../database/Database.kt`.
 - Name classes and functions in backticks: `TicketDatabase`, `dbWrite()`.
-- Don't link to line numbers. They go stale on the next edit.
+- Don't link to line numbers.
 
 ## Diagrams
 
@@ -29,7 +26,7 @@ one small enough to read without zooming.
 
 ## Images
 
-Put images in `docs/images/`. Screenshots come from the render tests (`ScreenRenderTest`, `KitGalleryRenderTest`)
+Images go in `docs/images/`. Screenshots come from the render tests (`ScreenRenderTest`, `KitGalleryRenderTest`)
 rather than the running app, so they can be redone the same way after a UI change.
 
 ## Page template
@@ -49,20 +46,14 @@ The main idea, with a diagram if it helps.
 |------|-------|
 | ...  | ...   |
 
-## Gotchas
+## Todos
 
-Things that have caught people out.
-
-## Known gaps
-
-Unfinished or odd parts, if any.
+Unfinished or things to work on at a later time.
 
 ## See also
 
 Links to related pages.
 ```
-
-Sections that would be empty are left out.
 
 ## Keeping them current
 
@@ -72,9 +63,6 @@ When a change makes a page wrong, fix the page in the same PR. When a page is ad
 - The pull request template (`.gitea/pull_request_template.md`) asks "Docs updated?" on every PR.
 - The API pages are checked against the routes by `python3 scripts/check_api_docs.py`. Run it after any route
   change.
-- Every relative link and heading anchor in `docs/` and `CLAUDE.md` is checked by
-  `python3 scripts/check_doc_links.py`. Run it after moving or renaming a page or heading.
+- You can test links in `docs/` and `CLAUDE.md` by running`python3 scripts/check_doc_links.py`.
 - CI (`.gitea/workflows/ci.yml`) runs both checks on every pull request, with the tests.
-- A choice someone might want to undo later gets an entry in [`decisions.md`](decisions.md).
-- KDoc on the code covers what a class or function does; these pages cover how the pieces fit and why. Don't
-  copy one into the other.
+- KDoc on the code covers what a class or function does; these pages cover how the pieces fit and why.

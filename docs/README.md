@@ -73,6 +73,10 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Reports](api/report.md): sales, profit, tax, techs and turnaround over some days
 - [Appointments](api/appointment.md): the calendar, and appointments becoming check-ins
 - [Time clock](api/timeclock.md): clocking in and out by PIN or from your own device, timesheets
+- [Payments](api/payment.md): card readers, payment links and paying online through Stripe or Square, refunds onto the card
+- [Locations](api/location.md): more than one shop on one server, each with its own tickets, stock and numbers
+- [Staff schedule](api/schedule.md): shifts, time off and training, weekly repeats, the calendar's staff board
+- [Time off](api/timeoff.md): requests against a yearly allowance, approved onto the schedule
 - [Status page](api/status.md): the customer's page at `/status`, the one part meant for the internet
 
 ## Testing
@@ -90,11 +94,6 @@ Start with [Getting started](getting-started.md), then read the [architecture ov
 - [Add a theme or font](how-to/add-a-theme-or-font.md): a palette or interface font, and what to check
 - [Add platform-specific code](how-to/add-a-platform-actual.md): an `expect` and its `actual`s
 - [Add a printout](how-to/add-a-printable-document.md): a new slip or report
-
-## Decisions
-
-- [Decisions](decisions.md): why H2, per device sessions, photo deletion waiting a day, cents, client-made ids,
-  the UI kit rules and other choices, with what each costs
 
 ## Roadmap
 

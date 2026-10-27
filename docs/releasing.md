@@ -10,12 +10,15 @@ package is built from it:
 
 | Package | Where it goes | Notes |
 |---|---|---|
-| Server | `server/build.gradle.kts` `version`, and the generated `BuildInfo.VERSION` | `AdminService.SERVER_VERSION` (admin screen, backup manifests) |
+| Server | `server/build.gradle.kts` `version` | `AdminService.SERVER_VERSION` (admin screen, backup manifests) |
+| Shared | The generated `BuildInfo.VERSION` (`shared/build.gradle.kts`), as `APP_VERSION` | The server sends it on `/api/ping` and every client compares it with its own (see [Versions](api/README.md#versions)) |
 | Desktop installers | `composeApp/build.gradle.kts` `packageVersion` | A `-rc1` suffix is dropped, since installers only take numbers. macOS refuses a version starting with 0, so 0.x app bundles say 1.0.0 inside |
 | Android | `androidApp/build.gradle.kts` `versionName`, and `versionCode` from it | `major * 10000 + minor * 100 + patch`, so 0.8.0 is 800 |
 
-`API_VERSION` is separate: it only changes when older clients can't use the server any more (see
-[decisions](decisions.md)). `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
+Pick the number with that check in mind: a client and server a major version apart (a minor version before 1.0)
+refuse to work together, so a release with breaking API changes bumps the major (the minor while still on 0.x), and
+one that only adds things bumps the minor. `API_VERSION` is separate: it only changes when older clients can't use
+the server any more, and only ever warns. `iosApp/Configuration/Config.xcconfig`'s `MARKETING_VERSION` is updated by hand alongside it.
 
 ## The icon
 
@@ -82,7 +85,9 @@ Without one the APK comes out unsigned (`TicketMan-Android-<version>-unsigned.ap
 
 ## Making a release
 
-1. Set `ticketman.version` in `gradle.properties` and merge that to master.
+1. Set `ticketman.version` in `gradle.properties`, add a `<release>` for it at the top of the Flathub metainfo and
+   point its screenshots at the new tag (see [Flathub](#flathub); CI's `flatpak.py check` fails until both are
+   done), and merge that to master.
 2. Tag the commit and push the tag:
 
    ```bash
@@ -211,3 +216,79 @@ The MSI and DMG aren't code signed. Windows SmartScreen warns about the MSI (Mor
 the app "can't be opened". Right click it and choose Open, or run `xattr -dr com.apple.quarantine
 /Applications/TicketMan.app`. Signing the MSI needs a code signing certificate, and signing the DMG needs an Apple
 Developer account plus notarization (Compose's `macOS { signing { } notarization { } }`).
+
+## Flathub
+
+The desktop app is packaged for [Flathub](https://flathub.org) as `io.github.Mr0btain.TicketMan` (Flathub checks
+the GitHub account owns an `io.github` ID). Everything for it is in [`flatpak/`](../flatpak):
+
+| File | What it is |
+|---|---|
+| `org.Mr0btain.TicketMan.yml` | The manifest: the freedesktop runtime, a Java 21 runtime from the `openjdk21` extension, the release's `TicketMan-Desktop-<version>.jar`, and the files below from the release's tag |
+| `org.Mr0btain.TicketMan.metainfo.xml` | What the store page shows: the description, screenshots (from `docs/images/` at the release's tag) and a `<release>` per version |
+| `org.Mr0btain.TicketMan.desktop` | The menu entry. `StartupWMClass` is the window class AWT makes from the main class, so renaming `MainKt` changes it |
+| `ticketman.sh` | Starts the jar, with Skiko's unpacked library moved out of the home folder the sandbox can't write |
+
+The sandbox lets the app use X11 (AWT has no Wayland), the network, CUPS for printing, the keyring for KSafe's key
+(through the secret portal when there is one) and `~/.eu_anifantakis_ksafe` for KSafe's settings, which the sandbox
+keeps in `~/.var/app/io.github.Mr0btain.TicketMan/`. The app's own folders already follow `XDG_DATA_HOME` and
+`XDG_CACHE_HOME`, and file dialogs go through the portal, so nothing else is needed. Settings from the DEB aren't
+carried over, so someone moving to the Flatpak connects and logs in again.
+
+[`scripts/flatpak.py`](../scripts/flatpak.py) does the work (it needs `flatpak install flathub org.flatpak.Builder`):
+
+```bash
+python3 scripts/flatpak.py check              # the metainfo has a <release> for ticketman.version, screenshots at its tag
+python3 scripts/flatpak.py build --install    # build the jar, then the Flatpak from this checkout, lint, install
+flatpak run io.github.Mr0btain.TicketMan
+python3 scripts/flatpak.py update 0.9.1       # once the GitHub release is out: the jar's url and sha256, the tag's commit
+```
+
+`build` lints the manifest and the built repo with `flatpak-builder-lint`. The repo check always reports
+`appstream-external-screenshot-url` and `appstream-remote-icon-not-mirrored`, which only clear on Flathub's own
+build, and `appstream-missing-screenshots` until the tag is on GitHub (the screenshot URLs point at it).
+
+**Submitting the first time.** Flathub builds from its own repository, so the manifest is copied there:
+
+1. Release the version on GitHub (the tag and the desktop jar have to be there), then run
+   `python3 scripts/flatpak.py update <version>` and commit the manifest.
+2. Fork [flathub/flathub](https://github.com/flathub/flathub), branch from `new-pr`, add the manifest at the root,
+   and open a pull request against `new-pr` named `Add io.github.Mr0btain.TicketMan`. Their
+   [submission guide](https://docs.flathub.org/docs/for-app-authors/submission) has the checklist.
+3. Comment `bot, build` on the pull request for a test build, and answer the reviewers. Once it's merged Flathub
+   makes `flathub/io.github.Mr0btain.TicketMan` and invites you to it; accept within a week.
+4. Verify the app on Flathub's developer portal by logging in with the GitHub account, which gives it the
+   verified badge.
+
+**Each release after that.** Flathub's checker bot reads `x-checker-data` in the manifest and opens a pull request
+on `flathub/io.github.Mr0btain.TicketMan` when a new GitHub release has a desktop jar. Merge it once its test build
+passes. If the manifest here changed too (new permissions), make the same change there.
+
+## Snap
+
+The desktop app is also packaged as the `ticketman` snap. Everything for it is in [`snap/`](../snap):
+`snapcraft.yaml` and the menu entry in `gui/ticketman.desktop`. Unlike the Flatpak it doesn't use the jar: it packs
+the tarball from `packageTarball`, which already has its own Java runtime and Skia, so there is no Java in the snap
+besides the app's own. jpackage only builds for the machine it runs on, so each architecture's snap is packed on that
+architecture (or in the same arm64 container as the arm64 DEB) from that machine's tarball:
+
+```bash
+./gradlew :composeApp:packageTarball          # composeApp/build/compose/binaries/main/tar/TicketMan-Linux-<version>-<arch>.tar.gz
+snapcraft pack                                # needs snapcraft and LXD: sudo snap install snapcraft --classic; sudo snap install lxd; sudo lxd init --auto
+sudo snap install --dangerous ./ticketman_<version>_<arch>.snap
+snap connect ticketman:password-manager-service
+ticketman
+```
+
+The version comes from the tarball's name. The snap is strictly confined, with the `gnome` extension (X11, GL,
+fonts, portals for file dialogs), `network`, `cups` for printing, `home`, and `password-manager-service` for KSafe's
+key in the keyring. That last one isn't connected on install unless the store grants it (ask on the
+[Snapcraft forum](https://forum.snapcraft.io/c/store-requests/19)), so until then users connect it themselves.
+Java reads its home folder from the user's account, not `$HOME`, so `JAVA_TOOL_OPTIONS` points `user.home` at the
+snap's own folder, where KSafe keeps `~/.eu_anifantakis_ksafe` (`~/snap/ticketman/current/`). Settings from the DEB
+or the Flatpak aren't carried over.
+
+**Publishing.** Once: make an account on [snapcraft.io](https://snapcraft.io), `snapcraft login` and
+`snapcraft register ticketman`. Each release: `snapcraft upload --release=edge ticketman_<version>_<arch>.snap` for
+both architectures, try it, then promote it with `snapcraft release ticketman <revision> stable` (or from the
+snapcraft.io dashboard).

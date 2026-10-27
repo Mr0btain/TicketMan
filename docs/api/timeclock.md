@@ -65,7 +65,12 @@ Time that started from one day to another, both included, in the shop's time zon
 - **Query:** `from` and `to`, days like `2026-10-26`; `user`, only theirs. **`400`** a missing or bad day, `to`
   before `from`, more than 92 days, or a `user` that isn't an id.
 - **`200`** `Timesheet { from, to, people, generatedAt }`, `people` being a `TimesheetPerson { userIdentifier, name,
-  hours, entries }` for each person with time, by name. Open stretches count up to `generatedAt`.
+  hours, entries, scheduledHours, shifts }` for each person with time or a shift on the [schedule](schedule.md), by
+  name. Open stretches count up to `generatedAt`. `scheduledHours` adds up their `SHIFT` entries starting in those
+  days (time off and training aren't counted), and `shifts` holds a `ShiftCheck { startsAt, endsAt, clockedInAt,
+  lateMinutes, missed }` for each (shared `TimeClockRules.check`): the first clock in from two hours before a shift
+  to its end counts for it, over 5 minutes after it starts is late, and none once those 5 minutes are past is
+  missed. Shifts still to come have neither.
 
 ### `POST /api/timeclock/entry/add`
 

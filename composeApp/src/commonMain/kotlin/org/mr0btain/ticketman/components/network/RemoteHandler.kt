@@ -1,6 +1,5 @@
 package org.mr0btain.ticketman.components.network
 
-import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.ApiRoutes
 import org.mr0btain.ticketman.server.AuthPaths
 import org.mr0btain.ticketman.server.UserPaths
@@ -16,6 +15,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.io.encoding.Base64
 import org.mr0btain.ticketman.components.data.local.LocalStorage
 import org.mr0btain.ticketman.components.network.database.*
+import kotlin.concurrent.Volatile
 import org.mr0btain.ticketman.components.network.user.LoginOutcome
 import org.mr0btain.ticketman.components.network.user.ServerUserClient
 import org.mr0btain.ticketman.components.network.image.ImageRemoteRepository
@@ -48,15 +48,29 @@ class RemoteHandler(
     private val LOGIN_TAG = "$TAG:Login"
     private val LOGOUT_TAG = "$TAG:Logout"
     private val KIOSK_TAG = "$TAG:Kiosk"
-    val userClient = ServerUserClient(createUserHttpClient(engine), localStorage)
+    // Emits when the server turns a request away for this app's version, so it's checked again and the update
+    // screen shows. Declared before the clients, which report to it
+    private val _versionRejected = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val versionRejected = _versionRejected.asSharedFlow()
+
+    val userClient = ServerUserClient(createUserHttpClient(engine) { _versionRejected.tryEmit(Unit) }, localStorage)
 
     // Shared with the photo loader so photos go out with the same tokens and refresh
     val httpClient = createRemoteHttpClient(
         engine = engine,
         getAccessToken = { getAccessToken() },
         getRefreshToken = { getRefreshToken() },
-        refreshTokens = { refreshTokens() }
+        refreshTokens = { refreshTokens() },
+        onVersionRejected = { _versionRejected.tryEmit(Unit) },
+        getLocation = { location }
     )
+
+    /**
+     * Where this device works, sent with every request: a location's id, `all` for an admin looking at every one,
+     * or null to leave it to the server (the user's home location). Set by the locations handler
+     */
+    @Volatile
+    var location: String? = null
 
     // One per area of the API, all on the same logged in client
     val customerRepo = CustomerRemoteRepository(httpClient)
@@ -74,10 +88,14 @@ class RemoteHandler(
     val reportRepo = ReportRemoteRepository(httpClient)
     val appointmentRepo = AppointmentRemoteRepository(httpClient)
     val timeClockRepo = TimeClockRemoteRepository(httpClient)
+    val paymentRepo = PaymentRemoteRepository(httpClient)
+    val locationRepo = LocationRemoteRepository(httpClient)
+    val scheduleRepo = ScheduleRemoteRepository(httpClient)
+    val timeOffRepo = TimeOffRemoteRepository(httpClient)
 
     /** Every repository, so [setUrl] points all of them at the server. A new one goes here too */
     private val repositories: List<ServerRepository> =
-        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo)
+        listOf(customerRepo, ticketRepo, inventoryRepo, userRepo, adminRepo, counterRepo, invoiceRepo, imageRepo, notifyRepo, estimateRepo, giftCardRepo, purchaseRepo, reportRepo, appointmentRepo, timeClockRepo, paymentRepo, locationRepo, scheduleRepo, timeOffRepo)
 
     /**
      * Whether an expired session can be fixed by logging in again with the saved username and password.
@@ -89,17 +107,11 @@ class RemoteHandler(
     private var serverUrl = ""
 
     /**
-     * Why this app and the server the last [setUrl] reached may not work together, null when they match. Only means
-     * something after a [setUrl] that connected. Older servers don't say their version, which counts as a mismatch
+     * How this app and the server the last [setUrl] reached differ in version, null when they match. Only means
+     * something after a [setUrl] that reached a server. A [VersionNotice.blocking] one means [setUrl] didn't connect
      */
-    val apiMismatch: String?
-        get() = userClient.serverApiVersion.let { version ->
-            when {
-                version == API_VERSION -> null
-                version == null || version < API_VERSION -> "The server is older than this app, so some things may not work. Update the server."
-                else -> "The server is newer than this app, so some things may not work. Update the app."
-            }
-        }
+    val versionNotice: VersionNotice?
+        get() = versionNoticeOf(userClient.serverAppVersion, userClient.serverApiVersion)
 
     /**
      * The address the last [setUrl] went to. Not always the one it was given: a plain HTTP address the server
@@ -125,6 +137,17 @@ class RemoteHandler(
 
             // Check if we can establish a connection with this address, if success then set it.
             val check = userClient.checkServer(url)
+
+            // A major version apart, breaking changes mean nothing can be loaded, so no repository gets the address.
+            // Clear the last server's too, so nothing still loads from there
+            if (check == ServerCheck.UP && versionNotice?.blocking == true) {
+                AppLogger.i(SET_SERVER_URL_TAG, "Server at $url is ${userClient.serverAppVersion}, can't work with this app")
+                userClient.changeServerUrl("")
+                serverUrl = ""
+                repositories.forEach { it.serverUrl = "" }
+                return ConnectionResult.INCOMPATIBLE
+            }
+
             if (check == ServerCheck.UP) {
                 userClient.changeServerUrl(url)
                 serverUrl = url.trimEnd('/')

@@ -33,6 +33,8 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var warrantyUntil by TicketTable.warrantyUntil
     var warrantyOf by TicketTable.warrantyOf
     var abandonedAt by TicketTable.abandonedAt
+    var numberPrefix by TicketTable.numberPrefix
+    var location by TicketTable.location
 
     // For notes
     var notes by NoteEntity via TicketNoteTable
@@ -43,7 +45,7 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             device = device,
             status = status,
             priority = priority,
-            number = numberYear?.let { year -> numberSequence?.let { TicketNumber(year, it) } },
+            number = numberYear?.let { year -> numberSequence?.let { TicketNumber(year, it, numberPrefix) } },
             problem = problem,
             condition = condition,
             accessories = accessories,
@@ -57,7 +59,8 @@ class TicketEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             passcodeSet = passcodeSet,
             warrantyUntil = warrantyUntil,
             warrantyOf = warrantyOf,
-            abandonedAt = abandonedAt
+            abandonedAt = abandonedAt,
+            locationIdentifier = location
         )
     }
 }

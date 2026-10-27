@@ -28,6 +28,8 @@ import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerDia
 import org.mr0btain.ticketman.ui.screens.records.components.customer.CustomerPanel
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryDialog
 import org.mr0btain.ticketman.ui.screens.records.components.inventory.InventoryPanel
+import org.mr0btain.ticketman.ui.screens.records.components.inventory.StockTransferDialog
+import org.mr0btain.ticketman.data.inventory.StockTransfer
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketDialog
 import org.mr0btain.ticketman.ui.screens.records.components.ticket.TicketPanel
 import ticketman.composeapp.generated.resources.Res
@@ -97,6 +99,7 @@ fun RecordsScreen(
 
     // For inventory dialog
     var showInventoryDialog by remember { mutableStateOf(false) }
+    var showStockTransfer by remember { mutableStateOf(false) }
 
     // For confirm delete dialog
     var dataType by remember { mutableStateOf(DataType.NONE) }
@@ -195,6 +198,24 @@ fun RecordsScreen(
         },
         suppliers = viewModel.purchasing.suppliers.collectAsState().value
     )
+
+    // Moving an item's parts between locations
+    if (showStockTransfer) {
+        var history by remember { mutableStateOf<List<StockTransfer>?>(null) }
+        LaunchedEffect(inventorySeed.identifier) { history = viewModel.inventory.transfers() }
+        StockTransferDialog(
+            itemName = inventorySeed.name,
+            stockAt = inventorySeed.stockAt,
+            history = history,
+            onMove = { request, onResult ->
+                viewModel.inventory.transfer(request) { failed ->
+                    onResult(failed)
+                    if (failed == null) showStockTransfer = false
+                }
+            },
+            onDismissRequest = { showStockTransfer = false }
+        )
+    }
 
     // For confirming deleting an item
     TmConfirmDeleteDialog(
@@ -340,6 +361,7 @@ fun RecordsScreen(
                     showInventoryDialog = true
                 },
                 onEditInventory = { showInventoryDialog = true },
+                onMoveStock = { showStockTransfer = true },
                 canEdit = canEdit,
                 onImageClick = { page -> showImages(inventorySeed.images, page) },
                 onNoteImageClick = { id, page -> showNoteImages(inventorySeed.notes, id, page) },

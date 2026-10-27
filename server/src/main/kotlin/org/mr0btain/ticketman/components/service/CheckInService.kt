@@ -1,5 +1,8 @@
 package org.mr0btain.ticketman.components.service
 
+import org.mr0btain.ticketman.components.database.PaymentDatabase
+import org.mr0btain.ticketman.components.database.LocationDatabase
+import org.mr0btain.ticketman.components.payments.CardPayments
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AppointmentDatabase
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
@@ -43,7 +46,9 @@ class CheckInService(
     private val devices: DeviceDatabase = DeviceDatabase(),
     private val passcodes: PasscodeDatabase = PasscodeDatabase(),
     private val vault: PasscodeVault? = null,
-    private val appointments: AppointmentDatabase = AppointmentDatabase()
+    private val appointments: AppointmentDatabase = AppointmentDatabase(),
+    private val cards: CardPayments = CardPayments(PaymentDatabase()),
+    private val locations: LocationDatabase = LocationDatabase()
 ) {
     private val storedValue = StoredValuePayments(values) { Money.format(it, shop.get().currencySymbol) }
 
@@ -52,8 +57,10 @@ class CheckInService(
      * in at the visit gets its own ticket, linked to the others, and the customer's device record. Everything is
      * checked first, then saved together
      */
-    fun checkIn(received: CheckInRequest, takenBy: String, actor: Uuid?): AccountResult<CheckInResponse> {
-        val shopProfile = shop.get()
+    fun checkIn(received: CheckInRequest, takenBy: String, actor: Uuid?, location: Uuid? = null): AccountResult<CheckInResponse> {
+        // Every device is checked in at the counter's location, taxed at its rates
+        val at = location ?: locations.main().identifier
+        val shopProfile = shop.at(at)
         if (customers.getById(received.customerIdentifier) == null) return AccountResult.Invalid("Pick a customer")
 
         // Each device's ticket, checked the same way
@@ -63,7 +70,7 @@ class CheckInService(
                 is CustomStatusRules.Resolved.Ok -> resolved.status
                 is CustomStatusRules.Resolved.Problem -> return AccountResult.Invalid(resolved.message)
             }
-            val ticket = item.ticket.copy(status = status)
+            val ticket = item.ticket.copy(status = status, locationIdentifier = at)
 
             // Check in time is read from the identifier, so it has to be a time based (version 7) one
             if (ticket.identifier.toByteArray()[6].toInt() ushr 4 != 7) return AccountResult.Invalid("Ticket identifier has to be a version 7 UUID")
@@ -95,6 +102,7 @@ class CheckInService(
         request.deposit?.let { deposit ->
             if (deposit.amountCents <= 0) return AccountResult.Invalid("Deposit has to be more than zero")
             storedValue.problem(listOf(deposit), request.customerIdentifier)?.let { return AccountResult.Conflict(it) }
+            cards.problem(listOf(deposit))?.let { return AccountResult.Conflict(it) }
         }
 
         request.appointmentIdentifier?.let { identifier ->
@@ -121,6 +129,8 @@ class CheckInService(
                 }
             }
         } catch (ex: StoredValuePayments.ShortOfValue) {
+            return AccountResult.Conflict(ex.message)
+        } catch (ex: CardPayments.ChargeTaken) {
             return AccountResult.Conflict(ex.message)
         } catch (ex: AppointmentTaken) {
             return AccountResult.Conflict("That appointment was checked in already")
@@ -155,14 +165,18 @@ class CheckInService(
 
                 request.deposit?.takeIf { index == 0 }?.let { deposit ->
                     invoices.getOrCreate(ticket.identifier, request.customerIdentifier, shopProfile.taxBasisPoints, shopProfile.taxRates)?.let { invoice ->
-                        val payment = storedValue.normalized(
-                            Payment(
-                                method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,
-                                note = deposit.note.ifBlank { "Deposit" }, reference = deposit.reference
-                            )
+                        val payment = cards.withCharge(
+                            storedValue.normalized(
+                                Payment(
+                                    method = deposit.method, amountCents = deposit.amountCents, receivedAt = now, receivedBy = takenBy,
+                                    note = deposit.note.ifBlank { "Deposit" }, reference = deposit.reference
+                                )
+                            ),
+                            deposit.chargeIdentifier
                         )
                         invoices.addPayment(invoice.identifier, payment)
                         storedValue.take(payment, request.customerIdentifier, invoice.identifier, invoice.label, takenBy)
+                        cards.claim(payment, invoice.identifier, invoice.label)
                     }
                 }
 

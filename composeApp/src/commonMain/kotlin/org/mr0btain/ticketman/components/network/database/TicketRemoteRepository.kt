@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.network.database
 
+import org.mr0btain.ticketman.server.request.MoveTicketRequest
 import io.ktor.client.*
 import org.mr0btain.ticketman.server.request.PasscodeBody
 import io.ktor.client.request.get
@@ -135,6 +136,22 @@ class TicketRemoteRepository(
         return handleDataHttpResponse(
             STATUS_TOKEN_TAG,
             networkRequest(STATUS_TOKEN_TAG) { client.post { url("$serverUrl${TicketPaths.STATUS_TOKEN.fill(identifier)}") } }
+        )
+    }
+
+    /** Sends the ticket to another location. Answers with it there */
+    suspend fun moveTo(identifier: Uuid, location: Uuid): TmResult<Ticket, ServerError> {
+        if (serverUrl.isBlank()) return TmResult.Error(ServerError(NetworkError.NO_INTERNET, "No server set"))
+
+        return handleDataHttpResponse(
+            STATUS_TOKEN_TAG,
+            networkRequest(STATUS_TOKEN_TAG) {
+                client.post {
+                    url("$serverUrl${TicketPaths.MOVE.fill(identifier)}")
+                    contentType(ContentType.Application.Json)
+                    setBody(MoveTicketRequest(location))
+                }
+            }
         )
     }
 

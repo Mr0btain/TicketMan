@@ -38,7 +38,7 @@ class StationDatabase {
      * Registers a device as a pending station. A device registering again starts over with a new secret
      * @return The station and its credentials, the secret is only ever handed out here
      */
-    fun register(deviceId: String, name: String, requestedBy: String): Pair<Station, StationCredentials>? {
+    fun register(deviceId: String, name: String, requestedBy: String, location: Uuid? = null): Pair<Station, StationCredentials>? {
         val secret = ByteArray(32).also { random.nextBytes(it) }.let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
         val identifier = Uuid.generateV7()
 
@@ -52,6 +52,7 @@ class StationDatabase {
                 row[StationTable.secretHash] = PasswordHasher.hash(secret)
                 row[StationTable.requestedBy] = requestedBy
                 row[StationTable.requestedAt] = Clock.System.now().toEpochMilliseconds()
+                row[StationTable.location] = location
             }
 
             val station = StationTable.selectAll().where { StationTable.id eq identifier }.single().toStation()
@@ -96,6 +97,12 @@ class StationDatabase {
             } > 0
         }
 
+    /** Which location the station is at */
+    fun setLocation(identifier: Uuid, location: Uuid): Boolean =
+        dbWrite(KIOSK_TAG) {
+            StationTable.update(where = { StationTable.id eq identifier }) { row -> row[StationTable.location] = location } > 0
+        }
+
     fun remove(identifier: Uuid): Boolean =
         dbWrite(REMOVE_TAG) {
             StationTable.deleteWhere { StationTable.id eq identifier } > 0
@@ -112,6 +119,7 @@ class StationDatabase {
             approvedBy = this[StationTable.approvedBy],
             approvedAt = this[StationTable.approvedAt],
             kioskEnabled = this[StationTable.kioskEnabled],
-            idleTimeoutSeconds = this[StationTable.idleTimeoutSeconds]
+            idleTimeoutSeconds = this[StationTable.idleTimeoutSeconds],
+            locationIdentifier = this[StationTable.location]
         )
 }

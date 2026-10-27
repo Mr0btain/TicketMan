@@ -98,6 +98,7 @@ class TimeClockDatabase {
                 row[station] = entry.station
                 row[note] = entry.note.trim()
                 row[editedBy] = entry.editedBy
+                row[location] = entry.locationIdentifier
             }
             true
         }
@@ -140,6 +141,7 @@ class TimeClockDatabase {
                 clockedInAt = row[TimeEntryTable.clockedInAt],
                 clockedOutAt = row[TimeEntryTable.clockedOutAt],
                 station = row[TimeEntryTable.station],
+                locationIdentifier = row[TimeEntryTable.location],
                 note = row[TimeEntryTable.note],
                 editedBy = row[TimeEntryTable.editedBy]
             )

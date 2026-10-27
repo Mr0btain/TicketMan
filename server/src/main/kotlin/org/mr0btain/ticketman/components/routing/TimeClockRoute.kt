@@ -30,7 +30,7 @@ fun Route.timeClockRoute(
     post(TimeClockPaths.PUNCH) {
         when (val check = userService.checkStationPin(call.receive<PinLoginRequest>())) {
             is StationPin.Failed -> call.respondPinFailure(check.result)
-            is StationPin.Passed -> call.respondAccount(service.punch(check.user, check.station.name), HttpStatusCode.OK)
+            is StationPin.Passed -> call.respondAccount(service.punch(check.user, check.station.name, check.station.locationIdentifier), HttpStatusCode.OK)
         }
     }
 
@@ -54,7 +54,7 @@ fun Route.timeClockRoute(
                 return@post
             }
 
-            call.respondAccount(service.punch(user, ""), HttpStatusCode.OK)
+            call.respondAccount(service.punch(user, "", call.workingLocation().identifier), HttpStatusCode.OK)
         }
 
         get(TimeClockPaths.ME_TIMESHEET) {

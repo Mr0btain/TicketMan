@@ -31,7 +31,8 @@ fun Route.purchaseRoute(
 
         // `?status=ORDERED,PARTLY_RECEIVED` for only those
         get(PurchasePaths.ORDERS) {
-            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
+            // Orders for where the caller works
+            val request = call.pagedRequest()?.at(call.locationScope()) ?: return@get call.respondBadQuery()
             val statuses = call.queryParameters["status"]?.takeIf { it.isNotBlank() }?.split(',')?.map { name ->
                 PurchaseStatus.entries.firstOrNull { it.name == name.trim().uppercase() } ?: return@get call.respondBadQuery()
             }
@@ -68,7 +69,7 @@ fun Route.purchaseRoute(
 
         post(PurchasePaths.ADD) {
             call.respondAccount(
-                service.create(call.receive<PurchaseOrderRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                service.create(call.receive<PurchaseOrderRequest>(), call.username(userDatabase), call.getIdentifierFromToken(), call.workingLocation().identifier),
                 HttpStatusCode.Created
             )
         }

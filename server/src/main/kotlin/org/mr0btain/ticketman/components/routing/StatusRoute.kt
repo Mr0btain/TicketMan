@@ -6,8 +6,13 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.ShopDatabase
+import org.mr0btain.ticketman.components.payments.PaymentService
 import org.mr0btain.ticketman.components.service.StatusPage
 import org.mr0btain.ticketman.components.service.StatusService
+import org.mr0btain.ticketman.components.service.BookingService
+import kotlinx.datetime.LocalDate
+import org.mr0btain.ticketman.data.appointment.BookingRules
+import kotlin.uuid.Uuid
 import org.mr0btain.ticketman.data.image.ImageVariant
 import org.mr0btain.ticketman.server.StatusPaths
 import kotlin.uuid.ExperimentalUuidApi
@@ -20,11 +25,56 @@ import kotlin.uuid.ExperimentalUuidApi
 @OptIn(ExperimentalUuidApi::class)
 fun Route.statusRoute(
     service: StatusService,
-    shopDatabase: ShopDatabase
+    shopDatabase: ShopDatabase,
+    payments: PaymentService? = null,
+    booking: BookingService? = null
 ) {
+    fun canBook() = booking != null && shopDatabase.get().booking.enabled
+
     // The lookup form
     get {
-        call.respondStatusPage(HttpStatusCode.OK, StatusPage.lookupForm(shopDatabase.get()))
+        call.respondStatusPage(HttpStatusCode.OK, StatusPage.lookupForm(shopDatabase.get(), canBook = canBook()))
+    }
+
+    // Booking a visit: before the ticket's page, whose {token} would take "book" too
+    get(StatusPaths.BOOK) {
+        val location = call.queryParameters["location"]?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+        val day = call.queryParameters["day"]?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+        val choices = booking?.choices(location) ?: return@get call.respondStatusPage(
+            HttpStatusCode.NotFound,
+            StatusPage.message(shopDatabase.get(), "Booking online is off", "Call us to book a visit.", "../status")
+        )
+        call.respondStatusPage(HttpStatusCode.OK, StatusPage.booking(choices, day))
+    }
+
+    post(StatusPaths.BOOK) {
+        val params = call.receiveParameters()
+        val form = BookingService.Form(
+            location = params["location"]?.let { runCatching { Uuid.parse(it) }.getOrNull() },
+            startsAt = params["time"]?.toLongOrNull(),
+            name = params["name"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            phone = params["phone"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            email = params["email"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            device = params["device"].orEmpty().take(BookingRules.MAX_FIELD + 1),
+            problem = params["problem"].orEmpty().take(BookingRules.MAX_PROBLEM + 1)
+        )
+        val shop = shopDatabase.get()
+
+        when (val booked = booking?.book(form, call.request.origin.remoteHost) ?: BookingService.Booked.Off) {
+            is BookingService.Booked.Done -> call.respondStatusPage(HttpStatusCode.OK, StatusPage.booked(booked.choices, booked.appointment))
+            is BookingService.Booked.Problem -> {
+                val day = form.startsAt?.let { time -> booked.choices.days.firstOrNull { time in it.times }?.date }
+                call.respondStatusPage(HttpStatusCode.BadRequest, StatusPage.booking(booked.choices, day, form, booked.message))
+            }
+            BookingService.Booked.Limited -> call.respondStatusPage(
+                HttpStatusCode.TooManyRequests,
+                StatusPage.message(shop, "Too many bookings", "Wait a while, or call us to book.", "../status")
+            )
+            BookingService.Booked.Off -> call.respondStatusPage(
+                HttpStatusCode.NotFound,
+                StatusPage.message(shop, "Booking online is off", "Call us to book a visit.", "../status")
+            )
+        }
     }
 
     // The form's answer: off to the ticket's page, or the form again saying why not
@@ -104,6 +154,46 @@ fun Route.statusRoute(
         }
     }
 
+    // Off to the processor's checkout for the balance. A GET from a plain link, see StatusPage
+    get(StatusPaths.PAY) {
+        val token = call.parameters["token"].orEmpty()
+        val shop = shopDatabase.get()
+
+        when (val pay = service.pay(token, call.request.origin.remoteHost)) {
+            is StatusService.Pay.Checkout -> {
+                call.response.header(HttpHeaders.Location, pay.url)
+                call.response.header(HttpHeaders.CacheControl, "no-store")
+                call.response.header("Referrer-Policy", "no-referrer")
+                call.respond(HttpStatusCode.SeeOther)
+            }
+
+            is StatusService.Pay.Problem -> call.respondStatusPage(HttpStatusCode.Conflict, StatusPage.ticket(pay.view))
+
+            StatusService.Pay.NotFound -> call.respondStatusPage(
+                HttpStatusCode.NotFound,
+                StatusPage.message(shop, "That link doesn't work", "It may have been replaced by a newer one. Call us to pay.", "../../status")
+            )
+
+            StatusService.Pay.Limited -> call.respondStatusPage(
+                HttpStatusCode.TooManyRequests,
+                StatusPage.message(shop, "Too many tries", "Wait a while and try again.", "../../status")
+            )
+        }
+    }
+
+    // The card processor saying a payment changed. Checked against its signature, then only used to ask about charges
+    post(StatusPaths.PAYMENT_WEBHOOK) {
+        if (payments == null) return@post call.respond(HttpStatusCode.NotFound)
+        val body = call.receiveText().take(MAX_WEBHOOK)
+        val headers = call.request.headers
+
+        when (payments.webhook(call.parameters["provider"].orEmpty(), { headers[it] }, body)) {
+            PaymentService.Webhook.Done -> call.respond(HttpStatusCode.OK)
+            PaymentService.Webhook.NotFound -> call.respond(HttpStatusCode.NotFound)
+            PaymentService.Webhook.Refused -> call.respond(HttpStatusCode.BadRequest)
+        }
+    }
+
     get(StatusPaths.PHOTO) {
         val identifier = call.uuidParameter("identifier")
         val variant = call.parameters["variant"]?.let { ImageVariant.fromPath(it) }
@@ -143,3 +233,6 @@ private suspend fun RoutingCall.respondStatusPage(status: HttpStatusCode, html: 
 
 /** Longer than any ticket number or phone, so a huge field isn't parsed */
 private const val MAX_FIELD = 40
+
+/** Far more than a payment event, which is a few KB */
+private const val MAX_WEBHOOK = 512 * 1024

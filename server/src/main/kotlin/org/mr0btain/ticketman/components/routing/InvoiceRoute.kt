@@ -73,8 +73,9 @@ fun Route.invoiceRoute(
             if (invoice != null) call.respond(HttpStatusCode.OK, invoice) else call.respond(HttpStatusCode.NotFound)
         }
 
+        // Where the caller works, every location's for an admin looking at all of them
         get(InvoicePaths.FETCH) {
-            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
+            val request = call.pagedRequest()?.at(call.locationScope()) ?: return@get call.respondBadQuery()
 
             call.respond(HttpStatusCode.OK, database.getPagedItems(request))
         }
@@ -149,24 +150,25 @@ fun Route.invoiceRoute(
             }
 
             val kind = format ?: ExportFormat.INVOICES
+            val location = call.locationScope().identifier
             val write: (java.io.Writer) -> Unit
             val count: Int
 
             when (kind) {
                 ExportFormat.INVOICES -> {
-                    val list = documents.inRange(from, to) ?: return@get call.respond(HttpStatusCode.InternalServerError)
+                    val list = documents.inRange(from, to, location) ?: return@get call.respond(HttpStatusCode.InternalServerError)
                     write = { documents.writeCsv(list, it) }
                     count = list.size
                 }
 
                 ExportFormat.QUICKBOOKS, ExportFormat.XERO -> {
-                    val list = accounting.paidInRange(from, to) ?: return@get call.respond(HttpStatusCode.InternalServerError)
+                    val list = accounting.paidInRange(from, to, location) ?: return@get call.respond(HttpStatusCode.InternalServerError)
                     write = { if (kind == ExportFormat.XERO) accounting.writeXero(list, it) else accounting.writeQuickBooks(list, it) }
                     count = list.size
                 }
 
                 ExportFormat.PAYMENTS -> {
-                    val list = accounting.paymentsInRange(from, to) ?: return@get call.respond(HttpStatusCode.InternalServerError)
+                    val list = accounting.paymentsInRange(from, to, location) ?: return@get call.respond(HttpStatusCode.InternalServerError)
                     write = { accounting.writePayments(list, it) }
                     count = list.size
                 }

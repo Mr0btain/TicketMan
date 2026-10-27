@@ -1,5 +1,7 @@
 package org.mr0btain.ticketman.ui.screens.admin
 
+import org.mr0btain.ticketman.ui.screens.admin.timeoff.AdminTimeOffTab
+import org.mr0btain.ticketman.ui.screens.admin.locations.AdminLocationsTab
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.*
@@ -21,6 +23,7 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
 import org.mr0btain.ticketman.ui.screens.admin.audit.AdminAuditTab
 import org.mr0btain.ticketman.ui.screens.admin.messages.AdminMessagesTab
+import org.mr0btain.ticketman.ui.screens.admin.payments.AdminPaymentsTab
 import org.mr0btain.ticketman.ui.screens.admin.components.AdminTab
 import org.mr0btain.ticketman.ui.screens.admin.inventory.AdminLowStockTab
 import org.mr0btain.ticketman.ui.screens.admin.invoices.AdminInvoicesTab
@@ -94,6 +97,15 @@ private fun AdminContent(
     val messageSettings by admin.messages.settings.collectAsState()
     val outbox by admin.messages.outbox.collectAsState()
     val outboxEnd by admin.messages.outboxEnd.collectAsState()
+    val paymentSettings by admin.payments.settings.collectAsState()
+    val allLocations by viewModel.locations.all.collectAsState()
+    val timeOffRequests by admin.timeOff.requests.collectAsState()
+    val timeOffBalances by admin.timeOff.balances.collectAsState()
+    val timeOffWaiting by admin.timeOff.waiting.collectAsState()
+    val activeLocations by viewModel.locations.active.collectAsState()
+    val accountReaders by admin.payments.accountReaders.collectAsState()
+    val cardCharges by admin.payments.charges.collectAsState()
+    val cardChargesEnd by admin.payments.chargesEnd.collectAsState()
     val report by admin.reports.report.collectAsState()
     val reportRange by admin.reports.range.collectAsState()
     val commissions by admin.reports.commissions.collectAsState()
@@ -165,8 +177,9 @@ private fun AdminContent(
         )
     }
 
-    // Fresh numbers whenever a tab is opened, only for that tab
-    LaunchedEffect(selectedTab) {
+    // Fresh numbers whenever a tab is opened, only for that tab, and when the device starts working somewhere else
+    val workingLocation by viewModel.locations.working.collectAsState()
+    LaunchedEffect(selectedTab, workingLocation) {
         admin.refresh(selectedTab)
         if (selectedTab == AdminTab.USERS) viewModel.users.pager.refresh()
     }
@@ -191,7 +204,9 @@ private fun AdminContent(
                 showUserDialog = false
                 viewModel.users.select(user.identifier, force = true)
             })
-        }
+        },
+        locations = activeLocations,
+        defaultLocation = viewModel.locations.working.value.identifier
     )
 
     ResetPasswordDialog(
@@ -228,7 +243,10 @@ private fun AdminContent(
                 tabs = AdminTab.entries.map { it.label },
                 selectedIndex = selectedTab.ordinal,
                 onSelect = { selectedTab = AdminTab.entries[it] },
-                badges = if (pending.isNotEmpty()) mapOf(AdminTab.USERS.ordinal to pending.size) else emptyMap()
+                badges = listOfNotNull(
+                    (AdminTab.USERS.ordinal to pending.size).takeIf { pending.isNotEmpty() },
+                    (AdminTab.TIME_OFF.ordinal to timeOffWaiting).takeIf { timeOffWaiting > 0 }
+                ).toMap()
             )
 
             // Tabs check for changes on their own; this is only for when that's turned off in Settings
@@ -319,7 +337,23 @@ private fun AdminContent(
                 stations = stations,
                 onApprove = { admin.devices.approveStation(it) },
                 onKiosk = { station, settings -> admin.devices.setKiosk(station, settings) },
-                onRemove = { admin.devices.removeStation(it) }
+                onRemove = { admin.devices.removeStation(it) },
+                locations = activeLocations,
+                onLocation = { station, location -> admin.devices.setStationLocation(station, location) }
+            )
+
+            AdminTab.TIME_OFF -> AdminTimeOffTab(
+                requests = timeOffRequests,
+                balances = timeOffBalances,
+                onApprove = { admin.timeOff.approve(it) },
+                onDecline = { request, reason -> admin.timeOff.decline(request, reason) },
+                onAllowance = { balance, hours -> admin.timeOff.setAllowance(balance, hours) }
+            )
+
+            AdminTab.LOCATIONS -> AdminLocationsTab(
+                locations = allLocations,
+                taxClasses = shopProfile?.taxClasses.orEmpty(),
+                onSave = { location, isNew, onResult -> viewModel.locations.save(location, isNew, onResult) }
             )
 
             AdminTab.LOW_STOCK -> AdminLowStockTab(
@@ -400,6 +434,19 @@ private fun AdminContent(
                 onRetry = { admin.messages.retry(it) },
                 onCancel = { admin.messages.cancel(it) },
                 onLoadMore = { admin.messages.loadMore() }
+            )
+
+            AdminTab.PAYMENTS -> AdminPaymentsTab(
+                settings = paymentSettings,
+                publicUrl = shopProfile?.publicUrl.orEmpty(),
+                accountReaders = accountReaders,
+                charges = cardCharges,
+                chargesEnd = cardChargesEnd,
+                isBusy = isLoading,
+                onSave = { admin.payments.save(it) },
+                onFindReaders = { admin.payments.findReaders() },
+                onRefund = { charge, reason -> admin.payments.refund(charge, reason) },
+                onLoadMore = { admin.payments.loadMore() }
             )
 
             AdminTab.AUDIT -> AdminAuditTab(

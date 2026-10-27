@@ -126,7 +126,7 @@ everywhere else the build leaves them out without a word. `iosApp` is the Xcode 
 - **`androidApp` needs compileSdk 37** (FileKit 0.16 requires it). Building the APK also needs an AAPT2 that runs
   on the build machine: Gradle downloads the x86 Linux one, which fails on ARM Linux.
 - **iOS has never been built or run.** The code was written on Linux, where it can't compile, so the first build
-  on a Mac is expected to need fixes. Testing it is a phase of the [roadmap](../roadmap.md#phase-ios-test-and-fix-needs-a-mac).
+  on a Mac is expected to need fixes.
 
 ## See also
 

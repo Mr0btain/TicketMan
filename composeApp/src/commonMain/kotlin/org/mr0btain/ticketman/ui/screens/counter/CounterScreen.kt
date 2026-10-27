@@ -1,6 +1,8 @@
 package org.mr0btain.ticketman.ui.screens.counter
 
 import org.mr0btain.ticketman.data.money.Money
+import org.mr0btain.ticketman.data.invoice.PaymentMethod
+import org.mr0btain.ticketman.server.request.PaymentRequest
 import org.mr0btain.ticketman.data.ticket.StatusLink
 import androidx.compose.foundation.layout.*
 import org.mr0btain.ticketman.ui.kit.theme.TmTheme
@@ -55,6 +57,10 @@ fun CounterScreen(
     val lastPickup by counter.pickup.last.collectAsState()
     val saleCustomer by counter.sale.customer.collectAsState()
     val lastSale by counter.sale.last.collectAsState()
+    val cardOptions by counter.cards.options.collectAsState()
+    val activeLocations by viewModel.locations.active.collectAsState()
+    val readerCharge by counter.cards.active.collectAsState()
+    val paymentLink by counter.cards.link.collectAsState()
 
     val canEdit = viewModel.session.canEdit.collectAsState().value
     val isAdmin = viewModel.session.isAdmin.collectAsState().value
@@ -179,6 +185,10 @@ fun CounterScreen(
                         ),
                         onSendStatusLink = StatusLink.url(shop.publicUrl, detail.ticket)?.let { { counter.estimates.message(detail.ticket.identifier) } },
                         onOpenTicket = { counter.openTicket(it) },
+                        moveTo = if (activeLocations.size > 1) activeLocations.filter { location ->
+                            location.identifier != (detail.ticket.locationIdentifier ?: activeLocations.firstOrNull { it.main }?.identifier)
+                        } else emptyList(),
+                        onMove = { counter.moveTicket(it) },
                         passcode = if (canEdit) PasscodeActions(
                             onShow = { counter.showPasscode(detail.ticket.identifier) },
                             onSet = { passcode, onResult -> counter.setPasscode(detail.ticket.identifier, passcode, onResult) },
@@ -260,7 +270,12 @@ fun CounterScreen(
                     onOpenTicket = { counter.openTicket(it) },
                     onSubmit = { request, onResult -> counter.checkIn.submit(request, onResult) },
                     onCancel = { counter.goHome() },
-                    onLoadDevices = { counter.checkIn.devices(it) }
+                    onLoadDevices = { counter.checkIn.devices(it) },
+                    readers = cardOptions.readers,
+                    surchargePercent = cardOptions.surchargePercent,
+                    onReaderCharge = if (cardOptions.readers.isEmpty()) null else { reader, amount, onPaid ->
+                        counter.cards.charge(reader, amount, 0, null, onPaid)
+                    }
                 )
 
                 CounterView.CHECKED_IN -> lastCheckIn?.let { result ->
@@ -290,7 +305,14 @@ fun CounterScreen(
                         onLookupGiftCard = { counter.findGiftCard(it) },
                         onFindCode = { counter.findItem(it) },
                         onFinish = { charges, discount, payments, onResult -> counter.pickup.finish(charges, discount, payments, onResult) },
-                        onBack = { counter.openTicket(detail.ticket.identifier) }
+                        onBack = { counter.openTicket(detail.ticket.identifier) },
+                        readers = cardOptions.readers,
+                        onReaderCharge = detail.invoice?.takeIf { cardOptions.readers.isNotEmpty() }?.let { invoice ->
+                            { reader, amount, tip -> counter.cards.charge(reader, amount, tip, invoice.identifier) { counter.pickup.reloadInvoice() } }
+                        },
+                        tipPercents = cardOptions.tipPercents,
+                        surchargePercent = cardOptions.surchargePercent,
+                        onPaymentLink = detail.invoice?.takeIf { cardOptions.links }?.let { invoice -> { counter.cards.showLink(invoice.identifier) } }
                     )
                 }
 
@@ -320,7 +342,15 @@ fun CounterScreen(
                     onLookupGiftCard = { counter.findGiftCard(it) },
                     onFindCode = { counter.findItem(it) },
                     onFinish = { request, onResult -> counter.sale.finish(request, onResult) },
-                    onBack = { counter.goHome() }
+                    onBack = { counter.goHome() },
+                    readers = cardOptions.readers,
+                    onReaderCharge = if (cardOptions.readers.isEmpty()) null else { reader, amount, tip, onPaid ->
+                        counter.cards.charge(reader, amount, tip, null) { charge ->
+                            onPaid(PaymentRequest(PaymentMethod.CARD, charge.appliedCents, chargeIdentifier = charge.identifier))
+                        }
+                    },
+                    tipPercents = cardOptions.tipPercents,
+                    surchargePercent = cardOptions.surchargePercent
                 )
 
                 CounterView.SOLD -> lastSale?.let { invoice ->
@@ -352,6 +382,13 @@ fun CounterScreen(
                 )
             }
         }
+    }
+
+    readerCharge?.let { charge ->
+        ReaderChargeDialog(charge = charge, onCancel = { counter.cards.cancel() }, onClose = { counter.cards.dismiss() })
+    }
+    paymentLink?.let { charge ->
+        PaymentLinkDialog(charge = charge, onClose = { counter.cards.closeLink() }, onSend = { counter.cards.sendLink(it) })
     }
 
     // Ready to type as soon as the counter opens, unless it's being touched, where focus would pop up the on screen keyboard

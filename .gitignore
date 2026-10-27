@@ -19,3 +19,9 @@ shared/build/kotlinProjectStructureMetadata/kotlin-project-structure-metadata.js
 *.jks
 *.keystore
 /.mcp.json
+
+# snapcraft --destructive-mode output, see docs/releasing.md#snap
+/parts/
+/stage/
+/prime/
+*.snap

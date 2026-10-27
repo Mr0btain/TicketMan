@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.data.invoice
 import kotlinx.serialization.Serializable
 import kotlin.math.roundToLong
 import org.mr0btain.ticketman.data.MainItem
+import org.mr0btain.ticketman.data.payment.PaymentProvider
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -17,6 +18,8 @@ import kotlin.uuid.Uuid
  * @param paidAt Epoch millis it was paid off at pickup
  * @param ticketIdentifier Its ticket, null for a sale straight from stock
  * @param ticketLabel The ticket's number, kept once the ticket is deleted, blank before
+ * @param locationIdentifier The location it was made at, its ticket's or the counter's for a sale. Its stock is
+ * taken from there
  * @param ticketRemovedAt Epoch millis its ticket was deleted. An invoice with payments, or a void one, outlives its
  * ticket, so the money taken stays on record until an admin deletes it
  */
@@ -40,7 +43,8 @@ data class Invoice(
     val createdAt: Long = 0,
     val paidAt: Long? = null,
     val ticketLabel: String = "",
-    val ticketRemovedAt: Long? = null
+    val ticketRemovedAt: Long? = null,
+    val locationIdentifier: Uuid? = null
 ): MainItem() {
     /** Sold over the counter without a ticket */
     val isSale: Boolean
@@ -61,6 +65,10 @@ data class Invoice(
     /** Money given back, as a positive amount */
     val refundedCents: Long
         get() = -payments.filter { it.isRefund }.sumOf { it.amountCents }
+
+    /** What's left to give back of [payment] through the processor, after refunds made against it */
+    fun refundableCents(payment: Payment): Long =
+        payment.amountCents + payments.filter { it.refundOf == payment.identifier }.sumOf { it.amountCents }
 
     /** Paid less refunded, what the shop kept */
     val netPaidCents: Long
@@ -99,15 +107,17 @@ enum class InvoiceStatus {
 }
 
 /**
- * Readable invoice number like INV-26-00000042, counted per year like ticket numbers
+ * Readable invoice number like INV-26-00000042, or INV-DT-26-00000042 at a location with a code, counted per
+ * location and year like ticket numbers
  */
 @Serializable
 data class InvoiceNumber(
     val year: Int,
-    val sequence: Long
+    val sequence: Long,
+    val prefix: String = ""
 ) {
     override fun toString(): String =
-        "INV-${(year % 100).toString().padStart(2, '0')}-${sequence.toString().padStart(8, '0')}"
+        "INV-" + (if (prefix.isBlank()) "" else "$prefix-") + "${(year % 100).toString().padStart(2, '0')}-${sequence.toString().padStart(8, '0')}"
 }
 
 /**
@@ -118,6 +128,12 @@ data class InvoiceNumber(
  * @param note For a refund, the reason
  * @param returns Parts a refund put back in stock
  * @param reference The gift card's code for [PaymentMethod.GIFT_CARD]
+ * @param processor Taken or given back through the shop's card processor, null for money taken by hand
+ * @param processorReference The processor's id for the money: what a refund goes against, or the refund itself
+ * @param chargeIdentifier The [org.mr0btain.ticketman.data.payment.CardCharge] it came from
+ * @param refundOf For a refund through the processor, the payment it gives back
+ * @param tipCents A tip taken on the card with it, on top of [amountCents] and not part of the invoice
+ * @param surchargeCents A card surcharge taken with it, likewise
  */
 @OptIn(ExperimentalUuidApi::class)
 @Serializable
@@ -129,8 +145,18 @@ data class Payment(
     val receivedBy: String = "",
     val note: String = "",
     val returns: List<ReturnedPart> = emptyList(),
-    val reference: String = ""
+    val reference: String = "",
+    val processor: PaymentProvider? = null,
+    val processorReference: String = "",
+    val chargeIdentifier: Uuid? = null,
+    val refundOf: Uuid? = null,
+    val tipCents: Long = 0,
+    val surchargeCents: Long = 0
 ) {
+    /** Everything the card was charged */
+    val chargedCents: Long
+        get() = amountCents + tipCents + surchargeCents
+
     val isRefund: Boolean
         get() = amountCents < 0
 }

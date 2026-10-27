@@ -59,7 +59,8 @@ class EstimateService(
         invoices.linesProblem(request.lines)?.let { return AccountResult.Invalid(it) }
         if (request.note.length > MAX_NOTE) return AccountResult.Invalid("The note can be up to $MAX_NOTE characters")
 
-        val profile = shop.get()
+        // Taxed like the ticket's invoice will be, at its location's rates
+        val profile = shop.at(ticket.locationIdentifier)
         request.lines.firstOrNull { line -> line.taxable && line.taxClass != null && profile.taxRates.none { it.identifier == line.taxClass } }?.let { line ->
             return AccountResult.Invalid("\"${line.description}\" has a tax class the shop doesn't have any more, pick another")
         }

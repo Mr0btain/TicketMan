@@ -1,6 +1,11 @@
 package org.mr0btain.ticketman.components.service
 
 import org.mr0btain.ticketman.components.utils.formatDate
+import org.mr0btain.ticketman.components.utils.formatDay
+import org.mr0btain.ticketman.components.utils.formatDayInSentence
+import org.mr0btain.ticketman.components.utils.formatTime
+import org.mr0btain.ticketman.data.appointment.Appointment
+import kotlinx.datetime.LocalDate
 import org.mr0btain.ticketman.data.shop.Storage
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatQuantity
@@ -87,7 +92,18 @@ object StatusPage {
                     val cls = if (strong) """ class="strong"""" else ""
                     append("""<div$cls><dt>${label.esc()}</dt><dd class="num">${amount.esc()}</dd></div>""")
                 }
-                append("</dl></section>")
+                append("</dl>")
+                if (view.payProblem != null) append("""<p class="problem" role="alert">${view.payProblem.esc()}</p>""")
+                // A link rather than a form, so the redirect to the processor's checkout isn't held to form-action
+                if (view.payOnline) {
+                    val balance = Money.format(view.invoice!!.balanceCents, shop.currencySymbol)
+                    append("""<p><a class="button" href="${token.esc()}/pay" rel="nofollow">Pay ${balance.esc()} online</a></p>""")
+                    if (view.surchargeCents > 0) {
+                        val surcharge = Money.format(view.surchargeCents, shop.currencySymbol)
+                        append("""<p class="muted">Paying by card adds a ${surcharge.esc()} surcharge.</p>""")
+                    }
+                }
+                append("</section>")
             }
 
             append(contact(shop))
@@ -100,7 +116,7 @@ object StatusPage {
      * The lookup form at `/status`
      * @param problem Why the last try didn't work, shown above the form
      */
-    fun lookupForm(shop: ShopProfile, problem: String? = null, number: String = ""): String {
+    fun lookupForm(shop: ShopProfile, problem: String? = null, number: String = "", canBook: Boolean = false): String {
         val body = buildString {
             append("""<section class="hero"><h1>Check on your repair</h1>""")
             append("<p>Your ticket number is on your claim slip. Scanning its QR code brings you straight to your repair.</p></section>")
@@ -110,10 +126,89 @@ object StatusPage {
             append("""<label>Ticket number<input name="number" value="${number.esc()}" placeholder="26-00000042" required autocomplete="off" inputmode="numeric"></label>""")
             append("""<label>Last 4 digits of your phone number<input name="phone" required maxlength="4" pattern="[0-9]{4}" inputmode="numeric" autocomplete="off"></label>""")
             append("""<button type="submit">Look it up</button></form></section>""")
+            if (canBook) append("""<section><h2>Need a repair?</h2><p><a class="button" href="status/book">Book a visit</a></p></section>""")
             append(contact(shop))
         }
 
         return page(shop, "Check on your repair", body, formHref = null)
+    }
+
+    /**
+     * Booking a visit at `/status/book`: the location, a day, a time free on it and their details
+     * @param day The day whose times are shown, the first with any when null
+     * @param form What they typed, kept when the page comes back with a [problem]
+     */
+    fun booking(choices: BookingService.Choices, day: LocalDate?, form: BookingService.Form = BookingService.Form(), problem: String? = null): String {
+        val shop = choices.profile
+        val location = choices.location
+        val shown = choices.days.firstOrNull { it.date == day } ?: choices.days.firstOrNull()
+        val several = choices.locations.size > 1
+        val at = if (several) "location=${location.identifier}&" else ""
+
+        val body = buildString {
+            append("""<section class="hero"><h1>Book a visit</h1>""")
+            append("<p>Pick a time and tell us about the device. Bring it in then and we'll check it in.</p>")
+            shop.booking.note.takeIf { it.isNotBlank() }?.let { append("""<p class="message">${it.esc()}</p>""") }
+            append("</section>")
+
+            if (several) {
+                append("""<section><h2>Where</h2><p class="choices">""")
+                choices.locations.forEach { place ->
+                    val chosen = if (place.identifier == location.identifier) """ class="chosen" aria-current="true"""" else ""
+                    append("""<a href="book?location=${place.identifier}"$chosen>${place.name.esc()}</a>""")
+                }
+                append("</p></section>")
+            }
+
+            append("<section><h2>When</h2>")
+            if (problem != null) append("""<p class="problem" role="alert">${problem.esc()}</p>""")
+            if (shown == null) {
+                append("<p>There are no times free in the next ${shop.booking.daysAhead} days. Call us and we'll find one.</p></section>")
+            } else {
+                append("""<p class="choices">""")
+                choices.days.forEach { option ->
+                    val chosen = if (option == shown) """ class="chosen" aria-current="true"""" else ""
+                    append("""<a href="book?${at}day=${option.date}"$chosen>${formatDay(option.times.first()).esc()}</a>""")
+                }
+                append("</p>")
+
+                append("""<form method="post" action="book"><input type="hidden" name="location" value="${location.identifier}">""")
+                append("""<fieldset class="times"><legend>${formatDay(shown.times.first()).esc()}</legend>""")
+                shown.times.forEach { time ->
+                    val checked = if (time == form.startsAt) " checked" else ""
+                    append("""<label class="time"><input type="radio" name="time" value="$time" required$checked><span class="num">${formatTime(time).esc()}</span></label>""")
+                }
+                append("</fieldset>")
+                append("""<label>Your name<input name="name" value="${form.name.esc()}" required maxlength="200" autocomplete="name"></label>""")
+                append("""<label>Phone<input name="phone" value="${form.phone.esc()}" maxlength="200" inputmode="tel" autocomplete="tel"></label>""")
+                append("""<label>Email<input name="email" value="${form.email.esc()}" maxlength="200" type="email" autocomplete="email"></label>""")
+                append("""<label>Device<input name="device" value="${form.device.esc()}" maxlength="200" placeholder="iPhone 14"></label>""")
+                append("""<label>What's wrong<textarea name="problem" maxlength="1000" rows="3">${form.problem.esc()}</textarea></label>""")
+                append("""<p class="muted">We need a phone number or an email to reach you.</p>""")
+                append("""<button type="submit">Book it</button></form></section>""")
+            }
+            append(contact(shop))
+        }
+
+        return page(shop, "Book a visit", body, formHref = "../status")
+    }
+
+    /** Booked: when and where */
+    fun booked(choices: BookingService.Choices, appointment: Appointment): String {
+        val shop = choices.profile
+        val where = listOfNotNull(
+            choices.location.name.takeIf { choices.locations.size > 1 },
+            shop.street.ifBlank { null },
+            listOf(shop.city, shop.state).filter { it.isNotBlank() }.joinToString(", ").ifBlank { null }
+        ).joinToString(", ")
+        val body = buildString {
+            append("""<section class="hero"><h1>You're booked</h1>""")
+            append("<p>We'll see you ${formatDayInSentence(appointment.startsAt).esc()} at <span class=\"num\">${formatTime(appointment.startsAt).esc()}</span>" +
+                (if (where.isNotBlank()) ", ${where.esc()}" else "") + ".</p>")
+            append("""<p class="muted">Need to change it? Call us.</p></section>""")
+            append(contact(shop))
+        }
+        return page(shop, "You're booked", body, formHref = "../status")
     }
 
     /** A link that doesn't work, a lookup that's been tried too often, and the like */
@@ -249,10 +344,15 @@ article{border-top:1px solid var(--line);padding:.6em 0}article:first-of-type{bo
 .rows .strong{font-weight:700;border-top:1px solid var(--line);margin-top:.3em;padding-top:.5em}
 address{font-style:normal}a{color:var(--accent)}
 form{display:grid;gap:14px}label{display:grid;gap:4px;font-weight:600}
-input{font:inherit;padding:.6em .7em;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+input,textarea{font:inherit;padding:.6em .7em;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--text)}
+.choices{display:flex;flex-wrap:wrap;gap:8px}.choices a{padding:.35em .85em;border:1px solid var(--line);border-radius:999px;text-decoration:none}
+.choices a.chosen{background:var(--accent);border-color:var(--accent);color:#fff}
+fieldset.times{border:0;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px}fieldset.times legend{font-weight:600;margin-bottom:6px;padding:0}
+label.time{display:flex;align-items:center;gap:6px;font-weight:500;border:1px solid var(--line);border-radius:10px;padding:.35em .7em}
 button{font:inherit;font-weight:600;padding:.7em;border-radius:10px;border:0;background:var(--accent);color:#fff;cursor:pointer}
 .problem{color:var(--danger);font-weight:600}
 .buttons{display:flex;gap:10px}.buttons button{flex:1}
+a.button{display:block;text-align:center;text-decoration:none;font-weight:600;padding:.7em;border-radius:10px;background:var(--accent);color:#fff}
 button.secondary{background:transparent;color:var(--text);border:1px solid var(--line)}
 footer{color:var(--muted);font-size:.85rem;padding-bottom:28px}
 """.trimIndent().replace("\n", "")

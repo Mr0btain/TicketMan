@@ -16,6 +16,12 @@ enum class ConnectionResult {
     /** The server's certificate is trusted but for another name, see [ServerTrust.wrongName] */
     WRONG_NAME,
 
+    /**
+     * The server answered, but it's a major version away from this app, see [RemoteHandler.versionNotice]. Nothing
+     * points at it, so nothing loads
+     */
+    INCOMPATIBLE,
+
     /** Server is reachable but logging in with the stored credentials failed */
     CONNECTED,
 

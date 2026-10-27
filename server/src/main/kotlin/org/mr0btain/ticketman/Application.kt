@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.database.LocalDatabase
 import org.mr0btain.ticketman.components.database.configureDatabase
 import org.mr0btain.ticketman.components.database.debug.seedTestData
+import org.mr0btain.ticketman.components.plugins.configureClientVersionCheck
 import org.mr0btain.ticketman.components.plugins.configureContentNegotiation
 import org.mr0btain.ticketman.components.plugins.configureCors
 import org.mr0btain.ticketman.components.plugins.configureProxy
@@ -25,6 +26,8 @@ import org.mr0btain.ticketman.components.service.RestoreService
 import org.mr0btain.ticketman.components.service.CheckInService
 import org.mr0btain.ticketman.components.service.EstimateService
 import org.mr0btain.ticketman.components.notify.NotificationService
+import org.mr0btain.ticketman.components.payments.CardPayments
+import org.mr0btain.ticketman.components.payments.PaymentService
 import org.mr0btain.ticketman.components.service.ImageService
 import org.mr0btain.ticketman.components.service.InvoiceService
 import org.mr0btain.ticketman.components.service.JwtService
@@ -103,6 +106,8 @@ fun Application.module() {
         configureTransfers()
         configureProxy(proxy)
         configureCors(environment.config.propertyOrNull("cors.hosts")?.getString().orEmpty())
+        configureClientVersionCheck()
+        val cardPayments = CardPayments(database.paymentDatabase, developmentMode)
         val invoiceService = InvoiceService(
             invoices = database.invoiceDatabase,
             tickets = database.ticketDatabase,
@@ -112,7 +117,8 @@ fun Application.module() {
             work = database.workDatabase,
             customers = database.customerDatabase,
             values = database.storedValueDatabase,
-            passcodes = database.passcodeDatabase
+            passcodes = database.passcodeDatabase,
+            cards = cardPayments
         )
 
         val checkInService = CheckInService(
@@ -126,7 +132,8 @@ fun Application.module() {
             devices = database.deviceDatabase,
             passcodes = database.passcodeDatabase,
             vault = passcodeVault,
-            appointments = database.appointmentDatabase
+            appointments = database.appointmentDatabase,
+            cards = cardPayments
         )
 
         val imageService = ImageService(database.imageDatabase, database.imageStore)
@@ -191,10 +198,28 @@ fun Application.module() {
 
         val storageService = StorageService(database.ticketDatabase, database.shopDatabase, notificationService, database.auditLogDatabase)
 
+        val paymentService = PaymentService(
+            cards = cardPayments,
+            invoiceService = invoiceService,
+            invoices = database.invoiceDatabase,
+            tickets = database.ticketDatabase,
+            shop = database.shopDatabase,
+            auditLog = database.auditLogDatabase
+        )
+
         configureRouting(
             userService, accountService, adminService, invoiceService, checkInService, imageService, backupService,
-            restoreService, notificationService, estimateService, database, loginLimiter, passcodeVault
+            restoreService, notificationService, estimateService, database, loginLimiter, passcodeVault,
+            paymentService = paymentService
         )
+
+        // Follows up card charges that are waiting: a reader nobody is watching, a link the customer paid and closed
+        launch(Dispatchers.IO) {
+            while (isActive) {
+                delay(PaymentService.SWEEP_INTERVAL)
+                paymentService.sweep()
+            }
+        }
 
         // Sends customer messages as they're queued, and tries again the ones that didn't go
         launch(Dispatchers.IO) {
@@ -230,7 +255,7 @@ fun Application.module() {
         val seed = environment.config.propertyOrNull("env.seedTestData")?.getString()?.trim().toBoolean()
         if (seed && database.ticketDatabase.count() == 0L) {
             AppLogger.e("SERVER:Seed", "SEED_TEST_DATA is on, filling the empty database with made up records. Never on a shop's real server")
-            seedTestData(database = database, request = SeedRequest(tickets = 150, customers = 60, inventory = 40, users = 6))
+            seedTestData(database = database, request = SeedRequest(tickets = 150, customers = 60, inventory = 40, users = 6), developmentMode = developmentMode)
         }
     }
 }

@@ -3,6 +3,8 @@ package org.mr0btain.ticketman.components.plugins
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.plugins.cors.routing.*
+import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.APP_VERSION_HEADER
 
 /**
  * Lets the web client's dev server (`wasmJsBrowserDevelopmentRun`, on its own port) call this server. Only in
@@ -21,10 +23,14 @@ fun Application.configureCors(hosts: String) {
         allowMethod(HttpMethod.Patch)
         allowHeader(HttpHeaders.Authorization)
         allowHeader(HttpHeaders.ContentType)
+        allowHeader(APP_VERSION_HEADER)
         allowNonSimpleContentTypes = true
 
         // Downloads read their file name from it
         exposeHeader(HttpHeaders.ContentDisposition)
+        // The ping's versions, which the client checks against its own. It sends its own on every call
+        exposeHeader(API_VERSION_HEADER)
+        exposeHeader(APP_VERSION_HEADER)
         maxAgeInSeconds = 600
     }
 }

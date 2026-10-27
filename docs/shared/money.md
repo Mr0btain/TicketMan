@@ -87,7 +87,7 @@ is due. At pickup the payments have to cover the balance; the server refuses a s
   `Money.parse` on start.
 - **An invoice keeps the tax rates it was made with**, its classes' included. The rate is read from the shop profile once, when the invoice
   is made (at check-in, or the first time it's opened), and stored on it. Changing the shop's tax rate only affects
-  invoices made after that. See [decisions](../decisions.md#invoices-keep-the-tax-rate-they-were-made-with).
+  invoices made after that.
 - **The symbol always goes first**, with a dot before the cents. Shops that write `12,34 €` get `€12.34`.
 
 ## See also

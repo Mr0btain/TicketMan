@@ -31,7 +31,7 @@ fun Route.counterRoute(
         // A device coming in: ticket, customer, tech, deposit and signature in one go
         post(CounterPaths.CHECK_IN) {
             call.respondAccount(
-                checkInService.checkIn(call.receive<CheckInRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                checkInService.checkIn(call.receive<CheckInRequest>(), call.username(userDatabase), call.getIdentifierFromToken(), call.workingLocation().identifier),
                 HttpStatusCode.Created
             )
         }
@@ -39,7 +39,7 @@ fun Route.counterRoute(
         // Selling from stock with no ticket, paid there and then
         post(CounterPaths.SALE) {
             call.respondAccount(
-                invoiceService.sell(call.receive<SaleRequest>(), call.username(userDatabase), call.getIdentifierFromToken()),
+                invoiceService.sell(call.receive<SaleRequest>(), call.username(userDatabase), call.getIdentifierFromToken(), call.workingLocation().identifier),
                 HttpStatusCode.Created
             )
         }
@@ -63,7 +63,8 @@ fun Route.counterRoute(
         get(CounterPaths.QUEUE) {
             val recent = (call.queryParameters["recent"]?.toIntOrNull() ?: DEFAULT_RECENT).coerceIn(0, MAX_LIMIT)
 
-            call.respond(HttpStatusCode.OK, database.queue(recent))
+            // Where the caller works, every location's for an admin looking at all of them
+            call.respond(HttpStatusCode.OK, database.queue(recent, call.locationScope().identifier))
         }
 
         // Earlier repairs on the same device for this customer within the shop's repeat window. A POST although

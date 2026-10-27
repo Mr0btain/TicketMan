@@ -6,17 +6,11 @@ How to build and run each part of TicketMan, run the tests, and look over UI cha
 
 | Tool | Needed for | Notes |
 |------|------------|-------|
-| JDK 17 or newer | Everything | Developed on JDK 21. Gradle itself comes with the repo (`./gradlew`) |
-| IntelliJ IDEA or Android Studio | Editing (optional) | With the Kotlin Multiplatform plugin. Run configurations are checked in under `.run/` |
+| JDK 17 or newer | Everything | Developed on JDK 21. |
 | Android SDK with platform 37 | Android builds only | FileKit 0.16 needs `compileSdk` 37. Point `sdk.dir` in `local.properties` at the SDK |
-| A recent browser | The web client | Chrome or Firefox, with Wasm GC support |
 | Python 3 | The end to end script | Standard library only |
-| Caddy | Trying the server behind a proxy (optional) | [caddyserver.com/docs/install](https://caddyserver.com/docs/install). No Docker needed |
 
-Use `./gradlew` in Git Bash, macOS or Linux, and `.\gradlew.bat` in PowerShell. The first build downloads a lot of
-dependencies and takes a while.
-
-## Run the server
+## Running the server
 
 ```bash
 PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pdevelopment
@@ -31,22 +25,15 @@ PORT=8098 DATA_PATH=/tmp/tm ADMIN_PASSWORD=admin_pass ./gradlew :server:run -Pde
   printed in the log.
 - `-Pdevelopment` turns on Ktor's development mode, which also allows seeding test data from the admin screen.
 
-The server is ready when the log shows `Responding at http://0.0.0.0:8098`. Opening that address in a browser
-returns an empty `200`, which is what clients use to check the server is up.
-
 All server settings are on the [configuration](configuration.md) page.
 
-## Run a client
+## Running a client
 
 ### Desktop
 
 ```bash
 ./gradlew :composeApp:run
 ```
-
-On first start, set the server address (`http://localhost:8098`) under Settings > Server, then log in as
-`admin` from the foot of the nav rail. The desktop client is the
-main target and the most complete.
 
 A debug build (`./gradlew :composeApp:run -DticketmanDebug=true`) with no address saved tries
 `http://localhost:8080`, so a server started with `./gradlew :server:run -Pdevelopment` and the default `PORT`
@@ -59,8 +46,7 @@ connects with nothing typed. The address is saved once a server answers there.
 ```
 
 `--auto` recompiles and reloads when a source file is saved. Without it, trigger a reload by running
-`./gradlew :composeApp:hotReloadDesktopMain` from another terminal. In the IDE, use the **Desktop [Run, hot]🔥**
-run configuration.
+`./gradlew :composeApp:hotReloadDesktopMain` from another terminal.
 
 ### Web
 
@@ -85,8 +71,6 @@ configuration from Android Studio. To reach a dev server on this machine from th
 `adb reverse tcp:<port> tcp:<port>` and connect to `http://localhost:<port>` (see
 [Platforms](client/platforms.md#android)). It needs a JDK on the path or in `JAVA_HOME`, like any Gradle task.
 
-To only check that the shared code compiles for Android, without the app: `./gradlew :composeApp:compileAndroidMain`.
-
 ### Desktop installers
 
 `./gradlew :composeApp:packageDistributionForCurrentOS` builds a `.deb`, `.msi` or `.dmg` for the machine you're on,
@@ -94,7 +78,7 @@ named for it (`TicketMan-Windows-0.8.0-x64.msi`, see [releasing](releasing.md#bu
 
 ### Behind a proxy
 
-Shops run the server behind a reverse proxy that does HTTPS ([Configuration](configuration.md#https)).
+Shops should run the server behind a reverse proxy that handles HTTPS ([Configuration](configuration.md#https)).
 To try that setup from the repo, without Docker, install Caddy and run:
 
 ```bash
@@ -156,8 +140,6 @@ check of the same setup (see [Testing](testing.md#docker)). Building and running
 ./gradlew :server:test --tests "org.mr0btain.ticketman.ApplicationTest"
 ```
 
-There's no lint task.
-
 `composeApp:desktopTest` includes `UiKitRulesTest`, which fails if a screen outside `ui/kit` hard codes a color,
 font size or shape, or uses a Material component. See [Kit rules](ui/kit-rules.md).
 
@@ -201,7 +183,6 @@ skips checking the certificate, for Caddy's local one.
 - **Server tests don't read `application.yaml`.** They use the helpers in `server/src/test/.../TestServer.kt`
   instead. The in-process test engine also handles big or cut-off request bodies differently from Netty, so check
   upload and download changes against a real `:server:run`.
-- **iOS only builds on a Mac.** Its targets are left out elsewhere (see [Platforms](client/platforms.md#ios)).
 
 ## See also
 

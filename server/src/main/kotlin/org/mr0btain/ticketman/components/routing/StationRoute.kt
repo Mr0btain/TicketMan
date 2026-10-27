@@ -30,7 +30,8 @@ fun Route.stationRoute(
                 return@post
             }
 
-            val registered = database.register(request.deviceId.trim(), request.name.trim(), call.username(userDatabase))
+            // At the location whoever registers it works at, which an admin can change
+            val registered = database.register(request.deviceId.trim(), request.name.trim(), call.username(userDatabase), call.workingLocation().identifier)
 
             if (registered == null) {
                 call.respond(HttpStatusCode.InternalServerError)

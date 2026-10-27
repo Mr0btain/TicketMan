@@ -285,6 +285,8 @@ tasks.register<Tar>("packageTarball") {
     group = "compose desktop"
     description = "Packs the app made by createDistributable into a .tar.gz"
     from(tasks.named("createDistributable"))
+    // Gradle 9's reproducible archives make every file 644, which would leave bin/TicketMan unable to run
+    useFileSystemPermissions()
     compression = Compression.GZIP
     archiveFileName.set(releaseName("tar.gz"))
     destinationDirectory.set(layout.buildDirectory.dir("compose/binaries/main/tar"))

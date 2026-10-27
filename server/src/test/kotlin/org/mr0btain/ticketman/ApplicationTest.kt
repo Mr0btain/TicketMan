@@ -2,6 +2,11 @@ package org.mr0btain.ticketman
 
 import org.mr0btain.ticketman.server.API_VERSION
 import org.mr0btain.ticketman.server.API_VERSION_HEADER
+import org.mr0btain.ticketman.server.APP_VERSION
+import org.mr0btain.ticketman.server.APP_VERSION_HEADER
+import org.mr0btain.ticketman.server.ApiRoutes
+import org.mr0btain.ticketman.server.AppVersion
+import org.mr0btain.ticketman.server.UserPaths
 import org.mr0btain.ticketman.server.response.SERVER_PING_BODY
 import org.mr0btain.ticketman.server.response.SERVER_PING_PATH
 import org.mr0btain.ticketman.data.customer.Customer
@@ -41,6 +46,30 @@ class ApplicationTest {
         val response = client.get(SERVER_PING_PATH)
         assertEquals(SERVER_PING_BODY, response.bodyAsText())
         assertEquals(API_VERSION.toString(), response.headers[API_VERSION_HEADER])
+        assertEquals(APP_VERSION, response.headers[APP_VERSION_HEADER])
+    }
+
+    @Test
+    fun aClientAMajorVersionAwayIsTurnedAway() = testApplication {
+        configureTestServer(dataDir)
+        val current = AppVersion.current
+        val newer = AppVersion(current.major + 1, 0, 0).toString()
+        val me = ApiRoutes.USER + UserPaths.ME
+
+        val rejected = client.get(me) { header(APP_VERSION_HEADER, newer) }
+        assertEquals(HttpStatusCode.UpgradeRequired, rejected.status)
+        assertContains(rejected.bodyAsText(), "Update the server to $newer")
+
+        // The ping still answers, so the client can say which to update
+        val ping = client.get(SERVER_PING_PATH) { header(APP_VERSION_HEADER, newer) }
+        assertEquals(HttpStatusCode.OK, ping.status)
+
+        // Its own version, a patch off, or none at all (older clients, scripts) go through to the route
+        val patch = AppVersion(current.major, current.minor, current.patch + 1).toString()
+        listOf(APP_VERSION, patch, null).forEach { version ->
+            val response = client.get(me) { version?.let { header(APP_VERSION_HEADER, it) } }
+            assertEquals(HttpStatusCode.Unauthorized, response.status, "with version $version")
+        }
     }
 
     @Test

@@ -29,6 +29,7 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
     var pinLocked by UserTable.pinLocked
     var photo by UserTable.photo
     var badgeCode by UserTable.badgeCode
+    var homeLocation by UserTable.homeLocation
 
     // For notes
     var notes by NoteEntity via UserNoteTable
@@ -50,7 +51,8 @@ class UserEntity(entityID: EntityID<Uuid>) : UuidEntity(entityID) {
             hasPin = pinHash.isNotBlank(),
             pinLocked = pinLocked,
             photo = photo?.let { ImageEntity.findById(it) }?.toStoredImage(),
-            hasBadge = badgeCode != null
+            hasBadge = badgeCode != null,
+            homeLocation = homeLocation
         )
     }
 

@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
@@ -64,15 +65,16 @@ class CounterDatabase(
     /**
      * Tickets that need attention at the counter. Picked up tickets are left out
      * @param recentLimit How many of the newest tickets to include
+     * @param location Only this location's tickets, null for every location's
      */
-    fun queue(recentLimit: Int): CounterQueueResponse {
+    fun queue(recentLimit: Int, location: Uuid? = null): CounterQueueResponse {
         val today = Instant.now().atZone(zone).toLocalDate()
         val startOfToday = today.atStartOfDay(zone).toInstant().toEpochMilli()
         val startOfTomorrow = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
 
         val tickets = dbQuery(QUEUE_TAG) {
             TicketEntity
-                .find { TicketTable.pickedUpAt.isNull() }
+                .find { TicketTable.pickedUpAt.isNull() and TicketTable.location.at(location) }
                 .orderBy(TicketTable.id to SortOrder.DESC)
                 .map { it.toTicket() }
                 .filter { it.status.status != TicketStatusType.PICKED_UP }

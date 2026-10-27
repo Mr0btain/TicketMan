@@ -56,6 +56,8 @@ import org.mr0btain.ticketman.ui.kit.containers.TmSwitchRow
 import org.mr0btain.ticketman.ui.kit.containers.TmTabs
 import org.mr0btain.ticketman.ui.kit.images.TmImagePager
 import org.mr0btain.ticketman.ui.kit.data.TmKeyValueRow
+import org.mr0btain.ticketman.ui.kit.data.TmQrCode
+import org.mr0btain.ticketman.ui.kit.data.TmScheduleBlock
 import org.mr0btain.ticketman.ui.kit.data.TmMoneyText
 import org.mr0btain.ticketman.ui.kit.data.TmTicketIdText
 import org.mr0btain.ticketman.ui.kit.data.TmCountBar
@@ -66,6 +68,10 @@ import org.mr0btain.ticketman.ui.kit.feedback.TmAccessBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmPriorityBadge
 import org.mr0btain.ticketman.ui.kit.feedback.TmStatusBadge
 import org.mr0btain.ticketman.ui.kit.feedback.LocalTicketStatuses
+import org.mr0btain.ticketman.ui.kit.feedback.LocalLocations
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocations
+import org.mr0btain.ticketman.ui.kit.feedback.TmLocationBadge
+import org.mr0btain.ticketman.data.location.Location
 import org.mr0btain.ticketman.ui.kit.feedback.TmDot
 import org.mr0btain.ticketman.ui.kit.feedback.TmEmptyState
 import org.mr0btain.ticketman.ui.kit.feedback.TmLoading
@@ -476,8 +482,17 @@ private fun BadgesSection() {
         Specimen("Priority") { TicketPriorityType.entries.forEach { TmPriorityBadge(it) } }
         Specimen("Access level") { AccessLevel.entries.forEach { TmAccessBadge(it) } }
         Specimen("Account") { UserStatus.entries.forEach { TmUserStatusBadge(it) } }
+        Specimen("Location, with more than one") {
+            CompositionLocalProvider(LocalLocations provides sampleLocations) {
+                sampleLocations.all.forEach { TmLocationBadge(it.identifier, always = true) }
+            }
+        }
     }
 }
+
+private val sampleLocations = TmLocations(
+    all = listOf(Location(name = "Main Street", main = true), Location(code = "DT", name = "Downtown"), Location(code = "NS", name = "Northside"))
+)
 
 // --------------------------------------- Lists ---------------------------------------
 
@@ -648,6 +663,20 @@ private fun DataSection() {
         TmKeyValueRow(label = "Invoice") { TmTicketIdText("INV-26-00000041") }
         TmKeyValueRow(label = "Refund") { TmMoneyText(-2500, signed = true) }
         TmKeyValueRow(label = "SKU", value = "SCR-IP13-BLK", numeric = true)
+
+        TmDivider()
+
+        // A payment link or status page, for the customer's phone at the counter
+        TmQrCode(text = "https://repairs.example.com/status/0123456789abcdef0123456789abcdef", size = 120.dp)
+
+        TmDivider()
+
+        // Shifts and time off on the calendar, squared off where they carry on past the edge
+        Row(horizontalArrangement = Arrangement.spacedBy(TmTheme.spacing.xs)) {
+            TmScheduleBlock(title = "Shift", subtitle = "9:00 to 17:00, 8h", tone = TmTheme.colors.accent, modifier = Modifier.weight(1f))
+            TmScheduleBlock(title = "Time off", subtitle = "Vacation", tone = TmTheme.colors.warning, modifier = Modifier.weight(2f), continuesAfter = true)
+            TmScheduleBlock(title = "Training", tone = TmTheme.colors.success, modifier = Modifier.weight(1f), continuesBefore = true)
+        }
     }
 }
 

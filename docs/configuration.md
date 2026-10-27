@@ -11,8 +11,8 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 
 | Setting | Env var | Default | What it does |
 |---------|---------|---------|--------------|
-| `ktor.deployment.port` | `PORT` | `8080` | Port for plain HTTP, on all interfaces. The server only speaks plain HTTP, see [HTTPS](#https) |
-| `env.trustedProxies` | `TRUSTED_PROXIES` | blank | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. Blank means loopback and the private ranges, `none` ignores the header |
+| `ktor.deployment.port` | `PORT` | `8080` | Port for plain HTTP, on all interfaces. for HTTPS, see [HTTPS](#https) |
+| `env.trustedProxies` | `TRUSTED_PROXIES` | blank | Addresses and CIDR ranges whose `X-Forwarded-For` is believed, comma separated. ex: example.com. Blank means loopback and the private ranges, `none` ignores the header |
 | `cors.hosts` | `CORS_HOSTS` | blank | Development mode only: hosts allowed to call the server from a browser, like `localhost:8080`. Blank allows any |
 | `jwt.secret` | `SECRET` | blank | Signs every access and refresh token. Blank means the server makes one and keeps it |
 | `jwt.audience` | - | `my-audience` | Put in tokens and checked on every request |
@@ -21,7 +21,7 @@ as `"$VAR:default"` is read from the environment variable `VAR`, falling back to
 | `env.name` | `NAME` | `Server` | Server name shown on the admin screen's Server tab |
 | `env.dataPath` | `DATA_PATH` | blank | Folder for the database, photos, backups and restores. Blank means the platform's app data folder |
 | `env.adminPassword` | `ADMIN_PASSWORD` | blank | Password for the `admin` user made when no admin exists. Blank means a random one is logged |
-| `env.seedTestData` | `SEED_TEST_DATA` | `false` | `true` fills an empty database with made up records on start, see [Seeding on start](#seeding-on-start). Never on a real shop's server |
+| `env.seedTestData` | `SEED_TEST_DATA` | `false` | `true` fills an empty database with made up records, see [Seeding on start](#seeding-on-start).|
 | `env.restartOnExit` | `RESTART_ON_EXIT` | `false` | `true` when something starts the server again after it exits, so admins can restart it from the Server tab. The Docker image sets it |
 | - | `TZ` | the machine's | The time zone "today", due dates and the yearly number rollover use. Set it in a container, which is UTC otherwise |
 | `backup.folder` | `BACKUP_DIR` | blank | Folder for a backup made once a day. Blank turns it off |
@@ -38,23 +38,14 @@ Tokens are signed with `SECRET` when it's set. When it isn't, the server makes a
 start, keeps it in `<DATA_PATH>/server/secret` (readable only by the account running the server) and logs
 `SECRET isn't set, made one in ...`. Later starts read the same file.
 
-Either way, keep it the same across restarts: changing `SECRET` or deleting the file signs everyone out, since every
-existing token stops verifying. A backup doesn't include the file, so a server restored onto a new machine makes a
-new secret and devices log in once more.
-
-Servers from before this used a fixed default written in `application.yaml`. The first start after upgrading makes
-a secret instead, so devices that relied on that default log in once more.
+Changing `SECRET` or deleting the file signs everyone out, since every existing token stops verifying. A backup 
+doesn't include the file, so a server restored onto a new machine makes a new secret and devices have to log in
+again.
 
 ### HTTPS
 
-The server never does HTTPS itself: a reverse proxy in front of it (Caddy, nginx, Traefik) does, usually with a
-public certificate, and talks plain HTTP to it. See [Running a server](operations.md#behind-a-reverse-proxy) for
-setting one up, and [Private certificates](operations.md#private-certificates) for a shop with no domain.
-
-`PROXY`, `TRUST_PROXY`, `SSL_PORT`, `HTTP_MODE`, `SSL_KEYSTORE`, `SSL_KEYSTORE_PASSWORD`, `SSL_KEY_ALIAS` and
-`SSL_KEY_PASSWORD` are from when it could, and are ignored. The startup log warns when any of them is set, and notes
-a `server/tls/` folder left in the data folder. The log also names the plain HTTP port the proxy should send to and
-the trusted ranges (`StartupLog.kt`, from `ProxySettings` in `components/proxy/`).
+For HTTPS it's recommended to use a reverse proxy in front of it (Caddy, nginx, Traefik), or something like a Cloudflare
+tunnel.
 
 ### `TRUSTED_PROXIES`
 
@@ -152,13 +143,7 @@ For HTTPS in development, put Caddy in front with `scripts/dev_proxy.sh` (see
 
 ### Seeding on start
 
-`SEED_TEST_DATA=true` fills the database with made up records on start, in or out of development mode, but only
-when it has no tickets yet, so a restart doesn't add more: 150 tickets, 60 customers, 40 inventory items and a few
-users, then work logged on about two thirds of the tickets, some deposits, and most of the done ones picked up and
-paid, all through `InvoiceService` like the counter. A blank shop profile is filled in (`Bench Repair (test data)`,
-6% tax, $80 an hour labor), and staff with known passwords are added: `tech` / `tech_pass` (Normal) and `clerk` /
-`clerk_pass` (Restricted). The log warns when it happens. `scripts/docker_local.sh` turns it on. Never set it on a
-shop's real server.
+`SEED_TEST_DATA=true` fills the database with made up records on start, used for testing and debug.
 
 ## Logging
 

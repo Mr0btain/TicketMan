@@ -8,6 +8,20 @@ plugins {
     alias(libs.plugins.serialize)
 }
 
+// BuildInfo.VERSION (ticketman.version), so the server and every client know the version they were built as and can
+// tell when they're too far apart to work together (server/AppVersion.kt)
+val generateBuildInfo = tasks.register("generateBuildInfo") {
+    val outputDir = layout.buildDirectory.dir("generated/buildInfo")
+    val appVersion = providers.gradleProperty("ticketman.version").get()
+    inputs.property("version", appVersion)
+    outputs.dir(outputDir)
+    doLast {
+        val file = outputDir.get().file("org/mr0btain/ticketman/BuildInfo.kt").asFile
+        file.parentFile.mkdirs()
+        file.writeText("package org.mr0btain.ticketman\n\nobject BuildInfo {\n    const val VERSION = \"$appVersion\"\n}\n")
+    }
+}
+
 kotlin {
     android {
         namespace = "org.mr0btain.ticketman.shared"
@@ -49,6 +63,10 @@ kotlin {
     }
 
     sourceSets {
+        commonMain {
+            kotlin.srcDir(generateBuildInfo)
+        }
+
         commonMain.dependencies {
             // put your Multiplatform dependencies here
             implementation(libs.kotlin.coroutines)

@@ -6,6 +6,7 @@ import io.ktor.http.*
 import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.InventoryDatabase
+import org.mr0btain.ticketman.components.database.LocationDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
@@ -76,11 +77,14 @@ class InventoryTest {
         val token = token(tech)
         add(screen, token)
 
-        assertEquals(screen, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()))
+        // Its count is at the main location, where the tech works
+        val read = json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText())
+        assertEquals(screen, read.copy(stockAt = emptyList()))
+        assertEquals(listOf(5), read.stockAt.map { it.stock })
 
         val repriced = screen.copy(priceCents = 11_500)
         assertEquals(HttpStatusCode.Accepted, post("/api/data/inventory/update", json.encodeToString(repriced), token).status)
-        assertEquals(repriced, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()))
+        assertEquals(repriced, json.decodeFromString<Inventory>(get(screen.identifier, token).bodyAsText()).copy(stockAt = emptyList()))
     }
 
     @Test
@@ -119,16 +123,17 @@ class InventoryTest {
 
         // Taking more than there is leaves it as it was, putting back always works
         val inventory = InventoryDatabase()
-        assertFalse(inventory.adjustStock(screen.identifier, 1))
+        val main = LocationDatabase().main().identifier
+        assertFalse(inventory.adjustStock(screen.identifier, main, 1))
         assertEquals(0, inventory.getById(screen.identifier)!!.stock)
-        assertTrue(inventory.adjustStock(screen.identifier, -3))
-        assertTrue(inventory.adjustStock(screen.identifier, 3))
+        assertTrue(inventory.adjustStock(screen.identifier, main, -3))
+        assertTrue(inventory.adjustStock(screen.identifier, main, 3))
         assertEquals(0, inventory.getById(screen.identifier)!!.stock)
 
         // Untracked stock isn't counted at all
         val cable = Inventory(name = "Cable")
         add(cable, token)
-        assertTrue(inventory.adjustStock(cable.identifier, 50))
+        assertTrue(inventory.adjustStock(cable.identifier, main, 50))
         assertEquals(Int.MAX_VALUE, inventory.getById(cable.identifier)!!.stock)
     }
 

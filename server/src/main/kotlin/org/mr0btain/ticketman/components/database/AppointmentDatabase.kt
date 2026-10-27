@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.components.database
 
+import org.jetbrains.exposed.v1.core.Op
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
@@ -40,11 +41,17 @@ class AppointmentDatabase {
             AppointmentTable.selectAll().where { AppointmentTable.id eq identifier }.toList().toAppointments().singleOrNull()
         }
 
-    /** Starting from [fromMillis] up to but not including [toMillis], earliest first. Null when the read failed */
-    fun between(fromMillis: Long, toMillis: Long): List<Appointment>? =
+    /**
+     * Starting from [fromMillis] up to but not including [toMillis], earliest first, at [location] or every
+     * location for null. Null when the read failed
+     */
+    fun between(fromMillis: Long, toMillis: Long, location: Uuid? = null): List<Appointment>? =
         dbQuery(GET_TAG) {
             AppointmentTable.selectAll()
-                .where { (AppointmentTable.startsAt greaterEq fromMillis) and (AppointmentTable.startsAt less toMillis) }
+                .where {
+                    (AppointmentTable.startsAt greaterEq fromMillis) and (AppointmentTable.startsAt less toMillis) and
+                        AppointmentTable.location.at(location)
+                }
                 .orderBy(AppointmentTable.startsAt to SortOrder.ASC)
                 .toList()
                 .toAppointments()
@@ -70,6 +77,7 @@ class AppointmentDatabase {
                 row[status] = appointment.status.name
                 row[createdBy] = appointment.createdBy
                 row[createdAt] = appointment.createdAt
+                row[location] = appointment.locationIdentifier
                 row.fill(appointment)
             }
             true
@@ -161,7 +169,8 @@ class AppointmentDatabase {
                 ticketIdentifier = row[AppointmentTable.ticket],
                 reminderSentAt = row[AppointmentTable.reminderSentAt],
                 createdBy = row[AppointmentTable.createdBy],
-                createdAt = row[AppointmentTable.createdAt]
+                createdAt = row[AppointmentTable.createdAt],
+                locationIdentifier = row[AppointmentTable.location]
             )
         }
     }

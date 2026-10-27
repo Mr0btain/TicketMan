@@ -36,9 +36,18 @@ object InvoiceTable : UuidTable("invoices") {
     // Added with storage terms: staff took the storage line off, so it isn't put back
     val storageWaived = bool("storage_waived").default(false)
 
+    // Added with locations: the location's code its number starts with, blank for the main location's
+    val numberPrefix = text("number_prefix").default("")
+
+    // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
+    val location = uuid("location_id").nullable().index()
+
     init {
-        uniqueIndex("invoices_number_unique", numberYear, numberSequence)
+        // Older databases have it on (year, sequence) alone until LocalDatabase's number-prefix fix
+        uniqueIndex(NUMBER_INDEX, numberPrefix, numberYear, numberSequence)
     }
+
+    const val NUMBER_INDEX = "invoices_number_unique"
 }
 
 /** Lines on an invoice, in order */
@@ -77,4 +86,15 @@ object InvoicePaymentTable : UuidTable("invoice_payments") {
 
     // Added with gift cards: the card's code for a GIFT_CARD payment or refund
     val reference = text("reference").default("")
+
+    // Added with card processing: the processor, its id for the money, the charge it came from and what a refund
+    // gives back
+    val processor = text("processor").nullable()
+    val processorReference = text("processor_reference").default("")
+    val charge = uuid("charge_id").nullable()
+    val refundOf = uuid("refund_of").nullable()
+
+    // Added with tips and surcharges: charged on the card on top of the amount
+    val tipCents = long("tip_cents").default(0)
+    val surchargeCents = long("surcharge_cents").default(0)
 }

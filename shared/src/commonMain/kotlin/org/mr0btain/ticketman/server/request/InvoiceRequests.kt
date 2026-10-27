@@ -35,13 +35,16 @@ data class ChargeChange(val before: Charge, val after: Charge)
 /**
  * A payment being taken
  * @param reference The gift card's code when it's paid with one
+ * @param chargeIdentifier A card reader charge already paid with no invoice, which this payment puts on one. Its
+ * method is [PaymentMethod.CARD] and its amount the charge's
  */
 @Serializable
 data class PaymentRequest(
     val method: PaymentMethod,
     val amountCents: Long,
     val note: String = "",
-    val reference: String = ""
+    val reference: String = "",
+    val chargeIdentifier: Uuid? = null
 )
 
 /**
@@ -98,6 +101,8 @@ data class PickupRequest(
  * @param returns Parts coming back, put back in stock. Only ones the invoice sold and not already returned
  * @param reference For [PaymentMethod.GIFT_CARD], the card it goes back onto; blank makes a new one.
  * [PaymentMethod.STORE_CREDIT] goes to the invoice's customer
+ * @param paymentIdentifier A card payment taken through the processor, to give the money back onto that card. The
+ * method is then [PaymentMethod.CARD]
  */
 @Serializable
 data class RefundRequest(
@@ -105,7 +110,8 @@ data class RefundRequest(
     val amountCents: Long,
     val reason: String,
     val returns: List<ReturnedPart> = emptyList(),
-    val reference: String = ""
+    val reference: String = "",
+    val paymentIdentifier: Uuid? = null
 )
 
 /**

@@ -34,7 +34,16 @@ object PurchaseOrderTable : UuidTable("purchase_orders") {
     val receivedAt = long("received_at").nullable()
     val expectedAt = long("expected_at").nullable()
 
+    // Added with locations: where it's delivered, and the code its number starts with
+    val numberPrefix = text("number_prefix").default("")
+
+    // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
+    val location = uuid("location_id").nullable().index()
+
     init {
-        uniqueIndex("purchase_orders_number_unique", numberYear, numberSequence)
+        // Older databases have it on (year, sequence) alone until LocalDatabase's number-prefix fix
+        uniqueIndex(NUMBER_INDEX, numberPrefix, numberYear, numberSequence)
     }
+
+    const val NUMBER_INDEX = "purchase_orders_number_unique"
 }

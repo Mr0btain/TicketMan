@@ -8,6 +8,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabase
+import org.mr0btain.ticketman.components.database.LocationDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.audit.AuditAction
 import org.mr0btain.ticketman.data.image.StoredImage
@@ -16,11 +17,14 @@ import org.mr0btain.ticketman.logging.AppLogger
 import org.mr0btain.ticketman.server.InventoryPaths
 import org.mr0btain.ticketman.server.RecordPaths
 import org.mr0btain.ticketman.server.request.StockChangeRequest
+import org.mr0btain.ticketman.data.inventory.StockTransfer
+import org.mr0btain.ticketman.data.inventory.StockTransferRequest
 
 fun Route.inventoryRoute(
     database: InventoryDatabase,
     userDatabase: UserDatabase,
-    auditLog: AuditLogDatabase
+    auditLog: AuditLogDatabase,
+    locations: LocationDatabase = LocationDatabase()
 ) {
     val TAG = "InventoryRoute"
     val GET_TAG = "$TAG:Get"
@@ -33,7 +37,8 @@ fun Route.inventoryRoute(
     authenticate("restricted") {
         get(RecordPaths.GET) {
             val identifier = call.uuidParameter("identifier")
-            val result = identifier?.let { database.getById(it) }
+            // Its count where the caller works, or added up across every location
+            val result = identifier?.let { database.getById(it, call.locationScope().identifier) }
 
             if (result != null) {
                 call.respond(HttpStatusCode.OK, result)
@@ -44,7 +49,7 @@ fun Route.inventoryRoute(
         }
 
         get(RecordPaths.FETCH) {
-            val request = call.pagedRequest() ?: return@get call.respondBadQuery()
+            val request = call.pagedRequest()?.at(call.locationScope()) ?: return@get call.respondBadQuery()
 
             val result = database.getPagedItems(request)
 
@@ -73,7 +78,7 @@ fun Route.inventoryRoute(
     authenticate("restricted") {
         // Exactly matching a barcode or SKU, for a scanner at the counter
         get(InventoryPaths.BY_CODE) {
-            val item = call.parameters["code"]?.let { database.getByCode(it) }
+            val item = call.parameters["code"]?.let { database.getByCode(it, call.locationScope().identifier) }
 
             if (item != null) call.respond(HttpStatusCode.OK, item) else call.respond(HttpStatusCode.NotFound)
         }
@@ -131,7 +136,9 @@ fun Route.inventoryRoute(
                 return@post
             }
 
-            val saved = received.takeIf { database.add(it) }?.let { database.getById(it.identifier) }
+            // Its stock is the count where the caller works, the other locations have none yet
+            val location = call.workingLocation().identifier
+            val saved = received.takeIf { database.add(it, location) }?.let { database.getById(it.identifier, location) }
 
             if (saved == null) {
                 call.respond(HttpStatusCode.InternalServerError)
@@ -158,13 +165,57 @@ fun Route.inventoryRoute(
                 return@post
             }
 
-            if (!database.update(received)) {
+            // The reorder point is the one where the caller works
+            if (!database.update(received, call.workingLocation().identifier)) {
                 call.respond(HttpStatusCode.NotFound)
                 return@post
             }
 
             call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, received.identifier, received.name)
             call.respond(HttpStatusCode.Accepted)
+        }
+    }
+
+    authenticate("restricted") {
+        get(InventoryPaths.TRANSFERS) {
+            val identifier = call.uuidParameter("identifier") ?: return@get call.respond(HttpStatusCode.NotFound)
+            database.transfers(identifier)?.let { call.respond(HttpStatusCode.OK, it) } ?: call.respond(HttpStatusCode.InternalServerError)
+        }
+    }
+
+    // Parts from one location to another, both counts changed together
+    authenticate {
+        post(InventoryPaths.TRANSFER) {
+            val identifier = call.uuidParameter("identifier") ?: return@post call.respond(HttpStatusCode.NotFound)
+            val request = call.receive<StockTransferRequest>()
+            request.problem()?.let { return@post call.respond(HttpStatusCode.BadRequest, it) }
+
+            val from = locations.get(request.fromLocation)?.takeIf { !it.retired }
+            val to = locations.get(request.toLocation)?.takeIf { !it.retired }
+            if (from == null || to == null) return@post call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's")
+
+            val transfer = StockTransfer(
+                itemIdentifier = identifier,
+                fromLocation = from.identifier,
+                toLocation = to.identifier,
+                quantity = request.quantity,
+                note = request.note.trim(),
+                movedBy = call.username(userDatabase),
+                movedAt = System.currentTimeMillis()
+            )
+            when (database.transfer(transfer)) {
+                InventoryDatabase.Transfer.DONE -> {
+                    call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Moved ${request.quantity} from ${from.name} to ${to.name}" + transfer.note.ifBlank { null }?.let { ": $it" }.orEmpty())
+                    call.respond(HttpStatusCode.Created, database.transfers(identifier, limit = 1)?.firstOrNull() ?: transfer)
+                }
+                InventoryDatabase.Transfer.SHORT -> {
+                    val there = database.stockAt(identifier, from.identifier) ?: 0
+                    call.respond(HttpStatusCode.Conflict, "Only $there at ${from.name}")
+                }
+                InventoryDatabase.Transfer.UNTRACKED -> call.respond(HttpStatusCode.BadRequest, "Its stock isn't counted")
+                InventoryDatabase.Transfer.NOT_FOUND -> call.respond(HttpStatusCode.NotFound)
+                null -> call.respond(HttpStatusCode.InternalServerError)
+            }
         }
     }
 
@@ -184,13 +235,17 @@ fun Route.inventoryRoute(
                 return@post
             }
 
-            when (database.setStock(identifier, request.from, request.to)) {
+            // The count at the location asked about, or where the caller works
+            val location = request.locationIdentifier?.let { id -> locations.get(id)?.takeIf { !it.retired } ?: return@post call.respond(HttpStatusCode.BadRequest, "That location isn't one of the shop's") }
+                ?: call.workingLocation()
+
+            when (database.setStock(identifier, location.identifier, request.from, request.to)) {
                 InventoryDatabase.StockChange.DONE -> {
-                    call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Stock ${request.from} to ${request.to}")
+                    call.audit(auditLog, AuditAction.UPDATE, ENTITY_TYPE, identifier, "Stock at ${location.name} ${request.from} to ${request.to}")
                     call.respond(HttpStatusCode.Accepted)
                 }
                 InventoryDatabase.StockChange.CHANGED_SINCE -> {
-                    val now = database.getById(identifier)?.stock
+                    val now = database.stockAt(identifier, location.identifier)
                     val count = if (now == Int.MAX_VALUE) "untracked" else "$now"
                     call.respond(HttpStatusCode.Conflict, "Stock changed to $count since this was opened, check the count and try again")
                 }

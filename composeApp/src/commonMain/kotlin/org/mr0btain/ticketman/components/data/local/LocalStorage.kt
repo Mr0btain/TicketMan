@@ -27,6 +27,8 @@ class LocalStorage(private val store: KeyValueStore) {
     private var _updateInterval: UpdateInterval = UpdateInterval.DEFAULT
     private var _deviceId: String = ""
     private var _deviceName: String = ""
+    private var _workingLocation: String = ""
+    private var _calendarView: String = ""
 
     var username: String
         get() = _username
@@ -202,6 +204,25 @@ class LocalStorage(private val store: KeyValueStore) {
             store.putString(DEVICE_NAME_KEY, _deviceName)
         }
 
+    /**
+     * The location this device works at, a location's id or `all`, as picked last. Blank until one is picked, when
+     * the station's or the user's home location is used
+     */
+    var workingLocation: String
+        get() = _workingLocation
+        set(value) {
+            _workingLocation = value.trim()
+            store.putString(WORKING_LOCATION_KEY, _workingLocation)
+        }
+
+    /** The calendar's view as last picked, by name. Blank for the default */
+    var calendarView: String
+        get() = _calendarView
+        set(value) {
+            _calendarView = value
+            store.putString(CALENDAR_VIEW_KEY, value)
+        }
+
     // Initialize by pulling stored values
     init {
         _accessToken = store.getString(ACCESS_TOKEN_KEY, "")
@@ -226,6 +247,8 @@ class LocalStorage(private val store: KeyValueStore) {
 
         _deviceId = store.getString(DEVICE_ID_KEY, "")
         _deviceName = store.getString(DEVICE_NAME_KEY, "").ifBlank { defaultDeviceName() }
+        _workingLocation = store.getString(WORKING_LOCATION_KEY, "")
+        _calendarView = store.getString(CALENDAR_VIEW_KEY, "")
     }
 
     private fun defaultDeviceName(): String = getPlatform().name
@@ -288,6 +311,8 @@ class LocalStorage(private val store: KeyValueStore) {
         private const val CACHE_SIZE_KEY = "cache_size"
         private const val UPDATE_INTERVAL_KEY = "update_interval"
         private const val DEVICE_ID_KEY = "device_id"
+        private const val WORKING_LOCATION_KEY = "working_location"
+        private const val CALENDAR_VIEW_KEY = "calendar_view"
         private const val DEVICE_NAME_KEY = "device_name"
         private const val STATION_ID_KEY = "station_id"
         private const val STATION_SECRET_KEY = "station_secret"

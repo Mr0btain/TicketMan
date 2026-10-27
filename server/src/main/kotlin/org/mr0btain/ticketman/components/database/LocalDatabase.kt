@@ -9,6 +9,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.tables.DataFixTable
@@ -17,6 +18,13 @@ import org.mr0btain.ticketman.components.database.tables.customer.CustomerNoteTa
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTable
 import org.mr0btain.ticketman.components.database.tables.customer.CustomerTicketTable
 import org.mr0btain.ticketman.components.database.tables.image.ImageTable
+import org.mr0btain.ticketman.components.database.tables.location.InventoryStockTable
+import org.mr0btain.ticketman.components.database.tables.location.StockTransferTable
+import org.mr0btain.ticketman.components.database.tables.location.LocationTable
+import org.mr0btain.ticketman.components.database.tables.schedule.ScheduleTable
+import org.mr0btain.ticketman.components.database.tables.schedule.TimeOffAllowanceTable
+import org.mr0btain.ticketman.components.database.tables.schedule.TimeOffRequestTable
+import org.jetbrains.exposed.v1.core.isNull
 import org.mr0btain.ticketman.components.database.tables.inventory.InventoryImageTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoiceChargeTable
 import org.mr0btain.ticketman.components.database.tables.invoice.InvoicePaymentTable
@@ -33,6 +41,8 @@ import org.mr0btain.ticketman.components.database.tables.ticket.TicketWorkTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketStatusHistoryTable
 import org.mr0btain.ticketman.components.database.tables.ticket.TicketTable
 import org.mr0btain.ticketman.components.database.tables.notify.NotifySettingsTable
+import org.mr0btain.ticketman.components.database.tables.payment.CardChargeTable
+import org.mr0btain.ticketman.components.database.tables.payment.PaymentSettingsTable
 import org.mr0btain.ticketman.components.database.tables.notify.OutboxTable
 import org.mr0btain.ticketman.components.database.tables.estimate.EstimateTable
 import org.mr0btain.ticketman.components.database.tables.storedvalue.CustomerCreditTable
@@ -109,6 +119,10 @@ class LocalDatabase (
     val reportDatabase = ReportDatabase(invoiceDatabase)
     val appointmentDatabase = AppointmentDatabase()
     val timeClockDatabase = TimeClockDatabase()
+    val locationDatabase = LocationDatabase()
+    val scheduleDatabase = ScheduleDatabase()
+    val timeOffDatabase = TimeOffDatabase()
+    val paymentDatabase = PaymentDatabase()
     val imageDatabase = ImageDatabase { recordDatabases }
 
     /**
@@ -156,6 +170,14 @@ class LocalDatabase (
         CommissionRateTable,
         AppointmentTable,
         TimeEntryTable,
+        PaymentSettingsTable,
+        CardChargeTable,
+        LocationTable,
+        InventoryStockTable,
+        StockTransferTable,
+        ScheduleTable,
+        TimeOffAllowanceTable,
+        TimeOffRequestTable,
         DataFixTable
     )
 
@@ -175,7 +197,12 @@ class LocalDatabase (
         CustomerTable,
         InvoicePaymentTable,
         InvoiceChargeTable,
-        EstimateTable
+        EstimateTable,
+        AppointmentTable,
+        PurchaseOrderTable,
+        TimeEntryTable,
+        ScheduleTable,
+        CardChargeTable
     )
 
     /**
@@ -194,7 +221,7 @@ class LocalDatabase (
             // Indexes on existing tables aren't added by the above
             exec(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.NUMBER_INDEX} " +
-                    "ON ${TicketTable.tableName} (${TicketTable.numberYear.name}, ${TicketTable.numberSequence.name})"
+                    "ON ${TicketTable.tableName} (${TicketTable.numberPrefix.name}, ${TicketTable.numberYear.name}, ${TicketTable.numberSequence.name})"
             )
             exec(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ${TicketTable.STATUS_TOKEN_INDEX} " +
@@ -221,6 +248,12 @@ class LocalDatabase (
         }
         // Devices are kept per customer since; older tickets get theirs from what was typed on them
         runOnce("customer-devices") { deviceDatabase.backfill() }
+        // Locations: numbers are unique per location's code, stock is counted per location, and everything from
+        // before belongs to the main one
+        runOnce("number-prefix-indexes") { prefixNumberIndexes() }
+        val main = locationDatabase.ensureMain()
+        runOnce("stock-per-location") { inventoryDatabase.moveStockTo(main.identifier) }
+        assignMainLocation(main.identifier)
         removeDetachedNotes()
     }
 
@@ -263,6 +296,39 @@ class LocalDatabase (
     }
 
     /**
+     * Numbers were unique per year; with locations they're unique per location's code and year. The old indexes go
+     * and the new ones take their place (a fresh database already has them)
+     */
+    private fun prefixNumberIndexes() {
+        val transaction = TransactionManager.current()
+        listOf(
+            Triple(TicketTable.NUMBER_INDEX, TicketTable.tableName, listOf(TicketTable.numberPrefix, TicketTable.numberYear, TicketTable.numberSequence)),
+            Triple(InvoiceTable.NUMBER_INDEX, InvoiceTable.tableName, listOf(InvoiceTable.numberPrefix, InvoiceTable.numberYear, InvoiceTable.numberSequence)),
+            Triple(PurchaseOrderTable.NUMBER_INDEX, PurchaseOrderTable.tableName, listOf(PurchaseOrderTable.numberPrefix, PurchaseOrderTable.numberYear, PurchaseOrderTable.numberSequence))
+        ).forEach { (index, table, columns) ->
+            transaction.exec("DROP INDEX IF EXISTS $index")
+            transaction.exec("CREATE UNIQUE INDEX $index ON $table (${columns.joinToString { it.name }})")
+        }
+    }
+
+    /**
+     * Gives rows without a location the main one: everything from before locations, and anything written by an
+     * older client's request that didn't say. Run every start, it only touches rows that need it
+     */
+    private fun assignMainLocation(main: kotlin.uuid.Uuid) {
+        try {
+            transaction {
+                listOf(TicketTable.location, InvoiceTable.location, StationTable.location, AppointmentTable.location, PurchaseOrderTable.location, TimeEntryTable.location)
+                    .forEach { column ->
+                        column.table.update(where = { column.isNull() }) { row -> row[column] = main }
+                    }
+            }
+        } catch (ex: Exception) {
+            AppLogger.e(DATA_FIX_TAG, "Main location: ${SimpleResult.FAIL}", ex)
+        }
+    }
+
+    /**
      * Deletes notes no record links to, left by removing customers, tickets and items before removing took their
      * notes along. Their photos are picked up by the next image sweep
      */
@@ -294,7 +360,8 @@ class LocalDatabase (
             UserTable.pinFailedAttempts to "DEFAULT 0 NOT NULL",
             UserTable.pinLocked to "DEFAULT FALSE NOT NULL",
             UserTable.photo to "NULL",
-            UserTable.badgeCode to "NULL"
+            UserTable.badgeCode to "NULL",
+            UserTable.homeLocation to "NULL"
         ).forEach { (column, constraints) ->
             exec(
                 "ALTER TABLE ${identity(UserTable)} ADD COLUMN IF NOT EXISTS " +

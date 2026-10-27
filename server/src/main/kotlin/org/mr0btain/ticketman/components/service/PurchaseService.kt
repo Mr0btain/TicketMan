@@ -3,6 +3,7 @@ package org.mr0btain.ticketman.components.service
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.mr0btain.ticketman.components.database.AuditLogDatabase
 import org.mr0btain.ticketman.components.database.InventoryDatabase
+import org.mr0btain.ticketman.components.database.LocationDatabase
 import org.mr0btain.ticketman.components.database.PurchaseDatabase
 import org.mr0btain.ticketman.components.database.ShopDatabase
 import org.mr0btain.ticketman.components.database.TicketDatabase
@@ -31,7 +32,8 @@ class PurchaseService(
     private val tickets: TicketDatabase,
     private val shop: ShopDatabase,
     private val auditLog: AuditLogDatabase,
-    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() }
+    private val now: () -> Long = { Clock.System.now().toEpochMilliseconds() },
+    private val locations: LocationDatabase = LocationDatabase()
 ) {
     private val moves = TicketMoves(tickets, shop, now)
 
@@ -71,8 +73,8 @@ class PurchaseService(
 
     // ------------------------------------------ Orders ------------------------------------------
 
-    /** A new draft */
-    fun create(request: PurchaseOrderRequest, staffName: String, actor: Uuid?): AccountResult<PurchaseOrder> = synchronized(LOCK) {
+    /** A new draft, delivered to [location] */
+    fun create(request: PurchaseOrderRequest, staffName: String, actor: Uuid?, location: Uuid? = null): AccountResult<PurchaseOrder> = synchronized(LOCK) {
         val supplierName = supplierName(request.supplierIdentifier) ?: return AccountResult.Invalid("That supplier doesn't exist")
         val lines = linesFor(request.lines) ?: return AccountResult.Invalid(linesProblem(request.lines)!!)
 
@@ -84,7 +86,8 @@ class PurchaseService(
                 note = request.note.trim(),
                 createdAt = now(),
                 createdBy = staffName,
-                expectedAt = request.expectedAt
+                expectedAt = request.expectedAt,
+                locationIdentifier = location ?: locations.main().identifier
             )
         ) ?: return AccountResult.Invalid("Couldn't save the order")
 
@@ -158,7 +161,7 @@ class PurchaseService(
             if (!purchases.save(received)) throw IllegalStateException("Order not saved")
             order.lines.filter { it.identifier in arriving }.forEach { line ->
                 // Untracked items stay untracked, adjustStock leaves them alone
-                inventory.adjustStock(line.inventoryIdentifier, -arriving.getValue(line.identifier))
+                inventory.adjustStock(line.inventoryIdentifier, order.locationIdentifier ?: locations.main().identifier, -arriving.getValue(line.identifier))
                 if (line.unitCostCents > 0) inventory.setCost(line.inventoryIdentifier, line.unitCostCents)
             }
 
@@ -203,8 +206,8 @@ class PurchaseService(
     }
 
     /**
-     * A part a ticket needs: added to the supplier's newest draft, or a new draft when there's none. The ticket
-     * moves on when that order is placed
+     * A part a ticket needs: added to the supplier's newest draft for the ticket's location, or a new draft when
+     * there's none. The ticket moves on when that order is placed
      */
     fun orderPart(request: OrderPartRequest, staffName: String, actor: Uuid?): AccountResult<PurchaseOrder> = synchronized(LOCK) {
         val ticket = tickets.getById(request.ticketIdentifier) ?: return AccountResult.NotFound
@@ -222,11 +225,14 @@ class PurchaseService(
             ticketIdentifier = ticket.identifier
         )
 
-        val draft = purchases.unfinished().orEmpty().lastOrNull { it.status == PurchaseStatus.DRAFT && it.supplierIdentifier == supplier }
+        val location = ticket.locationIdentifier ?: locations.main().identifier
+        val draft = purchases.unfinished().orEmpty().lastOrNull {
+            it.status == PurchaseStatus.DRAFT && it.supplierIdentifier == supplier && (it.locationIdentifier ?: locations.main().identifier) == location
+        }
         val order = if (draft != null) {
             draft.copy(lines = draft.lines + line).takeIf { purchases.save(it) } ?: return AccountResult.Invalid("Couldn't save the order")
         } else {
-            purchases.add(PurchaseOrder(supplierIdentifier = supplier, supplierName = supplierName, lines = listOf(line), createdAt = now(), createdBy = staffName))
+            purchases.add(PurchaseOrder(supplierIdentifier = supplier, supplierName = supplierName, lines = listOf(line), createdAt = now(), createdBy = staffName, locationIdentifier = location))
                 ?: return AccountResult.Invalid("Couldn't save the order")
         }
 

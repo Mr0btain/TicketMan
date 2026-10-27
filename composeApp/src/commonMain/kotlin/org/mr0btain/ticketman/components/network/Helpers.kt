@@ -97,6 +97,7 @@ fun networkErrorFor(statusCode: Int): NetworkError =
         408 -> NetworkError.REQUEST_TIMEOUT
         409 -> NetworkError.CONFLICT
         413 -> NetworkError.PAYLOAD_TOO_LARGE
+        426 -> NetworkError.INCOMPATIBLE_VERSION
         429 -> NetworkError.TOO_MANY_REQUESTS
         // The server never sends these itself, only a proxy in front of it does
         502, 503, 504 -> NetworkError.PROXY_SERVER_DOWN

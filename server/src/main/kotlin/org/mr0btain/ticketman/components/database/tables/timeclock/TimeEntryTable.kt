@@ -13,4 +13,7 @@ object TimeEntryTable : UuidTable("time_entries") {
     val station = text("station").default("")
     val note = text("note").default("")
     val editedBy = text("edited_by").default("")
+
+    // Added with locations: the location it belongs to. Null only until LocalDatabase gives older rows the main one
+    val location = uuid("location_id").nullable().index()
 }

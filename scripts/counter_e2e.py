@@ -21,6 +21,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import socket
 import socketserver
 import ssl
@@ -53,12 +54,15 @@ def send(request):
         return error.code, error.read(), error.headers
 
 
-def call(method, path, body=None, token=None, expect=None, raw=None, content_type="application/json"):
+def call(method, path, body=None, token=None, expect=None, raw=None, content_type="application/json", location=None):
     data = raw if raw is not None else None if body is None else json.dumps(body).encode()
     request = urllib.request.Request(BASE + path, data=data, method=method)
     request.add_header("Content-Type", content_type)
     if token:
         request.add_header("Authorization", "Bearer " + token)
+    # Where the request works, like the client's X-TicketMan-Location
+    if location:
+        request.add_header("X-TicketMan-Location", location)
     status, content, _ = send(request)
     text = content.decode(errors="replace")
     if expect is not None and status != expect:
@@ -532,6 +536,189 @@ status, paid_csv, _ = send(urllib.request.Request(f"{BASE}/api/invoice/export?fr
 payment_rows = paid_csv.decode().strip().split("\r\n")
 check(status == 200 and any(",-129.90," in r and "Cracked in the box" in r for r in payment_rows), f"payments {status}: {payment_rows[:3]}")
 step(f"Today's books export: {len(qb_rows) - 1} QuickBooks lines, {len(xero_rows) - 1} Xero lines and {len(payment_rows) - 1} payments, the screen's refund among them")
+
+# ------------------------------------------ Card payments ------------------------------------------
+def charge_settled(identifier, seconds=20):
+    """Asks about a reader charge like the counter does, until it's no longer waiting"""
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        _, charge = call("GET", f"/api/payment/charge/{identifier}", token=pin, expect=200)
+        if charge["status"] != "PENDING":
+            return charge
+        time.sleep(0.5)
+    raise SystemExit(f"FAIL charge {identifier} still waiting after {seconds}s")
+
+
+simulated = {"enabled": True, "provider": "SIMULATED", "readers": [{"identifier": "sim_reader_1", "name": "Front reader"}], "onlinePayments": True}
+status, _ = call("POST", "/api/payment/settings", simulated, admin)
+if status == 400:
+    step("Card payments skipped: the simulated processor only runs on a server in development mode")
+else:
+    check(status == 200, f"payment settings answered {status}")
+    _, shop = call("GET", "/api/shop", token=admin, expect=200)
+    call("POST", "/api/shop/update", {**shop, "publicUrl": BASE}, admin, expect=202)
+    _, options = call("GET", "/api/payment/options", token=pin, expect=200)
+    check(options["enabled"] and options["links"] and options["onlinePayments"] and [r["name"] for r in options["readers"]] == ["Front reader"], f"options {options}")
+
+    mini = arrived["ticket"]
+    _, mini_invoice = call("POST", f"/api/invoice/ticket/{mini['identifier']}", token=pin, expect=200)
+    _, mini_invoice = call("POST", f"/api/invoice/{mini_invoice['identifier']}/update", {
+        "added": [{"identifier": uid(), "type": "LABOR", "description": "iPad mini screen", "quantity": 1, "unitPriceCents": 9000, "taxable": False}]
+    }, pin, expect=200)
+    invoice_id = mini_invoice["identifier"]
+    owed = mini_invoice["totalCents"] - sum(p["amountCents"] for p in mini_invoice["payments"])
+
+    reader = {"readerIdentifier": "sim_reader_1", "invoiceIdentifier": invoice_id}
+    call("POST", "/api/payment/charge/reader", {**reader, "amountCents": owed + 1}, pin, expect=400)
+    _, declined = call("POST", "/api/payment/charge/reader", {**reader, "amountCents": 1002}, pin, expect=201)
+    declined = charge_settled(declined["identifier"])
+    check(declined["status"] == "FAILED" and "declined" in declined["error"], f"declined {declined}")
+    _, deposit = call("POST", "/api/payment/charge/reader", {**reader, "amountCents": 4000}, pin, expect=201)
+    deposit = charge_settled(deposit["identifier"])
+    _, mini_invoice = call("GET", f"/api/invoice/{invoice_id}", token=pin, expect=200)
+    card = next(p for p in mini_invoice["payments"] if p.get("chargeIdentifier") == deposit["identifier"])
+    check(deposit["status"] == "SUCCEEDED" and card["method"] == "CARD" and card["processor"] == "SIMULATED" and card["amountCents"] == 4000, f"reader payment {deposit} {card}")
+
+    # The rest from Jane's status page: off to the checkout, which sends her back paid
+    status, html, _ = page(f"/status/{mini['statusToken']}")
+    check(f"Pay ${(owed - 4000) / 100:,.2f} online" in html, "status page should offer paying online")
+    status, _, headers = page(f"/status/{mini['statusToken']}/pay")
+    check(status == 303 and headers["Location"].endswith(f"/status/{mini['statusToken']}"), f"pay answered {status} {headers.get('Location')}")
+    status, html, _ = page(f"/status/{mini['statusToken']}")
+    _, mini_invoice = call("GET", f"/api/invoice/{invoice_id}", token=pin, expect=200)
+    paid = sum(p["amountCents"] for p in mini_invoice["payments"])
+    check("online</a>" not in html and paid == mini_invoice["totalCents"], f"after paying online, paid {paid} of {mini_invoice['totalCents']}")
+
+    call("POST", "/api/counter/pickup", {"ticketIdentifier": mini["identifier"]}, pin, expect=200)
+    call("POST", f"/api/invoice/{invoice_id}/refund", {"method": "CARD", "amountCents": 1000, "reason": "Goodwill", "paymentIdentifier": card["identifier"]}, pin, expect=403)
+    _, refunded = call("POST", f"/api/invoice/{invoice_id}/refund", {"method": "CARD", "amountCents": 1000, "reason": "Goodwill", "paymentIdentifier": card["identifier"]}, admin, expect=200)
+    refund = next(p for p in refunded["payments"] if p.get("refundOf") == card["identifier"])
+    check(refund["amountCents"] == -1000 and refund["processorReference"].startswith("sim_re_"), f"card refund {refund}")
+    call("POST", f"/api/invoice/{invoice_id}/refund", {"method": "CARD", "amountCents": 3001, "reason": "Too much", "paymentIdentifier": card["identifier"]}, admin, expect=400)
+
+    call("POST", "/api/payment/settings", {**simulated, "enabled": False}, admin, expect=200)
+    call("POST", "/api/shop/update", shop, admin, expect=202)
+    step(f"Simulated card reader: a declined card changes nothing, $40.00 lands on the iPad mini's invoice, Jane pays the other ${(owed - 4000) / 100:.2f} from her status page, and $10.00 goes back onto the card")
+
+# ------------------------------------------ More than one location ------------------------------------------
+_, locations = call("GET", "/api/location", token=pin, expect=200)
+main_location = next(l for l in locations if l["main"])
+call("POST", "/api/location/add", {"identifier": uid(), "code": "DT", "name": "Downtown"}, pin, expect=403)
+call("POST", "/api/location/add", {"identifier": uid(), "code": "", "name": "Uptown"}, admin, expect=400)
+_, downtown = call("POST", "/api/location/add", {"identifier": uid(), "code": "dt", "name": "Downtown", "phone": "555-0200", "taxRate": "10"}, admin, expect=201)
+dt = downtown["identifier"]
+check(downtown["code"] == "DT", f"location {downtown}")
+
+# Checked in downtown: numbered there, in its queue and not the main one's, taxed at its rate
+_, dt_check_in = call("POST", "/api/counter/check-in", {
+    "ticket": {"identifier": uid(), "device": {"manufacturer": "Samsung", "model": "Galaxy S23"}, "problem": "Won't charge"},
+    "customerIdentifier": jane, "signature": visit["signature"]
+}, pin, expect=201, location=dt)
+dt_ticket = dt_check_in["ticket"]
+check(dt_ticket["number"]["prefix"] == "DT" and dt_ticket["number"]["sequence"] == 1 and dt_ticket["locationIdentifier"] == dt, f"downtown ticket {dt_ticket['number']}")
+_, dt_queue = call("GET", "/api/counter/queue", token=pin, expect=200, location=dt)
+_, main_queue = call("GET", "/api/counter/queue", token=pin, expect=200, location=main_location["identifier"])
+check([t["ticket"]["identifier"] for t in dt_queue["recentlyCheckedIn"]] == [dt_ticket["identifier"]], "downtown's queue has only its ticket")
+check(dt_ticket["identifier"] not in [t["ticket"]["identifier"] for t in main_queue["recentlyCheckedIn"]], "the main queue has no downtown ticket")
+_, found = call("GET", f"/api/data/ticket/number/DT-{dt_ticket['number']['year'] % 100}-1", token=pin, expect=200)
+check(found["identifier"] == dt_ticket["identifier"], "found by its DT number")
+_, dt_invoice = call("POST", f"/api/invoice/ticket/{dt_ticket['identifier']}", token=pin, expect=200, location=dt)
+check(dt_invoice["taxRateBasisPoints"] == 1000 and dt_invoice["number"]["prefix"] == "DT", f"downtown invoice {dt_invoice['number']} at {dt_invoice['taxRateBasisPoints']}")
+_, here = call("GET", "/api/shop/here", token=pin, expect=200, location=dt)
+check(here["phone"] == "555-0200" and here["name"].endswith("Downtown"), f"downtown's details {here['name']} {here['phone']}")
+
+# The screen's count is the main location's; downtown starts with none and gets two by hand
+_, screen_here = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200, location=dt)
+main_count = next((s["stock"] for s in screen_here["stockAt"] if s["locationIdentifier"] == main_location["identifier"]), 0)
+check(screen_here["stock"] == 0 and main_count > 0, f"downtown has {screen_here['stock']}, main {main_count}")
+call("POST", f"/api/data/inventory/set/stock/{screen}", {"from": 0, "to": 2}, pin, expect=202, location=dt)
+_, screen_here = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200, location=dt)
+check(screen_here["stock"] == 2, f"downtown now has {screen_here['stock']}")
+
+# One more brought over from the main shop: down there and up here together, and never more than the main shop has
+call("POST", f"/api/data/inventory/transfer/{screen}", {"fromLocation": main_location["identifier"], "toLocation": dt, "quantity": main_count + 1}, pin, expect=409)
+_, transfer = call("POST", f"/api/data/inventory/transfer/{screen}", {"fromLocation": main_location["identifier"], "toLocation": dt, "quantity": 1, "note": "For the downtown repair"}, pin, expect=201)
+_, screen_here = call("GET", f"/api/data/inventory/get/{screen}", token=pin, expect=200, location=dt)
+counts = {s["locationIdentifier"]: s["stock"] for s in screen_here["stockAt"]}
+check(counts[dt] == 3 and counts[main_location["identifier"]] == main_count - 1, f"after the move {counts}")
+_, transfers = call("GET", f"/api/data/inventory/transfers/{screen}", token=pin, expect=200)
+check(transfers[0]["identifier"] == transfer["identifier"], f"transfers {transfers}")
+
+# Taken back to the main shop for the repair: its number stays, its open invoice goes with it
+_, moved = call("POST", f"/api/data/ticket/move/{dt_ticket['identifier']}", {"locationIdentifier": main_location["identifier"]}, pin, expect=200)
+_, moved_invoice = call("GET", f"/api/invoice/{dt_invoice['identifier']}", token=pin, expect=200)
+check(moved["locationIdentifier"] == main_location["identifier"] and moved["number"]["prefix"] == "DT" and moved_invoice["locationIdentifier"] == main_location["identifier"], "moved with its invoice")
+
+call("POST", "/api/location/update", {**downtown, "retired": True}, admin, expect=200)
+step(f"A second location, Downtown (DT): its check in is DT-{dt_ticket['number']['year'] % 100}-00000001 at its own 10% tax, only in its queue, its stock counted apart (0, then 2, then 3 with one moved over from the main shop), and it moves to the main shop keeping its number")
+
+# ------------------------------------------ Staff schedule ------------------------------------------
+# Nina on 9 to 5 every weekday for two weeks from next Monday, written by the admin, read by her PIN session
+import datetime as _dt
+# Dates as dates and times on them in local time, so a daylight saving change in between doesn't move a day
+_day = _dt.date.today() + _dt.timedelta(days=7)
+_monday = _day - _dt.timedelta(days=_day.weekday())
+def local_millis(day, hour=0):
+    return int(time.mktime(_dt.datetime(day.year, day.month, day.day, hour).timetuple()) * 1000)
+monday_text = _monday.isoformat()
+friday_after = (_monday + _dt.timedelta(days=11)).isoformat()
+shift = {"identifier": uid(), "userIdentifier": newtech_id, "kind": "SHIFT", "startsAt": local_millis(_monday, 9), "endsAt": local_millis(_monday, 17)}
+call("POST", "/api/schedule/add", {"entry": shift}, pin, expect=403)
+_, series = call("POST", "/api/schedule/add", {"entry": shift, "repeat": {"weekdays": [1, 2, 3, 4, 5], "until": friday_after}}, admin, expect=201)
+check(len(series) == 10 and len({e["seriesIdentifier"] for e in series}) == 1 and series[0]["userName"] == "Nina Tech", f"series of {len(series)}")
+_, seen = call("GET", f"/api/schedule/range?from={monday_text}&to={friday_after}", token=pin, expect=200)
+check(len([e for e in seen if e["userIdentifier"] == newtech_id]) == 10, f"pin session sees {len(seen)}")
+# Her second week an hour later
+later = {**series[5], "startsAt": series[5]["startsAt"] + 3600000, "endsAt": series[5]["endsAt"] + 3600000}
+_, moved = call("POST", "/api/schedule/update?scope=FOLLOWING", later, admin, expect=200)
+check(len(moved) == 5, f"moved {len(moved)}")
+_, off = call("POST", "/api/schedule/add", {"entry": {"identifier": uid(), "userIdentifier": newtech_id, "kind": "TIME_OFF", "startsAt": local_millis(_monday + _dt.timedelta(days=13)), "endsAt": local_millis(_monday + _dt.timedelta(days=15)), "note": "Dentist"}}, admin, expect=201)
+check(off[0]["allDay"], "time off is whole days")
+call("DELETE", f"/api/schedule/remove/{series[0]['identifier']}?scope=SERIES", token=admin, expect=202)
+_, left = call("GET", f"/api/schedule/range?from={monday_text}&to={friday_after}", token=pin, expect=200)
+check(all(e["seriesIdentifier"] != series[0]["seriesIdentifier"] for e in left), "the series is gone")
+step(f"Nina's schedule: 9 to 5 every weekday from {monday_text} (10 shifts, a series), her second week an hour later, two days off, then the series taken off")
+
+# ------------------------------------------ Time off ------------------------------------------
+# Nina gets 40 hours a year, asks for two days (16h), more than what's left is refused, the admin approves it onto the schedule
+_off_day = _monday + _dt.timedelta(days=21)
+def time_off(first, days, hours):
+    return {"identifier": uid(), "startsAt": local_millis(first), "endsAt": local_millis(first + _dt.timedelta(days=days)), "hours": hours, "note": "Family visit"}
+call("POST", "/api/timeoff/request", time_off(_off_day, 2, 16), pin, expect=409)
+call("POST", f"/api/timeoff/allowance/{newtech_id}", {"hours": 40}, pin, expect=403)
+call("POST", f"/api/timeoff/allowance/{newtech_id}", {"hours": 40}, admin, expect=200)
+_, asked = call("POST", "/api/timeoff/request", time_off(_off_day, 2, 16), pin, expect=201)
+call("POST", "/api/timeoff/request", time_off(_off_day + _dt.timedelta(days=7), 5, 40), pin, expect=409)
+_, waiting = call("GET", "/api/timeoff/requests?status=PENDING", token=admin, expect=200)
+check([r["identifier"] for r in waiting] == [asked["identifier"]], f"waiting {waiting}")
+_, approved = call("POST", f"/api/timeoff/approve/{asked['identifier']}", {}, admin, expect=200)
+_, on_schedule = call("GET", f"/api/schedule/range?from={_off_day.isoformat()}&to={(_off_day + _dt.timedelta(days=1)).isoformat()}", token=pin, expect=200)
+check(any(e["requestIdentifier"] == asked["identifier"] and e["kind"] == "TIME_OFF" and e["timeOffHours"] == 16 for e in on_schedule), f"on the schedule {on_schedule}")
+_, mine = call("GET", f"/api/timeoff/me?year={_off_day.year}", token=pin, expect=200)
+check(mine["balance"]["takenHours"] == 16 and mine["balance"]["allowanceHours"] == 40, f"balance {mine['balance']}")
+step(f"Nina's time off: refused without an allowance, 40 hours a year set by the admin, two days ({_off_day.isoformat()}) asked for and approved onto the schedule, 24 hours left; asking for 40 more refused")
+
+# ------------------------------------------ Booking online ------------------------------------------
+# Booking turned on; Nina works 9 to 11 one day, so the page offers those times and a customer books one
+_book_day = _monday + _dt.timedelta(days=24)  # past her time off above, which takes her shifts off the page
+_, shop = call("GET", "/api/shop", token=admin, expect=200)
+page_status, _, _ = page("/status/book")
+check(page_status == 404, f"booking off answered {page_status}")
+shop["booking"] = {"enabled": True, "minutes": 30, "daysAhead": 40, "leadMinutes": 0, "note": "Bring your charger"}
+call("POST", "/api/shop/update", shop, admin, expect=202)
+call("POST", "/api/schedule/add", {"entry": {"identifier": uid(), "userIdentifier": newtech_id, "kind": "SHIFT", "startsAt": local_millis(_book_day, 9), "endsAt": local_millis(_book_day, 11)}}, admin, expect=201)
+page_status, html, _ = page(f"/status/book?day={_book_day.isoformat()}")
+offered = [int(t) for t in re.findall(r'name="time" value="(\d+)"', html)]
+check(page_status == 200 and offered == [local_millis(_book_day, 9) + i * 1800000 for i in range(4)], f"offered {offered}")
+page_status, html, _ = page("/status/book", {"time": str(offered[1]), "name": "Grace Hopper", "phone": "555 010 2030", "device": "Pixel 8", "problem": "Won't charge"})
+check(page_status == 200 and "You're booked" in html, f"booking answered {page_status}")
+_, booked = call("GET", f"/api/appointment/range?from={_book_day.isoformat()}&to={_book_day.isoformat()}", token=pin, expect=200)
+check(any(a["customerName"] == "Grace Hopper" and a["startsAt"] == offered[1] and a["createdBy"] == "customer" for a in booked), f"on the calendar {booked}")
+page_status, _, _ = page("/status/book", {"time": str(offered[1]), "name": "Someone Else", "phone": "555 010 9999"})
+check(page_status == 400, f"the same time again answered {page_status}")
+shop["booking"]["enabled"] = False
+call("POST", "/api/shop/update", shop, admin, expect=202)
+step(f"Booking online: {len(offered)} half hours offered in Nina's shift on {_book_day.isoformat()}, Grace books 9:30 and it's on the calendar, the same time refused after")
 
 _, sessions = call("GET", "/api/admin/sessions", token=admin, expect=200)
 kinds = {(s["username"], s["deviceName"], s["kind"]) for s in sessions}

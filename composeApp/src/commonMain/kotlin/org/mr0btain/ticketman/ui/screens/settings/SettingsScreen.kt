@@ -1,5 +1,6 @@
 package org.mr0btain.ticketman.ui.screens.settings
 
+import org.mr0btain.ticketman.ui.screens.locations.LocationPicker
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import org.mr0btain.ticketman.data.user.AccessLevel
@@ -64,6 +65,7 @@ fun SettingsScreen(
     var showChangePin by remember { mutableStateOf(false) }
     val clockedIn = viewModel.timeClock.current.collectAsState()
     val weekHours = viewModel.timeClock.weekHours.collectAsState()
+    val weekScheduled = viewModel.timeClock.weekScheduled.collectAsState()
     LaunchedEffect(Unit) { viewModel.timeClock.refresh() }
     var showStation by remember { mutableStateOf(false) }
 
@@ -199,7 +201,8 @@ fun SettingsScreen(
                     description = when {
                         currentUser.value == null -> "Log in to use the time clock"
                         else -> (clockedIn.value?.let { "On the clock since ${formatTime(it.clockedInAt)}" } ?: "Off the clock") +
-                            (weekHours.value?.let { ", ${formatHours(it)} this week" } ?: "")
+                            (weekHours.value?.let { ", ${formatHours(it)} this week" } ?: "") +
+                            (weekScheduled.value?.takeIf { it > 0 }?.let { " of ${formatHours(it)} scheduled" } ?: "")
                     },
                     enabled = currentUser.value != null,
                     onClick = { viewModel.timeClock.punch() }
@@ -218,7 +221,7 @@ fun SettingsScreen(
         )
     )
 
-    val apiMismatch = viewModel.session.apiMismatch.collectAsState()
+    val versionNotice = viewModel.session.versionNotice.collectAsState()
     val connectionProblem = viewModel.session.connectionProblem.collectAsState()
     val insecureWarning = viewModel.session.insecureWarning.collectAsState()
     val scope = rememberCoroutineScope()
@@ -228,7 +231,7 @@ fun SettingsScreen(
             user = currentUser.value,
             onLogin = { viewModel.session.changeShowLogin(true) },
             onLogout = { viewModel.session.logout() },
-            apiMismatch = apiMismatch.value,
+            versionNotice = versionNotice.value,
             connectionProblem = connectionProblem.value,
             insecureWarning = insecureWarning.value,
             onPhotoChange = if (currentUser.value?.canAccess(AccessLevel.NORMAL) == true) {
@@ -237,7 +240,8 @@ fun SettingsScreen(
                         problem?.let { scope.launch { viewModel.snackBarHost.showSnackbar("Couldn't save your photo: $it") } }
                     }
                 }
-            } else null
+            } else null,
+            location = { LocationPicker(viewModel.locations, canSeeAll = currentUser.value?.accessLevel == AccessLevel.ADMIN) }
         )
     }
 
