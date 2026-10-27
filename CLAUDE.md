@@ -50,12 +50,6 @@ scripts/docker_local.sh                                  # the same left running
 ./gradlew :server:buildFatJar -PwithWeb                  # the same as one jar
 ./gradlew :composeApp:packageUberJarForCurrentOS -PallPlatforms  # desktop jar for every OS (needs Java 21 to run)
 
-# Flathub (docs/releasing.md#flathub): flatpak/ holds the manifest, metainfo, desktop entry and launcher for
-# io.github.Mr0btain.TicketMan, which packages the -PallPlatforms desktop jar on the openjdk21 extension
-python3 scripts/flatpak.py check             # the metainfo has a <release> for ticketman.version, screenshots at its tag
-python3 scripts/flatpak.py build --install   # build the jar and the Flatpak from this checkout, lint, install
-python3 scripts/flatpak.py update <version>  # after a GitHub release: the manifest's jar sha256 and tag commit
-
 # Snap (docs/releasing.md#snap): snap/snapcraft.yaml packs this machine's packageTarball (bundled Java), per architecture
 ./gradlew :composeApp:packageTarball && snapcraft pack   # needs snapcraft and LXD
 
