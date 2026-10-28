@@ -42,7 +42,7 @@ A page of items, by name.
 Items whose name, description or category contains the query, or whose SKU, barcode or id starts with it.
 
 - **Query:** `query`, `limit` (default 20, at most 200).
-- **`200`** a list of `SearchResult`.
+- **`200`** a list of `TmSearchResult`.
 
 ### `GET /api/data/inventory/code/{code}`
 

@@ -35,7 +35,7 @@ import org.mr0btain.ticketman.components.database.tables.user.UserEntity
 import org.mr0btain.ticketman.components.database.tables.user.UserTable
 import org.mr0btain.ticketman.components.database.tables.user.UserTicketTable
 import org.mr0btain.ticketman.data.counter.TicketSummary
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -159,9 +159,9 @@ class TicketDatabase(
         }
     }
 
-    override fun search(query: String, limit: Int): List<SearchResult>? =
+    override fun search(query: String, limit: Int): List<TmSearchResult>? =
         searchTickets(query, limit)?.map { ticket ->
-            SearchResult(
+            TmSearchResult(
                 identifier = ticket.identifier,
                 text = "${ticket.label} ${ticket.device}".trim()
             )

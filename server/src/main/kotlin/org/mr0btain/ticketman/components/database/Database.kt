@@ -9,7 +9,7 @@ import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.mr0btain.ticketman.components.database.tables.note.NoteEntity
 import org.mr0btain.ticketman.data.MainItem
 import org.mr0btain.ticketman.data.image.StoredImage
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.error.Error
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
@@ -207,7 +207,7 @@ abstract class Database<T : MainItem>(protected val tag: String) {
      * @param query The search criteria
      * @param limit The limit of results to return
      */
-    abstract fun search(query: String, limit: Int = 20): List<SearchResult>?
+    abstract fun search(query: String, limit: Int = 20): List<TmSearchResult>?
 }
 /**
  * Ids of every note linked to a record of one of [databases]' types. Must run inside a transaction

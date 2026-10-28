@@ -20,7 +20,7 @@ import org.mr0btain.ticketman.components.database.tables.inventory.InventoryTabl
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.inventory.Inventory
 import org.mr0btain.ticketman.data.money.Money
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.error.InventoryError
@@ -138,7 +138,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
             true
         }
 
-    override fun search(query: String, limit: Int): List<SearchResult>? =
+    override fun search(query: String, limit: Int): List<TmSearchResult>? =
         dbQuery(SEARCH_TAG) {
             val pattern = "${query.trim().lowercase()}%"
             val contains = "%${query.trim().lowercase()}%"
@@ -155,7 +155,7 @@ class InventoryDatabase(tag: String = "InventoryLocalDatabase") : Database<Inven
                 .orderBy(InventoryTable.name.lowerCase() to SortOrder.ASC, InventoryTable.id to SortOrder.ASC)
                 .limit(limit)
                 .map { inventoryEntity ->
-                    SearchResult(
+                    TmSearchResult(
                         identifier = inventoryEntity.id.value,
                         text = when {
                             inventoryEntity.name.startsWith(query, true) -> inventoryEntity.name

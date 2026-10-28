@@ -10,10 +10,8 @@ import org.mr0btain.ticketman.components.database.LocationDatabase
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.search.SearchQuery
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.Note
-import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
@@ -166,7 +164,7 @@ class InventoryTest {
         val token = token(tech)
         listOf(screen, battery, charger).forEach { add(it, token) }
 
-        fun ids(results: String) = json.decodeFromString<List<SearchResult>>(results).map { it.identifier }
+        fun ids(results: String) = json.decodeFromString<List<TmSearchResult>>(results).map { it.identifier }
 
         assertEquals(listOf(battery.identifier), ids(client.get("/api/data/inventory/search?query=pixel&limit=10") { bearerAuth(token) }.bodyAsText()))
         assertEquals(listOf(screen.identifier), ids(client.get("/api/data/inventory/search?query=oem&limit=10") { bearerAuth(token) }.bodyAsText()))

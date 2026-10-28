@@ -4,7 +4,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import org.mr0btain.ticketman.components.data.inventory.InventorySeed
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsLayout
 import kotlin.uuid.Uuid
@@ -17,7 +17,7 @@ fun InventoryPanel(
     selectedInventory: InventorySeed,
     pendingId: Uuid? = null,
     onSelectedInventoryChange: (Uuid) -> Unit,
-    onSearchQuery: suspend (String) -> List<SearchResult>,
+    onSearchQuery: suspend (String) -> List<TmSearchResult>,
     onAddInventory: () -> Unit,
     onEditInventory: () -> Unit,
     onMoveStock: (() -> Unit)? = null,

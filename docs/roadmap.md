@@ -4,7 +4,7 @@ What's planned to add or fix.
 
 ## TODOs
 
-- **Recvords Search** When searching for a name or such in the records tab, we should scroll to the item, not just
+- **Records Search** When searching for a name or such in the records tab, we should scroll to the item, not just
   set the selected item.
 - **Calendar** The calendar on mobile phones when in month view seems a bit smashed. Needs addressed.
 - **Admin Screen** When we select a ticker or something that redirects us to another screen, we should add a

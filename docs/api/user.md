@@ -61,7 +61,7 @@ location's), everyone for an admin working at `all`. Search finds everyone.
 Users whose name, username or id starts with the query. Used to pick a technician.
 
 - **Query:** `query`, `limit` (default 20, at most 200).
-- **`200`** a list of `SearchResult`.
+- **`200`** a list of `TmSearchResult`.
 
 ## Managing users
 

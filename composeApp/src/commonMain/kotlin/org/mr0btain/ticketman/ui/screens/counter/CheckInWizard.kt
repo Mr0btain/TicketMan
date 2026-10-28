@@ -36,7 +36,7 @@ import org.mr0btain.ticketman.components.utils.promiseTimeInDays
 import org.mr0btain.ticketman.data.counter.TicketSummary
 import org.mr0btain.ticketman.data.customer.Customer
 import org.mr0btain.ticketman.data.invoice.PaymentMethod
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.*
 import org.mr0btain.ticketman.data.time.timestampMillis
 import org.mr0btain.ticketman.server.request.CheckInRequest
@@ -130,7 +130,7 @@ internal class CheckInForm(customer: Customer?, private val checklists: List<Int
 
     /** The deposit taken on a card reader, paid before the check in is sent, which then claims it */
     var depositCharge by mutableStateOf<CardCharge?>(null)
-    var technician by mutableStateOf(appointment?.technicianIdentifier?.let { SearchResult(it, appointment.technicianName) })
+    var technician by mutableStateOf(appointment?.technicianIdentifier?.let { TmSearchResult(it, appointment.technicianName) })
     var strokes by mutableStateOf<List<List<SignaturePoint>>>(emptyList())
     var aspectRatio by mutableStateOf(3f)
     var signedName by mutableStateOf(customer?.name.orEmpty())
@@ -222,7 +222,7 @@ fun CheckInWizard(
     checklists: List<IntakeChecklist> = emptyList(),
     onSearchCustomers: suspend (String) -> List<Customer>,
     onAddCustomer: (Customer, (Customer?, String?) -> Unit) -> Unit,
-    onSearchTechnicians: suspend (String) -> List<SearchResult>,
+    onSearchTechnicians: suspend (String) -> List<TmSearchResult>,
     onRepeatCheck: suspend (Uuid, Device, Uuid, Uuid?) -> List<TicketSummary>,
     onOpenTicket: (Uuid) -> Unit,
     onSubmit: (CheckInRequest, (String?) -> Unit) -> Unit,
@@ -562,13 +562,13 @@ private fun DeviceStep(
 @Composable
 internal fun RepairStep(
     form: CheckInForm,
-    onSearchTechnicians: suspend (String) -> List<SearchResult>,
+    onSearchTechnicians: suspend (String) -> List<TmSearchResult>,
     readers: List<CardReader> = emptyList(),
     surchargePercent: String = "",
     onReaderCharge: ((CardReader, Long, (CardCharge) -> Unit) -> Unit)? = null
 ) {
     var techQuery by remember { mutableStateOf("") }
-    var techMatches by remember { mutableStateOf<List<SearchResult>>(emptyList()) }
+    var techMatches by remember { mutableStateOf<List<TmSearchResult>>(emptyList()) }
     val spacing = TmTheme.spacing
 
     LaunchedEffect(techQuery) {

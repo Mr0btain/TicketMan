@@ -29,7 +29,7 @@ import org.mr0btain.ticketman.components.service.PasswordHasher
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.BadgeCode
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.data.shared.PagedRequest
 import org.mr0btain.ticketman.data.user.User
@@ -150,7 +150,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
         return (1..BadgeCode.LENGTH).map { BadgeCode.ALPHABET[random.nextInt(BadgeCode.ALPHABET.length)] }.joinToString("")
     }
 
-    override fun search(query: String, limit: Int): List<SearchResult>? =
+    override fun search(query: String, limit: Int): List<TmSearchResult>? =
         dbQuery(SEARCH_TAG) {
             val pattern = "${query.lowercase()}%"
 
@@ -163,7 +163,7 @@ class UserDatabase(tag: String = "UserLocalDatabase") : Database<User>(tag) {
                 .orderBy(UserTable.name to SortOrder.ASC, UserTable.id to SortOrder.ASC)
                 .limit(limit)
                 .map { userEntity ->
-                    SearchResult(
+                    TmSearchResult(
                         identifier = userEntity.id.value,
                         text = when {
                             userEntity.name.startsWith(query) -> userEntity.name

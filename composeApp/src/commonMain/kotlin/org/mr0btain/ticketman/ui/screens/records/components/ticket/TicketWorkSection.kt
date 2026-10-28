@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.utils.formatDateTime
 import org.mr0btain.ticketman.components.utils.formatQuantity
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.WorkEntry
 import org.mr0btain.ticketman.data.ticket.WorkType
 import org.mr0btain.ticketman.server.request.WorkRequest
@@ -161,7 +161,7 @@ private fun twoDecimals(quantity: Double): Boolean = abs(quantity * 100 - (quant
 @Composable
 fun WorkDialog(
     laborRateCents: Long,
-    onPartSearch: suspend (String) -> List<SearchResult>,
+    onPartSearch: suspend (String) -> List<TmSearchResult>,
     onFindPart: suspend (Uuid) -> Inventory?,
     onSave: (List<WorkRequest>, (String?) -> Unit) -> Unit,
     onDismissRequest: () -> Unit,

@@ -7,7 +7,7 @@ import io.ktor.server.testing.*
 import kotlinx.serialization.json.Json
 import org.mr0btain.ticketman.components.database.UserDatabase
 import org.mr0btain.ticketman.data.inventory.Inventory
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.user.AccessLevel
 import org.mr0btain.ticketman.data.user.User
 import org.mr0btain.ticketman.server.request.LoginRequest
@@ -101,9 +101,9 @@ class InventoryDetailsTest {
         assertEquals(HttpStatusCode.NotFound, get("/api/data/inventory/code/nothing").status)
 
         // Search takes the start of a code, and any part of a category
-        val bySku = json.decodeFromString<List<SearchResult>>(get("/api/data/inventory/search?query=bat-&limit=10").bodyAsText())
+        val bySku = json.decodeFromString<List<TmSearchResult>>(get("/api/data/inventory/search?query=bat-&limit=10").bodyAsText())
         assertEquals(listOf("Battery"), bySku.map { it.text })
-        val byCategory = json.decodeFromString<List<SearchResult>>(get("/api/data/inventory/search?query=able&limit=10").bodyAsText())
+        val byCategory = json.decodeFromString<List<TmSearchResult>>(get("/api/data/inventory/search?query=able&limit=10").bodyAsText())
         assertEquals(listOf("Cable"), byCategory.map { it.text })
 
         assertEquals(listOf("Batteries", "cables"), json.decodeFromString<List<String>>(get("/api/data/inventory/categories").bodyAsText()))

@@ -32,7 +32,7 @@ Customers matching any part of their name ("jane doe" works), the start of their
 number ignoring formatting.
 
 - **Query:** `query`, `limit` (default 20, at most 200).
-- **`200`** a list of `SearchResult`, the text being the name and phone.
+- **`200`** a list of `TmSearchResult`, the text being the name and phone.
 
 ### `GET /api/data/customer/get/tickets/{identifier}`
 

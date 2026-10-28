@@ -55,7 +55,7 @@ or the problem. Newest number first. A [status page](status.md) link, like the c
 its ticket (the counter search uses the same lookup).
 
 - **Query:** `query`, `limit` (default 20, at most 200).
-- **`200`** a list of `SearchResult`, the text being the number and device.
+- **`200`** a list of `TmSearchResult`, the text being the number and device.
 
 ### `GET /api/data/ticket/number/{number}`
 

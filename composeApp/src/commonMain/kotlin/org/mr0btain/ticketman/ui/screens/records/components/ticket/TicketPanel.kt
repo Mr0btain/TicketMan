@@ -4,7 +4,7 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.runtime.Composable
 import org.mr0btain.ticketman.components.data.ticket.TicketScope
 import org.mr0btain.ticketman.components.data.ticket.TicketSeed
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.Ticket
 import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
 import org.mr0btain.ticketman.ui.kit.selection.TmSegmented
@@ -28,7 +28,7 @@ fun TicketPanel(
     onEditTicket: () -> Unit,
     canEdit: Boolean = true,
     onSelectedTicketChange: (Uuid) -> Unit,
-    onSearchQuery: suspend (String) -> List<SearchResult>,
+    onSearchQuery: suspend (String) -> List<TmSearchResult>,
     onDeleteTicket: () -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
     ticketListState: LazyListState,

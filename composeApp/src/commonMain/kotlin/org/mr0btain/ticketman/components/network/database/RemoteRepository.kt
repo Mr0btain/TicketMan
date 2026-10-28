@@ -9,7 +9,7 @@ import org.mr0btain.ticketman.components.network.handleActionHttpResponse
 import org.mr0btain.ticketman.components.network.handleDataHttpResponse
 import org.mr0btain.ticketman.components.network.networkRequest
 import org.mr0btain.ticketman.data.MainItem
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.shared.EntityReference
 import org.mr0btain.ticketman.data.shared.Note
 import org.mr0btain.ticketman.error.EmptyResult
@@ -199,7 +199,7 @@ abstract class RemoteRepository<T: MainItem>(
     }
 
     /** Records matching [query], as identifiers and display text */
-    suspend fun search(query: String, limit: Int): TmResult<List<SearchResult>, ServerError> {
+    suspend fun search(query: String, limit: Int): TmResult<List<TmSearchResult>, ServerError> {
         if (serverUrl.isBlank()) return noServer()
 
         val response = networkRequest(SEARCH_TAG) {

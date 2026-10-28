@@ -5,7 +5,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import org.mr0btain.ticketman.components.data.customer.CustomerSeed
 import org.mr0btain.ticketman.data.customer.Customer
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.ui.kit.navigation.TmPanelTopBar
 import org.mr0btain.ticketman.ui.screens.records.components.RecordsLayout
 import kotlin.uuid.Uuid
@@ -20,7 +20,7 @@ fun CustomerPanel(
     onEditCustomer: () -> Unit,
     canEdit: Boolean = true,
     onCustomerSelectionChange: (Uuid) -> Unit,
-    onSearchQuery: suspend (String) -> List<SearchResult>,
+    onSearchQuery: suspend (String) -> List<TmSearchResult>,
     onDeleteCustomer: () -> Unit,
     onTicketClick: (Uuid) -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,

@@ -9,7 +9,7 @@ stored by the server, sent as JSON and shown by the client, so this is the one p
 |------|------------|
 | `MainItem` | Abstract base for anything with its own identity: `Customer`, `Ticket`, `Inventory`, `User`, `Note`, `StoredImage`, `Invoice`. Has an `identifier: Uuid` and a `timestamp` read from it |
 | `SubItem` | Marker interface for values that live inside a main item (`Device`, `Address`, `TicketStatus`, `Charge`, ...) |
-| `IdentifiedItem` | An id plus display text. `SearchResult` implements it |
+| `IdentifiedItem` | An id plus display text. `TmSearchResult` implements it |
 | `EntityReference` | An id plus a name, for showing a link to another record without loading it (a ticket's customer, its tech) |
 
 ### Identifiers and creation time

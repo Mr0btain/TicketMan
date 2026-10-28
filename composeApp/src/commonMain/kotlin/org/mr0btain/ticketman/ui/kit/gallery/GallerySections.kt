@@ -28,7 +28,7 @@ import kotlinx.coroutines.delay
 import org.mr0btain.ticketman.components.utils.formatEnumName
 import org.mr0btain.ticketman.data.image.StoredImage
 import org.mr0btain.ticketman.data.user.AccessLevel
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.data.ticket.TicketPriorityType
 import org.mr0btain.ticketman.data.ticket.CustomStatus
 import org.mr0btain.ticketman.data.ticket.StatusChoice
@@ -141,7 +141,7 @@ internal fun gallerySections(): List<@Composable () -> Unit> = listOf(
 // Made up shop data for the samples
 private val sampleCustomers = listOf(
     "Dana Whitfield", "Marcus Oyelaran", "Priya Raman", "Tomás Herrera", "June Kowalski", "Dan Hollis"
-).map { SearchResult(Uuid.random(), it) }
+).map { TmSearchResult(Uuid.random(), it) }
 
 private data class SampleTicket(
     val number: String,

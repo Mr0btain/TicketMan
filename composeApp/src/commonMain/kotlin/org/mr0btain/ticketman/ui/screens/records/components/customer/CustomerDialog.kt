@@ -10,7 +10,7 @@ import org.mr0btain.ticketman.components.data.note.NoteSeed
 import androidx.compose.material3.Text
 import kotlinx.coroutines.launch
 import org.mr0btain.ticketman.components.network.ServerError
-import org.mr0btain.ticketman.data.search.SearchResult
+import org.mr0btain.ticketman.data.search.TmSearchResult
 import org.mr0btain.ticketman.error.TmResult
 import org.mr0btain.ticketman.ui.kit.notes.TmNoteBlock
 import org.mr0btain.ticketman.ui.kit.containers.TmConfirmDialog
@@ -47,7 +47,7 @@ fun CustomerDialog(
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
     onImageClick: (noteIdentifier: Uuid, page: Int) -> Unit,
-    onTicketSearchQuery: suspend (String) -> List<SearchResult>,
+    onTicketSearchQuery: suspend (String) -> List<TmSearchResult>,
     onFindTicket: suspend (Uuid) -> TmResult<TicketToLink, ServerError>
 ) {
     if (!isVisible) return
