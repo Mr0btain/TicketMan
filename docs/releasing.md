@@ -102,8 +102,8 @@ builds everything without publishing, which is a good way to try it before taggi
 
 | Workflow | Builds | Publishes to |
 |---|---|---|
-| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's (the arm64 DEB and tarball built natively), plus the DMGs (macOS arm64 on `macos-latest`, x64 for Intel Macs on `macos-15-intel`) and, when asked, the unsigned iOS app | GitHub release, `ghcr.io/<owner>/ticketman` |
-| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, on your own Windows runner), DEB and tarball (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
+| [`.github/workflows/release.yml`](../.github/workflows/release.yml) | The same as Gitea's (the arm64 DEB and tarball built natively, the arm64 MSI on `windows-11-arm`), plus the DMGs (macOS arm64 on `macos-latest`, x64 for Intel Macs on `macos-15-intel`) and, when asked, the unsigned iOS app | GitHub release, `ghcr.io/<owner>/ticketman` |
+| [`.gitea/workflows/release.yml`](../.gitea/workflows/release.yml) | MSI (Windows x64, and arm64 when asked, on your own Windows runners), DEB and tarball (x64, and arm64 through QEMU), APK, desktop jar, server zip, jar and Docker image, each with and without the web client | Gitea release, the Gitea container registry, Docker Hub |
 
 Gitea doesn't read `.github/workflows` while `.gitea/workflows` exists, so a repo pushed to both only runs each
 workflow in its own place. Each also has its own copy of the tests ([`.gitea/workflows/ci.yml`](../.gitea/workflows/ci.yml)
@@ -142,7 +142,8 @@ tag pushes when set to `true`; the release is published with the rest, and isn't
 | The amd64 DEB and the APK | `skip_amd64` | `SKIP_AMD64` |
 | The arm64 DEB | `skip_arm64` | `SKIP_ARM64` |
 | Only the Linux tarballs (the DEBs are still built) | `skip_tarball` | `SKIP_TARBALL` |
-| The Windows MSI | `skip_windows` | `SKIP_WINDOWS` |
+| The Windows x64 MSI | `skip_windows` | `SKIP_WINDOWS` |
+| The Windows arm64 MSI (skipped by default on Gitea, below) | `skip_windows_arm64` | `SKIP_WINDOWS_ARM64` |
 | The macOS arm64 DMG (GitHub only) | `skip_mac` | `SKIP_MAC` |
 | The macOS x64 DMG for Intel Macs (GitHub only) | `skip_mac_x64` | `SKIP_MAC_X64` |
 | The desktop jar | `skip_desktop_jar` | `SKIP_DESKTOP_JAR` |
@@ -154,6 +155,12 @@ The GitHub workflow can also build the iOS app, unsigned (`TicketMan-iOS-<versio
 other way round until it's been tried on a device: it's only built with the `build_ios` box or the `BUILD_IOS`
 variable set to `true`, and a failed iOS build doesn't stop the release. It's installed by sideloading (AltStore,
 Sideloadly), which signs it with the person's own Apple ID.
+
+jpackage can't cross build, so the arm64 MSI (`TicketMan-Windows-<version>-arm64.msi`) needs a Windows on ARM machine.
+GitHub builds it on its `windows-11-arm` runner, free for public repos only. On Gitea it needs a runner registered with
+the `windows-arm64:host` label (set up like the x64 one below), so until there is one it's skipped by default: untick
+`skip_windows_arm64` on a run by hand, and set `SKIP_WINDOWS_ARM64` to `false` for tag pushes. Without it, Windows on
+ARM still runs the x64 MSI under emulation.
 
 ## One time setup
 

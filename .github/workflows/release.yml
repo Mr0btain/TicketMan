@@ -19,7 +19,11 @@ on:
         type: boolean
         default: false
       skip_windows:
-        description: Skip the Windows MSI
+        description: Skip the Windows x64 MSI
+        type: boolean
+        default: false
+      skip_windows_arm64:
+        description: Skip the Windows arm64 MSI
         type: boolean
         default: false
       skip_mac:
@@ -88,6 +92,7 @@ jobs:
         name: Installers to build
         env:
           SKIP_WINDOWS: ${{ format('{0}', inputs.skip_windows) == 'true' || vars.SKIP_WINDOWS == 'true' }}
+          SKIP_WINDOWS_ARM64: ${{ format('{0}', inputs.skip_windows_arm64) == 'true' || vars.SKIP_WINDOWS_ARM64 == 'true' }}
           SKIP_MAC: ${{ format('{0}', inputs.skip_mac) == 'true' || vars.SKIP_MAC == 'true' }}
           SKIP_MAC_X64: ${{ format('{0}', inputs.skip_mac_x64) == 'true' || vars.SKIP_MAC_X64 == 'true' }}
           SKIP_AMD64: ${{ format('{0}', inputs.skip_amd64) == 'true' || vars.SKIP_AMD64 == 'true' }}
@@ -95,6 +100,8 @@ jobs:
         run: |
           entries=()
           [ "$SKIP_WINDOWS" != true ] && entries+=('{"os":"windows-latest","format":"msi","task":"packageMsi"}')
+          # jpackage can't cross build, so the arm64 MSI needs an arm64 runner (free for public repos, like the DEB's)
+          [ "$SKIP_WINDOWS_ARM64" != true ] && entries+=('{"os":"windows-11-arm","format":"msi","task":"packageMsi"}')
           [ "$SKIP_MAC" != true ] && entries+=('{"os":"macos-latest","format":"dmg","task":"packageDmg"}')
           # macos-latest is Apple silicon; Intel Macs need a DMG built on an Intel runner
           [ "$SKIP_MAC_X64" != true ] && entries+=('{"os":"macos-15-intel","format":"dmg","task":"packageDmg"}')
