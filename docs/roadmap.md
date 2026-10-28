@@ -7,13 +7,14 @@ What's planned to add or fix.
 - **Records Search** When searching for a name or such in the records tab, we should scroll to the item, not just
   set the selected item.
 - **Calendar** The calendar on mobile phones when in month view seems a bit smashed. Needs addressed.
-- **Admin Screen** When we select a ticker or something that redirects us to another screen, we should add a
+- **Admin Screen** When we select a ticket or something that redirects us to another screen, we should add a
   back button or some navigation to return to where we were on the admin screen.
-- **Screen States** Some screens done save state when switching to another.
+- **Screen States** Some screens done save state when switching to another. We should make admin, records, and counter
+  all keep their state when switching between them.
 
 ## iOS app
 
-The code is written (on Linux, where it can't compile); testing it needs a Mac. See
+The code is written; testing it needs a Mac. See
 [Platforms](client/platforms.md#ios) for how it fits together.
 
 - **Test every `actual`**: the Darwin HTTP engine with `DarwinTrust` checking certificates against 
@@ -37,7 +38,7 @@ The code is written (on Linux, where it can't compile); testing it needs a Mac. 
 
 ## Phase macOS: Test the desktop app
 
-- **Run it from source and from the DMG** on Apple silicon: `./gradlew :composeApp:run`, then the released DMG
+- **Run it from source and from the DMG** on Apple Silicon: `./gradlew :composeApp:run`, then the released DMG
   dragged to Applications (unsigned, so `xattr -dr com.apple.quarantine /Applications/TicketMan.app` first, see
   [Releasing](releasing.md)). Check the version shown inside (macOS refuses a bundle version starting with 0).
 - **Walk through it** like Linux and Windows: connecting and trusting a Caddy CA, logging in and the session coming
@@ -50,7 +51,7 @@ The code is written (on Linux, where it can't compile); testing it needs a Mac. 
 - **Later, with a paid Apple Developer account:** sign and notarize the DMG (Compose's
   `macOS { signing { } notarization { } }`) so it opens without the quarantine step.
 
-## Open questions
+## Open questions to decide later
 
 - Phase 10: should a time off allowance carry unused time over? Built as starting over each calendar year 
    with no carry over.
